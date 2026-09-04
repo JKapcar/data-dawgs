@@ -1,0 +1,288 @@
+yPrice} → ${l.closePrice}</b></div>`
+    + `<div class="t-row"><span>Leg CLV</span><b>${csgn(d.legClv,2)} pts</b></div>`;
+  const w=200, off=16;
+  const bw=document.getElementById('clvSvg').getBoundingClientRect().width;
+  tip.style.left = (px+off+w>bw ? px-w-off : px+off)+'px';
+  tip.style.top = Math.max(0,py-30)+'px';
+  tip.style.opacity = 1;
+}
+
+/* ---- the footnote, split ----
+   ⚠️ Three things are deliberately NOT in the drawer.
+   1. "Simulated league" — a truth claim about the numbers on screen, and the demo-badge
+      rule is site-wide. It is a visible strip above the plot (#clvSim), not a paragraph.
+   2. The coverage counts — they ARE the sample. A drawer that hides "4 of 176 excluded"
+      hides it from everyone who does not click.
+   3. The entry-price caveat, in short form. The chart is displaying CLV; that CLV mixes
+      one checked number with one unchecked one, and that has to be readable next to it.
+      The full paragraph is still in the drawer.
+   Everything static goes below, verbatim. */
+function clvFootLive(){
+  const c = CLV.data.coverage;
+  // n per player over the whole season, for the band's range — the same counts the band
+  // takes its median from, so the two cannot drift.
+  const ns = CLV.players.map(p => (clvSeriesFor('all')[p]||[]).length).filter(n => n > 0).sort((a,b)=>a-b);
+  const band = ns.length
+    ? `luck band n = ${ns[0]}${ns[ns.length-1] !== ns[0] ? '–' + ns[ns.length-1] : ''}` : '';
+  return `<p class="live"><b>${c.noClose} of ${c.legs}</b> legs have no capturable close and are excluded`
+    + ` · <b>${c.pushes}</b> push${c.pushes===1?'':'es'} dropped`
+    + (band ? ` · ${band}` : '')
+    + ` · captured entries only; self-priced legs are excluded</p>`;
+}
+
+function clvMethod(){
+  // The counts appear on the live line too, and on purpose: up there they are the
+  // sample, down here they are the sentence explaining what an exclusion means. Same
+  // source both times, so they cannot disagree.
+  const c = CLV.data.coverage;
+  return `<details class="method"><summary>How this chart is built</summary><div class="method-body">`
+    + `<b>How the axes are built.</b> Both prices are de-vigged proportionally against the opposite side, so a `
+    + `<code>-200</code> favourite quoted with the usual hold is treated as roughly 65%, not 66.7%. `
+    + `<b>x</b> = mean of <code>p_close − p_entry</code> across a player's graded legs to date, in probability `
+    + `points; positive means the market moved toward their side after they bet. `
+    + `<b>y</b> = <code>(wins ÷ n) − mean(p_close)</code>, also in points; the closing line sets the bar. `
+    + `Pushes and voids are dropped from both. Same unit on both axes, so the quadrants are comparable.<br><br>`
+    + `<b>One book, both ends.</b> Every Bozo leg has to be a real DraftKings selection that is legal in an SGP, `
+    + `so DK is the book at entry <i>and</i> at close — the price you got and the price it closed at are `
+    + `like-for-like rather than a cross-book artifact. Both reach us through licensed aggregators because `
+    + `DraftKings has no public odds API. <b>Self-priced props and Other legs are excluded from this chart.</b><br><br>`
+    + `<b>What is not on the chart.</b> ${c.noClose} of ${c.legs} legs have no capturable close and are excluded `
+    + `from both axes and from <code>n</code> — never back-filled from the entry price, and still counted in the `
+    + `ledger. Every leg goes on a real bet slip, so the market always existed and always closed; a gap here means `
+    + `the capture could not resolve what was typed onto the right market, and each one carries the reason it `
+    + `missed. “Other” legs are the exception — free text describing an arbitrary market, with nothing to match `
+    + `on. ${c.pushes} push${c.pushes===1?'':'es'} are dropped too.<br><br>`
+    + `<b>The luck band.</b> The shaded strip is how far from zero a perfectly-calibrated bettor drifts by chance `
+    + `alone — binomial standard error <code>√(p̄(1−p̄) ÷ n)</code> on the delta, where n is the median legs per `
+    + `player so far. It starts enormous and shrinks as the season runs. <b>A dot inside ±2 SE has not `
+    + `demonstrated anything</b>: after a full season plus playoffs the band is still roughly ±10 points, wider `
+    + `than most of the spread on this chart. The x-axis needs far less sample to mean something than the y-axis `
+    + `does, which is the honest finding here and not a flaw in the picture.<br><br>`
+    + `<b>Two caveats on the band itself.</b> It assumes legs are independent, and in Bozo they are not — several `
+    + `players land on the same game most weeks. Positive correlation means the league-wide delta swings further `
+    + `than a pooled binomial band implies, so the band is a <i>floor</i> on the noise, not a ceiling. And p̄ `
+    + `varies per player: someone who always takes −400 favourites has a different standard error from someone `
+    + `at −110. A pooled band is an approximation, and the right one at eight players.`
+    + (CLV.data.format === 'royale'
+      ? `<br><br><b>Bozo Royale changes what n means.</b> A player chopped in week 1 has one charted leg and a `
+        + `delta that says nothing about them; the survivor has fourteen. Dot size already encodes that — the `
+        + `band's <code>n</code> range is printed on its label for the same reason, because a median no longer `
+        + `describes most of the roster.` : '')
+    + `</div></details>`;
+}
+
+/* Draw the survival curves. Same colour + shape identity as the CLV chart above — a
+   player is one thing on this page, not two. */
+let SURV = null, survKey = '';
+function paintSurvival(){
+  const card = document.getElementById('survCard');
+  if(!card) return;
+  if(!CLV.data || CLV.data.format !== 'royale' || onHub() || view()!=='overview'){
+    card.style.display='none'; return;
+  }
+  // ⚠️ Re-run only when the inputs actually change. This is 4,000 seasons of resampling;
+  // doing it on every render would make the board crawl for no new information.
+  const key = royaleAliveNames().join(',') + '#' + (CLV.data.legs||[]).length + '#' + (S.week||1);
+  if(key !== survKey){ SURV = simulateRoyale(); survKey = key; }
+  const R = SURV;
+  if(!R || R.tooEarly){ card.style.display='none'; return; }
+  card.style.display='';
+
+  const meta = document.getElementById('survMeta');
+  meta.textContent = `${R.sims.toLocaleString()} simulated seasons · ${R.players.length} alive`
+    + (isDemo() ? ' · DEMO' : '');
+
+  /* ---- the curves ---- */
+  const W=960, H=380, M={t:20,r:120,b:44,l:52};
+  const PW=W-M.l-M.r, PH=H-M.t-M.b;
+  // Trim the horizon to where the outcome is effectively settled — 26 weeks of flat line
+  // is not information, it is just a wide chart.
+  let last = 1;
+  for(let w=0; w<R.horizon; w++)
+    if(R.players.some(p=>R.curve[p][w] > 0.005)) last = w;
+  const wk0 = S.week || 1;
+  const sx = w => M.l + (last ? w/last : 0) * PW;
+  const sy = v => M.t + PH - v * PH;
+
+  let s = '';
+  for(const t of [0,0.25,0.5,0.75,1]){
+    s += `<line x1="${M.l}" x2="${M.l+PW}" y1="${sy(t)}" y2="${sy(t)}" stroke="var(--grid)" stroke-width="1"/>`
+      + `<text class="tick" x="${M.l-10}" y="${sy(t)+4}" text-anchor="end">${Math.round(t*100)}%</text>`;
+  }
+  const step = last > 12 ? 4 : last > 6 ? 2 : 1;
+  for(let w=0; w<=last; w+=step)
+    s += `<text class="tick" x="${sx(w)}" y="${M.t+PH+20}" text-anchor="middle">wk ${wk0+w}</text>`;
+  s += `<text class="axtitle" x="${M.l+PW/2}" y="${H-8}" text-anchor="middle">week</text>`;
+  s += `<text class="axtitle" transform="translate(15,${M.t+PH/2}) rotate(-90)" text-anchor="middle">still alive</text>`;
+
+  const ordered = R.players.slice().sort((a,b)=>R.win[b]-R.win[a]);
+  for(const p of ordered){
+    const pts = R.curve[p].slice(0,last+1).map((v,w)=>`${sx(w)},${sy(v)}`).join(' ');
+    s += `<polyline points="${pts}" fill="none" stroke="var(${clvId(p).cssVar})" stroke-width="2.4"
+            stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>`;
+    const endV = R.curve[p][last];
+    s += `<g transform="translate(${sx(last)},${sy(endV)})">${clvGlyph(p, 4.6, 'stroke="var(--surface-1)" stroke-width="1.6"')}</g>`;
+    s += `<text class="dotlabel" x="${sx(last)+11}" y="${sy(endV)+4}">${esc(teamOf(p))} ${(R.win[p]*100).toFixed(0)}%</text>`;
+  }
+  document.getElementById('survSvg').innerHTML = s;
+
+  /* ---- the table: the two numbers people will actually argue about ---- */
+  document.getElementById('survTbl').innerHTML =
+    `<tbody><tr><th>Who</th><th>Chopped next week</th><th>Takes the pot</th><th>Legs resampled</th></tr>`
+    + ordered.map(p=>{
+        const pool = royalePool(p);
+        return `<tr><td>${esc(teamOf(p))}${chute(p)}${p===(ME&&ME.name)?' <span class="me">· you</span>':''}</td>
+          <td>${pct(R.nextChop[p])}</td><td>${pct(R.win[p])}</td>
+          <td class="tm">${pool.length}${pool.length<3?' — thin':''}</td></tr>`;
+      }).join('') + `</tbody>`;
+
+  /* Same split as the CLV footnote. What stays visible is what changes between loads and
+     what is a claim about these numbers: that they are simulated, how many seasons, and
+     whether anyone on the table has too little history to be resampled honestly. The
+     method — what the sim does and does not model — is the drawer.
+     ⚠️ "Simulation, not a forecast" does NOT go in the drawer. It is the same class of
+     claim as the CLV chart's demo strip. */
+  const thin = R.players.filter(p => royalePool(p).length < 3).length;
+  document.getElementById('survFoot').innerHTML =
+      `<p class="live"><b>Simulation, not a forecast.</b> ${R.sims.toLocaleString()} seasons resampled from `
+    + `players' own graded legs`
+    + (thin ? ` · <b>${thin} of ${R.players.length}</b> ${thin===1?'has':'have'} fewer than three legs to `
+        + `resample — treat those numbers as decoration` : '')
+    + (R.softLegs ? ` · <b>${R.softLegs} of ${R.totalLegs}</b> resampled legs price off a self-reported entry` : '')
+    + `</p>`
+    + `<details class="method"><summary>How this simulation is built</summary><div class="method-body">`
+    + `<b>Simulation, not a forecast.</b> ${R.sims.toLocaleString()} seasons, each week dealing every survivor `
+    + `one of their own graded legs at random and re-rolling only the outcome from that leg's de-vigged closing `
+    + `price. Nobody's future betting is invented — but a player is only as predictable as their history is long, `
+    + `and the <i>legs resampled</i> column is how much history there is. Under three, treat their number as `
+    + `decoration.<br><br>`
+    + `<b>What it does not model.</b> Legs are drawn independently, and in Bozo they are not — several players `
+    + `land on the same game most weeks. That correlation makes both clean weeks and bloodbaths more common than `
+    + `this shows, so the middle of this chart is too smooth. Prop and “other” legs take their Worst Beat margin `
+    + `from their own price, since a binary leg has none of its own.`
+    + (R.buyback ? ` Re-deploys need no assumption any more: they are automatic, so the simulation does exactly `
+      + `what the league does — one each, spent on the chop, never at the final two.`
+      : ``)
+    + (R.softLegs ? `<br><br><b>${R.softLegs} of ${R.totalLegs} resampled legs have no captured close</b>, so their `
+      + `win probability comes from the entry price instead — a self-reported number. Those legs flatter whoever `
+      + `entered them optimistically.` : '')
+    + `</div></details>`;
+}
+
+async function clvLoad(force){
+  const card = document.getElementById('clvCard');
+  if(onHub()){ card.style.display='none'; return; }
+  if(CLV.loading) return;
+  if(CLV.lid===LID && CLV.data && !force){
+    card.style.display=view()==='overview' ? '' : 'none';
+    if(view()==='diagnostics') paintDiagnosticsExplorer();
+    return;
+  }
+  CLV.loading = true;
+  try{
+    const j = await wGet('/bozo/clv?league='+encodeURIComponent(LID));
+    CLV.data = j; CLV.lid = LID;
+    CLV.series = {}; CLV.dom = {};
+    CLV.players = (j.players||[]).slice().sort();
+    CLV.me = ME ? ME.name : null;
+    CLV.maxWeek = Math.max(1, ...j.legs.map(l=>l.week));
+    CLV.sports = [...new Set(j.legs.map(l=>l.sport))].sort();
+    clvBuildIdent();
+    CLV.state.on = new Set(CLV.players);
+    CLV.state.sel = null; CLV.state.hover = null;
+    CLV.state.week = CLV.maxWeek; CLV.state.sport = 'all';
+
+    // Nothing graded yet is a real state, not an error. Say so instead of drawing an
+    // empty axis frame, which reads as "broken".
+    if(!j.legs.length){ card.style.display='none'; if(view()==='diagnostics') paintDiagnosticsExplorer(); return; }
+    card.style.display=view()==='overview' ? '' : 'none';
+
+    const wk=document.getElementById('clvWeek');
+    wk.max = CLV.maxWeek; wk.value = CLV.maxWeek;
+    document.getElementById('clvSport').innerHTML = '<option value="all">All sports</option>'
+      + CLV.sports.map(s=>`<option value="${esc(s)}">${esc(s.toUpperCase())}</option>`).join('');
+    // The demo warning is a strip above the plot, not a line in the footnote — see the
+    // note above clvFootLive for why it does not go in the drawer.
+    document.getElementById('clvSim').style.display = CLV.data.synthetic ? '' : 'none';
+    document.getElementById('clvFoot').innerHTML = clvFootLive() + clvMethod();
+    clvRender();
+    if(view()==='overview') paintSurvival();
+    if(view()==='diagnostics') paintDiagnosticsExplorer();
+  }catch(e){
+    card.style.display='none';
+    if(view()==='diagnostics'){
+      document.getElementById('dxMeta').textContent='ledger unavailable';
+      document.getElementById('dxChart').innerHTML='<div class="dash-empty">The diagnostics ledger could not be reached. Try this sheet again in a moment.</div>';
+    }
+  }finally{ CLV.loading=false; }
+}
+
+(function clvWireControls(){
+  const seg=(a,b,onA,onB)=>{
+    const A=document.getElementById(a), B=document.getElementById(b);
+    if(!A||!B) return;
+    A.onclick=()=>{ A.setAttribute('aria-pressed','true'); B.setAttribute('aria-pressed','false'); onA(); };
+    B.onclick=()=>{ B.setAttribute('aria-pressed','true'); A.setAttribute('aria-pressed','false'); onB(); };
+  };
+  seg('clv-week','clv-season', ()=>{ CLV.state.mode='week'; clvRender(); },
+                               ()=>{ CLV.state.mode='season'; clvRender(); });
+  seg('clv-chart','clv-table',
+    ()=>{ CLV.state.display='chart';
+          document.getElementById('clvChartView').hidden=false;
+          document.getElementById('clvTableView').hidden=true; clvRender(); },
+    ()=>{ CLV.state.display='table';
+          document.getElementById('clvChartView').hidden=true;
+          document.getElementById('clvTableView').hidden=false; clvRender(); });
+  const wk=document.getElementById('clvWeek');
+  if(wk) wk.oninput = e=>{ CLV.state.week=+e.target.value; clvRender(); };
+  const bd=document.getElementById('clvBand');
+  if(bd) bd.onchange = e=>{ CLV.state.band=e.target.checked; clvRender(); };
+  const sp=document.getElementById('clvSport');
+  // ⚠️ A sport filter rebuilds the series AND the domain for that slice. "My CLV on NBA
+  // vs NFL" is a real question and the answer must not be plotted on the all-sports frame.
+  if(sp) sp.onchange = e=>{ CLV.state.sport=e.target.value; CLV.state.sel=null; clvRender(); };
+  const pb=document.getElementById('clvPlay');
+  if(pb) pb.onclick = ()=>{
+    CLV.state.playing = !CLV.state.playing;
+    pb.setAttribute('aria-pressed', String(CLV.state.playing));
+    pb.textContent = CLV.state.playing ? '❚❚' : '▶';
+    clearInterval(CLV.timer);
+    if(!CLV.state.playing) return;
+    if(CLV.state.week >= CLV.maxWeek) CLV.state.week = 1;
+    CLV.timer = setInterval(()=>{
+      CLV.state.week++;
+      document.getElementById('clvWeek').value = CLV.state.week;
+      clvRender();
+      if(CLV.state.week >= CLV.maxWeek){
+        clearInterval(CLV.timer); CLV.state.playing=false;
+        pb.setAttribute('aria-pressed','false'); pb.textContent='▶';
+      }
+    }, 620);
+  };
+})();
+
+(async function init(){
+  ME = loadSession();
+  // Start the two deliberately public boards immediately. They must not wait behind
+  // account roster or league-directory calls: those can be slow, while the ticket is
+  // the point of the page. Member-only leagues still wait for /league/list to confirm
+  // that this signed-in account may see them.
+  const requested=new URLSearchParams(location.search).get('l');
+  if(requested && /^[a-z0-9-]{2,24}$/.test(requested)) LID=requested;
+  const watchedLid=LID;
+  // ⚠️ Only the one public room now. The Royale demo was the other, and it is gone —
+  // eager-loading a deleted league would open a watch on state that never arrives.
+  const eagerPublic = LID==='main';
+  if(eagerPublic) watchState();
+  await Promise.all([loadRoster(), loadLeagues()]);
+  // A bad or inaccessible ?l= may be normalized by loadLeagues. The interval created
+  // above reads the current LID, but its EventSource was opened for the old one.
+  if(!eagerPublic) watchState();
+  else if(LID!==watchedLid){ if(esHandle) esHandle.close(); refresh(); }
+  renderAuth();
+  loadGames('nfl');
+})();
+</script>
+
+</body>
+</html>

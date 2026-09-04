@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/assets/icon-180.png">
+<meta name="apple-mobile-web-app-title" content="Data Dawgs">
+<meta name="theme-color" content="#070a08" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f2ecdf" media="(prefers-color-scheme: light)">
+<title>Bozo — Data Dawgs</title>
+<link rel="icon" href="data:image/png;base64,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">
+<style>
+:root{
+  color-scheme: dark;
+  --surface-1:#241c12; --page:#070a08;
+  --ink-1:#f5f1ea; --ink-2:#c8c1b4; --ink-3:#8f897d;
+  --grid:#2b251d; --axis:#3b3428; --border:rgba(255,255,255,0.10);
+  --accent:#ff6a02; --accent-ink:#140a02;
+  --good:#2fbf3f; --bad:#ff6b6b; --warn:#eda100;
+}
+:root[data-theme="light"]{
+  color-scheme: light;
+  --surface-1:#fffdf7; --page:#f2ecdf;
+  --ink-1:#2b1c0e; --ink-2:#5b4a37; --ink-3:#8c7b66;
+  --grid:#e3dac6; --axis:#c4b8a2; --border:rgba(49,29,0,0.15);
+  --accent:#d13a00; --accent-ink:#ffffff;
+  --good:#006300; --bad:#c73030; --warn:#a86e00;
+  --navbar:#2a1a06; --navink:#ecdfc9; --navink2:#b7a488;
+}
+/* light theme: paper texture (Browns-style: warm paper field, seal-brown nav) */
+:root[data-theme="light"] body{
+  background-color:var(--page);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23p)' opacity='0.07'/%3E%3C/svg%3E"),
+    radial-gradient(1200px 500px at 50% -100px, rgba(209,58,0,0.06), transparent 70%);
+  background-size:220px 220px, auto;
+  overflow-x:clip;
+}
+:root[data-theme="light"] .card{box-shadow:0 1px 3px rgba(49,29,0,0.07)}
+:root[data-theme="light"] .sitenav{
+  background:var(--navbar);
+  border-bottom:3px solid var(--accent);
+  margin:0 calc(50% - 50vw) 24px;
+  /* ⚠️ NO `+ 24px`. The 50% resolves against the page column's CONTENT box, which is
+     already inside the column's own 24px padding. Adding 24 again pushed the logo 24px
+     right of every page title, light theme only. */
+  padding:12px calc(50vw - 50%);
+}
+:root[data-theme="light"] .brand{color:var(--navink)}
+:root[data-theme="light"] .brand .tag{color:var(--navink2)}
+/* cream nav text applies to the bar itself, NOT to the dropdown panel —
+   the panel is near-white, so cream-on-white made the items unreadable */
+:root[data-theme="light"] .sitenav .links > a,
+:root[data-theme="light"] .grpbtn{color:var(--navink)}
+:root[data-theme="light"] .grpmenu a{color:var(--ink-1);font-weight:650}
+:root[data-theme="light"] .grpmenu a:hover,
+:root[data-theme="light"] .grpmenu a.on,
+:root[data-theme="light"] .grpmenu a.hot{color:var(--accent)}
+:root[data-theme="light"] .sitenav .links a:hover,
+:root[data-theme="light"] .grpbtn:hover{background:rgba(255,106,2,0.16);color:#fff}
+:root[data-theme="light"] .sitenav .links a.on,
+:root[data-theme="light"] .grpbtn.on{color:#ff8a4d;box-shadow:inset 0 -2px 0 #ff8a4d}
+:root[data-theme="light"] .theme-btn{background:rgba(255,106,2,.22);border-color:#ff8a4d;color:#fff;box-shadow:0 0 0 1px rgba(255,138,77,.22)}
+:root[data-theme="light"] .theme-btn:hover{background:#ff6a02;border-color:#ff6a02;color:#fff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink-1);
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px 60px}
+/* ---- site nav ---- */
+.sitenav{display:flex;align-items:center;gap:22px;padding:14px 0;border-bottom:1px solid var(--grid);margin-bottom:24px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--ink-1)}
+.brand img{width:34px;height:42px;object-fit:contain}
+.brand .logo{font-size:19px;font-weight:800;letter-spacing:.02em}
+.brand .logo span{color:var(--accent)}
+.brand .tag{font-size:11.5px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;align-self:center}
+/* ⚠️ Banner armour. bozo.html defines `.tag{font:700 9.5px/1 ui-monospace;padding:3px 6px}`
+   for its W/L chips — 0-1-0 vs the rule above's 0-2-0, so it wins every property that
+   rule does NOT declare. These declarations are the reset.
+   ⚠️ Do NOT add font-size or white-space — the narrow media query below would lose. */
+.sitenav .brand .tag{font-family:inherit;font-weight:400;font-style:normal;line-height:inherit;
+  padding:0;margin:0;background:none;border:0;border-radius:0;box-shadow:none}
+/* ⚠️ align-items:center, not stretch. The row holds three box models — plain <a>,
+   <a class=grpbtn> in a .navgrp (Labs, Dawgs), <button class=grpbtn> in a
+   .navgrp (Data). Under stretch their text tops were 24.2 / 19.2 / 22.2. */
+.sitenav .links{display:flex;gap:2px;margin-left:auto;flex-wrap:wrap;align-items:center}
+.sitenav .links a{color:var(--ink-2);text-decoration:none;padding:6px 6px;border-radius:8px;font-size:13px;font-weight:550}
+.sitenav .links a:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
+.sitenav .links a.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
+/* nav dropdown groups */
+.navgrp{position:relative;display:flex;align-items:center}
+.grpbtn{background:none;border:none;color:var(--ink-2);padding:6px 6px;border-radius:8px;font-size:13px;font-weight:550;cursor:pointer;font-family:inherit;
+  /* ⚠️ display:block + explicit line-height put a group header on the same baseline as
+     a plain link. <a> defaults to inline (overflows upward), <button> to inline-block
+     with line-height:normal. Both drifted. Do not drop either. */
+  display:block;line-height:1.55}
+.grpbtn:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
+.grpbtn.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
+.grpbtn .caret{font-size:10px;opacity:.7}
+/* ⚠️ The Labs header is an <a>, so `.sitenav .links a` (0-2-1) reclaims its colour and
+   out-specifies `:root[data-theme="light"] .grpbtn` (0-2-0) — dark ink on the dark nav
+   bar, i.e. invisible in light theme. Style it as `a.grpbtn`, never bare `.grpbtn`. */
+.sitenav .links a.grpbtn{color:var(--ink-2);text-decoration:none}
+.sitenav .links a.grpbtn:hover{background:color-mix(in srgb, var(--accent) 10%, transparent);color:var(--ink-1)}
+.sitenav .links a.grpbtn.on{color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent);border-radius:8px 8px 0 0}
+:root[data-theme="light"] .sitenav .links a.grpbtn{color:var(--navink)}
+:root[data-theme="light"] .sitenav .links a.grpbtn:hover{background:rgba(255,106,2,0.16);color:#fff}
+:root[data-theme="light"] .sitenav .links a.grpbtn.on{color:#ff8a4d;box-shadow:inset 0 -2px 0 #ff8a4d}
+.grpmenu{position:absolute;top:100%;left:0;min-width:190px;background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:6px;display:none;z-index:60;box-shadow:0 10px 30px rgba(0,0,0,.35);margin-top:4px}
+.grpmenu::before{content:"";position:absolute;top:-8px;left:0;right:0;height:8px}
+.navgrp.open .grpmenu{display:block}
+@media (hover:hover){ .navgrp:hover .grpmenu{display:block} }
+.grpmenu a{display:block;padding:9px 13px;border-radius:7px;color:var(--ink-1);text-decoration:none;font-size:14px;font-weight:650;white-space:nowrap}
+.grpmenu a:hover{background:color-mix(in srgb, var(--accent) 14%, transparent);color:var(--accent)}
+/* Dropdown selection is a text treatment, not the top-level tab treatment.
+   The stronger selectors override `.sitenav .links a.on`, whose inset shadow is the
+   underline reserved for the active domain header. */
+.sitenav .links .grpmenu a.on{color:var(--accent);font-weight:750;
+  box-shadow:none;border-radius:7px}
+:root[data-theme="light"] .sitenav .links .grpmenu a.on{
+  color:var(--accent);font-weight:750;box-shadow:none;border-radius:7px}
+.grpmenu a.hot{color:var(--accent);font-weight:750}
+.grpmenu a.hot::before{content:"●";font-size:9px;margin-right:7px;vertical-align:1px;animation:ddpulse 1.6s ease-in-out infinite}
+.grpmenu a.arena-item{display:flex;align-items:center;gap:9px;font-family:inherit;font-weight:650}
+.grpmenu a.arena-item .arena-icon{display:inline-grid;place-items:center;width:23px;height:23px;
+  border:1px solid color-mix(in srgb,var(--accent) 24%,var(--border));border-radius:7px;
+  background:color-mix(in srgb,var(--accent) 10%,var(--surface-2));
+  font:15px/1 "Segoe UI Emoji","Apple Color Emoji",sans-serif;box-shadow:inset 0 1px 0 rgba(255,255,255,.08);flex:none}
+@keyframes ddpulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* The one live control — status light and route to the board in a single button.
+   Selectors must out-specify `.sitenav .links a`, which otherwise reclaims padding,
+   radius and weight and flattens the pill into plain text. */
+.sitenav .links a.livebtn,
+:root[data-theme="light"] .sitenav .links > a.livebtn{
+  display:inline-flex;align-items:center;gap:7px;
+  background:var(--accent);color:#fff;text-decoration:none;border-radius:999px;
+  padding:6px 15px;font-size:12.5px;font-weight:800;letter-spacing:.06em;margin-left:8px;
+  box-shadow:0 2px 10px color-mix(in srgb, var(--accent) 45%, transparent)}
+.sitenav .links a.livebtn:hover,
+:root[data-theme="light"] .sitenav .links a.livebtn:hover{
+  background:var(--accent);color:#fff;filter:brightness(1.12)}
+.sitenav .links a.livebtn .dot{width:7px;height:7px;border-radius:50%;background:#fff;
+  animation:ddpulse 1.6s ease-in-out infinite;flex:none}
+.sitenav .links a.livebtn.off,
+:root[data-theme="light"] .sitenav .links > a.livebtn.off{
+  background:none;box-shadow:none;border:1px solid var(--border);color:var(--ink-3);font-weight:700}
+.sitenav .links a.livebtn.off .dot{animation:none;opacity:.45;background:currentColor}
+/* operator sits below a rule — its own zone, locked down on draft day */
+.grpmenu a.sep{border-top:1px solid var(--grid);margin-top:5px;padding-top:10px;
+  color:var(--ink-3)!important;font-weight:600}
+.grpmenu a.sep{display:flex;align-items:baseline;gap:10px}
+.grpmenu a.sep::after{content:"operator";margin-left:auto;font-size:9.5px;letter-spacing:.06em;
+  text-transform:uppercase;opacity:.6}
+.grpmenu a.sep:hover{color:var(--accent)!important}
+/* ---------- navauth — sign-in as its own section of the banner (8/7) ----------
+   ⚠️ It is a direct child of .sitenav sitting BETWEEN .brand and .links, in the dead
+   space between the logo and the menu. It is deliberately NOT inside .links: that row
+   is flex-wrap:nowrap on phones and already runs five nav items plus two buttons in a
+   single line, so an eighth child there pushes the theme button off-screen. In the gap
+   it costs nothing, because the gap was already empty.
+   ⚠️ Light theme paints the bar seal-brown (--navbar), so the chip needs the same
+   cream-on-brown override .theme-btn already carries. Without it the border and text
+   inherit page colours and vanish into the bar. */
+.navauth{display:flex;align-items:center;flex:0 0 auto;min-width:0;margin-left:4px}
+.navauth .authbtn{display:inline-flex;align-items:center;gap:6px;background:none;
+  border:1px solid var(--border);border-radius:999px;color:var(--ink-2);
+  padding:4px 12px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:600;
+  line-height:1.6;white-space:nowrap;max-width:170px}
+.navauth .authbtn:hover{border-color:var(--accent);color:var(--ink-1)}
+.navauth .authbtn .who{overflow:hidden;text-overflow:ellipsis}
+.navauth .authbtn .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);flex:0 0 auto}
+.navauth.in .authbtn{border-color:color-mix(in srgb, var(--accent) 55%, transparent);color:var(--ink-1)}
+:root[data-theme="light"] .navauth .authbtn{border-color:rgba(236,223,201,0.35);color:var(--navink)}
+:root[data-theme="light"] .navauth .authbtn:hover{border-color:var(--accent);color:#fff}
+:root[data-theme="light"] .navauth.in .authbtn{border-color:rgba(255,138,77,0.7);color:#ffd9c2}
+/* ---- the sign-in dialog: one per page, built lazily on first open ---- */
+.authmodal{position:fixed;inset:0;z-index:9500;display:none;align-items:center;
+  justify-content:center;background:rgba(0,0,0,0.62);padding:18px}
+.authmodal.open{display:flex}
+/* ⚠️ Enumerated, and !important. The `hidden` attribute loses to any `display` rule
+   that out-specifies it — that is exactly how the DFS custom-payout box shipped
+   visible. Do not delete this line thinking the attribute is enough. */
+.authmodal [hidden]{display:none !important}
+.authmodal .box{position:relative;background:var(--surface-1);border:1px solid var(--border);
+  border-radius:14px;width:min(380px,100%);max-height:88vh;overflow:auto;padding:22px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);color:var(--ink-1)}
+.authmodal h3{margin:0 0 6px;font-size:18px;color:var(--ink-1)}
+.authmodal .sub{margin:0 0 4px;color:var(--ink-2);font-size:13px}
+.authmodal label{display:block;font-size:11px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);margin:12px 0 4px}
+.authmodal input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:9px;
+  background:var(--page);color:var(--ink-1);font:inherit;font-size:14px}
+.authmodal input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.authmodal .go{display:block;width:100%;margin-top:12px;padding:10px 14px;border-radius:10px;
+  border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);
+  font:inherit;font-size:14px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
+.authmodal .go.alt{background:none;color:var(--ink-1);border-color:var(--border)}
+.authmodal .go.alt:hover{border-color:var(--accent)}
+.authmodal .err{margin:10px 0 0;color:var(--bad);font-size:13px;min-height:1.2em}
+.authmodal .err.ok{color:var(--good)}
+.authmodal .note{margin:14px 0 0;color:var(--ink-3);font-size:12px;line-height:1.5}
+.authmodal .x{position:absolute;top:8px;right:10px;background:none;border:0;color:var(--ink-3);
+  font-size:22px;line-height:1;cursor:pointer;padding:4px 8px}
+.authmodal .x:hover{color:var(--ink-1)}
+.theme-btn{display:inline-flex;align-items:center;gap:4px;background:rgba(255,106,2,.10);border:1px solid var(--accent);border-radius:999px;color:var(--ink-1);padding:4px 10px;cursor:pointer;font-size:12.5px;font-weight:800;box-shadow:0 0 0 1px rgba(255,106,2,.12)}
+.theme-btn:hover{background:var(--accent);color:var(--accent-ink)}
+.sitenav .links .theme-btn{margin-left:10px}
+/* ---- 🙃 The Upside Down: the machine-readable mirror, made visible ----
+   Sits NEXT TO the theme pill but is deliberately not part of it: dashed border, no
+   word label. The everyday light/dark toggle stays binary — this is a third door, not
+   a third state. See the .livebtn note above for why every selector here is scoped
+   `.sitenav .links`: a bare `.udbtn` loses to `.sitenav .links a` on anything it
+   shares, and would silently flatten the day the button becomes an <a>. */
+.udbtn{background:none;border:1px dashed var(--border);border-radius:8px;color:var(--ink-2);
+  padding:4px 9px;cursor:pointer;font-size:13px;line-height:1.55;font-family:inherit;
+  display:block}
+/* ⚠️ 🙃 IS NOT A NAV ITEM. Moved 2026-08-08 out of the nav's flex run and down to
+   its own centred row at the foot of every page — see the .udfoot injection in the nav
+   script. Bottom-CENTRE, not bottom-right: Ask Toto owns the right corner as a fixed
+   button and would sit on top of it. The two phone rules that used to squeeze 🙃 into
+   the one-row nav were deleted with this move, which hands ~24px of slack back to the
+   360px layout. If 🙃 ever returns to the nav, restore all three together. */
+.udfoot{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;padding:20px 0 4px}
+/* ⚠️ CEP-5A Stage 7: the DawgHouse link lives in this row because the row is the only
+   footer markup identical on all 28 pages — the <footer> elements themselves are not.
+   The shelf is off-nav on purpose; this is how it stays reachable. */
+.udhouse{border:1px dashed var(--border);border-radius:8px;color:var(--ink-3);text-decoration:none;padding:5px 10px;font:700 11px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace}
+.udhouse:hover{border-color:var(--accent);color:var(--accent)}
+:root[data-theme="light"] .udhouse{border-color:rgba(236,223,201,0.40);color:var(--navink2)}
+:root[data-theme="light"] .udhouse:hover{border-color:#ff8a4d;color:#ff8a4d}
+.udbtn:hover{border-color:var(--accent);color:var(--accent)}
+:root[data-theme="light"] .udbtn{border-color:rgba(236,223,201,0.40);color:var(--navink2)}
+:root[data-theme="light"] .udbtn:hover{border-color:#ff8a4d;color:#ff8a4d}
+
+/* ---- the overlay itself ----
+   ALWAYS dark, whatever the page is set to — the Upside Down is one fixed place, and
+   a light-mode version of it would be a fourth theme nobody asked for. Colours are
+   therefore hard-coded to the dark tokens, NOT var(--page)/var(--ink-*), which would
+   flip to cream under :root[data-theme="light"]. Do not "tidy" them into variables. */
+.ud-ov{position:fixed;inset:0;z-index:9000;display:none;background:#161009;color:#c8c1b4;
+  overflow:auto;overscroll-behavior:contain;
+  font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.ud-ov.on{display:block}
+.ud-cv{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;opacity:.55}
+.ud-in{position:relative;max-width:1040px;margin:0 auto;padding:18px 20px 70px}
+.ud-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  border-bottom:1px solid #2b251d;padding-bottom:12px;margin-bottom:14px}
+.ud-ttl{font-size:15px;font-weight:800;color:#f5f1ea;letter-spacing:.02em;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.ud-ttl b{color:#ff6a02}
+.ud-path{color:#8f897d;font-size:11.5px;word-break:break-all}
+.ud-path a{color:#ff6a02}
+.ud-x{margin-left:auto;background:none;border:1px solid rgba(255,255,255,.18);
+  border-radius:8px;color:#c8c1b4;padding:5px 11px;cursor:pointer;font:inherit;flex:0 0 auto}
+.ud-x:hover{border-color:#ff6a02;color:#ff6a02}
+.ud-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.ud-chip{border:1px solid #2b251d;background:#241c12;border-radius:999px;
+  padding:4px 12px;font-size:11.5px;color:#c8c1b4;max-width:100%;overflow-wrap:anywhere}
+.ud-chip b{color:#ff6a02;font-weight:800;text-transform:uppercase;letter-spacing:.07em;
+  font-size:9.5px;margin-right:7px}
+.ud-chip.dawg{border-color:#2fbf3f}
+.ud-chip.dawg b{color:#2fbf3f}
+.ud-note{background:#241c12;border:1px solid #2b251d;border-left:2px solid #ff6a02;
+  border-radius:0 8px 8px 0;padding:10px 13px;margin:0 0 12px;color:#c8c1b4;
+  font:13px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+.ud-note b{color:#f5f1ea}
+/* ⚠️ inline-block + anywhere, not a plain inline run with margin-right: at 360px the
+   third path ran straight off the right edge of the overlay. Caught by looking, not by
+   a bounds check — the overlay scrolls, so nothing reported an overflow. */
+.ud-also{margin:0 0 12px;color:#8f897d;font-size:11.5px;overflow-wrap:anywhere}
+.ud-also a{color:#ff6a02;display:inline-block;margin:0 12px 4px 0}
+.ud-body{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;
+  background:#241c12;border:1px solid #2b251d;border-radius:10px;padding:14px 16px;
+  color:#c8c1b4;font:12.5px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.ud-k{color:#8f897d}
+.ud-s{color:#ffab6b}
+.ud-n{color:#2fbf3f}
+.ud-w{color:#ff6b6b}
+.ud-foot{margin:14px 0 0;color:#8f897d;font-size:11.5px;
+  font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+@media(max-width:760px){
+  .ud-in{padding:14px 13px 60px}
+  .ud-body{font-size:11.5px;padding:11px 12px}
+}
+
+/* Copy A — index.html only. A footnote to the manifesto, not a line of it: the
+   manifesto still ends on the Cleveland kicker and this sits after that block closes. */
+.udnote{margin:22px 0 0;padding:12px 16px;border:1px dashed var(--border);border-radius:10px;
+  color:var(--ink-2);font-size:13.5px;line-height:1.55;
+  background:color-mix(in srgb, var(--accent) 5%, transparent)}
+.udmach{white-space:nowrap}
+.navbrk{display:none}
+/* A few nav items ship BOTH a full label and a phone label; exactly one is ever shown.
+   Desktop gets the full one. The phone rule below flips them.
+   ⚠️ These defaults must live OUTSIDE the media query — without them every page at every
+   width renders "The DawgHouseDawgHouse". */
+.nlg{display:inline}
+.nsm{display:none}
+@media(max-width:760px){
+  /* ⚠️ ONE ROW ON PHONES — brand, all six links and the theme button share a single
+     line. It used to wrap onto four rows and eat 181px before any content; this is 44px.
+     What pays for it: the tagline is hidden, the wordmark drops to 12px, two labels use
+     their `short` form, and the theme button becomes its icon.
+     ⚠️ flex-wrap:nowrap on BOTH .sitenav and .links is load-bearing — leave either one
+     wrapping and the theme button returns to a line of its own.
+     ⚠️ .navbrk is a forced flex break belonging to the OLD two-row layout. It must be
+     hidden here or it breaks the very row it was written to organise. */
+  .sitenav{flex-wrap:nowrap;justify-content:flex-start;gap:0 6px;padding:8px 0}
+  .sitenav .brand{width:auto;flex:0 0 auto;justify-content:flex-start;gap:5px}
+  .sitenav .brand img{width:22px;height:27px}
+  .sitenav .brand .logo{font-size:12px;letter-spacing:-.2px;white-space:nowrap}
+  .sitenav .brand .tag{display:none}
+  .sitenav .navauth{margin-left:auto}
+  .sitenav .navauth .authbtn{padding:3px 8px;font-size:10.5px;max-width:104px;gap:4px;line-height:1.5}
+  .sitenav .navauth .authbtn .dot{width:6px;height:6px}
+  .sitenav .links{width:auto;flex:1 1 auto;margin-left:auto;flex-wrap:nowrap;
+    justify-content:flex-end;gap:0 1px;min-width:0}
+  .sitenav .links .navbrk{display:none}
+  .sitenav .links a,.sitenav .links .grpbtn{padding:4px 2px;font-size:10px;
+    white-space:nowrap;letter-spacing:-.2px}
+  .sitenav .links .caret{display:none}
+  .sitenav .links .theme-btn{margin-left:4px;padding:4px 6px;font-size:12px;flex:0 0 auto}
+  .theme-btn .tword{display:none}
+  /* ⚠️ THE SLACK IS SPENT. The ~28px that 🙃 freed when it moved to the footer row on
+     2026-08-08 was taken on 2026-08-11 by the Prediction Markets and A.I. groups, along
+     with 1px per side off the padding below and two `short:` labels (Rcpt, Mkts). Eight
+     groups now fit with nothing left over: a ninth collides at 420 and 520 even with the
+     font at 9.5px, the gap at zero and the theme button and sign-in chip tightened. The
+     next section is an overflow menu, not another entry.
+     ⚠️ Re-measure with an element-vs-element overlap check, never a bounds check —
+     work/test-nav-fit.mjs explains why a bounds check cannot see this failure. */
+  .nlg{display:none} .nsm{display:inline}
+}
+/* ⚠️ Second breakpoint, and it is not cosmetic. Measured at 360px: the brand (105px)
+   + six links (222px) + the theme button (29px) + gaps need ~362px inside a ~312px
+   container. .links is `flex:1 1 auto; min-width:0`, so instead of wrapping it gets
+   SQUEEZED and — because it is justify-content:flex-end — its content spills LEFT,
+   printing the nav straight over the wordmark. It is not clipped and it is not
+   overflowing the viewport, so a bounds check will not see it. Only an element-vs-
+   element overlap check catches it; test_nav.mjs has one now.
+   Dropping the wordmark buys back ~78px, which is the whole deficit. The logo mark
+   stays, and the whole brand is still the link home. Above 420px the wordmark fits
+   and comes back. */
+@media(max-width:519px){
+  .sitenav .brand .logo{display:none}
+}
+@media(max-width:419px){
+  /* The six-section nav fits beside the logo and account chip. Keep the desktop
+     composition instead of forcing .links onto a second row. The old two-row rule
+     was written for an eight-group nav and survived after the menu became smaller. */
+  .sitenav{flex-wrap:nowrap;gap:0 10px}
+  .sitenav .links{flex:1 1 auto;margin-left:0;justify-content:flex-start;
+    flex-wrap:nowrap;gap:4px;padding-top:0}
+  .sitenav .links .theme-btn{margin-left:2px}
+  .sitenav .navauth{margin-left:auto}
+  .sitenav .navauth .authbtn{padding:3px 6px;font-size:10px;max-width:72px}
+  .sitenav .links a,.sitenav .links .grpbtn{
+    padding:4px 1px;font-size:11px;letter-spacing:-.2px}
+  .sitenav .links a.livebtn{margin-left:0}
+  :root[data-theme="light"] .sitenav .links > a.livebtn{margin-left:0}
+
+  /* Ask Toto occupies the lower-right corner when the page is scrolled to its foot. */
+  .udfoot{justify-content:flex-start;padding-bottom:72px}
+}
+/* The smallest supported phones need another few pixels, but still keep the same row. */
+@media(max-width:359px){
+  .sitenav{gap:0 6px}
+  .sitenav .brand img{width:20px;height:25px}
+  .sitenav .navauth .authbtn{padding:3px 5px;font-size:9.5px;max-width:64px}
+  .sitenav .links{justify-content:flex-start;gap:2px}
+  .sitenav .links a,.sitenav .links .grpbtn{padding:3px 1px;font-size:9.5px}
+  .sitenav .links .theme-btn{margin-left:0;padding:3px 4px;font-size:11px}
+}
+/* Desktop's compact brand lockup belongs on phones too. Stack the tagline under
+   DATA DAWGS so it costs height, not horizontal room. The dog-only fallback remains
+   below 360px, where the full lockup and six domains cannot coexist legibly. */
+@media(min-width:360px) and (max-width:519px){
+  /* Pull the lockup into the wrapper gutter. Its negative margin also returns those
+     pixels to the middle group instead of shrinking the tap targets. */
+  .sitenav .brand{display:grid;grid-template-columns:22px auto;
+    grid-template-rows:auto auto;column-gap:5px;row-gap:0;align-items:center;
+    margin-left:-8px}
+  .sitenav .brand img{grid-column:1;grid-row:1/3}
+  .sitenav .brand .logo{display:block;grid-column:2;grid-row:1;
+    font-size:9.5px;line-height:1;letter-spacing:-.3px;white-space:nowrap}
+  .sitenav .brand .tag{display:block;grid-column:2;grid-row:2;
+    font-size:5.5px;line-height:1;letter-spacing:.04em;white-space:nowrap}
+  /* Equal auto margins bookend the domain run inside .links. This spends the open
+     middle space on both sides of the run instead of leaving one dead patch before
+     the account controls. */
+  .sitenav .links{gap:4px}
+  .sitenav .links .navgrp:first-child{margin-left:auto}
+  .sitenav .navauth{margin-left:auto}
+}
+@media(min-width:360px) and (max-width:379px){
+  .sitenav{gap:0 6px}
+  .sitenav .brand{grid-template-columns:20px auto;column-gap:4px}
+  .sitenav .brand img{width:20px;height:25px}
+  .sitenav .brand .logo{font-size:8.5px}
+  .sitenav .brand .tag{font-size:5px}
+  .sitenav .links{gap:3px}
+  .sitenav .links a,.sitenav .links .grpbtn{padding:3px 1px;font-size:9.5px}
+  .sitenav .navauth .authbtn{padding:3px 4px;font-size:9px;max-width:58px}
+  .sitenav .links .theme-btn{margin-left:0;padding:3px 4px;font-size:11px}
+}
+@media(min-width:380px) and (max-width:419px){
+  /* ⚠️ gap was 5px and had to come down when the bar went to SEVEN groups: at exactly
+     390px the run ended 1px past the viewport and the document scrolled sideways. This
+     band is the tight one because the brand lockup is at its full 22px here while the
+     widths below 380 shrink it. 4px keeps minDomainGap well clear of the 2.5px floor
+     work/test-nav-fit.mjs enforces, and buys 6px — the overflow was 1. */
+  .sitenav .links{gap:4px}
+  .sitenav .links a,.sitenav .links .grpbtn{padding:4px 1px;font-size:10.5px}
+}
+/* ---- cards & type ---- */
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:18px}
+.card h2{font-size:17px;font-weight:700;margin:0 0 8px}
+.card h3{font-size:14.5px;font-weight:650;margin:16px 0 6px}
+.card p{margin:8px 0;color:var(--ink-1)}
+.muted{color:var(--ink-3);font-size:12.5px}
+.callout{border-left:3px solid var(--accent);padding:10px 14px;background:color-mix(in srgb, var(--accent) 6%, transparent);border-radius:0 8px 8px 0;margin:12px 0;font-size:14px}
+.callout.warn{border-left-color:var(--warn);background:color-mix(in srgb, var(--warn) 8%, transparent)}
+a{color:var(--accent)}
+.pill{display:inline-block;font-size:11px;font-weight:650;letter-spacing:.03em;border-radius:6px;padding:2px 8px;margin-right:4px}
+.pill.buy{background:color-mix(in srgb, var(--good) 14%, transparent);color:var(--good)}
+.pill.fade{background:color-mix(in srgb, var(--bad) 13%, transparent);color:var(--bad)}
+.pill.zrb{background:color-mix(in srgb, var(--accent) 13%, transparent);color:var(--accent)}
+.pill.pos{background:color-mix(in srgb, var(--ink-3) 15%, transparent);color:var(--ink-2)}
+/* ---- tables ---- */
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:14px}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-3);font-weight:600;text-align:right;padding:6px 8px;border-bottom:1px solid var(--grid);white-space:nowrap}
+th.tl,td.tl{text-align:left}
+td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--grid);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+/* ---- landing ---- */
+.hero{padding:34px 0 6px;text-align:center;max-width:720px;margin:0 auto}
+/* Dark hero = all brand orange. Light hero = banner-brown binary with orange eyes + wordmark.
+   NO filter and NO drop-shadow: at 46px blur the shadow haloed into a visible box. */
+.hero img{width:min(360px,74vw);height:auto;display:block;margin:0 auto 6px;filter:none}
+.hero .hero-light{display:none}
+:root[data-theme="light"] .hero .hero-dark{display:none}
+:root[data-theme="light"] .hero .hero-light{display:block}
+.hero .tagline{font-size:17px;color:var(--ink-2);margin:10px 0 8px;letter-spacing:.01em}
+/* ---- manifesto (home) ---- */
+.manifesto{max-width:660px;margin:12px auto 0}
+.manifesto section{margin:34px 0}
+.manifesto h2{font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--accent);margin:0 0 12px}
+.manifesto p{font-size:16px;line-height:1.72;color:var(--ink-1);margin:0 0 15px}
+.manifesto p em{color:var(--ink-2);font-style:italic}
+.manifesto section+section{border-top:1px solid var(--grid);padding-top:30px}
+/* the four practice items: a rule instead of bullets — reads as field notes, not a list */
+.manifesto .field{border-left:2px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  padding-left:16px;margin:0 0 20px}
+.manifesto .field .lead{display:block;font-weight:750;color:var(--ink-1);margin-bottom:3px}
+/* closing line — the landing */
+.manifesto .kicker{font-size:20px;font-weight:800;line-height:1.5;text-align:center;
+  color:var(--accent);max-width:520px;margin:22px auto 0;letter-spacing:.005em}
+@media(max-width:560px){.manifesto .kicker{font-size:17.5px}}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:26px}
+.tile{display:block;text-decoration:none;color:var(--ink-1);background:var(--surface-1);border:1px solid var(--border);border-radius:14px;padding:20px 22px;transition:border-color .15s}
+.tile:hover{border-color:var(--accent)}
+.tile h2{margin:0 0 6px;font-size:16.5px;font-weight:700}
+.tile p{margin:0;color:var(--ink-2);font-size:13.5px}
+.tile .go{display:block;margin-top:12px;color:var(--accent);font-size:13px;font-weight:600}
+footer{color:var(--ink-3);font-size:12px;margin-top:26px;border-top:1px solid var(--grid);padding-top:14px}
+footer a{color:var(--accent)}
+/* ---- controls ---- */
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:14px}
+.controls input[type=text]{background:var(--surface-1);color:var(--ink-1);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:14px;width:220px}
+.chip{border:1px solid var(--border);background:none;color:var(--ink-2);border-radius:7px;padding:4px 10px;cursor:pointer;font-size:13px}
+.chip.on{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn{background:none;border:1px solid var(--border);border-radius:8px;color:var(--ink-2);padding:5px 12px;cursor:pointer;font-size:13px}
+.btn:hover{color:var(--ink-1);border-color:var(--accent)}
+
+/* ================= Bozo ================= */
+.bz-hdr{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+.bz-hdr h1{font-size:28px;margin:0;letter-spacing:-.4px;font-weight:800}
+.bz-sub{color:var(--ink-2);margin:6px 0 22px;max-width:62ch}
+
+/* ================= the playbill header =================
+   One block now does what six stacked ones used to: title, dek, the week/status band,
+   which league you are in, and the cast strip. It is the SAME component on the board and
+   on a player's sheet — only the active cell and the sheet bar change.
+
+   ⚠️ --bz-display is a variable so a display face can be dropped in as a one-line change
+   later. It is not one today on purpose: there are zero webfonts on any page of this
+   site, and the service worker exists as draft-night offline insurance — a face pulled
+   from a third-party CDN is a network dependency the offline path cannot keep. If the
+   face is ever wanted, the shape is a self-hosted subset woff2 in assets/ covering only
+   the wordmark, with font-display:swap and the stack below as fallback. The playbill
+   reads as a playbill because of the STRUCTURE — star eyebrow, centred dek, double rule,
+   mono band, cast strip — not because of the face. */
+.playbill{--bz-display:"Arial Black","Helvetica Neue",Helvetica,Arial,sans-serif;margin:0 0 20px}
+/* Top rail: right-aligned back-link above the wordmark. Empty when #backHub is
+   hidden, and with no padding of its own it collapses to nothing on the hub. */
+.playbill .toprail{display:flex;justify-content:flex-end;align-items:center;min-height:0}
+.playbill .toprail .backlink{margin:0;font:700 10.5px/1 ui-monospace,Menlo,monospace;
+  letter-spacing:.14em;text-transform:uppercase;padding:2px 0 8px}
+.playbill .eyebrow{font:700 10.5px/1 ui-monospace,Menlo,monospace;letter-spacing:.32em;
+  text-transform:uppercase;color:var(--accent);text-align:center;margin:0 0 9px}
+/* the bill's double rule, so the header reads as the top of the same broadside */
+.playbill .eyebrow{padding-bottom:10px;border-bottom:1px solid var(--ink-1);
+  box-shadow:0 3px 0 -1px var(--ink-1)}
+.playbill h1{font-family:var(--bz-display);font-weight:900;font-size:clamp(40px,11.5vw,62px);
+  letter-spacing:-.012em;line-height:.92;text-transform:uppercase;text-align:center;margin:6px 0 0;
+  color:var(--accent);text-shadow:2px 3px 0 var(--pb-shadow)}
+.playbill .dek em{font-family:Georgia,"Times New Roman",ui-serif,serif;font-style:italic}
+/* Kap's line, unchanged and not truncated on mobile — the second clause is the joke. */
+.playbill .dek{color:var(--ink-2);text-align:center;max-width:31ch;margin:11px auto 15px;
+  font-size:14.5px;line-height:1.45}
+.playbill .band{border-top:2px solid var(--ink-1);border-bottom:2px solid var(--ink-1);
+  padding:9px 4px;display:flex;justify-content:center;align-items:center;flex-wrap:wrap}
+.playbill .band > *{font:700 11px/1.5 ui-monospace,Menlo,monospace;letter-spacing:1.7px;
+  text-transform:uppercase;color:var(--ink-2)}
+.playbill .band > * + *::before{content:"·";margin:0 11px;color:var(--ink-3)}
+/* ⚠️ #statusChip still gets `className = 'chip ' + status` and "Week N · status" written
+   to it by render(). It is RESTYLED here rather than rewired: a filled pill would read
+   as a control sitting inside a typographic band, so the status carries in the ink
+   instead. This is also the only place on the page the week number is printed. */
+.playbill .band .chip{background:none;padding:0;border-radius:0;letter-spacing:1.7px}
+.playbill .band .chip.open{color:var(--accent)}
+.playbill .band .chip.placed{color:var(--warn)}
+.playbill .band .chip.graded{color:var(--good)}
+/* ---- the league line: the name IS the switcher ---- */
+.playbill .league{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:10px 2px 0}
+.playbill .league select{background:none;border:0;border-radius:0;color:var(--ink-1);
+  font:750 14.5px system-ui;padding:0;width:auto;min-width:0;cursor:pointer;
+  -webkit-appearance:none;appearance:none}
+.playbill .league select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.playbill .league .lgname{font:750 14.5px system-ui;color:var(--ink-1);
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.playbill .league .lil{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.3px;
+  text-transform:uppercase;color:var(--ink-3)}
+.playbill .league .demo{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.3px;
+  text-transform:uppercase;background:var(--warn);color:#1a1206;padding:4px 6px;border-radius:4px}
+/* The league picker and the four page sheets are one navigation decision. Keeping
+   them in one rail means changing leagues never requires returning to the directory. */
+.playbill .page-tabs{display:grid;grid-template-columns:minmax(190px,auto) minmax(0,1fr);
+  align-items:stretch;margin-top:12px;border-top:1px solid var(--grid);border-bottom:1px solid var(--grid)}
+.playbill .page-tabs > .league,.playbill .page-tabs > .snav{min-width:0}
+.playbill .page-tabs .league{padding:9px 14px 9px 2px;border-right:1px solid var(--grid);flex-wrap:nowrap}
+/* Nothing else shares this line any more, so the name takes the cell it is given
+   and truncates with an ellipsis rather than against a neighbour. */
+.playbill .page-tabs .league select{max-width:100%;flex:0 1 auto;font-weight:850;
+  text-overflow:ellipsis}
+.playbill .page-tabs .league .lgname{flex:0 1 auto}
+.playbill .page-tabs .snav{margin:0;border-top:0;align-self:stretch}
+.playbill .page-tabs .snav button{display:flex;align-items:center;justify-content:center}
+@media(max-width:720px){
+  .playbill .page-tabs{grid-template-columns:1fr}
+  .playbill .page-tabs .league{border-right:0;border-bottom:1px solid var(--grid);padding:9px 2px}
+  .playbill .page-tabs .league select{max-width:100%}
+}
+/* ---- the cast strip: board / one cell per player / league ----
+   ⚠️ ONE row that scrolls, not a wrapping cloud of pills. Ten pills wrapped to three
+   rows at 390px and pushed the board under the fold, which is the whole reason this
+   header was rebuilt. Flush cells divided by hairlines read as a playbill's cast list;
+   pills read as filters, which is a different claim about what these are. */
+.playbill .snav{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:0;margin:12px 0 0;
+  border-top:1px solid var(--grid);scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.playbill .snav::-webkit-scrollbar{display:none}
+.playbill .snav button{flex:0 0 auto;background:none;border:0;border-right:1px solid var(--grid);
+  border-radius:0;color:var(--ink-2);padding:10px 13px;cursor:pointer;white-space:nowrap;
+  font:700 11.5px/1 ui-monospace,monospace;letter-spacing:.9px;text-transform:uppercase}
+.playbill .snav button:last-child{border-right:0}
+.playbill .snav button:hover{color:var(--ink-1)}
+.playbill .snav button.on{background:var(--accent);color:var(--accent-ink)}
+/* The pill's border used to carry focus. Flush cells have none, so put a ring back —
+   these are still the page's primary navigation and they are still <button>s. */
+.playbill .snav button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+.playbill .snav .yu{font-size:9px;opacity:.8;margin-left:5px}
+/* ⚠️ Royale dead state lives HERE and nowhere else. There used to be a second roster
+   line inside the Royale card saying the same thing; two renderings of one fact can
+   disagree, and the strip already IS the roster. */
+.playbill .snav button.dead{opacity:.62}
+.playbill .snav button.dead .who{text-decoration:line-through}
+.playbill .snav button .out{font-size:9px;letter-spacing:.8px;margin-left:5px;color:var(--bad)}
+.playbill .snav button.on .out{color:var(--accent-ink);opacity:.85}
+/* ---- the sheet bar: only on a player's sheet ---- */
+.playbill .sheetbar{display:flex;align-items:center;gap:11px;flex-wrap:wrap;
+  border-top:1px solid var(--grid);padding:9px 2px 0;
+  font:700 10.5px/1.6 ui-monospace,monospace;letter-spacing:1.3px;text-transform:uppercase;
+  color:var(--ink-3)}
+.playbill .sheetbar b{color:var(--ink-1)}
+.playbill .sheetbar a{margin-left:auto;color:var(--accent);text-decoration:none}
+@media(max-width:560px){
+  .playbill .dek{font-size:13.5px;margin-bottom:13px}
+  .playbill .band > *{letter-spacing:1.2px}
+  .playbill .band > * + *::before{margin:0 7px}
+}
+.card{background:var(--surface-1);border:1px solid var(--grid);border-radius:12px;padding:18px;margin-bottom:16px}
+h2.bz{font-size:13px;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-3);margin:0 0 12px;font-weight:700}
+.chip{font:700 11px/1 ui-monospace,Menlo,monospace;letter-spacing:1.2px;text-transform:uppercase;padding:5px 9px;border-radius:5px;background:var(--grid);color:var(--ink-2);white-space:nowrap}
+.chip.open{background:var(--accent);color:var(--accent-ink)}
+.chip.placed{background:var(--warn);color:#1a1206}
+.chip.graded{background:var(--good);color:#fff}
+.frm{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f.w2{grid-column:span 2}.f.w4{grid-column:span 4}
+.bz label{font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-3)}
+.bz input,.bz select{background:var(--page);border:1px solid var(--grid);color:var(--ink-1);border-radius:7px;
+  padding:9px 10px;font:15px system-ui;width:100%;min-width:0}
+.bz input:focus,.bz select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:11px 18px;
+  font:800 13px/1 system-ui;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
+.btn.ghost{background:none;color:var(--ink-2);border:1px solid var(--grid)}
+.btn.sm{padding:7px 12px;font-size:11px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.err{color:var(--bad);font-size:13px;margin-top:9px;font-weight:600;min-height:18px}
+.err.ok{color:var(--good)}
+/* ⚠️ The site's base stylesheet sets a bare `th,td{text-align:right;white-space:nowrap}`
+   for the stats tables. This table needs left-aligned prose that wraps, and a bare
+   `td` rule beats "no declaration at all" — so both must be stated explicitly here
+   or the columns drift right of their headers and long legs refuse to wrap. */
+table.bz{width:100%;border-collapse:collapse;font-size:14px}
+table.bz th{text-align:left;font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1.1px;text-transform:uppercase;
+  color:var(--ink-3);padding:0 8px 9px;border-bottom:1px solid var(--grid);white-space:nowrap}
+table.bz td{padding:10px 8px;border-bottom:1px solid var(--grid);vertical-align:top;
+  text-align:left;white-space:normal}
+table.bz td.px,table.bz td.tm{white-space:nowrap}
+table.bz tr:last-child td{border-bottom:0}
+tr.me td{background:color-mix(in srgb, var(--accent) 7%, transparent)}
+tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
+.who{font-weight:750}.pk{color:var(--ink-2);font-size:13.5px}
+.px{font:700 14px ui-monospace,monospace;white-space:nowrap}
+/* .tm wraps by default — it is used for prose captions as well as table cells.
+   Only the cells that must stay on one line get nowrap back (see table.bz above).
+   As nowrap it shot the "scores come from ESPN" caption off the card on a phone. */
+.tm{font:11px ui-monospace,monospace;color:var(--ink-3)}
+.pend{color:var(--ink-3);font-style:italic}
+.tag{display:inline-block;font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.8px;padding:3px 6px;
+  border-radius:4px;text-transform:uppercase;margin-left:6px}
+.tag.w{background:var(--good);color:#fff}.tag.l{background:var(--bad);color:#fff}.tag.p{background:var(--ink-3);color:#fff}
+.rvw{display:inline-block;font:700 9.5px/1 ui-monospace,monospace;letter-spacing:.8px;text-transform:uppercase;
+  padding:3px 6px;border-radius:4px;margin-left:6px;cursor:help;white-space:nowrap}
+.rvw.review{background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--warn);
+  border:1px solid color-mix(in srgb,var(--warn) 45%,transparent)}
+.rvw.hard{background:var(--warn);color:#1a1206}
+.tick{display:flex;gap:22px;flex-wrap:wrap;align-items:baseline;border-top:1px solid var(--grid);margin-top:14px;padding-top:14px}
+.big{font:800 29px/1 ui-monospace,monospace;color:var(--accent);letter-spacing:-1px}
+.lil{font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-3)}
+/* accent carries the headline numbers only — a cost painted the same orange as
+   the payout reads as good news */
+.big.cost{color:var(--ink-1)}
+/* BOZO MACHINE v2 — cabinet, reels, lever. Was two blocks (base + .bz-carnival
+   overrides); folded into one so the geometry has a single home. */
+/* ===================== the cabinet ===================== */
+/* The lever is mounted on a boss on the cabinet's right flank and swings into
+   reserved padding — that is why the arc never crosses the reels. The old build
+   rotated a full-height flex column 58deg about its own centre-bottom inside an
+   82px track, so the knob left the cabinet and landed on the reel glass. */
+.machine{
+  position:relative;isolation:isolate;
+  padding:56px 104px 34px 22px;border-radius:12px;
+  border:2px solid var(--brass-lo);border-top:3px solid var(--brass);
+  background:
+    linear-gradient(180deg,rgba(49,38,23,0),rgba(49,38,23,.33)),
+    radial-gradient(120% 90% at 50% -10%,#3a2c19,#1b1409 72%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.05),inset 0 20px 36px rgba(0,0,0,.45),0 10px 22px rgba(0,0,0,.32);
+  transition:box-shadow .3s}
+/* bulb rail — four repeating radial layers, one per edge. Chase speed is a
+   custom property so escalation is one variable, not four keyframe sets. */
+.machine::before{
+  content:"";position:absolute;inset:8px;border-radius:8px;pointer-events:none;z-index:4;
+  background:
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 0 0/17px 17px repeat-x,
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 0 100%/17px 17px repeat-x,
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 0 0/17px 17px repeat-y,
+    radial-gradient(circle,var(--bulb) 0 2.5px,transparent 3.1px) 100% 0/17px 17px repeat-y;
+  filter:drop-shadow(0 0 4px rgba(255,201,116,.5));
+  opacity:var(--bulbo,.5);
+  animation:bulbchase var(--bulbspeed,1.15s) linear infinite;
+  animation-play-state:var(--bulbrun,paused);
+  transit

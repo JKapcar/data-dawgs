@@ -1,0 +1,862 @@
+    <span class="pulllab" id="pullLab">armed</span>
+    </div>
+    <div class="coins" id="coins"></div>
+    <div class="flash"></div>
+  </div>
+  <ol class="ord" id="ord"></ol>
+  <div class="row" style="margin-top:12px">
+    <button type="button" class="btn ghost sm" id="mute" aria-pressed="false">Sound on</button>
+  </div>
+  <p class="note" id="drawNote"></p>
+</div>
+
+<!-- ---------- CLV vs. result ----------
+     Two questions the league has always run together, pulled apart onto two axes:
+     "did you get a good price" (x, mostly under your control, stabilises fast) and
+     "did you win more than the price implied" (y, mostly luck at this sample size).
+     Same unit on both, so the quadrants compare. -->
+<div class="card" id="clvCard" style="display:none">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Beating the number vs. beating the close</h2>
+    <span class="tm" id="clvHead"></span></div>
+  <p class="note" id="clvSub" style="margin:0 0 14px">Each dot is one player through one week. Horizontal is the price
+    they got against the closing line; vertical is how often they actually won versus how often the closing line said
+    they should. Hover or pick a name to trace a season.</p>
+
+  <!-- ⚠️ This does NOT go in the methodology drawer, and it is not a paragraph of the
+       footnote. It is a truth claim about the numbers on screen, the demo-badge
+       requirement is explicit and site-wide, and a warning a reader has to click to
+       find is a warning most readers never see. Above the plot, always visible. -->
+  <div class="flag" id="clvSim" style="display:none"><span>⚠️</span><span><b>Simulated league.</b>
+    Every price, close and result on this chart is fabricated by the seeding script. It is here to show what a
+    populated board looks like, it counts toward nothing, and it can be deleted from the leagues card.</span></div>
+
+  <div class="clv-controls">
+    <div class="seg" role="group" aria-label="View">
+      <button id="clv-week" aria-pressed="true">By week</button>
+      <button id="clv-season" aria-pressed="false">Season average</button>
+    </div>
+    <div class="weekbox">
+      <label for="clvWeek">Through</label>
+      <input type="range" id="clvWeek" min="1" max="18" value="18" step="1">
+      <span class="weeknum" id="clvWeekNum">Week 18</span>
+      <button class="playbtn" id="clvPlay" aria-pressed="false" aria-label="Play season">&#9654;</button>
+    </div>
+    <label class="clv-check"><input type="checkbox" id="clvBand" checked><span>Luck band</span></label>
+    <label class="clv-check" style="gap:8px"><span class="clv-lab">Sport</span>
+      <select id="clvSport"><option value="all">All sports</option></select></label>
+    <div class="seg" role="group" aria-label="Display" style="margin-left:auto">
+      <button id="clv-chart" aria-pressed="true">Chart</button>
+      <button id="clv-table" aria-pressed="false">Table</button>
+    </div>
+  </div>
+
+  <div class="clv-legend" id="clvLegend"></div>
+  <div class="clv-legnote">Click a name to trace it &middot; shift-click to hide &middot; shape and colour both carry
+    identity, because eight series is past the point where colour alone is reliable &middot; dot size is sample size,
+    so a week-1 dot is one coin flip and a Super Bowl dot is twenty-two.</div>
+
+  <div id="clvChartView">
+    <div class="clv-plot">
+      <svg class="clv-svg" id="clvSvg" viewBox="0 0 960 520" role="img"
+           aria-label="Scatter plot of cumulative closing line value against cumulative win rate versus expected"></svg>
+      <div class="clv-tip" id="clvTip"></div>
+    </div>
+  </div>
+  <div id="clvTableView" hidden><div class="clv-tablewrap"><table class="clv-tbl" id="clvTbl"></table></div></div>
+
+  <div class="clv-foot" id="clvFoot"></div>
+</div>
+
+<!-- ---------- Bozo Royale: survival odds ----------
+     A second chart over the same legs. Where the CLV chart asks whether you have been
+     getting a good price, this asks how the season ends if everyone keeps betting the
+     way they have been. Simulation, and labelled as such everywhere it appears. -->
+<div class="card" id="survCard" style="display:none">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Survival odds</h2>
+    <span class="tm" id="survMeta"></span></div>
+  <p class="note" id="survSub" style="margin:0 0 14px">How the season ends if everyone keeps betting the way
+    they have been. Each simulated week deals every survivor one of their own past legs and re-rolls only the
+    result, so nobody's future betting is invented — it is their own history, replayed.</p>
+  <div class="surv-wrap">
+    <svg class="surv-svg" id="survSvg" viewBox="0 0 960 380" role="img"
+         aria-label="Probability each player is still alive, by week"></svg>
+  </div>
+  <div class="tscroll"><table class="bz survtbl" id="survTbl"></table></div>
+  <div class="clv-foot" id="survFoot"></div>
+</div>
+
+<!-- ---------- the ticket, as a parlay slip ---------- -->
+<div class="card" id="ticketCard">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">The ticket</h2><span class="tm" id="fill"></span></div>
+  <!-- The shared betslip link. Above the slip because it opens the thing below it. -->
+  <div class="slipbar" id="slipBar"></div>
+  <div class="slip" id="board"></div>
+  <p class="note" id="placeNote"></p>
+</div>
+
+<!-- ---------- diagnostics ---------- -->
+<div class="card bz-carnival" id="diagCard" style="display:none">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Diagnostics</h2><span class="tm" id="dgMeta"></span></div>
+  <div class="stat-grid" id="dgTiles"></div>
+  <div id="dgFlags"></div>
+  <div class="tscroll"><table class="bz" id="dgTable"><tbody></tbody></table></div>
+  <p class="note" id="dgNote"></p>
+</div>
+
+<!-- ---------- grading (admin) ---------- -->
+<div class="card" id="gradeCard" style="display:none">
+  <h2 class="bz">Grade the week</h2>
+  <div class="row"><button class="btn" id="autoGrade">Pull results</button>
+    <span class="tm">NFL and CFB scores come from the Worker's scheduled cache. Props and closing prices are the only manual bits.</span></div>
+  <div class="err" id="gerr"></div>
+  <div id="manual" style="margin-top:14px"></div>
+</div>
+
+<div class="verdict" id="verdict" style="display:none">
+  <!-- The belt itself. This card is the moment it changes hands, so it is the one place
+       the trophy is shown at any size. -->
+  <div class="belttrophy" role="img" aria-label="The Bozo belt"></div>
+  <div class="lil" style="color:#b7a488">This week's bozo</div>
+  <div class="nm" id="vName">—</div><div class="why" id="vWhy"></div>
+</div>
+
+<!-- ---------- season ---------- -->
+<div class="card bz-carnival" id="seasonCard">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Season Bozo Count</h2><span class="tm" id="lbMeta"></span></div>
+  <div class="tboard" id="lb"></div>
+  <div class="row" style="margin-top:14px" id="adminRow" style="display:none">
+    <button class="btn ghost sm" id="next">Start next week</button>
+  </div>
+  <p class="note" id="srcNote"></p>
+</div>
+
+<!-- ---------- Bozo Royale: the chop log ----------
+     ⚠️ This card is LAST on the board on purpose, below the season table. A chop log is
+     a receipt, and receipts go at the end. It used to sit above the hierarchy machine,
+     where four stacked blocks of prose were the first thing anyone read on a Royale
+     board — before the ticket, before the draw, before the standings. Who is alive is
+     now on the cast strip in the header, and the one piece of NEWS in here (a re-deploy
+     from the most recent graded week) is hoisted to #royaleAlert under the header.
+
+     ⚠️ Nothing here is a prompt. Get chopped with a re-deploy left and you are put back
+     on the next ticket automatically — the Warzone gulag, not a menu. This card reports
+     what already happened to you. The old buy-back needed a timed window to stop a
+     chopped player lurking and re-entering at the final two; taking the decision away
+     closes that by construction, because there is nothing left to defer. -->
+<div class="card" id="royaleCard" style="display:none">
+  <div class="bz-hdr"><h2 class="bz" style="margin:0">Bozo Royale</h2><span class="tm" id="royaleState"></span></div>
+  <div id="royaleBody"></div>
+</div>
+
+</div>
+
+</div>
+<script>
+/* ============================================================
+   Bozo — the trust layer lives in the Worker, not here.
+   Reads come straight from RTDB (/bozo is world-readable, so the board is
+   public and needs no credential). Every WRITE goes to the toto Worker with a
+   session header; the Worker stamps the timestamp, enforces the price band and
+   draws the tiebreaker permutation. Nothing here is load-bearing for fairness —
+   if you forged this whole file you still could not write a pick.
+   ============================================================ */
+const WORKER = 'https://toto.jkapcar4.workers.dev';
+const DB     = 'https://data-dawgs-draft-default-rtdb.firebaseio.com';
+const SESS_K = 'dd-bozo-sess';
+/* Legacy account-recovery links may still land here as bozo.html?join=<tok>.
+   They create or recover identity only and never grant league membership. The
+   claim card lives on signon.html, so forward the token there. */
+(function(){
+  const tok = new URLSearchParams(location.search).get('join');
+  if (tok) location.replace('signon.html?join=' + encodeURIComponent(tok) + '&next=bozo.html');
+})();
+
+// The Worker is the authority on who may grade (BOZO_ADMIN). This constant only
+// decides whether to SHOW the admin controls — a wrong value here gets a 403,
+// it does not grant anything. The repo is public; this was never a secret.
+const ADMIN = 'Kap';
+
+const SPORTS = {nfl:{n:'NFL',sd:13.5,tot:10.5}, cfb:{n:'CFB',sd:16,tot:14},
+  nba:{n:'NBA',sd:11.5,tot:17}, cbb:{n:'CBB',sd:10.5,tot:13},
+  mlb:{n:'MLB',sd:4.4,tot:4.2}, nhl:{n:'NHL',sd:2.3,tot:2.1}};
+const ESPN_PATH = {nfl:'football/nfl', cfb:'football/college-football',
+  nba:'basketball/nba', cbb:'basketball/mens-college-basketball',
+  mlb:'baseball/mlb', nhl:'hockey/nhl'};
+const LEVERS = [{k:'odds',name:'Shortest Odds',desc:'biggest favorite in the pool'},
+  {k:'beat',name:'Worst Beat',desc:'finished furthest under its number'},
+  {k:'last',name:'Last In',desc:'final leg submitted'},
+  {k:'clv', name:'Worst CLV', desc:'price moved most against it'}];
+/* Reel glyphs. Kept out of LEVERS so that array keeps its shape for every other
+   consumer (the grader, the simulator, DD_BOTCTX); keyed by lever k. */
+const LEVER_ICON = {
+  odds :'<svg viewBox="0 0 24 24" fill="none" stroke="#8a1a0c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 12.7 12.9 20.4a1.6 1.6 0 0 1-2.3 0l-7-7a1.6 1.6 0 0 1-.5-1.1V4.7c0-.9.7-1.6 1.6-1.6h7.6c.4 0 .8.2 1.1.5l7.2 7.2a1.6 1.6 0 0 1 0 2.3Z"/><circle cx="7.6" cy="7.6" r="1.4" fill="#8a1a0c"/></svg>',
+  beat :'<svg viewBox="0 0 24 24" fill="none" stroke="#8a1a0c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6 14.9 8.5l6.5.95-4.7 4.6 1.1 6.5L12 17.5l-5.8 3.05 1.1-6.5-4.7-4.6 6.5-.95z"/><path d="M12 8.6v3.2" stroke-width="2.2"/><circle cx="12" cy="14.6" r=".9" fill="#8a1a0c" stroke="none"/></svg>',
+  last :'<svg viewBox="0 0 24 24" fill="none" stroke="#8a1a0c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.6"/><path d="M12 9.4v4.1l2.8 1.7M9.4 2.7h5.2M18.6 6.1l1.6-1.6"/></svg>',
+  clv  :'<svg viewBox="0 0 24 24" fill="none" stroke="#8a1a0c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.2 6.4 9.6 13l3.5-3.5 7.7 7.7"/><path d="M20.8 12.4v4.8H16"/></svg>'
+};
+
+
+let S = {};                 // live state for the SELECTED league, from RTDB
+let LEAGUES = [];           // [{id,name,manager,size,members,week,status}]
+let LID = 'main';           // which league we're looking at (?l=)
+let joinGateStatusLid = null; // manager-only password/visibility status, loaded once per page
+let JOIN_DIRECTORY = [];    // signed-in directory used by Join Existing League on the hub
+let joinDirectoryLoaded = false, joinDirectoryLoading = false, joinSelected = null;
+let ROSTER = [];            // every account on the site, [{name, claimed}]
+let ME = null;              // {name, session}
+let GAMES = {};             // sport -> games[]
+let drawnOrder = null;      // the key this PAGE LOAD has already revealed; null = not yet
+
+/* ---------------- session ---------------- */
+// The session is an HMAC-signed blob the Worker minted. We decode the payload
+// only to show a name and notice expiry — the signature is what matters and only
+// the Worker can check it.
+function loadSession(){
+  const raw = localStorage.getItem(SESS_K);
+  if(!raw) return null;
+  try{
+    const body = JSON.parse(atob(raw.split('.')[0].replace(/-/g,'+').replace(/_/g,'/')));
+    if(!body.n || !body.e || Date.now() > body.e){ localStorage.removeItem(SESS_K); return null; }
+    return {name:body.n, session:raw};
+  }catch(e){ localStorage.removeItem(SESS_K); return null; }
+}
+/* ⚠️ Both go through window.DDAuth (defined in the nav script) when it exists, so the
+   banner chip and this page never disagree about who is signed in. Writing the key
+   directly still works — DDAuth re-reads it — but the chip would not repaint until the
+   next page load, which reads as a bug. The fallbacks keep this file standalone. */
+function setSession(tok){
+  if(window.DDAuth) window.DDAuth.set(tok); else localStorage.setItem(SESS_K, tok);
+  ME = loadSession();
+  joinDirectoryLoaded = false; joinSelected = null;
+}
+function clearSession(){
+  if(window.DDAuth) window.DDAuth.clear(); else localStorage.removeItem(SESS_K);
+  ME = null;
+  joinDirectoryLoaded = false; joinSelected = null;
+}
+
+// Every Worker GET gets a cache-buster. The Worker sends no-store now, but a
+// stale roster once showed a player the claim form after they had already
+// claimed — belt and braces, it costs nothing.
+const bust = () => 'cb=' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+async function wGet(path){
+  const h = {};
+  // Directory visibility is session-aware. GETs use the same advertised header as
+  // writes, so /league/list can return public leagues plus only this member's leagues.
+  if(ME) h['X-Bozo-Session'] = ME.session;
+  const r = await fetch(WORKER + path + (path.includes('?')?'&':'?') + bust(), {headers:h});
+  const j = await r.json().catch(()=>({error:'bad response'}));
+  if(!r.ok) throw new Error(j.error || ('HTTP '+r.status));
+  return j;
+}
+// Every write names its league. The Worker defaults to "main" when absent, but being
+// explicit means a stale tab can never write into the wrong league after a switch.
+async function wPost(path, body){
+  const h = {'Content-Type':'application/json'};
+  // ⚠️ This header name is load-bearing. The Worker ACCEPTS both X-Dawg-Session
+  // and X-Bozo-Session, but its CORS Access-Control-Allow-Headers only ADVERTISES
+  // X-Bozo-Session. A custom header the preflight doesn't advertise is rejected by
+  // the browser before the request is ever sent — every authenticated write died
+  // with a bare "Failed to fetch". Do not rename this without shipping the Worker's
+  // allow-list in the same deploy. test_headers.mjs pins the two together.
+  if(ME) h['X-Bozo-Session'] = ME.session;
+  const r = await fetch(WORKER + path, {method:'POST', headers:h,
+    body:JSON.stringify({league:LID, ...(body||{})})});
+  const j = await r.json().catch(()=>({error:'bad response'}));
+  if(!r.ok){
+    // The Worker kills sessions when a password changes or an admin resets you.
+    if(r.status === 401 && /sign in|password/i.test(j.error||'')){ clearSession(); renderAuth(); }
+    throw new Error(j.error || ('HTTP '+r.status));
+  }
+  return j;
+}
+
+/* ---------------- math (unchanged from the design session) ---------------- */
+/* ⚠️ A pick stores `side` — 'over'/'under' for totals and props, a team abbr for
+   spreads and moneylines. Nothing has ever written `dir`, so every `x.dir` test in
+   this file was silently false: unders got the OVER expectation, and auto-grading a
+   total marked every over as a loss. dirOf() is the one place that reads it now. A
+   team abbreviation is never 'under', so spreads and MLs fall through to 'over',
+   which is the branch they always wanted. */
+const dirOf = x => ((x && (x.dir || x.side)) === 'under') ? 'under' : 'over';
+const dec  = a => a<0 ? 1+100/Math.abs(a) : 1+a/100;
+const imp  = a => a<0 ? Math.abs(a)/(Math.abs(a)+100) : 100/(a+100);
+/* Proportional de-vig against the opposite side of the same two-way market.
+   ⚠️ Null when either side is missing, deliberately. Raw implied and de-vigged differ by
+   roughly the whole hold, so a function that "falls back" to raw would let two different
+   quantities be compared as if they were one. Callers must handle the null. */
+const devigP = (a,b) => (a==null||b==null) ? null : (imp(a)/(imp(a)+imp(b)));
+const amer = d => d>=2 ? '+'+Math.round((d-1)*100) : '-'+Math.round(100/(d-1));
+// Acklam's inverse normal — turns a price into an expected margin.
+function invNorm(p){
+  if(p<=0)return -6; if(p>=1)return 6;
+  const a=[-39.696830286653757,220.94609842452050,-275.92851044696869,138.35775186726900,-30.664798066147160,2.5066282774592392],
+        b=[-54.476098798224058,161.58583685804089,-155.69897985988661,66.801311887719720,-13.280681552885721],
+        c=[-0.0077848940024302926,-0.32239645804113648,-2.4007582771618381,-2.5497325393437338,4.3746641414649678,2.9381639826987831],
+        d=[0.0077846957090414622,0.32246712907003983,2.4451340770184519,3.7544086619074162];
+  const pl=0.02425; let q,r;
+  if(p<pl){ q=Math.sqrt(-2*Math.log(p));
+    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  if(p>1-pl){ q=Math.sqrt(-2*Math.log(1-p));
+    return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1); }
+  q=p-.5; r=q*q;
+  return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+}
+function sdOf(x){ const s=SPORTS[x.sport];
+  // ⚠️ "other" inherits the PROP guess (line x 0.55) because that is honestly all we
+  // know about an arbitrary number. It is flagged as soft everywhere props are.
+  return x.mkt==='total' ? s.tot
+       : (x.mkt==='prop' || x.mkt==='other') ? Math.max(Math.abs(x.line)*.55,1)
+       : s.sd; }
+/* Expected result = the number, shifted by what the price says. A −175 favorite
+   laying 3 is expected to clear 3; a −110 laying 3 is expected to land on it.
+   That shift is why moneylines need no reference spread typed in: line is 0 and
+   the price alone carries the whole expectation. */
+function expected(x){
+  const sd=sdOf(x), p=Math.min(.98,Math.max(.02, imp(x.price)-.022));   // crude de-vig
+  const shift=sd*invNorm(p), base = x.mkt==='ml' ? 0 : x.line;
+  return dirOf(x)==='under' ? base-shift : base+shift;
+}
+
+/* ---------------- close-vs-submitted review flags ----------------
+   ⚠️ DORMANT TODAY. Every check below returns null while `close` is missing, and no
+   closing price is captured yet. That is the honest state: nothing is being checked
+   right now. It lights up by itself the moment closes land — no further page work.
+
+   ⚠️ CLV MEASURES THE MOVE. THIS MEASURES IMPLAUSIBILITY. Do not conflate them. A
+   large adverse move is exactly what the CLV lever exists to punish and is NOT
+   suspicious — it is the lever working. What is suspicious is a gap too large to be
+   a market move at all: -110 closing -130 is Tuesday; -110 closing -400 is not a
+   line move, it is a wrong number.
+
+   ⚠️ DIRECTION CARRIES MOST OF THE INFORMATION. Understating your price — claiming
+   -110 on a -400 favourite — makes the close look far SHORTER than what you
+   submitted, and that is the direction that flatters you on both Shortest Odds and
+   Worst Beat. The opposite direction costs the submitter, so the same magnitude is
+   far more likely to be a typo. Same number, different prior. Label them apart and
+   let a human decide — this flags for review, it never accuses.
+
+   ⚠️ THE THRESHOLDS BELOW ARE A FIRST GUESS AND ARE NOT CALIBRATED. They should be
+   re-cut against real closes after a season, and probably become league dials. */
+const FLAG_PP = {review:10, hard:20};      // implied-probability points on the price
+const FLAG_SD = {review:0.25, hard:0.5};   // line movement, in that sport's SDs
+function reviewFlag(r){
+  if(!r || !Number.isFinite(+r.price)) return null;
+  const out=[];
+  if(Number.isFinite(+r.close)){
+    // signed: positive means the SUBMITTED price was longer than the close
+    const d = imp(+r.close) - imp(+r.price), pp = Math.abs(d)*100;
+    if(pp >= FLAG_PP.review) out.push({
+      level: pp >= FLAG_PP.hard ? 'hard' : 'review',
+      why: `submitted ${r.price}, closed ${r.close} — ${pp.toFixed(1)}pp of implied probability, `
+         + (d > 0 ? 'in the direction that would flatter the submitter'
+                  : 'in the direction that costs the submitter (more likely a typo)')});
+  }
+  if(r.mkt && r.mkt!=='ml' && Number.isFinite(+r.mainLine) && Number.isFinite(+r.line)){
+    const sd = sdOf(r) || 1, dl = Math.abs(+r.mainLine - +r.line), sds = dl/sd;
+    if(sds >= FLAG_SD.review) out.push({
+      level: sds >= FLAG_SD.hard ? 'hard' : 'review',
+      why: `the number moved ${dl.toFixed(1)} (${sds.toFixed(2)} SD) from ${r.line} to ${r.mainLine}`});
+  }
+  if(!out.length) return null;
+  return {level: out.some(o=>o.level==='hard') ? 'hard' : 'review', why: out.map(o=>o.why).join('; ')};
+}
+const flagBadge = f => !f ? '' :
+  `<span class="rvw ${f.level}" title="${esc(f.why)}">${f.level==='hard'?'check this':'review'}</span>`;
+// Every flagged row across the whole league ledger — what a manager actually wants.
+function flaggedRows(){
+  return Object.values(S.ledger||{}).map(r=>({r, f:reviewFlag(r)})).filter(x=>x.f);
+}
+
+/* ---------------- reading a price out of a text box ----------------
+   ⚠️ The price boxes are text, not type="number" (see .pxin in the CSS: Android's
+   numeric keypad has no minus key). So NOTHING may read `+el.value` any more —
+   `+"238"` is 238, `+""` is 0 and `+"-"` is NaN, and only the last of those is
+   obviously wrong. Everything goes through these two.
+
+   priceNum() is the strict read: a signed integer or nothing. It returns NaN for a
+   half-typed "-" or "+", which is what a caller mid-keystroke should see.
+
+   favPrice() is the Price box only. That box shows its minus as a painted prefix and
+   holds digits alone, so "238" IS the favourite -238 — and a pasted "-238" or "+238"
+   reads the same, because the favourites-only band leaves no second bet those could
+   mean. The OTHER SIDE box is deliberately NOT coerced: a pick'em prices both sides
+   negative, so its sign is real information and guessing it would change the de-vig. */
+function priceNum(raw){
+  const s = String(raw ?? '').trim().replace(/[\s,]/g, '');
+  return /^[+-]?\d+$/.test(s) ? Number(s) : NaN;
+}
+const favPrice = raw => { const n = priceNum(raw); return Number.isFinite(n) ? -Math.abs(n) : NaN; };
+const fmtPrice = n => (n > 0 ? '+' : '') + n;
+const priceSourceBadge = x => x && x.priceSource === 'captured'
+  ? '<span class="cst ok" title="Both sides captured from DraftKings through SGO">DK captured</span>'
+  : '<span class="cst warn" title="Self-priced; no two-sided captured entry, so this leg is excluded from CLV">self · no CLV</span>';
+
+// Server capture replaced the old browser-side price guesswork. The warning slot stays
+// because old markup and the live prefill call it, but only the server decides whether a
+// captured quote matches the line and league band.
+function paintPriceWarn(){
+  const el = document.getElementById('priceWarn'); if(!el) return;
+  el.textContent = ''; el.style.display = 'none';
+}
+
+/* ---------------- scores: the page calls ESPN itself ---------------- */
+// ESPN answers 403 to Cloudflare egress and 200 to a browser. The form keeps the
+// direct browser call as its fast path; /scores now falls back to the Worker's compact
+// nflverse/cfbfastR schedule cache rather than retrying ESPN from the blocked network.
+function dateRange(){
+  const p=n=>String(n).padStart(2,'0'), f=x=>x.getFullYear()+p(x.getMonth()+1)+p(x.getDate());
+  const now=Date.now();
+  return f(new Date(now-3*864e5)) + '-' + f(new Date(now+10*864e5));
+}
+function slim(raw){
+  return (raw.events||[]).map(ev=>{
+    const comp=(ev.competitions&&ev.competitions[0])||{};
+    const teams=(comp.competitors||[]).map(c=>({
+      abbr:(c.team&&(c.team.abbreviation||c.team.shortDisplayName))||'?',
+      name:(c.team&&c.team.displayName)||'?',
+      home:c.homeAway==='home',
+      score:c.score==null?null:Number(c.score)}));
+    const st=(ev.status&&ev.status.type)||{};
+    return {id:String(ev.id), short:ev.shortName||ev.name||'', start:ev.date||null,
+            state:st.state||'pre', final:st.completed===true, teams};
+  });
+}
+async function fetchScores(sport){
+  const url = `https://site.api.espn.com/apis/site/v2/sports/${ESPN_PATH[sport]}/scoreboard?dates=${dateRange()}&limit=400`;
+  try{
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('ESPN '+r.status);
+    return slim(await r.json());
+  }catch(e){
+    const j = await wGet(`/scores?sport=${sport}&dates=${dateRange()}`);   // fallback
+    return j.games||[];
+  }
+}
+async function loadGames(sport){
+  const sel=document.getElementById('fGame');
+  sel.innerHTML='<option value="">Loading…</option>';
+  try{
+    GAMES[sport]=await fetchScores(sport);
+    document.getElementById('srcNote').textContent='';
+  }catch(e){
+    GAMES[sport]=[];
+    document.getElementById('srcNote').textContent='Scores unreachable — '+e.message+'. Grading falls back to manual entry.';
+  }
+  paintGames();
+  // The games are the last thing the prefill was waiting on — see myLegNow().
+  try{ prefillFromMyLeg(); }catch(e){ /* never let a prefill break the game list */ }
+}
+function paintGames(){
+  const sp=document.getElementById('fSport').value, sel=document.getElementById('fGame');
+  const g=GAMES[sp]||[];
+  sel.innerHTML = g.length
+    ? g.map(x=>`<option value="${x.id}">${esc(x.short)}${x.final?' · final':''}</option>`).join('')
+    : '<option value="">no games in window</option>';
+  paintSides();
+}
+
+/* ---------------- the form opens on the leg you already have ----------------
+   ⚠️ IT USED TO OPEN ON ITS OWN DEFAULTS. Market fell to Spread (the first <option>),
+   the game fell to whatever loaded first, and your actual leg sat two cards below in
+   your sheet. Nothing in this file ever read your pick back into the form — there was
+   no `fMkt.value =` anywhere — so a member holding a moneyline saw "Spread" selected,
+   typed their moneyline price against it, and got the off-market warning. That reads
+   as the page telling you your BET is wrong when what is really wrong is that the form
+   never knew what your bet was.
+
+   ⚠️ THE PRICE IS DELIBERATELY NOT PREFILLED, and that is the whole judgement here.
+   "Editing resets your clock AND your price" is a rule, not a side effect: an edit
+   takes the price at the moment you edit. Filling the old number back in would let a
+   stale price ride out on a fresh timestamp, which is the exact thing the reset exists
+   to prevent. So the SELECTION comes back — sport, game, market, side, number — and
+   the price you pay is re-read from the book every time. Same for the other side.
+
+   ⚠️ Only fires while the form is untouched. render() runs on the 15-second poll and
+   on every EventSource put, so a prefill that ignored that would overwrite what you
+   were typing, mid-keystroke, every time somebody else's leg landed. */
+let formTouched = false, prefilledFor = null;
+// ⚠️ Derived here rather than passed in, because this runs from TWO places that know
+// different things: render(), which has the board but maybe not the games, and
+// loadGames(), which has the games but no board context. The games arrive after the
+// first render and nothing re-renders until the 15s poll, so a prefill that only ran
+// from render() left the form on its defaults for up to fifteen seconds after load —
+// which is the whole window in which somebody reads the form and starts typing.
+const myLegNow = () => (ME && S && S.picks) ? (S.picks[kEnc(ME.name)] || null) : null;
+function prefillFromMyLeg(mine = myLegNow()){
+  if(!mine){ prefilledFor = null; return; }              // leg removed — allow a re-fill
+  // ⚠️ Keyed on the leg's own ts, so an edit (which restamps it) re-fills, and a poll
+  // that returns the same leg does not.
+  const key = [S.season||'', S.week||1, mine.ts||0].join(':');
+  if(formTouched || prefilledFor === key) return;
+
+  const fS=document.getElementById('fSport'), fG=document.getElementById('fGame'),
+        fM=document.getElementById('fMkt'),  fSd=document.getElementById('fSide'),
+        fL=document.getElementById('fLine'), fPr=document.getElementById('fProp');
+
+  // Sport first: the game list is per-sport and every field below reads out of it.
+  if(mine.sport && SPORTS[mine.sport] && fS.value !== mine.sport){
+    fS.value = mine.sport;
+    if(GAMES[mine.sport]) paintGames();
+    else { loadGames(mine.sport); return; }   // async — resume on the next render
+  }
+  // ⚠️ Bail rather than guess if the game is gone from the window. A leg whose game has
+  // aged out still exists on the board; silently selecting a DIFFERENT game so the form
+  // looks populated would be worse than leaving it alone.
+  if(!(GAMES[fS.value]||[]).some(x => String(x.id) === String(mine.eventId))) return;
+
+  prefilledFor = key;
+  fG.value = String(mine.eventId);
+  if(mine.mkt) fM.value = mine.mkt;
+  // paintSides() rebuilds Side FOR THIS MARKET and shows/hides Number, so it has to run
+  // after the market is set and before the side is chosen.
+  paintSides();
+  if(mine.side) fSd.value = mine.side;
+  if(mine.mkt !== 'ml' && mine.line != null) fL.value = mine.line;
+  if(mine.prop) fPr.value = mine.prop;
+  // The optional price check stays empty: every edit captures a fresh quote.
+  paintLegPreview(); paintPriceWarn();
+}
+
+/* Grade one leg against its game's realised numbers. PURE, and separate from autoGrade
+   so it can be tested for real rather than re-implemented in a test — a second copy of
+   this arithmetic would be exactly as wrong as the first and agree with it perfectly.
+
+   ⚠️ THREE OUTCOMES. `edge` is signed distance past the number, so exactly 0 is a PUSH.
+   The old code compared with `>` and had no third state, which scored every leg landing
+   on its number as a loss — and a loss makes you eligible to wear it, or in Bozo Royale
+   to be eliminated.
+
+   ⚠️ `line` is what THIS SIDE GIVES UP: positive lays points, negative takes them. So
+   m − line is correct in both directions, including the MLB/NHL runline dog at +1.5
+   stored as −1.5. Bozo is favourites-only, which makes that dog the band-legal baseball
+   and hockey spread — it is the common case there, not an exotic one.
+
+   ⚠️ A moneyline has no number, so the margin itself is the edge, and a drawn game is a
+   push rather than a loss. */
+function legEdge(mkt, dir, line, margin, total){
+  return mkt === 'total' ? (dir === 'over' ? (total - line) : (line - total))
+       : mkt === 'ml'    ? margin
+       :                   (margin - line);
+}
+function gradeLeg(mkt, dir, line, margin, total){
+  const edge = legEdge(mkt, dir, line, margin, total);
+  return edge > 0 ? 'won' : edge < 0 ? 'lost' : 'push';
+}
+
+/* WORST BEAT: how far under its number the leg finished, in standard deviations.
+
+   ⚠️ FROM THE NUMBER, NOT FROM THE PRICE, and that is the correction. This used to
+   measure the gap to expected(), which folds the price in — a −400 favourite is
+   "expected" to win by more, so the same miss scored worse for them. But SHORTEST ODDS
+   is already the lever that punishes taking chalk. Pricing it in here too made two of
+   the four levers measure overlapping things, which is the opposite of what a randomised
+   hierarchy of independent levers is for. data/bozo-rules.json says "finished furthest
+   under its number, in standard deviations" — the number, and this now is that.
+
+   ⚠️ It is the SAME edge the grader uses, negated. You lost by exactly the amount you
+   missed by; there is no second definition of "missed" to drift from the first. */
+function beatDeficit(mkt, dir, line, margin, total, sd){
+  if(!(sd > 0)) return null;
+  return -legEdge(mkt, dir, line, margin, total) / sd;
+}
+
+/* The leg exactly as the board will print it. ONE definition, used by the live preview
+   and by the submit — if these were two copies, the preview would eventually reassure
+   someone about a leg the board then displays differently.
+
+   ⚠️ `line` is what this side GIVES UP: positive lays points, negative takes them. So a
+   stored 8.5 prints "-8.5" and a stored -1.5 prints "+1.5". That inversion looks odd
+   until you remember the number is the handicap, not the display. */
+function legLabel(mk, side, line, prop, gameShort){
+  if(mk==='ml') return side+' ML';
+  if(mk==='spread') return `${side} ${line>0?'-':'+'}${Math.abs(line)}`;
+  if(mk==='total') return `${gameShort||''} ${side==='over'?'o':'u'}${line}`;
+  return `${prop||''} ${side==='over'?'o':'u'}${line}`;
+}
+
+/* The two keys the Worker checks a submission against.
+   ⚠️ THE SERVER IS AUTHORITATIVE. These are a mirror, and they exist only so you learn
+   your leg is gone BEFORE you press the button rather than from a rejection afterwards.
+   If they ever drift from the Worker's versions the failure is a warning that is wrong,
+   never a leg that gets through — /bozo/pick re-derives both and refuses on its own. */
+const pageSelectionKey = (eventId, mk, side, line, prop) =>
+  [String(eventId), mk, String(side), mk==='ml' ? '' : String(line ?? ''), String(prop||'')].join('|');
+const pageMarketKey = (eventId, mk, line, prop) =>
+  [String(eventId), mk,
+   mk==='total'  ? String(line ?? '')
+   : mk==='spread' ? String(Math.abs(Number(line)||0))
+   : mk==='prop' ? String(prop||'')+'|'+String(line ?? '')
+   : mk==='other' ? String(prop||'') : ''].join('|');
+
+/* ⚠️ The preview is the actual fix for the spread-sign trap, AND the place the race is
+   made visible. Uniqueness means the first player to claim a selection owns it, and Last
+   In means the newest leg wears it — both of which reward submitting early. Neither is
+   felt by anyone reading a rules page. Showing you that your leg is already gone, and
+   where you would land in the order, is what makes waiting cost something you can see. */
+function paintLegPreview(){
+  const el = document.getElementById('legPrev'); if(!el) return;
+  const mk = fMkt.value, side = fSide.value, raw = fLine.value;
+  const g = (GAMES[fSport.value]||[]).find(x=>x.id===fGame.value);
+  if(!side || (mk!=='ml' && raw==='')){ el.style.display='none'; return; }
+  const line = +raw, prop = fProp.value, eventId = fGame.value;
+  el.style.display='';
+  const takes = mk==='spread' && line < 0;
+
+  let h = `<span class="pl">You are submitting</span> <b>${esc(legLabel(mk, side, line, prop, g?g.short:''))}</b>`
+    + (mk==='spread'
+        ? ` <span class="pl">— ${takes ? `${esc(side)} TAKES ${Math.abs(line)} points`
+                                       : `${esc(side)} LAYS ${Math.abs(line)} points`}</span>`
+        : '');
+
+  /* ---- is it still available? ---- */
+  const mineKey = ME ? kEnc(ME.name) : null;
+  const mySel = pageSelectionKey(eventId, mk, side, line, prop);
+  const myMkt = pageMarketKey(eventId, mk, line, prop);
+  let clash = null;
+  for(const [who, x] of Object.entries(S.picks||{})){
+    if(who === mineKey || !x) continue;
+    const theirSel = x.selectionKey || pageSelectionKey(x.eventId, x.mkt, x.side, x.line, x.prop);
+    if(theirSel === mySel){ clash = { who, kind:'taken', label:x.label }; break; }
+    const theirMkt = x.marketKey || pageMarketKey(x.eventId, x.mkt, x.line, x.prop);
+    if(theirMkt === myMkt && String(x.side) !== String(side)){
+      clash = { who, kind:'clash', label:x.label }; break;
+    }
+  }
+  if(clash){
+    h += clash.kind==='taken'
+      ? `<div class="legwarn"><b>Gone.</b> ${esc(teamOf(playerName(clash.who)))} already has this exact selection,
+         and DraftKings won't take it twice on one parlay. Pick a different side, number or game.</div>`
+      : `<div class="legwarn"><b>Can't sit with ${esc(teamOf(playerName(clash.who)))}'s leg.</b>
+         They have ${esc(clash.label)} — the other side of this same market. Both can't cash, so the ticket
+         could never win.</div>`;
+  }
+
+  /* ---- where you would land in the order ---- */
+  const inNow = Object.keys(S.picks||{}).length;
+  const editing = !!(mineKey && (S.picks||{})[mineKey]);
+  const size = isRoyale() ? royaleAliveNames().length : names().length;
+  const wouldBe = editing ? inNow : inNow + 1;
+  const lastIn = wouldBe >= size;
+  h += `<div class="legrace ${lastIn?'hot':''}">`
+    + (editing
+        ? `⚠️ You already have a leg in. Editing <b>resets your clock and your price</b> — you'd drop from
+           ${ordinal(rankOfMine())} to <b>last</b>, which is what Last In looks at.`
+        : `You'd be <b>${ordinal(wouldBe)}</b> of ${size} in.`)
+    + (lastIn
+        ? ` <b>That's Last In</b> — if the ticket busts and Last In is drawn first, it's you.`
+        : ` The last leg to land wears Last In, so the longer you wait the more exposed you are — and the
+           selection you want can be taken by then.`)
+    + `</div>`;
+
+  el.innerHTML = h;
+}
+const ordinal = n => n + (['th','st','nd','rd'][(n%100-n%10!=10)*(n%10<4)*(n%10)] || 'th');
+// Where my current leg sits in submission order, 1-based.
+function rankOfMine(){
+  if(!ME) return 0;
+  const ks = Object.keys(S.picks||{}).sort((a,b)=>((S.picks[a].ts||0)-(S.picks[b].ts||0)));
+  return ks.indexOf(kEnc(ME.name)) + 1;
+}
+
+function paintSides(){
+  const sp=document.getElementById('fSport').value, id=document.getElementById('fGame').value;
+  const g=(GAMES[sp]||[]).find(x=>x.id===id), mk=document.getElementById('fMkt').value;
+  const sel=document.getElementById('fSide');
+  // ⚠️ "other" is a NUMBER + over/under + a price, not a free-for-all. Kap's call was
+  // "require a number anyway": a leg with nothing to measure would be immune to Worst
+  // Beat, and a lever you can opt out of defeats the randomised hierarchy. So it takes
+  // the same shape as a prop and every lever stays computable.
+  const OU = mk==='total' || mk==='prop' || mk==='other';
+  if(OU) sel.innerHTML='<option value="over">Over</option><option value="under">Under</option>';
+  else sel.innerHTML=(g?g.teams:[]).map(t=>`<option value="${esc(t.abbr)}">${esc(t.name)}</option>`).join('');
+  document.getElementById('lineWrap').style.display = mk==='ml' ? 'none' : '';
+  /* ⚠️ THE SIGN IS THE WHOLE MEANING ON A SPREAD, and the form used to hide it. The
+     stored convention is "points THIS SIDE GIVES UP": positive lays, negative takes.
+     Both the grader (m − line) and expected() depend on that, and there are live legs
+     stored under it, so the convention stays. What changes is that the form stops being
+     silent about it.
+
+     This matters because of one specific leg. Bozo takes favourites only, so the legal
+     baseball and hockey spread is the DOG at +1.5 priced short — a TAKING bet, which has
+     to be typed −1.5. Typed as 1.5 it means laying 1.5 and resolves backwards, and
+     nothing in the old form would have told you. The preview under the box is the real
+     fix: it shows the leg exactly as the board will, before you submit it. */
+  const fl = document.getElementById('fLine');
+  document.getElementById('lineLbl').innerHTML =
+    mk==='spread' ? 'Spread <span class="opt">+ lays &middot; &minus; takes</span>'
+    : mk==='total' ? 'Total' : 'Number';
+  fl.placeholder = mk==='spread' ? '6.5 to lay  ·  -1.5 to take' : '6.5';
+  paintLegPreview();
+  const pw=document.getElementById('propWrap');
+  pw.style.display = (mk==='prop'||mk==='other') ? '' : 'none';
+  const pl=document.getElementById('fProp');
+  document.querySelector('#propWrap label').textContent = mk==='other' ? 'Describe the bet' : 'Player & stat';
+  pl.placeholder = mk==='other' ? 'ARI 1H team total · alt line · whatever it is' : 'Kelce receiving yards';
+  document.getElementById('priceLbl').innerHTML = mk==='other'
+    ? 'Price <span class="opt">required · self-priced</span>'
+    : mk==='prop'
+      ? 'Fallback price <span class="opt">optional</span>'
+      : 'Price check <span class="opt">optional · DK captured</span>';
+}
+
+/* ---------------- live state ---------------- */
+// /bozo is world-readable, so the board streams straight from RTDB with no
+// credential. EventSource = push; the poll is only a safety net.
+let esHandle = null;
+function watchState(){
+  let es=null;
+  try{
+    es = new EventSource(DB + '/bozo/leagues/' + LID + '.json');
+    esHandle = es;
+    es.addEventListener('put', ev=>{
+      try{
+        const m=JSON.parse(ev.data);
+        if(m.path === '/') { S = m.data || {}; render(); }
+        else refresh();
+      }catch(e){ refresh(); }
+    });
+    es.addEventListener('patch', refresh);
+    es.onerror = ()=>{ /* browser retries on its own; the poll covers gaps */ };
+  }catch(e){ /* no EventSource — poll only */ }
+  setInterval(refresh, 15000);
+  refresh();
+}
+async function refresh(){
+  try{
+    const r = await fetch(DB + '/bozo/leagues/' + LID + '.json?' + bust());
+    S = (await r.json()) || {};
+  }catch(e){ return; /* transient network — the next tick retries */ }
+  // ⚠️ render() is OUTSIDE the catch on purpose. It used to sit inside, which meant
+  // a plain ReferenceError in a paint function looked exactly like a dropped fetch:
+  // no console error, no visual break, just some cards quietly not updating. That
+  // hid a dead function call through an entire build. Let paint bugs be loud.
+  render();
+}
+
+/* ---------------- render ---------------- */
+const esc = s => String(s==null?'':s).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+const when = ts => !ts ? '' : new Date(ts).toLocaleDateString(undefined,{weekday:'short'}) + ' ' +
+  new Date(ts).toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});
+// ⚠️ The chips, the board and the season table are the LEAGUE's members — not every
+// account on the site. A four-person league shows four names next to an eight.
+const league = () => LEAGUES.find(l=>l.id===LID) || null;
+const kDec = k => {try{return decodeURIComponent(k);}catch(e){return k;}};
+// A member row is keyed by immutable uid and carries the display name as a label. A row
+// that is still `true` (the demo leagues, and any imported season) falls back to the key,
+// which is where the name lives in that older shape.
+const memberLabel = k => {const v=((S&&S.members)||{})[k]; return (v&&typeof v==='object'&&v.name)?String(v.name):kDec(k);};
+const stateMembers = () => Object.keys((S&&S.members)||{}).map(memberLabel);
+// The live state arrives before the signed-in directory on purpose. Fall back to its
+// member keys so the ticket can paint immediately instead of showing a fake 0-of-8
+// board while account and directory requests finish.
+const names = () => (league()?.members) || stateMembers();
+const allAccounts = () => ROSTER.map(p=>p.name);
+
+// Two different powers. isAdmin is the site owner (creates leagues, can act anywhere);
+// isManager runs THIS league. The Worker enforces both — this only decides what shows.
+const isAdmin = () => !!ME && ME.name === ADMIN;
+const isManager = () => !!ME && (isAdmin() || (league()?.manager) === ME.name);
+
+/* ---------------- league config (the manager's dials) ---------------- */
+// The Worker is the enforcer (validatePick reads /bozo/config); this mirror only
+// decides what the form says and rejects early. Defaults MUST match the Worker's
+// BAND_DEFAULT or the page would promise a band the Worker refuses.
+const band = () => ({
+  ceil:  (S.config && Number.isFinite(S.config.bandCeil))  ? S.config.bandCeil  : -100,
+  floor: (S.config && Number.isFinite(S.config.bandFloor)) ? S.config.bandFloor : -500,
+});
+
+/* ---------------- team names ---------------- */
+// A display name inside ONE league. The account name stays the key everywhere — picks,
+// ledger rows, sheet links — so renaming what the board calls someone can never orphan
+// a receipt, and the same person can be different things in different leagues.
+const teamOf = n => (league()?.teams || {})[kEnc(n)] || (S.teams||{})[kEnc(n)] || n;
+
+/* ⚠️ S.bozo and history[].bozo are PICK KEYS, not roster names. decide() takes the
+   bozo out of Object.keys(picks), and the Worker stores those URL-encoded — "The
+   Kid" is "The%20Kid". Every other comparison in this file uses the decoded name.
+   playerName() was CALLED by the verdict card and defined nowhere, so naming a bozo
+   threw a ReferenceError; because refresh() swallowed render() exceptions, the
+   symptom was not a crash but the season board silently freezing at the moment of
+   grading — everything after the verdict card in render() stopped running. */
+function playerName(key){
+  if(key==null) return '';
+  let d=key; try{ d=decodeURIComponent(key); }catch(e){}
+  return names().includes(d) ? d : key;
+}
+
+/* ---------------- the hub: every league in one place ---------------- */
+// bozo.html with no ?l= is the general Bozo page: the league directory plus, for the
+// site admin, the controls to create more. ?l=<id> opens that league's board.
+const onHub = () => !new URLSearchParams(location.search).get('l');
+
+// Who may edit a given league: the site admin anywhere, a manager in their own.
+const canManage = l => !!ME && (isAdmin() || l.manager === ME.name);
+
+/* ---------------- join an existing league ----------------
+   Discovery belongs on Bozo. Identity setup still belongs on signon.html, but once a
+   person is signed in they choose the league and prove access here with its password. */
+const jlErr = (m, ok=false) => {
+  const e=document.getElementById('jlErr'); e.textContent=m||''; e.className='err'+(ok?' ok':''); return e;
+};
+function chooseJoinLeague(item){
+  joinSelected=item;
+  const passwordWrap=document.getElementById('jlPasswordWrap');
+  const actionWrap=document.getElementById('jlActionWrap');
+  const joinGo=document.getElementById('jlJoinGo');
+  const open=document.getElementById('jlOpen');
+  actionWrap.style.display=''; document.getElementById('jlPassword').value='';
+  if(item.already){
+    passwordWrap.style.display='none'; joinGo.style.display='none';
+    open.href='bozo.html?l='+encodeURIComponent(item.id); open.style.display='';
+    jlErr('You already belong to this league.', true);
+  }else{
+    passwordWrap.style.display=''; joinGo.style.display=''; open.style.display='none';
+    jlErr(''); document.getElementById('jlPassword').focus();
+  }
+}
+function paintJoinDirectory(results,total){
+  JOIN_DIRECTORY=results; joinSelected=null;
+  const sel=document.getElementById('jlDirectory'); sel.innerHTML='';
+  const first=document.createElement('option'); first.value='';
+  first.textContent=results.length
+    ? `Choose a league · ${results.length}${total>results.length?' of '+total:' shown'}`
+    : 'No matching leagues';
+  sel.appendChild(first);
+  results.forEach((item,i)=>{
+    const o=document.createElement('option'); o.value=String(i);
+    o.textContent=`${item.name} · ${item.size} member${item.size===1?'':'s'}${item.already?' · joined':''}`;
+    sel.appendChild(o);
+  });
+  document.getElementById('jlPasswordWrap').style.display='none';
+  document.getElementById('jlActionWrap').style.display='none';
+  if(!results.length) jlErr('No leagues match that filter.');
+  else if(total>20) jlErr('Showing 20 leagues. Filter by name to narrow the list.');
+  else jlErr('');
+  if(results.length===1){ sel.value='0'; chooseJoinLeague(results[0]); }
+}
+async function loadJoinDirectory(query=''){
+  if(!ME || joinDirectoryLoading) return;
+  query=String(query||'').trim();
+  if(query.length===1) return jlErr('Use at least two characters to filter.');
+  joinDirectoryLoading=true; jlErr(query?'Filtering…':'Loading leagues…');
+  try{
+    const r=await wPost('/league/search',{query});
+    paintJoinDirectory(r.results||[],Number(r.total)||0); joinDirectoryLoaded=true;
+  }catch(e){ jlErr(e.message); }
+  finally{ joinDirectoryLoading=false; }
+}
+function paintJoinLeague(){
+  document.getElementById('jlSignedOut').style.display=ME?'none':'';
+  document.getElementById('jlSignedIn').style.display=ME?'':'none';
+  document.getElementById('jlIntro').textContent=ME
+    ? 'Choose a league, then enter its shared password. Your account—not a premade roster name—gets the seat.'
+    : 'Sign in or create your own account first. Then return here to choose the league and enter its shared password.';
+  if(ME && !joinDirectoryLoaded && !joinDirectoryLoading) loadJoinDirectory();
+}
+
+document.getElementById('jlDirectory').onchange=e=>{
+  const i=Number(e.target.value);
+  if(e.target.value!=='' && JOIN_DIRECTORY[i]) chooseJoinLeague(J

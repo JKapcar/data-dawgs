@@ -1,0 +1,718 @@
+   !("idempotentHint" in x.annotations) && !("openWorldHint" in x.annotations)),
+     "the hints nobody verified are ABSENT, not guessed");
+  ok(new Set(full.map(x => x.title)).size === full.length, "titles are unique — two tools with one title is a UI that lies");
+  ok(full.every(x => !("catalog" in x)), "`catalog` is server-side bookkeeping and never reaches the wire");
+
+  ok(fullNamed.length === full.length, "/mcp/full/<pass> lists the same set as the bare /mcp/<pass>");
+  ok(full.length === N_TOOLS && core.length === N_CORE, `full lists ${N_TOOLS}, core lists ${N_CORE}`);
+  const fullNames = new Set(full.map(x => x.name)), coreNames = new Set(core.map(x => x.name));
+  ok([...coreNames].every(n => fullNames.has(n)), "core is a strict subset of full");
+  ok(coreNames.has("dd_whoami") && coreNames.has("dd_bozo_week") && coreNames.has("dd_draft_board") && coreNames.has("dd_site_map"),
+     "core keeps the league's own state and the site map");
+  ok(!coreNames.has("dd_find_cfb_games") && !coreNames.has("dd_solve_dfs_lineup") && !coreNames.has("dd_model_scoreboard"),
+     "core drops the CFB evidence surfaces, the DFS solver and the model scoreboard");
+
+  // callable, not merely listed
+  const okCall = await (await req(call("dd_convert_odds", { american_odds: -110 }), { path: "/mcp/core/" + PASS })).json();
+  ok(okCall.result && !okCall.result.isError, "a core tool is callable on the core path");
+  const blocked = await (await req(call("dd_find_cfb_games", { limit: 1 }), { path: "/mcp/core/" + PASS })).json();
+  ok(blocked.error && blocked.error.code === -32602, "a full-only tool is NOT callable on core — it is an error, not a silent fallback");
+  // ⚠️ read the message defensively: if the catalog stops being enforced there IS no error
+  // object, and a crash here would hide which assertion actually broke.
+  const msgOf = j => (j.error && j.error.message) || "";
+  ok(/not in the `core` catalog/.test(msgOf(blocked)) && /\/mcp\/full\//.test(msgOf(blocked)),
+     "…and the error says which catalog and where to get the tool");
+  const missing = await (await req(call("dd_nonexistent"), { path: "/mcp/core/" + PASS })).json();
+  ok(/Unknown tool/.test(msgOf(missing)), "a name that exists nowhere still reads as unknown, not as a catalog problem");
+  const allowed = await (await req(call("dd_find_cfb_games", { limit: 1 }), { path: "/mcp/full/" + PASS })).json();
+  ok(allowed.result && !allowed.result.isError, "…and the same call succeeds on full");
+
+  // the catalog segment is stripped BEFORE the credential is read
+  ok((await req(rpc("ping"), { path: "/mcp/core/wrong-pass" })).status === 401, "catalog prefix does not bypass auth");
+  ok((await req(rpc("ping"), { path: "/mcp/core" })).status === 401, "a bare catalog word is a credential, and a wrong one → 401");
+  {
+    const r = await req(rpc("tools/list"), { path: "/mcp/core", headers: { "X-Dawg-Pass": PASS } });
+    ok(r.status === 200 && (await r.json()).result.tools.length === N_CORE, "header auth can still pick a catalog");
+  }
+
+  /* ⚠️ THE RESERVED-WORD PASSPHRASE. A DAWG_PASS that IS "core" or "full" used to be
+     unreachable: /mcp/core parsed as "catalog core, no credential", and no URL was left that
+     could carry it. It was defended with a comment telling a human not to do it — which fails
+     silently, at deploy time, and locks out the whole league rather than one member. The route
+     now only treats a leading catalog word as a catalog when something follows it (or when the
+     credential came in a header), so no passphrase can be stranded whatever it happens to be.
+     These run against their OWN env, because the collision only exists when the secret equals
+     the reserved word. */
+  for (const word of ["core", "full"]) {
+    const envWord = { ...env, DAWG_PASS: word };
+    const reqWord = (body, path) => worker.fetch(
+      new Request("https://toto.jkapcar4.workers.dev" + path, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      }), envWord);
+    const r = await reqWord(rpc("tools/list"), "/mcp/" + word);
+    ok(r.status === 200, `a passphrase of "${word}" still authenticates at /mcp/${word}`, "status " + r.status);
+    if (r.status === 200) {
+      const n = (await r.json()).result.tools.length;
+      ok(n === N_TOOLS, `…and gets the default full catalog, not an empty or partial one`, "tools=" + n);
+    }
+    // it must still be a real credential check, not a hole that lets the word through
+    const bad = await reqWord(rpc("ping"), "/mcp/" + (word === "core" ? "full" : "core"));
+    ok(bad.status === 401, `…while the OTHER reserved word is still rejected as a wrong credential`);
+  }
+  // per-user tokens route the same way
+  {
+    const j = await (await req(rpc("tools/list"), { path: "/mcp/core/" + USER_TOKEN })).json();
+    ok(j.result.tools.length === N_CORE, "a per-user token gets the same catalog treatment");
+  }
+  // initialize says which catalog you are on
+  for (const [path, needle] of [["/mcp/core/" + PASS, "Catalog `core`"], ["/mcp/" + PASS, "Catalog `full`"]]) {
+    const j = await (await req(rpc("initialize", { protocolVersion: "2025-06-18" }), { path })).json();
+    ok(j.result.instructions.startsWith(needle), "initialize opens by naming the catalog: " + needle);
+    ok(new RegExp(`${N_CORE} of ${N_TOOLS}|${N_TOOLS} of ${N_TOOLS}`).test(j.result.instructions), "…with the honest count for that path");
+  }
+  {
+    const r = await req(null, { path: "/mcp/" + PASS, method: "GET" });
+    const j = await r.json();
+    ok(j.catalogs && /\/mcp\/core\//.test(j.catalogs.core) && /\/mcp\/full\//.test(j.catalogs.full),
+       "the GET hint advertises both catalog paths");
+  }
+}
+// the registry itself: annotations are complete in the SOURCE, not just in one response
+{
+  const src = readFileSync(resolve(WORK, "mcp-block.js"), "utf8");
+  const reg = src.slice(src.indexOf("const MCP_TOOLS = ["));
+  const n = (re) => (reg.match(re) || []).length;
+  const tools = n(/\n    name: "(?:dd|sd)_\w+",\n/g);
+  ok(tools === N_TOOLS, `${N_TOOLS} tools declared in work/mcp-block.js`);
+  ok(n(/\n    title: "[^"]+",\n/g) === tools, "every declared tool carries a title");
+  ok(n(/\n    catalog: "(?:core|full)",\n/g) === tools, "every declared tool carries a core/full catalog tag");
+  ok(n(/\n    readOnlyHint: (?:true|false),\n/g) === tools, "every declared tool carries a readOnlyHint");
+  // ⚠️ This asserted ZERO readOnlyHint:false while the block was fully read-only, then
+  // exactly one when dd_submit_bozo_leg landed (2026-08-13, cep-identity §4). SwoleDawg
+  // (2026-08-18) made it a NAMED SET rather than a number — the invariant was never the
+  // count, it was that no tool acquires a write quietly.
+  ok(n(/readOnlyHint: false/g) === WRITE_TOOLS.length,
+     `exactly ${WRITE_TOOLS.length} tools claim readOnlyHint:false in the source`);
+  for (const name of WRITE_TOOLS) {
+    const at = reg.indexOf(`name: "${name}"`);
+    ok(at >= 0 && /readOnlyHint: false/.test(reg.slice(at, at + 700)),
+       `…including ${name}, which declares it`);
+  }
+  const wtool = reg.slice(reg.indexOf('name: "dd_submit_bozo_leg"'));
+  ok(/destructiveHint: true/.test(wtool.slice(0, 400)),
+     "the write tool declares destructiveHint — an edit overwrites the caller's existing leg");
+  ok(n(/\n    catalog: "core",\n/g) === N_CORE, `${N_CORE} tools are tagged core in the source`);
+}
+// dd_league_overview
+{
+  const j = await (await req(call("dd_league_overview"))).json();
+  const d = text(j);
+  ok(d.name === "Data Dawgs" && d.season === 2026, "league overview basics");
+  ok(d.members.includes("The Kid"), "member names are DECODED (The%20Kid → The Kid)");
+  ok(d.legsIn === 2, "legsIn counts current picks");
+}
+// dd_bozo_week: submission order + caveats
+{
+  const j = await (await req(call("dd_bozo_week"))).json();
+  const d = text(j);
+  ok(d.legs.length === 2, "bozo week returns both legs");
+  ok(d.legs[0].player === "Jeff" && d.legs[1].player === "Kap", "legs in SUBMISSION ORDER (ts), not key order");
+  ok(Array.isArray(d.caveats) && d.caveats.some(c => c.includes("CLV")), "caveats ship in the payload, incl. never-state-CLV");
+  ok(d.legs[0].priceSource === "self", "priceSource label survives");
+}
+// dd_bozo_standings on an empty ledger: an answer, not a crash
+{
+  const j = await (await req(call("dd_bozo_standings"))).json();
+  ok(!j.result.isError && text(j).note.includes("empty"), "empty ledger is an answer");
+}
+// dd_draft_board: maxBid math
+{
+  const j = await (await req(call("dd_draft_board"))).json();
+  const d = text(j);
+  const a = d.teams.find(t => t.name === "Team A"), b = d.teams.find(t => t.name === "Team B");
+  ok(a.spent === 73 && a.left === 127 && a.openSpots === 14, "team A spent/left/open");
+  ok(a.maxBid === a.left, "maxBid equals dollars remaining when $0 bids are legal");
+  ok(b.left === 200 && b.openSpots === 15 && b.maxBid === 200, "untouched team reports left 200, 15 open spots, and maxBid 200");
+  ok(d.onTheClock === "Team B" && d.onBlock === "Bijan Robinson", "clock + block");
+}
+// dd_draft_board: C6 — a test pick must never read as a completed sale
+{
+  const j = await (await req(call("dd_draft_board"))).json();
+  const d = text(j);
+  ok(d.simulated === false, "unflagged room: simulated is present and false, never absent");
+  ok(d.note === undefined, "…and carries no warning it would have to walk back");
+}
+{
+  netMode = "simulatedRoom";
+  const j = await (await req(call("dd_draft_board"))).json();
+  const d = text(j);
+  ok(d.simulated === true, "top-level flag → simulated true");
+  ok(typeof d.note === "string" && /NOT completed sales/.test(d.note),
+     "…and the payload says so in WORDS — a bare boolean is ignorable, prose is not");
+  ok(d.recentSales.length === 1 && d.teams.length === 2,
+     "…while still returning the picks: the room stays usable for league testing (backlog C5)");
+  netMode = "normal";
+}
+{
+  netMode = "simulatedSettings";
+  const j = await (await req(call("dd_draft_board"))).json();
+  ok(text(j).simulated === true, "settings-level flag also counts (draft app may rewrite state)");
+  netMode = "normal";
+}
+/* dd_draft_board: the room must never be guessed. The old default was `pepperoninipples`,
+   which answered confidently from a stale 14-team shell while a real draft ran elsewhere. */
+{
+  netMode = "manyRooms";
+  const j = await (await req(call("dd_draft_board"))).json();
+  const d = text(j);
+  ok(d.status === "room_required" && d.teams === undefined,
+     "several rooms and no `room` argument → a disambiguation, NOT a board");
+  ok(d.rooms.length === 2 && d.rooms.some(r => r.legacy === true),
+     "…listing every room and marking the legacy one");
+  ok(/NOTHING WAS READ/.test(d.note), "…and saying in words that nothing was read");
+  netMode = "normal";
+}
+{
+  netMode = "manyRooms";
+  const j = await (await req(call("dd_draft_board", { room: "dd_aaaa" }))).json();
+  const d = text(j);
+  ok(d.room === "dd_aaaa" && d.picksMade === 1, "a named room is read even when several exist");
+  netMode = "normal";
+}
+{
+  const j = await (await req(call("dd_draft_board"))).json();
+  const d = text(j);
+  ok(d.rosterSpots === 15 && d.resolvedBy === "the only room in the mirror",
+     "one room resolves silently, and rosterSpots comes from that room's settings");
+}
+// dd_draft_board: a room with no roster size says null — it does not invent 15
+{
+  netMode = "noSpots";
+  const j = await (await req(call("dd_draft_board"))).json();
+  const d = text(j);
+  ok(d.rosterSpots === null && d.teams[0].openSpots === null,
+     "missing roster size reports null rather than a hardcoded default");
+  ok(typeof d.rosterSpotsNote === "string" && /Do not assume a default/.test(d.rosterSpotsNote),
+     "…and says so in prose, since a null is easy to read past");
+  netMode = "normal";
+}
+// dd_draft_board: empty room is a tool error, not a protocol error
+{
+  netMode = "emptyRoom";
+  const j = await (await req(call("dd_draft_board"))).json();
+  ok(j.result && j.result.isError === true, "empty draft room → isError RESULT");
+  ok(j.result.content[0].text.includes("empty"), "…that says the room is empty");
+  netMode = "normal";
+}
+// database failure → isError result, turn survives
+{
+  netMode = "dbdown";
+  const j = await (await req(call("dd_bozo_week"))).json();
+  ok(j.result && j.result.isError === true && /unreachable|refused/i.test(j.result.content[0].text), "DB down → isError result");
+  netMode = "normal";
+}
+// dd_draft_pool: envelope + filter + limit
+{
+  const j = await (await req(call("dd_draft_pool", { pos: "RB", limit: 5 }))).json();
+  const d = text(j);
+  ok(d.as_of === "2026-07-29", "pool carries as_of");
+  ok(d.players.length === 1 && d.players[0].pos === "RB", "pos filter works");
+  ok(/NOT a points projection/i.test(d.note) || d.note.length > 0, "staleness note survives");
+}
+// dd_survivor_week
+{
+  const j = await (await req(call("dd_survivor_week", { week: 1 }))).json();
+  const d = text(j);
+  ok(d.picks && d.picks.CLE === 40, "survivor picks returned");
+  ok(d.stale === false && typeof d.ageHours === "number", "age computed, not stale at 1h");
+  const j2 = await (await req(call("dd_survivor_week", { week: 9 }))).json();
+  ok(j2.result.isError === true, "missing survivor week → isError");
+  const j3 = await (await req(call("dd_survivor_week", { week: 99 }))).json();
+  ok(j3.result.isError === true, "week 99 rejected");
+}
+// dd_survivor_ev: a PORT of survivor.html's leverage(), and the parity is enforced —
+// the reference below is transcribed from the page, not from the block. If the two
+// drift, the MCP answer and the board silently disagree, which is the actual failure.
+function refLeverage(week, pop, games, entries, used) {
+  const tab = {};
+  games.filter((g) => g.wk === week).forEach((g) => { tab[g.h] = { opp: g.a, p: g.p }; tab[g.a] = { opp: g.h, p: 1 - g.p }; });
+  const E = Math.max(1, entries - 1);
+  const seen = {}, gs = [];
+  for (const t in tab) {
+    if (seen[t]) continue;
+    const g = tab[t]; seen[t] = 1; seen[g.opp] = 1;
+    const ph = g.p, ah = pop[t] || 0, aa = pop[g.opp] || 0;
+    gs.push({ h: t, a: g.opp, mean: aa + (ah - aa) * ph, varc: (ah - aa) * (ah - aa) * ph * (1 - ph) });
+  }
+  return Object.keys(tab).filter((t) => !used.has(t)).map((t) => {
+    const own = pop[t] || 0; let mu = 0, v2 = 0;
+    for (const g of gs) { if (g.h === t || g.a === t) { mu += own; continue; } mu += g.mean; v2 += g.varc; }
+    const mean = E * mu, varS = E * E * v2, d = 1 + mean;
+    return { team: t, equity: tab[t].p * (1 / d + varS / (d * d * d)) };
+  });
+}
+{
+  // week 2 has no posted snapshot → ownership is MODELLED and must say so in words
+  const j = await (await req(call("dd_survivor_ev", { week: 2, entries: 200 }))).json();
+  const d = text(j);
+  ok(d.ownership === "modelled", "no snapshot → ownership modelled");
+  ok(typeof d.note === "string" && /MODELLED/.test(d.note), "…and the payload says so in WORDS, not a flag");
+  ok(typeof d.model === "string" && /independent/.test(d.model) && /Taylor/.test(d.model),
+     "the model names itself: independence assumption + Taylor correction (invariant 6)");
+  ok(d.rows.length === 4 && d.rows[0].evIndex === 1 && d.rows[0].rank === 1, "4 candidates, leader indexed 1.0");
+  ok(d.rows.every((r, i) => !i || d.rows[i - 1].equity >= r.equity), "sorted by equity, best first");
+  const CHALK = 2.4, tabP = { SEA: 0.7, PIT: 0.3, CLE: 0.6, ARI: 0.4 };
+  const pop = {}; let tot = 0;
+  for (const t in tabP) { pop[t] = Math.pow(Math.max(tabP[t], 0.01), CHALK); tot += pop[t]; }
+  for (const t in pop) pop[t] /= tot;
+  const ref = refLeverage(2, pop, survJson.data.games, 200, new Set());
+  ok(ref.every((r) => Math.abs((d.rows.find((x) => x.team === r.team) || {}).equity - r.equity) < 1e-5),
+     "equity matches survivor.html's leverage() transcribed independently — a port, not a cousin");
+}
+{
+  // week 1 HAS a posted snapshot ({CLE:40}) → renormalised over the teams playing
+  const j = await (await req(call("dd_survivor_ev", { week: 1 }))).json();
+  const d = text(j);
+  ok(d.ownership === "posted" && d.stale === false, "stored snapshot → posted, hour-old is not stale");
+  const cle = d.rows.find((r) => r.team === "CLE"), sea = d.rows.find((r) => r.team === "SEA");
+  ok(cle && cle.pop === 1, "posted picks renormalise over teams actually playing (CLE 40 → 100%)");
+  ok(sea.survivorsIfWin < cle.survivorsIfWin,
+     "joining the chalk keeps the whole field alive with you; fading it does not");
+}
+{
+  // every playing team spent → a tool error, case-insensitively
+  const j = await (await req(call("dd_survivor_ev", { week: 1, used: ["sea", "PIT", "CLE", "ari"] }))).json();
+  ok(j.result.isError === true && /used list/.test(j.result.content[0].text), "all teams used → tool error, used list is case-insensitive");
+  const j2 = await (await req(call("dd_survivor_ev", { week: 7 }))).json();
+  ok(j2.result.isError === true, "week with no games in the snapshot → tool error");
+}
+// dd_optimize_survivor_path: the Worker calls the exact shared browser engine.
+{
+  const j = await (await req(call("dd_optimize_survivor_path", { from_week: 1 }))).json();
+  const d = text(j);
+  const teams = Object.keys(survJson.data.elo);
+  const direct = DDSurvivorPath.solvePath({
+    weeks: Array.from({ length: 18 }, (_, i) => i + 1), teams,
+    probabilities: teams.map(team => Array.from({ length: 18 }, (_, i) => {
+      const week = i + 1, g = survJson.data.games.find(game => game.wk === week && (game.h === team || game.a === team));
+      return !g ? null : (g.h === team ? g.p : 1 - g.p);
+    })),
+  });
+  ok(!j.result.isError && d.covered_weeks === 2 && d.complete === false && Math.abs(d.run_the_table_probability - 0.48) < 1e-12,
+     "survivor path returns the exact 0.48 fixture ceiling and exposes missing weeks");
+  ok(d.path.map(x => x.week + ":" + x.team).join(",") === direct.assignments.map(x => x.week + ":" + x.team).join(","),
+     "survivor MCP selections exactly match direct browser-engine output");
+  const sea = d.current_week_options.find(x => x.team === "SEA");
+  ok(sea.selected && Math.abs(sea.future_path_probability - 0.6) < 1e-12 &&
+       Math.abs(sea.future_cost - (1 - 0.6 / 0.7)) < 1e-12 && Math.abs(sea.combined_path_probability - 0.48) < 1e-12,
+     "current-week option reports exact future cost and combined path probability");
+  ok(d.access === "read-only" && d.stored === false && d.modelled === true && d.graded === false &&
+       d.warnings.some(w => /CEILING, NOT A PLAN/.test(w)),
+     "survivor path makes read-only, ungraded and ceiling limits explicit");
+}
+{
+  const used = text(await (await req(call("dd_optimize_survivor_path", { from_week: 1, used_teams: ["sea"] }))).json());
+  ok(Math.abs(used.run_the_table_probability - 0.33) < 1e-12 && used.path.some(x => x.week === 1 && x.team === "PIT"),
+     "used team is case-insensitive and leaves the 0.33 PIT/CLE path");
+  const reused = text(await (await req(call("dd_optimize_survivor_path", { from_week: 1, reuse_teams: true }))).json());
+  ok(Math.abs(reused.run_the_table_probability - 0.56) < 1e-12 && reused.path.filter(x => x.team === "SEA").length === 2,
+     "reuse mode truly permits SEA in both fixture weeks");
+  /* ⚠️ This block used to assert the OPPOSITE — that the tool refused to model double
+     picks and said so in a warning. That warning was true until Stage B and is now
+     false, so the assertion is REPLACED by one pinning the new behaviour rather than
+     deleted. Both numbers below are hand-computed from the fixture, not captured.
+
+     Fixture: wk1 SEA .8 / ARI .2, PIT .55 / CLE .45; wk2 SEA .7 / PIT .3, CLE .6 / ARI .4.
+     ⚠️ It also declares 18 weeks of which only two have games, so requested_picks and
+     requested_weeks count the whole horizon and `complete` is false for reasons that
+     predate slots. The Stage B quantities are covered_picks and covered_weeks. */
+
+  // --- week 2 doubled: one slot in wk1, two in wk2, four teams, no reuse.
+  //   w1=SEA .8  -> wk2 best pair CLE .6 x ARI .4 = .24  -> .192
+  //   w1=PIT .55 -> wk2 best pair SEA .7 x CLE .6 = .42  -> .231   <- max
+  //   w1=CLE .45 -> .7 x .4 = .28                        -> .126
+  //   w1=ARI .2  -> .7 x .6 = .42                        -> .084
+  const doubled = text(await (await req(call("dd_optimize_survivor_path", { double_pick_weeks: [2] }))).json());
+  ok(Math.abs(doubled.run_the_table_probability - 0.231) < 1e-12,
+     "double-pick week 2 solves to the hand-computed 0.231 optimum", String(doubled.run_the_table_probability));
+  const wk2 = doubled.path.filter(x => x.week === 2);
+  ok(wk2.length === 2 && new Set(wk2.map(x => x.team)).size === 2,
+     "week 2 spends two DISTINCT teams", wk2.map(x => x.team).join(","));
+  ok(doubled.covered_picks === 3 && doubled.covered_weeks === 2,
+     "covered_picks counts slots while covered_weeks still counts weeks",
+     `${doubled.covered_picks} picks / ${doubled.covered_weeks} weeks`);
+  ok(doubled.requested_picks === doubled.requested_weeks + 1,
+     "one double week asks for exactly one extra pick over the horizon",
+     `${doubled.requested_picks} vs ${doubled.requested_weeks}`);
+  ok(doubled.rules_fully_modelled === true &&
+       doubled.warnings.some(w => /Double-pick weeks are modelled exactly/.test(w)) &&
+       !doubled.warnings.some(w => /NOT MODELLED/.test(w)),
+     "the tool now claims double picks ARE modelled, and the old warning is gone");
+  ok(JSON.stringify(doubled.double_pick_weeks) === JSON.stringify([2]),
+     "the payload names which weeks it treated as double", JSON.stringify(doubled.double_pick_weeks));
+
+  // --- BOTH weeks doubled: four slots, four teams, every team spent exactly once.
+  //   {SEA,PIT} wk1 = .44 x {ARI,CLE} wk2 = .24 -> .1056   <- max
+  //   {SEA,CLE} = .36 x {ARI,PIT} = .12         -> .0432
+  //   {SEA,ARI} = .16 x {PIT,CLE} = .18         -> .0288
+  //   {PIT,CLE} = .2475 x {SEA,ARI} = .28       -> .0693
+  //   {PIT,ARI} = .11 x {SEA,CLE} = .42         -> .0462
+  //   {CLE,ARI} = .09 x {SEA,PIT} = .21         -> .0189
+  const both = text(await (await req(call("dd_optimize_survivor_path", { double_pick_weeks: [1, 2] }))).json());
+  ok(Math.abs(both.run_the_table_probability - 0.1056) < 1e-12,
+     "two double weeks solve to the hand-computed 0.1056 optimum", String(both.run_the_table_probability));
+  ok(both.covered_picks === 4 && new Set(both.path.map(x => x.team)).size === 4,
+     "four slots spend four distinct teams", `${both.covered_picks} picks`);
+
+  // --- the suffix rule and the explicit list are the same thing, and they union
+  const suffix = text(await (await req(call("dd_optimize_survivor_path", { double_pick_from: 2 }))).json());
+  ok(Math.abs(suffix.run_the_table_probability - 0.231) < 1e-12,
+     "double_pick_from: 2 matches the equivalent explicit list — empty weeks cost nothing",
+     String(suffix.run_the_table_probability));
+  ok(suffix.double_pick_weeks.length === 17 && suffix.double_pick_weeks[0] === 2,
+     "a suffix rule expands to every week from there to 18", JSON.stringify(suffix.double_pick_weeks));
+  const union = text(await (await req(call("dd_optimize_survivor_path", { double_pick_from: 18, double_pick_weeks: [1] }))).json());
+  ok(JSON.stringify(union.double_pick_weeks) === JSON.stringify([1, 18]),
+     "a suffix and a list given together are unioned", JSON.stringify(union.double_pick_weeks));
+
+  const badList = await (await req(call("dd_optimize_survivor_path", { double_pick_weeks: [0] }))).json();
+  ok(/whole numbers from 1 to 18/.test(JSON.stringify(badList)),
+     "an out-of-range double-pick week is rejected", JSON.stringify(badList).slice(0, 140));
+}
+{
+  const badTeam = await (await req(call("dd_optimize_survivor_path", { used_teams: ["XXX"] }))).json();
+  const badWeek = await (await req(call("dd_optimize_survivor_path", { from_week: 0 }))).json();
+  const badExtra = await (await req(call("dd_optimize_survivor_path", { confidence: true }))).json();
+  ok(badTeam.result.isError === true && badWeek.result.isError === true && badExtra.result.isError === true,
+     "survivor path rejects unknown teams, invalid weeks and unsupported inputs");
+}
+// dd_analyze_matchup: the formula is public in models.json — recompute it here with a
+// DIFFERENT Φ approximation (Press erfc, not the page's Abramowitz–Stegun) so agreement
+// means the maths is right, not that the same bug is pasted twice.
+function refNcdf(z) {
+  const x = z / Math.SQRT2, ax = Math.abs(x), t = 1 / (1 + 0.5 * ax);
+  const e = t * Math.exp(-ax * ax - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 + t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))));
+  const erfc = x >= 0 ? e : 2 - e;
+  return 1 - erfc / 2;
+}
+{
+  const j = await (await req(call("dd_analyze_matchup", { home: "SEA", away: "cardinals" }))).json();
+  const d = text(j);
+  ok(d.home.team === "SEA" && d.away.team === "ARI", "abbreviation and nickname both resolve");
+  const margin = (1620 - 1420) / 23.58 + 2.1;
+  ok(Math.abs(d.expectedMarginAtHome - Math.round(margin * 100) / 100) < 1e-9, "margin follows the published formula");
+  ok(Math.abs(d.pHomeWin - refNcdf(margin / 13.18)) < 2e-4, "win prob is Φ(margin/SD), checked against an independent CDF");
+  ok(Array.isArray(d.scheduledMeetings2026) && d.scheduledMeetings2026[0].week === 1 && d.scheduledMeetings2026[0].pHomeWin === 0.8,
+     "the week-1 meeting is listed with the board's blended number");
+  ok(/Elo-only/.test(d.model) && /0d3f8418/.test(d.model), "model names itself AND its snapshot (invariant 6)");
+}
+{
+  const j = await (await req(call("dd_analyze_matchup", { home: "the 1972 dolphins", away: "SEA" }))).json();
+  ok(j.result.isError === true, "unknown team → tool error");
+  const j2 = await (await req(call("dd_analyze_matchup", { home: "browns", away: "Cleveland" }))).json();
+  ok(j2.result.isError === true, "same team by two names → tool error");
+}
+// Pound calculators: pure MCP results must stay in parity with work/pound-core.js.
+{
+  const args = { home_elo: 1500, away_elo: 1500, home_field_elo: 65 };
+  const j = await (await req(call("dd_elo_game", args))).json();
+  const d = text(j), ref = P.eloGame(args.home_elo, args.away_elo, args.home_field_elo);
+  ok(Math.abs(d.home_win_probability - ref.home_win_probability) < 1e-12 &&
+     Math.abs(d.adjusted_elo_difference - ref.adjusted_elo_difference) < 1e-12,
+     "Elo game probability matches Pound core");
+  ok(d.read_only === true && /calculator only/i.test(d.note) && /538-classic\.json/.test(d.note) && /model-receipts\.json/.test(d.note),
+     "Elo result separates calculator output from published states and receipts");
+  const wrongType = await (await req(call("dd_elo_game", { ...args, home_elo: "1500" }))).json();
+  ok(wrongType.result.isError === true, "Elo numeric strings fail closed");
+}
+{
+  const args = { home_win_probability: 0.6, residual_sd_points: 13.18, home_line: -3 };
+  const j = await (await req(call("dd_translate_probability", args))).json();
+  const d = text(j), ref = P.normalTranslation(args.home_win_probability, args.residual_sd_points, args.home_line);
+  ok(Math.abs(d.expected_margin_home - ref.expected_margin_home) < 1e-12 &&
+     Math.abs(d.home_cover_probability - ref.home_cover_probability) < 1e-12,
+     "probability translation matches Pound core");
+  ok(d.modelled === true && d.read_only === true && d.push_probability === 0 &&
+     /key-number mass/.test(d.note), "translation exposes modelled, continuous and zero-push assumptions");
+  const marginOnly = text(await (await req(call("dd_translate_probability",
+    { home_win_probability: 0.5, residual_sd_points: 13.18 }))).json());
+  ok(Math.abs(marginOnly.expected_margin_home - 0.5) < 1e-12 && marginOnly.home_cover_probability === undefined,
+     "translation supports margin-only calls without inventing a line");
+  const zero = await (await req(call("dd_translate_probability",
+    { home_win_probability: 0, residual_sd_points: 13.18 }))).json();
+  const badSd = await (await req(call("dd_translate_probability",
+    { home_win_probability: 0.6, residual_sd_points: 0 }))).json();
+  ok(zero.result.isError === true && badSd.result.isError === true,
+     "translation rejects boundary probabilities and non-positive residual SD");
+}
+{
+  const j = await (await req(call("dd_convert_odds", { american_odds: -110 }))).json();
+  const d = text(j), ref = P.oddsConverter(-110);
+  ok(Math.abs(d.decimal_odds - ref.decimal) < 1e-12, "odds decimal matches Pound core");
+  ok(Math.abs(d.implied_probability - ref.implied_probability) < 1e-12, "odds implied probability matches Pound core");
+  ok(d.read_only === true && /user-supplied/i.test(d.note), "odds result labels provenance and read-only behavior");
+  const bad = await (await req(call("dd_convert_odds", { american_odds: -50 }))).json();
+  ok(bad.result.isError === true, "invalid American odds fail closed");
+  const wrongType = await (await req(call("dd_convert_odds", { american_odds: "-110" }))).json();
+  ok(wrongType.result.isError === true, "numeric strings are rejected against the MCP number schema");
+}
+{
+  const j = await (await req(call("dd_devig_market", { side_a_american: -110, side_b_american: -110 }))).json();
+  const d = text(j), ref = P.holdVig(-110, -110);
+  ok(Math.abs(d.hold - ref.hold) < 1e-12, "market hold matches Pound core");
+  ok(d.devig_probability.every((x, i) => Math.abs(x - ref.devig_probability[i]) < 1e-12), "proportional devig matches Pound core");
+  ok(d.devig_method === "proportional normalization", "devig method is explicit");
+}
+{
+  const prices = [-110, 150];
+  const j = await (await req(call("dd_price_parlay", { american_odds: prices }))).json();
+  const d = text(j), ref = P.parlay(prices);
+  ok(Math.abs(d.decimal_odds - ref.decimal) < 1e-12 && Math.abs(d.american_odds - ref.american) < 1e-12,
+     "parlay price matches Pound core");
+  ok(/correlation/.test(d.note), "parlay discloses that price multiplication is not a correlation model");
+  const empty = await (await req(call("dd_price_parlay", { american_odds: [] }))).json();
+  ok(empty.result.isError === true, "empty parlay fails closed");
+  const tooMany = await (await req(call("dd_price_parlay", { american_odds: new Array(21).fill(-110) }))).json();
+  ok(tooMany.result.isError === true, "parlay call is bounded at 20 legs");
+}
+{
+  const price = -110, p = P.impliedFromAmerican(price);
+  const j = await (await req(call("dd_calculate_bet_ev", { win_probability: p, american_odds: price }))).json();
+  const d = text(j), ref = P.betEV(p, price);
+  ok(Math.abs(d.roi - ref.roi) < 1e-12 && Math.abs(d.break_even_probability - ref.break_even_probability) < 1e-12,
+     "bet EV matches Pound core at break-even");
+  ok(/caller-supplied/.test(d.note) && /not an independently graded edge/i.test(d.note), "EV result refuses an edge claim");
+  const bad = await (await req(call("dd_calculate_bet_ev", { win_probability: 1.1, american_odds: -110 }))).json();
+  ok(bad.result.isError === true, "EV probability outside [0,1] fails closed");
+}
+{
+  const j = await (await req(call("dd_calculate_hedge", { original_stake: 100, original_american: 200, hedge_american: -150 }))).json();
+  const d = text(j), ref = P.hedge(100, 200, -150);
+  ok(Math.abs(d.hedge_stake - ref.hedge_stake) < 1e-12 && Math.abs(d.locked_profit - ref.locked_profit) < 1e-12,
+     "hedge sizing matches Pound core");
+  ok(/no bet is placed/.test(d.note), "hedge tool states that it takes no action");
+  const bad = await (await req(call("dd_calculate_hedge", { original_stake: 0, original_american: 200, hedge_american: -150 }))).json();
+  ok(bad.result.isError === true, "non-positive hedge stake fails closed");
+}
+{
+  const args = { attempts: 20, completions: 20, yards: 400, touchdowns: 4, interceptions: 0 };
+  const j = await (await req(call("dd_nfl_passer_rating", args))).json();
+  const d = text(j), ref = P.passerRating(20, 20, 400, 4, 0);
+  ok(Math.abs(d.nfl_passer_rating - ref.rating) < 1e-12 && Math.abs(d.nfl_passer_rating - 158.33333333333334) < 1e-12,
+     "perfect passer rating matches Pound core");
+  const neg = text(await (await req(call("dd_nfl_passer_rating", { attempts: 1, completions: 0, yards: -5, touchdowns: 0, interceptions: 0 }))).json());
+  ok(Math.abs(neg.nfl_passer_rating - P.passerRating(1, 0, -5, 0, 0).rating) < 1e-12, "legitimate negative passing yards remain valid");
+  const fractional = await (await req(call("dd_nfl_passer_rating", { attempts: 1.5, completions: 1, yards: 10, touchdowns: 0, interceptions: 0 }))).json();
+  ok(fractional.result.isError === true, "fractional passing statistics fail closed");
+}
+{
+  const j = await (await req(call("dd_score_forecast", { forecast_probability: 0.7, outcome_0_or_1: 1 }))).json();
+  const d = text(j), ref = P.forecastGrade(0.7, 1);
+  ok(Math.abs(d.brier - ref.brier) < 1e-12 && Math.abs(d.log_loss - ref.log_loss) < 1e-12,
+     "forecast grade matches Pound core");
+  ok(d.sample_size === 1 && d.graded_track_record === false, "single-row grade cannot masquerade as a track record");
+  const bad = await (await req(call("dd_score_forecast", { forecast_probability: 0.7, outcome_0_or_1: 2 }))).json();
+  ok(bad.result.isError === true, "non-binary outcome fails closed");
+}
+{
+  const xs = [0.4, 0.6, 0.7];
+  const j = await (await req(call("dd_summarize_beliefs", { probabilities: xs }))).json();
+  const d = text(j), ref = P.beliefSummary(xs);
+  ok(Math.abs(d.mean - ref.mean) < 1e-12 && Math.abs(d.standard_deviation - ref.standard_deviation) < 1e-12,
+     "belief summary matches Pound core");
+  ok(d.crosses_50 === true && /not a validated consensus blend/i.test(d.note), "belief summary carries the no-consensus claim");
+  const empty = await (await req(call("dd_summarize_beliefs", { probabilities: [] }))).json();
+  ok(empty.result.isError === true, "empty belief list fails closed");
+}
+// dd_model_scoreboard: bounded receipt query, latest-per-model selection and exact
+// parity with the human board's descriptive statistics.
+{
+  const j = await (await req(call("dd_model_scoreboard"))).json();
+  const d = text(j), cle = d.games[0], ref = P.beliefSummary([0.45, 0.65]);
+  ok(!j.result.isError && d.games.length === 2 && d.filters.season === 2026 && d.filters.week === 1,
+     "model scoreboard defaults to the latest season's Week 1 board");
+  ok(cle.game_id === "2026_01_CLE_PIT" && cle.models.some(m => m.forecast_id === "nfelo-cle-new") && !cle.models.some(m => m.forecast_id === "nfelo-cle-old"),
+     "model scoreboard sorts by disagreement and selects the latest receipt per game/model");
+  ok(Math.abs(cle.descriptive_summary.mean - ref.mean) < 1e-12 && Math.abs(cle.descriptive_summary.standard_deviation - ref.standard_deviation) < 1e-12 && cle.descriptive_summary.crosses_50,
+     "model scoreboard descriptive summary matches Pound core exactly");
+  ok(d.read_only === true && d.stored === false && d.graded === false && d.comparison_type.includes("descriptive") && d.warnings.some(x => /not a validated consensus/i.test(x)),
+     "model scoreboard makes read-only, ungraded and no-consensus limits explicit");
+  ok(d.ledger_integrity.rows === 7 && cle.models.every(m => m.source_commit && m.input_snapshot_id && m.schedule_snapshot_id),
+     "model scoreboard preserves ledger integrity and per-model provenance");
+}
+{
+  const team = text(await (await req(call("dd_model_scoreboard", { team: "pit", sort: "kickoff", limit: 1 }))).json());
+  ok(team.matched_games === 2 && team.returned_games === 1 && team.games[0].game_id === "2026_01_CLE_PIT",
+     "model scoreboard team filter is case-insensitive and limit bounds output");
+  const game = text(await (await req(call("dd_model_scoreboard", { game_id: "2026_02_PIT_SEA", model_ids: ["nfelo"] }))).json());
+  ok(game.games.length === 1 && game.games[0].models.length === 1 && game.games[0].complete_comparable_set === true,
+     "model scoreboard supports exact game and requested-model filters");
+  const none = text(await (await req(call("dd_model_scoreboard", { season: 2099 }))).json());
+  ok(none.games.length === 0 && none.note.includes("No prospective"), "model scoreboard returns a structured empty result");
+  const badWeek = await (await req(call("dd_model_scoreboard", { week: 0 }))).json();
+  const badExtra = await (await req(call("dd_model_scoreboard", { confidence: true }))).json();
+  const badTeam = await (await req(call("dd_model_scoreboard", { team: "C!" }))).json();
+  ok(badWeek.result.isError === true && badExtra.result.isError === true && badTeam.result.isError === true,
+     "model scoreboard rejects invalid and unsupported filters");
+}
+// dd_get_cfb_rating_system: compact method discovery or one exact full system
+// contract, without treating registry membership as evidence of skill.
+{
+  const j = await (await req(call("dd_get_cfb_rating_system"))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.mode === "rating-system-index" && d.system === null &&
+     d.registered_system_count === 1 && d.available_systems[0].system_id === "dd-cfb-elo" &&
+     d.available_systems[0].available_outputs.join(",") === "team_strength",
+     "CFB rating-system reader lists compact registered method and output summaries");
+  ok(d.consensus_built === false && d.prospective_forecasts_exist === false && d.graded === false &&
+     d.current_2026_method === false && d.read_only && d.stored === false &&
+     d.warnings.some(x => /Registry membership documents source/i.test(x)),
+     "CFB rating-system index refuses consensus, prospective, graded and current-method claims");
+}
+{
+  const j = await (await req(call("dd_get_cfb_rating_system", { system_id: "DD-CFB-ELO" }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.mode === "rating-system" && d.system.system_id === "dd-cfb-elo" &&
+     d.system.source_snapshot_id === "sha256:test-cfb-elo" && d.system.outputs.expected_margin.available === false,
+     "CFB rating-system reader returns one exact full source and output contract");
+  ok(d.system.matchup_probability.elo_scale === 400 && d.system.matchup_probability.home_field_elo === 55 &&
+     d.rating_period.prospective === false && d.consensus.status === "not-built",
+     "CFB rating-system reader preserves the published matchup transform and registry boundaries");
+  const missing = await (await req(call("dd_get_cfb_rating_system", { system_id: "mystery" }))).json();
+  const invalid = await (await req(call("dd_get_cfb_rating_system", { system_id: "bad system" }))).json();
+  const extra = await (await req(call("dd_get_cfb_rating_system", { include_rankings: true }))).json();
+  ok([missing, invalid, extra].every(result => result.result.isError === true),
+     "CFB rating-system reader fails closed on unknown, invalid and unsupported inputs");
+}
+// dd_rank_cfb_teams: bounded ranking and conference slices over one declared
+// rating system, without presenting the result as consensus or current-season.
+{
+  const j = await (await req(call("dd_rank_cfb_teams"))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.system.system_id === "dd-cfb-elo" && d.teams.length === 3 &&
+     d.teams.map(x => x.rating.rank).join(",") === "1,2,133",
+     "CFB ranking defaults safely when the registry has exactly one system and sorts by rank");
+  ok(d.teams[0].team === "Indiana" && d.teams[0].observed_results.record === "16-0-0" &&
+     d.observed_results_are_facts === true && d.modelled_fields.includes("teams[].rating"),
+     "CFB ranking keeps observed results separate from the modelled rating");
+  ok(d.retrodictive === true && d.prospective === false && d.graded === false &&
+     d.consensus_ranking === false && d.current_2026_ranking === false && d.read_only === true && d.stored === false,
+     "CFB ranking states its historical, ungraded, non-consensus and non-persistence limits");
+}
+{
+  const j = await (await req(call("dd_rank_cfb_teams", { conference: "big ten", offset: 1, limit: 1 }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.query.conference === "Big Ten" && d.matched_before_pagination === 2 &&
+     d.returned === 1 && d.teams[0].team === "Ohio State",
+     "CFB ranking supports exact case-insensitive conference slices and bounded pagination");
+  const explicit = text(await (await req(call("dd_rank_cfb_teams", { system_id: "DD-CFB-ELO" }))).json());
+  ok(explicit.system.system_id === "dd-cfb-elo",
+     "CFB ranking accepts an explicit case-insensitive registered system id");
+  const unknown = await (await req(call("dd_rank_cfb_teams", { system_id: "mystery" }))).json();
+  const conference = await (await req(call("dd_rank_cfb_teams", { conference: "NFL" }))).json();
+  const offset = await (await req(call("dd_rank_cfb_teams", { offset: 200 }))).json();
+  const limit = await (await req(call("dd_rank_cfb_teams", { limit: 51 }))).json();
+  const extra = await (await req(call("dd_rank_cfb_teams", { consensus: true }))).json();
+  ok(unknown.result.isError === true && conference.result.isError === true && offset.result.isError === true &&
+     limit.result.isError === true && extra.result.isError === true,
+     "CFB ranking fails closed on unknown systems, conferences and unsupported bounds or claims");
+}
+// dd_cfb_team_profile: exact bounded read over the dated registry, with every
+// retrodictive/no-consensus limit preserved in the response.
+{
+  const j = await (await req(call("dd_cfb_team_profile", { team: "OHIO STATE" }))).json();
+  const d = text(j), elo = d.systems[0];
+  ok(!j.result.isError && d.team.team_slug === "ohio-state" && d.team.conference === "Big Ten",
+     "CFB team profile resolves an exact case-insensitive team name");
+  ok(elo.system_id === "dd-cfb-elo" && elo.rating.rank === 2 && elo.rating.team_strength === 1925.8 && elo.rating.win_probability === null,
+     "CFB team profile returns the registered rating and preserves unsupported null outputs");
+  ok(d.observed_results.record === "12-2-0" && d.observed_results.point_differential === 338,
+     "CFB team profile keeps observed season results separate from the modelled rating");
+  ok(d.observed_results_are_facts === true && d.modelled_fields.includes("systems") &&
+     d.modelled_fields.includes("systems[].rating.retrodictive_team_diagnostic"),
+     "CFB team profile labels which object is observed and which is modelled");
+  ok(elo.team_diagnostics.rankings_published === false && elo.rating.retrodictive_team_diagnostic.games === 13 &&
+     elo.rating.retrodictive_team_diagnostic.actual_minus_expected_wins === 0.9 &&
+     !("rank" in elo.rating.retrodictive_team_diagnostic),
+     "CFB team profile carries the non-ranked retrodictive team diagnostic");
+  ok(d.as_of === "2026-08-08" && d.integrity.snapshot_id === "sha256:test-cfb-ratings" && d.read_only && d.stored === false,
+     "CFB team profile preserves registry provenance and non-persistence");
+  ok(d.modelled && d.retrodictive && d.prospective === false && d.graded === false && d.consensus.status === "not-built" &&
+     d.warnings.some(x => /one rating is not a consensus/i.test(x)) && d.warnings.some(x => /not represent a current-season forecast/i.test(x)),
+     "CFB team profile states the retrodictive, ungraded and no-consensus limits");
+  ok(d.warnings.some(x => /not luck, team-quality labels, forecasts, grades or rankings/i.test(x)),
+     "CFB team profile refuses to turn the diagnostic into a luck or quality label");
+}
+{
+  const slug = text(await (await req(call("dd_cfb_team_profile", { team: "ohio-state" }))).json());
+  ok(slug.team.name === "Ohio State" && slug.match.exact === true,
+     "CFB team profile accepts the canonical slug");
+  const partial = await (await req(call("dd_cfb_team_profile", { team: "state" }))).json();
+  const missing = await (await req(call("dd_cfb_team_profile", { team: "Cleveland Tech" }))).json();
+  const extra = await (await req(call("dd_cfb_team_profile", { team: "Akron", season: 2026 }))).json();
+  const empty = await (await req(call("dd_cfb_team_profile", { team: "" }))).json();
+  ok(partial.result.isError === true && /exact registry name or slug/.test(partial.result.content[0].text) &&
+     missing.result.isError === true && extra.result.isError === true && empty.result.isError === true,
+     "CFB team profile fails closed on partial, unknown, unsupported and empty inputs");
+}
+// dd_compare_cfb_teams: exact same-snapshot comparison without laundering the
+// observed/rating deltas into a matchup forecast.
+{
+  const j = await (await req(call("dd_compare_cfb_teams", { team_a: "Ohio State", team_b: "akron" }))).json();
+  const d = text(j), system = d.comparison.systems[0];
+  ok(!j.result.isError && d.teams.team_a.team_slug === "ohio-state" && d.teams.team_b.team_slug === "akron",
+     "CFB comparison resolves two exact names or slugs on one snapshot");
+  ok(system.team_strength_delta_a_minus_b === 837.7 && system.rank_delta_a_minus_b === -131,
+     "CFB comparison returns exact rating and rank deltas");
+  ok(d.comparison.observed_2025.win_percentage_delta_a_minus_b > 0 &&
+     d.teams.team_a.observed_results.record === "12-2-0" && d.teams.team_b.observed_results.record === "4-8-0",
+     "CFB comparison keeps observed records separate from modelled system deltas");
+  ok(d.read_only && d.stored === false && d.prospective === false && d.graded === false &&
+     d.warnings.some(x => /not a head-to-head game projection/i.test(x)) && d.warnings.some(x => /not opponent-adjusted/i.test(x)) &&
+     d.warnings.some(x => /not luck, team-quality labels, forecasts, grades or rankings/i.test(x)),
+     "CFB comparison refuses forecast, edge and schedule-adjustment claims");
+}
+{
+  const same = await (await req(call("dd_compare_cfb_teams", { team_a: "Akron", team_b: "akron" }))).json();
+  const partial = await (await req(call("dd_compare_cfb_teams", { team_a: "state", team_b: "Akron" }))).json();
+  const missing = await (await req(call("dd_compare_cfb_teams", { team_a: "Akron" }))).json();
+  const extra = await (await req(call("dd_compare_cfb_teams", { team_a: "Akron", team_b: "Indiana", neutral: true }))).json();
+  ok(same.result.isError === true && partial.result.isError === true && missing.result.isError === true && extra.result.isError === true,
+     "CFB comparison fails closed on same-team, partial, missing and unsupported inputs");
+}
+// dd_project_cfb_matchup: exact parity with the published Elo transform, with
+// venue handling and a hard boundary against calling it a scheduled forecast.
+{
+  const j = await (await req(call("dd_project_cfb_matchup", { home_team: "Ohio State", away_team: "Akron" }))).json();
+  const d = text(j), projection = d.projections[0];
+  const expected = 1 / (1 + 10 ** (-((1925.8 - 1088.1 + 55) / 400)));
+  ok(!j.result.isError && d.matchup.home_team.team_slug === "ohio-state" && d.matchup.away_team.team_slug === "akron",
+     "CFB matchup projection resolves an exact home and away team");
+  ok(Math.abs(projection.home_win_probability - expected) < 1e-15 &&
+     Math.abs(projection.away_win_probability - (1 - expected)) < 1e-15 && projection.venue_adjustment_elo === 55,
+     "CFB matchup projection reproduces the published Elo probability transform exactly");
+  ok(d.retrodictive === true && d.prospective === false && d.scheduled_game === false && d.graded === false &&
+     d.unsupported_outputs.expected_margin === null && d.unsupported_outputs.predicted_total === null,
+     "CFB matchup projection labels retrodictive status and refuses unsupported outputs");
+  ok(d.warnings.some(x => /not a frozen 2026 forecast receipt/i.test(x)) && d.warnings.some(x => /not a consensus/i.test(x)),
+     "CFB matchup projection carries forecast and consensus caveats");
+}
+{
+  const home = text(await (await req(call("dd_project_cfb_matchup", { home_team: "Ohio State", away_team: "Akron" }))).json()).projections[0];
+  const neutral = text(await (await req(call("dd_project_cfb_matchup", { home_team: "Ohio State", away_team: "Akron", neutral_site: true }))).json()).projections[0];
+  ok(neutral.venue_adjustment_elo === 0 && neutral.home_win_probability < home.home_win_probability,
+     "neutral-site CFB projection removes the published home-field adjustment");
+  const same = await (await req(call("dd_project_cfb_matchup", { home_team: "Akron", away_team: "akron" }))).json();
+  const partial = await (await req(call("dd_project_cfb_matchup", { home_team: "state", away_team: "Akron" }))).json();
+  const badNeutral = await (await req(call("dd_project_cfb_matchup", { home_team: "Ohio State", away_team: "Akron", neutral_site: "yes" }))).json();
+  const extra = await (await req(call("dd_project_cfb_matchup", { home_team: "Ohio State", away_team: "Akron", week: 1 }))).json();
+  ok(same.result.isError === true && partial.result.isError === true && badNeutral.result.isError === true && extra.result.isError === true,
+     "CFB matchup projection fails closed on same-team, partial, mistyped and unsupported inputs");
+}
+// dd_project_cfb_schedule_path: exact Poisson-binomial path math over
+// caller-supplied opponents, never an invented schedule or playoff model.
+{
+  const args = {
+    team: "Ohio State",
+    games: [
+      { opponent: "Akron", venue: "home", l

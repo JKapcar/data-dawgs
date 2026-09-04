@@ -1,0 +1,599 @@
+ion:opacity .35s}
+@keyframes bulbchase{to{background-position:17px 0,-17px 100%,0 17px,100% -17px}}
+.machine.armed  {--bulbo:.72;--bulbspeed:1.15s;--bulbrun:running}
+.machine.pending{--bulbo:1;  --bulbspeed:.42s; --bulbrun:running}
+.machine.spin1  {--bulbo:1;  --bulbspeed:.30s; --bulbrun:running}
+.machine.spin2  {--bulbo:1;  --bulbspeed:.20s; --bulbrun:running}
+.machine.spin3  {--bulbo:1;  --bulbspeed:.13s; --bulbrun:running}
+.machine.locked {--bulbo:.92;--bulbspeed:1.6s; --bulbrun:running}
+
+@keyframes cabinetthunk{0%,100%{transform:none}
+  16%{transform:translateY(7px) rotate(.3deg)}38%{transform:translateY(-5px) rotate(-.24deg)}
+  58%{transform:translateY(3px) rotate(.12deg)}78%{transform:translateY(-1px)}}
+.machine.pulling{animation:cabinetthunk .8s cubic-bezier(.2,.8,.2,1)}
+@keyframes reelthunk{0%,100%{transform:none}30%{transform:translateY(2.5px)}62%{transform:translateY(-1px)}}
+.machine.thunk{animation:reelthunk .16s ease-out}
+
+/* jackpot wash on the final lock */
+.machine .flash{position:absolute;inset:0;border-radius:12px;pointer-events:none;z-index:5;opacity:0;
+  background:radial-gradient(120% 100% at 50% 40%,rgba(255,224,138,.85),rgba(255,150,50,.28) 45%,transparent 72%)}
+@keyframes jackpotflash{0%{opacity:0}12%{opacity:1}100%{opacity:0}}
+.machine.jackpot .flash{animation:jackpotflash 1.1s ease-out}
+
+/* ===================== marquee ===================== */
+.marq{position:absolute;left:22px;right:104px;top:22px;height:22px;z-index:3;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;border-radius:6px;
+  background:linear-gradient(180deg,var(--grape),var(--grape-lo));
+  box-shadow:inset 0 0 14px rgba(0,0,0,.6),0 1px 0 rgba(255,255,255,.06)}
+.marq b{font:800 9.5px/1 ui-monospace,monospace;letter-spacing:5px;color:var(--bulb-off);
+  transition:color .3s,text-shadow .3s;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.machine.pending .marq b,.machine.locked .marq b{color:var(--bulb);text-shadow:0 0 12px rgba(255,224,138,.8)}
+
+/* ===================== reels ===================== */
+.reels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;position:relative;z-index:2}
+.pos{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.4px;color:#b7a488;text-transform:uppercase;
+  margin:0 0 6px;text-align:center;transition:color .25s,text-shadow .25s}
+.reel.lock .pos{color:var(--bulb);text-shadow:0 0 9px rgba(255,224,138,.55)}
+
+.win{position:relative;height:104px;overflow:hidden;border-radius:8px;
+  background:linear-gradient(180deg,#fffdf7,#efe6d4);
+  border:2px solid var(--brass-lo);
+  box-shadow:inset 0 0 14px rgba(43,28,14,.18);
+  transition:border-color .2s,box-shadow .25s}
+/* curved glass + payline. Both are ::pseudo so a reel is one element. */
+.win::before{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,0) 34%,
+             rgba(43,28,14,.05) 60%,rgba(43,28,14,.20))}
+.win::after{content:"";position:absolute;left:6px;right:6px;top:50%;height:2px;margin-top:-1px;z-index:3;
+  pointer-events:none;background:linear-gradient(90deg,transparent,var(--nose),transparent);
+  opacity:.3;transition:opacity .25s}
+.reel.lock .win{border-color:var(--brass-hi);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 34%,transparent),0 0 24px rgba(255,201,116,.42),
+             inset 0 0 20px rgba(255,180,80,.22)}
+.reel.lock .win::after{opacity:.65}
+/* 1st decides most weeks, so it gets the jackpot frame — :first-child, so it
+   follows the reel set rather than a hardcoded index. */
+.reels > .reel:first-child.lock .win{
+  box-shadow:0 0 0 3px var(--accent),0 0 30px color-mix(in srgb,var(--accent) 58%,transparent),
+             inset 0 0 22px rgba(255,150,50,.3)}
+
+.strip{position:absolute;left:0;right:0;top:0;will-change:transform;
+  transform:translate3d(0,0,0);filter:blur(0px)}
+.cell{height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  text-align:center;padding:0 5px;color:#2b1c0e;border-bottom:1px solid rgba(43,28,14,.12)}
+.cell svg{width:26px;height:26px;flex:0 0 26px;opacity:.88}
+.cell span{font:800 11.5px/1.15 system-ui;letter-spacing:.4px;text-transform:uppercase}
+/* the strip blurs with velocity — set from JS as a px value */
+.reel.moving .strip{filter:blur(var(--mblur,2px))}
+/* a reel that has just stopped gets a one-frame gold pop on the payline */
+@keyframes cellpop{0%{transform:scale(1)}40%{transform:scale(1.09)}100%{transform:scale(1)}}
+.reel.pop .cell{animation:cellpop .28s ease-out}
+
+/* ===================== the lever ===================== */
+.leverbay{position:absolute;right:0;top:0;bottom:0;width:104px;z-index:3}
+/* brass boss the arm pivots on */
+/* mounting plate the arm pivots on — a plate, not a second ball */
+.boss{position:absolute;bottom:32px;left:26px;width:44px;height:30px;margin-left:-22px;border-radius:6px 6px 4px 4px;
+  background:linear-gradient(180deg,var(--brass),#5c4718);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -4px 8px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.5);z-index:1}
+.boss::after{content:"";position:absolute;left:50%;top:6px;width:16px;height:16px;margin-left:-8px;border-radius:50%;
+  background:radial-gradient(circle at 34% 30%,#e8cf9a,#8a6a2c 60%,#3a2a12);
+  box-shadow:inset 0 -2px 4px rgba(0,0,0,.55)}
+/* the arc track: shows where the knob goes before you touch it */
+
+.lever{position:absolute;left:0;right:2px;bottom:16px;top:16px;background:none;border:0;padding:0;margin:0;
+  color:inherit;font:inherit;cursor:default;touch-action:none;-webkit-tap-highlight-color:transparent;
+  display:block}
+.lever:focus-visible{outline:2px solid var(--bulb);outline-offset:-6px;border-radius:10px}
+.lever.live{cursor:grab}
+.lever.live:active{cursor:grabbing}
+.arm{position:absolute;left:26px;bottom:46px;width:13px;height:96px;margin-left:-6.5px;
+  transform-origin:50% 100%;
+  transform:rotate(calc(var(--pull,0)*34deg)) scaleY(calc(1 - var(--pull,0)*.12));
+  transition:transform var(--armT,.5s) cubic-bezier(.18,.86,.28,1.06)}
+.rod{position:absolute;inset:0;border-radius:7px;
+  background:linear-gradient(90deg,#40311a,#a8873c 24%,var(--brass-hi) 47%,#a8873c 70%,#40311a);
+  box-shadow:0 0 0 1px rgba(0,0,0,.45),inset 0 0 8px rgba(0,0,0,.25)}
+.knob{position:absolute;left:50%;top:-13px;width:50px;height:50px;margin-left:-25px;border-radius:50%;
+  background:radial-gradient(circle at 34% 28%,#ff9a86 0 10%,var(--nose) 48%,#8a1a0c 100%);
+  box-shadow:inset 0 -6px 11px rgba(0,0,0,.42),0 0 0 3px #3a2a12,0 6px 14px rgba(0,0,0,.5);
+  transform:scale(calc(1 - var(--pull,0)*.09))}
+/* "beg" pulse only when a draw is sitting on the server waiting for this reader */
+@keyframes knobbeg{
+  0%,100%{box-shadow:inset 0 -6px 11px rgba(0,0,0,.42),0 0 0 3px #3a2a12,0 0 0 0 rgba(227,59,38,.55)}
+  50%    {box-shadow:inset 0 -6px 11px rgba(0,0,0,.42),0 0 0 3px #3a2a12,0 0 0 15px rgba(227,59,38,0)}}
+.machine.pending .lever:not(.dragging) .knob{animation:knobbeg 1.2s ease-in-out infinite}
+/* centred on the boss (26px in), and NARROW ENOUGH TO STAY IN THE BAY — at
+   78px it hung 13px past the bay's left edge and sat over the 4th reel's
+   column. If the decal text ever gets longer again, shorten the text. */
+.pulllab{position:absolute;left:0;width:52px;bottom:17px;text-align:center;white-space:nowrap;
+  font:800 10px/1 ui-monospace,monospace;letter-spacing:1.8px;text-transform:uppercase;
+  color:var(--bulb-off);transition:color .3s;pointer-events:none}
+.lever.live ~ .pulllab{color:var(--bulb);text-shadow:0 0 9px rgba(255,201,116,.6)}
+/* the commit threshold, drawn on the track so "how far is far enough" is visible */
+.detent{position:absolute;left:50%;bottom:59px;width:6px;height:6px;margin-left:-3px;border-radius:50%;
+  background:var(--bulb);opacity:0;transform-origin:50% 50%;
+  translate:0 0;pointer-events:none;transition:opacity .25s}
+.lever.dragging ~ .detent{opacity:.85}
+
+/* ===================== coins ===================== */
+.coins{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:6;border-radius:12px}
+.coin{position:absolute;width:14px;height:14px;border-radius:50%;
+  background:radial-gradient(circle at 32% 28%,var(--bulb),var(--gold) 52%,#8a6412);
+  box-shadow:0 0 8px rgba(255,201,116,.7),inset 0 -2px 3px rgba(0,0,0,.35)}
+
+.ord{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:6px}
+.ord li{display:flex;gap:10px;align-items:baseline;opacity:0;transform:translateY(4px);
+  transition:opacity .3s,transform .3s;font-size:14px}
+.ord li.on{opacity:1;transform:none}
+.ord .n{font:800 11px ui-monospace,monospace;color:var(--accent);flex:0 0 16px}
+.ord li:first-child b{color:var(--accent)}.ord .d{color:var(--ink-3);font-size:13px}
+/* ================= the belt =================
+   Roger Goodell's Super Bowl / Super Browns / Fake Hair — the physical trophy the
+   league actually passes around, cropped to its centre plate.
+
+   ⚠️ INLINE, not a file in assets/. Every page in this repo is self-contained and
+   sw.js caches by a hash of the HTML, so an external image would sit outside that
+   hash and could go stale on its own — a new belt with the old page, or the reverse.
+   8 KB of base64 against a 250 KB page is the cheaper problem.
+
+   ⚠️ Declared ONCE. The season crest and the verdict trophy are the same bytes at two
+   sizes; two copies of a data URI in one file is 8 KB of duplication that will
+   eventually disagree with itself. */
+:root{--belt:url('data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCACAAIADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3TSPCWmaTGF03RNOsYx3it1B/76x6VbnktLZQLrVbWIKOjXCr+lecXUiyzykGaSPcQpmmeQ7e3JNVVCj/AFcEagf3UArzFhH1Z0uskehTa74bhPz6zFKR2iV5M/kMVVk8W+HolAgttRuOO1uFx/30RXDvvGSW2gdQDUD7iAVbJOepq1hIGbxPY7Kbx1EoIttBYH1muQB+gNU7jx3rDcQ2umwe+HkI/WuOugwVMO5zjds/DNU5Yl82VSkzbU3LmQ4Yjr/OtY4akuhm8RJnW3HivxDNn/iZJGP+mVuq4/MVBH4o8QQvn+02l9poUcfyri2t4l1C6R1dkji8xVLsOcA9qbY2akkXCTRu9x5YCzN8g27hg55rb2EOxCxEmejWvjzUB8tzYWNyo4JjZoj/AFFbFn430W4GL23vrFjn5tvmLk+6n+leOIkyWSMl7crKY0c7mDKdzYAwealaa/gmVY54JxlwWkUx4K9ckVjLCQZosRJHuAk0TW02wX2m6gp/5ZTBGP02tzXMeIvhT4J1MEX3haCBu0lqzQMPptOK84GsxYH222KDcVDkCRMj0I5rf0jxHqFvHv0zVbhU9Em3p9NrZArB4SUfhZtHERZieIP2ddFuAzaJrt3ZP/DHdRiRfX7y4Nec+IfgT420vdLBax6tAoyHsZAzY/3Thq9+tfHmpRnF5b2N2vq0Zhcj6rkfpWrZ+NNGuNpns761fu0e2dQenYhuPpUr20NyvckfGN9ot/o12Uu4bywnU8LcQlD+R61Wk8yS2laSQEllUALgKAOABX3ZPFpet6chdLbUrOUEqJ4g6nHGMMMjkV574q+C/g3VopWsYJdFlYlt9qd0efUoePwGKccSr+8hOk2tDQszG0hRkXcuNp6j8qkm6Yx05Ge1VtIkikkkjd1aUDKkKRgfj36VdkjZk3txGpwXY/KP8+ldSdzzcQmpWKE4ZgVXqRxz36ioC6BPm+XJyvP51PMzDDJBIyZ+/Idi/gD8zfpXC6tr+sGaWLdFY7WKssKYPH+0cmm5WKoU5tHVzTKiHMZAAI3NhRg89TWRc6tZCcypLCXI2n9/uxk+ig98VyC3bJqEN5cFrkxyBiszbt3qOfaulspreCORFu/MkB80gDzCpfadv7sYJDJjj1ojUOj2LW7Ee8Q3Ut1mNgyCOZTHLgFsAfwcZ4x9aa+swx3rxMsLXCkS+UDIrJ8u0Egp0p+opeyRt52ianbww3kMkE89vJi4VWJLDgYODgA8VXimmXxHLeyWd5BarZRQxu0MhJZZy7A7QTn07dAe9aqRPsUhbbVbV0jCosp2xKxinRwwU5+UZyTTmurXLoZAr+U4C3SGNWZmyQfwqi91pitptvfSxCExurx3CFGjUQsCSGA2kk/pWL4yu/7LsLifS2eMLdxwKVJaPJUyPlTlcYZF9sYpOVhezZ0UNuQdKXZ+5jRpmYdM9cfyqrbCJrOfUWWV5jKxLQybWiHYkemTXF6V4zaKQG7tjG4/5bWjbT+KH5T+GK6e11aC+0uX7E8EysyrLKqlJRySFdT689M9Kakmc9SLjqzRs9bnQBLpRKv94DDf/XrYtLmGZkmt5AxVgSOhHNcgp/OtLQ41a4MrOAyjCDPJ9TRKKsRQrz5uVnr3hzWYtNtmtp7eSeAuXUo+DHu68HqO/WuqlZt3y4x2x6V5/ZbWgQk8MmCa6nSdbi2W9lNbN5x2xLPvBX0BIxkHoO9eVVp9UezCXRnJ2MRed5zJIUViItygBem44+vy/gac2pOzSpDD8seE3feYycbto6cAjt1OO1LdyG1snZADt+VR6nsPxP8AOqUaGFI4AxJjHLd2OcsfxJJrppXZnVjF6tD4v9Ibz3Z/L2BmLHkex9/asnUNGtr/AFD7SXdN4AMacZPQc/TArYmbZEkCnOfnf3Pb8hTbZ7aKdZLttkC5MhBxxjnmt7XWpmtNijFaafpN0Le20qynufJEpeZPOMaN904Ocs3JAAOFwTjPGIPFfi651GOC0vJ2kicNFb2cCLkDuQq4A6ZNPsYbzXtRv9edoI/LJkbzE3KCBwu3uqKB14GBmvQfgpptpH4cTUpWWSa6uXLOMEt1ADccdjj3qW+WN2jTqeT+JPDXjjWb2e81Cz1C+kyWJkmMuwHnaCTjv2+lUPDPw88R63qBgTTrm1YLvZ5kMKgfU9T7Cvp/UdX07S5YraeQQs4+VUjLYHrhRnFTC4EoUp5zq6bw3lttx9cdfbrWX1iy0Q+S/U+dbr4c/EayuobWza5uYWbIVrjfGozjLgnAHAz7Vy+tPZQ3dxpGv6BJbvE5iuhYP5LrKp+9tB2N1BGVGe3rX1THqFtMWWBpJNvUrEw59sgZrzj4yeEodTgj8WWEbLcrGILzEfLxniORlOOUbAOf4SfSqp4jmdpImVOyujwm+8CXUthFqOhXIv7aZN6xyAJMB6ehP0NdV4N8PWsHh1LHVLQ/aLk/aWD8EHoAPQqOo9/rWt4OhurXw/Fa3iGO4glmikQjBUrIwI/PNaU6NLHhW2yKd0bf3WHT/A+xNbGbVzm9Q0ZtPUSCZpbckKCxG9Seg561Rv3e0skl8uECaUQfv3ZEjU5wWIOQCRgH1zmulksLfUYrz7TNcPb30Qie3dvlhIyDt7g5/UVzSI97p76fqUhaRN2nXTE9GXmOT8Rtb/gLetEpuxhGhFSudx8PZIv7DeCGLT40hmyFs7w3CfMBySeVOR0rqNvJwcHqDXn3wr1BJJ5rS4k0iK9aIrLbW9o0M4eNsEufusMc8etegoc7SeOK5ZbnYjOv2JktoyTjzA3HQ7Vz/MCo4wplJJYB8Bh1HHT6VBdOw1KDkKCkv8xQrhhlcrg7SCMc5xx6+vFaU9gmTF9zF8gknOapayQ2kXgIHMROfoQf6VYPT3qK6j8+1mg4JkjZAPcjA/Wt+hmtzioNQktEnjQl4502yIxIBP8AC3HXaeQDxnrXofwe1aX7Pd2W1BHE8TpuT5P3gC7ev3iUGB715/4i02HTHWKPVrS9lGUmWDd+4cfeX5gNwB43KSMg16H4CFtpMIjni8q41O5tVtbVcs5dY927p1B+Y+gGfas4O6NKlrXR3niHUNH8M24v9d1AQxyFhAoDCWcgZAAGMsB2NUfCGt2HimS4eLQdUsY4MGOW+iCefn+6OvHesS8D3/xFSbVNBuTeC2Hk6hKjKsQ7AKwKIevIyxPbms6ysvF+ppqE9jbm2UKyEajciSMSAAhkYKG28AdMNnjaRmsnThbV6iUpdEely2EDxuGtogeuVUZIHQEkcVzdh4p0HxBb6lYWF0VubOG4a4sr6M/vEWNtw5JyoJU8H+dcV4l1PUT4W8LWmq+JpLHUbe4eLVrWxnLymFshC5HcADO7s2etc54h8KzafrMdz4Y0e9S8t/Kkjmguo5oruKRsEbB8zKVJDEFscg+tKnTjbV6lz51a60LenXQvBc3MefKluGkQnk/OquRnuAWKg+gFWscVR0Cx/s3TFsfL8sQyzKFznAErY5+mKv10IwKU8jWr3RWJ5sx/aEiQfMxHDAe/3T+Nc1qi/wDE4EvlPGmqWHmFGGGWWHn89jEV1V38t1av6s0efqpP/stY3isBJdHumBPlalGh/wB2QMjfzFNoCLwlfNZeMUQ3k0Vtfxx3AhS1EiySMDE5Z+sY3KDnoc816aOBjuDXkcRnttQ0WaMao0ga4tzFp7qs0mAkgXngrndkV66p3MCV271zt9MjpXPM0ic5M4a+tMuNp8xeeeozmrErp5eVycEHdjnGf/11m37pEjSYybeVZRz/AA9GP5EVosB5jqsjeSyY28cH1B69O1aQHJXEYLk5+93oTIIx61DC5aIM33hw31HBp4I3ZxituhnsdvHpdpqXhrQbKGzgL3d1JuuQdr2wfIkYAdchQOeMkHrVzTltYdUtZWjaSWykfY8jYZS6hXI6Z+XAzjH61j+DvE+j6VatpviSSK3svM3W1265WMscsjEcgEjIPTqOwqfw3rGm+IdPa6tblJXRikxViG3A/e9eRyO+DWdKN7xYVHs0dyJY54sxSLKh7Z/pWD4915fD3hO/1OaRxIkLR24VSzGQqduB7dT2ABJqsgkWEys4SVAAGVjl/cf/AF6v3VvpGrWCW+oyRzK9u9vIpdhgSKA/PUEjjPufWueth3DU1pVk2rniduv2eJFiZhxkuDy5PJYnuT1z713Pwe1CddbvNNCr5P2f7UmB/qn3hWI9N+QSBwSue5rmNV8PWOh6lBo2n+LrS7V2KxJdwtuiHZNyE7gB3Ndv4S0O38MG5m/tZdWe/gWO4Cx+WEZSSoQdQuGIOSTnBrho4WrGfM3ofS4/NcJXwvJFe9+Rx+qGM61qYiIaJL+4RCD1AkP+fwquRimW0csUbRzlDKJZDJsPG4uSR+BOKkI4zXrxXQ+UuVb/AO/aYxn7QP8A0B657xNZiz0OOMXE8xfVbdwZW3EEyj5R7DtW/esTewKEZvKjkmZV5J42gfU5P5Vg69dR38fh5fKmh+16hHMUlXayJGCx3Dt2NU9gKWrRLNf6bC1o94Dqk48hLjyS48voHyNvTPWvWNKV10+wQxSQt5KDy5JPMZOwDN/ER6968avBFdTaNbXi6a/nXFxOY9QkKQyfIigEjnJOce4r2mFUthFHGgjSKNUVR/CFUDA/KuepuaRONkkB2mXkLmCdehAx1/Ec/wDAam0WV/Ils59zzWh2nHJZf4WHrxSeQ0mql1+0GJx++MybOVwVIIGM/Wr93aww3cd2QVmMfJXOdp6A+vr+VXBMmpNRdmVEmQzJOm4Q3GB8wwVboMjtnp9QPWrX4dDUSyWtyjxtLG6vkFScZrkvEuvX9jq6Wtndki2XbKzICJGPPze4GBx3zV81txR97Y6u/tob60ktblC0Ui4Yd/qPeuNOv6j4cmMdrqHl3FndHzoRxFdoOA20/wAQKkHvgj0rU0HxPLfrMJ9PAECBnljlUDk4AwxHJPbNMudI8P6tLdJd3rWU0xnCTXETr9mfKPGWGMHJMitg8Bgad+qHbueoaB4u0rXNEOoI7xj5lkjaMkg5HYduevHQ10D6PpGralDe3Nk12YLIWbWzE7NpPLBc4Zvc/wAIrwnT9E1zSNPivvCGtWsj3cBW9sHmjfDA4b/ZZeMg8HB9yK6jwP8AEDX9L1SPRvF2kTW4TaVuUiZkBAyvmbcjHuOncU53lGy3IUVF3R0Oq+FPFdo82m2Xh/wfqemM5wXilgLp1AdEOCwx1HWtQ6dB4S0BXNlp1vf6p5cLG1iaOJJ2kHKoegAJJPUhMmtEeNLSQTQx3lt5iH/WEMAM9BkjBPI6V5l4v8cm/wDEMDi8ht7HT4JJo2u2CvdXDIURUUElQNxIJHcn0rOMZr4i5NPYdYyC4tY5xnEo83/vo7v61YX0964rUPHek6TCllbQXV3PDGqYMZiXgAAktzz16Vd8Ka6/inTnjeBbZlkK3WxsgRn7qr3yw4J7AN6irTFY27D98014v3ZiBGf+ma5Cn8SWP4iuX125Fx4lu5t37rS7T7OG/wCm8/3se4QE/hXQ6jFYWl6NWAT7dFbmKFC5CsD0BUdunOOgrmoIbew0T7TdztM1tNJd35ZcefI2MYB9ThAPQt6090RzK9hmibZfHNtaS3McT20UVuI5LD7Qskjt5ki5PEbDON1eult0j5/WvMvhza6hFqUcl6niG3uJ3kuLlXVBaSSEE8/xZ5GPpXpCdPbNc1R3ZvEoWyxwOdwd1By25yS3t9M1BcyM7tJIcs5yT71OuHgDBgVbBUjkHjr71BNG49GGeorpSscVaMm7lGVYzMkzQq0kbblLDODXPar4ctLhnmiuZ4ZZGLNvHmKSTk+/866SdeenNVpAR25p8qe5iqkoPRnPaFpEmnJdR3YN7DOFUxQhWRgCMMVbDAjkjFaGo6tZafHvle8A+0BmEcTAuWLNgg4+X7oP0q5FGJbmOMjhnAP9atxWYe6ljjWSBEXI2SHkk8H9DRyI6IV5SWpjTm28zVpbqOBoolxGrxxvvRYHJ8srk4zhsnng1W0ezhbQ7Bmt4dxs0KvLGQu4xFixYff5GT6VsDTIZLaOWRlxIoLboUY7i2MciqbafbPPNaxrCywROcNbLgEcFQPTHcU7FOrbco3lnpghMbWUKWsk32YyvGfkZpZIydx9D5fHt71LDLpMMsltAIIN0TSQMoVdjtLKpHHowUe3FWpNLCLeCMxH7OqyhfIXDkjJOD3461N/ZkaLtW5nVpCQvlqqKTs3DIA70WJdR9jzrxJol9qV1baja2TLNdxmW6UzFkicscDe+O2OO2KueFtLv9FluJ/7SjieeExFLcFiDkEMWOBx+PU1tnLHcxJPck5puOelNQW5yTxUnoiJI2DeY8ssrn+ORsn8ulW7WL7SfszRtKsgKSICQWU9ehFRY4xVrTre7eZZbaMkqchugH1NU9jKDk5I1vBGkrYa3cuunSW6JGVSX7e0yPnGfkPIPua7WHAUZ+tZGkAhpTjnAzjtV5xceYn2WKe5kY/6pXwAAOuADXFPc9mOxlNdzWjeSuj3UsEf3Ht9hUL2AXcD+lRSa5aopM9nqVqD082yk/8AZQQK6218LeAb8g6T4qQHooh1KN8fganb4a3Cxg6f4mvNmcgvHuB+rA5qViY9TT2TOHGs6JL8jaja7vR32EfnipUSxuRm3vI3/wByVWFdNc+BfE6O7JqmmXgIwEmjwF+gIrCvvAuugj7R4V0m9A5JiVMt+I5rRYiHczlQT3RVGnzwzCZGRypyA2VotvtEBI+zeaWlMjssg/TNVLjQJbNnM/hfU7HHRre4lQL9BnFVV8mMxxrqmv2rHk+aUmGf9osp/IVoqqfUj6ulsam6QRLE1nchECEYTPIbJ/SqpeVNUkugl46tEygtCcqT0A9hUcd7chWMXiSyc7toW708pn6bWH51opdXxiJWXSJOB86XLBR65BBP5VamRKl5ldLn52drS9kZym7ERHRcMffqeKSKW5jwsdjdMMIp3KF4GQep9MVfjvYFUG4ubHcR92OUsPr2NRNeQFNqSyOQcho4CTj0yRgik5oFSbMEaHfMxPlqgJ43yDP6VYi8Oso3T3HHfYn9TWlLOZpC/lXZVhjYZRGv5DBFMi0c3YATSklYHIMjPIR9Se1S6yRKwcexFHZ6VaEGV4c+s0o/keKlbULHBVLqJtvZPm/9BzWnZ+GNZch4dHggDDr9nVPxycVow+DNbkULNdxQgf8ATQZH/fIrN4iPc3jQtsjFssShmVSx6qHUgZxxwevWu38IaZqdnePcahbiHERRMYHJI7ZPaquneCZILhJp9SDlWBKqrHODnHJ/pXUatqFjpsTXGpXtrZR9S1xKqD9TXJWrc2kTohTtuf/Z')}
+/* The crest, beside whoever is holding it. Rounded rather than circular — the plate is
+   square and a hard circle crops the lettering off all four sides. */
+.who2 .beltcrest{width:17px;height:17px;flex:0 0 17px;margin-left:5px;vertical-align:-4px}
+.beltcrest{display:inline-block;width:22px;height:22px;flex:0 0 22px;border-radius:5px;
+  background:var(--belt) center/cover;vertical-align:-5px;margin-left:7px;
+  box-shadow:0 0 0 1.5px var(--gold,#f0b429),0 1px 4px rgba(0,0,0,.5)}
+.verdict .belttrophy{width:76px;height:76px;margin:0 auto 10px;border-radius:12px;
+  background:var(--belt) center/cover;
+  box-shadow:0 0 0 2px #c9a24a,0 0 22px rgba(255,201,116,.28),0 6px 16px rgba(0,0,0,.5)}
+.verdict{background:#241c12;color:#ecdfc9;border-radius:12px;padding:22px;margin-bottom:16px;text-align:center}
+.verdict .nm{font:800 34px/1 system-ui;color:#fff;letter-spacing:-.8px;margin:6px 0}
+.verdict .why{color:#b7a488;font-size:14px}
+/* ---- the ticket, as a printed parlay slip ---- */
+.slip{position:relative;background:var(--page);border:1px solid var(--grid);border-radius:4px;
+  padding:8px 0 0;margin:4px 0 0;font-family:ui-monospace,Menlo,monospace;overflow:hidden}
+/* perforated top/bottom: half-circles punched in the CARD colour, so the slip
+   reads as torn off a roll. Uses --surface-1 because the card is what's behind it. */
+.slip::before,.slip::after{content:"";position:absolute;left:0;right:0;height:8px;pointer-events:none;
+  background:radial-gradient(circle at 6px 0,var(--surface-1) 0 5px,transparent 5.5px) 0 0/12px 8px repeat-x}
+.slip::before{top:0}
+.slip::after{bottom:0;transform:rotate(180deg)}
+.slip-hd{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;
+  padding:10px 16px 10px;border-bottom:2px solid var(--ink-1);margin:0 0 2px}
+.slip-hd .t{font:800 12.5px/1 ui-monospace,monospace;letter-spacing:2.2px;text-transform:uppercase;color:var(--ink-1)}
+.slip-hd .s{font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1.4px;text-transform:uppercase;color:var(--ink-3)}
+.legs{list-style:none;margin:0;padding:0}
+.leg{position:relative;display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:0 12px;
+  padding:11px 16px;border-bottom:1px dashed var(--grid);align-items:start}
+.leg:last-child{border-bottom:0}
+/* the parlay rail — one line chaining every leg together, which is the whole
+   visual point of a parlay vs. eight singles */
+.leg::before{content:"";position:absolute;left:28px;top:0;bottom:0;width:1px;background:var(--grid)}
+.leg:first-child::before{top:22px}
+.leg:last-child::before{bottom:calc(100% - 22px)}
+.mk{position:relative;z-index:1;width:21px;height:21px;border-radius:50%;margin-top:1px;
+  display:flex;align-items:center;justify-content:center;background:var(--page);
+  border:2px solid var(--ink-3);color:var(--ink-2);font:800 10px/1 ui-monospace,monospace}
+.leg.on .mk{border-color:var(--accent);color:var(--accent)}
+.leg.won .mk{background:var(--good);border-color:var(--good);color:#fff}
+.leg.lost .mk{background:var(--bad);border-color:var(--bad);color:#fff}
+.leg.void .mk{background:var(--ink-3);border-color:var(--ink-3);color:#fff}
+.leg.empty .mk{border-style:dashed;opacity:.6}
+.leg .who2{font:800 12px/1.35 ui-monospace,monospace;letter-spacing:1.3px;text-transform:uppercase;color:var(--ink-1)}
+.leg .sel{font-family:system-ui,-apple-system,sans-serif;font-weight:650;font-size:14.5px;
+  color:var(--ink-1);margin-top:2px;overflow-wrap:anywhere}
+.leg .mkt{font:11px/1.5 ui-monospace,monospace;color:var(--ink-3);margin-top:2px;overflow-wrap:anywhere}
+.leg.empty .sel{color:var(--ink-3);font-style:italic;font-weight:500}
+.leg.bz{background:color-mix(in srgb,var(--bad) 10%,transparent)}
+.leg.mine{box-shadow:inset 3px 0 0 var(--accent)}
+.leg .rt{text-align:right;white-space:nowrap}
+.leg .pxv{font:800 15px/1.2 ui-monospace,monospace;color:var(--ink-1);font-variant-numeric:tabular-nums}
+.leg.empty .pxv{color:var(--ink-3);font-weight:600;font-size:12px}
+.leg .tin{font:10.5px/1.6 ui-monospace,monospace;color:var(--ink-3)}
+.slip-ft{display:flex;gap:24px;flex-wrap:wrap;align-items:baseline;
+  border-top:2px solid var(--ink-1);margin:2px 0 0;padding:14px 112px 20px 16px}
+/* Anchored to the FOOTER, not the first leg — at top:44px it landed squarely on
+   leg one's price in every theme and width. The footer reserves 112px of right
+   padding so the stamp can never sit on a number. */
+.stamp{position:absolute;right:14px;bottom:16px;transform:rotate(-11deg);pointer-events:none;
+  font:800 15px/1 ui-monospace,monospace;letter-spacing:3px;text-transform:uppercase;
+  padding:6px 10px;border:2.5px solid currentColor;border-radius:5px;opacity:.5}
+.stamp.open{color:var(--accent)}.stamp.placed{color:var(--warn)}.stamp.graded{color:var(--good)}
+/* ---- diagnostics ---- */
+.meter{display:block;width:100%;min-width:56px;height:8px;border-radius:4px;overflow:hidden;
+  background:color-mix(in srgb,var(--accent) 15%,transparent)}
+.meter i{display:block;height:100%;border-radius:4px;background:var(--accent)}
+.meter.risk{background:color-mix(in srgb,var(--bad) 15%,transparent)}
+.meter.risk i{background:var(--bad)}
+.mcell{display:flex;flex-direction:column;gap:4px;min-width:74px}
+.mcell .v{font:700 12.5px/1 ui-monospace,monospace;color:var(--ink-1);font-variant-numeric:tabular-nums}
+.tbd{font:700 10px/1 ui-monospace,monospace;letter-spacing:1px;color:var(--ink-3);
+  border:1px dashed var(--grid);border-radius:4px;padding:3px 5px;display:inline-block}
+.flag{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;color:var(--ink-2);
+  border-left:3px solid var(--warn);padding:8px 0 8px 11px;margin:12px 0 0}
+.flag b{color:var(--ink-1)}
+.flag.corr{border-left-color:var(--bad)}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* ---- season, as a split-flap board ---- */
+/* Dark plate in BOTH themes on purpose — same call as .machine and .verdict.
+   A chalkboard was considered and rejected: green + handwriting fights the
+   mono/terminal identity the rest of this page is built on. */
+.tboard{background:#191209;border:1px solid #2b2318;border-top:3px solid var(--accent);
+  border-radius:11px;padding:12px 10px 8px;box-shadow:inset 0 14px 26px rgba(0,0,0,.5)}
+.thead,.trow{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:12px;align-items:center;padding:7px 8px}
+.thead{border-bottom:1px solid #2f2619;padding-bottom:9px;margin-bottom:2px}
+.thead span{font:700 9.5px/1 ui-monospace,monospace;letter-spacing:1.6px;text-transform:uppercase;color:#7a6a52}
+.thead span:last-child{text-align:right}
+.trow{border-bottom:1px solid #241d15}
+.trow:last-child{border-bottom:0}
+.trow .rk{font:800 12px/1 ui-monospace,monospace;color:#7a6a52;font-variant-numeric:tabular-nums}
+.trow .nm2{font:800 15px/1.2 ui-monospace,monospace;letter-spacing:1.7px;text-transform:uppercase;
+  color:#ecdfc9;display:flex;align-items:center;gap:9px;flex-wrap:wrap;min-width:0}
+.trow.me2 .nm2{color:#ff9146}
+.fund{font:700 9px/1 ui-monospace,monospace;letter-spacing:1.2px;text-transform:uppercase;
+  color:#1a1206;background:var(--accent);padding:4px 7px;border-radius:4px;white-space:nowrap}
+.flap{display:flex;gap:3px;perspective:280px}
+.flap b{position:relative;min-width:21px;height:30px;border-radius:3px;background:#241d15;color:#ffcf9a;
+  font:800 18px/30px ui-monospace,monospace;text-align:center;padding:0 2px;
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,.5),0 1px 0 rgba(255,255,255,.04)}
+.flap b::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:rgba(0,0,0,.55)}
+.flap b.zero{color:#93805f}
+@keyframes flap{0%{transform:rotateX(-90deg);filter:brightness(1.8)}100%{transform:none}}
+.flap b.flip{animation:flap .45s cubic-bezier(.2,.9,.3,1);transform-origin:50% 0}
+/* ---- machine: armed (pre-draw) idle state ---- */
+.machine.armed .win{border-color:rgba(255,255,255,.09)}
+/* idle motion is owned by the v2 rAF engine, not CSS — see the BOZO MACHINE v2
+   block above. A CSS animation on `transform` would override it. */
+.machine.armed .cell{opacity:.62}
+.ord li.ghost{opacity:1}
+.ord li.ghost b{color:var(--ink-3);font-weight:650}
+.ord li.ghost .n{color:var(--ink-3)}
+
+/* ================= carnival-casino skin =================
+   Applies to exactly three surfaces: the hierarchy machine (#drawCard), the
+   diagnostics plate (#diagCard) and the season board (#seasonCard).
+
+   ⚠️ This is PAINT ONLY. No class the JS reads is renamed and no layout box is
+   restructured — the reveal logic below is the only behavioural change on this
+   page. If you need to undo the look, delete this block and the three
+   `bz-carnival` classes in the markup; everything still works.
+
+   ⚠️ These three plates are dark in BOTH themes, which is the call .machine,
+   .verdict and .tboard already made before this skin existed. A felt/brass
+   surface that flips to cream in light theme stops reading as a machine, and
+   the reel windows have to stay cream either way for the type to survive.
+   So all inks inside a plate are declared literally here rather than inherited
+   from --ink-*, which in light theme are dark-on-dark. */
+.bz-carnival{
+  /* the cabinet's own metals — brown-and-gold, unchanged */
+  --brass:#c9a24a; --brass-hi:#f2dda6; --brass-lo:#6d5220;
+  --nose:#e33b26; --cream:#fff8ea;
+  /* the midway palette: tent red, gold, grape signs, turquoise booth */
+  --candy:#e03131; --gold:#f0b429; --gold-hi:#ffe9a8; --gold-lo:#8a6212;
+  --grape:#2c1a52; --grape-lo:#1a0f33;
+  --teal:#0f7a75; --teal-hi:#13908a; --teal-lo:#06423e;
+}
+/* --- the big top: stripes FAN from a peak, with a scalloped valance and a pennant.
+   ⚠️ A plain diagonal stripe band was tried first and reads as a decorative header,
+   not a tent — the fan and the peak are what make it a big top. The `at 50% 165%`
+   focus puts the vanishing point below the card so the fan spreads across the full
+   width instead of pinching in the middle. --- */
+.card.bz-carnival{position:relative;overflow:hidden;padding-top:52px;border-color:var(--gold-lo)}
+.card.bz-carnival::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:42px;pointer-events:none;
+  background:repeating-conic-gradient(from -92deg at 50% 165%,
+    var(--candy) 0 2.6deg, var(--cream) 2.6deg 5.2deg);
+  /* two mask layers: a solid band on top, scallops punched along the bottom edge */
+  -webkit-mask:linear-gradient(#000 0 0) 0 0/100% 28px no-repeat,
+          radial-gradient(circle at 13px 100%,transparent 0 12px,#000 12.6px) 0 100%/26px 15px repeat-x;
+          mask:linear-gradient(#000 0 0) 0 0/100% 28px no-repeat,
+          radial-gradient(circle at 13px 100%,transparent 0 12px,#000 12.6px) 0 100%/26px 15px repeat-x;
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,.12)}
+/* the pole and pennant at the peak */
+.card.bz-carnival::after{
+  content:"";position:absolute;left:50%;top:-2px;width:2px;height:16px;background:var(--gold);
+  box-shadow:6px 3px 0 -1px var(--candy),8px 3px 0 -1px var(--candy),10px 4px 0 -2px var(--candy);
+  z-index:2;pointer-events:none}
+.card.bz-carnival > .bz-hdr{position:relative;margin-top:2px}
+/* --- every card title is a bulb-outlined marquee sign. The dotted gold border IS
+   the bulb row — at 3px it reads as lamps, and it costs no extra element. --- */
+.card.bz-carnival > .bz-hdr h2.bz{
+  display:inline-block;padding:7px 14px;border-radius:8px;letter-spacing:2px;text-transform:uppercase;
+  font-size:14px;color:var(--bulb);background:linear-gradient(180deg,var(--grape),var(--grape-lo));
+  border:3px dotted var(--bulb);text-shadow:0 0 12px rgba(255,224,138,.7);
+  box-shadow:0 0 18px rgba(255,224,138,.22),inset 0 0 22px rgba(0,0,0,.5)}
+
+/* --- cabinet, reel windows and lever: see the BOZO MACHINE v2 block above. --- */
+/* --- the drawn order, as a lit marquee list --- */
+.bz-carnival .ord li:first-child:not(.ghost) b{color:var(--accent);text-shadow:0 0 10px color-mix(in srgb,var(--accent) 45%,transparent)}
+
+/* --- diagnostics: the sideshow odds plate, turquoise under a gold rail --- */
+#diagCard.bz-carnival .stat-grid{
+  border:3px solid var(--gold);border-radius:11px;padding:16px 18px;margin:8px 0 4px;gap:16px 20px;
+  background:
+    repeating-linear-gradient(45deg,rgba(255,255,255,.05) 0 20px,transparent 20px 40px),
+    linear-gradient(180deg,var(--teal-hi),var(--teal-lo));
+  box-shadow:inset 0 0 0 2px rgba(224,49,49,.35),inset 0 14px 28px rgba(0,0,0,.4)}
+#diagCard.bz-carnival .stat-grid .lil{color:#9ff0e4}
+#diagCard.bz-carnival .stat-grid .big{color:var(--bulb);text-shadow:0 0 14px rgba(255,224,138,.45)}
+#diagCard.bz-carnival .stat-grid .big.cost{color:var(--cream);text-shadow:none}
+#diagCard.bz-carnival .stat-grid .tm{color:#7fd8ca}
+#diagCard.bz-carnival #dgNote{color:var(--ink-3)}
+#diagCard.bz-carnival #dgTable th{border-bottom:2px solid var(--gold);color:var(--candy)}
+/* the caution stripe reads as a fairground barrier, not a browser warning box.
+   ⚠️ It is absolutely positioned because .flag is a flex row — a ::before in flow
+   becomes a flex item and pushes the ⚠ glyph off its text. */
+#diagCard.bz-carnival .flag{border-left:0;position:relative;padding-left:15px}
+#diagCard.bz-carnival .flag::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:3px;
+  background:repeating-linear-gradient(135deg,var(--candy) 0 7px,var(--cream) 7px 14px)}
+#diagCard.bz-carnival .flag.corr::before{background:repeating-linear-gradient(135deg,var(--nose) 0 6px,var(--grape-lo) 6px 12px)}
+/* the empty state is the house waiting for a bet, not an error */
+#diagCard.bz-carnival.empty #dgNote{
+  border-top:0;background:linear-gradient(180deg,var(--teal-hi),var(--teal-lo));border:3px solid var(--gold);
+  border-radius:11px;padding:18px 20px;color:#9ff0e4;text-align:center;font-size:13.5px;
+  box-shadow:inset 0 0 0 2px rgba(224,49,49,.35),inset 0 14px 28px rgba(0,0,0,.4)}
+#diagCard.bz-carnival.empty #dgNote::before{
+  content:"";display:block;width:26px;height:26px;border-radius:50%;margin:0 auto 10px;
+  background:radial-gradient(circle at 34% 30%,#ff9a86 0 12%,var(--nose) 52%,#7c1608 100%);opacity:.55}
+
+/* --- season: the ticket booth. Turquoise board, polka dots, a scalloped red
+   valance under the bulb rail. --- */
+#seasonCard.bz-carnival .tboard{
+  border:3px solid var(--gold);border-top:3px solid var(--gold);padding-top:30px;position:relative;
+  background:
+    radial-gradient(circle,rgba(255,255,255,.07) 1.8px,transparent 2.3px) 0 0/18px 18px,
+    radial-gradient(130% 100% at 50% -10%,var(--teal-hi),var(--teal-lo) 72%);
+  box-shadow:inset 0 0 0 2px rgba(224,49,49,.3),inset 0 16px 30px rgba(0,0,0,.45)}
+#seasonCard.bz-carnival .tboard::before{
+  content:"";position:absolute;left:10px;right:10px;top:9px;height:6px;pointer-events:none;
+  background:radial-gradient(circle,var(--bulb) 0 2.4px,transparent 3px) 0 50%/17px 6px repeat-x;
+  filter:drop-shadow(0 0 4px rgba(255,201,116,.5));opacity:.85}
+#seasonCard.bz-carnival .tboard::after{
+  content:"";position:absolute;left:0;right:0;top:19px;height:11px;pointer-events:none;
+  background:repeating-linear-gradient(90deg,var(--candy) 0 13px,var(--cream) 13px 26px);
+  -webkit-mask:radial-gradient(circle at 8px 0,#000 0 7px,transparent 7.6px) 0 0/16px 11px repeat-x;
+          mask:radial-gradient(circle at 8px 0,#000 0 7px,transparent 7.6px) 0 0/16px 11px repeat-x;
+  opacity:.9}
+#seasonCard.bz-carnival .thead{border-bottom-color:rgba(240,180,41,.35)}
+#seasonCard.bz-carnival .thead span{color:#9ff0e4}
+#seasonCard.bz-carnival .trow{border-bottom-color:rgba(255,255,255,.08)}
+#seasonCard.bz-carnival .trow .rk{color:var(--bulb)}
+#seasonCard.bz-carnival .trow .nm2{color:var(--cream)}
+#seasonCard.bz-carnival .trow.me2 .nm2{color:#ffd166}
+/* one red nose = this dawg has worn the belt. Presence only, never a count —
+   the flap digits are the count and two encodings of one number invite a
+   disagreement between them. */
+#seasonCard.bz-carnival .trow[data-belt="1"] .nm2::after{display:none}
+#seasonCard.bz-carnival .trow[data-worn="1"] .nm2::after{
+  content:"";width:9px;height:9px;border-radius:50%;flex:0 0 9px;
+  background:radial-gradient(circle at 34% 30%,#ff9a86 0 14%,var(--nose) 55%,#7c1608 100%);
+  box-shadow:0 0 7px rgba(227,59,38,.6)}
+#seasonCard.bz-carnival .fund{
+  background:linear-gradient(180deg,#ff6b5e,var(--candy));color:var(--cream);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 0 2px var(--gold)}
+/* the counts are torn ticket stubs — cream card, red numerals, gold edge */
+#seasonCard.bz-carnival .flap b{
+  background:linear-gradient(180deg,var(--cream),#efe2c8);color:var(--candy);
+  box-shadow:inset 0 0 0 2px var(--gold),0 1px 0 rgba(0,0,0,.35);text-shadow:none}
+#seasonCard.bz-carnival .flap b.zero{color:#b9a98c}
+#seasonCard.bz-carnival #next{border-color:var(--gold-lo);color:var(--gold)}
+#seasonCard.bz-carnival #next:hover{border-color:var(--gold);color:var(--gold-hi)}
+.note{font-size:13px;color:var(--ink-3);margin:12px 0 0;border-top:1px solid var(--grid);padding-top:11px}
+.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.gr{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:8px 0;
+  border-bottom:1px solid var(--grid);font-size:13.5px}
+.gr input{width:96px}
+/* auth — the signed-OUT form only. There is no signed-in strip any more: sign out is in
+   the nav account modal and "my sheet" is your cell in the cast strip. */
+.auth{max-width:420px}
+.auth .f{margin-bottom:10px}
+.readonly{border-left:3px solid var(--warn);padding-left:12px;color:var(--ink-2);font-size:13.5px}
+@media(max-width:640px){
+  .frm{grid-template-columns:1fr 1fr}.f.w4{grid-column:span 2}
+  /* buildReels sets grid-template-columns inline to the live lever count, so the
+     reels stay in a single left-to-right row at every width. Shrink the type
+     instead of wrapping — the row IS the hierarchy. */
+@media(max-width:640px){
+  /* the lever lies on its side under the reels; the arm sweeps left-to-right so it
+     still reads as a pull rather than a squash */
+  .machine{padding:48px 20px 20px}
+  .marq{right:20px;left:20px;top:20px}
+  .reels{gap:7px}
+  .win{height:86px}.cell{height:86px}
+  .cell span{font-size:10px;letter-spacing:0}
+  .cell svg{width:21px;height:21px;flex:0 0 21px}
+  .leverbay{position:relative;right:auto;top:auto;bottom:auto;width:100%;height:60px;padding:0;margin-top:14px}
+  .boss{bottom:6px;left:40px;width:40px;height:32px;margin-left:-20px;border-radius:6px}
+  .track{display:none}
+  .arm{left:40px;bottom:15px;margin-left:0;width:152px;height:15px;transform-origin:0 50%;
+    transform:rotate(calc(var(--pull,0)*34deg)) scaleX(calc(1 - var(--pull,0)*.13))}
+  .rod{border-radius:7px}
+  .knob{left:auto;right:-10px;top:50%;width:40px;height:40px;margin:-20px 0 0 0}
+  .lever{inset:0}
+  .pulllab{bottom:4px;left:auto;right:10px;width:auto;text-align:right}
+  .card.bz-carnival{padding-top:46px}
+  h2.bz{font-size:12.5px;letter-spacing:1.4px;padding:6px 11px}
+}
+  /* the tent scales down but keeps its peak — the fan is the whole point of it */
+  .card.bz-carnival{padding-top:44px}
+  .card.bz-carnival::before{height:34px;
+    -webkit-mask:linear-gradient(#000 0 0) 0 0/100% 22px no-repeat,
+            radial-gradient(circle at 11px 100%,transparent 0 10px,#000 10.6px) 0 100%/22px 13px repeat-x;
+            mask:linear-gradient(#000 0 0) 0 0/100% 22px no-repeat,
+            radial-gradient(circle at 11px 100%,transparent 0 10px,#000 10.6px) 0 100%/22px 13px repeat-x}
+  .card.bz-carnival > .bz-hdr h2.bz{font-size:12.5px;letter-spacing:1.4px;padding:6px 11px}
+  table.bz td,table.bz th{padding-left:5px;padding-right:5px}
+  /* ---- diagnostics on a phone: ONE table, scrolled sideways ----
+     ⚠️ IT STAYS A TABLE. This was cards for one release and that was the wrong read of
+     "hard to tell which column is which" — the complaint was that the columns were
+     illegible, not that columns were the wrong shape. Comparing two people on one lever
+     is the job, and a column does that for free while a stack of cards makes you hold
+     one card in your head and scroll to the next.
+     ⚠️ What actually made it unreadable was losing your place while scrolling right, so
+     the name column is PINNED to the left edge and rides along. That is the fix: a value
+     is never on screen without the name it belongs to.
+     ⚠️ The header is NOT sticky, deliberately. .tscroll sets overflow-x, which makes
+     overflow-y compute to auto — so a `position:sticky; top:0` there anchors to a
+     container that never scrolls vertically and simply does nothing. It would be a rule
+     that looks like it works and doesn't. The column rules below do that job instead. */
+  #dgTable{min-width:640px}
+  /* the name column rides along — without it you scroll to Worst CLV and no longer know
+     whose row you are on, which is the whole failure this replaces */
+  #dgTable td.who,#dgTable th:first-child{position:sticky;left:0;z-index:2;
+    background:var(--surface-1);box-shadow:1px 0 0 var(--grid)}
+  #dgTable tr.me td.who{background:color-mix(in srgb,var(--accent) 12%,var(--surface-1))}
+  #dgTable td,#dgTable th{white-space:nowrap}
+  /* a rule between every column: at this width the eye needs the edge, not just the gap */
+  #dgTable td+td,#dgTable th+th{border-left:1px solid var(--grid)}
+  .tscroll{position:relative}
+  .mcell{min-width:54px}
+  .slip-ft{gap:16px;padding-right:96px}
+  .stamp{font-size:12px;top:auto;right:10px;bottom:14px;padding:5px 8px;letter-spacing:2px}
+  .leg{grid-template-columns:24px minmax(0,1fr) auto;padding:10px 12px}
+  .leg::before{left:26px}
+  .trow,.thead{grid-template-columns:22px minmax(0,1fr) auto;gap:8px}
+  .trow .nm2{font-size:13px;letter-spacing:1.1px}
+  .bz-hdr h1{font-size:24px}
+}
+@media(prefers-reduced-motion:reduce){
+  .machine::before{animation:none!important}
+  .machine.pulling,.machine.thunk,.machine.jackpot .flash{animation:none!important}
+  .machine.pending .lever .knob{animation:none!important}
+  .strip{filter:none!important}
+  .arm{transition:none}
+  .ord li{transition:none}
+}
+@media(prefers-reduced-motion:reduce){.strip,.rod,.ord li{transition:none!important}
+  /* the bulbs stay LIT, they just stop travelling — an unlit machine would read
+     as broken rather than as motion-reduced */
+  .bz-carnival .machine::before,.bz-carnival .machine .knob{animation:none!important}
+  .bz-carnival .machine.pending::before{opacity:1}
+  /* ⚠️ Stopping the idle reel scroll is NOT enough on its own: a frozen strip parks
+     every window on the same cell, and four windows reading "Shortest Odds" looks
+     exactly like a drawn hierarchy. Blank the glass instead — hatched cream says
+     "no result here", which is the true statement. The lever list underneath still
+     names which levers are in the draw. */
+  .bz-carnival .machine.armed .strip{animation:none!important;visibility:hidden}
+  .bz-carnival .machine.armed .win{background:repeating-linear-gradient(45deg,#e7dcc6 0 7px,#f7f1e6 7px 14px)}}
+/* ---- sheets nav: the cast strip, styled with the playbill it lives in ---- */
+/* ---- sheet stat tiles ---- */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px 22px;margin:4px 0 2px}
+.stat-grid .big{font-size:24px}
+/* ---- league dials ---- */
+.dial{display:flex;align-items:center;gap:8px}
+.dial button{background:none;border:1px solid var(--grid);color:var(--ink-2);border-radius:7px;
+  width:34px;height:34px;cursor:pointer;font:800 16px/1 ui-monospace,monospace}
+.dial button:hover{border-color:var(--accent);color:var(--ink-1)}
+.dial input{width:86px;text-align:center;font:700 15px ui-monospace,monospace}
+.rule-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;
+  padding:11px 0;border-bottom:1px solid var(--grid);font-size:14px}
+.rule-row:last-child{border-bottom:0}
+.rule-row .rl{font-weight:750}
+.rule-row .rd{color:var(--ink-3);font-size:12.5px;display:block;margin-top:2px}
+.rule-row .rv{font:700 14px ui-monospace,monospace;white-space:nowrap;color:var(--ink-1)}
+/* A rule that is not a manager's to change. Styled as a statement, not a disabled
+   control — a greyed-out dropdown reads as "broken", which is a different claim. */
+.rule-row .fixedrule{font:700 11px/1 ui-monospace,monospace;letter-spacing:1px;text-transform:uppercase;
+  white-space:nowrap;color:var(--ink-3);border:1px dashed var(--grid);border-radius:5px;padding:6px 9px}
+
+/* ================= CLV vs. result =================
+   ⚠️ SERIES PALETTE AND THEMING — read before "fixing" this.
+
+   The prototype shipped a `@media (prefers-color-scheme: dark)` block alongside a
+   `[data-theme="dark"]` scope, and the handoff asked for both to be kept. This site does
+   not work that way and adding them would BREAK the thing that instruction was protecting.
+   Here `:root` IS dark — dark is the default, and light is the override at
+   `:root[data-theme="light"]`. There is no OS-preference block anywhere on the site,
+   because the theme toggle is the only input. Wire prefers-color-scheme in and a reader
+   on a light-OS machine who has chosen Dark gets light series colours on a dark card.
+   So the OS setting is ignored here exactly as it is everywhere else on the site, which
+   is what "the site's Dark toggle must win over the OS setting either way" actually asks
+   for on this codebase.
+
+   The eight series colours are the prototype's, unchanged and validated with the dataviz
+   skill's palette checker. Nothing below this block references a raw hex.
+
+   ⚠️ Eight series cannot clear an all-pairs contrast gate — a scatter puts ANY two
+   series next to each other, not just adjacent legend slots. The documented mitigations
+   are load-bearing and must not be removed: shape is a real channel (eight glyphs,
+   assigned so the weakest colour pairs get the most different shapes), selecting a
+   player drops the rest to 16%, direct labels in season mode, and the table twin carries
+   every value. */
+:root{
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+  --s5:#d55181; --s6:#2fbf3f; --s7:#9085e9; --s8:#e66767;
+  --clv-quad:rgba(255,255,255,0.025);
+  --clv-band-1:rgba(255,255,255,0.075); --clv-band-2:rgba(255,255,255,0.038);
+}
+:root[data-theme="light"]{
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100;
+  --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7; --s8:#e34948;
+  --clv-quad:rgba(43,28,14,0.022);
+  --clv-band-1:rgba(43,28,14,0.055); --clv-band-2:rgba(43,28,14,0.028);
+}
+.clv-controls{display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  padding-bottom:16px;margin-bottom:4px;border-bottom:1px solid var(--grid)}
+.clv-controls .seg{display:inline-flex;background:var(--grid);border-radius:999px;padding:3px;gap:2px}
+.clv-controls .seg button{font:600 12px/1 system-ui;letter-spacing:.04em;padding:6px 13px;border:0;
+  border-radius:999px;cursor:pointer;background:transparent;color:var(--ink-2)}
+.clv-controls .seg button[aria-pressed="true"]{background:var(--surface-1);color:var(--ink-1);
+  box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.clv-controls .weekbox{display:flex;align-items:center;gap:10px}
+.clv-controls .weekbox label{font:11px ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+#clvWeek{width:190px;accent-color:var(--accent)}
+.clv-controls .weeknum{font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;min-width:6.6em}
+.clv-controls .playbtn{width:30px;height:30px;border-radius:50%;cursor:pointer;border:1px solid var(--axis);
+  background:transparent;color:var(--ink-1);font-size:12px;line-height:1;display:grid;place-items:center}
+.clv-controls .playbtn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.clv-check{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;font-weight:600;color:var(--ink-2)}
+.clv-check input{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
+.clv-check .clv-lab{color:var(--ink-3);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.clv-check select{font:600 12px system-ui;color:var(--ink-1);background:var(--grid);border:1px solid var(--border);
+  border-radius:999px;padding:5px 10px;cursor:pointer;text-transform:uppercase;letter-spacing:.04em}
+.clv-legend{display:flex;flex-wrap:wrap;gap:6px;padding:14px 0 6px}
+.clv-legend .pchip{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font:600 12.5px system-ui;
+  padding:4px 11px 4px 8px;border-radius:999px;border:1px solid var(--border);background:transparent;color:var(--ink-2)}
+.clv-legend .pchip[data-on="false"]{opacity:.38}
+.clv-legend .pchip[data-sel="true"]{border-color:var(--ink-1);color:var(--ink-1);background:var(--grid)}
+.clv-legend .pchip svg{display:block}
+.clv-legend .me{font:600 9.5px/1 ui-monospace,monospace;letter-spacing:.08em;color:var(--ink-3)}
+.clv-legend .dead{font:600 9.5px/1 ui-monospace,monospace;letter-spacing:.08em;color:var(--bad)}
+.clv-legnote{font-size:11.5px;color:var(--ink-3);padding:2px 0 0;line-height:1.6}
+.clv-plot{position:relative;margin-top:6px}
+svg.clv-svg{display:block;width:100%;height:auto;overflow:visible}
+.clv-svg .tick{font-size:11px;fill:var(--ink-3);font-variant-numeric:tabular-nums}
+.clv-svg .axtitle{font-size:11px;fill:var(--ink-2);letter-spacing:.09em;text-transform:uppercase;font-weight:650}
+.clv-svg .quadlab{font-size:10px;fill:var(--ink-3);letter-spacing:.1em;text-transform:uppercase}
+.clv-svg .dotlabel{font-size:11.5px;font-weight:700;fill:var(--ink-1);paint-order:stroke;
+  stroke:var(--surface-1);stroke-width:3px}
+.clv-svg .bandlab{font-size:10px;fill:var(--ink-3);letter-spacing:.08em;text-transform:uppercase;
+  paint-order:stroke;stroke:var(--surface-1);stroke-width:3px}
+.clv-tip{position:absolute;pointer-events:none;opacity:0;transition:opacity .09s;background:var(--surface-1);
+  border:1px solid var(--axis);border-radius:9px;padding:9px 11px;font-size:12.5px;min-width:172px;
+  box-shadow:0 6px 20px rgba(0,0,0,.28);z-index:5}
+.clv-tip .t-name{font-weight:750;margin-bottom:5px;display:flex;align-items:center;gap:7px}
+.clv-tip .t-row{display:flex;justify-content:space-between;gap:16px;color:var(--ink-2)}
+.clv-tip .t-row b{color:var(--ink-1);font-variant-numeric:tabular-nums;font-weight:650}
+.clv-tip .t-sep{height:1px;background:var(--grid);margin:6px 0}
+.clv-tablewrap{max-height:520px;overflow:auto;margin-top:14px}
+table.clv-tbl{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+table.clv-tbl th,table.clv-tbl td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--grid)}
+table.clv-tbl th{font:650 10.5px/1 ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-3);white-space:nowrap}
+table.clv-tbl th:first-child,table.clv-tbl td:first-child{text-align:left}
+table.clv-tbl tbody tr:hover{background:var(--grid)}
+table.clv-tbl .pos{color:var(--good)} table.clv-tbl .neg{color:var(--bad)}
+.clv-foot{margin-top:16px;padding-top:14px;border-top:1px solid var(--grid);font-size:11.5px;
+  color:var(--ink-3);line-height:1.65}
+.clv-foot b{color:var(--ink-2)}
+.clv-foot code{font-size:11px;background:var(--grid);padding:1px 5px;border-radius:4px}
+/* ---- one live line, the method in a drawer ----
+   The prose under these charts was five paragraphs with four live numbers buried in it,
+   which is a methodology page wearing a caption's clothes. The numbers that CHANGE are
+   the ones a reader needs without clicking; the method does not change between loads.
+
+   ⚠️ The drawer is closed by default an

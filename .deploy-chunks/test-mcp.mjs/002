@@ -1,0 +1,707 @@
+abel: "home test" },
+      { opponent: "Indiana", venue: "away", label: "road test" },
+      { opponent: "Akron", venue: "neutral", label: "rematch" },
+    ],
+    minimum_wins: 2,
+  };
+  const j = await (await req(call("dd_project_cfb_schedule_path", args))).json();
+  const d = text(j), system = d.systems[0];
+  const p1 = 1 / (1 + 10 ** (-((1925.8 - 1088.1 + 55) / 400)));
+  const indianaHome = 1 / (1 + 10 ** (-((2054.8 - 1925.8 + 55) / 400)));
+  const p2 = 1 - indianaHome;
+  const p3 = 1 / (1 + 10 ** (-((1925.8 - 1088.1) / 400)));
+  const expected = p1 + p2 + p3;
+  const distributionSum = system.exact_win_distribution.reduce((sum, row) => sum + row.probability, 0);
+  const atLeastTwo = system.exact_win_distribution.slice(2).reduce((sum, row) => sum + row.probability, 0);
+  ok(!j.result.isError && d.team.team_slug === "ohio-state" && d.games_supplied === 3 && system.games.length === 3,
+     "CFB schedule path resolves a focal team and every caller-supplied opponent");
+  ok(Math.abs(system.games[0].focal_win_probability - p1) < 1e-15 &&
+     Math.abs(system.games[1].focal_win_probability - p2) < 1e-15 &&
+     Math.abs(system.games[2].focal_win_probability - p3) < 1e-15,
+     "CFB schedule path applies home, away and neutral Elo venue transforms exactly");
+  ok(Math.abs(system.expected_wins - expected) < 1e-15 && Math.abs(distributionSum - 1) < 1e-12 &&
+     Math.abs(system.probability_at_least_minimum_wins - atLeastTwo) < 1e-15,
+     "CFB schedule path returns a normalized exact Poisson-binomial distribution and threshold probability");
+  const leverageByIndex = Object.fromEntries(system.threshold_game_leverage.map(row => [row.index, row]));
+  const exactOneWin = (a, b) => a * (1 - b) + (1 - a) * b;
+  ok(system.threshold_game_leverage.length === 3 &&
+     Math.abs(leverageByIndex[1].threshold_probability_swing - exactOneWin(p2, p3)) < 1e-15 &&
+     Math.abs(leverageByIndex[2].threshold_probability_swing - exactOneWin(p1, p3)) < 1e-15 &&
+     Math.abs(leverageByIndex[3].threshold_probability_swing - exactOneWin(p1, p2)) < 1e-15 &&
+     system.threshold_game_leverage.every(row =>
+       Math.abs(row.threshold_probability_swing -
+         (row.probability_at_least_minimum_wins_if_forced_win -
+          row.probability_at_least_minimum_wins_if_forced_loss)) < 1e-15),
+     "CFB schedule path computes each supplied game's exact forced-win versus forced-loss threshold leverage");
+  ok(system.threshold_game_leverage.every((row, i, rows) => i === 0 ||
+     rows[i - 1].threshold_probability_swing >= row.threshold_probability_swing) &&
+     /not conference or playoff leverage/i.test(d.warnings.join(" ")),
+     "CFB schedule path ranks threshold leverage without laundering it into playoff leverage");
+  ok(system.method.includes("no Monte Carlo") && d.actual_schedule === false &&
+     d.playoff_or_conference_rules_modelled === false && d.retrodictive && !d.prospective && !d.graded,
+     "CFB schedule path refuses actual-schedule, playoff, prospective and graded claims");
+  ok(d.read_only && d.stored === false && d.assumptions.some(x => /independent/.test(x)) &&
+     d.warnings.some(x => /not a prospective 2026 season forecast/i.test(x)),
+     "CFB schedule path publishes independence, non-persistence and forecast caveats");
+}
+{
+  const empty = await (await req(call("dd_project_cfb_schedule_path", { team: "Akron", games: [] }))).json();
+  const same = await (await req(call("dd_project_cfb_schedule_path", { team: "Akron", games: [{ opponent: "Akron" }] }))).json();
+  const partial = await (await req(call("dd_project_cfb_schedule_path", { team: "Akron", games: [{ opponent: "state" }] }))).json();
+  const badVenue = await (await req(call("dd_project_cfb_schedule_path", { team: "Akron", games: [{ opponent: "Indiana", venue: "Cleveland" }] }))).json();
+  const badMinimum = await (await req(call("dd_project_cfb_schedule_path", { team: "Akron", games: [{ opponent: "Indiana" }], minimum_wins: 2 }))).json();
+  const extra = await (await req(call("dd_project_cfb_schedule_path", { team: "Akron", games: [{ opponent: "Indiana", spread: -3 }] }))).json();
+  ok([empty, same, partial, badVenue, badMinimum, extra].every(result => result.result.isError === true),
+     "CFB schedule path fails closed on empty, same-team, partial, bad-venue, impossible-threshold and unsupported inputs");
+  const noThreshold = text(await (await req(call("dd_project_cfb_schedule_path", {
+    team: "Akron", games: [{ opponent: "Indiana" }]
+  }))).json()).systems[0];
+  ok(noThreshold.threshold_game_leverage === null && noThreshold.threshold_leverage_definition === null,
+     "CFB schedule path omits leverage when the caller supplies no win threshold");
+}
+// dd_find_cfb_record_divergence: descriptive team rows plus the aggregate-only
+// chronological validation receipt, never current-team fraud labels.
+{
+  const j = await (await req(call("dd_find_cfb_record_divergence", {}))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.returned === 3 && d.rows[0].team_slug === "florida-state" && d.rows[0].absolute_rank_gap === 57,
+     "CFB divergence explorer defaults to largest absolute descriptive rank gaps");
+  ok(d.validation.finding === "held-out-incremental-signal" && d.validation.holdout_games === 233 &&
+     d.validation.holdout_brier_improvement_over_elo === 0.001123 && d.validation.promotion_gate_passed === true,
+     "CFB divergence explorer returns the aggregate chronological validation receipt");
+  ok(d.current_team_labels_permitted === false && !d.prospective && !d.market_adjusted && !d.graded &&
+     d.read_only && d.stored === false && d.rows.every(row => !("predictive_label" in row)),
+     "CFB divergence explorer refuses labels, prospective, market-adjusted and graded claims");
+  ok(d.warnings.some(x => /small incremental signal beyond Elo/i.test(x)) &&
+     d.warnings.some(x => /Do not convert/.test(x)),
+     "CFB divergence explorer carries validation-scale and no-verdict caveats");
+}
+{
+  const team = text(await (await req(call("dd_find_cfb_record_divergence", { team: "Kennesaw State" }))).json());
+  const filtered = text(await (await req(call("dd_find_cfb_record_divergence", {
+    direction: "scoring-ahead-of-record", conference: "acc", minimum_absolute_rank_gap: 40, limit: 1,
+  }))).json());
+  ok(team.returned === 1 && team.rows[0].team_slug === "kennesaw-state" && team.rows[0].record_scoring_rank_gap === 51,
+     "CFB divergence explorer resolves an exact team without assigning a predictive label");
+  ok(filtered.query.conference === "ACC" && filtered.returned === 1 && filtered.rows[0].team_slug === "florida-state",
+     "CFB divergence explorer applies exact conference, direction, gap and limit filters");
+}
+{
+  const partial = await (await req(call("dd_find_cfb_record_divergence", { team: "state" }))).json();
+  const badDirection = await (await req(call("dd_find_cfb_record_divergence", { direction: "fraud" }))).json();
+  const badConference = await (await req(call("dd_find_cfb_record_divergence", { conference: "NFL" }))).json();
+  const badGap = await (await req(call("dd_find_cfb_record_divergence", { minimum_absolute_rank_gap: 136 }))).json();
+  const badLimit = await (await req(call("dd_find_cfb_record_divergence", { limit: 26 }))).json();
+  const extra = await (await req(call("dd_find_cfb_record_divergence", { verdict: "overrated" }))).json();
+  ok([partial, badDirection, badConference, badGap, badLimit, extra].every(result => result.result.isError === true),
+     "CFB divergence explorer fails closed on partial, invented, out-of-range and unsupported inputs");
+}
+// dd_get_cfb_model_disagreement: the blocked aggregate measurement is useful
+// evidence, but unknown price timing forbids a winner, blend or game-level edge.
+{
+  const j = await (await req(call("dd_get_cfb_model_disagreement", {}))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.finding === "blocked" && d.conclusion_withheld === true &&
+     d.measured_anyway.n_paired_games === 5 && d.measured_anyway.buckets.length === 2,
+     "CFB disagreement reader returns the dated blocked aggregate measurement");
+  ok(d.market_observation_timestamp_available === false && d.market_price_timing === "unknown" &&
+     d.better_model_identified === false && d.consensus_or_blend_authorized === false &&
+     d.game_level_edges_available === false,
+     "CFB disagreement reader preserves the no-winner, no-blend and no-edge boundary");
+  ok(!d.prospective && !d.graded && d.read_only && d.stored === false &&
+     /timestamped pregame market snapshot/i.test(d.what_would_unblock_it) &&
+     d.warnings.some(x => /Do not infer a model winner/i.test(x)),
+     "CFB disagreement reader returns the exact unblock condition and non-persistence caveats");
+  const extra = await (await req(call("dd_get_cfb_model_disagreement", { game: "Ohio State" }))).json();
+  ok(extra.result.isError === true,
+     "CFB disagreement reader rejects game-level or other unsupported arguments");
+}
+// dd_get_cfb_model_receipt_status: zero rows is the honest prospective state,
+// and the immutable forecast ledger is never represented as its own grade table.
+{
+  const j = await (await req(call("dd_get_cfb_model_receipt_status", {}))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.status === "empty-by-design" && d.prospective_receipts === 0 &&
+     d.model_count === 0 && d.models.length === 0 && d.first_actual_forecast_exists === false,
+     "CFB receipt status reports the real zero-row prospective ledger");
+  ok(d.graded_forecasts === 0 && d.receipt_ledger_is_grading_surface === false &&
+     d.grading_surface_available === false && d.leaderboard_available === false && !d.prospective && !d.graded,
+     "CFB receipt status refuses grades, a leaderboard and prospective evidence that do not exist");
+  ok(d.read_only && d.stored === false && /scheduled 2026 game/i.test(d.next_unlock) &&
+     d.warnings.some(x => /zero-row ledger is evidence/i.test(x)) &&
+     d.warnings.some(x => /Retrodictive 2025 backtests are intentionally excluded/i.test(x)),
+     "CFB receipt status names the exact first-forecast unlock and ledger boundary");
+  const extra = await (await req(call("dd_get_cfb_model_receipt_status", { include_backtests: true }))).json();
+  ok(extra.result.isError === true,
+     "CFB receipt status rejects backtest or other unsupported arguments");
+}
+// dd_find_cfb_team_games: bounded mirrored team-perspective results with exact
+// opponent, outcome and site filtering.
+{
+  const j = await (await req(call("dd_find_cfb_team_games", { team: "OHIO STATE" }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.team.team_slug === "ohio-state" && d.returned === 2 &&
+     d.games[0].opponent.team === "Michigan" && d.games[1].opponent.team === "Georgia",
+     "CFB team-game reader resolves an exact team and returns chronological opponent history");
+  ok(d.games[0].result === "win" && d.games[0].point_differential === 3 &&
+     d.games[1].team_side === "away" && d.games[1].site === "neutral" && d.games[1].point_differential === 1,
+     "CFB team-game reader returns score and outcome from the selected team's perspective");
+  ok(d.scope === "results-only" && d.observed_results_only && !d.modelled && !d.opponent_adjusted &&
+     !d.market_adjusted && !d.forecast && !d.graded && d.read_only && d.stored === false &&
+     d.unavailable_metrics.includes("epa_per_play") && d.warnings.some(x => /mirrored row per team/i.test(x)),
+     "CFB team-game reader publishes its results-only mirrored-row boundary");
+}
+{
+  const filtered = text(await (await req(call("dd_find_cfb_team_games", {
+    team: "ohio-state", opponent: "Georgia", season_type: "postseason", result: "win", site: "neutral"
+  }))).json());
+  const latest = text(await (await req(call("dd_find_cfb_team_games", { team: "Ohio State", sort: "kickoff-desc", limit: 1 }))).json());
+  ok(filtered.returned === 1 && filtered.games[0].game_id === "2025_post_01_ohio-state_georgia" &&
+     filtered.query.opponent === "Georgia",
+     "CFB team-game reader combines exact opponent, postseason, result and site filters");
+  ok(latest.matched_before_limit === 2 && latest.returned === 1 && latest.games[0].opponent.team === "Georgia",
+     "CFB team-game reader applies reverse chronological sort and strict output bounds");
+}
+{
+  const partial = await (await req(call("dd_find_cfb_team_games", { team: "state" }))).json();
+  const missing = await (await req(call("dd_find_cfb_team_games", {}))).json();
+  const same = await (await req(call("dd_find_cfb_team_games", { team: "Ohio State", opponent: "ohio-state" }))).json();
+  const badResult = await (await req(call("dd_find_cfb_team_games", { team: "Akron", result: "cover" }))).json();
+  const badSite = await (await req(call("dd_find_cfb_team_games", { team: "Akron", site: "road" }))).json();
+  const badLimit = await (await req(call("dd_find_cfb_team_games", { team: "Akron", limit: 51 }))).json();
+  const extra = await (await req(call("dd_find_cfb_team_games", { team: "Akron", include_epa: true }))).json();
+  ok([partial, missing, same, badResult, badSite, badLimit, extra].every(result => result.result.isError === true),
+     "CFB team-game reader fails closed on partial, missing, same-team and unsupported inputs");
+}
+// dd_find_cfb_team_games at scope=latest-per-team: compact bounded cross-team
+// final-game discovery, formerly dd_find_cfb_latest_games.
+{
+  const j = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team" }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.season === 2025 && d.returned === 5 &&
+     d.rows.map(row => row.team).join(",") === "Georgia,Iowa State,Kansas State,Michigan,Ohio State",
+     "CFB latest-game reader defaults to a bounded alphabetical FBS index");
+  ok(d.scope === "observed-final-results-only" && d.observed_results_only && !d.current_2026_form &&
+     !d.forecast && !d.modelled && !d.graded && d.read_only && d.stored === false,
+     "CFB latest-game reader refuses current-form, model and forecast claims");
+  ok(d.coverage.final_games_only && d.coverage.one_row_per_represented_team &&
+     d.warnings.some(x => /last completed game in the dated 2025/i.test(x)),
+     "CFB latest-game reader preserves the final-only dated-latest boundary");
+}
+{
+  const filtered = text(await (await req(call("dd_find_cfb_team_games", {
+    scope: "latest-per-team", team: "OHIO STATE", conference: "big ten", opponent_division: "fbs",
+    season_type: "postseason", result: "win", site: "neutral",
+    sort: "kickoff-desc", offset: 0, limit: 1
+  }))).json());
+  ok(filtered.matched_before_pagination === 1 && filtered.returned === 1 &&
+     filtered.rows[0].team_slug === "ohio-state" &&
+     filtered.rows[0].latest_completed_game.opponent === "Georgia" && filtered.query.conference === "Big Ten",
+     "CFB latest-game reader combines exact team, conference, opponent, period, result and site filters");
+  const losses = text(await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", result: "loss" }))).json());
+  ok(losses.returned === 3 && losses.rows.map(row => row.team).join(",") === "Georgia,Kansas State,Michigan",
+     "CFB latest-game reader filters team-perspective observed outcomes");
+}
+{
+  const partial = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", team: "state" }))).json();
+  const conference = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", conference: "NFL" }))).json();
+  const opponent = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", opponent_division: "d2" }))).json();
+  const result = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", result: "cover" }))).json();
+  const offset = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", offset: 200 }))).json();
+  const limit = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", limit: 51 }))).json();
+  const extra = await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team", current: true }))).json();
+  ok([partial, conference, opponent, result, offset, limit, extra].every(value => value.result.isError === true),
+     "CFB latest-game reader fails closed on partial, invented, out-of-range and unsupported inputs");
+}
+// dd_find_cfb_team_periods at scope=latest-per-team: compact bounded cross-team
+// discovery whose "latest" label stays tied to the dated 2025 FBS-involved surface.
+// Formerly dd_find_cfb_latest_team_periods.
+{
+  const j = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team" }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.season === 2025 && d.returned === 2 &&
+     d.rows.map(row => row.team).join(",") === "Akron,Ohio State",
+     "CFB latest-period reader defaults to a bounded alphabetical compact index");
+  ok(d.scope === "results-only" && d.observed_results_only && !d.current_2026_form && !d.forecast &&
+     !d.modelled && !d.graded && d.read_only && d.stored === false,
+     "CFB latest-period reader refuses current-form, model and forecast claims");
+  ok(/not complete FCS season records/i.test(d.coverage.fcs_team_records) &&
+     d.warnings.some(x => /last covered period in the dated 2025/i.test(x)),
+     "CFB latest-period reader preserves the partial-FCS and dated-latest boundaries");
+  ok(d.rows.find(row => row.team_slug === "ohio-state").conference_regular_season_to_date.record === "1-0-0" &&
+     /not an official standing/i.test(d.conference_record_definition),
+     "CFB latest-period reader exposes the explicitly non-authoritative conference record");
+}
+{
+  const filtered = text(await (await req(call("dd_find_cfb_team_periods", {
+    scope: "latest-per-team", team: "OHIO STATE", division: "fbs", conference: "big ten", season_type: "postseason",
+    period_outcome: "positive", sort: "through-desc", offset: 0, limit: 1
+  }))).json());
+  ok(filtered.matched_before_pagination === 1 && filtered.returned === 1 &&
+     filtered.rows[0].team_slug === "ohio-state" && filtered.rows[0].latest_period.period_key === "postseason-01" &&
+     filtered.query.conference === "Big Ten",
+     "CFB latest-period reader combines exact team, conference, division, period and outcome filters");
+  const negative = text(await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", period_outcome: "negative" }))).json());
+  ok(negative.returned === 1 && negative.rows[0].team === "Akron",
+     "CFB latest-period outcome filter uses aggregate observed point-differential direction");
+  const conferenceOrder = text(await (await req(call("dd_find_cfb_team_periods", {
+    scope: "latest-per-team", sort: "conference-record-desc"
+  }))).json());
+  ok(conferenceOrder.rows.map(row => row.team).join(",") === "Ohio State,Akron" &&
+     conferenceOrder.rows.every(row => !("conference_rank" in row)) &&
+     conferenceOrder.warnings.some(value => /descriptive arithmetic order/i.test(value)),
+     "CFB latest-period reader compares conference records without inventing official ranks");
+}
+{
+  const partial = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", team: "state" }))).json();
+  const conference = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", conference: "NFL" }))).json();
+  const outcome = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", period_outcome: "win" }))).json();
+  const offset = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", offset: 400 }))).json();
+  const limit = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", limit: 51 }))).json();
+  const sort = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", sort: "official-standing" }))).json();
+  const extra = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", current: true }))).json();
+  ok([partial, conference, outcome, offset, limit, sort, extra].every(result => result.result.isError === true),
+     "CFB latest-period reader fails closed on partial, invented, out-of-range and unsupported inputs");
+}
+// dd_find_cfb_team_periods: bounded results-only team history with repeated
+// regular/postseason week labels kept distinct.
+{
+  const j = await (await req(call("dd_find_cfb_team_periods", { team: "OHIO STATE" }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.team.team_slug === "ohio-state" && d.team.team === "Ohio State" &&
+     d.returned === 3 && d.periods.map(x => x.period_key).join(",") === "regular-01,regular-12,postseason-01",
+     "CFB team-period reader resolves an exact team and returns chronological regular/postseason history");
+  ok(d.periods[1].period.point_differential === 3 && d.periods[2].season_to_date.record === "12-1-0" &&
+     d.periods[2].venue_counts.neutral === 1,
+     "CFB team-period reader preserves period, season-to-date and venue facts");
+  ok(d.periods[1].conference_regular_season_to_date.record === "1-0-0" &&
+     d.periods[2].conference_regular_season_to_date.record === "1-0-0" &&
+     /excludes postseason|not an official standing/i.test(d.conference_record_definition),
+     "CFB team-period reader carries conference record through postseason without counting it");
+  ok(d.scope === "results-only" && d.observed_results_only && !d.modelled && !d.opponent_adjusted &&
+     !d.market_adjusted && !d.forecast && !d.graded && d.read_only && d.stored === false &&
+     d.unavailable_metrics.includes("epa") && d.warnings.some(x => /Regular-season week 1 and postseason week 1/i.test(x)),
+     "CFB team-period reader publishes the results-only and repeated-week boundaries");
+}
+{
+  const post = text(await (await req(call("dd_find_cfb_team_periods", { team: "ohio-state", week: 1, season_type: "postseason" }))).json());
+  const latest = text(await (await req(call("dd_find_cfb_team_periods", { team: "Ohio State", sort: "period-desc", limit: 1 }))).json());
+  ok(post.returned === 1 && post.periods[0].period_key === "postseason-01",
+     "CFB team-period reader disambiguates repeated week numbers with season_type");
+  ok(latest.matched_before_limit === 3 && latest.returned === 1 && latest.periods[0].period_key === "postseason-01",
+     "CFB team-period reader applies chronological sort and strict output bounds");
+}
+{
+  const partial = await (await req(call("dd_find_cfb_team_periods", { team: "state" }))).json();
+  const missing = await (await req(call("dd_find_cfb_team_periods", {}))).json();
+  const badWeek = await (await req(call("dd_find_cfb_team_periods", { team: "Akron", week: 0 }))).json();
+  const badSeason = await (await req(call("dd_find_cfb_team_periods", { team: "Akron", season_type: "bowl" }))).json();
+  const badLimit = await (await req(call("dd_find_cfb_team_periods", { team: "Akron", limit: 26 }))).json();
+  const extra = await (await req(call("dd_find_cfb_team_periods", { team: "Akron", include_epa: true }))).json();
+  ok([partial, missing, badWeek, badSeason, badLimit, extra].every(result => result.result.isError === true),
+     "CFB team-period reader fails closed on partial, missing, out-of-range and unsupported inputs");
+}
+// dd_find_cfb_games: bounded canonical schedule/result facts with season-type
+// disambiguation and no model or market claims.
+{
+  const j = await (await req(call("dd_find_cfb_games", { team: "Ohio State", sort: "kickoff-asc" }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.season === 2025 && d.returned === 2 && d.games[0].season_type === "regular" &&
+     d.games[1].season_type === "postseason",
+     "CFB game finder resolves one exact team across regular and postseason games");
+  ok(d.games[0].observed_result.home_margin === 3 && d.games[0].observed_result.winner_team_slug === "ohio-state" &&
+     d.games[1].observed_result.home_margin === -1 && d.games[1].observed_result.winner_team_slug === "ohio-state",
+     "CFB game finder derives winner and home margin only from observed final scores");
+  ok(d.actual_canonical_schedule && d.completed_schedule && d.scheduled_games_in_surface === 0 &&
+     d.prospective_model_output === false && d.forecast === false && !d.modelled && d.read_only && d.stored === false,
+     "CFB game finder labels canonical facts, completed coverage and non-forecast status");
+}
+{
+  const post = text(await (await req(call("dd_find_cfb_games", { week: 1, season_type: "postseason", conference: "big ten" }))).json());
+  const noneScheduled = text(await (await req(call("dd_find_cfb_games", { status: "scheduled" }))).json());
+  const exact = text(await (await req(call("dd_find_cfb_games", { game_id: "2025_regu_01_iowa-state_kansas-state" }))).json());
+  ok(post.returned === 1 && post.games[0].game_id === "2025_post_01_ohio-state_georgia" && post.query.conference === "Big Ten",
+     "CFB game finder combines week, season type and exact conference filters");
+  ok(noneScheduled.returned === 0 && noneScheduled.matched_before_limit === 0,
+     "CFB game finder reports that the completed surface has no scheduled games");
+  ok(exact.returned === 1 && exact.games[0].observed_result.winner_team_slug === "iowa-state",
+     "CFB game finder resolves an exact canonical game id");
+}
+{
+  const partial = await (await req(call("dd_find_cfb_games", { team: "state" }))).json();
+  const missingGame = await (await req(call("dd_find_cfb_games", { game_id: "2026_missing" }))).json();
+  const badWeek = await (await req(call("dd_find_cfb_games", { week: 0 }))).json();
+  const badConference = await (await req(call("dd_find_cfb_games", { conference: "NFL" }))).json();
+  const badSort = await (await req(call("dd_find_cfb_games", { sort: "score" }))).json();
+  const extra = await (await req(call("dd_find_cfb_games", { include_odds: true }))).json();
+  ok([partial, missingGame, badWeek, badConference, badSort, extra].every(result => result.result.isError === true),
+     "CFB game finder fails closed on partial, missing, out-of-range and unsupported inputs");
+}
+// dd_find_cfb_historical_market: queryable book prices whose unknown timing is
+// enforced in both source validation and every response boundary.
+{
+  const j = await (await req(call("dd_find_cfb_historical_market", { team: "Ohio State", sort: "kickoff-asc" }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.season === 2025 && d.returned === 2 && d.games[0].game_id === "2025_regu_12_michigan_ohio-state" &&
+     d.games[1].books.length === 0,
+     "CFB historical market resolves one exact team and retains explicitly unpriced games");
+  ok(d.observation_timestamp_available === false && d.price_timing === "unknown" &&
+     d.verified_closing_lines === false && d.clv_supported === false &&
+     d.prospective_input_eligible === false && d.current_market === false,
+     "CFB historical market mechanically refuses closing-line, CLV, prospective and current-market claims");
+  ok(d.games[0].books[0].source_labelled_open_spread_home === -6.5 &&
+     !("spread_open_home" in d.games[0].books[0]) && d.rejected_quote_count === 1 &&
+     d.warnings.some(x => /Never call these closing lines/i.test(x)),
+     "CFB historical market relabels source-open fields and publishes rejection/caveat context");
+}
+{
+  const book = text(await (await req(call("dd_find_cfb_historical_market", { book: "draftkings", priced_only: true, limit: 1 }))).json());
+  const exact = text(await (await req(call("dd_find_cfb_historical_market", { game_id: "2025_regu_01_iowa-state_kansas-state" }))).json());
+  ok(book.query.book === "DraftKings" && book.matched_before_limit === 2 && book.returned === 1 && book.games[0].books.length === 1,
+     "CFB historical market applies exact book, priced-only and limit filters");
+  ok(exact.returned === 1 && exact.games[0].median_devig_home_win_probability === 0.59337,
+     "CFB historical market resolves an exact canonical game id");
+}
+{
+  const partial = await (await req(call("dd_find_cfb_historical_market", { team: "state" }))).json();
+  const missingGame = await (await req(call("dd_find_cfb_historical_market", { game_id: "2026_missing" }))).json();
+  const badBook = await (await req(call("dd_find_cfb_historical_market", { book: "Mystery Book" }))).json();
+  const badPriced = await (await req(call("dd_find_cfb_historical_market", { priced_only: "yes" }))).json();
+  const badLimit = await (await req(call("dd_find_cfb_historical_market", { limit: 26 }))).json();
+  const extra = await (await req(call("dd_find_cfb_historical_market", { closing_only: true }))).json();
+  ok([partial, missingGame, badBook, badPriced, badLimit, extra].every(result => result.result.isError === true),
+     "CFB historical market fails closed on partial, invented, mistyped and closing-line inputs");
+}
+// dd_get_cfb_model_card: generated governance and evaluation evidence, never a
+// shortcut from roadmap lifecycle to prospective skill.
+{
+  const j = await (await req(call("dd_get_cfb_model_card", {}))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.mode === "model-card-index" && d.card === null &&
+     d.available_models.length === 1 && d.available_models[0].model_id === "cfb-elo",
+     "CFB model-card reader lists compact generated card summaries");
+  ok(d.cards_are_generated_from_model_output && !d.prospective_receipts_exist && !d.prospective_validation &&
+     !d.graded && !d.consensus && !d.current_forecast && d.read_only && d.stored === false,
+     "CFB model-card index refuses prospective, graded, consensus and current-forecast claims");
+}
+{
+  const j = await (await req(call("dd_get_cfb_model_card", { model_id: "CFB-ELO" }))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.mode === "model-card" && d.card.model_id === "cfb-elo" &&
+     d.card.performance.full_evaluation_set.brier_home_win === 0.1862,
+     "CFB model-card reader returns one exact full card and its generated performance evidence");
+  ok(d.card.validation_design.kind === "retrodictive-backtest" &&
+     d.card.receipts.prospective_receipts_exist === false &&
+     d.warnings.some(x => /lifecycle value documents roadmap state/i.test(x)) &&
+     d.warnings.some(x => /known_limitations, failure_modes and receipts/i.test(x)),
+     "CFB model-card reader carries retrodictive, limitation and receipt boundaries");
+}
+{
+  const missing = await (await req(call("dd_get_cfb_model_card", { model_id: "mystery-model" }))).json();
+  const invalid = await (await req(call("dd_get_cfb_model_card", { model_id: "bad model" }))).json();
+  const extra = await (await req(call("dd_get_cfb_model_card", { include_recommendation: true }))).json();
+  ok([missing, invalid, extra].every(result => result.result.isError === true),
+     "CFB model-card reader fails closed on missing, invalid and unsupported inputs");
+}
+// dd_scores: reuses handleScores with sport+dates
+{
+  const j = await (await req(call("dd_scores", { sport: "nfl", dates: "20260913" }))).json();
+  const d = text(j);
+  ok(d.games && d.games[0].short === "CLE @ PIT", "scores flow through handleScores");
+  const j2 = await (await req(call("dd_scores", { sport: "curling" }))).json();
+  ok(j2.result.isError === true, "unknown sport → isError");
+  netMode = "espnDown";
+  const j3 = await (await req(call("dd_scores", { sport: "nfl" }))).json();
+  ok(j3.result.isError === true && /schedule cache/.test(j3.result.content[0].text), "missing schedule cache → honest isError");
+  netMode = "normal";
+}
+// dd_dfs_correlations: extraction from the live page
+{
+  const j = await (await req(call("dd_dfs_correlations"))).json();
+  const d = text(j);
+  ok(d.roles && d.roles[0] === "QB" && d.same[0][0] === 1, "CORR extracted and parsed from dfs.html");
+}
+// dd_solve_dfs_lineup: exact parity with the browser's shared engine
+{
+  const raw = makeSlate(4, 23);
+  const players = raw.map((p, i) => ({
+    id: "classic-" + i, name: p.pos + " " + i, position: p.pos,
+    team: p.team, opponent: p.opp, game_id: String(p.gid), salary: p.sal,
+    projection: p.proj, ownership: (i % 37) + 1,
+  }));
+  const args = {
+    players, site: "dk_classic", count: 2, min_salary: 49000, max_salary: 50000,
+    unique_players: 2, randomness: 0, seed: 7, max_per_team: 4, time_limit_ms: 3000,
+    stack: { qb_min: 1, qb_positions: ["WR", "TE"], bring_back: 1, no_rb_vs_dst: true },
+  };
+  const cfg = {
+    site: "dk_classic", count: 2, minSalary: 49000, maxSalary: 50000,
+    uniques: 2, randomness: 0, seed: 7, maxPerTeam: 4, maxPerGame: undefined,
+    timeLimitMs: 3000,
+    stack: { qbMin: 1, qbPos: ["WR", "TE"], bringBack: 1, noRbVsDst: true, noOppDst: false },
+  };
+  const enginePlayers = players.map(p => ({
+    id: p.id, name: p.name, pos: p.position, team: p.team, opp: p.opponent,
+    gid: p.game_id, sal: p.salary, proj: p.projection, own: p.ownership,
+    lock: false, excl: false, maxExp: null,
+  }));
+  const ref = DDFS.solveLineups(enginePlayers, cfg);
+  const j = await (await req(call("dd_solve_dfs_lineup", args))).json();
+  const d = text(j);
+  ok(!j.result.isError && d.status === "complete" && d.lineups.length === 2,
+     "DFS classic returns the requested exact lineup set");
+  ok(d.lineups.every(l => l.constraint_audit.satisfied && l.players.map(p => p.slot).join(",") === "QB,RB,RB,WR,WR,WR,TE,FLEX,DST"),
+     "DFS classic returns slot-aware lineups with a passing constraint audit");
+  ok(d.lineups.every((l, i) => l.salary === ref.lineups[i].sal &&
+       Math.abs(l.projection - ref.lineups[i].proj) < 1e-10 &&
+       l.players.map(p => p.id).sort().join(",") === ref.lineups[i].ids.map(x => players[x].id).sort().join(",")),
+     "DFS MCP classic selections exactly match direct browser-engine output");
+  ok(d.read_only === true && d.stored === false && /this call/.test(d.warnings[0]),
+     "DFS response makes transient read-only handling explicit");
+}
+// Showdown uses the same engine, including the captain multiplier.
+{
+  const raw = makeSlate(1, 29);
+  const players = raw.map((p, i) => ({
+    id: "showdown-" + i, name: p.pos + " " + i, position: p.pos,
+    team: p.team, opponent: p.opp, game_id: String(p.gid), salary: p.sal,
+    projection: p.proj,
+  }));
+  const enginePlayers = players.map(p => ({
+    id: p.id, name: p.name, pos: p.position, team: p.team, opp: p.opponent,
+    gid: p.game_id, sal: p.salary, proj: p.projection, own: null,
+    lock: false, excl: false, maxExp: null,
+  }));
+  const cfg = {
+    site: "dk_showdown", count: 1, minSalary: 0, maxSalary: 50000,
+    uniques: 0, randomness: 0, seed: 11, maxPerTeam: undefined, maxPerGame: undefined,
+    timeLimitMs: 3000, stack: { qbMin: 0, qbPos: ["WR", "TE"], bringBack: 0, noRbVsDst: false, noOppDst: false },
+  };
+  const ref = DDFS.solveLineups(enginePlayers, cfg);
+  const j = await (await req(call("dd_solve_dfs_lineup", {
+    players, site: "dk_showdown", count: 1, seed: 11, time_limit_ms: 3000,
+  }))).json();
+  const d = text(j);
+  ok(d.status === "complete" && d.lineups[0].captain_id === players[ref.lineups[0].cpt].id,
+     "DFS showdown captain matches direct browser-engine output");
+  ok(d.lineups[0].salary === ref.lineups[0].sal && d.lineups[0].players[0].slot === "CPT" &&
+       d.lineups[0].players[0].slot_salary === Math.round(d.lineups[0].players[0].salary * 1.5),
+     "DFS showdown reports the exact salary and captain multiplier");
+}
+// Malformed and infeasible slates fail honestly and stay bounded.
+{
+  const base = makeSlate(1, 31).slice(0, 9).map((p, i) => ({
+    id: "bad-" + i, name: p.pos + " " + i, position: p.pos,
+    team: p.team, opponent: p.opp, game_id: String(p.gid), salary: p.sal, projection: p.proj,
+  }));
+  const dup = base.map(p => ({ ...p })); dup[1].id = dup[0].id;
+  const bad = await (await req(call("dd_solve_dfs_lineup", { players: dup }))).json();
+  ok(bad.result.isError === true && /more than once/.test(bad.result.content[0].text),
+     "DFS rejects duplicate public player ids");
+  const tooMany = Array.from({ length: 221 }, (_, i) => ({ ...base[0], id: "too-many-" + i }));
+  const over = await (await req(call("dd_solve_dfs_lineup", { players: tooMany }))).json();
+  ok(over.result.isError === true && /limited to 220/.test(over.result.content[0].text),
+     "DFS enforces the per-call player bound");
+  const infeasible = await (await req(call("dd_solve_dfs_lineup", {
+    players: [base[0]], site: "dk_classic", time_limit_ms: 100,
+  }))).json();
+  const d = text(infeasible);
+  ok(!infeasible.result.isError && d.status === "infeasible" && d.returned_lineups === 0 && d.infeasible_reason,
+     "DFS reports a valid structured infeasibility result instead of crashing");
+}
+// dd_site_map: says what is NOT served
+{
+  const j = await (await req(call("dd_site_map"))).json();
+  const d = text(j);
+  ok(d.notServedHere && /Never hosted or persisted/.test(d.notServedHere.dfs_projections_and_ownership) &&
+     /bounded slate transiently/.test(d.notServedHere.dfs_projections_and_ownership),
+     "notServedHere explains the DFS transient-compute invariant");
+  ok(d.machine.surfaces.includes("surfaces.json"), "points agents at the surfaces map");
+  ok(d.machine.data.includes("/data/model-contracts.json") && d.pages["pound.html"], "site map includes the Pound contracts and workbench");
+  ok(d.machine.data.includes("/data/cfb-ratings.json") && d.machine.data.includes("/data/cfb-model-receipts.json") &&
+     d.machine.data.includes("/data/cfb-team-game.json") && d.machine.data.includes("/data/cfb-team-week.json") &&
+     d.machine.data.includes("/data/cfb-team-week-latest.json") && d.machine.data.includes("/data/cfb-games-latest.json") &&
+     d.machine.data.includes("/data/cfb-teams.json"),
+     "site map includes the canonical CFB registry, receipt ledger and results layers");
+  ok(d.machine.data.includes("/data/cfb-record-divergence.json"),
+     "site map includes the descriptive CFB record-divergence baseline");
+  ok(d.machine.data.includes("/data/cfb-record-divergence-validation.json"),
+     "site map includes the aggregate CFB divergence validation");
+}
+
+/* ------------- the merged CFB find surfaces: scope is a real boundary -------------
+ * ⚠️ WHY THESE EXIST. `dd_find_cfb_team_games` and `dd_find_cfb_team_periods` each cover
+ * a parent surface and its derived cross-sectional view behind one flat schema, which
+ * means a caller can pass a parameter the chosen scope does not support. IGNORING IT
+ * WOULD BE THE DISHONEST FAILURE: the caller gets a plausible answer to a question it did
+ * not ask, and nothing in the response says so. Every assertion below reads the error
+ * MESSAGE, because an error thrown for some other reason would satisfy isError just as
+ * well and prove nothing.
+ */
+{
+  const msg = async (tool, args) => {
+    const j = await (await req(call(tool, args))).json();
+    if (!j.result || j.result.isError !== true) return "(no error)";
+    return j.result.content[0].text;
+  };
+
+  // the retired names are gone from the wire, not merely undocumented
+  for (const gone of ["dd_find_cfb_latest_games", "dd_find_cfb_latest_team_periods"]) {
+    const j = await (await req(call(gone))).json();
+    ok(/Unknown tool/.test((j.error && j.error.message) || (j.result && j.result.content[0].text) || ""),
+       gone + " is not callable — the consolidation removed the name, it did not alias it");
+  }
+
+  // team is required for the default scope and optional for the derived one, and the
+  // error says which is which rather than "team must be a non-empty name or slug"
+  const noTeam = await msg("dd_find_cfb_team_games", {});
+  ok(/team is required when scope is team-games/.test(noTeam) && /latest-per-team/.test(noTeam),
+     "the conditional team requirement is enforced with an error that names both scopes", noTeam);
+  const noTeamPeriods = await msg("dd_find_cfb_team_periods", {});
+  ok(/team is required when scope is team-periods/.test(noTeamPeriods),
+     "…and the same holds for the period surface", noTeamPeriods);
+
+  // a parameter belonging to the other scope is refused BY NAME, naming the scope
+  const wrongWay = await msg("dd_find_cfb_team_games", { scope: "latest-per-team", opponent: "Georgia" });
+  ok(/unsupported field for scope latest-per-team: opponent/.test(wrongWay),
+     "a parent-scope parameter is refused by name under the derived scope", wrongWay);
+  const otherWay = await msg("dd_find_cfb_team_games", { team: "Ohio State", conference: "Big Ten" });
+  ok(/unsupported field for scope team-games: conference/.test(otherWay),
+     "…and a derived-scope parameter is refused by name under the parent scope", otherWay);
+  const periodWrongWay = await msg("dd_find_cfb_team_periods", { team: "Ohio State", period_outcome: "positive" });
+  ok(/unsupported field for scope team-periods: period_outcome/.test(periodWrongWay),
+     "the period surface refuses period_outcome outside latest-per-team", periodWrongWay);
+  const plural = await msg("dd_find_cfb_team_games", { team: "Ohio State", conference: "Big Ten", offset: 1 });
+  ok(/unsupported fields for scope team-games: conference, offset/.test(plural),
+     "…and two of them are refused together, both named", plural);
+
+  // the sort enum is the union of both scopes, so a value must be checked against the
+  // scope and not merely against the enum
+  const crossSort = await msg("dd_find_cfb_team_games", { team: "Ohio State", sort: "team-asc" });
+  ok(/sort must be kickoff-asc or kickoff-desc/.test(crossSort),
+     "a sort value from the other scope is refused even though the schema enum allows it", crossSort);
+  const crossSortBack = await msg("dd_find_cfb_team_games", { scope: "latest-per-team", sort: "kickoff-asc" });
+  ok(/sort must be team-asc or kickoff-desc/.test(crossSortBack),
+     "…in both directions", crossSortBack);
+  const crossPeriodSort = await msg("dd_find_cfb_team_periods", { team: "Ohio State", sort: "conference-record-desc" });
+  ok(/sort must be period-asc or period-desc/.test(crossPeriodSort),
+     "…and on the period surface too", crossPeriodSort);
+
+  // ⚠️ THE PER-SCOPE LIMIT CEILING SURVIVED THE MERGE. The schema advertises the union
+  // maximum of 50; team-periods still refuses 26, because that bound is a payload bound
+  // and raising it silently would be a behaviour change disguised as a refactor.
+  const tightLimit = await msg("dd_find_cfb_team_periods", { team: "Ohio State", limit: 26 });
+  ok(/limit must be a whole number from 1 through 25/.test(tightLimit),
+     "team-periods keeps its 25 ceiling under the union schema maximum of 50", tightLimit);
+  {
+    const j = await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team", limit: 26 }))).json();
+    ok(!j.result.isError, "…while latest-per-team accepts 26, so the ceiling is per-scope and not global");
+  }
+
+  // an invented scope is refused, and names what is available
+  const badScope = await msg("dd_find_cfb_team_games", { scope: "everything" });
+  ok(/scope must be team-games or latest-per-team/.test(badScope), "an invented scope is refused", badScope);
+
+  // both scopes declare which shape came back, so a consumer branches on a stated field
+  // instead of probing for a key
+  {
+    const parent = text(await (await req(call("dd_find_cfb_team_games", { team: "Ohio State" }))).json());
+    ok(parent.query.scope === "team-games" && parent.response_shape === "team-game-rows" &&
+       Array.isArray(parent.games) && !("rows" in parent),
+       "the parent scope echoes its scope and declares the team-game shape");
+    const derived = text(await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team" }))).json());
+    ok(derived.query.scope === "latest-per-team" && derived.response_shape === "latest-per-team-rows" &&
+       Array.isArray(derived.rows) && !("games" in derived),
+       "the derived scope echoes its scope and declares the latest-per-team shape");
+    // ⚠️ the top-level `scope` field is the DATA SURFACE's coverage string and predates
+    // the parameter. If the parameter had been echoed there it would have overwritten a
+    // published honesty claim, so the two must not be the same field.
+    ok(parent.scope !== parent.query.scope && typeof parent.scope === "string",
+       "the top-level scope still carries the data surface's coverage string, not the argument");
+    const derivedPeriods = text(await (await req(call("dd_find_cfb_team_periods", { scope: "latest-per-team" }))).json());
+    ok(derivedPeriods.response_shape === "latest-per-team-rows" && derivedPeriods.query.scope === "latest-per-team",
+       "the period surface declares its shape the same way");
+  }
+
+  // the per-scope DEFAULTS differ, and the default must follow the scope
+  {
+    const parent = text(await (await req(call("dd_find_cfb_team_games", { team: "Ohio State" }))).json());
+    ok(parent.query.sort === "kickoff-asc" && parent.query.limit === 25,
+       "the parent scope keeps its own sort and limit defaults");
+    const derived = text(await (await req(call("dd_find_cfb_team_games", { scope: "latest-per-team" }))).json());
+    ok(derived.query.sort === "team-asc" && derived.query.offset === 0,
+       "the derived scope keeps its own sort default and its pagination");
+    const parentPeriods = text(await (await req(call("dd_find_cfb_team_periods", { team: "Ohio State" }))).json());
+    ok(parentPeriods.query.sort === "period-asc" && parentPeriods.query.limit === 20,
+       "the period parent scope defaults to period-asc and a limit of 20, not the union's 25");
+  }
+
+  // the merged descriptions have to name the scopes, or a model cannot discover them
+  {
+    const listed = (await (await req(rpc("tools/list"))).json()).result.tools;
+    for (const name of ["dd_find_cfb_team_games", "dd_find_cfb_team_periods"]) {
+      const tool = listed.find(x => x.name === name);
+      ok(/scope=latest-per-team/.test(tool.description) && /refused by name rather than ignored/.test(tool.description),
+         name + " tells a caller the derived scope exists and that a wrong parameter is refused");
+      ok(tool.inputSchema.properties.scope && !("required" in tool.inputSchema),
+         name + " advertises scope and no longer claims an unconditional required field");
+    }
+  }
+}
+
+/* ----------------------- source-level safety asserts ----------------------- */
+const blockSrc = readFileSync(resolve(WORK, "mcp-block.js"), "utf8");
+const noComments = blockSrc.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+/* ------------------------ dd_draft_bozo_leg ------------------------
+   ⚠️ It reads the board and runs the server's validator. It submits nothing. The tests
+   below go through the refusals in the order the tool checks them, then the happy path. */
+const asUser = (name, args, id = 1) =>
+  req(call("dd_draft_bozo_leg", args, id), { path: "/mcp/" + name });
+const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", side: "SF", line: -6.5,
+  price: -180, label: "SF -6.5", startsAt: "2026-09-13T17:00:00.000Z" };
+
+{
+  // identity first: the shared connector cannot answer "are you in this league"
+  const j = await (await req(call("dd_draft_bozo_leg", LEG))).json();
+  ok(j.result.isError === true, "shared connector: dd_draft_bozo_leg refuses");
+  ok(/connect\.html/.test(j.result.content[0].text), "…and points at where to mint a personal URL");
+}
+{
+  const j = await (await asUser("u_outsider", LEG)).json();
+  ok(j.result.isError === true && /not in main/.test(j.result.content[0].text),
+     "a member of nothing is refused before any leg is inspected");
+}
+{
+  const d = text(await (await asUser(USER_TOKEN, { ...LEG, sport: "nba" })).json());
+  ok(d.accepted === false && d.reason === "sport_not_gradeable",
+     "dd_draft_bozo_leg rejects NBA until a Worker-reachable grading adapter exists");
+}
+{
+  leagueRec.status = "placed";
+  const d = text(await (await asUser(USER_TOKEN, LEG)).json());
+  leagueRec.status = "open";
+  ok(d.accepted === false && d.reason === "board-closed", "board locked: refused, with the reason named");
+  ok(/lever hierarchy has already been drawn/.test(d.detail), "…and says the draw already happened");
+}
+{
+  leagueRec.allowEdit = false;
+  const d = text(await (await asUser("u_kap", LEG)).json());
+  leagueRec.allowEdit = undefined;
+  ok(d.accepted === false && d.reason === "edits-locked" && d.yourExistingLeg.label === "Over 47.5",
+     "a league that locks legs on arrival refuses an edit, and shows what is already in");
+}
+{
+  const d = text(await (await asUser(USER_TOKEN, { ...LEG, price: 150 })).json());
+  ok(d.accepted === true && d.agreement.needsConfirmation === true,
+     "a typed-price disagreement is surfaced while the captured price drives validation");
+  ok(d.captured.price === -110 && d.band && d.band.ceil !== undefined,
+     "the captured price and band are returned together");
+}
+{
+  // ⚠️ Uniqueness is keyed on the SELECTION, not on the label. Two people can spell the
+  // same bet differently and DraftKings still rejects the second one — the ticket is one
+  // parlay and the same selection cannot go on it twice. So the check has to look at
+  // event, market, side and number, and a label that merely LOOKS the same must not
+  // trigger it.
+  const dupe = text(await (await asUser(USER_TOKEN,
+    { ...LEG, eventId: "401", game: "CLE @ PIT", mkt: "spread", side: "CLE", line: 3.5, label: "Browns -
