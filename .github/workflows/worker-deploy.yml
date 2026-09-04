@@ -19,10 +19,6 @@ name: worker-deploy
 # `versions upload` carries the manifest, and encrypted values stay in Cloudflare.
 
 on:
-  # One-shot 2026-09-04 deploy trigger, authorized by the owner in the J1 session.
-  # Removed immediately after this run succeeds.
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       message:
@@ -35,9 +31,6 @@ on:
         required: true
         default: false
 
-permissions:
-  contents: write
-
 concurrency:
   # One release at a time. Two overlapping runs would upload two versions and race over
   # which one ends up serving.
@@ -49,20 +42,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Repair connector-truncated generated files
-        run: |
-          cat .deploy-chunks/dawg-bot-worker.js/* > dawg-bot-worker.js
-          cat .deploy-chunks/mcp-block.js/* > work/mcp-block.js
-          echo "d33758c27f0b29b1350da4d6abef930da1b3f2cc9817f90c8d32fb62a93bd8eb  dawg-bot-worker.js" | sha256sum -c -
-          echo "e07b34a9a7418b30682184b86cce022974da3cca2ce35e135f4d4b0291a3b205  work/mcp-block.js" | sha256sum -c -
-          cp .deploy-chunks/worker-deploy.yml.orig .github/workflows/worker-deploy.yml
-          rm -rf .deploy-chunks
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dawg-bot-worker.js work/mcp-block.js .github/workflows/worker-deploy.yml
-          git add -A .deploy-chunks
-          git commit -m "fix: restore complete generated Worker sources"
-          git push origin HEAD:main
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
 
@@ -100,7 +79,7 @@ jobs:
         run: |
           set -o pipefail
           npx wrangler@4 versions upload --config wrangler.jsonc \
-            --message "${{ inputs.message || 'authorized one-shot deploy' }} (${GITHUB_SHA::7})" 2>&1 | tee upload.log
+            --message "${{ inputs.message }} (${GITHUB_SHA::7})" 2>&1 | tee upload.log
           # The id is what steps 4 and 5 of the runbook take. Parsed rather than retyped —
           # a hand-copied uuid is the step that has gone wrong most often.
           id=$(grep -oiE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' upload.log | tail -1)
@@ -123,7 +102,7 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Move traffic
-        if: ${{ github.event_name == 'push' || inputs.promote }}
+        if: ${{ inputs.promote }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -133,7 +112,7 @@ jobs:
           echo "### Traffic moved to \`${{ steps.upload.outputs.version_id }}\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Not promoted
-        if: ${{ github.event_name != 'push' && !inputs.promote }}
+        if: ${{ !inputs.promote }}
         run: |
           echo "Version uploaded but NOT serving. Re-run with promote checked to move traffic." \
             >> "$GITHUB_STEP_SUMMARY"
