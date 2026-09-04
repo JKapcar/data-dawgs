@@ -39,6 +39,18 @@ What is *not* built is the layer that makes it a product: submit-time price capt
 | D16 | Scope | **Build as public, ship to the 8, then invite-only, then open.** Native app is out; PWA is the "app store." No money ever moves on-platform. | Apple rejects gambling-adjacent apps from individual developers. Keeping money off-platform keeps it out of licensing. |
 | D17 | Player keys | **Migrate from `encodeURIComponent(displayName)` to auth `uid`.** Display name becomes an attribute. | Multi-tenant correctness; also the root of Bug C's cousin (`The%20Kid`). |
 | D18 | Roster size | **Variable per league. `lockCount` derives from `members.length` unless the manager overrides it.** Eight is not a constant anywhere in code, copy, or math. | Bozo Boyz is nine. Every league will differ, and a hard-coded 8 becomes a migration the first time someone joins a tenth. |
+| D19 | Schedule + score source | **ESPN is blocked from Worker egress (403 on `site.api` and the scoreboard) but works from the user's browser** — it blocks datacenter IPs, not people. So: browser-side reads (the submit form's game list and `startsAt`) keep working today; **every Worker-side read must move** to GitHub-hosted static data, fetched on a schedule with ETag conditional requests, normalized to current-season-only JSON in KV. NFL: `nflverse/nfldata` `games.csv`. CFB: `sportsdataverse/cfbfastR-data` processed schedule. | Both confirmed HTTP 200 from Worker egress. Both carry the ESPN game id, so `espnEventId` survives as an attribute (D7) without calling ESPN. Grading and close capture run in the Worker and need this; submit currently does not. |
+
+**D19 consequences**
+
+- **Browser-side ESPN is a dependency you don't control.** The submit form works today only because the player's own browser can reach ESPN. That can break at any time — a corporate network, a VPN, a mobile carrier, or ESPN tightening further — and when it does, the game list goes empty and no one can file a leg. The D19 KV schedule should back the submit form too, not just grading, so browser ESPN becomes an enhancement rather than a single point of failure.
+
+- **Grading becomes poll-until-populated, not fetch-once.** Neither source publishes a freshness SLA. nflverse republishes when upstream changes (observed 5–40 min in-season); cfbfastR runs game-day slots at ~35–55 min. `/bozo/grade` must tolerate blank scores and retry, on the same retryable-vs-terminal discipline as the close cron. It must never treat a blank score as a zero.
+- Use the cfbfastR **processed** schedule, not the raw file: raw represents unplayed games as `0–0`, which would grade every unplayed leg as a push against a real total.
+- `gametime` in nflverse is US Eastern regardless of venue. Combine with `gameday` under `America/New_York`. Treating it as UTC silently shifts every kickoff four or five hours and breaks the close window.
+- Never read `spread_line`, `total_line`, `away_moneyline` or any odds column from these files into CLV or grading. They are consensus and D9 excludes them. Sanity-check only.
+- Files are large (NFL 2.18 MB, CBB ~29.5 MB). Scheduled fetch → parse current season → compact KV. Never per-request.
+- **Scope: NFL and CFB only for now.** NBA, CBB, NHL and MLB have identified sources but no adapter. Until an adapter exists, those sports cannot be submitted — the submit validator must reject them with a clear reason rather than accepting a leg that can never be graded.
 
 **D18 consequences to check during implementation**
 
@@ -82,7 +94,7 @@ flowchart LR
   subgraph External
     SGO[SportsGameOdds<br/>free tier]
     OA[The Odds API<br/>free → $30]
-    ESPN[ESPN scores]
+    SRC[nflverse + cfbfastR<br/>GitHub static, D19]
     DK[DraftKings app<br/>manual only]
   end
   P --> H --> R
@@ -94,7 +106,7 @@ flowchart LR
   C --> OA
   C --> SGO
   R -->|submit capture| SGO
-  G --> ESPN
+  G --> SRC
   C --> DB
   G --> DB
   C --> KV
@@ -285,7 +297,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  G0[/bozo/grade] --> G1[ESPN final scores per event]
+  G0[/bozo/grade] --> G1[Final scores from KV<br/>nflverse / cfbfastR, D19<br/>blank score = retry, never 0]
   G1 --> G2[Per leg: actual, won]
   G2 --> G3{Margin market?}
   G3 -- "spread/total/prop with number" --> G4["margin = actual − line<br/>beatSd = margin / SD[sport,mkt]"]
@@ -435,6 +447,7 @@ Ship order: fixture → 1.1 → 1.4 → 1.5 → 1.6. 1.1 must be **deployed**, n
 | 2.3 | Typed price → `agreement` check (1.5 pts), `needsConfirmation` in echo | A 15-pt gap shows both prices; nothing is silently accepted |
 | 2.4 | Band check on captured price, with echo ordering per 3.2 | No band rejection without the captured price shown first |
 | 2.5 | Store `providerEventIds.sgo`, `entrySnapshotAt`, `fairEntry`, `entryHold`; kill `priceOpp: null` at the validator | Validator rejects a game-market leg with null `priceOpp` |
+| 2.5b | **Path parity.** The bozo.html form always sends `startsAt` (derived browser-side from ESPN at bozo.html:4431/6098); an MCP submission with only `eventId` sends `null`, and close capture silently skips it at dawg-bot-worker.js:6999. Make `startsAt` required at the validator for any leg with `clvEligible` intent, and resolve it server-side from the D19 KV schedule when absent rather than accepting null. Mark it required in `dd_submit_bozo_leg`'s schema. | A leg submitted via MCP with only `eventId` either resolves a kickoff or is rejected — never stored unmeasurable |
 | 2.6 | Board renders `priceSource` badge and `clvEligible` | A self-priced prop is visibly different from a captured leg |
 | 2.7 | **(from 3.2)** SGO pre-kick tick at T−7…T−1 writes `closeCandidate` only. **Additive**: the existing SGO close write at kickoff stays as-is until 3.2 replaces it. Do not make SGO candidate-only in this phase or Weeks 2–3 lose their closes. | Every game-market leg has a `closeCandidate` before kickoff; `close` still written by the existing path |
 | 2.8 | Adapter interface: SGO adapter exposes a common `getMarket(event, spec, {at})` shape | Phase 3's Odds API adapter implements the same signature without changing callers |
@@ -455,7 +468,7 @@ Ship order: fixture → 1.1 → 1.4 → 1.5 → 1.6. 1.1 must be **deployed**, n
 |---|---|---|
 | 4.1 | Simulator conforms to grader: SD-normalized (D4). Remove the raw-margin path flagged at 4370 | One definition in code and in `data/bozo-rules.json` |
 | 4.2 | Replace `rImp(price) − .022` with real de-vig from `priceOpp`; `no-sd` when absent | No assumed hold anywhere in the codebase |
-| 4.3 | SD calibration script: empirical SD of `(actual margin − closing spread)` and `(actual total − closing total)` per sport from prior-season ESPN data → `data/bozo-sd.json` with `asOf` | Table date renders on Docs |
+| 4.3 | SD calibration script: empirical SD of `(actual margin − closing spread)` and `(actual total − closing total)` per sport from prior-season nflverse/cfbfastR results (D19) → `data/bozo-sd.json` with `asOf` | Table date renders on Docs |
 | 4.4 | Prop SD table for the top 15 stat types (NFL pass/rush/rec yds, receptions, TDs; NBA pts/reb/ast/3s; MLB Ks/TB/hits; NHL SOG/pts) | Props participate in Worst Beat; others `no-sd` |
 
 ### Phase 5 — Deadline + Placement · Week 4 · ~8h
