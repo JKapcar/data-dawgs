@@ -1853,14 +1853,21 @@ const FETCH_SHAPES = [
 // directly (CORS), so toto forwards GET responses and stores nothing (Bible I2).
 // Never log or KV-put player lists. ContestTypeId 21 = Classic, 96 = Showdown CPT.
 
-const DK_UA = "Mozilla/5.0 (compatible; DataDawgsDFS/1.0; +https://datadawgs216.com)";
+// DK blocks non-browser UAs (403 Access Denied). Use a stock Chrome UA + lobby Referer.
+const DK_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const DK_LOBBY = "https://www.draftkings.com/lobby/getcontests";
 const DK_DRAFTABLES = "https://api.draftkings.com/draftgroups/v1/draftgroups";
 
 async function dkUpstream(url) {
   const res = await fetch(url, {
     method: "GET",
-    headers: { "User-Agent": DK_UA, "Accept": "application/json" },
+    headers: {
+      "User-Agent": DK_UA,
+      "Accept": "application/json, text/plain, */*",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Referer": "https://www.draftkings.com/lobby",
+      "Origin": "https://www.draftkings.com",
+    },
   });
   const text = await res.text();
   let body;
