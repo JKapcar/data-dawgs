@@ -2756,9 +2756,23 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <!-- ======================================================= SOLVER -->
 <section class="sheet" id="sh-solver" hidden>
   <div class="card">
-    <h3>Solver settings</h3>
-    <p class="sub">An exact integer solve, not a greedy fill: for every lineup it returns <b>the</b> highest-projected roster that satisfies every constraint below, and it is checked against exhaustive enumeration on small slates. There is no lineup-count paywall.</p>
+    <h3>Solver settings <span class="rt" id="presetState"></span></h3>
+    <p class="sub">Contest-aware presets (Bible §4.1) set lineups / uniques / randomness / stacks. An exact integer solve returns <b>the</b> highest-projected roster under those constraints. There is no lineup-count paywall.</p>
     <div class="grid3">
+      <label class="fld"><span>Contest preset</span>
+        <select class="fi" id="cfPreset">
+          <option value="">Custom (no preset)</option>
+          <option value="cash">Cash / DU / 50-50 / H2H</option>
+          <option value="single_gpp">Single-entry GPP</option>
+          <option value="three_max">3-max GPP</option>
+          <option value="mme">20-max / 150-max MME</option>
+          <option value="milly">Milly Maker</option>
+          <option value="sd_wildcat">Showdown Wildcat (150-max)</option>
+          <option value="sd_single">Showdown single-entry / Field General</option>
+        </select>
+      </label>
+      <label class="fld"><span>Field size <span class="hint">for E[dupes] prior</span></span><input class="fi" type="number" id="cfField" min="2" value="20000"></label>
+      <label class="fld"><span>Entry cap</span><input class="fi" type="number" id="cfEntryCap" min="1" value="20"></label>
       <label class="fld"><span>Lineups</span><input class="fi" type="number" id="cfCount" min="1" max="1000" value="20"></label>
       <label class="fld"><span>Min salary</span><input class="fi" type="number" id="cfMinSal" step="100" value="49000"></label>
       <label class="fld"><span>Max salary</span><input class="fi" type="number" id="cfMaxSal" step="100" value="50000"></label>
@@ -2789,11 +2803,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="btnrow">
       <button class="btn" id="solveGo">Build lineups</button>
       <button class="btn ghost sm" id="solveStop" hidden>Stop</button>
+      <button class="btn ghost sm" id="validateGo">Validate set</button>
       <button class="btn ghost sm" id="exportCsv">Export DraftKings CSV</button>
       <button class="btn ghost sm" id="clearLu">Clear pool</button>
     </div>
     <div class="prog" id="solveProg" hidden><i></i></div>
     <div class="banner" id="solveWarn" hidden></div>
+    <div class="banner" id="fitWarn" hidden></div>
     <div class="statrow" id="solveStats" hidden></div>
   </div>
 
@@ -2801,6 +2817,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <h3>Lineups <span class="rt" id="luCount"></span></h3>
     <div id="luList"></div>
     <p class="note" id="luMore"></p>
+  </div>
+
+  <div class="card" id="valCard" hidden>
+    <h3>Validators <span class="rt" id="valState"></span></h3>
+    <p class="sub">Bible §4.2 — pass/warn only (never hard-block). E[dupes] uses §3.2 <b>priors</b> until ≥3 weeks of standings (I5).</p>
+    <div id="valList"></div>
+    <p class="note" id="valNote"></p>
   </div>
 </section>
 
@@ -2984,6 +3007,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <h3>Ranked contests</h3>
     <p class="sub">Higher rank = better on rake / 10th÷1st / min-cash bands. Preset is what the solver should use when you generate for that contest.</p>
     <div class="tscroll"><table class="dtab" id="scrTab"><thead><tr><th>Verdict</th><th>Rank</th><th>Contest</th><th>Preset</th><th>Rake</th><th>10th÷1st</th><th>Min-cash</th><th></th></tr></thead><tbody></tbody></table></div>
+    <p class="note">Use <b>Apply</b> to push that contest's §4.1 preset into the Solver sheet.</p>
     <p class="note" id="scrNote">No contests scored yet.</p>
   </div>
 </section>
@@ -2992,7 +3016,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <section class="sheet" id="sh-standings" hidden>
   <div class="card">
     <h3>Standings ingest <span class="rt" id="stState"></span></h3>
-    <p class="sub">Week 1+ receipts skeleton (Bible §9.1). Paste a GameCenter standings CSV; it stays in <b>IndexedDB on this device only</b> (I3). Derived aggregates come later — this just captures the data.</p>
+    <p class="sub">Week 1+ receipts (Bible §9.1). Paste a GameCenter standings CSV; it stays in <b>IndexedDB on this device only</b> (I3). Entry names are hashed on ingest. Grades (§9.3) run below on whatever exists.</p>
     <div class="grid3">
       <label class="fld"><span>Week</span><input class="fi" type="number" id="stWeek" min="1" max="22" value="1"></label>
       <label class="fld"><span>Contest key / id</span><input class="fi" id="stContestKey" placeholder="dk-contest-123"></label>
@@ -3012,6 +3036,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <h3>Stored contests</h3>
     <div class="tscroll"><table class="dtab" id="stTab"><thead><tr><th>Week</th><th>Key</th><th>Name</th><th>Entries</th><th>Imported</th></tr></thead><tbody></tbody></table></div>
     <p class="note" id="stNote">Nothing stored yet.</p>
+  </div>
+  <div class="card">
+    <h3>Week receipts <span class="rt" id="rcState"></span></h3>
+    <p class="sub">Bible §9.1–9.3. Grades run on whatever exists; empty sections stay labelled <b>prior (I5)</b> until data lands.</p>
+    <div class="btnrow"><button class="btn sm" id="rcGrade">Grade this week</button></div>
+    <div class="banner" id="rcWarn" hidden></div>
+    <pre class="note" id="rcOut" style="white-space:pre-wrap;max-height:320px;overflow:auto"></pre>
   </div>
 </section>
 
@@ -5064,8 +5095,9 @@ function banner(id, kind, html) {
   };
 });
 
+/* ---- Standings ingest (Phase 1 — source: work/dfs-standings-ingest.js) ---- */
 /**
- * Contest standings ingest skeleton (Bible §9.1 / Phase 0).
+ * Contest standings ingest skeleton (Bible §9.1 / Phase 0/1 — hash entry names; receipts in dfs-receipts.js).
  * Client-side only — IndexedDB/localStorage. Never upload standings (I3).
  */
 (function (root, factory) {
@@ -5161,6 +5193,19 @@ function banner(id, kind, html) {
         raw: row
       });
     }
+    // Hash entry names for on-device privacy (Bible §9.1)
+    function fnv1a(str) {
+      var h = 0x811c9dc5;
+      str = String(str || "");
+      for (var i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+      }
+      return ("0000000" + h.toString(16)).slice(-8);
+    }
+    entries.forEach(function (e) {
+      if (e.entryName) e.entryHash = fnv1a(e.entryName);
+    });
     return {
       contestKey: meta.contestKey || ("local-" + Date.now()),
       week: meta.week || null,
@@ -5168,7 +5213,8 @@ function banner(id, kind, html) {
       importedAt: new Date().toISOString(),
       headers: head,
       entries: entries,
-      n: entries.length
+      n: entries.length,
+      schema: "dfs-standings-v1-phase1"
     };
   }
 
@@ -5208,8 +5254,806 @@ function banner(id, kind, html) {
   };
 });
 
+
+/* ---- Contest presets (Phase 1 — source: work/dfs-contest-presets.js) ---- */
 /**
- * Contest screener stub — Bible §5 / §4.1 preset mapping.
+ * Contest-aware generation presets — Bible §4.1.
+ * Screener mapPreset keys share these definitions. applyPreset fills solver cfg.
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === "object" && module.exports) module.exports = api;
+  if (root) root.DDFSPresets = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  "use strict";
+
+  // leverage: 0 | low | medium | high | highest → ownership penalty / stack weight scale
+  var LEVERAGE_SCALE = { "0": 0, low: 0.35, medium: 0.7, high: 1.0, highest: 1.35 };
+
+  var PRESETS = {
+    cash: {
+      key: "cash",
+      label: "Cash / DU / 50-50 / H2H",
+      objective: "mean points",
+      variance: "low",
+      exposure: "none",
+      minUniques: 0,
+      lineups: 1,
+      leverage: "0",
+      randomness: 0,
+      qbStackMin: 0,
+      bringBack: 0,
+      maxExp: 100,
+      showdown: false
+    },
+    single_gpp: {
+      key: "single_gpp",
+      label: "Single-entry GPP",
+      objective: "top-10 rate, dupe-adjusted",
+      variance: "medium",
+      exposure: "none",
+      minUniques: 0,
+      lineups: 1,
+      leverage: "low",
+      randomness: 8,
+      qbStackMin: 1,
+      bringBack: 1,
+      maxExp: 100,
+      showdown: false
+    },
+    three_max: {
+      key: "three_max",
+      label: "3-max GPP",
+      objective: "greedy P(≥1 top-10)",
+      variance: "medium-high",
+      exposure: "after_each",
+      minUniques: 2,
+      lineups: 3,
+      leverage: "medium",
+      randomness: 12,
+      qbStackMin: 1,
+      bringBack: 1,
+      maxExp: 67,
+      showdown: false
+    },
+    mme: {
+      key: "mme",
+      label: "20-max / 150-max MME",
+      objective: "greedy P(≥1 top-1%)",
+      variance: "high",
+      exposure: "after_each",
+      minUniques: 3,
+      lineups: 20,
+      leverage: "high",
+      randomness: 20,
+      qbStackMin: 1,
+      bringBack: 1,
+      maxExp: 40,
+      showdown: false
+    },
+    milly: {
+      key: "milly",
+      label: "Milly Maker",
+      objective: "greedy P(≥1 top-1%), % to first ≈ 30%",
+      variance: "high",
+      exposure: "after_each",
+      minUniques: 3,
+      lineups: 150,
+      leverage: "highest",
+      randomness: 25,
+      qbStackMin: 1,
+      bringBack: 1,
+      maxExp: 30,
+      showdown: false
+    },
+    sd_wildcat: {
+      key: "sd_wildcat",
+      label: "Showdown Wildcat (150-max)",
+      objective: "greedy P(≥1 top-1%), product-own dupe control",
+      variance: "high",
+      exposure: "after_each",
+      minUniques: 2,
+      lineups: 150,
+      leverage: "high",
+      randomness: 22,
+      qbStackMin: 0,
+      bringBack: 0,
+      maxExp: 35,
+      showdown: true
+    },
+    sd_single: {
+      key: "sd_single",
+      label: "Showdown single-entry / Field General",
+      objective: "top-1% rate, dupe-adjusted",
+      variance: "high",
+      exposure: "none",
+      minUniques: 0,
+      lineups: 1,
+      leverage: "medium",
+      randomness: 15,
+      qbStackMin: 0,
+      bringBack: 0,
+      maxExp: 100,
+      showdown: true
+    }
+  };
+
+  function listPresets() {
+    return Object.keys(PRESETS).map(function (k) { return PRESETS[k]; });
+  }
+
+  function getPreset(key) {
+    return PRESETS[key] || null;
+  }
+
+  function leverageScale(lev) {
+    return LEVERAGE_SCALE[String(lev)] != null ? LEVERAGE_SCALE[String(lev)] : 0.7;
+  }
+
+  /**
+   * Map preset → solver cfg fields used by dfs.html (count, uniq, rand, maxExp, qbMin, bring).
+   * Caps milly/wildcat lineups at `opts.lineupCap` (default 150) for browser sanity.
+   */
+  function solverCfgFromPreset(preset, opts) {
+    opts = opts || {};
+    var p = typeof preset === "string" ? PRESETS[preset] : preset;
+    if (!p) return null;
+    var cap = opts.lineupCap != null ? opts.lineupCap : 150;
+    var n = Math.min(p.lineups, cap);
+    if (opts.entryCap != null && p.exposure === "after_each") {
+      n = Math.min(n, Math.max(1, +opts.entryCap));
+    }
+    return {
+      count: n,
+      uniq: p.minUniques,
+      rand: p.randomness,
+      maxExp: p.maxExp,
+      qbMin: p.qbStackMin,
+      bring: p.bringBack,
+      leverage: p.leverage,
+      leverageScale: leverageScale(p.leverage),
+      variance: p.variance,
+      exposure: p.exposure,
+      presetKey: p.key,
+      objective: p.objective,
+      label: p.label,
+      showdown: !!p.showdown
+    };
+  }
+
+  return {
+    PRESETS: PRESETS,
+    LEVERAGE_SCALE: LEVERAGE_SCALE,
+    listPresets: listPresets,
+    getPreset: getPreset,
+    leverageScale: leverageScale,
+    solverCfgFromPreset: solverCfgFromPreset
+  };
+});
+
+/* ---- Dupe model priors (Phase 1 — source: work/dfs-dupe-model.js) ---- */
+/**
+ * Dupe estimator — Bible §3.1–3.2.
+ * E[dupes](L) = entries × Π own_i × Π c_jk
+ * All c_jk are PRIORS until ≥3 weeks standings (I5) — every result carries prior:true.
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === "object" && module.exports) module.exports = api;
+  if (root) root.DDFSDupe = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  "use strict";
+
+  var PAIR_PRIORS = [
+    { id: "cpt_wr_qb", label: "CPT WR + same-team QB (showdown)", c: 1.98 },
+    { id: "two_rb_same", label: "Two same-team RBs", c: 1.29 },
+    { id: "qb_opp_dst", label: "QB + opposing D/ST", c: 0.36 },
+    { id: "qb_same_wrte", label: "QB + same-team WR1/TE1 (classic)", c: 1.5 },
+    { id: "rb_same_dst", label: "RB + same-team D/ST", c: 1.2 }
+  ];
+
+  function ownFrac(p) {
+    var o = +((p && p.own) || 0);
+    if (!isFinite(o) || o <= 0) return 0.001; // floor so log/product defined
+    if (o > 1) o = o / 100;
+    if (o > 1) o = 1;
+    if (o < 0.001) o = 0.001;
+    return o;
+  }
+
+  function isPassCatcher(pos) {
+    return pos === "WR" || pos === "TE";
+  }
+
+  /**
+   * Classify pair (a,b) player objects → prior multiplier.
+   * opts.showdown + cptIndex into lineup ids handled by caller via flags on players:
+   *   p._isCpt boolean when showdown captain.
+   */
+  function pairMultiplier(a, b) {
+    var pa = a.pos, pb = b.pos;
+    var ta = a.team, tb = b.team;
+    var ca = !!a._isCpt, cb = !!b._isCpt;
+
+    // CPT WR + same-team QB
+    if (ca || cb) {
+      var cpt = ca ? a : b, oth = ca ? b : a;
+      if (cpt.pos === "WR" && oth.pos === "QB" && cpt.team === oth.team) return { c: 1.98, id: "cpt_wr_qb" };
+      if (cpt.pos === "QB" && oth.pos === "WR" && cpt.team === oth.team) return { c: 1.98, id: "cpt_wr_qb" };
+    }
+
+    if (pa === "RB" && pb === "RB" && ta && ta === tb) return { c: 1.29, id: "two_rb_same" };
+
+    if ((pa === "QB" && pb === "DST" && a.opp && a.opp === tb) ||
+        (pb === "QB" && pa === "DST" && b.opp && b.opp === ta)) {
+      return { c: 0.36, id: "qb_opp_dst" };
+    }
+
+    if ((pa === "QB" && isPassCatcher(pb) && ta && ta === tb) ||
+        (pb === "QB" && isPassCatcher(pa) && ta && ta === tb)) {
+      return { c: 1.5, id: "qb_same_wrte" };
+    }
+
+    if ((pa === "RB" && pb === "DST" && ta && ta === tb) ||
+        (pb === "RB" && pa === "DST" && ta && ta === tb)) {
+      return { c: 1.2, id: "rb_same_dst" };
+    }
+
+    return { c: 1.0, id: "indep" };
+  }
+
+  /**
+   * @param {object} lineup { ids: number[], cpt?: number }
+   * @param {object[]} players
+   * @param {object} opts { entries, showdown }
+   */
+  function expectedDupes(lineup, players, opts) {
+    opts = opts || {};
+    var entries = Math.max(1, +opts.entries || 1);
+    var ids = (lineup && lineup.ids) || [];
+    if (!ids.length) {
+      return { error: "empty lineup", prior: true, label: "prior (I5)" };
+    }
+
+    var plist = ids.map(function (i) {
+      var p = players[i] || {};
+      var copy = {
+        name: p.name, pos: p.pos, team: p.team, opp: p.opp, own: p.own,
+        _isCpt: opts.showdown && lineup.cpt != null && i === lineup.cpt
+      };
+      return copy;
+    });
+
+    var productOwn = 1;
+    for (var i = 0; i < plist.length; i++) productOwn *= ownFrac(plist[i]);
+
+    var pairProd = 1;
+    var drivers = [];
+    for (var a = 0; a < plist.length; a++) {
+      for (var b = a + 1; b < plist.length; b++) {
+        var m = pairMultiplier(plist[a], plist[b]);
+        pairProd *= m.c;
+        if (m.c !== 1) {
+          drivers.push({
+            a: plist[a].name, b: plist[b].name,
+            id: m.id, c: m.c
+          });
+        }
+      }
+    }
+    drivers.sort(function (x, y) { return Math.abs(Math.log(y.c)) - Math.abs(Math.log(x.c)); });
+
+    var J = productOwn * pairProd;
+    var eDupes = entries * J;
+    var rarity = 0;
+    for (var r = 0; r < plist.length; r++) rarity += -Math.log(ownFrac(plist[r]));
+
+    return {
+      entries: entries,
+      productOwn: productOwn,
+      pairProduct: pairProd,
+      J: J,
+      eDupes: eDupes,
+      rarity: rarity,
+      drivers: drivers.slice(0, 5),
+      prior: true,
+      label: "prior (I5) — §3.2 seeds until ≥3 weeks standings"
+    };
+  }
+
+  function thresholdForContest(entries, opts) {
+    opts = opts || {};
+    entries = +entries || 0;
+    if (opts.smallField || entries > 0 && entries < 1000) return 3;
+    if (entries >= 1000) return entries / 10000;
+    return 3;
+  }
+
+  return {
+    PAIR_PRIORS: PAIR_PRIORS,
+    ownFrac: ownFrac,
+    pairMultiplier: pairMultiplier,
+    expectedDupes: expectedDupes,
+    thresholdForContest: thresholdForContest
+  };
+});
+
+/* ---- Validators + fit (Phase 1 — source: work/dfs-validators.js) ---- */
+/**
+ * Construction validators + lineup-to-contest fit — Bible §4.2 / §4.3.
+ * pass | warn | info — never hard-block (override with logged reason).
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === "object" && module.exports) module.exports = api;
+  if (root) root.DDFSValidators = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  "use strict";
+
+  function issue(level, code, message, extra) {
+    var o = { level: level, code: code, message: message };
+    if (extra) for (var k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) o[k] = extra[k];
+    return o;
+  }
+
+  function playersOf(lineup, pool) {
+    return (lineup.ids || []).map(function (i) { return pool[i]; }).filter(Boolean);
+  }
+
+  function showdownSplit(lineup, pool) {
+    var cpt = lineup.cpt != null ? pool[lineup.cpt] : null;
+    if (!cpt) return { label: "unknown", cptSide: 0, other: 0 };
+    var cptTeam = cpt.team;
+    var cptSide = 0, other = 0;
+    playersOf(lineup, pool).forEach(function (p) {
+      if (p.team === cptTeam) cptSide++; else other++;
+    });
+    var label = cptSide + "-" + other;
+    if (cptSide === 6) label = "6-0";
+    return { label: label, cptSide: cptSide, other: other, cptTeam: cptTeam, cptPos: cpt.pos };
+  }
+
+  function validateClassicLineup(lineup, pool, opts) {
+    opts = opts || {};
+    var issues = [];
+    var ps = playersOf(lineup, pool);
+    var byTeam = {};
+    ps.forEach(function (p) {
+      byTeam[p.team] = byTeam[p.team] || [];
+      byTeam[p.team].push(p);
+    });
+    var qb = ps.filter(function (p) { return p.pos === "QB"; })[0];
+    if (qb) {
+      var mates = byTeam[qb.team] || [];
+      var passCatch = mates.filter(function (p) { return p.pos === "WR" || p.pos === "TE"; });
+      if (passCatch.length === 0) {
+        issues.push(issue("warn", "naked_qb", "Naked QB — no same-team WR/TE (strongest negative field signal)."));
+      }
+      // double-stack = QB + 2 pass catchers
+      if (passCatch.length >= 2) {
+        var opp = qb.opp;
+        var bring = ps.filter(function (p) { return p.team === opp; });
+        if (!bring.length) {
+          issues.push(issue("warn", "no_bringback", "Double-stack without a bring-back from the opponent."));
+        }
+      }
+    }
+    Object.keys(byTeam).forEach(function (tm) {
+      var rbs = byTeam[tm].filter(function (p) { return p.pos === "RB"; });
+      if (rbs.length >= 2) {
+        issues.push(issue("warn", "rb_double", "Two RBs from " + tm + "."));
+      }
+      var dst = byTeam[tm].filter(function (p) { return p.pos === "DST"; })[0];
+      if (dst && byTeam[tm].some(function (p) { return p.pos !== "DST"; })) {
+        // same-team DST vs own stack — DST is on same team as offense pieces
+        issues.push(issue("warn", "dst_with_stack", "D/ST stacked with offense on " + tm + "."));
+      }
+    });
+
+    var ownSum = ps.reduce(function (t, p) { return t + (+p.own || 0); }, 0);
+    // ownership may be 0–100
+    var thr = opts.ownThreshold;
+    if (thr == null) {
+      var owns = pool.filter(function (p) { return p && p.proj > 0; }).map(function (p) { return +p.own || 0; });
+      if (owns.length >= 8) {
+        var mean = owns.reduce(function (a, b) { return a + b; }, 0) / owns.length;
+        var sd = Math.sqrt(owns.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / owns.length);
+        // slate adaptive: field mean + 1 SD, scaled to 9-man classic (~9 * mean roughly for sum)
+        thr = (mean + sd) * Math.min(9, ps.length);
+      } else thr = 125; // fallback only when no slate owns — still not a hard block
+    }
+    if (ownSum > thr) {
+      issues.push(issue("warn", "cum_own", "Cumulative ownership " + ownSum.toFixed(0) + "% above slate-adaptive threshold " + thr.toFixed(0) + "%.", { ownSum: ownSum, threshold: thr }));
+    }
+
+    if (opts.dupe && opts.dupe.eDupes != null && opts.dupeThreshold != null && opts.dupe.eDupes > opts.dupeThreshold) {
+      var drv = (opts.dupe.drivers && opts.dupe.drivers[0]) ? (" Pair: " + opts.dupe.drivers[0].a + " + " + opts.dupe.drivers[0].b + ".") : "";
+      issues.push(issue("warn", "edupes", "E[dupes] " + opts.dupe.eDupes.toFixed(2) + " above threshold " + opts.dupeThreshold.toFixed(2) + " (prior)." + drv, { prior: true }));
+    }
+
+    var flex = null; // info only — FLEX is not tagged in ids; skip detailed FLEX lean
+    var qbSal = qb ? qb.sal : null;
+    if (qbSal != null) {
+      issues.push(issue("info", "qb_salary", "QB salary tier $" + qbSal + "."));
+    }
+
+    return issues;
+  }
+
+  function validateShowdownLineup(lineup, pool, opts) {
+    opts = opts || {};
+    var issues = [];
+    var ps = playersOf(lineup, pool);
+    var split = showdownSplit(lineup, pool);
+    issues.push(issue("info", "split", "Showdown split " + split.label + " (CPT-side " + split.cptSide + ").", { split: split }));
+
+    var cpt = lineup.cpt != null ? pool[lineup.cpt] : null;
+    if (cpt && (cpt.pos === "K" || cpt.pos === "DST")) {
+      issues.push(issue("warn", "cpt_k_dst", "CPT is " + cpt.pos + "."));
+    }
+    if (cpt && cpt.pos === "QB") {
+      var catchers = ps.filter(function (p) { return p.team === cpt.team && (p.pos === "WR" || p.pos === "TE"); });
+      if (catchers.length < 2) {
+        issues.push(issue("warn", "cpt_qb_thin", "CPT QB without ≥2 same-team pass-catchers."));
+      }
+    }
+    if (cpt && (cpt.pos === "QB" || cpt.pos === "WR" || cpt.pos === "TE")) {
+      var bring = ps.filter(function (p) { return p.team === cpt.opp; });
+      if (!bring.length) {
+        issues.push(issue("warn", "sd_no_bringback", "No bring-back when CPT is " + cpt.pos + "."));
+      }
+    }
+    if (cpt && cpt.pos === "QB") {
+      var badK = ps.filter(function (p) { return p.pos === "K" && p.team === cpt.team; });
+      if (badK.length) issues.push(issue("warn", "k_with_cpt_qb", "K rostered with CPT QB of the same team."));
+    }
+    var kCount = ps.filter(function (p) { return p.pos === "K"; }).length;
+    var dstCount = ps.filter(function (p) { return p.pos === "DST"; }).length;
+    if (kCount + dstCount >= 3) {
+      issues.push(issue("warn", "k_dst_heavy", "K+DST count ≥ 3."));
+    }
+    var dst = ps.filter(function (p) { return p.pos === "DST"; })[0];
+    if (dst) {
+      var vs = ps.filter(function (p) { return p.pos !== "DST" && p.team === dst.opp; });
+      if (vs.length >= 4) {
+        issues.push(issue("warn", "dst_vs_stack", "D/ST with ≥4 opposing players."));
+      }
+    }
+
+    var site = opts.site || { cap: 50000 };
+    var salLeft = (site.cap || 50000) - (lineup.sal || 0);
+    if (salLeft >= 0) {
+      issues.push(issue("info", "salary_left", "Salary left under cap: $" + salLeft + " (dupe-reduction lever)."));
+    }
+
+    if (opts.dupe && opts.dupe.eDupes != null && opts.dupeThreshold != null && opts.dupe.eDupes > opts.dupeThreshold) {
+      var drv = (opts.dupe.drivers && opts.dupe.drivers[0]) ? (" Pair: " + opts.dupe.drivers[0].a + " + " + opts.dupe.drivers[0].b + ".") : "";
+      issues.push(issue("warn", "edupes", "E[dupes] " + opts.dupe.eDupes.toFixed(2) + " above threshold " + opts.dupeThreshold.toFixed(2) + " (prior)." + drv, { prior: true }));
+    }
+
+    return issues;
+  }
+
+  function validateLineup(lineup, pool, opts) {
+    opts = opts || {};
+    if (opts.showdown) return validateShowdownLineup(lineup, pool, opts);
+    return validateClassicLineup(lineup, pool, opts);
+  }
+
+  function validateSet(lineups, pool, opts) {
+    opts = opts || {};
+    var Dupe = (typeof globalThis !== "undefined" && globalThis.DDFSDupe) || null;
+    try { if (!Dupe && typeof require === "function") Dupe = require("./dfs-dupe-model.js"); } catch (e) {}
+
+    var results = [];
+    var entries = +opts.entries || 20000;
+    var thr = opts.dupeThreshold;
+    if (thr == null && Dupe) thr = Dupe.thresholdForContest(entries, { smallField: entries < 1000 });
+
+    for (var i = 0; i < (lineups || []).length; i++) {
+      var lu = lineups[i];
+      var dupe = null;
+      if (Dupe) {
+        dupe = Dupe.expectedDupes(lu, pool, { entries: entries, showdown: !!opts.showdown });
+      }
+      var issues = validateLineup(lu, pool, {
+        showdown: opts.showdown,
+        site: opts.site,
+        dupe: dupe,
+        dupeThreshold: thr,
+        ownThreshold: opts.ownThreshold
+      });
+      var warns = issues.filter(function (x) { return x.level === "warn"; }).length;
+      results.push({
+        index: i,
+        issues: issues,
+        eDupes: dupe && dupe.eDupes,
+        dupePrior: true,
+        status: warns ? "warn" : "pass"
+      });
+    }
+    return {
+      results: results,
+      summary: {
+        n: results.length,
+        warns: results.filter(function (r) { return r.status === "warn"; }).length,
+        passes: results.filter(function (r) { return r.status === "pass"; }).length,
+        meanEDupes: results.length ? results.reduce(function (t, r) { return t + (r.eDupes || 0); }, 0) / results.length : 0,
+        prior: true,
+        label: "prior (I5)"
+      }
+    };
+  }
+
+  /**
+   * §4.3 fit check — single score 0–100 + offending dimension.
+   */
+  function fitCheck(lineups, pool, preset, contest) {
+    contest = contest || {};
+    preset = preset || {};
+    var entries = +contest.fieldCap || +contest.entries || 20000;
+    var report = validateSet(lineups, pool, {
+      showdown: !!preset.showdown || /showdown/i.test(String(contest.gameType || "")),
+      entries: entries,
+      site: { cap: 50000 }
+    });
+    var dims = [];
+    var meanDup = report.summary.meanEDupes;
+    var dupThr = (typeof globalThis !== "undefined" && globalThis.DDFSDupe)
+      ? globalThis.DDFSDupe.thresholdForContest(entries)
+      : entries / 10000;
+    if (meanDup > dupThr * 1.5) dims.push({ dim: "edupes", detail: "mean E[dupes] " + meanDup.toFixed(2) + " vs thr " + dupThr.toFixed(2) });
+
+    var needUniq = preset.minUniques || 0;
+    if (needUniq > 0 && lineups.length >= 2) {
+      var ok = true;
+      for (var i = 0; i < lineups.length && ok; i++) {
+        for (var j = i + 1; j < lineups.length; j++) {
+          var a = {};
+          (lineups[i].ids || []).forEach(function (id) { a[id] = 1; });
+          var diff = 0;
+          (lineups[j].ids || []).forEach(function (id) { if (!a[id]) diff++; });
+          (lineups[i].ids || []).forEach(function (id) {
+            var inB = (lineups[j].ids || []).indexOf(id) >= 0;
+            if (!inB) diff++;
+          });
+          // unique players = symmetric difference / 2-ish; use count of ids in A not in B
+          var onlyA = (lineups[i].ids || []).filter(function (id) { return (lineups[j].ids || []).indexOf(id) < 0; }).length;
+          if (onlyA < needUniq) { ok = false; break; }
+        }
+      }
+      if (!ok) dims.push({ dim: "min_uniques", detail: "min-uniques " + needUniq + " not satisfied across the set" });
+    }
+
+    var wantN = preset.lineups || 1;
+    var entryCap = +contest.entryCap || +contest.maxEntries || wantN;
+    if (lineups.length > entryCap) {
+      dims.push({ dim: "entry_cap", detail: lineups.length + " lineups > entry cap " + entryCap });
+    }
+
+    // variance vs objective heuristic: cash preset with high randomness flagged elsewhere;
+    // here: cash objective but many lineups
+    if (preset.key === "cash" && lineups.length > 1) {
+      dims.push({ dim: "variance", detail: "cash preset usually wants 1 lineup; set has " + lineups.length });
+    }
+    if ((preset.key === "mme" || preset.key === "milly" || preset.key === "sd_wildcat") && lineups.length < 3) {
+      dims.push({ dim: "variance", detail: "top-heavy preset with only " + lineups.length + " lineup(s)" });
+    }
+
+    var score = 100;
+    dims.forEach(function () { score -= 18; });
+    if (score < 0) score = 0;
+    var offender = dims.length ? dims[0].dim : null;
+    return {
+      score: score,
+      offender: offender,
+      dimensions: dims,
+      validation: report.summary,
+      prior: true,
+      label: "prior (I5) — fit uses prior E[dupes] until standings grade it"
+    };
+  }
+
+  /**
+   * Block export only when DK entries contest type ≠ build preset (§4.3).
+   */
+  function exportAllowed(buildPresetKey, entriesContestType) {
+    if (!buildPresetKey || !entriesContestType) return { ok: true, reason: null };
+    var a = String(buildPresetKey);
+    var b = String(entriesContestType).toLowerCase();
+    var sdBuild = /^sd_/.test(a);
+    var sdEntry = /showdown|captain|wildcat|field.?general/.test(b);
+    var cashBuild = a === "cash";
+    var cashEntry = /cash|double.?up|50.?50|h2h/.test(b);
+    if (sdBuild !== sdEntry && (sdBuild || sdEntry)) {
+      return { ok: false, reason: "Showdown/classic mismatch between build preset and entries contest type." };
+    }
+    if (cashBuild && !cashEntry && /gpp|milly|tournament/.test(b)) {
+      return { ok: false, reason: "Cash-preset set cannot export into a GPP entries file without override." };
+    }
+    return { ok: true, reason: null };
+  }
+
+  return {
+    validateLineup: validateLineup,
+    validateSet: validateSet,
+    fitCheck: fitCheck,
+    exportAllowed: exportAllowed,
+    showdownSplit: showdownSplit
+  };
+});
+
+/* ---- Receipts grades (Phase 1 — source: work/dfs-receipts.js) ---- */
+/**
+ * Receipts grades — Bible §9.1–9.3 (Phase 1: run on whatever exists).
+ * On-device only (I3). Fits that need ≥3 weeks stay stubbed with prior labels (I5).
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === "object" && module.exports) module.exports = api;
+  if (root) root.DDFSReceipts = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  "use strict";
+
+  function fnv1a(str) {
+    var h = 0x811c9dc5;
+    str = String(str || "");
+    for (var i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+    }
+    return ("0000000" + h.toString(16)).slice(-8);
+  }
+
+  function hashEntries(record) {
+    if (!record || !record.entries) return record;
+    record.entries.forEach(function (e) {
+      if (e.entryName && !e.entryHash) e.entryHash = fnv1a(e.entryName);
+    });
+    return record;
+  }
+
+  /** Ownership-miss modes (Leone) — stub until projected vs realized owns exist */
+  function ownershipMissModes(projected, realized) {
+    projected = projected || [];
+    realized = realized || [];
+    if (!projected.length || !realized.length) {
+      return {
+        ready: false,
+        prior: true,
+        label: "prior (I5) — need projected + realized ownership columns",
+        modes: []
+      };
+    }
+    // best-effort: match by name
+    var modes = { stack_piece: [], chalk_combo: [], differentiator: [] };
+    // without lineup-level data we only flag large individual misses
+    var byName = {};
+    realized.forEach(function (r) { byName[String(r.name || "").toLowerCase()] = r; });
+    projected.forEach(function (p) {
+      var r = byName[String(p.name || "").toLowerCase()];
+      if (!r) return;
+      var d = (+r.own || 0) - (+p.own || 0);
+      if (Math.abs(d) < 3) return;
+      var bucket = Math.abs(d) >= 8 ? "differentiator" : "stack_piece";
+      modes[bucket].push({ name: p.name, projected: +p.own, realized: +r.own, delta: d });
+    });
+    return { ready: true, prior: false, modes: modes, label: "graded from standings owns" };
+  }
+
+  function realizedVsProjectedDupes(rows) {
+    rows = rows || [];
+    if (!rows.length) {
+      return { ready: false, prior: true, label: "prior (I5) — paste lineups with E[dupes] + realized copies", rows: [] };
+    }
+    return {
+      ready: true,
+      prior: false,
+      rows: rows.map(function (r) {
+        return {
+          lineupId: r.lineupId,
+          projected: r.projected,
+          realized: r.realized,
+          miss: (r.realized != null && r.projected != null) ? r.realized - r.projected : null,
+          driverPair: r.driverPair || null
+        };
+      }),
+      label: "realized vs projected dupes"
+    };
+  }
+
+  /** ETR-style sim calibration buckets — empty until sim receipts stored */
+  function simCalibrationTables(samples) {
+    samples = samples || [];
+    var cashBuckets = ["0-15", "15-18", "18-21", "21-24", "24-27", "27-30", "30+"];
+    var roiBuckets = ["≤-40", "-40–-25", "-25–-10", "-10–0", "0–10", "10–25", "25–40", "≥40"];
+    var top1Buckets = ["0-0.5", "0.5-1", "1-2", "2-4", "4+"];
+    if (!samples.length) {
+      return {
+        ready: false,
+        prior: true,
+        label: "prior (I5) — need weekly sim vs realized ROI samples",
+        cashBuckets: cashBuckets,
+        roiBuckets: roiBuckets,
+        top1Buckets: top1Buckets,
+        counts: {}
+      };
+    }
+    // placeholder counts
+    return {
+      ready: true,
+      prior: false,
+      label: "sim calibration (monotonicity is the pass condition)",
+      cashBuckets: cashBuckets,
+      roiBuckets: roiBuckets,
+      top1Buckets: top1Buckets,
+      n: samples.length
+    };
+  }
+
+  function contestChoiceGrade(entries) {
+    entries = entries || [];
+    if (!entries.length) {
+      return { ready: false, prior: true, label: "prior (I5) — log contests with screener rank + realized ROI", byType: {} };
+    }
+    var byType = {};
+    entries.forEach(function (e) {
+      var t = e.contestType || e.preset || "unknown";
+      byType[t] = byType[t] || { n: 0, roiSum: 0 };
+      byType[t].n++;
+      byType[t].roiSum += (+e.roi || 0);
+    });
+    Object.keys(byType).forEach(function (t) {
+      byType[t].meanRoi = byType[t].roiSum / byType[t].n;
+    });
+    return { ready: true, prior: false, byType: byType, label: "contest-choice grade" };
+  }
+
+  function processGrade(submissions) {
+    submissions = submissions || [];
+    if (!submissions.length) {
+      return { ready: false, prior: true, label: "prior (I5) — track whether submit contest matched build preset (§4.3)", matched: 0, n: 0 };
+    }
+    var matched = submissions.filter(function (s) { return s.buildPreset && s.submitContestType && s.buildPreset === s.submitContestType; }).length;
+    return {
+      ready: true,
+      prior: false,
+      matched: matched,
+      n: submissions.length,
+      rate: matched / submissions.length,
+      label: "process grade — submit-to-build match"
+    };
+  }
+
+  function gradeWeek(bundle) {
+    bundle = bundle || {};
+    return {
+      week: bundle.week || null,
+      ownershipMiss: ownershipMissModes(bundle.projectedOwns, bundle.realizedOwns),
+      dupes: realizedVsProjectedDupes(bundle.dupeRows),
+      simCalibration: simCalibrationTables(bundle.simSamples),
+      contestChoice: contestChoiceGrade(bundle.contestEntries),
+      process: processGrade(bundle.submissions),
+      generatedAt: new Date().toISOString(),
+      note: "Phase 1 receipts run on whatever exists; empty sections stay labelled prior (I5)."
+    };
+  }
+
+  return {
+    fnv1a: fnv1a,
+    hashEntries: hashEntries,
+    ownershipMissModes: ownershipMissModes,
+    realizedVsProjectedDupes: realizedVsProjectedDupes,
+    simCalibrationTables: simCalibrationTables,
+    contestChoiceGrade: contestChoiceGrade,
+    processGrade: processGrade,
+    gradeWeek: gradeWeek
+  };
+});
+
+/* ---- Contest screener (Phase 1 — source: work/dfs-contest-screener.js) ---- */
+/**
+ * Contest screener — Bible §5 / §4.1 preset mapping (Phase 1 enriched presets).
  * Lobby fields are expected from toto CORS later; for now accept a manual object.
  */
 (function (root, factory) {
@@ -5228,6 +6072,21 @@ function banner(id, kind, html) {
     sd_wildcat: { key: "sd_wildcat", label: "Showdown Wildcat (150-max)", objective: "greedy P(≥1 top-1%)" },
     sd_single: { key: "sd_single", label: "Showdown single-entry / Field General", objective: "top-1% rate, dupe-adjusted" }
   };
+
+  function enrichPreset(p) {
+    if (typeof globalThis !== "undefined" && globalThis.DDFSPresets && globalThis.DDFSPresets.getPreset) {
+      var full = globalThis.DDFSPresets.getPreset(p.key);
+      if (full) return full;
+    }
+    try {
+      if (typeof require === "function") {
+        var P = require("./dfs-contest-presets.js");
+        var full2 = P.getPreset(p.key);
+        if (full2) return full2;
+      }
+    } catch (e) {}
+    return p;
+  }
 
   function rakeBand(rake) {
     if (rake == null || !isFinite(rake)) return "unknown";
@@ -5266,6 +6125,10 @@ function banner(id, kind, html) {
     return PRESETS.mme;
   }
 
+  function mapPresetFull(c) {
+    return enrichPreset(mapPreset(c));
+  }
+
   /**
    * @param {object} c buyIn, entryCap, fieldCap, prizePool, placesPaid, tenthPrize, firstPrize, minCash, gameType, name
    */
@@ -5283,7 +6146,7 @@ function banner(id, kind, html) {
       tenth: tenthBand(tenthOverFirst),
       minCash: minCashBand(minCashOver)
     };
-    var preset = mapPreset(c);
+    var preset = enrichPreset(mapPreset(c));
     var rank = 0;
     if (bands.rake === "play") rank += 3; else if (bands.rake === "tolerate") rank += 1;
     if (bands.tenth === "play") rank += 3; else if (bands.tenth === "tolerate") rank += 1;
@@ -5302,8 +6165,16 @@ function banner(id, kind, html) {
     return (list || []).map(scoreContest).sort(function (a, b) { return b.rank - a.rank; });
   }
 
-  return { PRESETS: PRESETS, mapPreset: mapPreset, scoreContest: scoreContest, rankContests: rankContests };
+  return {
+    PRESETS: PRESETS,
+    mapPreset: mapPreset,
+    mapPresetFull: mapPresetFull,
+    enrichPreset: enrichPreset,
+    scoreContest: scoreContest,
+    rankContests: rankContests
+  };
 });
+
 
 function parseCSV(text) { return DDFSIngest.parseCSV(text); }
 function nameKeys(name, tm) { return DDFSIngest.nameKeys(name, tm); }
@@ -5547,8 +6418,13 @@ function renderLineups() {
     const l = S.lineups[li];
     const own = l.ids.reduce((t, i) => t + (P[i].own || 0), 0);
     const sim = SIM ? SIM.perLineup.find(x => x.i === li) : null;
+        let edTag = "";
+    if (typeof DDFSDupe !== "undefined") {
+      const ed = DDFSDupe.expectedDupes(l, P, { entries: +($("cfField") && $("cfField").value) || (S.sim && S.sim.field) || 20000, showdown: !!E.SITES[S.site].showdown });
+      if (ed && ed.eDupes != null) edTag = `<span title="prior (I5)">E[dupes] ${ed.eDupes < 10 ? ed.eDupes.toFixed(2) : ed.eDupes.toFixed(1)}</span>`;
+    }
     h += `<div class="lu"><div class="hd"><span class="r">#${n + 1}</span>
-      <span>${fmt(l.proj)} proj</span><span>${fmt(own, 0)}% own</span>
+      <span>${fmt(l.proj)} proj</span><span>${fmt(own, 0)}% own</span>${edTag}
       ${sim ? `<span>${(sim.roi * 100).toFixed(0)}% ROI</span><span>${pct(sim.win, 2)} win</span>` : ""}
       <span class="sp">$${l.sal.toLocaleString()}</span></div><div class="ps">`;
     for (const s of lineupSlots(l)) {
@@ -5564,6 +6440,13 @@ function renderLineups() {
 
 function exportCsv() {
   if (!S.lineups.length) return;
+  if (typeof DDFSValidators !== "undefined" && S.presetKey && S.exportContestType) {
+    const gate = DDFSValidators.exportAllowed(S.presetKey, S.exportContestType);
+    if (!gate.ok) {
+      banner("solveWarn", "err", "<b>Export blocked.</b> " + esc(gate.reason) + " Clear the mismatch or change preset.");
+      return;
+    }
+  }
   const P = S.players, sd = E.SITES[S.site].showdown;
   const head = sd ? ["CPT", "FLEX", "FLEX", "FLEX", "FLEX", "FLEX"]
                   : ["QB", "RB", "RB", "WR", "WR", "WR", "TE", "FLEX", "DST"];
@@ -6313,12 +7196,14 @@ function renderScreener() {
     const rake = row.rake == null || !isFinite(row.rake) ? "—" : (row.rake * 100).toFixed(1) + "%";
     const tenth = (c.tenthPrize && c.firstPrize) ? ((+c.tenthPrize / +c.firstPrize) * 100).toFixed(1) + "%" : "—";
     const mc = (c.minCash && c.buyIn) ? (+c.minCash / +c.buyIn).toFixed(2) + "×" : "—";
+    const pkey = (row.preset && row.preset.key) || "";
     tr.innerHTML = `<td><b>${esc(row.verdict)}</b><div class="mut">${esc(row.bands.rake)}/${esc(row.bands.tenth)}/${esc(row.bands.minCash)}</div></td>` +
       `<td>${row.rank}</td>` +
       `<td>${esc(c.name || "(unnamed)")}<div class="mut">${esc(c.gameType || "")} · $${c.buyIn} · ${c.entryCap}-max</div></td>` +
       `<td>${esc(row.preset.label)}<div class="mut">${esc(row.preset.objective)}</div></td>` +
       `<td>${rake}</td><td>${tenth}</td><td>${mc}</td>` +
-      `<td><button type="button" class="btn ghost sm" data-scr-del="${idx}">Remove</button></td>`;
+      `<td style="white-space:nowrap"><button type="button" class="btn sm" data-scr-apply="${esc(pkey)}" data-scr-cap="${c.entryCap || 1}" data-scr-field="${c.fieldCap || ""}">Apply</button> ` +
+      `<button type="button" class="btn ghost sm" data-scr-del="${idx}">Remove</button></td>`;
     tb.appendChild(tr);
   });
   $("scrNote").textContent = ranked.length ? `${ranked.length} contest${ranked.length === 1 ? "" : "s"} scored.` : "No contests scored yet.";
@@ -6449,6 +7334,15 @@ function boot() {
   });
   // Prefetch lobby once the Slate sheet is in play (non-blocking)
   setTimeout(() => { try { refreshDkLobby(true); } catch (e) {} }, 400);
+  
+  $("cfPreset").addEventListener("change", () => {
+    const k = $("cfPreset").value;
+    if (!k) { $("presetState").textContent = ""; S.presetKey = ""; return; }
+    applyContestPreset(k, { entryCap: +$("cfEntryCap").value || undefined, fieldCap: +$("cfField").value || undefined });
+  });
+  $("validateGo").addEventListener("click", () => runValidators());
+  $("rcGrade").addEventListener("click", () => gradeReceipts());
+
   $("projGo").addEventListener("click", () => doProjections());
   $("projClear").addEventListener("click", () => {
     S.players.forEach(p => { p.proj = null; p.own = 0; });
@@ -6551,10 +7445,19 @@ $("rarityTabGo").addEventListener("click", () => {
     S.screener = []; save(); renderScreener();
     banner("scrWarn", "ok", "Cleared.");
   });
-  $("scrTab").addEventListener("click", e => {
-    const b = e.target.closest("[data-scr-del]"); if (!b) return;
+    $("scrTab").addEventListener("click", e => {
+    const apply = e.target.closest("button[data-scr-apply]");
+    if (apply) {
+      applyContestPreset(apply.dataset.scrApply, {
+        entryCap: +apply.dataset.scrCap || undefined,
+        fieldCap: +apply.dataset.scrField || undefined
+      });
+      show("solver");
+      return;
+    }
+    const b = e.target.closest("button[data-scr-del]"); if (!b) return;
     const i = +b.dataset.scrDel;
-    if (i >= 0 && i < S.screener.length) { S.screener.splice(i, 1); save(); renderScreener(); }
+    if (i >= 0) { S.screener.splice(i, 1); save(); renderScreener(); }
   });
 
   // ---- standings ----
@@ -6662,6 +7565,91 @@ function applyMappedSlate(r) {
     "Paste projections next — nothing can be optimised without them.");
   $("slateState").textContent = "live DK";
   $("matchNote").textContent = "";
+}
+
+
+function applyContestPreset(key, opts) {
+  opts = opts || {};
+  if (!key || typeof DDFSPresets === "undefined") return;
+  const entryCap = opts.entryCap != null ? opts.entryCap : (+$("cfEntryCap").value || 20);
+  const cfg = DDFSPresets.solverCfgFromPreset(key, { lineupCap: 150, entryCap: entryCap });
+  if (!cfg) return;
+  $("cfPreset").value = key;
+  $("cfCount").value = cfg.count;
+  $("cfUniq").value = cfg.uniq;
+  $("cfRand").value = cfg.rand;
+  $("cfMaxExp").value = cfg.maxExp;
+  if ($("cfQbMin")) $("cfQbMin").value = cfg.qbMin;
+  if ($("cfBring")) $("cfBring").value = cfg.bring;
+  if (opts.fieldCap) $("cfField").value = opts.fieldCap;
+  if (opts.entryCap) $("cfEntryCap").value = opts.entryCap;
+  S.presetKey = key;
+  S.cfg.count = cfg.count; S.cfg.uniq = cfg.uniq; S.cfg.rand = cfg.rand; S.cfg.maxExp = cfg.maxExp;
+  $("presetState").textContent = cfg.label;
+  // Showdown presets flip site
+  if (cfg.showdown && S.site !== "dk_showdown") {
+    S.site = "dk_showdown"; $("siteSel").value = "dk_showdown";
+  }
+  if (!cfg.showdown && S.site === "dk_showdown" && key.indexOf("sd_") !== 0) {
+    /* leave site alone if user already on classic */
+  }
+  $("stackCard").hidden = !!E.SITES[S.site].showdown;
+  banner("solveWarn", "ok", "<b>Preset applied:</b> " + esc(cfg.label) + " — " + esc(cfg.objective) + ". Leverage " + esc(String(cfg.leverage)) + " (prior until graded).");
+}
+
+function runValidators() {
+  if (!S.lineups.length) {
+    banner("fitWarn", "err", "<b>No lineups.</b> Build a set first.");
+    return;
+  }
+  if (typeof DDFSValidators === "undefined") {
+    banner("fitWarn", "err", "<b>Validators missing.</b> Reload.");
+    return;
+  }
+  const showdown = !!E.SITES[S.site].showdown;
+  const entries = +$("cfField").value || 20000;
+  const preset = (typeof DDFSPresets !== "undefined" && S.presetKey) ? DDFSPresets.getPreset(S.presetKey) : { minUniques: S.cfg.uniq, lineups: S.cfg.count, key: S.presetKey || "custom", showdown: showdown };
+  const report = DDFSValidators.validateSet(S.lineups, S.players, {
+    showdown: showdown,
+    entries: entries,
+    site: E.SITES[S.site]
+  });
+  const fit = DDFSValidators.fitCheck(S.lineups, S.players, preset, {
+    fieldCap: entries,
+    entryCap: +$("cfEntryCap").value || S.lineups.length,
+    gameType: showdown ? "Showdown" : "Classic"
+  });
+  $("valCard").hidden = false;
+  $("valState").textContent = report.summary.warns ? (report.summary.warns + " warn") : "pass";
+  let h = "";
+  report.results.forEach((r, n) => {
+    const ed = r.eDupes != null ? ` · E[dupes] ${r.eDupes.toFixed(2)} <span class="mut">(prior)</span>` : "";
+    h += `<div class="lu"><div class="hd"><span class="r">#${n + 1}</span><span class="${r.status === "warn" ? "neg" : "pos"}">${r.status}</span>${ed}</div>`;
+    if (r.issues.length) {
+      h += "<ul style=\"margin:6px 0 0 18px;font-size:13px\">";
+      r.issues.forEach(iss => {
+        h += `<li><b>${esc(iss.level)}</b> ${esc(iss.message)}</li>`;
+      });
+      h += "</ul>";
+    }
+    h += "</div>";
+  });
+  $("valList").innerHTML = h;
+  $("valNote").textContent = `Mean E[dupes] ${report.summary.meanEDupes.toFixed(3)} · ${report.summary.label}`;
+  const fitMsg = `<b>Fit score ${fit.score}/100</b>` + (fit.offender ? ` — watch <code>${esc(fit.offender)}</code>` : " — looks aligned with the preset.") + ` <span class="mut">${esc(fit.label)}</span>`;
+  banner("fitWarn", fit.score >= 70 ? "ok" : "warn", fitMsg);
+}
+
+function gradeReceipts() {
+  if (typeof DDFSReceipts === "undefined") {
+    banner("rcWarn", "err", "<b>Receipts module missing.</b>");
+    return;
+  }
+  const week = +$("stWeek").value || 1;
+  const g = DDFSReceipts.gradeWeek({ week: week });
+  $("rcState").textContent = "week " + week;
+  $("rcOut").textContent = JSON.stringify(g, null, 2);
+  banner("rcWarn", "ok", "<b>Receipts graded</b> for week " + week + ". Empty sections stay labelled prior (I5).");
 }
 
 function doSalaries(text) {
