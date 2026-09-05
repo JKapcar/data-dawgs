@@ -3,7 +3,7 @@
  "tier": "labs",
  "graded": false,
  "as_of": "2026-09-05",
- "source": "nfelo e9ff7aee ratings + nflverse/nfldata 2026 schedule.",
+ "source": "nfelo 192be5b0 ratings + nflverse/nfldata 2026 schedule.",
  "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"market\" = derived from a real line, \"model\" = Elo-only. Ownership is modelled, not observed.",
  "field_notes": {
   "mm": "model expected margin, home perspective (points)",
@@ -24,9 +24,9 @@
    "model_su": 0.6575,
    "blend_su": 0.6674,
    "market_su": 0.6677,
-   "nfelo_sha": "e9ff7aee",
+   "nfelo_sha": "192be5b0",
    "sched_src": "nflverse/nfldata",
-   "market_observed_at": "2026-09-05T01:40:46.000Z"
+   "market_observed_at": "2026-09-05T12:40:46.000Z"
   },
   "elo": {
    "SEA": 1628.3,
@@ -234,7 +234,7 @@
     "mm": 4.789,
     "mk": 0.6311,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.6338,
     "src": "market"
@@ -248,7 +248,7 @@
     "mm": 3.449,
     "mk": 0.6311,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.6242,
     "src": "market"
@@ -262,7 +262,7 @@
     "mm": 3.05,
     "mk": 0.6311,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.6213,
     "src": "market"
@@ -276,7 +276,7 @@
     "mm": -0.775,
     "mk": 0.3689,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.3952,
     "src": "market"
@@ -290,7 +290,7 @@
     "mm": 0.463,
     "mk": 0.4427,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.4604,
     "src": "market"
@@ -304,7 +304,7 @@
     "mm": -0.924,
     "mk": 0.4053,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.4218,
     "src": "market"
@@ -318,7 +318,7 @@
     "mm": 6.167,
     "mk": 0.7596,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.7408,
     "src": "market"
@@ -332,7 +332,7 @@
     "mm": 6.527,
     "mk": 0.7453,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.7319,
     "src": "market"
@@ -346,7 +346,7 @@
     "mm": 3.05,
     "mk": 0.5573,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.5659,
     "src": "market"
@@ -360,7 +360,7 @@
     "mm": 2.77,
     "mk": 0.6311,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.6193,
     "src": "market"
@@ -374,7 +374,7 @@
     "mm": 4.314,
     "mk": 0.8335,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.7904,
     "src": "market"
@@ -388,7 +388,7 @@
     "mm": 4.517,
     "mk": 0.5573,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.5768,
     "src": "market"
@@ -402,7 +402,7 @@
     "mm": 1.591,
     "mk": 0.6311,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.6107,
     "src": "market"
@@ -416,7 +416,7 @@
     "mm": 4.14,
     "mk": 0.6828,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.6683,
     "src": "market"
@@ -430,7 +430,7 @@
     "mm": 0.963,
     "mk": 0.4053,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.4359,
     "src": "market"
@@ -444,7 +444,7 @@
     "mm": 0.857,
     "mk": 0.613,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-05T01:40:46.000Z",
+    "mk_obs": "2026-09-05T12:40:46.000Z",
     "mk_book": null,
     "p": 0.5916,
     "src": "market"
