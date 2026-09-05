@@ -11,6 +11,10 @@ import { BOZO_ESPN_TEAM_SEED } from "./bozo-team-registry.mjs";
  *                        a per-user rate bucket) OR the shared DAWG_PASS (fallback).
  *   GET  /scores       — NFL/CFB schedule-score cache from nflverse/cfbfastR in KV.
  *                        The page may enhance this with browser-side ESPN.
+ *   GET  /dk/lobby     — CORS proxy: DraftKings NFL lobby (getcontests). Query: sport=NFL.
+ *                        Stores nothing (I2). Used by dfs.html Load from DraftKings.
+ *   GET  /dk/draftables — CORS proxy: draftgroups draftables JSON. Query: draftGroupId=.
+ *                        Salaries + OUT/Q/IR + CPT/FLEX. Stores nothing.
  *   GET  /bozo/roster  — player list + who has claimed a password (public)
  *   POST /bozo/claim   — spend a one-time join token, set your own password
  *   POST /bozo/login   — name + password  → session
@@ -1652,6 +1656,8 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
 
     if (url.pathname === "/scores")       return handleScores(url, env, cors);
+    if (url.pathname === "/dk/lobby")     return handleDkLobby(request, url, cors);
+    if (url.pathname === "/dk/draftables") return handleDkDraftables(request, url, cors);
     if (url.pathname === "/survivor-picks") return handleSurvivorPicks(request, url, env, cors);
     if (url.pathname === "/cfb/market-snapshots") return handleCfbMarketSnapshots(request, url, env, cors);
     if (url.pathname === "/sleeper/players-slim") return handleSleeperPlayersSlim(request, env, cors);
@@ -1841,6 +1847,66 @@ const FETCH_SHAPES = [
   { name: "ua-only", headers: { "User-Agent": UA_CHROME } },
   { name: "bare", headers: {} },
 ];
+
+/* ============================== /dk/* (CORS only) ============================== */
+// DraftKings public lobby + draftables. DFS Labs Phase 0: browser cannot call DK
+// directly (CORS), so toto forwards GET responses and stores nothing (Bible I2).
+// Never log or KV-put player lists. ContestTypeId 21 = Classic, 96 = Showdown CPT.
+
+const DK_UA = "Mozilla/5.0 (compatible; DataDawgsDFS/1.0; +https://datadawgs216.com)";
+const DK_LOBBY = "https://www.draftkings.com/lobby/getcontests";
+const DK_DRAFTABLES = "https://api.draftkings.com/draftgroups/v1/draftgroups";
+
+async function dkUpstream(url) {
+  const res = await fetch(url, {
+    method: "GET",
+    headers: { "User-Agent": DK_UA, "Accept": "application/json" },
+  });
+  const text = await res.text();
+  let body;
+  try { body = JSON.parse(text); }
+  catch {
+    const err = new Error("DraftKings returned non-JSON (HTTP " + res.status + ")");
+    err.status = 502;
+    throw err;
+  }
+  if (!res.ok) {
+    const err = new Error("DraftKings HTTP " + res.status);
+    err.status = res.status >= 400 && res.status < 600 ? res.status : 502;
+    err.body = body;
+    throw err;
+  }
+  return body;
+}
+
+async function handleDkLobby(request, url, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const sport = String(url.searchParams.get("sport") || "NFL").toUpperCase();
+  if (!/^[A-Z]{2,8}$/.test(sport)) return json({ error: "sport must be a short code like NFL" }, 400, cors);
+  try {
+    const body = await dkUpstream(DK_LOBBY + "?sport=" + encodeURIComponent(sport));
+    return new Response(JSON.stringify(body), {
+      headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" },
+    });
+  } catch (e) {
+    return json({ error: "dk_lobby_failed", detail: String(e.message || e) }, e.status || 502, cors);
+  }
+}
+
+async function handleDkDraftables(request, url, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const id = String(url.searchParams.get("draftGroupId") || "").trim();
+  if (!/^\d{1,12}$/.test(id)) return json({ error: "draftGroupId must be a positive integer" }, 400, cors);
+  try {
+    const body = await dkUpstream(DK_DRAFTABLES + "/" + id + "/draftables");
+    return new Response(JSON.stringify(body), {
+      headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" },
+    });
+  } catch (e) {
+    return json({ error: "dk_draftables_failed", detail: String(e.message || e) }, e.status || 502, cors);
+  }
+}
+
 async function handleScores(url, env, cors) {
   const sport = url.searchParams.get("sport");
   const dates = url.searchParams.get("dates") || "";
