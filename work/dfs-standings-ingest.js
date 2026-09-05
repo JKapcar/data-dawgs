@@ -1,5 +1,5 @@
 /**
- * Contest standings ingest skeleton (Bible §9.1 / Phase 0).
+ * Contest standings ingest skeleton (Bible §9.1 / Phase 0/1 — hash entry names; receipts in dfs-receipts.js).
  * Client-side only — IndexedDB/localStorage. Never upload standings (I3).
  */
 (function (root, factory) {
@@ -95,6 +95,19 @@
         raw: row
       });
     }
+    // Hash entry names for on-device privacy (Bible §9.1)
+    function fnv1a(str) {
+      var h = 0x811c9dc5;
+      str = String(str || "");
+      for (var i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+      }
+      return ("0000000" + h.toString(16)).slice(-8);
+    }
+    entries.forEach(function (e) {
+      if (e.entryName) e.entryHash = fnv1a(e.entryName);
+    });
     return {
       contestKey: meta.contestKey || ("local-" + Date.now()),
       week: meta.week || null,
@@ -102,7 +115,8 @@
       importedAt: new Date().toISOString(),
       headers: head,
       entries: entries,
-      n: entries.length
+      n: entries.length,
+      schema: "dfs-standings-v1-phase1"
     };
   }
 

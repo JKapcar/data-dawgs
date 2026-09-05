@@ -29,8 +29,8 @@ Kap will not rely on desktop `DKSalaries.csv` Export (Android cannot export). Ph
 
 ## Deploy note
 
-After merging, redeploy `dawg-bot-worker.js` to Cloudflare (`toto.jkapcar4.workers.dev`) so `/dk/*` is live. Until then, Load from DraftKings will 404 on the worker.
+`/dk/*` live on toto (redeployed 2026-09-05; Chrome UA fix #70).
 
-## Next: Phase 1
+## Next
 
-Presets / validators / dupe priors / receipts (Bible §10).
+Phase 1 checklist: `docs/DFS_PHASE1_CHECKLIST.md`.

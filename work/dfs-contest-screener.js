@@ -1,5 +1,5 @@
 /**
- * Contest screener stub — Bible §5 / §4.1 preset mapping.
+ * Contest screener — Bible §5 / §4.1 preset mapping (Phase 1 enriched presets).
  * Lobby fields are expected from toto CORS later; for now accept a manual object.
  */
 (function (root, factory) {
@@ -18,6 +18,21 @@
     sd_wildcat: { key: "sd_wildcat", label: "Showdown Wildcat (150-max)", objective: "greedy P(≥1 top-1%)" },
     sd_single: { key: "sd_single", label: "Showdown single-entry / Field General", objective: "top-1% rate, dupe-adjusted" }
   };
+
+  function enrichPreset(p) {
+    if (typeof globalThis !== "undefined" && globalThis.DDFSPresets && globalThis.DDFSPresets.getPreset) {
+      var full = globalThis.DDFSPresets.getPreset(p.key);
+      if (full) return full;
+    }
+    try {
+      if (typeof require === "function") {
+        var P = require("./dfs-contest-presets.js");
+        var full2 = P.getPreset(p.key);
+        if (full2) return full2;
+      }
+    } catch (e) {}
+    return p;
+  }
 
   function rakeBand(rake) {
     if (rake == null || !isFinite(rake)) return "unknown";
@@ -56,6 +71,10 @@
     return PRESETS.mme;
   }
 
+  function mapPresetFull(c) {
+    return enrichPreset(mapPreset(c));
+  }
+
   /**
    * @param {object} c buyIn, entryCap, fieldCap, prizePool, placesPaid, tenthPrize, firstPrize, minCash, gameType, name
    */
@@ -73,7 +92,7 @@
       tenth: tenthBand(tenthOverFirst),
       minCash: minCashBand(minCashOver)
     };
-    var preset = mapPreset(c);
+    var preset = enrichPreset(mapPreset(c));
     var rank = 0;
     if (bands.rake === "play") rank += 3; else if (bands.rake === "tolerate") rank += 1;
     if (bands.tenth === "play") rank += 3; else if (bands.tenth === "tolerate") rank += 1;
@@ -92,5 +111,12 @@
     return (list || []).map(scoreContest).sort(function (a, b) { return b.rank - a.rank; });
   }
 
-  return { PRESETS: PRESETS, mapPreset: mapPreset, scoreContest: scoreContest, rankContests: rankContests };
+  return {
+    PRESETS: PRESETS,
+    mapPreset: mapPreset,
+    mapPresetFull: mapPresetFull,
+    enrichPreset: enrichPreset,
+    scoreContest: scoreContest,
+    rankContests: rankContests
+  };
 });
