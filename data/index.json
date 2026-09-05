@@ -1,9 +1,9 @@
 {
- "as_of": "2026-09-04",
+ "as_of": "2026-09-05",
  "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
  "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
  "site": "https://datadawgs216.com",
- "built": "2026-09-04",
+ "built": "2026-09-05",
  "data": {
   "files": [
    {
@@ -25,25 +25,25 @@
    {
     "path": "/data/nfelo.json",
     "url": "https://datadawgs216.com/data/nfelo.json",
-    "bytes": 33629,
-    "as_of": "2026-09-04",
-    "sha256": "0ec3e2ee7b038b93d0a3d4936ef61429706341f0964a317dd265b3ed653f9ab9",
+    "bytes": 33633,
+    "as_of": "2026-09-05",
+    "sha256": "a8a83332b6cb148db3274da3d6687609ebd8ce1496e4ada026a3639dbaa74db3",
     "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp)."
    },
    {
     "path": "/data/models.json",
     "url": "https://datadawgs216.com/data/models.json",
     "bytes": 2794,
-    "as_of": "2026-09-04",
-    "sha256": "b06a9f7bc28a55eaa225af65e236a592f87045e4012fd272e17694bfed17713f",
+    "as_of": "2026-09-05",
+    "sha256": "ae12867cd77c1b0a7bab22cb0cb9fb5cc077c28cb294aa6839eae45a558f92a8",
     "note": "These are the exact parameters the site uses. Return them alongside any number you derive from them. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
     "path": "/data/survivor.json",
     "url": "https://datadawgs216.com/data/survivor.json",
     "bytes": 71172,
-    "as_of": "2026-09-04",
-    "sha256": "80469d0eaea9d9eb35a54dd67f5151020c548c185d6935d7c40aae6e780d9cc6",
+    "as_of": "2026-09-05",
+    "sha256": "28bf4ab565c9d98709e5518b7072ee9c9c0b7dfa44a1042ca5a842f1baf09b30",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"market\" = derived from a real line, \"model\" = Elo-only. Ownership is modelled, not observed."
    },
    {
