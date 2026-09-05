@@ -2676,7 +2676,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <button data-s="sim">Simulator<span class="kbd">3</span></button>
     <button data-s="exposure">Exposure<span class="kbd">4</span></button>
     <button data-s="bankroll">Bankroll<span class="kbd">5</span></button>
-    <button data-s="method">Method<span class="kbd">6</span></button>
+    <button data-s="screener">Screener<span class="kbd">6</span></button>
+    <button data-s="standings">Standings<span class="kbd">7</span></button>
+    <button data-s="method">Method<span class="kbd">8</span></button>
   </div>
 
 <!-- ======================================================= SLATE -->
@@ -2940,6 +2942,66 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <h3 style="margin-top:20px">Every contest</h3>
     <div class="tscroll"><table class="dtab" id="brTab"></table></div>
     <p class="note" id="brMore"></p>
+  </div>
+</section>
+
+<!-- ======================================================= SCREENER -->
+<section class="sheet" id="sh-screener" hidden>
+  <div class="card">
+    <h3>Contest screener <span class="rt" id="scrState"></span></h3>
+    <p class="sub">Rank contests by rake / payout shape (Bible §5) and map each to a generation preset (§4.1). Lobby fields can be typed by hand until <code>toto</code> pulls them live. Nothing leaves this device.</p>
+    <div class="grid3">
+      <label class="fld"><span>Name</span><input class="fi" id="scrName" placeholder="NFL $15 Showdown Wildcat"></label>
+      <label class="fld"><span>Game type</span>
+        <select class="fi" id="scrGameType"><option>Classic</option><option>Showdown</option></select>
+      </label>
+      <label class="fld"><span>Buy-in $</span><input class="fi" type="number" id="scrBuyIn" min="0" step="0.25" value="20"></label>
+      <label class="fld"><span>Entry cap</span><input class="fi" type="number" id="scrEntryCap" min="1" value="1"></label>
+      <label class="fld"><span>Field cap</span><input class="fi" type="number" id="scrFieldCap" min="2" value="100000"></label>
+      <label class="fld"><span>Prize pool $</span><input class="fi" type="number" id="scrPrizePool" min="0" step="1" value="0"></label>
+      <label class="fld"><span>1st prize $</span><input class="fi" type="number" id="scrFirst" min="0" step="1" value="0"></label>
+      <label class="fld"><span>10th prize $</span><input class="fi" type="number" id="scrTenth" min="0" step="1" value="0"></label>
+      <label class="fld"><span>Min-cash $</span><input class="fi" type="number" id="scrMinCash" min="0" step="0.25" value="0"></label>
+      <label class="fld"><span>Rake (0–1, optional)</span><input class="fi" type="number" id="scrRake" min="0" max="1" step="0.001" placeholder="auto from pool"></label>
+    </div>
+    <div class="btnrow">
+      <button class="btn sm" id="scrAdd">Score &amp; add</button>
+      <button class="btn ghost sm" id="scrClear">Clear list</button>
+    </div>
+    <div class="banner" id="scrWarn" hidden></div>
+  </div>
+  <div class="card">
+    <h3>Ranked contests</h3>
+    <p class="sub">Higher rank = better on rake / 10th÷1st / min-cash bands. Preset is what the solver should use when you generate for that contest.</p>
+    <div class="tscroll"><table class="dtab" id="scrTab"><thead><tr><th>Verdict</th><th>Rank</th><th>Contest</th><th>Preset</th><th>Rake</th><th>10th÷1st</th><th>Min-cash</th><th></th></tr></thead><tbody></tbody></table></div>
+    <p class="note" id="scrNote">No contests scored yet.</p>
+  </div>
+</section>
+
+<!-- ======================================================= STANDINGS -->
+<section class="sheet" id="sh-standings" hidden>
+  <div class="card">
+    <h3>Standings ingest <span class="rt" id="stState"></span></h3>
+    <p class="sub">Week 1+ receipts skeleton (Bible §9.1). Paste a GameCenter standings CSV; it stays in <b>IndexedDB on this device only</b> (I3). Derived aggregates come later — this just captures the data.</p>
+    <div class="grid3">
+      <label class="fld"><span>Week</span><input class="fi" type="number" id="stWeek" min="1" max="22" value="1"></label>
+      <label class="fld"><span>Contest key / id</span><input class="fi" id="stContestKey" placeholder="dk-contest-123"></label>
+      <label class="fld"><span>Contest name</span><input class="fi" id="stContestName" placeholder="Showdown Wildcat"></label>
+    </div>
+    <label class="fld"><span>Standings CSV</span>
+      <input class="fi" type="file" id="stFile" accept=".csv,text/csv,text/plain">
+    </label>
+    <textarea class="fi" id="stPaste" placeholder="Rank,Entry,Points,Lineup&#10;1,you,172.4,…&#10;2,field,168.1,…"></textarea>
+    <div class="btnrow">
+      <button class="btn sm" id="stImport">Parse &amp; store locally</button>
+      <button class="btn ghost sm" id="stRefresh">Refresh list</button>
+    </div>
+    <div class="banner" id="stWarn" hidden></div>
+  </div>
+  <div class="card">
+    <h3>Stored contests</h3>
+    <div class="tscroll"><table class="dtab" id="stTab"><thead><tr><th>Week</th><th>Key</th><th>Name</th><th>Entries</th><th>Imported</th></tr></thead><tbody></tbody></table></div>
+    <p class="note" id="stNote">Nothing stored yet.</p>
   </div>
 </section>
 
@@ -4329,6 +4391,7 @@ const DEF = {
   players: [],
   lineups: [],
   bankroll: [],
+  screener: [],
   cfg: { count: 20, minSal: 49000, maxSal: 50000, uniq: 2, rand: 15, maxExp: 100, team: 4, game: 6,
          time: 60, qbMin: 1, qbPos: "WR,TE", bring: 0, noRbDst: false, noOppDst: false },
   sim: { field: 20000, fee: 20, payout: "gpp", paid: 20, alpha: 1.15, rake: 15, custom: "",
@@ -5938,9 +6001,110 @@ function readSim() {
   save();
 }
 
+/* ---------------------------------------------------------------- screener / standings (Phase 0 UI) */
+
+if (!Array.isArray(S.screener)) S.screener = [];
+
+function scrReadForm() {
+  const rakeRaw = $("scrRake").value;
+  const c = {
+    name: $("scrName").value.trim(),
+    gameType: $("scrGameType").value,
+    buyIn: parseFloat($("scrBuyIn").value) || 0,
+    entryCap: parseInt($("scrEntryCap").value, 10) || 1,
+    fieldCap: parseInt($("scrFieldCap").value, 10) || 0,
+    prizePool: parseFloat($("scrPrizePool").value) || 0,
+    firstPrize: parseFloat($("scrFirst").value) || 0,
+    tenthPrize: parseFloat($("scrTenth").value) || 0,
+    minCash: parseFloat($("scrMinCash").value) || 0
+  };
+  if (String(rakeRaw).trim() !== "" && isFinite(parseFloat(rakeRaw))) c.rake = parseFloat(rakeRaw);
+  return c;
+}
+
+function renderScreener() {
+  if (typeof DDFSScreener === "undefined") {
+    banner("scrWarn", "err", "<b>Screener module missing.</b> Reload the page.");
+    return;
+  }
+  const ranked = DDFSScreener.rankContests(S.screener);
+  const tb = $("scrTab").querySelector("tbody");
+  tb.innerHTML = "";
+  ranked.forEach((row) => {
+    const c = row.contest || {};
+    const idx = S.screener.indexOf(c);
+    const tr = document.createElement("tr");
+    const rake = row.rake == null || !isFinite(row.rake) ? "—" : (row.rake * 100).toFixed(1) + "%";
+    const tenth = (c.tenthPrize && c.firstPrize) ? ((+c.tenthPrize / +c.firstPrize) * 100).toFixed(1) + "%" : "—";
+    const mc = (c.minCash && c.buyIn) ? (+c.minCash / +c.buyIn).toFixed(2) + "×" : "—";
+    tr.innerHTML = `<td><b>${esc(row.verdict)}</b><div class="mut">${esc(row.bands.rake)}/${esc(row.bands.tenth)}/${esc(row.bands.minCash)}</div></td>` +
+      `<td>${row.rank}</td>` +
+      `<td>${esc(c.name || "(unnamed)")}<div class="mut">${esc(c.gameType || "")} · $${c.buyIn} · ${c.entryCap}-max</div></td>` +
+      `<td>${esc(row.preset.label)}<div class="mut">${esc(row.preset.objective)}</div></td>` +
+      `<td>${rake}</td><td>${tenth}</td><td>${mc}</td>` +
+      `<td><button type="button" class="btn ghost sm" data-scr-del="${idx}">Remove</button></td>`;
+    tb.appendChild(tr);
+  });
+  $("scrNote").textContent = ranked.length ? `${ranked.length} contest${ranked.length === 1 ? "" : "s"} scored.` : "No contests scored yet.";
+  $("scrState").textContent = ranked.length ? ranked[0].verdict : "";
+}
+
+function renderStandings() {
+  if (typeof DDFSStandings === "undefined") {
+    banner("stWarn", "err", "<b>Standings module missing.</b> Reload the page.");
+    return;
+  }
+  const tb = $("stTab").querySelector("tbody");
+  tb.innerHTML = `<tr><td colspan="5" class="mut">Loading…</td></tr>`;
+  DDFSStandings.listLocal().then(list => {
+    tb.innerHTML = "";
+    (list || []).sort((a, b) => String(b.importedAt || "").localeCompare(String(a.importedAt || ""))).forEach(rec => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${esc(String(rec.week == null ? "—" : rec.week))}</td>` +
+        `<td><code>${esc(rec.contestKey || "")}</code></td>` +
+        `<td>${esc(rec.contestName || "")}</td>` +
+        `<td>${rec.n != null ? rec.n : (rec.entries ? rec.entries.length : "—")}</td>` +
+        `<td class="mut">${esc((rec.importedAt || "").replace("T", " ").slice(0, 19))}</td>`;
+      tb.appendChild(tr);
+    });
+    $("stNote").textContent = (list && list.length) ? `${list.length} contest${list.length === 1 ? "" : "s"} on this device.` : "Nothing stored yet.";
+    $("stState").textContent = (list && list.length) ? "local" : "";
+  }).catch(err => {
+    tb.innerHTML = "";
+    banner("stWarn", "warn", "<b>IndexedDB unavailable.</b> " + esc(err && err.message || String(err)) + " Parsing still works for this session if you import again after fixing storage.");
+    $("stNote").textContent = "Storage unavailable in this browser context.";
+  });
+}
+
+async function doStandingsImport(text) {
+  if (typeof DDFSStandings === "undefined") {
+    banner("stWarn", "err", "<b>Standings module missing.</b>");
+    return;
+  }
+  if (!String(text || "").trim()) {
+    banner("stWarn", "err", "<b>Nothing to read.</b> Choose a CSV or paste standings.");
+    return;
+  }
+  const meta = {
+    week: parseInt($("stWeek").value, 10) || null,
+    contestKey: $("stContestKey").value.trim() || ("local-" + Date.now()),
+    contestName: $("stContestName").value.trim()
+  };
+  const rec = DDFSStandings.parseStandingsCsv(text, meta);
+  if (rec.error) { banner("stWarn", "err", "<b>Could not parse.</b> " + esc(rec.error)); return; }
+  try {
+    const saved = await DDFSStandings.saveLocal(rec);
+    banner("stWarn", "ok", `<b>Stored ${rec.n} entries</b> as <code>${esc(rec.contestKey)}</code>` +
+      (saved.storage === "indexeddb" ? " in IndexedDB." : " (in-memory only — IndexedDB not available)."));
+    renderStandings();
+  } catch (err) {
+    banner("stWarn", "err", "<b>Parse worked; save failed.</b> " + esc(err && err.message || String(err)));
+  }
+}
+
 /* ---------------------------------------------------------------- sheets */
 
-const SHEETS = ["slate", "solver", "sim", "exposure", "bankroll", "method"];
+const SHEETS
 function show(name) {
   if (SHEETS.indexOf(name) < 0) name = "slate";
   const btn = $("fsTabs").querySelector(`button[data-s="${name}"]`);
@@ -5951,6 +6115,8 @@ function show(name) {
   if (location.hash.slice(1) !== name) history.replaceState(null, "", "#" + name);
   if (name === "exposure") renderExposure();
   if (name === "bankroll") { renderBankroll(); }
+  if (name === "screener") renderScreener();
+  if (name === "standings") renderStandings();
   if (name === "method") renderMethod();
   if (name === "sim") renderSim();
   botContext();
@@ -6086,6 +6252,37 @@ $("rarityTabGo").addEventListener("click", () => {
     r.readAsText(f);
   });
   $("brImport").addEventListener("click", doBrImport);
+
+  // ---- screener ----
+  $("scrAdd").addEventListener("click", () => {
+    if (typeof DDFSScreener === "undefined") { banner("scrWarn", "err", "<b>Screener module missing.</b>"); return; }
+    const c = scrReadForm();
+    if (!c.name) { banner("scrWarn", "err", "<b>Name the contest</b> so you can tell them apart."); return; }
+    S.screener.push(c); save();
+    banner("scrWarn", "ok", "<b>Scored.</b> Preset: " + esc(DDFSScreener.mapPreset(c).label));
+    renderScreener();
+  });
+  $("scrClear").addEventListener("click", () => {
+    if (!S.screener.length) return;
+    if (!confirm("Clear all scored contests from this device?")) return;
+    S.screener = []; save(); renderScreener();
+    banner("scrWarn", "ok", "Cleared.");
+  });
+  $("scrTab").addEventListener("click", e => {
+    const b = e.target.closest("[data-scr-del]"); if (!b) return;
+    const i = +b.dataset.scrDel;
+    if (i >= 0 && i < S.screener.length) { S.screener.splice(i, 1); save(); renderScreener(); }
+  });
+
+  // ---- standings ----
+  $("stFile").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { $("stPaste").value = String(r.result).slice(0, 8000000); doStandingsImport(String(r.result)); };
+    r.readAsText(f);
+  });
+  $("stImport").addEventListener("click", () => doStandingsImport($("stPaste").value));
+  $("stRefresh").addEventListener("click", () => renderStandings());
   $("brExport").addEventListener("click", () => {
     const lines = ["date,contest,type,entries,fee,winnings,net"];
     S.bankroll.forEach(b => lines.push([b.date, '"' + String(b.name || "").replace(/"/g, '""') + '"',
