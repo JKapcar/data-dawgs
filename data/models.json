@@ -2,7 +2,7 @@
  "source_page": "/survivor.html",
  "tier": "labs",
  "graded": false,
- "as_of": "2026-09-05",
+ "as_of": "2026-09-06",
  "source": "Fitted on nfelo ratings + nflverse schedule; parameters as used live on survivor.html and receipts.html.",
  "note": "These are the exact parameters the site uses. Return them alongside any number you derive from them. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point.",
  "data": {
@@ -69,11 +69,11 @@
   },
   "nfelo_reference": {
    "version": "4.3.1",
-   "commit": "c2b2570e",
+   "commit": "edac91ee",
    "repo": "greerreNFL/nfelo"
   }
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-09-05",
+ "built": "2026-09-06",
  "canonical_url": "https://datadawgs216.com/data/models.json"
 }
