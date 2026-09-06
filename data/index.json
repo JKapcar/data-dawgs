@@ -114,24 +114,24 @@
     "path": "/data/nfl-schedule.json",
     "url": "https://datadawgs216.com/data/nfl-schedule.json",
     "bytes": 114173,
-    "as_of": "2026-08-07",
-    "sha256": "84fc7538792a90999b99e1eef08ca71852c9b174b0530bcb8e588142221a9707",
+    "as_of": "2026-09-06",
+    "sha256": "1446a67ae7c73fb41c81068de6f9d2191bfced780ae7df06dc94aa3af5309c97",
     "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts."
    },
    {
     "path": "/data/model-receipts.json",
     "url": "https://datadawgs216.com/data/model-receipts.json",
-    "bytes": 1353635,
-    "as_of": "2026-08-10",
-    "sha256": "4f1a2f66c9dcb571e3edc0aca7f3bdc4142af2c2f64759c2d4f5f23a7262ce0c",
-    "note": "Every row is prospective and append-only. The nfelo adapter preserves its locked model probability but deliberately omits legacy market values whose book and observation timestamp are unknown. The two ddpr-nfl lines are FUNCTIONS of the nfelo and 538 Classic rows, not independent evidence, and ddpr-nfl-linear is registered for comparison only and is not displayed. Results remain separate and nothing is graded yet."
+    "bytes": 1353409,
+    "as_of": "2026-09-06",
+    "sha256": "fc74e6c2c14ef4ed846f27a7e2c7e7168fa06bf21d31270d2388fa6702f695df",
+    "note": "Every row is prospective and append-only. The nfelo adapter preserves its locked model probability but deliberately omits legacy market values whose book and observation timestamp are unknown. Results remain separate and nothing is graded yet."
    },
    {
     "path": "/data/538-classic.json",
     "url": "https://datadawgs216.com/data/538-classic.json",
     "bytes": 93558,
-    "as_of": "2026-08-08",
-    "sha256": "e989d84acd786c59e413905376f12c65f3b3ea659d88221d4ded6c095b799886",
+    "as_of": "2026-09-06",
+    "sha256": "260047ffb6443834302f149ca1dd80e2211f9117cd746f5dc44f9d1211bba1c8",
     "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority."
    },
    {
@@ -258,8 +258,8 @@
     "path": "/data/receipts-inventory.json",
     "url": "https://datadawgs216.com/data/receipts-inventory.json",
     "bytes": 3415,
-    "as_of": "2026-08-28",
-    "sha256": "3082bda2d67ac8a20c9dcdbea9b81b15a58661c4acb624625195ee1ebde04e7d",
+    "as_of": "2026-09-06",
+    "sha256": "9ff2e911597b3c659e13fa778a27446391dc6776b881a11549ff39c1a3ec3c04",
     "note": "An INVENTORY, not a scoreboard. There is no honest Brier across domains, so this file counts what has been registered and settled and never scores it. The ledgers OVERLAP: receipts.json and the nfelo half of model-receipts.json are the same forecasts, as are 538-classic.json and its half. aggregate is therefore computed from aggregate.counted_from alone; aggregate.naive_sum is what summing the registered column would wrongly give, published so it can be named and corrected rather than quietly reproduced."
    },
    {

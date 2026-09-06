@@ -1,9 +1,9 @@
 {
- "as_of": "2026-08-10",
- "source": "Data Dawgs normalized append-only multi-model receipt ledger: locked nfelo 4.3.0 output, prospective 538 Classic Elo forecasts, and both pre-registered DDPR NFL ensemble aggregations.",
+ "as_of": "2026-09-06",
+ "source": "Data Dawgs normalized append-only multi-model receipt ledger: locked nfelo 4.3.0 output plus prospective 538 Classic Elo forecasts.",
  "tier": "labs",
  "graded": false,
- "note": "Every row is prospective and append-only. The nfelo adapter preserves its locked model probability but deliberately omits legacy market values whose book and observation timestamp are unknown. The two ddpr-nfl lines are FUNCTIONS of the nfelo and 538 Classic rows, not independent evidence, and ddpr-nfl-linear is registered for comparison only and is not displayed. Results remain separate and nothing is graded yet.",
+ "note": "Every row is prospective and append-only. The nfelo adapter preserves its locked model probability but deliberately omits legacy market values whose book and observation timestamp are unknown. Results remain separate and nothing is graded yet.",
  "integrity": {
   "sha256": "b462effc572cf9b7ae69c75eaa63ecb8f5876b7e2ebbccb880733030a6c78a5b",
   "algorithm": "SHA-256 of canonical receipt JSON rows joined by LF in append order.",
@@ -34284,6 +34284,6 @@
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-08-10",
+ "built": "2026-09-06",
  "canonical_url": "https://datadawgs216.com/data/model-receipts.json"
 }
