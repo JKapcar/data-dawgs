@@ -15,6 +15,10 @@ import { BOZO_ESPN_TEAM_SEED } from "./bozo-team-registry.mjs";
  *                        Stores nothing (I2). Used by dfs.html Load from DraftKings.
  *   GET  /dk/draftables — CORS proxy: draftgroups draftables JSON. Query: draftGroupId=.
  *                        Salaries + OUT/Q/IR + CPT/FLEX. Stores nothing.
+ *   GET  /dk/contests  — CORS proxy: lobby Contests[] filtered/mapped. Query: sport=, draftGroupId=.
+ *                        Additive; page degrades if 404. Stores nothing.
+ *   GET  /dk/contest   — CORS proxy: contest detail payout tiers. Query: id=. 8s timeout.
+ *                        Stores nothing. Cache-Control: no-store.
  *   GET  /bozo/roster  — player list + who has claimed a password (public)
  *   POST /bozo/claim   — spend a one-time join token, set your own password
  *   POST /bozo/login   — name + password  → session
@@ -1755,6 +1759,8 @@ export default {
     if (url.pathname === "/scores")       return handleScores(url, env, cors);
     if (url.pathname === "/dk/lobby")     return handleDkLobby(request, url, cors);
     if (url.pathname === "/dk/draftables") return handleDkDraftables(request, url, cors);
+    if (url.pathname === "/dk/contests")  return handleDkContests(request, url, cors);
+    if (url.pathname === "/dk/contest")   return handleDkContest(request, url, cors);
     if (url.pathname === "/survivor-picks") return handleSurvivorPicks(request, url, env, cors);
     if (url.pathname === "/cfb/market-snapshots") return handleCfbMarketSnapshots(request, url, env, cors);
     if (url.pathname === "/sleeper/players-slim") return handleSleeperPlayersSlim(request, env, cors);
@@ -2012,6 +2018,160 @@ async function handleDkDraftables(request, url, cors) {
     });
   } catch (e) {
     return json({ error: "dk_draftables_failed", detail: String(e.message || e) }, e.status || 502, cors);
+  }
+}
+
+const DK_CONTEST_DETAIL = "https://api.draftkings.com/contests/v1/contests";
+const DK_CONTEST_TIMEOUT_MS = 8000;
+
+/** Parse DK lobby `/Date(ms)/` or ISO-ish start into ISO string, else null. */
+function dkStartsAt(raw) {
+  if (raw == null || raw === "") return null;
+  if (typeof raw === "number" && isFinite(raw)) return new Date(raw).toISOString();
+  const s = String(raw);
+  const m = s.match(/\/Date\((-?\d+)(?:[-+]\d{4})?\)\//);
+  if (m) return new Date(Number(m[1])).toISOString();
+  const t = Date.parse(s);
+  return Number.isFinite(t) ? new Date(t).toISOString() : null;
+}
+
+/**
+ * Defensive map of one lobby Contests[] row → screener summary fields.
+ * Lobby uses short keys (n/a/po/m/nt/mec/dg/…). Never assume a key exists.
+ */
+function mapDkLobbyContestRow(row) {
+  row = row || {};
+  const attr = row.attr || row.attributes || {};
+  const guaranteedRaw = attr.IsGuaranteed != null ? attr.IsGuaranteed
+    : (attr.IsGuranteed != null ? attr.IsGuranteed : row.isGuaranteed);
+  const entries = Number(row.nt != null ? row.nt : (row.ec != null ? row.ec : (row.entries != null ? row.entries : 0)));
+  const out = {
+    id: row.id != null ? Number(row.id) : null,
+    name: row.n != null ? String(row.n) : (row.name != null ? String(row.name) : ""),
+    entryFee: Number(row.a != null ? row.a : (row.entryFee != null ? row.entryFee : 0)) || 0,
+    prizePool: Number(row.po != null ? row.po : (row.prizePool != null ? row.prizePool : (row.totalPayouts != null ? row.totalPayouts : 0))) || 0,
+    maxEntries: Number(row.m != null ? row.m : (row.maxEntries != null ? row.maxEntries : (row.maximumEntries != null ? row.maximumEntries : 0))) || 0,
+    entries: Number.isFinite(entries) ? entries : 0,
+    maxEntriesPerUser: Number(row.mec != null ? row.mec : (row.maxEntriesPerUser != null ? row.maxEntriesPerUser : (row.maximumEntriesPerUser != null ? row.maximumEntriesPerUser : 1))) || 1,
+    draftGroupId: Number(row.dg != null ? row.dg : (row.draftGroupId != null ? row.draftGroupId : 0)) || null,
+    gameTypeId: row.gameTypeId != null ? Number(row.gameTypeId) : (row.gt != null ? Number(row.gt) : null),
+    gameType: row.gameType != null ? String(row.gameType) : "",
+    startsAt: dkStartsAt(row.sd != null ? row.sd : (row.contestStartTime != null ? row.contestStartTime : row.ssd)),
+    isGuaranteed: guaranteedRaw === true || String(guaranteedRaw).toLowerCase() === "true",
+  };
+  if (row.payoutSummary != null) out.payoutSummary = row.payoutSummary;
+  else if (row.pd != null) out.payoutSummary = row.pd;
+  return out;
+}
+
+function mapDkContestPayoutTiers(detail) {
+  const tiers = (detail && detail.payoutSummary) || [];
+  const out = [];
+  for (let i = 0; i < tiers.length; i++) {
+    const t = tiers[i] || {};
+    const fromPlace = Number(t.minPosition != null ? t.minPosition : t.fromPlace);
+    const toPlace = Number(t.maxPosition != null ? t.maxPosition : t.toPlace);
+    let prize = 0;
+    const descs = t.payoutDescriptions || [];
+    if (descs.length && descs[0] && descs[0].value != null) prize = Number(descs[0].value) || 0;
+    else if (t.tierPayoutDescriptions && t.tierPayoutDescriptions.Cash) {
+      prize = Number(String(t.tierPayoutDescriptions.Cash).replace(/[^0-9.]/g, "")) || 0;
+    } else if (t.prize != null) prize = Number(t.prize) || 0;
+    if (!Number.isFinite(fromPlace) || !Number.isFinite(toPlace)) continue;
+    out.push({ fromPlace, toPlace, prize });
+  }
+  return out;
+}
+
+async function dkUpstreamTimeout(url, ms) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      signal: ctrl.signal,
+      headers: {
+        "User-Agent": DK_UA,
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.draftkings.com/lobby",
+        "Origin": "https://www.draftkings.com",
+      },
+    });
+    const text = await res.text();
+    let body;
+    try { body = JSON.parse(text); }
+    catch {
+      const err = new Error("DraftKings returned non-JSON (HTTP " + res.status + ")");
+      err.status = 502;
+      throw err;
+    }
+    if (!res.ok) {
+      const err = new Error("DraftKings HTTP " + res.status);
+      err.status = res.status >= 400 && res.status < 600 ? res.status : 502;
+      err.body = body;
+      throw err;
+    }
+    return body;
+  } catch (e) {
+    if (e && e.name === "AbortError") {
+      const err = new Error("DraftKings contest detail timed out after " + ms + "ms");
+      err.status = 502;
+      throw err;
+    }
+    throw e;
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+async function handleDkContests(request, url, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const sport = String(url.searchParams.get("sport") || "NFL").toUpperCase();
+  if (!/^[A-Z]{2,8}$/.test(sport)) return json({ error: "sport must be a short code like NFL" }, 400, cors);
+  const dgRaw = String(url.searchParams.get("draftGroupId") || "").trim();
+  let dgFilter = null;
+  if (dgRaw) {
+    if (!/^\d{1,12}$/.test(dgRaw)) return json({ error: "draftGroupId must be a positive integer" }, 400, cors);
+    dgFilter = Number(dgRaw);
+  }
+  try {
+    const body = await dkUpstream(DK_LOBBY + "?sport=" + encodeURIComponent(sport));
+    const raw = (body && Array.isArray(body.Contests)) ? body.Contests : [];
+    const mapped = [];
+    for (let i = 0; i < raw.length; i++) {
+      const row = mapDkLobbyContestRow(raw[i]);
+      if (dgFilter != null && Number(row.draftGroupId) !== dgFilter) continue;
+      mapped.push(row);
+    }
+    return new Response(JSON.stringify({ Contests: mapped, sport, draftGroupId: dgFilter }), {
+      headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" },
+    });
+  } catch (e) {
+    return json({ error: "dk_contests_failed", detail: String(e.message || e) }, e.status || 502, cors);
+  }
+}
+
+async function handleDkContest(request, url, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const id = String(url.searchParams.get("id") || "").trim();
+  if (!/^\d{1,12}$/.test(id)) return json({ error: "id must be a positive integer" }, 400, cors);
+  try {
+    const body = await dkUpstreamTimeout(DK_CONTEST_DETAIL + "/" + id + "?format=json", DK_CONTEST_TIMEOUT_MS);
+    const detail = (body && body.contestDetail) || body || {};
+    const payload = {
+      id: Number(id),
+      entryFee: Number(detail.entryFee) || 0,
+      prizePool: Number(detail.totalPayouts != null ? detail.totalPayouts : detail.prizePool) || 0,
+      maxEntries: Number(detail.maximumEntries != null ? detail.maximumEntries : detail.maxEntries) || 0,
+      maxEntriesPerUser: Number(detail.maximumEntriesPerUser != null ? detail.maximumEntriesPerUser : detail.maxEntriesPerUser) || 1,
+      payout: mapDkContestPayoutTiers(detail),
+    };
+    return new Response(JSON.stringify(payload), {
+      headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" },
+    });
+  } catch (e) {
+    return json({ error: "dk_contest_failed", detail: String(e.message || e) }, e.status || 502, cors);
   }
 }
 

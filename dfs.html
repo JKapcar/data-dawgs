@@ -3025,7 +3025,15 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <section class="sheet" id="sh-screener" hidden>
   <div class="card">
     <h3>Contest screener <span class="rt" id="scrState"></span></h3>
-    <p class="sub">Rank contests by rake / payout shape (Bible §5) and map each to a generation preset (§4.1). Lobby fields can be typed by hand until <code>toto</code> pulls them live. Nothing leaves this device.</p>
+    <p class="sub">Rank contests by rake / payout shape (Bible §5) and map each to a generation preset (§4.1). <b>Pull from lobby</b> loads top contests for the slate draft group via <code>toto</code>; type by hand anytime. Nothing leaves this device.</p>
+    <div class="btnrow" style="flex-wrap:wrap;gap:8px;align-items:end;margin-bottom:10px">
+      <button class="btn sm" id="scrPullLobby" type="button">Pull from lobby</button>
+      <label class="fld" style="margin:0;min-width:7rem"><span>Top N <span class="hint">gear</span></span>
+        <input class="fi" type="number" id="scrTopN" min="1" max="100" value="25" title="How many contests to pull (by prize pool)">
+      </label>
+      <span class="note" id="scrPullNote" style="margin:0">Uses the draft group loaded on Slate (or pick one there first).</span>
+    </div>
+    <p class="note" id="scrLobbyFallback" hidden></p>
     <div class="grid3">
       <label class="fld"><span>Name</span><input class="fi" id="scrName" placeholder="NFL $15 Showdown Wildcat"></label>
       <label class="fld"><span>Game type</span>
@@ -3048,9 +3056,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   </div>
   <div class="card">
     <h3>Ranked contests</h3>
-    <p class="sub">Higher rank = better on rake / 10th÷1st / min-cash bands. Preset is what the solver should use when you generate for that contest.</p>
-    <div class="tscroll"><table class="dtab" id="scrTab"><thead><tr><th>Verdict</th><th>Rank</th><th>Contest</th><th>Preset</th><th>Rake</th><th>10th÷1st</th><th>Min-cash</th><th></th></tr></thead><tbody></tbody></table></div>
-    <p class="note">Use <b>Apply</b> to push that contest's §4.1 preset into the Solver sheet.</p>
+    <p class="sub">Higher rank = better on rake / 10th÷1st / min-cash bands. Preset from mapPresetFull. Cells are hand-editable; <b>Apply</b> pushes the preset into Solver.</p>
+    <div class="tscroll"><table class="dtab" id="scrTab"><thead><tr><th>Verdict</th><th>Rank</th><th>Contest</th><th>% filled</th><th>Preset</th><th>Rake</th><th>10th÷1st</th><th>Min-cash</th><th></th></tr></thead><tbody></tbody></table></div>
+    <p class="note">Use <b>Apply</b> to push that contest's §4.1 preset into the Solver sheet. Edit buy-in / prizes inline or via the form above.</p>
     <p class="note" id="scrNote">No contests scored yet.</p>
   </div>
 </section>
@@ -4410,8 +4418,9 @@ const DEF = {
   lineups: [],
   bankroll: [],
   screener: [],
+  screenerLastPull: null,
   cfg: { count: 20, minSal: 49000, maxSal: 50000, uniq: 2, rand: 15, maxExp: 100, team: 4, game: 6,
-         time: 60, qbMin: 1, qbPos: "WR,TE", bring: 0, noRbDst: false, noOppDst: false },
+         time: 60, qbMin: 1, qbPos: "WR,TE", bring: 0, noRbDst: false, noOppDst: false, lobbyTopN: 25 },
   sim: { field: 20000, fee: 20, payout: "gpp", paid: 20, alpha: 1.15, rake: 15, custom: "",
          sims: 10000, sample: 2500, stack: 60, fieldSal: 49000 },
   sheet: "slate"
@@ -6219,6 +6228,177 @@ function banner(id, kind, html) {
   };
 });
 
+/* ---- Screener lobby pull (Phase 0.5 T3 — source: work/dfs-screener-lobby.js) ---- */
+/**
+ * Screener lobby pull — map Worker /dk/contests + /dk/contest into
+ * DDFSScreener.scoreContest inputs. Source for dfs.html (keep in sync).
+ * Never fetches ETR (I1). Page must degrade if Worker routes 404 (H4).
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === "object" && module.exports) module.exports = api;
+  if (root) root.DDFSScreenerLobby = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  "use strict";
+
+  var FALLBACK_404 =
+    "Live lobby contests need the toto update — type contests by hand for now";
+
+  /** Mirror of Worker mapDkLobbyContestRow for fixture unit tests. */
+  function mapDkLobbyContestRow(row) {
+    row = row || {};
+    var attr = row.attr || row.attributes || {};
+    var guaranteedRaw = attr.IsGuaranteed != null ? attr.IsGuaranteed
+      : (attr.IsGuranteed != null ? attr.IsGuranteed : row.isGuaranteed);
+    var entries = Number(row.nt != null ? row.nt : (row.ec != null ? row.ec : (row.entries != null ? row.entries : 0)));
+    var out = {
+      id: row.id != null ? Number(row.id) : null,
+      name: row.n != null ? String(row.n) : (row.name != null ? String(row.name) : ""),
+      entryFee: Number(row.a != null ? row.a : (row.entryFee != null ? row.entryFee : 0)) || 0,
+      prizePool: Number(row.po != null ? row.po : (row.prizePool != null ? row.prizePool : (row.totalPayouts != null ? row.totalPayouts : 0))) || 0,
+      maxEntries: Number(row.m != null ? row.m : (row.maxEntries != null ? row.maxEntries : (row.maximumEntries != null ? row.maximumEntries : 0))) || 0,
+      entries: Number.isFinite(entries) ? entries : 0,
+      maxEntriesPerUser: Number(row.mec != null ? row.mec : (row.maxEntriesPerUser != null ? row.maxEntriesPerUser : (row.maximumEntriesPerUser != null ? row.maximumEntriesPerUser : 1))) || 1,
+      draftGroupId: Number(row.dg != null ? row.dg : (row.draftGroupId != null ? row.draftGroupId : 0)) || null,
+      gameTypeId: row.gameTypeId != null ? Number(row.gameTypeId) : null,
+      gameType: row.gameType != null ? String(row.gameType) : "",
+      startsAt: null,
+      isGuaranteed: guaranteedRaw === true || String(guaranteedRaw).toLowerCase() === "true"
+    };
+    if (row.payoutSummary != null) out.payoutSummary = row.payoutSummary;
+    return out;
+  }
+
+  function mapDkContestPayoutTiers(detail) {
+    var tiers = (detail && detail.payoutSummary) || [];
+    var out = [];
+    for (var i = 0; i < tiers.length; i++) {
+      var t = tiers[i] || {};
+      var fromPlace = Number(t.minPosition != null ? t.minPosition : t.fromPlace);
+      var toPlace = Number(t.maxPosition != null ? t.maxPosition : t.toPlace);
+      var prize = 0;
+      var descs = t.payoutDescriptions || [];
+      if (descs.length && descs[0] && descs[0].value != null) prize = Number(descs[0].value) || 0;
+      else if (t.tierPayoutDescriptions && t.tierPayoutDescriptions.Cash) {
+        prize = Number(String(t.tierPayoutDescriptions.Cash).replace(/[^0-9.]/g, "")) || 0;
+      } else if (t.prize != null) prize = Number(t.prize) || 0;
+      if (!isFinite(fromPlace) || !isFinite(toPlace)) continue;
+      out.push({ fromPlace: fromPlace, toPlace: toPlace, prize: prize });
+    }
+    return out;
+  }
+
+  function computeRake(entryFee, maxEntries, prizePool) {
+    var fee = +entryFee || 0;
+    var cap = +maxEntries || 0;
+    var pool = +prizePool || 0;
+    if (!(fee > 0 && cap > 0)) return null;
+    return 1 - pool / (fee * cap);
+  }
+
+  function prizeAtPlace(tiers, place) {
+    tiers = tiers || [];
+    for (var i = 0; i < tiers.length; i++) {
+      var t = tiers[i];
+      if (place >= +t.fromPlace && place <= +t.toPlace) return +t.prize || 0;
+    }
+    return null;
+  }
+
+  function minCashFromTiers(tiers) {
+    tiers = tiers || [];
+    var min = null;
+    for (var i = 0; i < tiers.length; i++) {
+      var p = +tiers[i].prize || 0;
+      if (p > 0 && (min == null || p < min)) min = p;
+    }
+    return min == null ? 0 : min;
+  }
+
+  /**
+   * Build the object DDFSScreener.scoreContest expects.
+   * first = tier fromPlace==1; tenth = tier covering place 10 (0 if none → Avoid);
+   * minCash = lowest paid; rake = 1 − prizePool/(entryFee·maxEntries).
+   */
+  function toScoreContestInput(summary, detailOrTiers) {
+    summary = summary || {};
+    var tiers = Array.isArray(detailOrTiers) ? detailOrTiers
+      : (detailOrTiers && detailOrTiers.payout) ? detailOrTiers.payout
+      : mapDkContestPayoutTiers(detailOrTiers && detailOrTiers.contestDetail ? detailOrTiers.contestDetail : detailOrTiers);
+
+    var entryFee = Number(summary.entryFee != null ? summary.entryFee
+      : (detailOrTiers && detailOrTiers.entryFee != null ? detailOrTiers.entryFee : 0)) || 0;
+    var prizePool = Number(summary.prizePool != null ? summary.prizePool
+      : (detailOrTiers && detailOrTiers.prizePool != null ? detailOrTiers.prizePool : 0)) || 0;
+    var fieldCap = Number(summary.maxEntries != null ? summary.maxEntries
+      : (detailOrTiers && detailOrTiers.maxEntries != null ? detailOrTiers.maxEntries : 0)) || 0;
+    var entryCap = Number(summary.maxEntriesPerUser != null ? summary.maxEntriesPerUser
+      : (detailOrTiers && detailOrTiers.maxEntriesPerUser != null ? detailOrTiers.maxEntriesPerUser : 1)) || 1;
+
+    var first = prizeAtPlace(tiers, 1);
+    if (first == null) first = 0;
+    var tenthRaw = prizeAtPlace(tiers, 10);
+    var tenth = tenthRaw == null ? 0 : tenthRaw;
+    var minCash = minCashFromTiers(tiers);
+    var rake = computeRake(entryFee, fieldCap, prizePool);
+
+    var gameType = String(summary.gameType || "");
+    if (!gameType && /showdown|captain|single.?game/i.test(String(summary.name || ""))) gameType = "Showdown";
+    if (!gameType) gameType = "Classic";
+
+    return {
+      id: summary.id != null ? summary.id : null,
+      name: String(summary.name || ""),
+      gameType: gameType,
+      buyIn: entryFee,
+      entryCap: entryCap,
+      fieldCap: fieldCap,
+      prizePool: prizePool,
+      first: first,
+      tenth: tenth,
+      firstPrize: first,
+      tenthPrize: tenth,
+      minCash: minCash,
+      rake: rake,
+      entries: Number(summary.entries) || 0,
+      filledPct: fieldCap > 0 ? (Number(summary.entries) || 0) / fieldCap : null
+    };
+  }
+
+  function topByPrizePool(contests, n) {
+    n = Math.max(1, Math.min(200, +n || 25));
+    return (contests || []).slice().sort(function (a, b) {
+      return (+b.prizePool || 0) - (+a.prizePool || 0);
+    }).slice(0, n);
+  }
+
+  function fallback404Message() {
+    return FALLBACK_404;
+  }
+
+  function isRouteMissing(status, body) {
+    if (status === 404) return true;
+    var err = body && body.error;
+    if (status === 404 || err === "not_found") return true;
+    // Worker without the additive routes typically returns HTML/JSON 404 from CF
+    return false;
+  }
+
+  return {
+    FALLBACK_404: FALLBACK_404,
+    mapDkLobbyContestRow: mapDkLobbyContestRow,
+    mapDkContestPayoutTiers: mapDkContestPayoutTiers,
+    computeRake: computeRake,
+    prizeAtPlace: prizeAtPlace,
+    minCashFromTiers: minCashFromTiers,
+    toScoreContestInput: toScoreContestInput,
+    topByPrizePool: topByPrizePool,
+    fallback404Message: fallback404Message,
+    isRouteMissing: isRouteMissing
+  };
+});
+
+
 
 function parseCSV(text) { return DDFSIngest.parseCSV(text); }
 function normName(name) { return DDFSIngest.normName(name); }
@@ -7304,6 +7484,8 @@ function readSim() {
 /* ---------------------------------------------------------------- screener / standings (Phase 0 UI) */
 
 if (!Array.isArray(S.screener)) S.screener = [];
+if (S.screenerLastPull === undefined) S.screenerLastPull = null;
+if (S.cfg && S.cfg.lobbyTopN == null) S.cfg.lobbyTopN = 25;
 
 function scrReadForm() {
   const rakeRaw = $("scrRake").value;
@@ -7316,10 +7498,37 @@ function scrReadForm() {
     prizePool: parseFloat($("scrPrizePool").value) || 0,
     firstPrize: parseFloat($("scrFirst").value) || 0,
     tenthPrize: parseFloat($("scrTenth").value) || 0,
+    first: parseFloat($("scrFirst").value) || 0,
+    tenth: parseFloat($("scrTenth").value) || 0,
     minCash: parseFloat($("scrMinCash").value) || 0
   };
   if (String(rakeRaw).trim() !== "" && isFinite(parseFloat(rakeRaw))) c.rake = parseFloat(rakeRaw);
   return c;
+}
+
+function scrFillForm(c) {
+  c = c || {};
+  if ($("scrName")) $("scrName").value = c.name || "";
+  if ($("scrGameType")) $("scrGameType").value = /showdown/i.test(String(c.gameType || "")) ? "Showdown" : "Classic";
+  if ($("scrBuyIn")) $("scrBuyIn").value = c.buyIn != null ? c.buyIn : "";
+  if ($("scrEntryCap")) $("scrEntryCap").value = c.entryCap != null ? c.entryCap : "";
+  if ($("scrFieldCap")) $("scrFieldCap").value = c.fieldCap != null ? c.fieldCap : "";
+  if ($("scrPrizePool")) $("scrPrizePool").value = c.prizePool != null ? c.prizePool : "";
+  if ($("scrFirst")) $("scrFirst").value = (c.firstPrize != null ? c.firstPrize : c.first) || 0;
+  if ($("scrTenth")) $("scrTenth").value = (c.tenthPrize != null ? c.tenthPrize : c.tenth) || 0;
+  if ($("scrMinCash")) $("scrMinCash").value = c.minCash != null ? c.minCash : "";
+  if ($("scrRake")) $("scrRake").value = c.rake != null && isFinite(c.rake) ? c.rake : "";
+}
+
+function scrShowLobbyFallback(show) {
+  const n = $("scrLobbyFallback");
+  if (!n) return;
+  if (!show) { n.hidden = true; n.textContent = ""; return; }
+  const msg = (typeof DDFSScreenerLobby !== "undefined" && DDFSScreenerLobby.fallback404Message)
+    ? DDFSScreenerLobby.fallback404Message()
+    : "Live lobby contests need the toto update — type contests by hand for now";
+  n.textContent = msg;
+  n.hidden = false;
 }
 
 function renderScreener() {
@@ -7327,6 +7536,7 @@ function renderScreener() {
     banner("scrWarn", "err", "<b>Screener module missing.</b> Reload the page.");
     return;
   }
+  if ($("scrTopN") && S.cfg) $("scrTopN").value = S.cfg.lobbyTopN || 25;
   const ranked = DDFSScreener.rankContests(S.screener);
   const tb = $("scrTab").querySelector("tbody");
   tb.innerHTML = "";
@@ -7337,18 +7547,100 @@ function renderScreener() {
     const rake = row.rake == null || !isFinite(row.rake) ? "—" : (row.rake * 100).toFixed(1) + "%";
     const tenth = (c.tenthPrize && c.firstPrize) ? ((+c.tenthPrize / +c.firstPrize) * 100).toFixed(1) + "%" : "—";
     const mc = (c.minCash && c.buyIn) ? (+c.minCash / +c.buyIn).toFixed(2) + "×" : "—";
-    const pkey = (row.preset && row.preset.key) || "";
+    const filled = (c.filledPct != null && isFinite(c.filledPct))
+      ? (c.filledPct * 100).toFixed(1) + "%"
+      : (c.fieldCap > 0 && c.entries != null ? (((+c.entries || 0) / +c.fieldCap) * 100).toFixed(1) + "%" : "—");
+    const pfull = (typeof DDFSScreener.mapPresetFull === "function") ? DDFSScreener.mapPresetFull(c) : row.preset;
+    const pkey = (pfull && pfull.key) || (row.preset && row.preset.key) || "";
+    const plabel = (pfull && pfull.label) || (row.preset && row.preset.label) || "";
+    const pobj = (pfull && pfull.objective) || (row.preset && row.preset.objective) || "";
     tr.innerHTML = `<td><b>${esc(row.verdict)}</b><div class="mut">${esc(row.bands.rake)}/${esc(row.bands.tenth)}/${esc(row.bands.minCash)}</div></td>` +
       `<td>${row.rank}</td>` +
-      `<td>${esc(c.name || "(unnamed)")}<div class="mut">${esc(c.gameType || "")} · $${c.buyIn} · ${c.entryCap}-max</div></td>` +
-      `<td>${esc(row.preset.label)}<div class="mut">${esc(row.preset.objective)}</div></td>` +
+      `<td><input class="fi" data-scr-edit="${idx}" data-scr-field="name" value="${esc(c.name || "")}" style="min-width:12rem">` +
+      `<div class="mut">${esc(c.gameType || "")} · $` +
+      `<input class="fi" data-scr-edit="${idx}" data-scr-field="buyIn" type="number" step="0.25" value="${c.buyIn != null ? c.buyIn : ""}" style="width:4.5rem;display:inline-block"> · ` +
+      `<input class="fi" data-scr-edit="${idx}" data-scr-field="entryCap" type="number" min="1" value="${c.entryCap != null ? c.entryCap : ""}" style="width:3.2rem;display:inline-block">-max</div></td>` +
+      `<td>${filled}</td>` +
+      `<td>${esc(plabel)}<div class="mut">${esc(pobj)}</div></td>` +
       `<td>${rake}</td><td>${tenth}</td><td>${mc}</td>` +
-      `<td style="white-space:nowrap"><button type="button" class="btn sm" data-scr-apply="${esc(pkey)}" data-scr-cap="${c.entryCap || 1}" data-scr-field="${c.fieldCap || ""}">Apply</button> ` +
+      `<td style="white-space:nowrap"><button type="button" class="btn sm" data-scr-apply="${esc(pkey)}" data-scr-cap="${c.entryCap || 1}" data-scr-field-cap="${c.fieldCap || ""}">Apply</button> ` +
+      `<button type="button" class="btn ghost sm" data-scr-load="${idx}">Edit</button> ` +
       `<button type="button" class="btn ghost sm" data-scr-del="${idx}">Remove</button></td>`;
     tb.appendChild(tr);
   });
-  $("scrNote").textContent = ranked.length ? `${ranked.length} contest${ranked.length === 1 ? "" : "s"} scored.` : "No contests scored yet.";
+  const pull = S.screenerLastPull;
+  const pullNote = pull && pull.at
+    ? ` Last pull ${String(pull.at).replace("T", " ").slice(0, 19)} UTC · DG ${pull.draftGroupId || "—"} · ${Array.isArray(pull.rows) ? pull.rows.length : 0} rows.`
+    : "";
+  $("scrNote").textContent = (ranked.length ? `${ranked.length} contest${ranked.length === 1 ? "" : "s"} scored.` : "No contests scored yet.") + pullNote;
   $("scrState").textContent = ranked.length ? ranked[0].verdict : "";
+}
+
+async function pullScreenerFromLobby() {
+  if (typeof DDFSScreener === "undefined" || typeof DDFSScreenerLobby === "undefined") {
+    banner("scrWarn", "err", "<b>Screener modules missing.</b> Reload the page.");
+    return;
+  }
+  const topN = Math.max(1, Math.min(100, parseInt(($("scrTopN") && $("scrTopN").value) || (S.cfg && S.cfg.lobbyTopN) || 25, 10)));
+  if (S.cfg) { S.cfg.lobbyTopN = topN; save(); }
+  const dg = ($("dkGroupSel") && $("dkGroupSel").value) || "";
+  if (!dg) {
+    banner("scrWarn", "err", "<b>Pick a draft group on Slate first</b> (Refresh lobby → choose DG), then pull.");
+    return;
+  }
+  const btn = $("scrPullLobby");
+  if (btn) btn.disabled = true;
+  if ($("scrPullNote")) $("scrPullNote").textContent = "Fetching contests via toto…";
+  scrShowLobbyFallback(false);
+  try {
+    const r = await fetch(DK_TOTO + "/dk/contests?sport=NFL&draftGroupId=" + encodeURIComponent(dg), { method: "GET", cache: "no-store" });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 404 || DDFSScreenerLobby.isRouteMissing(r.status, j)) {
+      scrShowLobbyFallback(true);
+      banner("scrWarn", "warn", "<b>Lobby pull unavailable.</b> " + esc(DDFSScreenerLobby.fallback404Message()));
+      if ($("scrPullNote")) $("scrPullNote").textContent = "Manual form still works.";
+      return;
+    }
+    if (!r.ok) throw new Error(j.detail || j.error || ("HTTP " + r.status));
+    const list = Array.isArray(j.Contests) ? j.Contests : [];
+    const top = DDFSScreenerLobby.topByPrizePool(list, topN);
+    const rows = [];
+    for (let i = 0; i < top.length; i++) {
+      const summary = top[i];
+      let detail = null;
+      try {
+        const dr = await fetch(DK_TOTO + "/dk/contest?id=" + encodeURIComponent(summary.id), { method: "GET", cache: "no-store" });
+        const dj = await dr.json().catch(() => ({}));
+        if (dr.status === 404 || DDFSScreenerLobby.isRouteMissing(dr.status, dj)) {
+          scrShowLobbyFallback(true);
+          banner("scrWarn", "warn", "<b>Lobby pull unavailable.</b> " + esc(DDFSScreenerLobby.fallback404Message()));
+          if ($("scrPullNote")) $("scrPullNote").textContent = "Manual form still works.";
+          return;
+        }
+        if (dr.ok) detail = dj;
+      } catch (e) { /* leave tiers empty → tenth 0 Avoid */ }
+      rows.push(DDFSScreenerLobby.toScoreContestInput(summary, detail || { payout: [] }));
+    }
+    S.screener = rows;
+    S.screenerLastPull = { at: new Date().toISOString(), draftGroupId: Number(dg) || dg, rows: rows };
+    // Alias path documented in work-order: screener.lastPull
+    S.screener.lastPull = S.screenerLastPull;
+    save();
+    renderScreener();
+    banner("scrWarn", "ok", `<b>Pulled ${rows.length}</b> contest${rows.length === 1 ? "" : "s"} for DG ${esc(String(dg))} (top ${topN} by prize pool).`);
+    if ($("scrPullNote")) $("scrPullNote").textContent = `DG ${dg} · ${rows.length} scored.`;
+  } catch (e) {
+    const msg = String(e && e.message || e);
+    if (/404|not found|Failed to fetch/i.test(msg)) {
+      scrShowLobbyFallback(true);
+      banner("scrWarn", "warn", "<b>Lobby pull unavailable.</b> " + esc(DDFSScreenerLobby.fallback404Message()));
+    } else {
+      banner("scrWarn", "err", "<b>Pull failed.</b> " + esc(msg) + " — type contests by hand for now.");
+    }
+    if ($("scrPullNote")) $("scrPullNote").textContent = "Manual form still works.";
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 function renderStandings() {
@@ -7587,33 +7879,65 @@ $('paretoStop').addEventListener('click', () => { if(frontWorker)frontWorker.ter
   $("brImport").addEventListener("click", doBrImport);
 
   // ---- screener ----
+  if ($("scrTopN")) {
+    $("scrTopN").value = (S.cfg && S.cfg.lobbyTopN) || 25;
+    $("scrTopN").addEventListener("change", () => {
+      if (!S.cfg) return;
+      S.cfg.lobbyTopN = Math.max(1, Math.min(100, parseInt($("scrTopN").value, 10) || 25));
+      save();
+    });
+  }
+  if ($("scrPullLobby")) $("scrPullLobby").addEventListener("click", () => pullScreenerFromLobby());
   $("scrAdd").addEventListener("click", () => {
     if (typeof DDFSScreener === "undefined") { banner("scrWarn", "err", "<b>Screener module missing.</b>"); return; }
     const c = scrReadForm();
     if (!c.name) { banner("scrWarn", "err", "<b>Name the contest</b> so you can tell them apart."); return; }
     S.screener.push(c); save();
-    banner("scrWarn", "ok", "<b>Scored.</b> Preset: " + esc(DDFSScreener.mapPreset(c).label));
+    banner("scrWarn", "ok", "<b>Scored.</b> Preset: " + esc(DDFSScreener.mapPresetFull(c).label));
     renderScreener();
   });
   $("scrClear").addEventListener("click", () => {
     if (!S.screener.length) return;
     if (!confirm("Clear all scored contests from this device?")) return;
-    S.screener = []; save(); renderScreener();
+    S.screener = []; S.screenerLastPull = null; save(); renderScreener();
     banner("scrWarn", "ok", "Cleared.");
   });
-    $("scrTab").addEventListener("click", e => {
+  $("scrTab").addEventListener("click", e => {
     const apply = e.target.closest("button[data-scr-apply]");
     if (apply) {
       applyContestPreset(apply.dataset.scrApply, {
         entryCap: +apply.dataset.scrCap || undefined,
-        fieldCap: +apply.dataset.scrField || undefined
+        fieldCap: +(apply.dataset.scrFieldCap || apply.dataset.scrField) || undefined
       });
       show("solver");
+      return;
+    }
+    const load = e.target.closest("button[data-scr-load]");
+    if (load) {
+      const i = +load.dataset.scrLoad;
+      if (i >= 0 && S.screener[i]) scrFillForm(S.screener[i]);
       return;
     }
     const b = e.target.closest("button[data-scr-del]"); if (!b) return;
     const i = +b.dataset.scrDel;
     if (i >= 0) { S.screener.splice(i, 1); save(); renderScreener(); }
+  });
+  $("scrTab").addEventListener("change", e => {
+    const inp = e.target.closest("[data-scr-edit]");
+    if (!inp) return;
+    const i = +inp.dataset.scrEdit;
+    const field = inp.dataset.scrField;
+    if (!(i >= 0) || !S.screener[i] || !field) return;
+    let v = inp.value;
+    if (field !== "name") v = parseFloat(v);
+    if (field === "name") S.screener[i].name = String(inp.value || "");
+    else if (field === "buyIn") { S.screener[i].buyIn = +v || 0; }
+    else if (field === "entryCap") { S.screener[i].entryCap = parseInt(v, 10) || 1; }
+    if (S.screener[i].buyIn && S.screener[i].fieldCap && S.screener[i].prizePool) {
+      S.screener[i].rake = 1 - (+S.screener[i].prizePool / (+S.screener[i].buyIn * +S.screener[i].fieldCap));
+    }
+    save();
+    renderScreener();
   });
 
   // ---- standings ----
