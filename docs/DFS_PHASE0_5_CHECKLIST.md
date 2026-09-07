@@ -15,7 +15,7 @@ Companion: `docs/DFS_LABS_AUDIT_2026-09-06.md` · `docs/DFS_PHASE0_5_WORK_ORDER.
 | T5 · Never-empty projections (DFS-002) — modelled baseline tier | Open (after Wed; due Sat 2026-09-12) |
 | T6 · Week object + receipts + Toto surface (DFS-007) | In PR: https://github.com/JKapcar/data-dawgs/pull/77 |
 | T7 · Hide the cumulative-ownership frontier (DFS-004) | In PR: https://github.com/JKapcar/data-dawgs/pull/73 |
-| T8 · Docs (DFS-008) | In PR: this PR (`dfs-phase0.5-t8-docs`) |
+| T8 · Docs (DFS-008) | In PR: https://github.com/JKapcar/data-dawgs/pull/79 |
 | T9 · toto health chip (DFS-009) | In PR: https://github.com/JKapcar/data-dawgs/pull/78 |
 
 ## Invariants
