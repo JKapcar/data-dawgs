@@ -147,11 +147,43 @@
     });
   }
 
+
+  /**
+   * After a standings save: if S.weeks has a locked week whose contests include
+   * this contestKey, fill realized by lineup hash (I3 aggregates only).
+   * realized stays null until a match; once null, null stays null unless matched.
+   */
+  function applyWeekRealized(weeksMap, record) {
+    if (!weeksMap || !record) return { updated: false, weeks: weeksMap };
+    var Week = null;
+    if (typeof globalThis !== "undefined" && globalThis.DDFSWeek) Week = globalThis.DDFSWeek;
+    if (!Week && typeof require === "function") {
+      try { Week = require("./dfs-week.js"); } catch (e) {}
+    }
+    if (!Week || typeof Week.fillRealized !== "function") {
+      return { updated: false, weeks: weeksMap, reason: "DDFSWeek missing" };
+    }
+    var cid = String(record.contestKey || record.contestId || "");
+    var updated = false;
+    Object.keys(weeksMap).forEach(function (k) {
+      var w = weeksMap[k];
+      if (!w || !w.contests) return;
+      var match = w.contests.some(function (c) { return String(c.id) === cid; });
+      if (!match) return;
+      // Only fill when realized is still null (null stays null otherwise).
+      if (w.realized != null) return;
+      Week.fillRealized(w, record);
+      if (w.realized != null) updated = true;
+    });
+    return { updated: updated, weeks: weeksMap };
+  }
+
   return {
     DB_NAME: DB_NAME,
     parseStandingsCsv: parseStandingsCsv,
     saveLocal: saveLocal,
     listLocal: listLocal,
-    openDb: openDb
+    openDb: openDb,
+    applyWeekRealized: applyWeekRealized
   };
 });

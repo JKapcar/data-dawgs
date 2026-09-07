@@ -395,7 +395,13 @@
     "url": "https://datadawgs216.com/data/forecast-toto.json",
     "bytes": 10312,
     "as_of": "2026-09-12",
-    "sha256": "c4c2499ef3f0565dcdb60bf24e4f19fdca81d91398da3c39f5e7e1cc6694f1d5"
+    "sha256": "c4c2499ef3f0565dcdb60bf24e4f19fdca81d91398da3c39f5e7e1cc6694f1d5",
+  "path": "/data/dfs-weeks.json",
+    "url": "https://datadawgs216.com/data/dfs-weeks.json",
+    "bytes": 1511,
+    "as_of": "2026-09-07",
+    "sha256": "bc01d4909045bcbaf065125a695d6a47016d3b3dd31d71405683db95e28a1703",
+    "note": "EMPTY BY DESIGN. Week objects are locked on-device (dd-dfs-v1.weeks) before kickoff with lockedSha256 over canonical JSON and realized:null. Monday standings ingest fills realized by lineup hash when contest ids match. Published rows are derived aggregates only (I3) — lineup hashes, never player lists, projections, or ownership. PoC C1–C5 already hashed; this enables the week-object path on Receipts."
    },
    {
     "path": "/data/leagues/pepperoninipples.json",

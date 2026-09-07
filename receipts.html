@@ -847,22 +847,22 @@ tr.sv-used td{opacity:.42}
 #sheetClassic .s8-stat,#sheetCfbRec .s8-stat,#sheetAudit .s8-stat{border:1px solid var(--border);background:var(--surface-1);border-radius:10px;padding:13px}
 #sheetClassic .s8-stat b,#sheetCfbRec .s8-stat b,#sheetAudit .s8-stat b{display:block;font-size:25px;line-height:1;color:var(--ink-1)}
 #sheetClassic .s8-stat span,#sheetCfbRec .s8-stat span,#sheetAudit .s8-stat span{display:block;color:var(--ink-3);font:650 11px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;margin-top:6px;text-transform:uppercase}
-#sheetClassic .s8-wrap,#sheetSurvRec .s8-wrap,#sheetAudit .s8-wrap{overflow:auto;border:1px solid var(--border);border-radius:11px;background:var(--surface-1)}
-#sheetClassic .s8-tbl,#sheetSurvRec .s8-tbl,#sheetAudit .s8-tbl{width:100%;border-collapse:collapse;min-width:min(620px,100%);font-variant-numeric:tabular-nums}
-#sheetClassic .s8-tbl th,#sheetSurvRec .s8-tbl th,#sheetAudit .s8-tbl th{position:sticky;top:0;background:var(--surface-1);color:var(--ink-3);font:750 10.5px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.04em;padding:10px;text-align:right;border-bottom:1px solid var(--grid)}
-#sheetClassic .s8-tbl th:first-child,#sheetAudit .s8-tbl th:first-child,#sheetSurvRec .s8-tbl th:first-child,#sheetClassic .s8-tbl td:first-child,#sheetAudit .s8-tbl td:first-child,#sheetSurvRec .s8-tbl td:first-child{text-align:left}
-#sheetClassic .s8-tbl td,#sheetSurvRec .s8-tbl td,#sheetAudit .s8-tbl td{padding:11px 10px;border-bottom:1px solid var(--grid);text-align:right}
-#sheetClassic .s8-tbl tr:last-child td,#sheetSurvRec .s8-tbl tr:last-child td,#sheetAudit .s8-tbl tr:last-child td{border-bottom:0}
+#sheetClassic .s8-wrap,#sheetSurvRec .s8-wrap,#sheetDfsWeeks .s8-wrap,#sheetAudit .s8-wrap{overflow:auto;border:1px solid var(--border);border-radius:11px;background:var(--surface-1)}
+#sheetClassic .s8-tbl,#sheetSurvRec .s8-tbl,#sheetDfsWeeks .s8-tbl,#sheetAudit .s8-tbl{width:100%;border-collapse:collapse;min-width:min(620px,100%);font-variant-numeric:tabular-nums}
+#sheetClassic .s8-tbl th,#sheetSurvRec .s8-tbl th,#sheetDfsWeeks .s8-tbl th,#sheetAudit .s8-tbl th{position:sticky;top:0;background:var(--surface-1);color:var(--ink-3);font:750 10.5px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.04em;padding:10px;text-align:right;border-bottom:1px solid var(--grid)}
+#sheetClassic .s8-tbl th:first-child,#sheetAudit .s8-tbl th:first-child,#sheetSurvRec .s8-tbl th:first-child,#sheetDfsWeeks .s8-tbl th:first-child,#sheetClassic .s8-tbl td:first-child,#sheetAudit .s8-tbl td:first-child,#sheetSurvRec .s8-tbl td:first-child,#sheetDfsWeeks .s8-tbl td:first-child{text-align:left}
+#sheetClassic .s8-tbl td,#sheetSurvRec .s8-tbl td,#sheetDfsWeeks .s8-tbl td,#sheetAudit .s8-tbl td{padding:11px 10px;border-bottom:1px solid var(--grid);text-align:right}
+#sheetClassic .s8-tbl tr:last-child td,#sheetSurvRec .s8-tbl tr:last-child td,#sheetDfsWeeks .s8-tbl tr:last-child td,#sheetAudit .s8-tbl tr:last-child td{border-bottom:0}
 #sheetClassic .s8-tbl .game{font-weight:800}
 #sheetClassic .s8-tbl .date{display:block;color:var(--ink-3);font:11px ui-monospace,SFMono-Regular,Consolas,monospace;margin-top:2px}
 #sheetClassic .s8-load,#sheetCfbRec .s8-load,#sheetAudit .s8-load{padding:20px;color:var(--ink-3)}
-#sheetClassic .s8-err,#sheetCfbRec .s8-err,#sheetSurvRec .s8-err,#sheetAudit .s8-err{padding:20px;color:var(--bad)}
+#sheetClassic .s8-err,#sheetCfbRec .s8-err,#sheetSurvRec .s8-err,#sheetDfsWeeks .s8-err,#sheetAudit .s8-err{padding:20px;color:var(--bad)}
 #sheetClassic .s8-params,#sheetCfbRec .s8-terms{margin:16px 0 0;padding:0;list-style:none;display:grid;gap:7px}
 #sheetClassic .s8-params li,#sheetCfbRec .s8-terms li{color:var(--ink-3);font-size:12.5px;line-height:1.55;padding-left:15px;position:relative}
 #sheetClassic .s8-params li::before,#sheetCfbRec .s8-terms li::before{content:"\203A";position:absolute;left:0;color:var(--accent);font-weight:800}
-#sheetCfbRec .s8-zero,#sheetSurvRec .s8-zero{border:1px solid var(--border);border-left:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 5%,var(--surface-1));border-radius:11px;padding:20px;margin:18px 0}
-#sheetCfbRec .s8-zero b.s8-n,#sheetSurvRec .s8-zero b.s8-n{display:block;font-size:52px;line-height:1;color:var(--ink-1);font-variant-numeric:tabular-nums}
-#sheetCfbRec .s8-zero .s8-lbl,#sheetSurvRec .s8-zero .s8-lbl{display:block;color:var(--ink-3);font:750 11px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.05em;margin-top:8px}
+#sheetCfbRec .s8-zero,#sheetSurvRec .s8-zero,#sheetDfsWeeks .s8-zero{border:1px solid var(--border);border-left:3px solid var(--accent);background:color-mix(in srgb,var(--accent) 5%,var(--surface-1));border-radius:11px;padding:20px;margin:18px 0}
+#sheetCfbRec .s8-zero b.s8-n,#sheetSurvRec .s8-zero b.s8-n,#sheetDfsWeeks .s8-zero b.s8-n{display:block;font-size:52px;line-height:1;color:var(--ink-1);font-variant-numeric:tabular-nums}
+#sheetCfbRec .s8-zero .s8-lbl,#sheetSurvRec .s8-zero .s8-lbl,#sheetDfsWeeks .s8-zero .s8-lbl{display:block;color:var(--ink-3);font:750 11px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.05em;margin-top:8px}
 #sheetAudit .s8-verdict{display:inline-block;font:800 10.5px/1 ui-monospace,SFMono-Regular,Consolas,monospace;text-transform:uppercase;letter-spacing:.05em;border-radius:5px;padding:4px 7px;border:1px solid var(--border);color:var(--ink-2)}
 #sheetAudit .s8-verdict.s8-stands{color:var(--good,var(--accent));border-color:color-mix(in srgb,var(--good,var(--accent)) 45%,transparent)}
 #sheetAudit .s8-verdict.s8-outside{color:var(--ink-3)}
@@ -871,7 +871,7 @@ tr.sv-used td{opacity:.42}
 #sheetAudit .s8-neither b{color:var(--ink-1)}
 #sheetAudit .s8-owed{display:block;color:var(--ink-3);font-size:11.5px;line-height:1.5;margin-top:5px}
 @media(max-width:760px){#sheetClassic .s8-sum,#sheetAudit .s8-sum{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:430px){#sheetClassic .s8-sum,#sheetAudit .s8-sum{grid-template-columns:1fr 1fr}#sheetCfbRec .s8-zero b.s8-n,#sheetSurvRec .s8-zero b.s8-n{font-size:42px}}
+@media(max-width:430px){#sheetClassic .s8-sum,#sheetAudit .s8-sum{grid-template-columns:1fr 1fr}#sheetCfbRec .s8-zero b.s8-n,#sheetSurvRec .s8-zero b.s8-n,#sheetDfsWeeks .s8-zero b.s8-n{font-size:42px}}
 .nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}.grpmenu a[class*="kennel-"]{font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;font-weight:800;letter-spacing:.01em}.grpmenu a.kennel-scoreboard{color:#8ed6ff}.grpmenu a.kennel-nfeloml{color:#c9b3ff}.grpmenu a.kennel-qb{color:#ffc06a}.grpmenu a.kennel-wepa{color:#7ce7b0}.grpmenu a.kennel-srs{color:#ff9bb4}.grpmenu a.kennel-hfa{color:#ffe082}.grpmenu a.kennel-units{color:#8ee8e3}.grpmenu a.kennel-receipts{color:#f2c4ff}.grpmenu a.kennel-regimes{color:#a8d88c}</style>
 </head>
 <body>
@@ -2620,6 +2620,23 @@ Locked <b>2026-08-06</b> &middot; <b id="rcN">&mdash;</b> calls &middot;
   </div>
 </div>
 
+
+<div id="sheetDfsWeeks">
+  <div class="card">
+    <h2>DFS week objects &mdash; locked expectations, hashed lineups</h2>
+    <p class="muted" style="margin-top:0">Each row is a week locked <em>before kickoff</em> with
+    <code>lockedSha256</code> over canonical JSON and <code>realized:null</code> until Monday
+    standings ingest. Lineups are salt-less SHA-256 hashes of sorted DK ids + CPT &mdash;
+    never player lists, projections, or ownership (I3). <b>PoC C1&ndash;C5 already hashed;
+    this enables the week-object path.</b></p>
+    <div class="s8-zero" id="dfsWZero"><b class="s8-n" id="dfsWCount">&mdash;</b><span class="s8-lbl" id="dfsWLbl">weeks locked</span><p class="muted" id="dfsWNote" style="margin:12px 0 0">Loading the DFS week-object ledger&hellip;</p></div>
+    <div class="s8-wrap" id="dfsWWrap" style="display:none;margin-top:16px"><table class="s8-tbl" id="dfsWTbl"></table></div>
+    <p class="muted">Machine read:
+    <a href="/data/dfs-weeks.json"><code>/data/dfs-weeks.json</code></a>.
+    Built on-device by <code>work/dfs-week.js</code>; Kap publishes locked weeks later.</p>
+  </div>
+</div>
+
 <div id="sheetCalls">
   <div class="card">
     <h2>The locked call sheet</h2>
@@ -3538,6 +3555,39 @@ async function loadSurvivorReceipts(){
         }).join("");
   }catch(err){srvLoaded=false;mdlEl("srvNote").className="s8-err";mdlEl("srvNote").textContent="Survivor receipt ledger unavailable: "+err.message}
 }
+
+let dfsWLoaded=false;
+async function loadDfsWeeks(){
+  if(dfsWLoaded)return;dfsWLoaded=true;
+  try{
+    const env=await mdlJson("/data/dfs-weeks.json");
+    const rows=env.data;
+    if(!Array.isArray(rows))throw new Error("the DFS week-object ledger is not an array");
+    const c=env.counts||{};
+    mdlEl("dfsWCount").textContent=String(rows.length);
+    mdlEl("dfsWLbl").textContent=rows.length===1?"week locked":"weeks locked";
+    mdlEl("dfsWNote").textContent = rows.length
+      ? `${c.with_realized||0} with realized · ${c.pending!=null?c.pending:(rows.filter(r=>r.realized==null).length)} pending Monday ingest`
+      : (env.note || "Nothing published yet. Lock a week on dfs.html before kickoff; Kap publishes later.");
+    if(!rows.length) return;
+    mdlEl("dfsWWrap").style.display="";
+    mdlEl("dfsWTbl").innerHTML =
+      `<tr><th>Week</th><th>Lock</th><th>Contests</th><th>Lineups</th><th>Exp cash</th><th>Realized</th><th>sha</th></tr>`
+      + rows.slice().sort((a,b)=>(a.week||0)-(b.week||0)).map(r=>{
+          const real = r.realized==null
+            ? '<span style="color:var(--ink-3)">null</span>'
+            : (r.realized.cashRate!=null?((r.realized.cashRate*100).toFixed(1)+"% cash"):"filled");
+          const exp = r.expCash!=null?((r.expCash*100).toFixed(1)+"%"):"&mdash;";
+          return `<tr><td>${r.season||""} W${r.week}</td>`
+            + `<td>${mdlEsc(String(r.lockAt||"").slice(0,16))}</td>`
+            + `<td>${(r.contests&&r.contests.length)||0}</td>`
+            + `<td>${(r.lineups&&r.lineups.length)||0}</td>`
+            + `<td>${exp}</td>`
+            + `<td>${real}</td>`
+            + `<td><code>${mdlEsc(String(r.lockedSha256||"").slice(0,8))}</code></td></tr>`;
+        }).join("");
+  }catch(err){dfsWLoaded=false;mdlEl("dfsWNote").className="s8-err";mdlEl("dfsWNote").textContent="DFS week ledger unavailable: "+err.message}
+}
 let invLoaded=false;
 /* Stage RI. ONE fetch of ~1 KB. The counts are derived at BUILD time by
    tools/build-data.js and gated by tools/validate-data.js against the source payloads --
@@ -3640,6 +3690,7 @@ DDSheets({key:"receipts",mount:"#sheets",
           {id:"classic",label:"538 Classic",panel:"#sheetClassic"},
           {id:"cfbrec",label:"CFB Receipts",panel:"#sheetCfbRec"},
           {id:"survrec",label:"Survivor Receipts",panel:"#sheetSurvRec"},
+          {id:"dfsweeks",label:"DFS Weeks",panel:"#sheetDfsWeeks"},
           {id:"calls",label:"Calls",panel:"#sheetCalls"},
           {id:"provenance",label:"Provenance",panel:"#sheetProv"},
           {id:"audit",label:"Tier Audit",panel:"#sheetAudit"},
@@ -3647,7 +3698,7 @@ DDSheets({key:"receipts",mount:"#sheets",
   onShow(id){ if(id==="inventory") loadInventory();
     if(id==="scoreboard") drawCal(resolved()); if(id==="models") loadModels(); if(id==="provenance") loadProvenance();
     if(id==="classic") loadClassic(); if(id==="cfbrec") loadCfbReceipts();
-    if(id==="survrec") loadSurvivorReceipts(); if(id==="audit") loadAudit(); }});
+    if(id==="survrec") loadSurvivorReceipts(); if(id==="dfsweeks") loadDfsWeeks(); if(id==="audit") loadAudit(); }});
 const prev=window.onThemeChange;
 window.onThemeChange=function(){ if(typeof prev==="function") prev(); drawCal(resolved()); };
 let rz; addEventListener("resize",()=>{clearTimeout(rz); rz=setTimeout(()=>drawCal(resolved()),140);});
@@ -3676,8 +3727,8 @@ window.DD_BOTCTX = {
 - THE CFB RECEIPT LEDGER IS EMPTY AND THAT IS THE CORRECT STATE, not a loading failure. Back-filling a finished season would be inventing a receipt nobody wrote.
 - The locked call sheet was fixed on 2026-08-06: Call is nfelo's home win probability, Benchmark is the devigged closing price where a line existed at lock and BLANK where it did not. Grading is idempotent — a final is never re-scored, an unfinished game is skipped rather than guessed, a tie stores no straight-up result.`,
   ctx: () => `THE RECEIPTS PAGE. Every number on it is read from the published payloads at page load, so nothing here can drift from the files. Locked 2026-08-06 for the NFL call sheet; 538 Classic locked 2026-08-08; DDPR pre-registered 2026-08-10; provenance captured 2026-08-07 and moved here from The DawgHouse 2026-08-09. Tier: Pup.
-THE SHEETS: registered-forecast counts by ledger (a count, not a grade) · grading, which pulls finals from ESPN's public scoreboard client-side · calibration and week-by-week, which fill in as the season resolves · the locked 272-game call sheet · the model scoreboard with its logit-correlation table between every pair of registered lines · upstream provenance, where integration mode follows the verified licence · 538 Classic beliefs · the empty CFB receipt contract · and the tier audit, which is counted separately on purpose because a verdict about our own tool is not the same kind of claim as a game forecast.
-MACHINE READS: /data/model-board.json, /data/model-receipts.json, /data/ddpr-nfl.json, /data/538-classic.json, /data/cfb-model-receipts.json, /data/upstream-models.json, and dd_model_scoreboard over MCP.
+THE SHEETS: registered-forecast counts by ledger (a count, not a grade) · grading, which pulls finals from ESPN's public scoreboard client-side · calibration and week-by-week, which fill in as the season resolves · the locked 272-game call sheet · the model scoreboard with its logit-correlation table between every pair of registered lines · upstream provenance, where integration mode follows the verified licence · 538 Classic beliefs · the empty CFB receipt contract · DFS week objects (lockedSha256; realized:null until Monday ingest; PoC C1–C5 already hashed) · and the tier audit, which is counted separately on purpose because a verdict about our own tool is not the same kind of claim as a game forecast.
+MACHINE READS: /data/model-board.json, /data/model-receipts.json, /data/ddpr-nfl.json, /data/538-classic.json, /data/cfb-model-receipts.json, /data/dfs-weeks.json, /data/upstream-models.json, and dd_model_scoreboard over MCP.
 
 ` + (window.DDBotScan ? window.DDBotScan(5200) : "The page reader could not run, so nothing on the page can be read right now.")
 };
