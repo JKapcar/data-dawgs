@@ -2371,6 +2371,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     else {msg("leagueAccessMsg","");$("leaguePassword").focus();}
   }
   function paintLeagueDirectory(results,total){
+    results=results.filter(function(l){return ["main","bozo-boyz-royale"].includes(l.id);});total=results.length;
     directoryLeagues=results;var sel=$("leagueDirectory");sel.replaceChildren();selectedLeague=null;$("leaguePasswordWrap").hidden=true;
     var first=document.createElement("option");first.value="";first.textContent=results.length?("Choose a league · "+results.length+(total>results.length?" of "+total:" shown")):"No matching leagues";sel.appendChild(first);
     results.forEach(function(item,i){var o=document.createElement("option");o.value=String(i);o.textContent=item.name+" · "+item.size+" member"+(item.size===1?"":"s")+(item.already?" · joined":"");sel.appendChild(o);});

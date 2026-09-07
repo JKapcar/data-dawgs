@@ -3642,7 +3642,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <!-- ---- pick a league before the long-form explainer ---- -->
   <section class="pb-act pb-leagues-first" id="pbBill">
     <p class="pb-kicker">Choose your league</p>
-    <h2 class="pb-h2">Every league on the card</h2>
+    <h2 class="pb-h2">Your two leagues</h2>
     <p class="pb-sub"><span class="tm" id="hubCount"></span> running. Open one to see its board;
       the boards are public whether or not you are in them.</p>
     <div class="hub" id="hubList"></div>
@@ -3692,6 +3692,12 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="err" id="nlErr"></div>
   </div>
   <p class="note" id="hubNote"></p>
+  </section>
+  <section class="pb-act" id="demoSection" hidden aria-labelledby="demoHeading">
+    <p class="pb-kicker">Example only · simulated data</p>
+    <h2 class="pb-h2" id="demoHeading">See Bozo with data populated</h2>
+    <p class="pb-sub">Explore an example board with picks, results and charts filled in. These are simulated results, not a league to join.</p>
+    <div class="hub" id="demoList"></div>
   </section>
 
   <p class="pb-lede">One favorite each. One big parlay.<b>Whoever busts it worst wears it.</b></p>
@@ -4148,6 +4154,7 @@ const LEVER_ICON = {
 
 
 let S = {};                 // live state for the SELECTED league, from RTDB
+const isPlayableLeague = l => ['main','bozo-boyz-royale'].includes(l.id);
 let LEAGUES = [];           // [{id,name,manager,size,members,week,status}]
 let LID = 'main';           // which league we're looking at (?l=)
 let joinGateStatusLid = null; // manager-only password/visibility status, loaded once per page
@@ -4766,6 +4773,7 @@ function chooseJoinLeague(item){
   }
 }
 function paintJoinDirectory(results,total){
+  results=results.filter(isPlayableLeague); total=results.length;
   JOIN_DIRECTORY=results; joinSelected=null;
   const sel=document.getElementById('jlDirectory'); sel.innerHTML='';
   const first=document.createElement('option'); first.value='';
@@ -4835,12 +4843,12 @@ function paintHub(){
   if(!onHub()){ card.style.display='none'; return; }
   card.style.display='';
   document.getElementById('hubCount').textContent =
-    LEAGUES.length + (LEAGUES.length===1 ? ' league' : ' leagues');
+    LEAGUES.filter(isPlayableLeague).length + ' leagues';
   // ⚠️ A div, not an <a> — the stub carries buttons and an input, and nesting
   // interactive controls inside an anchor is both invalid and unusable.
   // ⚠️ The data-* contract (open/rename/del/title/rnerr) is what the delegated click
   // handler below reads. Restyling the stub must never drop one of these.
-  document.getElementById('hubList').innerHTML = LEAGUES.map((l,i)=>{
+  document.getElementById('hubList').innerHTML = LEAGUES.filter(isPlayableLeague).map((l,i)=>{
     const mine = ME && (l.members||[]).includes(ME.name);
     const chip = l.status==='open' ? 'open' : l.status;
     const st = l.settings || {};
@@ -4871,6 +4879,14 @@ function paintHub(){
     </div>`;
   }).join('') || '<p class="pend">No leagues yet.</p>';
 
+  const demos = LEAGUES.filter(l => l.settings?.synthetic === true);
+  document.getElementById('demoSection').hidden = !demos.length;
+  document.getElementById('demoList').innerHTML = demos.map(l =>
+    `<article class="hcard demo"><span class="chip demo">EXAMPLE ONLY</span>
+      <h3>Populated example board</h3>
+      <p class="meta">Simulated picks, prices and results. Counts toward no real league.</p>
+      <a class="btn sm" href="bozo.html?l=${encodeURIComponent(l.id)}">Explore the example →</a></article>`
+  ).join('');
   paintJoinLeague();
 
   // Site admin only: spinning up a whole new group. Lives on the hub, because that is
@@ -5219,7 +5235,8 @@ document.getElementById('hubList').addEventListener('click', e=>{
 function paintLeagueBar(){
   const bar  = document.getElementById('lgbar');
   const sel  = document.getElementById('lgPick');
-  const one  = LEAGUES.length <= 1;
+  const playable = LEAGUES.filter(isPlayableLeague);
+  const one  = playable.length <= 1;
   const lg   = league();
 
   const alive = isRoyale() ? royaleAliveNames().length : null;
@@ -5238,7 +5255,8 @@ function paintLeagueBar(){
   nm.textContent = one ? (lg ? lg.name : '') : '';
   bar.querySelector('label[for="lgPick"]').style.display = one ? 'none' : '';
   if(!one)
-    sel.innerHTML = LEAGUES.map(l=>`<option value="${esc(l.id)}"${l.id===LID?' selected':''}>${esc(l.name)}</option>`).join('');
+    sel.innerHTML = (isDemo() ? [{id:"",name:"Example only — switch to a real league"}, ...playable] : playable).map(l=>`<option value="${esc(l.id)}"${l.id===LID || (isDemo() && !l.id)?' selected':''}${!l.id?' disabled':''}>${esc(l.name)}</option>`).join('');
+  document.getElementById('lgDemo').textContent = 'Example only · simulated data';
   document.getElementById('lgDemo').style.display = isDemo() ? '' : 'none';
 }
 document.getElementById('lgPick').onchange = e => {
@@ -6684,8 +6702,7 @@ function paintTicker(players, t, mx, holder){
 const BOZO_SYS = `RIGHT NOW you are on Bozo, a weekly group betting game inside the Data Dawgs site.
 DATA FRESHNESS: If CONNECTION is loading, delayed, offline or failed, the displayed state is not verified current. Disclose that limit; never describe a retained snapshot as a live confirmation. A connected read does not independently certify the freshness of upstream records.
 THE GAME: each member submits ONE leg. Every leg goes on ONE real parlay at DraftKings, funded by last week's bozo. Whoever busts it worst wears it and funds the next ticket.
-- LEAGUE VISIBILITY: Bozo Boyz is listed for everyone; there is no longer a public Royale demo.
-  Bozo Royale is still a live format any league can be created in — the demo league that showcased it was deleted. A signed-in person additionally sees only leagues they belong to or manage. The league picker beside the four page tabs uses that same filtered list.
+- LEAGUE PICKER: Bozo Boyz and Bozo Boyz Royale are the two playable choices. Simulated demo boards appear separately under "See Bozo with data populated" as examples, not leagues to join.
 - LEAGUE MEMBERSHIP: accounts authenticate people. A manager sets one shared league password under League Settings; after signing in, a person uses Join Existing League on the Bozo hub (or the duplicate control under Your Dawgs), chooses from up to 20 league names, and enters the password to add their own authenticated account. Never ask for or repeat the password. Per-person league invites, manager pre-adds and reusable join links are retired.
 - Favorites only, inside the league's price band. No exact duplicate legs. The ticket LOCKS the moment the last leg lands; that moment is the close.
 - Only legs that LOST are eligible to be the bozo. Nobody who cashed can wear it, no matter how bad the price was.
