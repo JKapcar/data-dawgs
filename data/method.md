@@ -100,3 +100,12 @@ existing claims and completed grades cannot be rewritten. The weekly public reco
 is a calibration record, not one entry's season with its used teams tracked automatically.
 Routine unchanged-schedule weeks require no planned operator action; changed schedules,
 source failures and failed validation still need attention.
+
+## Amendment — sourced ownership model, 2026-09-07
+
+At Kap's request, the 2026 Week 1 public model now uses an explicit ETR/Splash
+projection + ESPN public-pick blend. This is a declared model revision, not a
+reader-local override or observed ownership in the target pool. Equal weighting
+is uncalibrated; missing ETR teams retain their normalized ESPN mass. Later weeks
+retain the chalk fallback. Existing receipts remain unchanged; new captures include
+the model provenance. See [sources, scope and formula](survivor-ownership-method.md).

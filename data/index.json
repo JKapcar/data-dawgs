@@ -41,9 +41,9 @@
    {
     "path": "/data/survivor.json",
     "url": "https://datadawgs216.com/data/survivor.json",
-    "bytes": 71151,
+    "bytes": 75138,
     "as_of": "2026-09-07",
-    "sha256": "f4bcec05d53fb8c235be0a4b0b02727f97cc75f322313f7411904681e7b6eb6a",
+    "sha256": "e95f987a989744e17ba700d2a32952d429fff353602187dead232e6084af662a",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"market\" = derived from a real line, \"model\" = Elo-only. Ownership is modelled, not observed."
    },
    {
@@ -343,6 +343,14 @@
     "note": "MODELLED, DESCRIPTIVE SEASON SNAPSHOT. EPA/WPA play values and opponent adjustments are produced upstream by cfbfastR/SportsDataverse. Data Dawgs selects and labels fields but does not refit or independently validate those models here. This is not a forecast, betting line, poll or Data Dawgs power rating. Early-season samples can be very small; use games and plays with every comparison."
    },
    {
+    "path": "/data/survivor-ownership-inputs.json",
+    "url": "https://datadawgs216.com/data/survivor-ownership-inputs.json",
+    "bytes": 3256,
+    "as_of": "2026-09-07",
+    "sha256": "9a64298455e11670796138fc35e4fbd9992f27313a29d988da0e8979f85d4796",
+    "note": "Percent units. ESPN is an observed pre-lock public pick snapshot, not final ownership. ETR is projected Splash ownership. Exact observation times and sample sizes unavailable; as_of is ingestion date. No account identifiers retained."
+   },
+   {
     "path": "/data/leagues/pepperoninipples.json",
     "url": "https://datadawgs216.com/data/leagues/pepperoninipples.json",
     "bytes": 2205,
@@ -376,8 +384,8 @@
    {
     "path": "/data/method.md",
     "url": "https://datadawgs216.com/data/method.md",
-    "bytes": 5824,
-    "sha256": "fdf26c798e05777ea63ba0dcc79a9258717ef9f7924a9705d5d4fd0e16cae98f",
+    "bytes": 6368,
+    "sha256": "3a4770841a4712c2c174d1d04693cd075ad9fae5469e1370860a72e14a4f239f",
     "as_of": "2026-09-04"
    },
    {
@@ -428,6 +436,13 @@
     "bytes": 7716,
     "sha256": "a029c512c9cc1e27f1dc8665f8ed81b3e625d6633741c33b447c4b2235cfc614",
     "as_of": "2026-08-28"
+   },
+   {
+    "path": "/data/survivor-ownership-method.md",
+    "url": "https://datadawgs216.com/data/survivor-ownership-method.md",
+    "bytes": 3663,
+    "sha256": "40075b764e5704d12df6d7580049ca305fedb7c8d795d74b536060a446795e4a",
+    "as_of": "2026-09-07"
    }
   ]
  }

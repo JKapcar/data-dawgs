@@ -458,7 +458,7 @@ write('survivor.json', {
     p: 'blended home win probability actually used',
     src: 'market | model',
   },
-  data: { meta: SV.meta, elo: SV.elo, teams: SV.teams, games: SV.games },
+  data: { meta: SV.meta, elo: SV.elo, teams: SV.teams, games: SV.games, ownership: SV.ownership || {} },
 });
 
 /* ---------- epa-teams.json ---------- */

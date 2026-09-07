@@ -41,6 +41,7 @@
  * ============================================================================
  */
 import fs from "fs";
+import { buildOwnership } from "./survivor-ownership-model.mjs";
 import path from "path";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -231,7 +232,8 @@ for (const g of out) {
   g.p = Math.round(ncdf((BLEND * mkm + (1 - BLEND) * g.mm) / meta.sd) * 10000) / 10000;
 }
 
-const SV = { meta, elo, teams: OLD.teams, games: out };
+const ownership = buildOwnership(readJSON("data/survivor-ownership-inputs.json"), out, meta.season);
+const SV = { meta, elo, teams: OLD.teams, games: out, ownership };
 
 /* ---- report and guard ------------------------------------------------------ */
 const oldMarket = OLD.games.filter(g => g.mk != null).length;
@@ -286,6 +288,7 @@ for (const t of Object.keys(elo)) {
   if (OLD.elo[t] === undefined) diffs.push(`NEW TEAM ${t}`);
   else if (Math.abs(OLD.elo[t] - elo[t]) > 0.05) diffs.push(`elo ${t}: ${OLD.elo[t]} -> ${elo[t]}`);
 }
+if (JSON.stringify(OLD.ownership) !== JSON.stringify(ownership)) diffs.push("ownership model updated");
 console.log(diffs.length
   ? `\n${diffs.length} field(s) differ from the page  [` + Object.entries(byField).map(([k, v]) => `${k}:${v}`).join(" ") + `]`
   : `\nno differences — the page matches the inputs`);

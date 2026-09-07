@@ -261,6 +261,7 @@ if (CMD === "capture") {
 
     objective: cfg.objective,
     ownership_source: rank.popReal ? "posted" : "modelled",
+    ownership_model: !rank.popReal && D.ownership?.[String(week)] ? D.ownership[String(week)] : null,
     ownership_adjustment: "alive-count projection; pick mix assumed independent of survival",
     config: {
       entries: cfg.entries, lives: cfg.lives, reuse: cfg.reuse,
