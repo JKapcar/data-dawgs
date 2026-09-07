@@ -707,6 +707,10 @@ button.btn.sm{font-size:12.5px;padding:7px 12px}
 :root[data-theme="light"] .toggle.on{color:#fff}
 
 .prog{height:6px;background:var(--grid);border-radius:4px;overflow:hidden;margin:12px 0 0}
+#rarityCard>summary,#legacyOwnFrontierCard>summary{cursor:pointer;list-style:none;margin:0 0 12px;font-size:13px;line-height:1.55;color:var(--ink-1);font-weight:650}
+#rarityCard>summary::-webkit-details-marker,#legacyOwnFrontierCard>summary::-webkit-details-marker{display:none}
+#rarityCard>summary::before,#legacyOwnFrontierCard>summary::before{content:"▸ ";color:var(--ink-3);font-weight:700}
+#rarityCard[open]>summary::before,#legacyOwnFrontierCard[open]>summary::before{content:"▾ "}
 .rlegend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:14px 0 2px;font-size:12px;color:var(--ink-2)}
 .rlegend span{display:inline-flex;align-items:center;gap:7px}
 .rlegend i{width:14px;height:0;border-top:2px solid var(--ink-2);flex:none}
@@ -2965,6 +2969,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <h3 style="margin-top:18px">Game exposure</h3><div class="bars" id="expGames"></div></div>
   </div>
   <div class="card"><h3>Salary used</h3><div id="expSal"></div></div>
+  <details class="card" id="legacyOwnFrontierCard">
+    <summary>Projection vs cumulative ownership — convex hull, superseded by Bible §3.3 (Phase 2). Not a selection tool.</summary>
+    <p class="note">The old cumulative-ownership frontier sweep has been retired from the Exposure sheet. Selection uses dupe-adjusted EV / literal Top-10 (Bible §3.4 / I4). The Lineup lab above explores contest fit; it is not that hull.</p>
+  </details>
   <div class="emptystate" id="expEmpty"><div class="big">No lineups yet</div><p><a href="#solver" data-goto="solver">Build lineups in Solver</a> to see how often each player appears across your lineup pool.</p></div>
 </section>
 
@@ -7922,6 +7930,11 @@ ${S.demo ? "- ⚠️ THE LOADED SLATE IS THE DEMO SLATE. Every player name, sala
         L.push(bs ? `⚠️ Bootstrapped 95% band on that ROI: ${(bs.lo * 100).toFixed(0)}% to ${(bs.hi * 100).toFixed(0)}%, resampling contests not entries. LEAD WITH THIS BAND, never with the point estimate.`
                   : `⚠️ Fewer than five contests logged — there is no confidence band and you must not imply the ROI figure means anything.`);
       } else L.push("Nothing is logged in the bankroll tracker.");
+      if (FRONT && FRONT.points && FRONT.points.length > 1) {
+        const a = FRONT.points[0], z = FRONT.points[FRONT.points.length - 1];
+        L.push(`PROJECTION-VS-RARITY (superseded; not used for selection): traced with ${FRONT.solves} exact solves. ${FRONT.points.length} vertices, from ${a.own.toFixed(1)}% cumulative ownership at ${a.proj.toFixed(1)} projected points to ${z.own.toFixed(1)}% at ${z.proj.toFixed(1)}.`);
+        L.push(`⚠️ THAT IS THE CONVEX HULL OF THE FRONTIER, NOT THE FRONTIER — superseded; not used for selection. Say "hull" or "at least this good", never "the best lineup at that ownership".`);
+      } else L.push("PROJECTION-VS-RARITY / FRONT: superseded; not used for selection. No hull has been traced in this session.");
       L.push("LINEUP LAB: Showdown pools are EXACT enumerations of every legal lineup under the Lab's salary floor and max-per-team (classic pools are sampled). The frontier is exact for showdown. A punt captain or a sub-0.5%-owned slot lowers the ownership product 50-100x while the rest of the roster may be exactly what the field plays; treat those frontier dots as flagged, not free. Tap a dot for the roster, slot ownership, E[dupes] (slot-aware analytic prior), validator flags and sim results. X is estimated copies (slot-ownership product times selected contest field size) on a log scale; presets are illustrative. Green/yellow/red background zones describe low/moderate/high duplication, not contest suitability. Simulator results retain their simulation field size; Y is projected points. Product is an independence proxy, not a duplication probability. Showdown uses CPT ownership and total-minus-CPT for FLEX. Gray points have not been simulated. Exposure caps and minimum uniques are not enforced on the exploration pool.");
       L.push("- ⚠️ Selection key is DUPE-ADJUSTED TOP-10 / EV_adj (Bible §3.4 / I4), not raw ROI. E[dupes] is a PRIOR until ≥3 weeks of standings grade the pair multipliers (I5) — say \"prior\" whenever you quote EV (dupe-adj) or E[dupes]. Top-10 means literal places 1–10 (B5), not a percent of field.");
       L.push(`VOCABULARY: Proj = sum of the user's projections. Mean = average simulated score. Own% = projected ownership. Win-lineup% = how often a player appears in the highest-scoring sampled opponent; not the exact slate optimum. Leverage = win-lineup% minus ownership. Dupes = expected number of other entries holding the identical lineup. Cash% = share of simulations finishing in the money. Top-10% = share finishing in literal places 1–10 (not a field cut). EV (dupe-adj) = Σ P(place)·prize/(1+E[dupes]) with prior E[dupes] until ≥3 weeks standings. ROI = raw simulated return before dupe adjustment — visible, not the selection key. Rarity in the Lab uses captain and FLEX slot-ownership product with a 0.25% minimum; expected copies on the axis are that product times the selected entry count, an uncalibrated proxy. Cumulative ownership is only a secondary diagnostic. Contest candidates are chosen on training worlds and evaluated on held-out worlds. No GPP-safe or cash-only designation follows from duplication alone.`);

@@ -56,16 +56,27 @@ await p.waitForTimeout(150);
 
 /* ---------------------------------------------------------------- before tracing */
 {
-  const s = await p.evaluate(() => ({
-    card: !!document.getElementById("rarityCard"),
-    visible: !document.getElementById("rarityCard").hidden,
-    chart: document.getElementById("rarityChart").innerHTML.length,
-    note: document.getElementById("rarityNote").textContent.length,
-    btn: document.getElementById("rarityGo").textContent.trim()
-  }));
-  ok("the card exists and shows once a pool is built", s.card && s.visible);
-  ok("nothing is drawn, and nothing is claimed, before the sweep runs", s.chart === 0 && s.note === 0, `chart ${s.chart}B note ${s.note}B`);
-  ok("the button says what it will do", /frontier/i.test(s.btn), s.btn);
+  const s = await p.evaluate(() => {
+    const legacy = document.getElementById("legacyOwnFrontierCard");
+    const sum = legacy && legacy.querySelector("summary");
+    const lab = document.getElementById("rarityCard");
+    return {
+      legacy: !!legacy,
+      isDetails: legacy && legacy.tagName === "DETAILS",
+      open: legacy ? !!legacy.open : null,
+      summary: sum ? sum.textContent.trim() : "",
+      lab: !!lab,
+      btn: document.getElementById("rarityGo") ? document.getElementById("rarityGo").textContent.trim() : ""
+    };
+  });
+  ok("Lineup lab card exists (Exposure)", s.lab);
+  ok("⚠️ cumulative-ownership hull is a closed <details>", s.isDetails && s.open === false);
+  ok("⚠️ the summary names the hull without saying frontier",
+    /Projection vs cumulative ownership/.test(s.summary) &&
+    /superseded by Bible §3\.3 \(Phase 2\)/.test(s.summary) &&
+    /Not a selection tool/.test(s.summary) &&
+    !/frontier/i.test(s.summary), s.summary);
+  ok("Generate exploration pool button is present", /exploration pool|Generate/i.test(s.btn), s.btn);
 }
 
 /* ---------------------------------------------------------------- trace it */
@@ -168,9 +179,9 @@ const toto = await p.evaluate(() => {
 });
 if (toto == null) ok("Ask Toto context hook found", false, "window.DD_BOTCTX.ctx() not reachable");
 else {
-  ok("⚠️ Toto is told the curve is a hull, not the frontier", /CONVEX HULL OF THE FRONTIER, NOT THE FRONTIER/.test(toto));
-  ok("⚠️ Toto is told what words not to use", /never "the best lineup at that ownership"/.test(toto));
-  ok("Toto gets the vocabulary for cumulative own", /Cumulative own = the sum of the projected ownership/.test(toto));
+  ok("⚠️ Toto is told FRONT is superseded; not used for selection", /superseded; not used for selection/.test(toto));
+  ok("⚠️ Toto hull wording present when a hull was traced, else superseded-no-hull",
+    /CONVEX HULL OF THE FRONTIER, NOT THE FRONTIER/.test(toto) || /No hull has been traced/.test(toto));
 }
 
 /* ---- rebuilding the pool must invalidate the overlay rather than mixing pools ---- */
@@ -190,8 +201,8 @@ ok("⚠️ a new pool clears the old frontier instead of overlaying the wrong li
   after.points === null && after.chart === 0 && after.note === 0,
   `points=${after.points} chart=${after.chart}B meta=${after.meta}`);
 const toto2 = await p.evaluate(() => window.DD_BOTCTX.ctx());
-ok("and Toto is told there is no frontier rather than describing the old one",
-  /No projection-vs-rarity frontier has been traced/.test(toto2) && !/CONVEX HULL/.test(toto2));
+ok("and Toto is told FRONT is superseded with no hull rather than describing the old one",
+  /superseded; not used for selection/.test(toto2) && /No hull has been traced/.test(toto2) && !/CONVEX HULL/.test(toto2));
 
 /* ---- refusals ----
    ⚠️ Only the ones a user can actually reach from this page are driven here. Zero
