@@ -1,6 +1,6 @@
 # DFS Labs — Phase 1 checklist
 
-Status: **landed** (Weeks 1–3 Bible §10).
+Status: **landed except I4 in UI (fixed in Phase 0.5 T4)** (Weeks 1–3 Bible §10).
 
 ## Deliverables
 
