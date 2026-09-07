@@ -148,14 +148,17 @@
         var st = normStatus(d.status);
         statusCounts[st || "OK"] = (statusCounts[st || "OK"] || 0) + 1;
         var key = pid || (name.toLowerCase() + "|" + tm + "|" + pos);
+        var kick = (d.competition && d.competition.startTime) || null;
         var rec = byPid[key] || (byPid[key] = {
           name: name, pos: pos, team: tm,
-          gid: g.gid, opp: g.opp,
+          gid: g.gid, opp: g.opp, away: g.away, home: g.home,
+          kickoff: kick, startTime: kick,
           sal: 0, dkId: "", cptId: "", cptSal: 0,
           playerDkId: pid,
           avg: fppgFromDraftable(d),
           proj: null, own: 0, status: st
         });
+        if (kick && !rec.kickoff) { rec.kickoff = kick; rec.startTime = kick; }
         if (st && (!rec.status || rec.status === "Q")) rec.status = st;
         var rs = Number(d.rosterSlotId);
         var did = d.draftableId != null ? String(d.draftableId) : "";
@@ -210,9 +213,11 @@
       statusCounts[cst || "OK"] = (statusCounts[cst || "OK"] || 0) + 1;
       var ckey = cpid || (cname.toLowerCase() + "|" + ctm + "|" + cpos);
       var prev = byPidC[ckey];
+      var ckick = (c.competition && c.competition.startTime) || null;
       var cand = {
         name: cname, pos: cpos, team: ctm,
-        gid: cg.gid, opp: cg.opp,
+        gid: cg.gid, opp: cg.opp, away: cg.away, home: cg.home,
+        kickoff: ckick, startTime: ckick,
         sal: csal,
         dkId: c.draftableId != null ? String(c.draftableId) : cpid,
         playerDkId: cpid,

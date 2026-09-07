@@ -992,6 +992,35 @@ button.btn.sm{font-size:12.5px;padding:7px 12px}
 .prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .18s}
 .prog[hidden]{display:none}
 
+/* ---- Phase 0.5 T1 dashboard ---- */
+details.gear{border:1px solid var(--border);border-radius:11px;padding:0;margin:0 0 12px;background:color-mix(in srgb,var(--surface-1) 92%,var(--page))}
+details.gear>summary{list-style:none;cursor:pointer;padding:10px 12px;font-size:12.5px;font-weight:750;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+details.gear>summary::-webkit-details-marker{display:none}
+details.gear>summary::before{content:"⚙";opacity:.55;font-size:12px}
+details.gear[open]>summary{border-bottom:1px solid var(--border);margin-bottom:10px;color:var(--ink-1)}
+details.gear .gear-body{padding:0 12px 12px}
+.week-grid{display:flex;flex-direction:column;gap:0}
+.chiprow{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 0}
+.pchip{appearance:none;border:1px solid var(--border);background:var(--page);border-radius:999px;padding:6px 11px;font:inherit;font-size:12px;font-weight:750;color:var(--ink-3);cursor:pointer}
+.pchip.on{border-color:color-mix(in srgb,var(--good) 55%,var(--border));color:var(--good);background:color-mix(in srgb,var(--good) 10%,transparent)}
+.pchip:hover{border-color:var(--accent);color:var(--accent)}
+.lockbig{font-size:28px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:4px 0 2px}
+.lockmeta{font-size:13px;color:var(--ink-2);margin:0 0 10px}
+.slate-row{display:grid;grid-template-columns:1fr auto auto;gap:8px 14px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--grid);font-size:13.5px}
+.slate-row:last-child{border-bottom:0}
+.slate-row .vs{font-weight:800;color:var(--ink-1);font-variant-numeric:tabular-nums}
+.slate-row .ko{color:var(--ink-3);font-size:12px}
+.slate-row .prob{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.slate-row .mm{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2);font-size:12.5px}
+.play-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--grid);font-size:13.5px}
+.play-row:last-child{border-bottom:0}
+@media(max-width:600px){
+  .week-grid .grid2{grid-template-columns:1fr}
+  .slate-row{grid-template-columns:1fr;gap:2px}
+  .slate-row .prob,.slate-row .mm{text-align:left}
+}
+
+
 .bars{margin-top:6px}
 .bars .b{display:grid;grid-template-columns:150px 1fr 52px;gap:9px;align-items:center;margin:0 0 5px;font-size:12.5px}
 .bars .b .nm{color:var(--ink-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1992,7 +2021,7 @@ arena.html — the hub for games played against other people; links to all of th
 bozo.html — the weekly one-leg parlay game with four sheets: Overview (season Bozo Count, CLV chart, current-week diagnostics and weekly hierarchy grid), This Week (hierarchy machine, ticket and personal entry), Diagnostics (filterable league ledger), and League Settings (roster, rules, shared league password, member cap and public/private visibility).
 challenge.html — the NFL Forecasting Challenge: put a probability on a game before kickoff, get graded after.
 survivor.html — survivor pool: this week's board, pick popularity, an optimal path, a season simulation, model settings.
-guillotine.html — guillotine league companion. dfs.html — DFS solver, contest simulator, exposure, bankroll. The projections there are the USER'S OWN.
+guillotine.html — guillotine league companion. dfs.html — DFS Labs: This week dashboard, slate, solver, simulator, exposure, bankroll, screener, standings, method (keys 1–9). The projections there are the USER'S OWN.
 teamdraft.html — the 32-team wins pool: spin wheel, board, eight rosters, Monte Carlo season sim.
 The draft rig: dashboard.html (a drafter's view), auction.html (the operator), board.html (read-only room view), bigboard.html (the projector), dataviz.html and report.html (afterwards), master.html (the player pool and scouting).
 datadawg-dollars.html — DataDawg$: our OWN converted auction dollars for one league room (Target $, conversion-sensitivity bands, delta vs the source price). It is NOT MV: MV is the dated market snapshot, DataDawg$ is this site's conversion of it. The league cheat sheet on board.html shows the same DataDawg$ alongside ESPN and PFF, all renormalized to that room's $2,800 — but ESPN and PFF are budget-only, with no custom-scoring shift, so they are not equivalent columns. Machine surfaces: /data/datadawg-dollars-values.json, /data/datadawg-dollars-method.json, /data/datadawg-dollars-method.md.
@@ -2675,68 +2704,118 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="fsstrip" id="fsStrip"></div>
 
   <div class="fstabs" id="fsTabs">
-    <button data-s="slate">Slate<span class="kbd">1</span></button>
-    <button data-s="solver">Solver<span class="kbd">2</span></button>
-    <button data-s="sim">Simulator<span class="kbd">3</span></button>
-    <button data-s="exposure">Exposure<span class="kbd">4</span></button>
-    <button data-s="bankroll">Bankroll<span class="kbd">5</span></button>
-    <button data-s="screener">Screener<span class="kbd">6</span></button>
-    <button data-s="standings">Standings<span class="kbd">7</span></button>
-    <button data-s="method">Method<span class="kbd">8</span></button>
+    <button data-s="week">This week<span class="kbd">1</span></button>
+    <button data-s="slate">Slate<span class="kbd">2</span></button>
+    <button data-s="solver">Solver<span class="kbd">3</span></button>
+    <button data-s="sim">Simulator<span class="kbd">4</span></button>
+    <button data-s="exposure">Exposure<span class="kbd">5</span></button>
+    <button data-s="bankroll">Bankroll<span class="kbd">6</span></button>
+    <button data-s="screener">Screener<span class="kbd">7</span></button>
+    <button data-s="standings">Standings<span class="kbd">8</span></button>
+    <button data-s="method">Method<span class="kbd">9</span></button>
   </div>
+
+
+<!-- ======================================================= THIS WEEK (T1) -->
+<section class="sheet" id="sh-week" hidden>
+  <div class="week-grid">
+    <div class="card" id="weekLockCard">
+      <h3>Next lock <span class="rt" id="weekLockRt"></span></h3>
+      <div class="lockbig" id="weekLockCountdown">—</div>
+      <p class="lockmeta" id="weekLockMeta">No slate lock time yet — load a draft group on the Slate sheet.</p>
+      <div class="btnrow">
+        <button class="btn ghost sm" id="dkSwitchAlt" type="button" hidden>Switch slate</button>
+        <button class="btn ghost sm" data-goto="slate" type="button">Open Slate</button>
+      </div>
+    </div>
+
+    <div class="card" id="weekSlateCard">
+      <h3>Slate <span class="rt" id="weekSlateRt"></span></h3>
+      <p class="sub">Home win probability and modelled margin from <code>data/survivor.json</code> (market or model). No totals.</p>
+      <div id="weekSlateRows"></div>
+      <p class="note" id="weekSlateFoot"></p>
+      <div class="emptystate" id="weekSlateEmpty"><div class="big">No games on the pool</div>
+        <p>Load a DraftKings slate to see AWAY @ HOME with kickoff and modelled home win odds.</p></div>
+    </div>
+
+    <div class="card" id="weekPipeCard">
+      <h3>Pipeline</h3>
+      <div class="chiprow" id="weekPipeChips"></div>
+    </div>
+
+    <div class="card" id="weekPlayCard">
+      <h3>Play list <span class="rt" id="weekPlayRt"></span></h3>
+      <div id="weekPlayRows"></div>
+      <div class="emptystate" id="weekPlayEmpty"><div class="big">No lobby pull yet</div>
+        <p>Score contests on the Screener sheet (or wait for the lobby pull). Top Play-band shows up here.</p></div>
+    </div>
+
+    <div class="card" id="weekLastCard">
+      <h3>Last week <span class="rt" id="weekLastRt"></span></h3>
+      <p class="sub" id="weekLastBody">Week N not graded — ingest standings on the Standings sheet.</p>
+    </div>
+  </div>
+</section>
 
 <!-- ======================================================= SLATE -->
 <section class="sheet" id="sh-slate" hidden>
   <div class="card">
-    <h3>1 · The slate <span class="rt" id="slateState"></span></h3>
-    <p class="sub">Upload one data sheet to populate Solver, Simulator and Exposure. Build lineups to create the simulator and exposure results. Player data stays in this browser.</p>
-    <div class="grid2">
-      <div>
-        <label class="fld"><span>Site &amp; game type</span>
-          <select class="fi" id="siteSel">
-            <option value="dk_classic">DraftKings · Classic (QB/2RB/3WR/TE/FLEX/DST, $50,000)</option>
-            <option value="dk_showdown">DraftKings · Showdown Captain Mode (CPT + 5 FLEX, $50,000)</option>
-          </select>
-        </label>
-        <details><summary>Optional: load official DraftKings salaries / IDs</summary>
-        <label class="fld"><span>Load from DraftKings</span>
-          <select class="fi" id="dkGroupSel" disabled>
-            <option value="">Fetch lobby…</option>
-          </select>
-        </label>
-        <div class="btnrow">
-          <button class="btn sm" id="dkLobbyGo">Refresh lobby</button>
-          <button class="btn sm" id="dkLoadGo" disabled>Load slate</button>
-          <button class="btn ghost sm" id="dkSwitchAlt" type="button" hidden>Switch slate</button>
-        </div>
-        <p class="note" id="dkLobbyNote">Uses toto → DraftKings draftables (salaries + OUT/Q). No Export CSV required. Opens on the next-locking Classic/Showdown when online.</p>
-        <p class="note" id="dkAutoloadNote" hidden></p>
-        </details>
-        <label class="fld"><span>Upload your data sheet</span>
-          <input class="fi" type="file" id="salFile" accept=".csv,text/csv,text/plain">
-        </label>
-        <p class="note">One CSV loads salaries, projections and ownership together. Supports ETR Classic / Showdown and DraftKings salary exports.</p>
-        <textarea class="fi" id="salPaste" placeholder="Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame&#10;QB,Josh Allen (39...),Josh Allen,39...,QB,7800,BUF@MIA 09/13/2026 01:00PM ET,BUF,21.8"></textarea>
-        <div class="btnrow"><button class="btn sm" id="salGo">Load data</button>
-          <button class="btn ghost sm" id="salDemo">Load a demo slate</button></div>
-      </div>
-      <details>
-        <summary>Advanced: match separate projections / map columns</summary>
-        <label class="fld"><span>Projections &amp; ownership <span class="hint">— name column plus a points column; ownership optional</span></span>
-          <textarea class="fi" id="projPaste" placeholder="Player,Proj,Own%&#10;Josh Allen,21.8,14.2&#10;Ja'Marr Chase,18.4,22.9"></textarea>
-        </label>
-        <div id="mapBox" hidden>
-          <div class="grid3">
-            <label class="fld"><span>Name column</span><select class="fi" id="mapName"></select></label>
-            <label class="fld"><span>Projection column</span><select class="fi" id="mapProj"></select></label>
-            <label class="fld"><span>Ownership % <span class="hint">optional</span></span><select class="fi" id="mapOwn"></select></label>
-            <label class="fld"><span>Team <span class="hint">optional, improves matching</span></span><select class="fi" id="mapTeam"></select></label>
+    <h3>2 · The slate <span class="rt" id="slateState"></span></h3>
+    <p class="sub">Upload one data sheet or load live DraftKings salaries through <b>toto</b>. Build lineups to create the simulator and exposure results. Player data stays in this browser.</p>
+    <details class="gear">
+      <summary>Site · DraftKings group · salary paste · projection columns</summary>
+      <div class="gear-body">
+        <div class="grid2">
+          <div>
+            <label class="fld"><span>Site &amp; game type</span>
+              <select class="fi" id="siteSel">
+                <option value="dk_classic">DraftKings · Classic (QB/2RB/3WR/TE/FLEX/DST, $50,000)</option>
+                <option value="dk_showdown">DraftKings · Showdown Captain Mode (CPT + 5 FLEX, $50,000)</option>
+              </select>
+            </label>
+            <details><summary>Optional: load official DraftKings salaries / IDs</summary>
+              <label class="fld"><span>Load from DraftKings</span>
+                <select class="fi" id="dkGroupSel" disabled>
+                  <option value="">Fetch lobby…</option>
+                </select>
+              </label>
+              <p class="note" id="dkLobbyNote">Uses toto → DraftKings draftables (salaries + OUT/Q). No Export CSV required. Opens on the next-locking Classic/Showdown when online.</p>
+              <p class="note" id="dkAutoloadNote" hidden></p>
+            </details>
+            <label class="fld"><span>Upload your data sheet</span>
+              <input class="fi" type="file" id="salFile" accept=".csv,text/csv,text/plain">
+            </label>
+            <p class="note">One CSV loads salaries, projections and ownership together. Supports ETR Classic / Showdown and DraftKings salary exports.</p>
+            <textarea class="fi" id="salPaste" placeholder="Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame&#10;QB,Josh Allen (39...),Josh Allen,39...,QB,7800,BUF@MIA 09/13/2026 01:00PM ET,BUF,21.8"></textarea>
+          </div>
+          <div>
+            <details open>
+              <summary>Advanced: match separate projections / map columns</summary>
+              <label class="fld"><span>Projections &amp; ownership <span class="hint">— name column plus a points column; ownership optional</span></span>
+                <textarea class="fi" id="projPaste" placeholder="Player,Proj,Own%&#10;Josh Allen,21.8,14.2&#10;Ja'Marr Chase,18.4,22.9"></textarea>
+              </label>
+              <div id="mapBox" hidden>
+                <div class="grid3">
+                  <label class="fld"><span>Name column</span><select class="fi" id="mapName"></select></label>
+                  <label class="fld"><span>Projection column</span><select class="fi" id="mapProj"></select></label>
+                  <label class="fld"><span>Ownership % <span class="hint">optional</span></span><select class="fi" id="mapOwn"></select></label>
+                  <label class="fld"><span>Team <span class="hint">optional, improves matching</span></span><select class="fi" id="mapTeam"></select></label>
+                </div>
+              </div>
+              <p class="note" id="matchNote"></p>
+            </details>
+            <p class="note">Actions stay outside the gear. Use Refresh / Load / Read / Match below.</p>
           </div>
         </div>
-        <div class="btnrow"><button class="btn sm" id="projGo">Match to the slate</button>
-          <button class="btn ghost sm" id="projClear">Clear projections</button></div>
-        <p class="note" id="matchNote"></p>
-      </details>
+      </div>
+    </details>
+    <div class="btnrow">
+      <button class="btn sm" id="dkLobbyGo">Refresh lobby</button>
+      <button class="btn sm" id="dkLoadGo" disabled>Load slate</button>
+      <button class="btn sm" id="salGo">Load data</button>
+      <button class="btn ghost sm" id="salDemo">Load a demo slate</button>
+      <button class="btn sm" id="projGo">Match to the slate</button>
+      <button class="btn ghost sm" id="projClear">Clear projections</button>
     </div>
     <div class="banner" id="slateWarn" hidden></div>
   </div>
@@ -2768,6 +2847,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="card">
     <h3>Solver settings <span class="rt" id="presetState"></span></h3>
     <p class="sub">Contest-aware presets (Bible §4.1) set lineups / uniques / randomness / stacks. An exact integer solve returns <b>the</b> highest-projected roster under those constraints. There is no lineup-count paywall.</p>
+    <details class="gear"><summary>Preset · field · salary window · uniques · exposure · time</summary><div class="gear-body">
     <div class="grid3">
       <label class="fld"><span>Contest preset</span>
         <select class="fi" id="cfPreset">
@@ -2793,11 +2873,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <label class="fld"><span>Max players per game</span><input class="fi" type="number" id="cfGame" min="1" max="9" value="6"></label>
       <label class="fld"><span>Time limit <span class="hint">seconds</span></span><input class="fi" type="number" id="cfTime" min="5" max="600" value="60"></label>
     </div>
+    </div></details>
   </div>
 
   <div class="card" id="stackCard">
     <h3>Stacking</h3>
     <p class="sub">Correlation is the only free lunch in a tournament: a quarterback and his receiver score the same touchdown twice. The estimated size of that effect is on the <a href="#" data-goto="method">Method</a> sheet.</p>
+    <details class="gear"><summary>QB stack · bring-back · DST rules</summary><div class="gear-body">
     <div class="grid3">
       <label class="fld"><span>QB + N teammates</span><input class="fi" type="number" id="cfQbMin" min="0" max="4" value="1"></label>
       <label class="fld"><span>Stack positions</span>
@@ -2806,6 +2888,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     </div>
     <div class="chkrow"><input type="checkbox" id="cfNoRbDst"><label for="cfNoRbDst">Never roster a running back playing against my defence</label></div>
     <div class="chkrow"><input type="checkbox" id="cfNoOppDst"><label for="cfNoOppDst">Never roster any player facing my defence</label></div>
+    </div></details>
   </div>
 
   <div class="card">
@@ -2843,6 +2926,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="card">
     <h3>The contest</h3>
     <p class="sub">The solver asks <b>what scores most</b>. This asks <b>what beats the room</b> — and in a top-heavy tournament those are rarely the same lineup.</p>
+    <details class="gear"><summary>Entries · fee · payout shape · rake</summary><div class="gear-body">
     <div class="grid3">
       <label class="fld"><span>Contest entries</span><input class="fi" type="number" id="siField" min="2" value="20000"></label>
       <label class="fld"><span>Entry fee $</span><input class="fi" type="number" id="siFee" min="0" step="0.25" value="20"></label>
@@ -2859,17 +2943,20 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     </div>
     <label class="fld" id="siCustomBox" hidden><span>Custom payout table <span class="hint">— one line per tier: fromPlace, toPlace, prize</span></span>
       <textarea class="fi" id="siCustom" placeholder="1,1,1000000&#10;2,2,150000&#10;3,5,50000&#10;6,20,10000"></textarea></label>
+    </div></details>
   </div>
 
   <div class="card">
     <h3>The field</h3>
     <p class="sub">Opponent lineups are generated to hit the ownership you supplied, spending close to the cap the way real entries do. <b>The field is a sample</b> — your finishing rank is measured against it and then scaled to the real contest size.</p>
+    <details class="gear"><summary>Sims · sample · stack share · field salary</summary><div class="gear-body">
     <div class="grid3">
       <label class="fld"><span>Simulations</span><input class="fi" type="number" id="siSims" min="500" max="50000" step="500" value="10000"></label>
       <label class="fld"><span>Field sample size</span><input class="fi" type="number" id="siSample" min="200" max="10000" step="100" value="2500"></label>
       <label class="fld"><span>Share of field stacked %</span><input class="fi" type="number" id="siStack" min="0" max="100" value="60"></label>
       <label class="fld"><span>Field min salary</span><input class="fi" type="number" id="siFieldSal" step="100" value="49000"></label>
     </div>
+    </div></details>
     <div class="btnrow">
       <button class="btn" id="simGo">Run the simulation</button>
       <button class="btn ghost sm" id="simStop" hidden>Stop</button>
@@ -2993,6 +3080,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="grid2">
     <div class="card">
       <h3>Log a contest</h3>
+      <details class="gear"><summary>Date · type · entries · fee · winnings · name</summary><div class="gear-body">
       <div class="grid3">
         <label class="fld"><span>Date</span><input class="fi" type="date" id="brDate"></label>
         <label class="fld"><span>Type</span><select class="fi" id="brType"><option>GPP</option><option>Cash</option><option>Showdown</option><option>Satellite</option><option>Other</option></select></label>
@@ -3001,6 +3089,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         <label class="fld"><span>Winnings $ <span class="hint">total</span></span><input class="fi" type="number" id="brWin" min="0" step="0.01" value="0"></label>
         <label class="fld"><span>Contest</span><input class="fi" id="brName" placeholder="NFL $5M Fantasy Football Millionaire"></label>
       </div>
+      </div></details>
       <div class="btnrow"><button class="btn sm" id="brAdd">Add</button></div>
     </div>
     <div class="card">
@@ -3050,6 +3139,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <label class="fld"><span>Min-cash $</span><input class="fi" type="number" id="scrMinCash" min="0" step="0.25" value="0"></label>
       <label class="fld"><span>Rake (0–1, optional)</span><input class="fi" type="number" id="scrRake" min="0" max="1" step="0.001" placeholder="auto from pool"></label>
     </div>
+    </div></details>
     <div class="btnrow">
       <button class="btn sm" id="scrAdd">Score &amp; add</button>
       <button class="btn ghost sm" id="scrClear">Clear list</button>
@@ -3070,6 +3160,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="card">
     <h3>Standings ingest <span class="rt" id="stState"></span></h3>
     <p class="sub">Week 1+ receipts (Bible §9.1). Paste a GameCenter standings CSV; it stays in <b>IndexedDB on this device only</b> (I3). Entry names are hashed on ingest. Grades (§9.3) run below on whatever exists.</p>
+    <details class="gear"><summary>Week · contest key · CSV paste</summary><div class="gear-body">
     <div class="grid3">
       <label class="fld"><span>Week</span><input class="fi" type="number" id="stWeek" min="1" max="22" value="1"></label>
       <label class="fld"><span>Contest key / id</span><input class="fi" id="stContestKey" placeholder="dk-contest-123"></label>
@@ -3079,6 +3170,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <input class="fi" type="file" id="stFile" accept=".csv,text/csv,text/plain">
     </label>
     <textarea class="fi" id="stPaste" placeholder="Rank,Entry,Points,Lineup&#10;1,you,172.4,…&#10;2,field,168.1,…"></textarea>
+    </div></details>
     <div class="btnrow">
       <button class="btn sm" id="stImport">Parse &amp; store locally</button>
       <button class="btn ghost sm" id="stRefresh">Refresh list</button>
@@ -4385,6 +4477,258 @@ const SRC = document.getElementById("ddfsEngine").textContent;
 try { new Function(SRC).call(window); } catch (e) { console.error("engine parse failed", e); }
 const E = window.DDFS;
 
+/* ---- Dashboard helpers (Phase 0.5 T1 — source: work/dfs-dashboard.js) ---- */
+/**
+ * DFS Labs Phase 0.5 T1 — dashboard helpers (countdown, survivor join, pipeline chips).
+ * Source of truth for unit tests; inlined into dfs.html. No ETR (I1 / H5).
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === "object" && module.exports) module.exports = api;
+  if (root) root.DDFSDashboard = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  "use strict";
+
+  /** DK / nflverse abbrev aliases → survivor.json canonical. */
+  var ABBREV_CANON = {
+    JAC: "JAX",
+    JAX: "JAX",
+    LA: "LAR",
+    LAR: "LAR",
+    WSH: "WAS",
+    WAS: "WAS"
+  };
+
+  function normAbbrev(raw) {
+    var t = String(raw || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (!t) return "";
+    return ABBREV_CANON[t] || t;
+  }
+
+  /**
+   * Format a remaining-ms countdown for the Next-lock card.
+   * Device clock vs StartTime — pure; no Date.now() inside.
+   */
+  function formatCountdown(msRemaining) {
+    if (msRemaining == null || !isFinite(msRemaining)) return "—";
+    if (msRemaining <= 0) return "LOCKED";
+    var sec = Math.floor(msRemaining / 1000);
+    var days = Math.floor(sec / 86400);
+    sec -= days * 86400;
+    var hours = Math.floor(sec / 3600);
+    sec -= hours * 3600;
+    var mins = Math.floor(sec / 60);
+    sec -= mins * 60;
+    if (days >= 1) return days + "d " + hours + "h";
+    if (hours >= 1) return hours + "h " + mins + "m";
+    if (mins >= 1) return mins + "m " + sec + "s";
+    return sec + "s";
+  }
+
+  function lockMsFromStart(startTime) {
+    if (startTime == null || startTime === "") return null;
+    var t = Date.parse(startTime);
+    return isFinite(t) ? t : null;
+  }
+
+  /**
+   * Join slate games (away/home/kickoff) to survivor.json rows.
+   * Matches team codes with JAC/JAX, LA/LAR, WSH/WAS normalized.
+   * Returns { rows, as_of, unmatched }.
+   */
+  function joinSurvivorSlate(games, survivorPayload, opts) {
+    opts = opts || {};
+    var envelope = survivorPayload || {};
+    var data = envelope.data || envelope;
+    var list = (data && data.games) || (Array.isArray(data) ? data : []) || [];
+    var week = opts.week != null ? +opts.week : null;
+    var byPair = {};
+    for (var i = 0; i < list.length; i++) {
+      var g = list[i] || {};
+      if (week != null && isFinite(week) && +g.wk !== week) continue;
+      var a = normAbbrev(g.a);
+      var h = normAbbrev(g.h);
+      if (!a || !h) continue;
+      byPair[a + "@" + h] = g;
+    }
+    var rows = [];
+    var unmatched = [];
+    var asOf = envelope.as_of || (data && data.meta && data.meta.as_of) || null;
+    (games || []).forEach(function (sg) {
+      var away = normAbbrev(sg.away || (String(sg.gid || "").split("@")[0]));
+      var home = normAbbrev(sg.home || (String(sg.gid || "").split("@")[1]));
+      var key = away + "@" + home;
+      var hit = byPair[key];
+      if (!hit) {
+        unmatched.push(key);
+        rows.push({
+          away: away,
+          home: home,
+          gid: sg.gid || key,
+          kickoff: sg.kickoff || sg.startTime || null,
+          p: null,
+          mm: null,
+          src: null,
+          matched: false
+        });
+        return;
+      }
+      var src = hit.src === "market" || hit.src === "model" ? hit.src : (hit.src ? String(hit.src) : null);
+      rows.push({
+        away: away,
+        home: home,
+        gid: sg.gid || key,
+        kickoff: sg.kickoff || sg.startTime || hit.d || null,
+        p: hit.p != null ? +hit.p : null,
+        mm: hit.mm != null ? +hit.mm : null,
+        src: src,
+        matched: true,
+        d: hit.d || null
+      });
+    });
+    return { rows: rows, as_of: asOf, unmatched: unmatched };
+  }
+
+  /**
+   * Pipeline chip states from fixture-like S / session flags.
+   * chips: Slate · Projections · Lineups · Sim · Exported · Graded
+   * Each: { id, label, ready, detail, sheet }
+   */
+  function pipelineChips(S, session) {
+    S = S || {};
+    session = session || {};
+    var players = S.players || [];
+    var priced = players.filter(function (p) {
+      return p && p.proj != null && isFinite(p.proj) && p.proj > 0 && !p.excl;
+    }).length;
+    var slateReady = players.length > 0;
+    var projReady = priced > 0;
+    var luReady = (S.lineups || []).length > 0;
+    var simReady = !!(session.sim || S.simDone);
+    var exported = !!(S.exportedAt || session.exportedAt);
+    var graded = false;
+    var gradeDetail = "";
+    if (S.weeks && typeof S.weeks === "object") {
+      var keys = Object.keys(S.weeks);
+      for (var i = 0; i < keys.length; i++) {
+        var w = S.weeks[keys[i]];
+        if (w && (w.graded === true || w.grade)) {
+          graded = true;
+          gradeDetail = "week " + keys[i];
+          break;
+        }
+      }
+    }
+    function chip(id, label, ready, detail, sheet) {
+      return { id: id, label: label, ready: !!ready, detail: detail || "", sheet: sheet };
+    }
+    var slateDetail = slateReady
+      ? (players.length + " players" + (S.slate && S.slate.source ? " · " + S.slate.source : ""))
+      : "not loaded";
+    if (S.slate && S.slate.loadedAt) slateDetail += " · " + String(S.slate.loadedAt).slice(0, 16);
+    return [
+      chip("slate", "Slate", slateReady, slateDetail, "slate"),
+      chip("projections", "Projections", projReady, projReady ? priced + " priced" : "none", "slate"),
+      chip("lineups", "Lineups", luReady, luReady ? S.lineups.length + " built" : "none", "solver"),
+      chip("sim", "Sim", simReady, simReady ? "ran" : "not run", "sim"),
+      chip("exported", "Exported", exported, exported ? String(S.exportedAt || session.exportedAt).slice(0, 16) : "no", "solver"),
+      chip("graded", "Graded", graded, graded ? gradeDetail : "not yet", "standings")
+    ];
+  }
+
+  /** Top Play-band contests from screener list (verdict === "play"). */
+  function playBandList(screener, scoreFn, limit) {
+    limit = limit == null ? 5 : limit;
+    var list = screener || [];
+    var scored = typeof scoreFn === "function"
+      ? list.map(scoreFn)
+      : list.map(function (c) {
+          return c && c.verdict ? c : { contest: c, verdict: (c && c.verdict) || "tolerate", rank: c && c.rank };
+        });
+    return scored
+      .filter(function (r) { return r && String(r.verdict).toLowerCase() === "play"; })
+      .sort(function (a, b) { return (b.rank || 0) - (a.rank || 0); })
+      .slice(0, limit);
+  }
+
+  /** Unique games from player pool for the Slate card. */
+  function gamesFromPlayers(players) {
+    var seen = {};
+    var out = [];
+    (players || []).forEach(function (p) {
+      if (!p) return;
+      var gid = p.gid || "";
+      var away = p.away, home = p.home;
+      if ((!away || !home) && gid.indexOf("@") >= 0) {
+        var parts = gid.split("@");
+        away = away || parts[0];
+        home = home || parts[1];
+      }
+      away = normAbbrev(away);
+      home = normAbbrev(home);
+      if (!away || !home) return;
+      var key = away + "@" + home;
+      if (seen[key]) {
+        if (!seen[key].kickoff && (p.kickoff || p.startTime)) {
+          seen[key].kickoff = p.kickoff || p.startTime;
+        }
+        return;
+      }
+      var row = {
+        away: away,
+        home: home,
+        gid: key,
+        kickoff: p.kickoff || p.startTime || null
+      };
+      seen[key] = row;
+      out.push(row);
+    });
+    return out;
+  }
+
+  function lastWeekCard(S, currentWeek) {
+    S = S || {};
+    var wk = currentWeek != null ? +currentWeek : null;
+    if (S.weeks && typeof S.weeks === "object") {
+      var keys = Object.keys(S.weeks).map(Number).filter(isFinite).sort(function (a, b) { return b - a; });
+      if (keys.length) {
+        var last = keys[0];
+        var rec = S.weeks[last] || S.weeks[String(last)];
+        return {
+          week: last,
+          graded: !!(rec && (rec.graded || rec.grade)),
+          record: rec,
+          empty: false,
+          message: null
+        };
+      }
+    }
+    var n = wk != null && isFinite(wk) ? wk : null;
+    return {
+      week: n,
+      graded: false,
+      record: null,
+      empty: true,
+      message: n != null
+        ? ("Week " + n + " not graded — ingest standings on the Standings sheet.")
+        : "Week N not graded — ingest standings on the Standings sheet."
+    };
+  }
+
+  return {
+    ABBREV_CANON: ABBREV_CANON,
+    normAbbrev: normAbbrev,
+    formatCountdown: formatCountdown,
+    lockMsFromStart: lockMsFromStart,
+    joinSurvivorSlate: joinSurvivorSlate,
+    pipelineChips: pipelineChips,
+    playBandList: playBandList,
+    gamesFromPlayers: gamesFromPlayers,
+    lastWeekCard: lastWeekCard
+  };
+});
+
+
 let WORKER_URL = null;
 try {
   WORKER_URL = URL.createObjectURL(new Blob([SRC + "\n" + WORKER_TAIL()], { type: "text/javascript" }));
@@ -4421,13 +4765,15 @@ const DEF = {
   bankroll: [],
   screener: [],
   screenerLastPull: null,
-  slate: { loadedAt: null, source: null, draftGroupId: null, stale: false },
+  weeks: {},
+  exportedAt: null,
+  slate: { loadedAt: null, source: null, draftGroupId: null, stale: false, label: null, startTime: null },
   demo: false,
   cfg: { count: 20, minSal: 49000, maxSal: 50000, uniq: 2, rand: 15, maxExp: 100, team: 4, game: 6,
          time: 60, qbMin: 1, qbPos: "WR,TE", bring: 0, noRbDst: false, noOppDst: false, lobbyTopN: 25 },
   sim: { field: 20000, fee: 20, payout: "gpp", paid: 20, alpha: 1.15, rake: 15, custom: "",
          sims: 10000, sample: 2500, stack: 60, fieldSal: 49000 },
-  sheet: "slate"
+  sheet: "week"
 };
 let S = load();
 function load() {
@@ -4652,6 +4998,8 @@ function banner(id, kind, html) {
       var gi = idx.gi >= 0 ? String(row[idx.gi] || "") : "";
       var m = gi.match(/([A-Za-z]{2,4})\s*@\s*([A-Za-z]{2,4})/);
       var away = m ? team(m[1]) : "", home = m ? team(m[2]) : "";
+      var kickM = gi.match(/(\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\s*[AP]M(?:\s*ET)?)/i);
+      var kickoff = kickM ? kickM[1] : null;
       var rp = idx.rp >= 0 ? String(row[idx.rp] || "").trim().toUpperCase() : "";
       var id = idx.id >= 0 ? String(row[idx.id] || "").trim() : (idFromName || "");
       var key = normName(name) + "|" + tm + "|" + pos;
@@ -4659,6 +5007,8 @@ function banner(id, kind, html) {
         name: name, pos: pos, team: tm,
         gid: m ? away + "@" + home : (tm || "?"),
         opp: tm === away ? home : (tm === home ? away : ""),
+        away: away, home: home,
+        kickoff: kickoff, startTime: kickoff,
         sal: 0, dkId: "", cptId: "", cptSal: 0,
         avg: idx.avg >= 0 ? parseFloat(row[idx.avg]) || 0 : 0,
         proj: null, own: null, status: ""
@@ -5034,14 +5384,17 @@ function banner(id, kind, html) {
         var st = normStatus(d.status);
         statusCounts[st || "OK"] = (statusCounts[st || "OK"] || 0) + 1;
         var key = pid || (name.toLowerCase() + "|" + tm + "|" + pos);
+        var kick = (d.competition && d.competition.startTime) || null;
         var rec = byPid[key] || (byPid[key] = {
           name: name, pos: pos, team: tm,
-          gid: g.gid, opp: g.opp,
+          gid: g.gid, opp: g.opp, away: g.away, home: g.home,
+          kickoff: kick, startTime: kick,
           sal: 0, dkId: "", cptId: "", cptSal: 0,
           playerDkId: pid,
           avg: fppgFromDraftable(d),
           proj: null, own: 0, status: st
         });
+        if (kick && !rec.kickoff) { rec.kickoff = kick; rec.startTime = kick; }
         if (st && (!rec.status || rec.status === "Q")) rec.status = st;
         var rs = Number(d.rosterSlotId);
         var did = d.draftableId != null ? String(d.draftableId) : "";
@@ -5096,9 +5449,11 @@ function banner(id, kind, html) {
       statusCounts[cst || "OK"] = (statusCounts[cst || "OK"] || 0) + 1;
       var ckey = cpid || (cname.toLowerCase() + "|" + ctm + "|" + cpos);
       var prev = byPidC[ckey];
+      var ckick = (c.competition && c.competition.startTime) || null;
       var cand = {
         name: cname, pos: cpos, team: ctm,
-        gid: cg.gid, opp: cg.opp,
+        gid: cg.gid, opp: cg.opp, away: cg.away, home: cg.home,
+        kickoff: ckick, startTime: ckick,
         sal: csal,
         dkId: c.draftableId != null ? String(c.draftableId) : cpid,
         playerDkId: cpid,
@@ -6958,6 +7313,7 @@ function exportCsv() {
     banner("solveWarn", "err", "<b>Official DraftKings IDs are needed for entry export.</b> Your uploaded projections work for analysis. Add the matching DraftKings salary file with IDs before exporting."); return;
   }
 
+  /* T1 pipeline chip */
   if (!S.lineups.length) return;
   if (typeof DDFSValidators !== "undefined" && S.presetKey && S.exportContestType) {
     const gate = DDFSValidators.exportAllowed(S.presetKey, S.exportContestType);
@@ -6988,6 +7344,8 @@ function exportCsv() {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   if (missing) banner("solveWarn", "warn", `<b>${missing} slot${missing === 1 ? "" : "s"} had no DraftKings player ID</b> and were written as names instead. That happens with the demo slate or a hand-built pool; a real salary export always carries IDs.`);
+  S.exportedAt = new Date().toISOString(); save(); if (S.sheet === "week") renderPipelineChips();
+  if (S.sheet === "week") renderPipelineChips();
 }
 
 /* ---------------------------------------------------------------- simulator */
@@ -7854,6 +8212,7 @@ function renderScreener() {
     : "";
   $("scrNote").textContent = (ranked.length ? `${ranked.length} contest${ranked.length === 1 ? "" : "s"} scored.` : "No contests scored yet.") + pullNote;
   $("scrState").textContent = ranked.length ? ranked[0].verdict : "";
+  if (S.sheet === "week") { renderPlayList(); renderPipelineChips(); }
 }
 
 async function pullScreenerFromLobby() {
@@ -7978,10 +8337,13 @@ async function doStandingsImport(text) {
 
 /* ---------------------------------------------------------------- sheets */
 
-const SHEETS = ["slate", "solver", "sim", "exposure", "bankroll", "screener", "standings", "method"];
+const SHEETS = ["week","slate","solver","sim","exposure","bankroll","screener","standings","method"];
 function show(name) {
-  if (SHEETS.indexOf(name) < 0) name = "slate";
+  if (SHEETS.indexOf(name) < 0) name = "week";
+  const btn = $("fsTabs").querySelector(`button[data-s="${name}"]`);
+  if (btn && btn.disabled) name = "week";
   S.sheet = name; save();
+  if (name === "week") renderWeekDash();
   SHEETS.forEach(s => { const n = $("sh-" + s); if (n) n.hidden = s !== name; });
   for (const b of $("fsTabs").querySelectorAll("button[data-s]")) b.classList.toggle("on", b.dataset.s === name);
   if (location.hash.slice(1) !== name) history.replaceState(null, "", "#" + name);
@@ -7999,7 +8361,23 @@ function show(name) {
 function boot() {
   writeCfg();
   renderStrip(); renderPool(); renderSolveStats(); renderLineups();
-  show(location.hash.slice(1) || S.sheet || "slate");
+  ensureSlateMeta();
+  if (!S.weeks) S.weeks = {};
+  // Existing users: ignore saved sheet once, land on This week; then honour saved sheet.
+  const WEEK_ONCE = "dd-dfs-week-default-once";
+  let bootSheet = location.hash.slice(1) || "";
+  if (!bootSheet) {
+    try {
+      if (!localStorage.getItem(WEEK_ONCE)) {
+        localStorage.setItem(WEEK_ONCE, "1");
+        bootSheet = "week";
+      } else {
+        bootSheet = S.sheet || "week";
+      }
+    } catch (e) { bootSheet = "week"; }
+  }
+  show(bootSheet || "week");
+  if ($("dkSwitchAlt")) $("dkSwitchAlt").addEventListener("click", () => switchToAltSlate());
 
   $("fsTabs").addEventListener("click", e => {
     const b = e.target.closest("button[data-s]");
@@ -8034,13 +8412,15 @@ function boot() {
   $("salGo").addEventListener("click", () => doSalaries($("salPaste").value));
   $("salDemo").addEventListener("click", () => {
     S.site = "dk_classic"; $("siteSel").value = "dk_classic";
+    ensureSlateMeta();
     S.players = demoSlate(); S.demo = true; S.lineups = []; SIM = null;
-    S.slate = DDFSAutoload.slateMeta({ source: "demo", draftGroupId: null, stale: false });
+    S.slate = Object.assign(DDFSAutoload.slateMeta({ source: "demo", draftGroupId: null, stale: false }), { label: "Demo slate", startTime: null });
     save(); renderStrip(); renderPool(); renderLineups(); renderSolveStats(); renderExposure();
     banner("slateWarn", "warn", "<b>Demo slate loaded — every player on it is invented.</b> The names, salaries, projections and ownership are all synthetic. It exists so you can watch the solver and the simulator work end to end; do not read a single number off it as advice.");
     $("matchNote").textContent = "";
     $("slateState").textContent = "demo";
     updateAutoloadSwitch(null);
+    if (typeof renderWeekDash === "function") renderWeekDash();
   });
   $("dkLobbyGo").addEventListener("click", () => refreshDkLobby());
   $("dkLoadGo").addEventListener("click", () => loadDkSlate());
@@ -8427,6 +8807,7 @@ async function loadDkSlate() {
 
 function applyMappedSlate(r, opts) {
   opts = opts || {};
+  ensureSlateMeta();
   const wantShowdown = !!r.showdown;
   const nextGroupId = opts.draftGroupId != null ? opts.draftGroupId : null;
   const prevGroupId = S.slate && S.slate.draftGroupId != null ? S.slate.draftGroupId : null;
@@ -8451,10 +8832,13 @@ function applyMappedSlate(r, opts) {
 
   S.players = players; S.demo = false; S.lineups = []; S.labPins=[];S.labAudit=null;SIM = null; FRONT = null;
   // Never auto-run solver or sim — wipe lineups/SIM only.
-  S.slate = DDFSAutoload.slateMeta({
-    source: opts.source || "toto",
-    draftGroupId: nextGroupId,
-    stale: false
+  ensureSlateMeta();
+  const meta = (typeof DDFSAutoload !== "undefined" && DDFSAutoload.slateMeta)
+    ? DDFSAutoload.slateMeta({ source: opts.source || "toto", draftGroupId: nextGroupId, stale: false })
+    : { loadedAt: new Date().toISOString(), source: opts.source || "toto", draftGroupId: nextGroupId, stale: false };
+  S.slate = Object.assign({}, S.slate, meta, {
+    label: opts.label || (S.slate && S.slate.label) || ("DG " + (nextGroupId || "")),
+    startTime: opts.startTime != null ? opts.startTime : (S.slate && S.slate.startTime) || null
   });
   save();
   renderStrip(); renderPool(); renderLineups(); renderSolveStats(); renderExposure();
@@ -8553,7 +8937,11 @@ function gradeReceipts() {
   const g = DDFSReceipts.gradeWeek({ week: week });
   $("rcState").textContent = "week " + week;
   $("rcOut").textContent = JSON.stringify(g, null, 2);
+  if (!S.weeks) S.weeks = {};
+  S.weeks[week] = { graded: true, grade: g, at: new Date().toISOString() };
+  save();
   banner("rcWarn", "ok", "<b>Receipts graded</b> for week " + week + ". Empty sections stay labelled prior (I5).");
+  if (S.sheet === "week") renderLastWeek();
 }
 
 function doSalaries(text,label) {
@@ -8564,11 +8952,25 @@ function doSalaries(text,label) {
   const wantShowdown = r.showdown;
   S.site = wantShowdown ? "dk_showdown" : "dk_classic";
   $("siteSel").value = S.site;
+  ensureSlateMeta();
   S.players = r.players; S.demo = false; S.lineups = []; S.labPins=[];S.labAudit=null;SIM = null; FRONT = null;
   recordLabSource(text,label||'Pasted CSV',r.projectionInfo);
-  S.slate = DDFSAutoload.slateMeta({ source: "csv", draftGroupId: null, stale: false });
+  S.slate = (typeof DDFSAutoload !== "undefined" && DDFSAutoload.slateMeta)
+    ? Object.assign(DDFSAutoload.slateMeta({ source: "csv", draftGroupId: null, stale: false }), { label: label || "CSV upload", startTime: null })
+    : { loadedAt: new Date().toISOString(), source: "csv", draftGroupId: null, stale: false, label: label || "CSV upload", startTime: null };
   save();
   renderStrip(); renderPool(); renderLineups(); renderSolveStats(); renderExposure();
+  $("stackCard").hidden = E.SITES[S.site].showdown;
+  banner("slateWarn", r.projected ? "ok" : "warn", `<b>${r.players.length} players loaded · ${r.projected} projections · ${r.ownership} ownership estimates.</b> ` +
+    (wantShowdown ? "Showdown detected. " : "Classic detected. ") +
+    (r.projected ? '<a href="#solver" data-goto="solver">Build lineups</a>, then simulate them and inspect exposure. ' : "Paste projections if needed — nothing can be optimised without them. ") + esc((r.warnings || []).join(" ")));
+  $("matchNote").textContent = "";
+  $("slateState").textContent = "csv";
+  if (typeof updateAutoloadSwitch === "function") updateAutoloadSwitch(null);
+  if (typeof renderWeekDash === "function") renderWeekDash();
+  save();
+  renderStrip(); renderPool(); renderLineups(); renderSolveStats(); renderExposure();
+  if (S.sheet === "week") renderWeekDash();
   $("stackCard").hidden = E.SITES[S.site].showdown;
   banner("slateWarn", r.projected ? "ok" : "warn", `<b>${r.players.length} players loaded · ${r.projected} projections · ${r.ownership} ownership estimates.</b> ` +
     (wantShowdown ? "Showdown detected. " : "Classic detected. ") +
@@ -8621,6 +9023,227 @@ function doBrImport() {
   renderBankroll(); renderStrip();
 }
 
+
+/* ---------------------------------------------------------------- Phase 0.5 T1 dashboard + T2 switch stubs */
+
+let _survivorCache = null;
+let _weekLockTimer = null;
+/** T2 hook: alternate draft group for one-tap switch (filled when autoload lands). */
+let _autoloadAlt = null;
+let _dfsSwitchTarget = null;
+
+function ensureSlateMeta() {
+  if (!S.slate || typeof S.slate !== "object") {
+    S.slate = { loadedAt: null, source: null, draftGroupId: null, stale: false, label: null, startTime: null };
+  }
+}
+
+function updateAutoloadSwitch(pick) {
+  /* Compatible with T2: pick.switchTarget / pick.alternate */
+  const alt = (pick && (pick.switchTarget || pick.alternate)) || null;
+  _autoloadAlt = alt;
+  _dfsSwitchTarget = alt;
+  const btn = $("dkSwitchAlt");
+  if (!btn) return;
+  if (alt && alt.draftGroupId) {
+    const label = alt.format === "showdown" ? "Showdown" : (alt.label || "Classic");
+    btn.hidden = false;
+    btn.textContent = "Switch to " + label + (alt.draftGroupId ? " (DG " + alt.draftGroupId + ")" : "");
+    btn.dataset.draftGroupId = String(alt.draftGroupId);
+  } else {
+    btn.hidden = true;
+    btn.removeAttribute("data-draft-group-id");
+  }
+}
+
+
+async function loadDkSlateById(id, opts) {
+  opts = opts || {};
+  if (!id) return;
+  const sel = $("dkGroupSel");
+  if (sel) {
+    // ensure option exists
+    if (![...sel.options].some(o => String(o.value) === String(id))) {
+      const opt = document.createElement("option");
+      opt.value = String(id);
+      opt.textContent = "DG " + id;
+      sel.appendChild(opt);
+    }
+    sel.value = String(id);
+  }
+  if (typeof loadDkSlate === "function") await loadDkSlate();
+}
+
+function switchToAltSlate() {
+  const alt = _dfsSwitchTarget || _autoloadAlt;
+  const id = (alt && alt.draftGroupId) || ($("dkSwitchAlt") && $("dkSwitchAlt").dataset.draftGroupId);
+  if (!id) return;
+  if (typeof loadDkSlateById === "function") {
+    loadDkSlateById(id, { reason: "switch" });
+    return;
+  }
+  /* Minimal stub until T2 merges: select group in picker and load. */
+  const sel = $("dkGroupSel");
+  if (sel) {
+    sel.value = String(id);
+    if (typeof loadDkSlate === "function") loadDkSlate();
+  }
+}
+
+function fmtKickLocal(raw) {
+  if (!raw) return "—";
+  const t = Date.parse(raw);
+  if (isFinite(t)) {
+    try {
+      return new Date(t).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    } catch (e) { return String(raw); }
+  }
+  return String(raw);
+}
+
+function nextLockInfo() {
+  ensureSlateMeta();
+  let start = S.slate.startTime || null;
+  if (!start && S.players && S.players.length) {
+    let best = null;
+    S.players.forEach(p => {
+      const k = p.kickoff || p.startTime;
+      const ms = k ? Date.parse(k) : NaN;
+      if (isFinite(ms) && (best == null || ms < best)) best = ms;
+    });
+    if (best != null) start = new Date(best).toISOString();
+  }
+  const lockMs = start ? Date.parse(start) : NaN;
+  const label = S.slate.label || (S.slate.draftGroupId ? ("DG " + S.slate.draftGroupId) : (S.demo ? "Demo slate" : (S.players.length ? "Loaded slate" : "")));
+  return { start: start, lockMs: isFinite(lockMs) ? lockMs : null, label: label };
+}
+
+async function loadSurvivorJson() {
+  if (_survivorCache) return _survivorCache;
+  try {
+    const r = await fetch("/data/survivor.json", { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    _survivorCache = await r.json();
+  } catch (e) {
+    _survivorCache = { as_of: null, data: { games: [] }, _err: String(e && e.message || e) };
+  }
+  return _survivorCache;
+}
+
+function renderPipelineChips() {
+  if (typeof DDFSDashboard === "undefined") return;
+  const chips = DDFSDashboard.pipelineChips(S, { sim: SIM, exportedAt: S.exportedAt });
+  const box = $("weekPipeChips");
+  if (!box) return;
+  box.innerHTML = chips.map(c =>
+    `<button type="button" class="pchip${c.ready ? " on" : ""}" data-goto="${esc(c.sheet)}" title="${esc(c.detail)}">${esc(c.label)}${c.detail ? ` · ${esc(c.detail)}` : ""}</button>`
+  ).join("");
+}
+
+function renderPlayList() {
+  const box = $("weekPlayRows"), empty = $("weekPlayEmpty"), rt = $("weekPlayRt");
+  if (!box) return;
+  let plays = [];
+  if (typeof DDFSDashboard !== "undefined" && typeof DDFSScreener !== "undefined") {
+    plays = DDFSDashboard.playBandList(S.screener || [], c => DDFSScreener.scoreContest(c), 5);
+  }
+  if (!plays.length) {
+    box.innerHTML = "";
+    if (empty) empty.hidden = false;
+    if (rt) rt.textContent = "";
+    return;
+  }
+  if (empty) empty.hidden = true;
+  if (rt) rt.textContent = plays.length + " play";
+  box.innerHTML = plays.map((row, i) => {
+    const c = row.contest || {};
+    const pkey = (row.preset && row.preset.key) || "";
+    return `<div class="play-row"><div><b>${esc(c.name || "(unnamed)")}</b>` +
+      `<div class="mut">$${c.buyIn || 0} · ${c.entryCap || 1}-max · rank ${row.rank}</div></div>` +
+      `<button type="button" class="btn sm" data-scr-apply="${esc(pkey)}" data-scr-cap="${c.entryCap || 1}" data-scr-field="${c.fieldCap || ""}">Apply</button></div>`;
+  }).join("");
+}
+
+function renderLastWeek() {
+  if (typeof DDFSDashboard === "undefined") return;
+  const wk = ($("stWeek") && +$("stWeek").value) || null;
+  const card = DDFSDashboard.lastWeekCard(S, wk);
+  if ($("weekLastRt")) $("weekLastRt").textContent = card.week != null ? ("week " + card.week) : "";
+  if ($("weekLastBody")) {
+    if (card.empty) $("weekLastBody").textContent = card.message;
+    else {
+      const rec = card.record || {};
+      $("weekLastBody").textContent = card.graded
+        ? (`Week ${card.week} graded` + (rec.net != null ? ` · net ${rec.net}` : "") + (rec.note ? ` — ${rec.note}` : "."))
+        : (`Week ${card.week} not graded — ingest standings on the Standings sheet.`);
+    }
+  }
+}
+
+function tickWeekLock() {
+  if (typeof DDFSDashboard === "undefined") return;
+  const info = nextLockInfo();
+  const el = $("weekLockCountdown");
+  const meta = $("weekLockMeta");
+  const rt = $("weekLockRt");
+  if (!info.lockMs) {
+    if (el) el.textContent = "—";
+    if (meta) meta.textContent = "No slate lock time yet — load a draft group on the Slate sheet.";
+    if (rt) rt.textContent = "";
+    return;
+  }
+  const left = info.lockMs - Date.now();
+  if (el) el.textContent = DDFSDashboard.formatCountdown(left);
+  if (meta) meta.textContent = (info.label ? info.label + " · " : "") + "locks " + fmtKickLocal(info.start) + " (device clock)";
+  if (rt) rt.textContent = left <= 0 ? "locked" : "upcoming";
+}
+
+async function renderWeekSlate() {
+  const box = $("weekSlateRows"), empty = $("weekSlateEmpty"), foot = $("weekSlateFoot"), rt = $("weekSlateRt");
+  if (!box) return;
+  if (typeof DDFSDashboard === "undefined") return;
+  const games = DDFSDashboard.gamesFromPlayers(S.players || []);
+  if (!games.length) {
+    box.innerHTML = "";
+    if (empty) empty.hidden = false;
+    if (foot) foot.textContent = "";
+    if (rt) rt.textContent = "";
+    return;
+  }
+  if (empty) empty.hidden = true;
+  const surv = await loadSurvivorJson();
+  const joined = DDFSDashboard.joinSurvivorSlate(games, surv, {});
+  if (rt) rt.textContent = joined.rows.length + " games";
+  box.innerHTML = joined.rows.map(r => {
+    const srcLabel = r.src === "market" ? "market" : (r.src === "model" ? "model" : "—");
+    const p = (r.p == null || !isFinite(r.p)) ? "—" : ((r.p * 100).toFixed(1) + "%");
+    const mm = (r.mm == null || !isFinite(r.mm)) ? "—" : ((r.mm > 0 ? "+" : "") + r.mm.toFixed(1));
+    return `<div class="slate-row"><div><span class="vs">${esc(r.away)} @ ${esc(r.home)}</span>` +
+      `<div class="ko">${esc(fmtKickLocal(r.kickoff || r.d))}</div></div>` +
+      `<div class="prob" title="Home win prob (${esc(srcLabel)})">${p}<div class="mut">${esc(srcLabel)}</div></div>` +
+      `<div class="mm" title="Modelled margin (home)">MV mm ${mm}</div></div>`;
+  }).join("");
+  if (foot) {
+    foot.textContent = joined.as_of
+      ? (`as_of ${joined.as_of}` + (joined.unmatched.length ? ` · ${joined.unmatched.length} unmatched` : "") + " · modelled margin from survivor.json")
+      : (joined.unmatched.length ? `${joined.unmatched.length} unmatched to survivor.json` : "");
+  }
+}
+
+async function renderWeekDash() {
+  ensureSlateMeta();
+  tickWeekLock();
+  clearInterval(_weekLockTimer);
+  _weekLockTimer = setInterval(tickWeekLock, 1000);
+  renderPipelineChips();
+  renderPlayList();
+  renderLastWeek();
+  await renderWeekSlate();
+  updateAutoloadSwitch({ switchTarget: _dfsSwitchTarget || _autoloadAlt });
+  botContext();
+}
+
+
 /* ---------------------------------------------------------------- Toto */
 // The assistant's view of this page has to move when the page moves, or the copy lies
 // about what he can see. Regenerated on every sheet change and after every run.
@@ -8629,7 +9252,7 @@ function botContext() {
   window.DD_BOTCTX = {
     label: "THE DFS SOLVER & CONTEST SIMULATOR",
     title: "Ask Toto about this page",
-    chrome: { sub: "reads your slate, your lineups and your simulation", ph: "Ask Toto about this slate…", chips: [
+    chrome: { sub: "reads this week's slate, lineups, contests and grades", ph: "Ask Toto about this slate…", chips: [
       ["Why is the highest-projected lineup often a bad tournament entry?", "Why is chalk bad?"],
       ["What is leverage, and how should I read the win-lineup column?", "What is leverage?"],
       ["Are my results good enough to say I have an edge?", "Do I have an edge?"]] },
@@ -8640,10 +9263,18 @@ RIGHT NOW you are on the DFS Solver & Contest Simulator. It is BUILT and it comp
 - ⚠️ The correlation structure IS measured — seven seasons of nflverse weekly stats, ${E.CORR.meta.games} games — but it is a league-average structure, not this game.
 - ⚠️ The simulated FIELD is the weak link: it is built from the user's ownership estimate, it is a sample of a few thousand lineups extrapolated to contest size, and a field built from ownership alone is usually softer than a real one. Say so whenever ROI comes up.
 - ⚠️ There are NO RECEIPTS. Nothing here has been run forward against a declared benchmark. If asked whether it beats anything, the answer is that nobody knows yet.
+- ⚠️ Selection key is DUPE-ADJUSTED TOP-10 / EV_adj (Bible §3.4 / I4), not raw ROI. E[dupes] is a PRIOR until ≥3 weeks of standings grade the pair multipliers (I5) — say "prior" whenever you quote EV (dupe-adj) or E[dupes]. Top-10 means literal places 1–10 (B5), not a percent of field.
 ${S.demo ? "- ⚠️ THE LOADED SLATE IS THE DEMO SLATE. Every player name, salary, projection and ownership figure on screen right now is INVENTED. Say that before discussing any number on it." : ""}`,
     ctx: () => {
       const L = [];
       L.push(`SHEET ON SCREEN: ${S.sheet}.`);
+      if (typeof DDFSDashboard !== "undefined") {
+        const chips = DDFSDashboard.pipelineChips(S, { sim: SIM, exportedAt: S.exportedAt });
+        L.push("PIPELINE: " + chips.map(c => c.label + (c.ready ? "=ready" : "=pending") + (c.detail ? "(" + c.detail + ")" : "")).join(" · ") + ".");
+        const lock = nextLockInfo();
+        if (lock.lockMs) L.push(`NEXT LOCK: ${lock.label || "slate"} at ${lock.start} · countdown ${DDFSDashboard.formatCountdown(lock.lockMs - Date.now())} (device clock).`);
+        else L.push("NEXT LOCK: none set — no StartTime on the loaded group yet.");
+      }
       L.push(`SLATE: ${E.SITES[S.site].label}. ${st.total} players, ${st.games} games, ${st.priced} with a projection.` +
              (S.demo ? " ⚠️ THIS IS THE INVENTED DEMO SLATE." : ""));
       if (!st.total) L.push("No slate is loaded — the user has not read in a salary file yet.");
