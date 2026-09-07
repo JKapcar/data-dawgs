@@ -88,7 +88,8 @@
         draftGroupId: id,
         contestTypeId: ct,
         gameCount: games,
-        startTime: g.StartTime || null,
+        // Live lobby uses StartDate / StartDateEst; older fixtures used StartTime.
+        startTime: g.StartTime || g.StartDate || g.StartDateEst || null,
         draftGroupTag: tag,
         format: fmt,
         label: labelParts.join(" · ")
@@ -151,6 +152,7 @@
           name: name, pos: pos, team: tm,
           gid: g.gid, opp: g.opp,
           sal: 0, dkId: "", cptId: "", cptSal: 0,
+          playerDkId: pid,
           avg: fppgFromDraftable(d),
           proj: null, own: 0, status: st
         });
@@ -213,6 +215,7 @@
         gid: cg.gid, opp: cg.opp,
         sal: csal,
         dkId: c.draftableId != null ? String(c.draftableId) : cpid,
+        playerDkId: cpid,
         cptId: "", cptSal: 0,
         avg: fppgFromDraftable(c),
         proj: null, own: 0, status: cst,
