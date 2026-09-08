@@ -25,9 +25,9 @@
    {
     "path": "/data/nfelo.json",
     "url": "https://datadawgs216.com/data/nfelo.json",
-    "bytes": 33644,
+    "bytes": 33658,
     "as_of": "2026-09-08",
-    "sha256": "d75bdfa9364d8f7de56d48236248fa33eedd721a1345d0f30a80f2aabec4003e",
+    "sha256": "6060f90f06d914b7d62951b8d1a8d8135d54a459269573e2d26a9505c571244d",
     "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp)."
    },
    {
@@ -35,15 +35,15 @@
     "url": "https://datadawgs216.com/data/models.json",
     "bytes": 2794,
     "as_of": "2026-09-08",
-    "sha256": "2a94fec647adeab065e066fad115d43c403a22028be18bfc11d398e8b92c4c6e",
+    "sha256": "7b1209ae3ed01792974e734f25201364d07711506704ba07cae2a94351e908c4",
     "note": "These are the exact parameters the site uses. Return them alongside any number you derive from them. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
     "path": "/data/survivor.json",
     "url": "https://datadawgs216.com/data/survivor.json",
-    "bytes": 75139,
+    "bytes": 75138,
     "as_of": "2026-09-08",
-    "sha256": "effbd8fa4f42a49e1f4013f50b179bd2ba7747f58cd4a146119ed97bcb86ec37",
+    "sha256": "b66403571dbce748c258c6040a640c076679b3339b21102dbb670f43dd27a75f",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"market\" = derived from a real line, \"model\" = Elo-only. Ownership is modelled, not observed."
    },
    {
