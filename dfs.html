@@ -6177,6 +6177,7 @@ function banner(id, kind, html) {
 
 
 function parseCSV(text) { return DDFSIngest.parseCSV(text); }
+function normName(name) { return DDFSIngest.normName(name); }
 function nameKeys(name, tm) { return DDFSIngest.nameKeys(name, tm); }
 function team(raw) { return DDFSIngest.team(raw); }
 function readSalaries(text) { return DDFSIngest.readSalaries(text); }
@@ -7265,7 +7266,7 @@ async function doStandingsImport(text) {
 
 /* ---------------------------------------------------------------- sheets */
 
-const SHEETS
+const SHEETS = ["slate", "solver", "sim", "exposure", "bankroll", "screener", "standings", "method"];
 function show(name) {
   if (SHEETS.indexOf(name) < 0) name = "slate";
   const btn = $("fsTabs").querySelector(`button[data-s="${name}"]`);
