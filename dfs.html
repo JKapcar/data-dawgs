@@ -2669,6 +2669,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <p class="lab-sub">Build a lineup pool against real constraints, then find out which of those lineups actually wins the contest you are entering. Bring your own projections; the maths is yours to check.</p>
 
   <div class="fsstrip" id="fsStrip"></div>
+  <p class="note"><a href="#standings" data-goto="standings">Save this slate / open private journal</a></p>
 
   <div class="fstabs" id="fsTabs">
     <button data-s="slate">Slate<span class="kbd">1</span></button>
@@ -3010,6 +3011,26 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
 <!-- ======================================================= STANDINGS -->
 <section class="sheet" id="sh-standings" hidden>
+  <div class="card" data-ddb-skip>
+    <h3>Private slate journal · save → enter → grade</h3>
+    <p class="sub">Save the current inputs, settings, lineup pool and simulation with the entries you recorded on DraftKings. Reopen it from any signed-in device and upload standings after the contest.</p>
+    <div class="grid3">
+      <label class="fld">Contest name<input class="fi" id="ledgerName"></label>
+      <label class="fld">DraftKings Contest ID<input class="fi" id="ledgerContestId"></label>
+      <label class="fld">Entry fee $<input class="fi" type="number" min="0" step="0.01" id="ledgerFee"></label>
+      <label class="fld">Final field size<input class="fi" type="number" min="1" id="ledgerField"></label>
+      <label class="fld">Reported lock time (optional, UTC)<input class="fi" type="datetime-local" id="ledgerLock"></label>
+    </div>
+    <label class="fld">Your entered lineups · one per line: lineup number, DraftKings Entry ID<textarea class="fi" id="ledgerEntries" placeholder="1,123456789&#10;4,123456790"></textarea></label>
+    <details><summary>Exact payout tiers (needed if standings omit winnings)</summary><p class="note">Include every paid tier. Unlisted ranks pay $0. Tied ranks split the combined prizes.</p><textarea class="fi" id="ledgerPayouts" placeholder="1,1,1000&#10;2,5,100"></textarea></details>
+    <div class="btnrow"><button class="btn" id="ledgerSave">Save slate + recorded entries</button><button class="btn ghost" id="ledgerRefresh">Open saved slates</button></div>
+    <select class="fi" id="ledgerSaved"><option value="">Choose a saved slate or grade…</option></select>
+    <div class="btnrow"><button class="btn ghost" id="ledgerRestore" disabled>Restore saved workspace</button><button class="btn ghost" id="ledgerBackup" disabled>Download private backup</button></div>
+    <label class="fld">Grade selected saved slate · upload DraftKings standings CSV<input class="fi" type="file" accept=".csv,text/csv" id="ledgerGradeFile" disabled></label>
+    <p class="note">Saving records your entries; it does not submit them to DraftKings. Server timestamps are preserved, but reported lock times are not independently verified. Private records are limited to 8 MB each.</p>
+    <p id="ledgerNotice" role="status"></p><div id="ledgerOutput"></div>
+  </div>
+
   <div class="card">
     <h3>Standings ingest <span class="rt" id="stState"></span></h3>
     <p class="sub">Week 1+ receipts (Bible §9.1). Paste a GameCenter standings CSV; it stays in <b>IndexedDB on this device only</b> (I3). Entry names are hashed on ingest. Grades (§9.3) run below on whatever exists.</p>
@@ -4377,6 +4398,7 @@ root.DDFS.payoutFn = payoutFn;
 </script>
 
 <script src="dfs-pareto.js"></script>
+<script src="dfs-ledger.js"></script>
 <script>
 /* =========================================================================
    DFS workbench — slate ingest, solver + simulator wiring, exposure, bankroll.
@@ -6554,7 +6576,7 @@ function runSim() {
   const cfg = {
     site: S.site, sims: S.sim.sims, fieldSize: S.sim.field, fieldSample: S.sim.sample,
     entryFee: S.sim.fee, fieldStackRate: S.sim.stack / 100, fieldMinSalary: S.sim.fieldSal,
-    seed: (Date.now() % 90000) + 7, payout
+    seed: S.simSeed || (S.simSeed = (Date.now() % 90000) + 7), payout
   };
   banner("simWarn", null, null);
   $("simProg").hidden = false; $("simProg").firstElementChild.style.width = "3%";
@@ -6567,7 +6589,7 @@ function runSim() {
   const finish = (r) => {
     $("simProg").hidden = true; $("simGo").disabled = false; $("simStop").hidden = true;
     if (JSON.stringify([S.players, S.lineups, S.site]) !== simSnapshot) { banner("simWarn", "warn", "Slate or lineups changed during simulation. Run again for current data."); return; }
-    SIM = r; SIM.ms = Date.now() - t0;
+    SIM = r; SIM.runConfig = JSON.parse(JSON.stringify(cfg)); SIM.ms = Date.now() - t0;
     banner("simWarn", "warn", r.warn && r.warn.length ? "<b>Heads up.</b> " + r.warn.map(esc).join(" ") : null);
     renderSim(); renderLineups(); drawRarity();
     banner("simWarn", "ok", "Simulation complete. <a href=\"#exposure\" data-goto=\"exposure\">View colored lineup cloud and frontier</a>. " + esc((r.warn || []).join(" ")));
@@ -6684,6 +6706,24 @@ function renderLev() {
    ⚠️ OWNERSHIP IS AN IMPORT, NOT AN OBSERVATION. Everything here is measured in the
    ownership numbers the user pasted in. They are somebody's projection of the field.
    ========================================================================== */
+
+let ledgerCurrent=null;
+async function ledgerRequest(method,body,id,cursor){
+ const token=window.DDAuth&&window.DDAuth.token();if(!token)throw Error('Sign in to save and reopen private slates.');
+ const r=await fetch('https://toto.jkapcar4.workers.dev/dfs/private'+(id?'?id='+encodeURIComponent(id):cursor?'?cursor='+encodeURIComponent(cursor):''),{method,headers:{'Content-Type':'application/json','X-Bozo-Session':token},body:body?JSON.stringify(body):undefined,cache:'no-store'});const j=await r.json();if(!r.ok)throw Error(j.error||'Private storage request failed');return j;
+}
+function ledgerNotice(text,error){$('ledgerNotice').textContent=text;$('ledgerNotice').style.color=error?'var(--bad)':'var(--ink-2)';}
+async function ledgerList(){try{const j={records:[]};let cursor;do{const page=await ledgerRequest('GET',null,null,cursor);j.records.push(...page.records);cursor=page.cursor;}while(cursor);$('ledgerSaved').innerHTML='<option value="">Choose a saved slate or grade…</option>'+j.records.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).map(r=>`<option value="${esc(r.id)}">${esc(r.createdAt.slice(0,16))} · ${esc(r.type)} · ${esc(r.name)}</option>`).join('');ledgerNotice(j.records.length+' private records loaded'+'');}catch(e){ledgerNotice(e.message,true);}}
+function ledgerShow(record){ledgerCurrent=record;$('ledgerBackup').disabled=false;$('ledgerRestore').disabled=record.type!=='snapshot';$('ledgerGradeFile').disabled=record.type!=='snapshot';$('ledgerOutput').innerHTML='';
+ if(record.type==='snapshot'){$('ledgerOutput').innerHTML=`<h3>${esc(record.snapshot.contest.name)}</h3><p>Saved ${esc(record.createdAt)} · ${record.snapshot.entries.length} recorded entries</p><p class="note">${esc(record.registration)} SHA-256: ${esc(record.snapshotHash)}</p>`;return;}
+ const g=record.grade;let h=`<h3>${esc(record.contest.name)} · Results</h3><p>${g.fieldRows.toLocaleString()} standings rows · ${g.parsedRows.toLocaleString()} resolved rosters · Net: <b>${g.totalNet==null?'Not fully settled':'$'+g.totalNet.toFixed(2)}</b></p>`;
+ h+=`<p>Field median projection: modeled ${g.modeledFieldMedianProjection==null?'—':g.modeledFieldMedianProjection.toFixed(1)} / actual field ${g.fieldMedianProjection==null?'—':g.fieldMedianProjection.toFixed(1)} (using saved pre-contest projections).</p>`;
+ h+='<div class="tscroll"><table class="dtab"><thead><tr><th>Entry ID</th><th>Status</th><th>Rank</th><th>Projected / actual</th><th>Prior estimate / observed other copies</th><th>Winnings</th><th>Net</th></tr></thead><tbody>'+g.entries.map(e=>`<tr><td>${esc(e.entryId)}</td><td>${esc(e.status)}</td><td>${e.rank??'—'}</td><td>${e.projectedPoints.toFixed(1)} / ${e.actualPoints??'—'}</td><td>${e.predictedOtherCopies==null?'—':e.predictedOtherCopies.toFixed(2)} / ${e.observedOtherCopies??'—'}${e.copiesComplete?'':' (lower bound)'}</td><td>${e.winnings==null?'—':'$'+e.winnings.toFixed(2)}</td><td>${e.net==null?'—':'$'+e.net.toFixed(2)}</td></tr>`).join('')+'</tbody></table></div>';
+ h+='<h3>Ownership: projected → realized</h3><p class="note">Percentage points. Ownership is withheld unless the full field resolves.</p><div class="tscroll"><table class="dtab"><thead><tr><th>Player</th><th>Total</th><th>CPT</th><th>FLEX</th></tr></thead><tbody>'+g.ownership.map(p=>{const f=(a,b)=>(a==null?'—':a.toFixed(1))+' → '+(b==null?'—':b.toFixed(1));return `<tr><td>${esc(p.name)}</td><td>${f(p.projectedTotal,p.realizedTotal)}</td><td>${f(p.projectedCpt,p.realizedCpt)}</td><td>${f(p.projectedFlex,p.realizedFlex)}</td></tr>`;}).join('')+'</tbody></table></div><p class="note">'+g.notes.map(esc).join(' ')+'</p>';$('ledgerOutput').innerHTML=h;
+}
+async function ledgerSave(){const btn=$('ledgerSave');btn.disabled=true;try{if(!S.imports||!S.imports.length)throw Error('Upload your source CSV once before saving, so this record includes its original inputs.');readCfg();readSim();const entries=$('ledgerEntries').value.trim().split(/\r?\n/).filter(Boolean).map(line=>{const cells=line.split(',').map(x=>x.trim()),i=Number(cells[0])-1;if(cells.length!==2)throw Error('Use one line per entry: lineup number, DraftKings Entry ID');let expected=null;const l=S.lineups[i];if(l&&typeof DDFSDupe!=='undefined'){const d=DDFSDupe.expectedDupes(l,S.players,{entries:Math.max(0,+$('ledgerField').value-1),showdown:S.site==='dk_showdown'});expected=d.eDupes??d.expectedDupes??null;}return {lineupIndex:i,entryId:cells[1],predictedOtherCopies:expected};});const payouts=$('ledgerPayouts').value.trim()?$('ledgerPayouts').value.trim().split(/\r?\n/).map(line=>{const a=line.split(',').map(Number);if(a.length!==3)throw Error('Payout rows: from rank, to rank, prize');return {from:a[0],to:a[1],prize:a[2]};}):[];
+ const snapshot={schema:'dfs-snapshot-v1',modelVersion:'dfs-ledger-2026-09-v1',state:JSON.parse(JSON.stringify(S)),simulation:SIM?JSON.parse(JSON.stringify(SIM)):null,engineSource:SRC,contest:{id:$('ledgerContestId').value.trim(),name:$('ledgerName').value.trim(),fee:$('ledgerFee').value===''?null:Number($('ledgerFee').value),fieldSize:Number($('ledgerField').value),reportedLockAt:$('ledgerLock').value||null,payouts},entries};DDFSLedger.validate(snapshot);const r=await ledgerRequest('POST',{type:'snapshot',snapshot});await ledgerList();ledgerShow(r);ledgerNotice('Saved privately. This snapshot cannot be overwritten.');}catch(e){ledgerNotice(e.message,true);}finally{btn.disabled=false;}}
+function ledgerRestore(){if(!ledgerCurrent||ledgerCurrent.type!=='snapshot')return;S=JSON.parse(JSON.stringify(ledgerCurrent.snapshot.state));SIM=ledgerCurrent.snapshot.simulation;FRONT=null;writeCfg();save();renderStrip();renderPool();renderLineups();renderSolveStats();renderExposure();ledgerNotice('Saved inputs, lineups and simulation restored. Reruns use the saved simulation seed; engine-version differences can change results.');}
 
 let FRONT = null, frontWorker = null;
 function runFrontier() {
@@ -7140,6 +7180,13 @@ function show(name) {
 /* ---------------------------------------------------------------- wiring */
 
 function boot() {
+  const previousLedgerAuth=window.onDDAuth;window.onDDAuth=function(){if(previousLedgerAuth)previousLedgerAuth.apply(this,arguments);ledgerCurrent=null;$('ledgerSaved').innerHTML='<option value="">Choose a saved slate or grade…</option>';$('ledgerOutput').innerHTML='';$('ledgerRestore').disabled=$('ledgerBackup').disabled=$('ledgerGradeFile').disabled=true;};
+  $('ledgerSave').addEventListener('click',ledgerSave);
+  $('ledgerRefresh').addEventListener('click',ledgerList);
+  $('ledgerRestore').addEventListener('click',ledgerRestore);
+  $('ledgerSaved').addEventListener('change',async e=>{if(!e.target.value)return;try{ledgerShow(await ledgerRequest('GET',null,e.target.value));}catch(e){ledgerNotice(e.message,true);}});
+  $('ledgerGradeFile').addEventListener('change',async e=>{const file=e.target.files&&e.target.files[0];if(!file||!ledgerCurrent||ledgerCurrent.type!=='snapshot')return;const id=ledgerCurrent.id;e.target.disabled=true;try{if(file.size>7000000)throw Error('Standings file is too large for this upload (7 MB CSV limit).');const r=await ledgerRequest('POST',{type:'result',snapshotId:id,csv:await file.text(),filename:file.name});await ledgerList();ledgerShow(r);ledgerNotice('Results graded and saved as a separate private record.');}catch(e){ledgerNotice(e.message,true);e.target.disabled=false;}e.target.value='';});
+  $('ledgerBackup').addEventListener('click',()=>{if(!ledgerCurrent)return;const u=URL.createObjectURL(new Blob([JSON.stringify(ledgerCurrent,null,2)],{type:'application/json'})),a=document.createElement('a');a.href=u;a.download='dfs-private-'+ledgerCurrent.id+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);});
   writeCfg();
   renderStrip(); renderPool(); renderSolveStats(); renderLineups();
   show(location.hash.slice(1) || S.sheet || "slate");
@@ -7170,7 +7217,7 @@ function boot() {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
     const r = new FileReader();
-    r.onload = () => { $("salPaste").value = String(r.result).slice(0, 2000000); doSalaries(String(r.result)); };
+    r.onload = () => { $("salPaste").value = String(r.result).slice(0, 2000000); doSalaries(String(r.result), f.name); };
     r.onerror = () => banner("slateWarn", "err", "<b>Could not read the file.</b> Please choose the CSV again.");
     r.readAsText(f);
   });
@@ -7509,11 +7556,12 @@ function gradeReceipts() {
   banner("rcWarn", "ok", "<b>Receipts graded</b> for week " + week + ". Empty sections stay labelled prior (I5).");
 }
 
-function doSalaries(text) {
+function doSalaries(text, filename) {
 
   if (!String(text || "").trim()) { banner("slateWarn", "err", "<b>Nothing to read.</b> Choose the DraftKings CSV or paste its contents."); return; }
   const r = DDFSIngest.readUpload(text, S.players);
   if (r.error) { banner("slateWarn", "err", "<b>Could not read that file.</b> " + esc(r.error)); return; }
+  S.imports = (S.imports || []).concat([{filename:filename || "pasted-data.csv",text:String(text),importedAt:new Date().toISOString()}]);
   const wantShowdown = r.showdown;
   S.site = wantShowdown ? "dk_showdown" : "dk_classic";
   $("siteSel").value = S.site;
@@ -7545,6 +7593,7 @@ function doProjections(map) {
     banner("slateWarn", "err", "<b>" + esc(r.error) + "</b>");
     return;
   }
+  S.imports = (S.imports || []).concat([{filename:"pasted-projections.csv",text:String(text),importedAt:new Date().toISOString()}]);
   $("mapBox").hidden = true;
   S.lineups = []; SIM = null; FRONT = null;
   save(); renderPool(); renderStrip();
@@ -7582,7 +7631,7 @@ function botContext() {
       ["Why is the highest-projected lineup often a bad tournament entry?", "Why is chalk bad?"],
       ["What is leverage, and how should I read the win-lineup column?", "What is leverage?"],
       ["Are my results good enough to say I have an edge?", "Do I have an edge?"]] },
-    sys: `RIGHT NOW you are on the DFS Solver & Contest Simulator. It is BUILT and it computes — the solver, the contest simulator, the exposure view and the bankroll tracker all run in the browser.
+    sys: `RIGHT NOW you are on the DFS Solver & Contest Simulator. The private slate journal in Standings saves immutable account-scoped records only on explicit Save. It records entries but never submits to DraftKings. Its server timestamp does not independently verify contest lock time. It is BUILT and it computes — the solver, the contest simulator, the exposure view and the bankroll tracker all run in the browser.
 - ⚠️ The PROJECTIONS ARE THE USER'S OWN. This tool has no player opinions and generates no projections. Never present a projection as the site's view, and never rate a player yourself as if the page had done so.
 - ⚠️ The correlation structure IS measured — seven seasons of nflverse weekly stats, ${E.CORR.meta.games} games — but it is a league-average structure, not this game.
 - ⚠️ The simulated FIELD is the weak link: it is built from the user's ownership estimate, it is a sample of a few thousand lineups extrapolated to contest size, and a field built from ownership alone is usually softer than a real one. Say so whenever ROI comes up.

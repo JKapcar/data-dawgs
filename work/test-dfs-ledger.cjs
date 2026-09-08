@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict'),L=require('../dfs-ledger.js');
+const players=Array.from({length:6},(_,i)=>({name:'Player '+i,own:50,cptOwn:10,proj:10}));const lineup={ids:[0,1,2,3,4,5],cpt:0,proj:65,sal:49000};const s={schema:'dfs-snapshot-v1',engineSource:'synthetic test engine',state:{imports:[{text:'synthetic CSV'}],players,lineups:[lineup],site:'dk_showdown'},contest:{id:'c1',name:'Synthetic',fee:10,fieldSize:2,payouts:[{from:1,to:1,prize:100}]},entries:[{entryId:'101',lineupIndex:0,predictedOtherCopies:0.5},{entryId:'102',lineupIndex:0}]};const roster='CPT Player 0 FLEX Player 1 FLEX Player 2 FLEX Player 3 FLEX Player 4 FLEX Player 5';const csv='Rank,EntryId,Points,Lineup\n1,101,0,'+roster+'\n1,102,0,'+roster;
+const g=L.grade(s,csv);assert.equal(g.totalNet,80);assert.equal(g.entries[0].actualPoints,0);assert.equal(g.entries[0].winnings,50);assert.equal(g.entries[0].observedOtherCopies,1);assert.equal(g.ownership[0].realizedCpt,100);assert.equal(g.ownership[1].realizedFlex,100);
+const zero=L.grade(s,'Rank,EntryId,Points,Lineup,Winnings\n1,101,0,'+roster+',0\n1,102,0,'+roster+',0');assert.equal(zero.totalNet,-20);
+const partial=L.grade(s,'Rank,EntryId,Points,Lineup\n1,101,0,'+roster);assert.equal(partial.completeOwnership,false);assert.equal(partial.totalNet,null);assert.equal(partial.ownership[0].realizedCpt,null);assert.equal(partial.entries[1].status,'missing');
+const mismatch=L.grade(s,csv.replaceAll('CPT Player 0 FLEX Player 1','CPT Player 1 FLEX Player 0'));assert.equal(mismatch.entries[0].status,'lineup mismatch');assert.equal(mismatch.totalNet,null);
+assert.throws(()=>L.grade(s,csv.replace('102','101')),/Duplicate/);assert.throws(()=>L.validate({...s,contest:{...s.contest,payouts:[{from:1,to:2,prize:10},{from:2,to:2,prize:10}]}}),/non-overlapping/);
+const before=JSON.stringify(s);L.grade(s,csv);assert.equal(JSON.stringify(s),before);
+console.log('Ledger: immutable input, Entry ID matching, captain mismatch, zero winnings/points, tie splitting, ownership and incomplete-file guards pass');
+module.exports={s,csv};

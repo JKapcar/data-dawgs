@@ -1969,9 +1969,9 @@ function refNcdf(z) {
 {
   const j = await (await req(call("dd_site_map"))).json();
   const d = text(j);
-  ok(d.notServedHere && /Never hosted or persisted/.test(d.notServedHere.dfs_projections_and_ownership) &&
+  ok(d.notServedHere && /private account-scoped snapshots/.test(d.notServedHere.dfs_projections_and_ownership) && /not exposed through public data or MCP discovery/.test(d.notServedHere.dfs_projections_and_ownership) &&
      /bounded slate transiently/.test(d.notServedHere.dfs_projections_and_ownership),
-     "notServedHere explains the DFS transient-compute invariant");
+     "notServedHere distinguishes explicit private journal saves from transient MCP computation");
   ok(d.machine.surfaces.includes("surfaces.json"), "points agents at the surfaces map");
   ok(d.machine.data.includes("/data/model-contracts.json") && d.pages["pound.html"], "site map includes the Pound contracts and workbench");
   ok(d.machine.data.includes("/data/cfb-ratings.json") && d.machine.data.includes("/data/cfb-model-receipts.json") &&
