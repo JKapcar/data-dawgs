@@ -5074,7 +5074,7 @@ const MCP_TOOLS = [
           "pound.html": "The Pound model workbench, deterministic calculators, contracts and honest tool-status inventory.",
         },
         notServedHere: {
-          dfs_projections_and_ownership: "Never hosted or persisted, by design. The browser slate stays in that user's localStorage. dd_solve_dfs_lineup accepts a bounded slate transiently in one authenticated call, computes, returns, and stores neither inputs nor results.",
+          dfs_projections_and_ownership: "The working slate is browser-local. The owner can explicitly save immutable private account-scoped snapshots and grades through the DFS page; these are not exposed through public data or MCP discovery. dd_solve_dfs_lineup accepts a bounded slate transiently in one authenticated call, computes, returns, and stores neither inputs nor results.",
           epa_stats: "The 2.1MB dataset is embedded in stats.html; parsing it per call is a poor fit for a Worker. Browse the page directly.",
         },
       });
