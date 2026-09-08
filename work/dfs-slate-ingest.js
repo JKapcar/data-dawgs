@@ -94,7 +94,7 @@
     var hasRp = findCol(low, ["roster position"]) >= 0;
     var hasDkSal = findCol(low, ["dk salary"]) >= 0;
     var hasSal = findCol(low, ["salary", "dk salary"]) >= 0;
-    var hasPos = findCol(low, ["position", "dk pos"]) >= 0;
+    var hasPos = findCol(low, ["position", "dk pos", "pos"]) >= 0;
     var hasName = findCol(low, ["name", "player", "name + id", "player name"]) >= 0;
     var hasProj = findCol(low, ["dk proj", "projection", "proj", "fpts", "points"]) >= 0;
     var hasFieldOwn = findCol(low, ["small field", "large field", "total own", "own", "ownership"]) >= 0;
@@ -110,7 +110,8 @@
     return "unknown";
   }
 
-  function readSalaries(text) {
+  function readSalaries(text, opts) {
+    opts = opts || {};
     var rows = parseCSV(text);
     if (!rows.length) return { error: "That file was empty." };
 
@@ -118,7 +119,7 @@
     for (var i = 0; i < Math.min(rows.length, 16); i++) {
       var cells = rows[i].map(function (c) { return String(c).trim().toLowerCase(); });
       var cSal = findCol(cells, ["salary", "dk salary"]);
-      var cPos = findCol(cells, ["position", "dk pos"]);
+      var cPos = findCol(cells, ["position", "dk pos", "pos"]);
       var cName = findCol(cells, ["name", "player", "name + id", "player name"]);
       if (cSal < 0 || cPos < 0 || cName < 0) continue;
       hdr = i;
@@ -137,7 +138,7 @@
     if (hdr < 0) {
       return { error: "This does not look like a DraftKings salary export — no row with Position/Name/Salary (or DK Pos/Player/DK Salary) was found." };
     }
-    if (headerKind === "etr-showdown" || (idx.cptSal >= 0 && idx.rp < 0)) {
+    if (!opts.combined && (headerKind === "etr-showdown" || (idx.cptSal >= 0 && idx.rp < 0))) {
       return {
         error: "This looks like an ETR Showdown projection board (CPT Salary / CPT Own columns), not a DraftKings salary export. Paste it into the projections box, or export DKSalaries.csv from the contest lineup page (desktop).",
         format: "etr-showdown",
@@ -151,7 +152,7 @@
     }
 
     // Scan for showdown signal first (any CPT roster position)
-    var anyCpt = false;
+    var anyCpt = !!(opts.combined && idx.cptSal >= 0);
     if (idx.rp >= 0) {
       for (var s = hdr + 1; s < rows.length; s++) {
         var rp0 = String(rows[s][idx.rp] || "").trim().toUpperCase();
@@ -192,7 +193,7 @@
         proj: null, own: 0, status: ""
       });
       if (rp === "CPT" || rp === "CAPTAIN") { rec.cptId = id; rec.cptSal = sal; }
-      else { rec.sal = sal; rec.dkId = id; }
+      else { rec.sal = sal; rec.dkId = id; if (idx.cptSal >= 0) rec.cptSal = parseMoney(row[idx.cptSal]); }
       if (!rec.sal && sal) {
         rec.sal = (rp === "CPT" || rp === "CAPTAIN") ? Math.round(sal / 1.5 / 100) * 100 : sal;
         rec.dkId = rec.dkId || id;
@@ -201,7 +202,7 @@
 
     var players = Object.keys(bySlot).map(function (k) { return bySlot[k]; }).filter(function (p) { return p.sal > 0; });
     if (!players.length) return { error: "Found the header but no player rows underneath it.", dropped: dropped };
-    var showdown = players.some(function (p) { return p.cptId; });
+    var showdown = anyCpt || players.some(function (p) { return p.cptId; });
     var games = {};
     players.forEach(function (p) { games[p.gid] = 1; });
     return {
@@ -316,13 +317,63 @@
     };
   }
 
+
+  // One upload accepts either a complete projection board, DK salaries, or a
+  // projection-only update. Work on copies so a rejected file cannot erase data.
+  function readUpload(text, existing) {
+    var rows = parseCSV(text), det = detectFormat(text);
+    if (!rows.length) return { error: "That file was empty." };
+    var start = det.headerRow || 0, low = rows[start].map(function (x) { return x.trim().toLowerCase(); });
+    var hasSalary = low.some(function (x) { return x === "salary" || x === "dk salary"; });
+    var normalized = rows.slice(start).map(function (r) { return r.map(function (v) { return '"' + v.replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
+    var result;
+    if (hasSalary) {
+      result = readSalaries(normalized, { combined: true });
+      if (result.error) return result;
+    } else {
+      if (!existing || !existing.length) return { error: "This file has projections but no salaries. Upload a sheet containing Player, Pos, Team, Salary and Proj, or load DraftKings salaries first." };
+      result = { players: existing.map(function (p) { return Object.assign({}, p); }), showdown: existing.some(function (p) { return p.cptSal || p.cptId; }), warnings: [] };
+    }
+    var proj = applyProjections(normalized, result.players);
+    if (!hasSalary && (proj.error || !proj.matched)) return { error: proj.error || "No players matched your current slate. Your loaded data has been kept." };
+    // Ownership units are column-wide, never inferred independently per player:
+    // 0.5 beside 80 means 0.5%, while an entirely fractional column is scaled.
+    if (!proj.error && proj.cols) [ [proj.cols.own, "own"], [proj.cols.cptOwn, "cptOwn"] ].forEach(function (pair) {
+      var col = pair[0]; if (col < 0) return;
+      var values = rows.slice(start + 1).map(function (r) { return parseFloat(String(r[col] || "").replace(/[%,$]/g, "")); }).filter(Number.isFinite);
+      var percent = low[col].indexOf("%") >= 0 || rows.slice(start + 1).some(function (r) { return /%/.test(r[col] || ""); }) || values.some(function (v) { return v > 1; });
+      rows.slice(start + 1).forEach(function (row) {
+        var name = normName(row[proj.cols.name]), tm = proj.cols.team >= 0 ? team(row[proj.cols.team]) : "";
+        var player = result.players.find(function (p) { return normName(p.name) === name && (!tm || p.team === tm); });
+        var val = parseFloat(String(row[col] || "").replace(/[%,$]/g, ""));
+        if (player && isFinite(val)) player[pair[1]] = val * (percent ? 1 : 100);
+      });
+    });
+    // Complete boards are authoritative. Keep official IDs only when name, team
+    // and salary match, and never carry projections from a different upload.
+    if (hasSalary) result.players.forEach(function (p) {
+      var old = (existing || []).find(function (x) { return normName(x.name) === normName(p.name) && x.team === p.team && x.sal === p.sal; });
+      if (old) { if (proj.error) ["proj", "own", "cptProj", "cptOwn"].forEach(function (k) { if (old[k] != null) p[k] = old[k]; }); p.dkId = p.dkId || old.dkId || ""; p.cptId = p.cptId || (old.cptSal === p.cptSal ? old.cptId : "") || ""; p.gid = old.gid; p.opp = old.opp; }
+    });
+    var teams = Array.from(new Set(result.players.map(function (p) { return p.team; }).filter(Boolean))).sort();
+    if (result.showdown && teams.length === 2) result.players.forEach(function (p) { p.opp = teams.find(function (t) { return t !== p.team; }); p.gid = teams.join("-"); });
+    result.games = new Set(result.players.map(function (p) { return p.gid; })).size;
+    result.projected = result.players.filter(function (p) { return p.proj != null; }).length;
+    result.ownership = result.players.filter(function (p) { return p.own > 0; }).length;
+    result.warnings = [];
+    if (!result.projected) result.warnings.push("Salaries loaded. Upload your projection sheet here next to build lineups.");
+    else if (!result.ownership) result.warnings.push("No ownership found. You can build lineups; simulation needs ownership estimates.");
+    if (result.players.some(function (p) { return !p.dkId || (result.showdown && !p.cptId); })) result.warnings.push("DraftKings entry export needs official player IDs; analysis can run without them.");
+    return result;
+  }
+
   function detectFormat(text) {
     var rows = parseCSV(text);
     if (!rows.length) return { format: "empty" };
     for (var i = 0; i < Math.min(rows.length, 16); i++) {
       var cells = rows[i].map(function (c) { return String(c).trim().toLowerCase(); });
       var cSal = findCol(cells, ["salary", "dk salary"]);
-      var cPos = findCol(cells, ["position", "dk pos"]);
+      var cPos = findCol(cells, ["position", "dk pos", "pos"]);
       var cName = findCol(cells, ["name", "player", "name + id"]);
       if (cSal >= 0 && cPos >= 0 && cName >= 0) {
         return { format: classifyHeader(cells), headerRow: i };
@@ -342,6 +393,7 @@
     parseOwn: parseOwn,
     detectFormat: detectFormat,
     readSalaries: readSalaries,
+    readUpload: readUpload,
     applyProjections: applyProjections,
     CLASSIC_POS: CLASSIC_POS,
     SHOWDOWN_POS: SHOWDOWN_POS

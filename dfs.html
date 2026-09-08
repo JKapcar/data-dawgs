@@ -2685,7 +2685,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <section class="sheet" id="sh-slate" hidden>
   <div class="card">
     <h3>1 · The slate <span class="rt" id="slateState"></span></h3>
-    <p class="sub">Load live DraftKings salaries through <b>toto</b> (CORS only — nothing is stored), or paste a desktop Export CSV if you have one. Player data stays in this browser.</p>
+    <p class="sub">Upload one data sheet to populate Solver, Simulator and Exposure. Build lineups to create the simulator and exposure results. Player data stays in this browser.</p>
     <div class="grid2">
       <div>
         <label class="fld"><span>Site &amp; game type</span>
@@ -2694,6 +2694,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
             <option value="dk_showdown">DraftKings · Showdown Captain Mode (CPT + 5 FLEX, $50,000)</option>
           </select>
         </label>
+        <details><summary>Optional: load official DraftKings salaries / IDs</summary>
         <label class="fld"><span>Load from DraftKings</span>
           <select class="fi" id="dkGroupSel" disabled>
             <option value="">Fetch lobby…</option>
@@ -2704,15 +2705,17 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
           <button class="btn sm" id="dkLoadGo" disabled>Load slate</button>
         </div>
         <p class="note" id="dkLobbyNote">Uses toto → DraftKings draftables (salaries + OUT/Q). No Export CSV required.</p>
-        <label class="fld"><span>Or salary file / paste</span>
+        </details>
+        <label class="fld"><span>Upload your data sheet</span>
           <input class="fi" type="file" id="salFile" accept=".csv,text/csv,text/plain">
         </label>
-        <p class="note">Optional desktop Export CSV…</p>
+        <p class="note">One CSV loads salaries, projections and ownership together. Supports ETR Classic / Showdown and DraftKings salary exports.</p>
         <textarea class="fi" id="salPaste" placeholder="Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame&#10;QB,Josh Allen (39...),Josh Allen,39...,QB,7800,BUF@MIA 09/13/2026 01:00PM ET,BUF,21.8"></textarea>
-        <div class="btnrow"><button class="btn sm" id="salGo">Read salaries</button>
+        <div class="btnrow"><button class="btn sm" id="salGo">Load data</button>
           <button class="btn ghost sm" id="salDemo">Load a demo slate</button></div>
       </div>
-      <div>
+      <details>
+        <summary>Advanced: match separate projections / map columns</summary>
         <label class="fld"><span>Projections &amp; ownership <span class="hint">— name column plus a points column; ownership optional</span></span>
           <textarea class="fi" id="projPaste" placeholder="Player,Proj,Own%&#10;Josh Allen,21.8,14.2&#10;Ja'Marr Chase,18.4,22.9"></textarea>
         </label>
@@ -2727,7 +2730,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         <div class="btnrow"><button class="btn sm" id="projGo">Match to the slate</button>
           <button class="btn ghost sm" id="projClear">Clear projections</button></div>
         <p class="note" id="matchNote"></p>
-      </div>
+      </details>
     </div>
     <div class="banner" id="slateWarn" hidden></div>
   </div>
@@ -2749,12 +2752,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     </div>
     <div class="tscroll"><table class="dtab" id="poolTab"></table></div>
     <div class="emptystate" id="poolEmpty"><div class="big">No slate loaded</div>
-      <p>Read a DraftKings salary file above, or load the demo slate to see the whole rig work end to end.</p></div>
+      <p>Upload your data sheet above, or load the demo slate to see the whole rig work end to end.</p></div>
   </div>
 </section>
 
 <!-- ======================================================= SOLVER -->
 <section class="sheet" id="sh-solver" hidden>
+  <div class="banner warn" id="solverNext" role="status" hidden></div>
   <div class="card">
     <h3>Solver settings <span class="rt" id="presetState"></span></h3>
     <p class="sub">Contest-aware presets (Bible §4.1) set lineups / uniques / randomness / stacks. An exact integer solve returns <b>the</b> highest-projected roster under those constraints. There is no lineup-count paywall.</p>
@@ -2829,6 +2833,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
 <!-- ======================================================= SIMULATOR -->
 <section class="sheet" id="sh-sim" hidden>
+  <div class="banner warn" id="simNext" role="status" hidden></div>
   <div class="card">
     <h3>The contest</h3>
     <p class="sub">The solver asks <b>what scores most</b>. This asks <b>what beats the room</b> — and in a top-heavy tournament those are rarely the same lineup.</p>
@@ -2930,7 +2935,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <p class="note" id="rarityNote"></p>
     <div class="tscroll" id="rarityTab" hidden><table class="dtab" id="rarityTabT"></table></div>
   </div>
-  <div class="emptystate" id="expEmpty"><div class="big">No lineups yet</div><p>Build a pool on the Solver sheet and this fills in.</p></div>
+  <div class="emptystate" id="expEmpty"><div class="big">No lineups yet</div><p><a href="#solver" data-goto="solver">Build lineups in Solver</a> to see how often each player appears across your lineup pool.</p></div>
 </section>
 
 <!-- ======================================================= BANKROLL -->
@@ -4575,7 +4580,7 @@ function banner(id, kind, html) {
     var hasRp = findCol(low, ["roster position"]) >= 0;
     var hasDkSal = findCol(low, ["dk salary"]) >= 0;
     var hasSal = findCol(low, ["salary", "dk salary"]) >= 0;
-    var hasPos = findCol(low, ["position", "dk pos"]) >= 0;
+    var hasPos = findCol(low, ["position", "dk pos", "pos"]) >= 0;
     var hasName = findCol(low, ["name", "player", "name + id", "player name"]) >= 0;
     var hasProj = findCol(low, ["dk proj", "projection", "proj", "fpts", "points"]) >= 0;
     var hasFieldOwn = findCol(low, ["small field", "large field", "total own", "own", "ownership"]) >= 0;
@@ -4591,7 +4596,8 @@ function banner(id, kind, html) {
     return "unknown";
   }
 
-  function readSalaries(text) {
+  function readSalaries(text, opts) {
+    opts = opts || {};
     var rows = parseCSV(text);
     if (!rows.length) return { error: "That file was empty." };
 
@@ -4599,7 +4605,7 @@ function banner(id, kind, html) {
     for (var i = 0; i < Math.min(rows.length, 16); i++) {
       var cells = rows[i].map(function (c) { return String(c).trim().toLowerCase(); });
       var cSal = findCol(cells, ["salary", "dk salary"]);
-      var cPos = findCol(cells, ["position", "dk pos"]);
+      var cPos = findCol(cells, ["position", "dk pos", "pos"]);
       var cName = findCol(cells, ["name", "player", "name + id", "player name"]);
       if (cSal < 0 || cPos < 0 || cName < 0) continue;
       hdr = i;
@@ -4618,7 +4624,7 @@ function banner(id, kind, html) {
     if (hdr < 0) {
       return { error: "This does not look like a DraftKings salary export — no row with Position/Name/Salary (or DK Pos/Player/DK Salary) was found." };
     }
-    if (headerKind === "etr-showdown" || (idx.cptSal >= 0 && idx.rp < 0)) {
+    if (!opts.combined && (headerKind === "etr-showdown" || (idx.cptSal >= 0 && idx.rp < 0))) {
       return {
         error: "This looks like an ETR Showdown projection board (CPT Salary / CPT Own columns), not a DraftKings salary export. Paste it into the projections box, or export DKSalaries.csv from the contest lineup page (desktop).",
         format: "etr-showdown",
@@ -4632,7 +4638,7 @@ function banner(id, kind, html) {
     }
 
     // Scan for showdown signal first (any CPT roster position)
-    var anyCpt = false;
+    var anyCpt = !!(opts.combined && idx.cptSal >= 0);
     if (idx.rp >= 0) {
       for (var s = hdr + 1; s < rows.length; s++) {
         var rp0 = String(rows[s][idx.rp] || "").trim().toUpperCase();
@@ -4673,7 +4679,7 @@ function banner(id, kind, html) {
         proj: null, own: 0, status: ""
       });
       if (rp === "CPT" || rp === "CAPTAIN") { rec.cptId = id; rec.cptSal = sal; }
-      else { rec.sal = sal; rec.dkId = id; }
+      else { rec.sal = sal; rec.dkId = id; if (idx.cptSal >= 0) rec.cptSal = parseMoney(row[idx.cptSal]); }
       if (!rec.sal && sal) {
         rec.sal = (rp === "CPT" || rp === "CAPTAIN") ? Math.round(sal / 1.5 / 100) * 100 : sal;
         rec.dkId = rec.dkId || id;
@@ -4682,7 +4688,7 @@ function banner(id, kind, html) {
 
     var players = Object.keys(bySlot).map(function (k) { return bySlot[k]; }).filter(function (p) { return p.sal > 0; });
     if (!players.length) return { error: "Found the header but no player rows underneath it.", dropped: dropped };
-    var showdown = players.some(function (p) { return p.cptId; });
+    var showdown = anyCpt || players.some(function (p) { return p.cptId; });
     var games = {};
     players.forEach(function (p) { games[p.gid] = 1; });
     return {
@@ -4797,13 +4803,63 @@ function banner(id, kind, html) {
     };
   }
 
+
+  // One upload accepts either a complete projection board, DK salaries, or a
+  // projection-only update. Work on copies so a rejected file cannot erase data.
+  function readUpload(text, existing) {
+    var rows = parseCSV(text), det = detectFormat(text);
+    if (!rows.length) return { error: "That file was empty." };
+    var start = det.headerRow || 0, low = rows[start].map(function (x) { return x.trim().toLowerCase(); });
+    var hasSalary = low.some(function (x) { return x === "salary" || x === "dk salary"; });
+    var normalized = rows.slice(start).map(function (r) { return r.map(function (v) { return '"' + v.replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
+    var result;
+    if (hasSalary) {
+      result = readSalaries(normalized, { combined: true });
+      if (result.error) return result;
+    } else {
+      if (!existing || !existing.length) return { error: "This file has projections but no salaries. Upload a sheet containing Player, Pos, Team, Salary and Proj, or load DraftKings salaries first." };
+      result = { players: existing.map(function (p) { return Object.assign({}, p); }), showdown: existing.some(function (p) { return p.cptSal || p.cptId; }), warnings: [] };
+    }
+    var proj = applyProjections(normalized, result.players);
+    if (!hasSalary && (proj.error || !proj.matched)) return { error: proj.error || "No players matched your current slate. Your loaded data has been kept." };
+    // Ownership units are column-wide, never inferred independently per player:
+    // 0.5 beside 80 means 0.5%, while an entirely fractional column is scaled.
+    if (!proj.error && proj.cols) [ [proj.cols.own, "own"], [proj.cols.cptOwn, "cptOwn"] ].forEach(function (pair) {
+      var col = pair[0]; if (col < 0) return;
+      var values = rows.slice(start + 1).map(function (r) { return parseFloat(String(r[col] || "").replace(/[%,$]/g, "")); }).filter(Number.isFinite);
+      var percent = low[col].indexOf("%") >= 0 || rows.slice(start + 1).some(function (r) { return /%/.test(r[col] || ""); }) || values.some(function (v) { return v > 1; });
+      rows.slice(start + 1).forEach(function (row) {
+        var name = normName(row[proj.cols.name]), tm = proj.cols.team >= 0 ? team(row[proj.cols.team]) : "";
+        var player = result.players.find(function (p) { return normName(p.name) === name && (!tm || p.team === tm); });
+        var val = parseFloat(String(row[col] || "").replace(/[%,$]/g, ""));
+        if (player && isFinite(val)) player[pair[1]] = val * (percent ? 1 : 100);
+      });
+    });
+    // Complete boards are authoritative. Keep official IDs only when name, team
+    // and salary match, and never carry projections from a different upload.
+    if (hasSalary) result.players.forEach(function (p) {
+      var old = (existing || []).find(function (x) { return normName(x.name) === normName(p.name) && x.team === p.team && x.sal === p.sal; });
+      if (old) { if (proj.error) ["proj", "own", "cptProj", "cptOwn"].forEach(function (k) { if (old[k] != null) p[k] = old[k]; }); p.dkId = p.dkId || old.dkId || ""; p.cptId = p.cptId || (old.cptSal === p.cptSal ? old.cptId : "") || ""; p.gid = old.gid; p.opp = old.opp; }
+    });
+    var teams = Array.from(new Set(result.players.map(function (p) { return p.team; }).filter(Boolean))).sort();
+    if (result.showdown && teams.length === 2) result.players.forEach(function (p) { p.opp = teams.find(function (t) { return t !== p.team; }); p.gid = teams.join("-"); });
+    result.games = new Set(result.players.map(function (p) { return p.gid; })).size;
+    result.projected = result.players.filter(function (p) { return p.proj != null; }).length;
+    result.ownership = result.players.filter(function (p) { return p.own > 0; }).length;
+    result.warnings = [];
+    if (!result.projected) result.warnings.push("Salaries loaded. Upload your projection sheet here next to build lineups.");
+    else if (!result.ownership) result.warnings.push("No ownership found. You can build lineups; simulation needs ownership estimates.");
+    if (result.players.some(function (p) { return !p.dkId || (result.showdown && !p.cptId); })) result.warnings.push("DraftKings entry export needs official player IDs; analysis can run without them.");
+    return result;
+  }
+
   function detectFormat(text) {
     var rows = parseCSV(text);
     if (!rows.length) return { format: "empty" };
     for (var i = 0; i < Math.min(rows.length, 16); i++) {
       var cells = rows[i].map(function (c) { return String(c).trim().toLowerCase(); });
       var cSal = findCol(cells, ["salary", "dk salary"]);
-      var cPos = findCol(cells, ["position", "dk pos"]);
+      var cPos = findCol(cells, ["position", "dk pos", "pos"]);
       var cName = findCol(cells, ["name", "player", "name + id"]);
       if (cSal >= 0 && cPos >= 0 && cName >= 0) {
         return { format: classifyHeader(cells), headerRow: i };
@@ -4823,6 +4879,7 @@ function banner(id, kind, html) {
     parseOwn: parseOwn,
     detectFormat: detectFormat,
     readSalaries: readSalaries,
+    readUpload: readUpload,
     applyProjections: applyProjections,
     CLASSIC_POS: CLASSIC_POS,
     SHOWDOWN_POS: SHOWDOWN_POS
@@ -6251,10 +6308,17 @@ function renderStrip() {
   if (S.demo) bits.push(`<span class="dot"></span><span style="color:var(--warn);font-weight:750">demo slate — invented players</span>`);
   $("fsStrip").innerHTML = bits.join("");
   $("poolCount").textContent = st.total ? `${st.priced} of ${st.total} have a projection` : "";
-  for (const b of $("fsTabs").querySelectorAll("button[data-s]")) {
-    const need = { solver: st.priced > 0, sim: S.lineups.length > 0, exposure: S.lineups.length > 0 };
-    b.disabled = b.dataset.s in need ? !need[b.dataset.s] : false;
-  }
+  // Keep navigation available; explain missing inputs inside each workspace.
+  const solverNext = $("solverNext");
+  solverNext.hidden = st.priced > 0;
+  solverNext.innerHTML = st.total
+    ? '<b>Add projections to build lineups.</b> Salaries alone do not include projected points. <a href="#slate" data-goto="slate">Add projections on Slate</a>.'
+    : '<b>Start with your player data.</b> <a href="#slate" data-goto="slate">Load salaries and projections on Slate</a>, or try the clearly labelled demo there.';
+  const simNext = $("simNext");
+  simNext.hidden = S.lineups.length > 0 && st.own >= 50;
+  simNext.innerHTML = !S.lineups.length
+    ? '<b>Build lineups before simulating.</b> <a href="#solver" data-goto="solver">Go to Solver</a>. You will also need projected ownership on your slate.'
+    : '<b>Add projected ownership before simulating.</b> <a href="#slate" data-goto="slate">Add an ownership column on Slate</a> so the simulator can model the field.';
 }
 
 function renderPool() {
@@ -6440,6 +6504,10 @@ function renderLineups() {
 }
 
 function exportCsv() {
+  if (S.players.some(p => !p.dkId || (E.SITES[S.site].showdown && !p.cptId))) {
+    banner("solveWarn", "err", "<b>Official DraftKings IDs are needed for entry export.</b> Your uploaded projections work for analysis. Add the matching DraftKings salary file with IDs before exporting."); return;
+  }
+
   if (!S.lineups.length) return;
   if (typeof DDFSValidators !== "undefined" && S.presetKey && S.exportContestType) {
     const gate = DDFSValidators.exportAllowed(S.presetKey, S.exportContestType);
@@ -7269,8 +7337,6 @@ async function doStandingsImport(text) {
 const SHEETS = ["slate", "solver", "sim", "exposure", "bankroll", "screener", "standings", "method"];
 function show(name) {
   if (SHEETS.indexOf(name) < 0) name = "slate";
-  const btn = $("fsTabs").querySelector(`button[data-s="${name}"]`);
-  if (btn && btn.disabled) name = "slate";
   S.sheet = name; save();
   SHEETS.forEach(s => { const n = $("sh-" + s); if (n) n.hidden = s !== name; });
   for (const b of $("fsTabs").querySelectorAll("button[data-s]")) b.classList.toggle("on", b.dataset.s === name);
@@ -7318,6 +7384,7 @@ function boot() {
     if (!f) return;
     const r = new FileReader();
     r.onload = () => { $("salPaste").value = String(r.result).slice(0, 2000000); doSalaries(String(r.result)); };
+    r.onerror = () => banner("slateWarn", "err", "<b>Could not read the file.</b> Please choose the CSV again.");
     r.readAsText(f);
   });
   $("salGo").addEventListener("click", () => doSalaries($("salPaste").value));
@@ -7554,6 +7621,11 @@ function applyMappedSlate(r) {
   r.players.forEach(p => {
     if (p.status === "OUT" || p.status === "IR") { p.excl = true; autoOut++; }
   });
+  // Enrich an uploaded board with official IDs without discarding its estimates.
+  r.players.forEach(p => {
+    const previous = S.players.find(x => normName(x.name) === normName(p.name) && x.team === p.team && x.sal === p.sal);
+    if (previous) ["proj", "own", "cptProj", "cptOwn"].forEach(k => { if (previous[k] != null) p[k] = previous[k]; });
+  });
   S.players = r.players; S.demo = false; S.lineups = []; SIM = null;
   save();
   renderStrip(); renderPool(); renderLineups(); renderSolveStats(); renderExposure();
@@ -7563,7 +7635,7 @@ function applyMappedSlate(r) {
     (wantShowdown ? " Showdown CPT/FLEX merged. " : " ") +
     (st ? ("Injury flags: " + esc(st) + ". ") : "") +
     (autoOut ? (autoOut + " OUT/IR marked Out (toggle if you disagree). ") : "") +
-    "Paste projections next — nothing can be optimised without them.");
+    (S.players.some(p => p.proj != null) ? "Your matching uploaded projections were retained." : "Upload your projection sheet above to build lineups."));
   $("slateState").textContent = "live DK";
   $("matchNote").textContent = "";
 }
@@ -7656,7 +7728,7 @@ function gradeReceipts() {
 function doSalaries(text) {
 
   if (!String(text || "").trim()) { banner("slateWarn", "err", "<b>Nothing to read.</b> Choose the DraftKings CSV or paste its contents."); return; }
-  const r = readSalaries(text);
+  const r = DDFSIngest.readUpload(text, S.players);
   if (r.error) { banner("slateWarn", "err", "<b>Could not read that file.</b> " + esc(r.error)); return; }
   const wantShowdown = r.showdown;
   S.site = wantShowdown ? "dk_showdown" : "dk_classic";
@@ -7665,9 +7737,10 @@ function doSalaries(text) {
   save();
   renderStrip(); renderPool(); renderLineups(); renderSolveStats(); renderExposure();
   $("stackCard").hidden = E.SITES[S.site].showdown;
-  banner("slateWarn", "ok", `<b>${r.players.length} players across ${r.games} game${r.games === 1 ? "" : "s"}.</b> ` +
-    (wantShowdown ? "Captain-mode rows were detected, so this is set up as a Showdown slate. " : "") +
-    "Now paste your projections — nothing can be optimised without them.") + ((r.warnings && r.warnings.length) ? " <span class=\"mut\">" + esc(r.warnings.join(" ")) + "</span>" : "");
+  banner("slateWarn", r.projected ? "ok" : "warn", `<b>${r.players.length} players loaded · ${r.projected} projections · ${r.ownership} ownership estimates.</b> ` +
+    (wantShowdown ? "Showdown detected. " : "Classic detected. ") +
+    (r.projected ? '<a href="#solver" data-goto="solver">Build lineups</a>, then simulate them and inspect exposure. ' : "") + esc((r.warnings || []).join(" ")));
+  $("matchNote").textContent = "";
   $("slateState").textContent = "";
 }
 
