@@ -7294,7 +7294,11 @@ const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
   .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const dash='<span style="opacity:.45">—</span>';
 const r1=v=>Math.round(v*10)/10;
-const iso=d=>d.toISOString().slice(0,10);
+/* Local calendar date, never UTC. toISOString() converts to UTC first, so east of
+   Greenwich the day rolled over at 8pm ET and a night session landed on tomorrow.
+   Every caller here means the user's own calendar day (today, the day strip built
+   with setDate, the streak walk), so format from the local getters. */
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const addD=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x;};
 const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const num=v=>{const n=parseFloat(v);return Number.isFinite(n)?n:null;};
