@@ -1,3 +1,4 @@
+import { seasonProbability } from "./nfelo-season-probability.mjs";
 /* Rebuild survivor.html's window.SV snapshot from the repo's own canonical data.
  *
  *   node work/build-survivor-snapshot.mjs --check    # regenerate and diff, write nothing
@@ -74,6 +75,8 @@ try { OLD = JSON.parse(oldRaw); } catch (e) { die("existing window.SV is not JSO
 /* ---- inputs --------------------------------------------------------------- */
 const nfelo = readJSON("data/nfelo.json");
 const sched = readJSON("data/nfl-schedule.json");
+const seasonInputs = nfelo.data.season_inputs;
+if (!seasonInputs || seasonInputs.nfelo_sha !== nfelo.data.meta.sha_full || seasonInputs.season !== sched.data.season) die("Missing or mismatched nfelo season inputs");
 const ratings = nfelo.data && nfelo.data.ratings;
 const nfeloGames = nfelo.data && nfelo.data.games;
 const games = sched.data && sched.data.games;
@@ -91,7 +94,8 @@ if (sched.data.season !== OLD.meta.season)
 const meta = {
   ...OLD.meta,
   captured: (nfelo.data.meta && nfelo.data.meta.captured) || nfelo.as_of || OLD.meta.captured,
-  probability_method: "nfelo-direct-v1",
+  probability_method: "nfelo-season-v1",
+  season_projection: { z: seasonInputs.z, qb_weight: seasonInputs.qb_weight, hfa_sha: seasonInputs.hfa_sha, hfa_committed_at: seasonInputs.hfa_committed_at, assumption: seasonInputs.assumption },
   probability_method_since: "2026-09-09",
   market_observed_at: (nfelo.data.meta && nfelo.data.meta.upstream_committed_at) || null,
   nfelo_sha: (nfelo.data.meta && nfelo.data.meta.sha) || OLD.meta.nfelo_sha,
@@ -184,6 +188,7 @@ for (const g of games) {
 
   const canonical = canonId(g);
   const prior = oldByTeams.get(`${g.week}|${h}|${a}`) || oldByCanon.get(canonical);
+  const seasonProjection = seasonProbability(seasonInputs, canonical);
   const mirrored = nfeloByCanon.get(canonical);
   const nfp = mirrored ? (mirrored.nfelo?.p_home_close ?? mirrored.nfelo?.p_home_open ?? mirrored.hwp) : null;
   if (mirrored && (!Number.isFinite(nfp) || nfp < 0 || nfp > 1))
@@ -211,27 +216,16 @@ for (const g of games) {
     mk_obs,
     mk_book: null,
     nfp,
+    season_p: seasonProjection.p,
+    season_elo_dif: seasonProjection.eloDifference,
     nfelo_obs: nfp == null ? null : meta.market_observed_at,
-    p: null, src: nfp == null ? "model" : "nfelo",
+    p: null, src: nfp == null ? "nfelo-season" : "nfelo",
   });
 }
 
-/* Published nfelo probabilities pass through unchanged. Ratings-only fallback uses the page CDF. */
-const lift = name => {
-  const m = new RegExp(`\\nfunction ${name}\\s*\\(`).exec(html);
-  if (!m) die(`could not lift ${name} from survivor.html — it was renamed`);
-  const from = m.index + 1;
-  let depth = 0, started = false;
-  for (let i = from; i < html.length; i++) {
-    const c = html[i];
-    if (c === "{") { depth++; started = true; }
-    else if (c === "}") { depth--; if (started && depth === 0) return html.slice(from, i + 1); }
-  }
-  die(`could not find the end of ${name}`);
-};
-const { ncdf, nppf } = new Function(lift("ncdf") + "\n" + lift("nppf") + "\nreturn {ncdf,nppf};")();
+/* Published forecasts override the full-season pre-market calculation. */
 for (const g of out) {
-  g.p = g.nfp ?? Math.round(ncdf(g.mm / meta.sd) * 10000) / 10000;
+  g.p = g.nfp ?? g.season_p;
 }
 
 const ownership = buildOwnership(readJSON("data/survivor-ownership-inputs.json"), out, meta.season);
@@ -278,7 +272,7 @@ const note = (f, msg) => { byField[f] = (byField[f] || 0) + 1; diffs.push(msg); 
 for (const g of out) {
   const prior = oldByTeams.get(`${g.wk}|${g.h}|${g.a}`);
   if (!prior) { note("new", `NEW ${g.id}`); continue; }
-  for (const f of ["id", "wk", "h", "a", "d", "src", "mk_src", "mk_obs", "mk_book", "nfp", "nfelo_obs"])
+  for (const f of ["id", "wk", "h", "a", "d", "src", "mk_src", "mk_obs", "mk_book", "nfp", "nfelo_obs", "season_p", "season_elo_dif"])
     if (prior[f] !== g[f]) note(f, `${f} ${g.id}: ${JSON.stringify(prior[f])} -> ${JSON.stringify(g[f])}`);
   if (Math.abs((prior.mm ?? 0) - (g.mm ?? 0)) > 0.005) note("mm", `mm ${g.id}: ${prior.mm} -> ${g.mm}`);
   if ((prior.mk ?? null) !== (g.mk ?? null)) note("mk", `mk ${g.id}: ${prior.mk} -> ${g.mk}`);

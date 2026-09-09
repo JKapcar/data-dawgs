@@ -124,3 +124,25 @@ provenance but no longer enter Survivor's probability calculation.
 This revision applies to the board and future receipts. Existing receipts remain
 unchanged with their original probabilities and method. Historical blend backtests
 do not validate this new policy. Ownership and pool rules are unchanged.
+
+
+### Full-season extension and daily cadence — 2026-09-09
+
+The owner approved nfelo-season-v1: published nfelo forecasts take priority.
+For unpublished games, use Greer’s pre-market calculation:
+`P(home) = 1 / (1 + 10^(-d / z))`, with `d = base_home - base_away +
+hfa_elo + qb_weight * (qb_home - qb_away)`. Config z and QB weight and unrounded
+published base/QB ratings are captured from the same nfelo commit. Game context
+comes from a pinned nfelohfa commit; its hfa_adj is converted to Elo with Greer’s
+factor of 25. Base ratings exclude QB adjustments; do not add QB twice.
+
+Current team/QB strength is held fixed for the remaining schedule. This is a
+Data Dawgs extension of nfelo’s formula, not a forecast published by Greer.
+No guessed future market lines or additional market blend enter it. Missing or
+nonfinite inputs stop publication. All 272 games must match the canonical schedule.
+The legacy normal-distribution probability fallback is retired.
+
+Refresh once daily at 14:45 UTC (10:45 a.m. EDT / 9:45 a.m. EST); actual Actions
+start time may be delayed. Remove the additional NFL-data-triggered model pull.
+Receipt capture and results grading retain their independent triggers.
+Existing receipts stay unchanged; future receipts record nfelo-season-v1.

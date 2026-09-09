@@ -266,7 +266,7 @@ if (CMD === "capture") {
     config: {
       entries: cfg.entries, lives: cfg.lives, reuse: cfg.reuse,
       double_pick_weeks: cfg.doublePickWeeks, week18_mode: cfg.week18Mode,
-      probability_method: "nfelo-direct-v1", chalk: cfg.chalk, used_teams: cfg.used,
+      probability_method: "nfelo-season-v1", chalk: cfg.chalk, used_teams: cfg.used,
     },
 
     input_snapshot_id: snapshotId,

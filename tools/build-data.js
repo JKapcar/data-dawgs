@@ -389,9 +389,9 @@ write('models.json', {
   tier: tierOf('survivor.html'),
   graded: false,
   as_of: SV.meta.captured,
-  source: 'Fitted on nfelo ratings + nflverse schedule; parameters as used live on survivor.html and receipts.html.',
+  source: 'nfelo published forecasts and nfelo-season-v1 parameters; legacy margin diagnostics retained for provenance.',
   note:
-    'These are the exact parameters the site uses. Return them alongside any number you derive from them. ' +
+    'Survivor uses nfelo published probabilities or nfelo-season-v1, not the legacy margin model below. ' +
     'The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its ' +
     'residual SD (13.18) is larger than most people intuit, which is the whole point.',
   data: {
@@ -423,10 +423,12 @@ write('models.json', {
       prop_sd_caveat: 'Props use a placeholder SD of line x 0.55. That is openly a guess. Flag it before leaning on it.',
     },
     survivor_engine: {
+      probability_method: SV.meta.probability_method,
+      season_projection: SV.meta.season_projection,
       defaults: {
         entries: 200, lives: 1, buybacks: false, buyback_through: 4, buyback_rate: 0.35,
         double_pick_from: 0, reuse_teams: false, start_week: 1, tiebreak: 'split',
-        probability_method: "nfelo-direct-v1", field_chalk_exponent: 2.4, sims: 3000,
+        probability_method: "nfelo-season-v1", field_chalk_exponent: 2.4, sims: 3000,
       },
       known_limitation:
         'Double-pick weeks are recorded but NOT simulated. Every survival number after a double-pick week ' +
@@ -448,17 +450,19 @@ write('survivor.json', {
   source: 'nfelo ' + SV.meta.nfelo_sha + ' published forecasts and ratings + ' + SV.meta.sched_src + ' 2026 schedule.',
   note:
     'Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: ' +
-    '"nfelo" = published nfelo forecast without an extra blend; "model" = ratings-only estimate when no forecast is available. Ownership is modelled, not observed.',
+    '"nfelo" = published nfelo forecast without an extra blend; "nfelo-season" = nfelo pre-market calculation with current team/QB strength and game-specific HFA. Ownership is modelled, not observed.',
   field_notes: {
-    mm: 'model expected margin, home perspective (points)',
+    mm: 'Legacy margin diagnostic; not used to calculate win probabilities',
     mk: 'market-implied home win probability (null when no line); derivation and provenance are named by mk_src',
     mk_src: 'nfelo-mirror | carried:2026-08-06 | null',
     mk_obs: 'when the market input was observed; null when no line',
     mk_book: 'source book; null because the nfelo upstream output does not identify it',
+    season_p: 'nfelo pre-market logistic probability using current base ratings, QB adjustments and game-specific HFA',
+    season_elo_dif: 'Base home minus away Elo plus HFA Elo and net QB adjustment',
     nfp: 'Published nfelo home win probability; null when unavailable. No additional market blend.',
     nfelo_obs: 'Upstream commit timestamp for the published forecast',
-    p: 'Home win probability used: published nfelo forecast or ratings-only estimate',
-    src: 'nfelo | model',
+    p: 'Home win probability used: published nfelo forecast or nfelo-based full-season projection',
+    src: 'nfelo | nfelo-season',
   },
   data: { meta: SV.meta, elo: SV.elo, teams: SV.teams, games: SV.games, ownership: SV.ownership || {} },
 });
