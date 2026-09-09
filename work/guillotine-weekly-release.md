@@ -12,7 +12,7 @@ Default dashboard: `guillotine.html`. Existing account shelves, historical score
 
 ## Operations
 
-`guillotine-refresh.yml` runs daily at 14:15 UTC, plus manual dispatch. It collects weekly projections, checks the Case history reference, captures/grades receipts, regenerates the manifest, validates, commits, and requests Pages publication. Failed input refreshes do not publish partial data. The browser refuses feeds over 48 hours old or for the wrong week/scoring. Roster changes require dashboard refresh; player inputs remain the dated daily snapshot.
+`guillotine-refresh.yml` runs daily at 14:15 UTC, plus manual dispatch and an initialization run when its workflow configuration is deployed. It collects weekly projections, checks the Case history reference, captures/grades receipts, regenerates the manifest, validates, commits, and requests Pages publication. Failed input refreshes do not publish partial data. The browser refuses feeds over 48 hours old or for the wrong week/scoring. Roster changes require dashboard refresh; player inputs remain the dated daily snapshot.
 
 `guillotine-receipts.cjs` captures 10,000-draw current-starter forecasts only within 24 hours before the first kickoff. No missed prediction is backfilled. Publication has a second pre-kickoff gate immediately before each automated push. Grades require the NFL week to advance, all recorded roster scores, and at least 12 hours after the last kickoff. Completed grades are immutable. Multiclass Brier is the sum of squared chop-probability errors; it is not a claimed edge over a benchmark. Initial tier remains Labs, unvalidated.
 

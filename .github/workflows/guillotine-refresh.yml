@@ -3,6 +3,10 @@ on:
   schedule:
     - cron: '15 14 * * *'
   workflow_dispatch:
+  # Initialize or re-check the job when its configuration is deployed.
+  push:
+    branches: [main]
+    paths: [".github/workflows/guillotine-refresh.yml"]
 permissions:
   contents: write
   pages: write
