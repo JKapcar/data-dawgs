@@ -4849,7 +4849,7 @@ function rememberLeague(ref,name){
    already are when you are thinking about which league you are in. */
 function paintSwitch(){
   const list=readShelf(),cur=state?keyOf(state.ref.provider,state.ref.id):'';
-  $('leagueBtn').textContent=state?state.league.name:(list.length?'Choose a league':'No league connected');
+  $('leagueBtn').textContent=state?state.league.name:(list.length?'Choose a league':'Connect your league');
   $('leagueMenu').innerHTML=(list.length?'<div class="mhd">Your leagues</div>':'')
     +list.map(x=>{const k=keyOf(x.provider,x.leagueId);
       return '<button type="button" role="menuitem" data-open="'+esc(x.leagueId)+'" data-provider="'+esc(x.provider)
@@ -5010,7 +5010,7 @@ function setLoaded(on){
   const stripLine=on
     ? esc(state.ref.provider)+' \u00b7 '+state.teams.length+' teams \u00b7 rosters frozen '
       +new Date().toLocaleString([],{dateStyle:'short',timeStyle:'short'})
-    : 'Add or open a league to begin.';
+    : 'Paste your league link to get started.';
   /* Cached so a sheet change can restore it without re-stamping the frozen time. */
   if(on&&state)state._stripLine=stripLine;
   $('stripText').textContent=stripLine;
