@@ -50,10 +50,16 @@ Run `cd work && node assemble.mjs` after changes to the Worker sources.
 
 ## Toto operating instructions
 
-The initial 16 Week 1 predictions are authored and attributed, not a claim that a
-recurring bot has already been activated. **Recurring ChatGPT task activation is pending
-the production release check.** Proposed cadence: daily around noon America/New_York,
-with a pre-kickoff health check when the contest is active.
+The live release was verified on 2026-09-09 at 21:46 UTC. The first scheduled run
+imported all 80 model/AI forecasts: 16 each for nfelo, Classic Elo, DDPR logit, the
+linear control and Toto. Kap had 16 saved human forecasts, including the opener.
+Health was fresh, nfelo v4.3.1 was current, and all five model/AI opener receipts were
+present. The crowd had insufficient human contributors. No real game had finished yet.
+
+**The recurring ChatGPT task is enabled**, daily around noon America/New_York beginning
+2026-09-10 through the regular season. Its first future run has not executed yet; daily
+publication must continue to be verified against the live import, not inferred from the
+task's enabled status.
 
 For each future run:
 
