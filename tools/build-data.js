@@ -1226,7 +1226,7 @@ const MCP_REGISTRY = (() => {
 // endpoint served 43: the map under-claims and every caller of a retired name keeps
 // working. Deploying first and failing to commit would leave this file claiming two tools
 // are live that answer -32602, which is the one thing it exists to prevent.
-const MCP_STAGED = ['dd_fantasy_leagues'];
+const MCP_STAGED = [];
 const MCP_LIVE = MCP_REGISTRY.map(t => t.name).filter(n => !MCP_STAGED.includes(n));
 for (const n of MCP_STAGED)
   if (!MCP_REGISTRY.some(t => t.name === n)) throw new Error(`${n} is listed as staged but is not in the registry`);
@@ -1339,7 +1339,7 @@ const SURFACES = [
     reading: [{ url: '/fantasy-warroom.html', title: 'Your league, priced against its own replacement level',
                 covers: 'Connect a Sleeper, public Yahoo or ESPN league and see every roster priced in DataDawg$ for that league\'s own settings — replacement level moves with roster shape, so two leagues with the same team count can price the same player differently. Carries the disagreement view against the provider\'s own projections.' }],
     planned: [],
-    gap: 'Production dd_war_room covers connected Yahoo and ESPN. Shared Sleeper context and dd_fantasy_leagues are implemented but await Worker deployment and authenticated runtime verification. Exact waiver deadlines, game locks and spendable FAAB after transfers remain unavailable; expanded weekly context for ESPN/Yahoo is future work.' },
+    gap: 'Sleeper shared context is live in dd_war_room and discoverable through dd_fantasy_leagues. Exact waiver deadlines, game locks and spendable FAAB after transfers remain unavailable; expanded weekly context for ESPN/Yahoo is future work. A personal-account end-to-end call still needs verification.' },
   { id: 'draft-strategy', domain: 'data', name: '2026 draft strategy', page: '/strategy.html',
     machine: [{ kind: 'markdown', url: '/data/strategy.md', status: 'live' }],
     reading: [{ url: '/strategy.html', title: '2026 draft strategy',

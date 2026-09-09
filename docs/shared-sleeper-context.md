@@ -1,8 +1,6 @@
 # Shared Sleeper context and clear ESPN setup
 
-Release state: implemented and locally verified; **not deployed**. Production's
-`dd_war_room` already supports Yahoo/ESPN. The new Sleeper path and
-`dd_fantasy_leagues` remain staged until the Worker and a personal connection are verified.
+Release state: Worker version `167ff6d4-70fc-47d4-b309-e9272ac9e129` deployed at 100% on 2026-09-09. Source, tests and deployment gates are verified. A real personal-account AI call remains to be checked after the website release.
 
 ## Why this release exists
 
