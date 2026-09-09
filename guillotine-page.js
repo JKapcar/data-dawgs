@@ -22,9 +22,10 @@ function deadline(){
  $('gxDeadline').textContent=Number.isFinite(window.GX_VOTE_DEADLINE)?'Votes close at the first kickoff: '+new Date(window.GX_VOTE_DEADLINE).toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'})+'.':'Kickoff time unavailable. Voting is paused until it can be verified.';
  window.dispatchEvent(new Event('gx-deadline'));
 }
+function route(key,id){const url=new URL(location.href);if(id)url.searchParams.set('league',id);url.searchParams.delete('view');if(key)url.hash=key;history.replaceState(null,'',url);}
 function ready(g){
  if(!g)return;const wasLoading=loading;current=g;loading=false;
- choices();$('gxTeamSelect').innerHTML=option('','Choose your team')+(g.all||g.teams||[]).filter(t=>!t.dead).map(t=>option(t.rid,t.name)).join('');
+ choices();route(null,g.leagueId);$('gxTeamSelect').innerHTML=option('','Choose your team')+(g.all||g.teams||[]).filter(t=>!t.dead).map(t=>option(t.rid,t.name)).join('');
  $('gxTeamSelect').value=g.me?.rid??'';$('gxTeamSelect').disabled=false;$('gxRefresh').disabled=false;$('gxRefresh').textContent='Refresh league';
  if(wasLoading||!$('gxConnectionStatus').dataset.loaded){$('gxConnectionStatus').textContent=g.league+' · Week '+(Number(g.done||0)+1)+' · '+g.teamCount+' teams · Updated '+new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});$('gxConnectionStatus').dataset.loaded='true';}
  $('gxValueStatus').textContent=window.GX_VALUE_STATUS||'';deadline();
@@ -48,7 +49,7 @@ $('gxRefresh').onclick=()=>{const id=$('gxLeagueSelect').value||$('gxId').value;
 const tabs=[...document.querySelectorAll('[data-gx-sheet]')];
 for(const b of tabs){const key=b.dataset.gxSheet;b.innerHTML='<span>'+esc(b.textContent.replace(/\s*New\s*$/,''))+'</span><small>'+descriptions[key]+'</small>';b.setAttribute('aria-controls',document.querySelector('[data-gx-panel="'+key+'"]').id);b.tabIndex=key==='survival'?0:-1;b.addEventListener('keydown',e=>{if(!['ArrowRight','ArrowLeft','Home','End'].includes(e.key))return;e.preventDefault();let i=tabs.indexOf(b);i=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;tabs[i].click();tabs[i].focus();});}
 function nav(key){$('gxNavHint').textContent=hints[key];for(const b of tabs)b.tabIndex=b.dataset.gxSheet===key?0:-1;}
-window.addEventListener('gx-sheet-change',e=>{nav(e.detail.key);history.replaceState(null,'','#'+e.detail.key);});
+window.addEventListener('gx-sheet-change',e=>{nav(e.detail.key);route(e.detail.key,current?.leagueId);});
 const initial=location.hash.slice(1).split('/')[0];if(descriptions[initial])document.querySelector('[data-gx-sheet="'+initial+'"]').click();
 choices();if(window.__GX)ready(window.__GX);else if(read('dd-guillotine-v1',{}).id)begin({detail:{leagueId:read('dd-guillotine-v1',{}).id}});
 fetch('/data/nfl-schedule.json',{cache:'no-store',signal:AbortSignal.timeout(20000)}).then(r=>{if(!r.ok)throw Error();return r.json();}).then(x=>{schedule=x.data.games;deadline();}).catch(()=>{$('gxDeadline').textContent='Kickoff time unavailable. Voting is paused until it can be verified.';});

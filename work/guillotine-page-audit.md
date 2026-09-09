@@ -18,3 +18,5 @@ Scope: guillotine.html and its companion engines, daily inputs, local selections
 Original companion suite: 136 checks. Original valuation contract: 21 checks. Weekly/audit suite: 14 tests, including independent season caches, network retry, zero-dollar bids, and first-kickoff locking. Data envelope/manifest and service-worker checks run before publication. Live browser checks follow publication.
 
 The original season-strength illustrations and the player-level weekly forecast remain distinct, labeled models. No claim of calibrated predictive accuracy or live in-game survival odds is added.
+
+Live verification: both leagues load with 18 teams; changing league clears old tables before new data appears. Changing the focus team updates the shared selection and Money state. Weekly start/sit renders, the season scenario completes, and Case's prospective record is visible. Light and dark layouts inspected in the live browser. A final follow-up makes the URL follow league/tab selection so reload preserves it, and improves text contrast on dark-mode orange controls. Signed-in private valuation retrieval was not exercised in this browser session.
