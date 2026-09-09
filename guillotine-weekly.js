@@ -14,18 +14,19 @@ function setStatus(s){$('gwStatus').textContent=s;}
 function choice(){return $('gwFocus').value;}
 async function load(){const token=++generation;++focusGeneration;result=null;focusResult=null;for(const id of ['gwMetrics','gwBoard','gwChop','gwLineup','gwWaivers','gwWeak','gwBudgets','gwBids','gwOutlook','gwReceipts'])$(id).textContent='';$('gwError').hidden=true;$('gwLoad').disabled=true;setStatus('Reading league, weekly players, budgets and transactions…');try{
  const id=$('gwLeague').value.match(/\d{6,24}/)?.[0];if(!id)throw Error('Enter a Sleeper league ID');
- const [l,r,u,f,st,sc]=await Promise.all([get('https://api.sleeper.app/v1/league/'+id),get('https://api.sleeper.app/v1/league/'+id+'/rosters'),get('https://api.sleeper.app/v1/league/'+id+'/users'),get('/data/guillotine-weekly.json'),get('https://api.sleeper.app/v1/state/nfl'),get('/data/nfl-schedule.json')]);
+ const [l,r,u,f,st,sc,cal]=await Promise.all([get('https://api.sleeper.app/v1/league/'+id),get('https://api.sleeper.app/v1/league/'+id+'/rosters'),get('https://api.sleeper.app/v1/league/'+id+'/users'),get('/data/guillotine-weekly.json'),get('https://api.sleeper.app/v1/state/nfl'),get('/data/nfl-schedule.json'),get('/data/guillotine-calibration.json')]);
+ f.data={...f.data,calibrations:cal.data.league_calibrations||f.data.calibrations};
  if(!l||!Array.isArray(r))throw Error('League not found');if(l.settings.type!==3)throw Error('This release requires a Sleeper Chopped league');
  if(f.data.season!==Number(l.season)||f.data.week!==Math.max(1,Math.min(18,st.display_week)))throw Error('The daily player feed is not for this league’s current week. Forecasts are withheld until it refreshes.');
  if(!Number.isFinite(Date.parse(f.data.fetched_at))||Date.now()-Date.parse(f.data.fetched_at)>48*3600000)throw Error('Weekly inputs are over 48 hours old. Forecasts are withheld.');
  const tx=await Promise.all(Array.from({length:f.data.week},(_,i)=>get('https://api.sleeper.app/v1/league/'+id+'/transactions/'+(i+1))));if(token!==generation)return;
- league=l;rosters=r;users=u;feed=f.data;transactions=tx.flat();schedule=sc.data.games;
+ league=l;rosters=r;users=u;feed={...f.data,calibration:GXEngine.calibrationFor(f.data,l)};transactions=tx.flat();schedule=sc.data.games;
  excluded=(saved[id]?.excluded)||r.filter(x=>feed.week>1&&!(x.players||[]).length).map(x=>String(x.roster_id));
  $('gwFocus').innerHTML='<option value="">Choose your team</option>'+r.map(x=>'<option value="'+x.roster_id+'">'+esc(name(x.roster_id))+'</option>').join('');$('gwFocus').value=saved[id]?.focus||'';
  saved.last=id;saved[id]={...saved[id],name:l.name};save();$('gwSaved').innerHTML='<option value="">Saved leagues</option>'+Object.keys(saved).filter(k=>/^\d+$/.test(k)).map(k=>'<option value="'+k+'">'+esc(saved[k].name||k)+'</option>').join('');
  setStatus('Simulating current starting lineups…');result=await calc('load',{feed,league,rosters,transactions,excluded,now:Date.now()});if(token!==generation)return;players=result.players;render();await selectFocus();
  setStatus(l.name+' · Week '+feed.week+' · '+r.length+' rosters · fetched '+new Date(feed.fetched_at).toLocaleString()+' · '+result.n.toLocaleString()+' simulations. Refresh after roster changes.');
- }catch(e){error(e);$('gwMetrics').innerHTML='';$('gwBoard').innerHTML='Forecast unavailable. Resolve the data issue above.';setStatus('No new forecast published.');}finally{$('gwLoad').disabled=false;}}
+ }catch(e){error(e);$('gwMetrics').innerHTML='';$('gwBoard').innerHTML='Forecast unavailable. Resolve the data issue above.';for(const id of ['gwLineup','gwWaivers','gwOutlook'])$(id).textContent='Forecast unavailable: '+(e.message||e);setStatus('No new forecast published.');}finally{$('gwLoad').disabled=false;}}
 function render(){const alive=rosters.filter(r=>!excluded.includes(String(r.roster_id))),pool=alive.reduce((s,r)=>s+GXEngine.budget(r,league),0);
  $('gwMetrics').innerHTML=metric(result.active.length,'Surviving teams')+metric(num(result.chop),'Median chop line')+metric(cash(pool),'FAAB left in the field')+metric('Week '+feed.week,'Weekly projections');
  $('gwBoard').innerHTML=table(['Rank / team','Survive','Projected score','80% score range'],result.rows.map((r,i)=>'<tr data-rid="'+r.rid+'"><td>'+(i+1)+'. '+esc(name(r.rid))+'</td><td><span class="bar"><i style="width:'+100*r.survival+'%"></i></span>'+pct(r.survival)+'</td><td>'+num(r.mean)+'</td><td>'+num(r.lo)+' – '+num(r.hi)+'</td></tr>'));

@@ -15,10 +15,7 @@ def write(name,data,source,note):
     env={'tier':'labs','tier_meaning':'Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.','graded':False,'as_of':NOW.date().isoformat(),'built':NOW.date().isoformat(),'source':source,'note':note,'canonical_url':'https://datadawgs216.com/data/'+name,'data':data}
     (ROOT/'data'/name).write_text(json.dumps(env,separators=(',',':'),allow_nan=False)+'\n')
 
-def build():
-    league=fetch('https://api.sleeper.app/v1/league/'+LEAGUE);state=fetch('https://api.sleeper.app/v1/state/nfl');season=int(league['season']);week=max(1,min(18,int(state['display_week'])));w=weights(league)
-    calibration_file=ROOT/'data/guillotine-calibration.json'
-    existing=json.loads(calibration_file.read_text())['data'] if calibration_file.exists() else None
+def calibrate(existing,season,w):
     if not existing or existing['season']!=season or existing['scoring']!=w:
         def historical(wk):
             result=[]
@@ -51,7 +48,21 @@ def build():
                 for q,f in group[i+1:]:products.append((e/buckets[p]['sd'])*(f/buckets[q]['sd']))
         rho=max(0,min(.25,(statistics.mean(products) if products else 0)*len(products)/(len(products)+100)))
         existing={'season':season,'scoring':w,'buckets':buckets,'same_team_rho':rho,'pair_n':len(products),'sample_n':n,'history_season':season-1,'weeks':[1,3,5,7,9,11,13,15,17],'method':'Historical residual RMS by position and projected-score bucket, shrunk with 40 position observations; nonnegative same-team common factor capped at 0.25. Normal residuals. No fitted injury probability.','limitation':'Historical Sleeper projections can be revised after games. These are descriptive uncertainty estimates, not out-of-sample calibration. Correlation between opposing NFL teams and negative teammate correlations are not modeled.','possibly_revised_rows':modifiedAfter}
-        write('guillotine-calibration.json',existing,'Sleeper 2025 weekly projections and actual statistics, scored for DawgPound Royale',existing['limitation'])
+    return existing
+
+def build():
+    league=fetch('https://api.sleeper.app/v1/league/'+LEAGUE);state=fetch('https://api.sleeper.app/v1/state/nfl');season=int(league['season']);week=max(1,min(18,int(state['display_week'])));w=weights(league)
+    calibration_file=ROOT/'data/guillotine-calibration.json'
+    existing=json.loads(calibration_file.read_text())['data'] if calibration_file.exists() else None
+    calibrations={}
+    for lid in [LEAGUE,'1389344040964599808']:
+        target=league if lid==LEAGUE else fetch('https://api.sleeper.app/v1/league/'+lid)
+        if int(target['season'])!=season:continue
+        prior=existing if lid==LEAGUE else (existing or {}).get('league_calibrations',{}).get(lid)
+        calibrations[lid]={k:v for k,v in calibrate(prior,season,weights(target)).items() if k!='league_calibrations'}
+    existing={**calibrations[LEAGUE],'league_calibrations':calibrations}
+    write('guillotine-calibration.json',existing,'Sleeper historical weekly projections and actual statistics, separately scored for each supported league',existing['limitation'])
+    stat_keys=set().union(*(c['scoring'] for c in calibrations.values()))
     projs=fetch(endpoint('projections',season,week));schedule=json.loads((ROOT/'data/nfl-schedule.json').read_text())['data']['games'];canon=lambda t:{'LA':'LAR','OAK':'LV','JAC':'JAX','WSH':'WAS'}.get(t,t);kick={}
     for g in schedule:
         if g['season']==season and g['week']==week and g.get('season_type')=='REG':
@@ -62,9 +73,9 @@ def build():
         if pos not in ['QB','RB','WR','TE'] or st is None:continue
         tm=canon(p.get('team'));opp=canon(p.get('opponent'));start=kick.get(tm)
         if opp and not start:raise ValueError('Missing kickoff for '+str(tm))
-        players.append({'id':p['player_id'],'name':((who.get('first_name')or'')+' '+(who.get('last_name')or'')).strip(),'position':pos,'positions':[p for p in (who.get('fantasy_positions') or [pos]) if p in ['QB','RB','WR','TE']],'team':tm,'opponent':opp,'injury':who.get('injury_status'),'kickoff':start,'updated_at':p.get('last_modified'),'stats':{k:v for k,v in st.items() if k in w},'has_projection':bool(st)})
+        players.append({'id':p['player_id'],'name':((who.get('first_name')or'')+' '+(who.get('last_name')or'')).strip(),'position':pos,'positions':[p for p in (who.get('fantasy_positions') or [pos]) if p in ['QB','RB','WR','TE']],'team':tm,'opponent':opp,'injury':who.get('injury_status'),'kickoff':start,'updated_at':p.get('last_modified'),'stats':{k:v for k,v in st.items() if k in stat_keys},'has_projection':bool(st)})
     if sum(score(p['stats'],w)>0 for p in players)<150:raise ValueError('Weekly projection coverage too thin')
-    out={'season':season,'week':week,'fetched_at':NOW.isoformat(),'source_url':endpoint('projections',season,week),'calibration':existing,'players':players,'model_version':'guillotine-weekly-v1'}
+    out={'season':season,'week':week,'fetched_at':NOW.isoformat(),'source_url':endpoint('projections',season,week),'calibration':existing,'calibrations':calibrations,'players':players,'model_version':'guillotine-weekly-v1'}
     write('guillotine-weekly.json',out,'Sleeper weekly NFL player projections; league-scored in the browser','Daily snapshot. Player timestamps are source update times. Projections are not live scores. Historical uncertainty is descriptive, not prospectively validated.')
     print(f'Weekly feed: {len(players)} players, week {week}; uncertainty sample {existing["sample_n"]}')
 if __name__=='__main__':build()
