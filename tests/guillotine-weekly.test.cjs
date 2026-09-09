@@ -14,3 +14,25 @@ test('prospective capture only inside pregame gate; stale data and unknown scori
 test('missing projection differs from real zero, and injury zeros do not inherit variance',()=>{const f=receiptFixture();f.feed.players[0].has_projection=false;f.feed.players[1].injury='Out';const p=E.makePlayers(f.feed,f.league,f.now);assert.equal(p.a,undefined);assert.equal(p.b.mean,0);assert.equal(p.b.sd,0);});
 test('grading waits for completed week, accepts zero and negative points, is immutable and defers unresolved ties',()=>{const f=receiptFixture(),r=capture(f),now=f.now+7*86400000,m=[{roster_id:1,points:0},{roster_id:2,points:4}];assert.equal(grade(r,m,{season:2026,display_week:1},now).status,'pending');const g=grade(r,m,{season:2026,display_week:2},now);assert.equal(g.chopped_rid,1);assert.equal(g.status,'graded');assert.equal(g.brier,g.rows.reduce((s,x)=>s+(x.risk-(x.rid===1?1:0))**2,0));assert.deepEqual(grade(g,[],{season:2026,display_week:2},now),g);assert.equal(grade(r,[{roster_id:1,points:-1},{roster_id:2,points:0}],{season:2026,display_week:2},now).chopped_rid,1);const tied={...r,week:2,rows:r.rows.map(x=>({...x,prior_season_points:0}))};assert.equal(grade(tied,[{roster_id:1,points:0},{roster_id:2,points:0}],{season:2026,display_week:3},now).status,'waiting-tiebreak');});
 test('league switch selects its own scoring calibration and rejects unsupported scoring',()=>{const f=receiptFixture();f.feed.calibrations={case:{...f.feed.calibration,scoring:{pass_td:6},buckets:{QB:{sd:5,n:90}}}};const other={...f.league,league_id:'case',scoring_settings:{pass_td:6}};const p=E.makePlayers(f.feed,other,f.now);assert.equal(p.a.mean,18);assert.equal(p.a.sd,5);assert.equal(E.makePlayers(f.feed,f.league,f.now).a.mean,12);assert.throws(()=>E.makePlayers(f.feed,{...other,scoring_settings:{pass_td:7}}),/not yet supported/);});
+
+const pageSource=require('node:fs').readFileSync(require('node:path').join(__dirname,'../guillotine.html'),'utf8');
+test('season projection caches are separate and a failed fetch can recover',async()=>{
+ const start=pageSource.indexOf('  var PROJ_P ='),end=pageSource.indexOf('  /* Byes come',start);let calls=[],fail=true;
+ const fetch=async url=>{calls.push(url);if(fail){fail=false;throw Error('temporary');}return {ok:true,json:async()=>[{season:url.match(/nfl\/(\d+)/)[1]}]};};
+ const proj=new Function('fetch',pageSource.slice(start,end)+';return projRows;')(fetch);
+ await assert.rejects(proj(2026),/temporary/);assert.equal((await proj(2026))[0].season,'2026');assert.equal((await proj(2025))[0].season,'2025');await proj(2026);assert.equal(calls.length,3);
+});
+test('original waiver plan respects a zero-dollar remaining budget',async()=>{
+ const start=pageSource.indexOf('  var PLAN_STEPS ='),end=pageSource.indexOf('  async function weakSpots',start);
+ const players={a:{id:'a',pg:10,name:'Starter'},b:{id:'b',pg:20,name:'Upgrade'}};
+ const shape=ps=>({total:Math.max(...ps.map(p=>p.pg))});
+ const plan=new Function('projRows','playerMap','lineupSlots','lineupShape','lineupGain',pageSource.slice(start,end)+';return waiverPlan;')(async()=>[],()=>players,()=>({}),shape,(ps,c,sl,base)=>shape(ps.concat(c)).total-base);
+ const p=await plan({season:2026,settings:{waiver_budget:1000}},[{roster_id:1,players:['a'],settings:{waiver_budget_used:1000}}],1,0);
+ assert.equal(p.left,0);assert.equal(p.steps[0].lo,0);assert.equal(p.steps[0].hi,0);
+});
+test('local votes close at actual first kickoff, including a Wednesday opener',()=>{
+ const start=pageSource.indexOf('  function locked(){'),end=pageSource.indexOf('\n',start),source=pageSource.slice(start,end);
+ let now=Date.parse('2026-09-10T00:19:59Z');const win={GW_INTEGRATED:true,GX_VOTE_DEADLINE:Date.parse('2026-09-10T00:20:00Z')};
+ const locked=new Function('window','Date',source+';return locked;')(win,{now:()=>now});
+ assert.equal(locked(),false);now+=1000;assert.equal(locked(),true);win.GX_VOTE_DEADLINE=null;assert.equal(locked(),true);
+});
