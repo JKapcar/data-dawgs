@@ -1,0 +1,41 @@
+{
+  "as_of": "2026-09-09",
+  "source": "ChatGPT/Codex-authored NFL probabilities using Data Dawgs public nfelo, 538 Classic and canonical schedule snapshots; no private user forecasts",
+  "built": "2026-09-09T21:17:00.996Z",
+  "tier": "labs",
+  "graded": false,
+  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
+  "canonical_url": "https://datadawgs216.com/data/forecast-toto.json",
+  "data": {
+    "entrant": "Toto",
+    "model_version": "toto-codex-data-only-v1 (underlying model identifier not exposed)",
+    "author": "ChatGPT / Codex",
+    "method": "Data-only probabilistic judgment anchored to current nfelo, its republished market probabilities, and Classic Elo. These inputs are correlated; this is NOT an independent model or a validated edge. Large disagreements lead to moderate forecasts, generally leaning toward current nfelo rather than preseason Classic Elo. No injury, lineup or news adjustment is claimed. The on-page chat assistant is a separate service.",
+    "inputs": {
+      "paths_in_hash_order": ["/data/nfl-schedule.json", "/data/nfelo.json", "/data/538-classic.json"],
+      "snapshot_sha256": "2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681",
+      "hash_method": "SHA-256 of the three UTF-8 file contents joined with one newline, in paths_in_hash_order",
+      "repository_commit": "31c84082f8ddc8dfc4ab807409339254fab1f043",
+      "nfelo_upstream_commit": "c44081fafd0728aabaaff5ed178fbec497c357f4",
+      "nfelo_captured_at": "2026-09-09T16:53:23.073Z"
+    },
+    "forecasts": [
+      {"game_id":"2026_01_NE_SEA","home_team":"SEA","away_team":"NE","home_win_probability":0.64,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"nfelo and republished market both give Seattle 63.11%; Classic gives 69.43%. I stay close to the current feed at 64%, with only a small upward adjustment for Classic rather than counting correlated signals as independent evidence."},
+      {"game_id":"2026_01_SF_LAR","home_team":"LAR","away_team":"SF","home_win_probability":0.59,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"Neutral-site game. nfelo 57.66% and neutral-site Classic 57.07% are below the republished market 63.11%. A moderate 59% reflects the disagreement without adding home advantage."},
+      {"game_id":"2026_01_ATL_PIT","home_team":"PIT","away_team":"ATL","home_win_probability":0.63,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"Current nfelo and market agree at 63.11%; Classic is close at 64.24%. No material data-only reason to move away from 63%."},
+      {"game_id":"2026_01_BAL_IND","home_team":"IND","away_team":"BAL","home_win_probability":0.42,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"Indianapolis ranges from market 36.89% through nfelo 43.98% to Classic 48.44%. I put more weight on current information than the near-even preseason rating and choose 42%."},
+      {"game_id":"2026_01_BUF_HOU","home_team":"HOU","away_team":"BUF","home_win_probability":0.47,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"nfelo and market are about 44.3% for Houston, while Classic gives 59.38%. That large disagreement warrants caution; 47% retains the current-feed underdog direction while acknowledging rating uncertainty."},
+      {"game_id":"2026_01_CHI_CAR","home_team":"CAR","away_team":"CHI","home_win_probability":0.42,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"Carolina is an underdog in all three inputs: nfelo 41.5%, market 38.7%, Classic 45.23%. I retain the central, moderate 42% view."},
+      {"game_id":"2026_01_CLE_JAX","home_team":"JAX","away_team":"CLE","home_win_probability":0.75,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"All sources favor Jacksonville: nfelo 72.31%, market 78.65%, Classic 76.98%. I choose 75%, below the more confident market/Classic pair because their agreement is not independent evidence."},
+      {"game_id":"2026_01_NO_DET","home_team":"DET","away_team":"NO","home_win_probability":0.74,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"nfelo and market give Detroit 74.53%, Classic 74.14%. I use 74% with no unsupported news adjustment."},
+      {"game_id":"2026_01_NYJ_TEN","home_team":"TEN","away_team":"NYJ","home_win_probability":0.56,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"Tennessee is a modest favorite: nfelo and market 55.73%, Classic 58.59%. I stay near the current-feed 56% rather than treating the ratings as extra independent votes."},
+      {"game_id":"2026_01_TB_CIN","home_team":"CIN","away_team":"TB","home_win_probability":0.62,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"nfelo and market give Cincinnati 63.11%; Classic is lower at 59.28%. A small downward adjustment to 62% captures that uncertainty."},
+      {"game_id":"2026_01_ARI_LAC","home_team":"LAC","away_team":"ARI","home_win_probability":0.77,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"The Chargers are favored by nfelo 74.87%, Classic 75.99%, and market 81.11%. I choose 77%, recognizing the market but not matching its full confidence."},
+      {"game_id":"2026_01_GB_MIN","home_team":"MIN","away_team":"GB","home_win_probability":0.59,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"Minnesota ranges from market 55.73% to nfelo 60.51% and Classic 62.38%. I shade nfelo downward to 59% in recognition of the less confident market."},
+      {"game_id":"2026_01_MIA_LV","home_team":"LV","away_team":"MIA","home_win_probability":0.58,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"Upstream OAK is normalized to Las Vegas. nfelo 62.44% and market 63.11% conflict with Classic 43.50%. I lean toward the current feed but reduce confidence to 58%; no claim about the cause of the disagreement."},
+      {"game_id":"2026_01_WAS_PHI","home_team":"PHI","away_team":"WAS","home_win_probability":0.65,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"Philadelphia is favored by nfelo 61.67%, market 66.60%, and Classic 71.50%. I select 65%, nearer current nfelo/market than the high preseason rating."},
+      {"game_id":"2026_01_DAL_NYG","home_team":"NYG","away_team":"DAL","home_win_probability":0.46,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"The Giants range from market 40.53% to nfelo 45.41% and Classic 54.37%. I remain near nfelo at 46%, acknowledging disagreement without flipping the favorite solely on Classic."},
+      {"game_id":"2026_01_DEN_KC","home_team":"KC","away_team":"DEN","home_win_probability":0.52,"captured_at":"2026-09-09T21:17:00.996Z","input_snapshot_id":"2c53752b299084ffc0cde200ca130c6dbbb0c1fb688042de88cbb50adcf5f681","rationale":"Kansas City has the widest directional disagreement: Classic 42.69%, nfelo 51.33%, market 59.47%. I use a cautious 52%, close to the current model and far from either confident extreme."}
+    ]
+  }
+}

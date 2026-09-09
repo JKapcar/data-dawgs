@@ -52,6 +52,10 @@ await ctx.route("**/toto.jkapcar4.workers.dev/**", async route => {
   const send = (o, s = 200) => route.fulfill({ status: s, contentType: "application/json", body: JSON.stringify(o) });
 
   if (p === "/forecast/entries") return send({ ok: true, entries: [], sealed: [] });
+  if (p === "/forecast/board") {
+    const models=JSON.parse(fs.readFileSync(path.join(ROOT,'data/model-receipts.json'),'utf8')).data;
+    return send({built:new Date().toISOString(),data:{health:{checked_at:new Date().toISOString(),status:'ok'},models,entrants:[],grades:[],games:[],boards:{totals:[],common_sample:{rows:[],n_games:0,note:'Test fixture — no final results'}}}});
+  }
   if (p === "/forecast/entry") {
     const body = req.postDataJSON() || {};
     posted.push(body);
@@ -121,8 +125,8 @@ ok("the registered model lines render", (await page.locator("#cwModels tbody tr"
   ok("…and the ties-void deviation", /ties void/i.test(m));
 }
 /* Zero rows and a broken read must not look alike. */
-ok("the leaderboard says it is not built, rather than showing an empty table",
-  /not built yet/i.test(await page.locator("#cwLbState").innerText()));
+ok("the live leaderboard distinguishes zero graded games from an unavailable backend",
+  /awaiting final results/i.test(await page.locator("#cwLbState").innerText()));
 
 /* ------------------------------------------- ⚠️ THE RULE THAT POISONS THE CROWD */
 console.log("\ntouched is an event, never a value");

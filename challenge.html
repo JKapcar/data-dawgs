@@ -2768,10 +2768,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     model number was written down and dated <b>before</b> kickoff &mdash; so when the season ends
     there is an argument about skill rather than about who remembered what.</p>
   </header>
-  <div class="p-disclosure"><b>Nothing here has been graded yet.</b> No game has been scored, no
-  leaderboard exists, and no claim is being made that anyone beats anything. What exists today is
-  the entry side: you can forecast, the models are already on the record, and the crowd line seals
-  itself at kickoff. Grading arrives with the results.</div>
+  <div class="p-disclosure" id="cwHealth" role="status">Checking live contest status…</div>
 
 <div id="sheets"></div>
 
@@ -2791,16 +2788,14 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div id="sheetBoardLb">
   <div class="card">
     <h3>Leaderboard</h3>
-    <p class="sub" id="cwLbState">Not built yet.</p>
-    <p class="note">There is deliberately nothing here. Points, Brier, ranks and coverage are all
-    <b>queries over the entries</b> &mdash; no running total is stored anywhere, because a stored
-    total is the one copy that goes stale. The queries need graded outcomes, and no game has been
-    played yet.</p>
-    <p class="note">When it does land it will be <b>two boards, not one</b>. Total points rewards
-    showing up, so a model that forecast all 272 games and a person who forecast 40 cannot be
-    compared on it. Beside it goes a common-sample board &mdash; the exact games an entrant and
-    every comparator both forecast &mdash; with n and coverage on every row. Publishing only the
-    first would be making the exact claim this site tells everyone else not to make.</p>
+    <p class="sub" id="cwLbState">Loading entrants and game results…</p>
+    <h3>Tracked entrants / total points</h3>
+    <div class="tblwrap"><table class="tbl" id="cwTotals"><thead><tr><th>Entrant</th><th>Type</th><th>Next game ready?</th><th>Submitted</th><th>Graded n</th><th>Coverage</th><th>Points</th><th>Brier ↓</th><th>Log loss ↓</th></tr></thead><tbody></tbody></table></div>
+    <p class="note">Total points rewards participation. Zero graded games means no performance ranking yet. “Submitted” counts real receipts, not a promise that a registered bot will play. The linear-mean control is tracked but excluded from the main comparison.</p>
+    <h3>Common-sample comparison</h3>
+    <p class="note" id="cwCommonNote"></p>
+    <div class="tblwrap"><table class="tbl" id="cwCommon"><thead><tr><th>Entrant</th><th>Type</th><th>Next game ready?</th><th>Submitted</th><th>Shared n</th><th>Coverage</th><th>Points</th><th>Brier ↓</th><th>Log loss ↓</th></tr></thead><tbody></tbody></table></div>
+    <h3>Game-by-game audit</h3><div id="cwAudit"></div>
   </div>
   </div>
 
@@ -2808,8 +2803,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div id="sheetBoardModels">
   <div class="card">
     <h3>The lines you are playing against <span class="rt" id="cwMdAsOf"></span></h3>
-    <p class="sub">Every one of these was captured and dated before the season. Nothing here is
-    computed at page load, and nothing is retrofitted &mdash; the file below is the receipt.</p>
+    <p class="sub">Live forecasts refresh before kickoff, then lock separately for each game. Receipts show source and capture times. The <a href="/data/model-receipts.json">original preseason ledger</a> remains unchanged. <a href="https://toto.jkapcar4.workers.dev/forecast/packet">Toto’s public input packet</a> contains site data, never other players’ unlocked probabilities.</p>
     <div class="tblwrap"><table class="tbl" id="cwModels"><thead><tr>
       <th>Line</th><th>Version</th><th class="num">Games</th><th>Captured</th><th>Independent?</th>
     </tr></thead><tbody></tbody></table></div>
@@ -2821,11 +2815,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   </div>
   <div class="card">
     <h3>The crowd line</h3>
-    <p class="sub">Every touched human forecast on a game becomes one entry, sealed the moment the
-    game kicks off. It is the only line here that is <b>independent of the models by
-    construction</b> &mdash; which is exactly why registered bots are excluded from it. A bot is
-    model-driven, so letting bots into the crowd would quietly turn it into an average of the
-    models it exists to check.</p>
+    <p class="sub">At least three touched human forecasts are needed. The crowd uses robust log-odds aggregation and excludes bots. Eligibility closes at kickoff; the next processing tick seals the receipt. People can see model hints, so independence from the models is not guaranteed.</p>
   </div>
   </div>
 
@@ -3016,6 +3006,7 @@ window.DDSheets = function(cfg){
   var mine = {};         // game_id -> stored entry
   var week = null;
   var contract = null;
+  var mineRequest = 0, liveSignature = null;
 
   /* ⚠️ A Set, written to ONLY by the input listener. Not derived, not inferred, never
      recomputed from a value. See the banner above. */
@@ -3139,6 +3130,7 @@ var playName = function(i){return PLAYS[i % PLAYS.length].name;};
       ezL.style.setProperty("--ez",ac);ezL.style.setProperty("--ezink",inkOn(ac));ezL.querySelector("b").textContent=g.away_team+" 100%";
       ezR.style.setProperty("--ez",hc);ezR.style.setProperty("--ezink",inkOn(hc));ezR.querySelector("b").textContent=g.home_team+" 100%";
       var field=q(".drive-field"),chain=q(".drive-chain"),cluster=q(".drive-cluster"),out=q("output"),coach=q(".drive-coach"),ask=q(".drive-ask"),cards=q(".drive-cards"),corr=q(".drive-corr"),lock=q(".drive-lock"),note=q(".drive-note"),badge=q(".save-badge"),p=val,savedValue=mine[g.game_id]?mine[g.game_id].slider_value:null,naive=mine[g.game_id]&&mine[g.game_id].p_naive,activePointer=null,dragStartX=0,dragStartP=p,lastTick=p,lastHaptic=0;
+      if(mine[g.game_id]&&mine[g.game_id].slider_side==="away")savedValue=100-savedValue;
       /* Direction is semantic, not decorative: p=0 puts the away helmet through the
          left endpoint, so it must face left; p=100 puts home through the right endpoint,
          so it must face right. Inward-facing helmets made the opposite team look like it
@@ -3160,10 +3152,12 @@ var playName = function(i){return PLAYS[i % PLAYS.length].name;};
         field.addEventListener("keydown",function(e){if(card.classList.contains("is-locked"))return;var step={ArrowLeft:-1,ArrowRight:1,PageDown:-10,PageUp:10}[e.key];if(step===undefined&&e.key!=="Home"&&e.key!=="End")return;e.preventDefault();p=e.key==="Home"?0:e.key==="End"?100:Math.max(0,Math.min(100,p+step));valueOf[g.game_id]=p;touchedGames.add(g.game_id);paint();syncSaveState();});
       }
       ask.addEventListener("click",function(){if(ask.disabled)return;naive=touchedGames.has(g.game_id)?Math.round(p):null;ask.hidden=true;modelLines.forEach(function(m,i){var b=mtpl.content.firstElementChild.cloneNode(true),name=m.model_name||m.model_id;b.querySelectorAll(".dm-hd").forEach(function(h){h.textContent=name;});b.querySelector(".dm-play").innerHTML=playSVG(i);b.querySelector(".dm-name").textContent=playName(i);b.querySelector(".dm-num").textContent=Math.round(m.p*100);b.querySelector(".dm-for").textContent=g.home_team+" TO WIN";b.querySelector(".dm-prov").textContent="v"+(m.model_version||"unknown")+" · captured "+String(m.captured_at||"").slice(0,10);b.addEventListener("click",function(){b.classList.add("flipped");});cards.appendChild(b);});corr.hidden=false;});
-      lock.addEventListener("click",function(){if(!touchedGames.has(g.game_id)){note.className="drive-note warn";note.textContent="UNTOUCHED ≠ 50 — set the ball first.";return;}note.textContent="Saving…";submit(g,p,"home",true,note,card,field,null,lock,{p_naive:naive,entry_method:"drive",hints_revealed:cards.children.length>0});});
+      ask.addEventListener("click",function(){cards.querySelectorAll(".dm-prov").forEach(function(el,i){var m=modelLines[i];if(m){el.textContent=(m.model_version||"unknown")+" · captured "+(m.source_capture_at||m.captured_at)+" · "+(locked?"locked":"pre-kickoff");el.title=m.rationale||m.source||"";}});corr.textContent="DDPR is an ensemble of nfelo and Classic. Toto is model-informed. The chains span only the two primitive models.";});
+      lock.addEventListener("click",function(){if(isLocked(g))return;if(!touchedGames.has(g.game_id)){note.className="drive-note warn";note.textContent="UNTOUCHED ≠ 50 — set the ball first.";return;}note.textContent="Saving…";submit(g,p,"home",true,note,card,field,null,lock,{p_naive:naive,entry_method:"drive",hints_revealed:cards.children.length>0});});
       if(!signedIn)note.innerHTML='Sign in to save a forecast.';
       syncSaveState();
-      if(locked){ask.disabled=true;lock.disabled=true;lock.classList.add("done");lock.textContent="LOCKED";}
+      if(locked){lock.disabled=true;lock.classList.add("done");lock.textContent="LOCKED";note.textContent="Kickoff lock — your saved forecast cannot change.";}
+      if(!modelLines.length){ask.disabled=true;ask.textContent="NO LIVE MODEL RECEIPTS YET";}
       paint();host.appendChild(card);
     });updateProgress();
   }
@@ -3194,7 +3188,7 @@ var playName = function(i){return PLAYS[i % PLAYS.length].name;};
         if(card._markSaved)card._markSaved(e.slider_value);
         st.className = "drive-note good";
         st.innerHTML = "Saved · revision " + e.revision + (drift ? ' <span class="drift">NAIVE ' + e.p_naive + '% → FINAL ' + e.slider_value + '%</span>' : "");
-        card.classList.add("is-done");save.disabled=false;updateProgress();
+        card.classList.add("is-done");save.disabled=false;updateProgress();liveSignature=null;refreshLive();
         return;
       }
       /* ⚠️ THE SERVER'S 409 IS THE REAL LOCK. Trust it over the local clock: a browser
@@ -3217,6 +3211,7 @@ var playName = function(i){return PLAYS[i % PLAYS.length].name;};
 
   /* ------------------------------------------------------------ my own week */
   function loadMine() {
+    var requestId = ++mineRequest;
     mine = {};
     var m = window.DDAuth && window.DDAuth.me();
     if (!m || week == null) { drawBoard(); return; }
@@ -3226,9 +3221,10 @@ var playName = function(i){return PLAYS[i % PLAYS.length].name;};
       { headers: window.DDAuth.headers() })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
+        if(requestId!==mineRequest)return;
         (j && j.entries || []).forEach(function (e) {
           mine[e.game_id] = e;
-          valueOf[e.game_id] = e.slider_value;
+          valueOf[e.game_id] = e.slider_side === "away" ? 100-e.slider_value : e.slider_value;
           sideOf[e.game_id] = e.slider_side;
           /* ⚠️ Rehydrating a STORED touched:true is not deriving it — the server already
              holds that fact. It is restored so a save that changes nothing does not
@@ -3237,7 +3233,7 @@ var playName = function(i){return PLAYS[i % PLAYS.length].name;};
         });
         drawBoard();
       })
-      .catch(function () { drawBoard(); });
+      .catch(function () { if(requestId===mineRequest)drawBoard(); });
   }
 
   function paintAuth() {
@@ -3403,21 +3399,32 @@ var playName = function(i){return PLAYS[i % PLAYS.length].name;};
 
   json("/data/nfl-team-colors.json").then(function(env){teamColors=env.data||{};drawBoard();}).catch(function(){});
 
-  json("/data/model-receipts.json").then(function (env) {
-    var rows = env.data || [];
-    rows.forEach(function (r) {
-      if (typeof r.home_win_probability !== "number") return;
-      (modelsByGame[r.game_id] = modelsByGame[r.game_id] || [])
-        .push({ model_id: r.model_id, model_name: r.model_name, model_version: r.model_version,
-                captured_at: r.captured_at, source_repo: r.source_repo, p: r.home_win_probability });
-    });
-    $("cwMdAsOf").textContent = "as of " + (env.as_of || "");
-    drawModels(rows);
-    drawBoard();
-  }).catch(function () {
-    $("cwCorr").className = "note bad";
-    $("cwCorr").textContent = "The model receipts could not be read, so no model line is shown.";
-  });
+  function liveTable(id,rows){
+    var tb=$(id).querySelector("tbody");tb.replaceChildren();
+    rows.forEach(function(e){var tr=document.createElement("tr");
+      [e.name+(e.displayed===false?" (control)":"")+(e.revoked?" (revoked)":""),e.kind,e.kind==="crowd"?"Seals at kickoff":e.next_game_submitted?"Yes":e.next_game_id?"No receipt":"—",e.submitted,e.n,
+       Math.round(e.coverage*100)+"%",e.n&&e.points!=null?e.points.toFixed(2):"—",e.brier==null?"—":e.brier.toFixed(4),e.log_loss==null?"—":e.log_loss.toFixed(4)]
+      .forEach(function(v){var td=document.createElement("td");td.textContent=v;tr.appendChild(td);});tb.appendChild(tr);});
+  }
+  function refreshLive(){
+    json(WORKER+"/forecast/board?season=2026").then(function(env){
+      if(!env.data||!env.data.boards)throw new Error("Live backend has not been deployed");
+      var d=env.data,h=d.health||{},rows=d.models||[];
+      $("cwHealth").textContent=(h.stale||h.status!=="ok"||h.nfelo_stale?"ATTENTION — ":"LIVE — ")+"last processing check: "+(h.checked_at||"not run")+" · nfelo source: "+(h.nfelo_captured_at||"not captured")+(h.nfelo_stale?" (stale)":"")+(h.missing_upcoming&&h.missing_upcoming.length?" · "+h.missing_upcoming.length+" upcoming model receipts missing":"")+(h.last_error?" · "+h.last_error.error:"");
+      $("cwMdAsOf").textContent="checked "+env.built;
+      liveTable("cwTotals",d.boards.totals);liveTable("cwCommon",d.boards.common_sample.rows);
+      $("cwLbState").textContent=d.entrants.length+" tracked entrants · "+d.grades.length+" graded entries. "+(d.grades.length?"Scores refresh after each final result.":"Awaiting final results; no performance ranking yet.")+(d.next_game?" Next game readiness: "+d.next_game.game_id+" · "+gameTime(Date.parse(d.next_game.kickoff_at)):"");
+      $("cwCommonNote").textContent=d.boards.common_sample.note+" Shared games: "+d.boards.common_sample.n_games+".";
+      var audit=$("cwAudit");audit.replaceChildren();
+      d.games.filter(function(g){return g.locked;}).forEach(function(g){var det=document.createElement("details"),sum=document.createElement("summary"),pre=document.createElement("pre");sum.textContent=g.game_id+" · "+g.status+" · "+(g.sealed?"sealed":"awaiting seal");pre.style.whiteSpace="pre-wrap";pre.textContent=JSON.stringify({lock_hash:g.lock_hash,missing_models:g.missing_models,forecasts:g.forecasts,grades:d.grades.filter(function(r){return r.game_id===g.game_id;})},null,2);det.append(sum,pre);audit.appendChild(det);});
+      var signature=JSON.stringify(rows);
+      if(signature!==liveSignature){liveSignature=signature;modelsByGame={};rows.forEach(function(r){
+        if(typeof r.home_win_probability!=="number"||r.model_id==="ddpr-nfl-linear")return;
+        (modelsByGame[r.game_id]=modelsByGame[r.game_id]||[]).push(Object.assign({},r,{p:r.home_win_probability}));
+      });drawModels(rows);if(!document.querySelector(".drive-card.is-dirty"))drawBoard();}
+    }).catch(function(e){$("cwHealth").textContent="LIVE CONTEST UNAVAILABLE — "+e.message+". Your saved entries are not replaced. No archived forecast is presented as live.";});
+  }
+  refreshLive();setInterval(refreshLive,60000);
 
   json("/data/model-contracts.json").then(function (env) {
     contract = env.data && env.data.forecast_challenge_contract;
@@ -3425,10 +3432,10 @@ var playName = function(i){return PLAYS[i % PLAYS.length].name;};
   }).catch(function () { drawMethod(null); });
 
   /* The banner chip signing in or out repaints the board in the same tick. */
-  window.addEventListener("dd-auth", function () { paintAuth(); loadMine(); });
+  window.addEventListener("dd-auth", function () { valueOf={};touchedGames.clear();paintAuth(); loadMine(); });
 
   /* The countdown is courtesy, so a cheap repaint is enough. */
-  setInterval(function () { document.querySelectorAll(".rt").forEach(function(el){ var card=el.closest(".drive-card"), g=card && card._game; if(g) el.textContent=isLocked(g)?"locked":until(g.kickoff_ms); }); }, 60000);
+  setInterval(function () { document.querySelectorAll(".drive-card").forEach(function(card){var g=card._game;if(!g)return;card.querySelector(".rt").textContent=isLocked(g)?"locked":until(g.kickoff_ms);if(isLocked(g)){card.classList.add("is-locked");card.querySelector(".drive-lock").disabled=true;card.querySelector(".drive-field").setAttribute("aria-disabled","true");}}); }, 1000);
 })();
 </script>
 
@@ -3443,19 +3450,9 @@ window.DD_BOTCTX = {
   chrome: {sub:'reads the challenge', ph:'Ask Toto about the challenge…', chips:[
     ['How does this get scored, and what beats what?','How scoring works'],
     ['Who am I actually playing against here?','The lines I face'],
-    ['Why is there no leaderboard yet?','No leaderboard?']]},
-  sys: `RIGHT NOW you are on the NFL Forecasting Challenge: a draggable football field per game for the reader, alongside four registered model lines and a sealed crowd line, everyone scored with the same formula on the same slate.
-- ⚠️ NOTHING HAS BEEN GRADED. No game has been scored, no leaderboard exists, and no claim is being made that anyone beats anything. What exists today is the entry side. Never imply a ranking.
-- AN UNTOUCHED SLIDER IS RECORDED AS UNTOUCHED, NOT AS 50. Those two things mean opposite things and the page is deliberate about it — do not tell anyone a blank counts as a coin flip.
-- ⚠️ TWO OF THE REGISTERED LINES ARE NOT INDEPENDENT OF EACH OTHER, and the correlation is measured on the page rather than asserted. Averaging four numbers that are mostly the same number is one model with extra steps and would look far more confident than it has earned.
-- THE CROWD LINE IS THE ONLY LINE INDEPENDENT OF THE MODELS BY CONSTRUCTION, which is exactly why registered bots are excluded from it — a bot is model-driven, and letting bots in would quietly turn the crowd into an average of the models it exists to check. It seals at kickoff.
-- WHEN THE LEADERBOARD LANDS IT WILL BE TWO BOARDS. Total points rewards showing up, so a model that forecast 272 games and a person who forecast 40 cannot be compared on it; beside it goes a common-sample board with n and coverage on every row. Do not rank anyone on volume.
-- The scoring rules are rendered from /data/model-contracts.json, not typed into the page. If the page and the contract ever disagree, the contract wins.
-- You may explain what a probability means, how Brier and log loss behave, and what a probability is claiming. Do not hand out picks dressed as forecasts, and do not tell anyone what number to enter as if you knew the answer.`,
-  ctx: () => `THE FORECAST CHALLENGE. Every registered line was captured and dated before the season; nothing on the page is computed at page load and nothing is retrofitted — the file is the receipt. Scoring is rendered from /data/model-contracts.json. Tier: Pup, nothing graded.
-THE PARTS: this week's slate of fields (drag the football to say how likely the game ends the way the label reads; 50 means nothing either way; untouched is recorded as untouched) · the leaderboard, deliberately empty because points, Brier, ranks and coverage are queries over entries and the queries need graded outcomes · the table of lines you are playing against, with their version, game count, capture date and whether they are independent · the crowd line, sealed at kickoff, bots excluded · and the scoring contract.
-
-` + (window.DDBotScan ? window.DDBotScan(5200) : "The page reader could not run, so nothing on the page can be read right now.")
+    ['Are the entrants ready and the feeds current?','Contest status']]},
+  sys: `You are explaining the NFL Forecasting Challenge. Use the visible live health, receipts and leaderboard; do not invent live status or scores. nfelo and 538 Classic are primitives; DDPR logit and linear are dependent ensembles. The linear control is tracked but not a main card. Toto is a SEPARATE ChatGPT/Codex-authored forecasting entrant with dated public inputs and forecasts; do not claim this chat interface is that scheduled process or impersonate its underlying model. Humans keep their own entries, private until each kickoff. Bots are excluded from the crowd, which requires at least three touched human entries; model hints mean human independence is not guaranteed. Untouched is absence, never a deliberate 50. Grading uses 25 - 100*(p-r)^2, ties void. Total points rewards participation; common-sample Brier compares the same games. No skill claim without an adequate sample. Archived preseason receipts are not live predictions.`,
+  ctx: () => `Live NFL contest status, entrants, models and derived scores from /forecast/board. Original preseason receipts remain an archive. Read actual counts and dates below; unavailable is not ready.\n` + (window.DDBotScan ? window.DDBotScan(6200) : "The page reader could not run.")
 };
 </script>
 </body>
