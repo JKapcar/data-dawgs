@@ -254,10 +254,14 @@
     const body={leagueId,season};
     const s2=clean(input&&input.s2), swid=clean(input&&input.swid);
     if(s2||swid){ body.s2=s2; body.swid=swid; }
-    return espnCall("/espn/connect",{method:"POST",body,fetch:options&&options.fetch});
+    return espnCall(espnPath("/espn/connect",options&&options.scoped?{leagueId,season}:null),{method:"POST",body,fetch:options&&options.fetch});
   }
-  function espnStatus(options){ return espnCall("/espn/connect",{fetch:options&&options.fetch}); }
-  function disconnectEspn(options){ return espnCall("/espn/connect",{method:"DELETE",fetch:options&&options.fetch}); }
+  function espnPath(path, options){
+    if(!options || options.leagueId==null) return path;
+    return path+"?leagueId="+encodeURIComponent(options.leagueId)+"&season="+encodeURIComponent(options.season);
+  }
+  function espnStatus(options){ return espnCall(espnPath("/espn/connect",options),{fetch:options&&options.fetch}); }
+  function disconnectEspn(options){ return espnCall(espnPath("/espn/connect",options),{method:"DELETE",fetch:options&&options.fetch}); }
   function fetchEspnLeague(options){ return espnCall("/espn/league",{fetch:options&&options.fetch}); }
   function fetchEspnPicks(options){ return espnCall("/espn/picks",{fetch:options&&options.fetch}); }
   // the War Room needs projections and the weekly schedule as well as rosters;
@@ -278,11 +282,24 @@
   function fetchEspnWarroom(options){
     const share=options&&options.share;
     if(share) return espnPublicCall("/espn/share/"+encodeURIComponent(share),{fetch:options&&options.fetch});
-    return espnCall("/espn/warroom",{fetch:options&&options.fetch});
+    return espnCall(espnPath("/espn/warroom",options),{fetch:options&&options.fetch});
   }
-  function espnShareStatus(options){ return espnCall("/espn/share",{fetch:options&&options.fetch}); }
-  function espnShareCreate(options){ return espnCall("/espn/share",{method:"POST",body:{},fetch:options&&options.fetch}); }
-  function espnShareRevoke(options){ return espnCall("/espn/share",{method:"DELETE",fetch:options&&options.fetch}); }
+  async function openEspnWarroom(input, options){
+    const scope={leagueId:clean(input&&input.leagueId),season:clean(input&&input.season),fetch:options&&options.fetch};
+    if(!/^\d{1,12}$/.test(scope.leagueId) || !/^\d{4}$/.test(scope.season))
+      throw new Error("Choose an ESPN league and season.");
+    const status=await espnStatus(scope);
+    const matches=status.connected && String(status.leagueId)===scope.leagueId && String(status.season)===scope.season;
+    if(!matches || input.s2 || input.swid)
+      await connectEspn(input,{scoped:true,fetch:scope.fetch});
+    const feed=await fetchEspnWarroom(scope);
+    if(String(feed.league&&feed.league.id)!==scope.leagueId || String(feed.league&&feed.league.season)!==scope.season)
+      throw new Error("ESPN returned a different league or season. Nothing was loaded. Please reconnect this league.");
+    return feed;
+  }
+  function espnShareStatus(options){ return espnCall(espnPath("/espn/share",options),{fetch:options&&options.fetch}); }
+  function espnShareCreate(options){ return espnCall(espnPath("/espn/share",options),{method:"POST",body:{},fetch:options&&options.fetch}); }
+  function espnShareRevoke(options){ return espnCall(espnPath("/espn/share",options),{method:"DELETE",fetch:options&&options.fetch}); }
 
   /* ---------------- Yahoo public leagues ---------------------------------
      Yahoo's browser API is not used. The Worker reads only server-rendered PUBLIC
@@ -381,7 +398,7 @@
       disconnect:disconnectYahoo,warroom:fetchYahooWarroom,
       shareStatus:yahooShareStatus,shareCreate:yahooShareCreate,shareRevoke:yahooShareRevoke},
     espn:{detect:input=>!!parseEspn(input),parse:parseEspn,connect:connectEspn,status:espnStatus,
-      disconnect:disconnectEspn,fetchLeague:fetchEspnLeague,fetchPicks:fetchEspnPicks,warroom:fetchEspnWarroom,importLeague:importEspn,
+      disconnect:disconnectEspn,fetchLeague:fetchEspnLeague,fetchPicks:fetchEspnPicks,warroom:fetchEspnWarroom,openWarroom:openEspnWarroom,importLeague:importEspn,
       shareStatus:espnShareStatus,shareCreate:espnShareCreate,shareRevoke:espnShareRevoke}
   };
   root.DDProviders=providers;
