@@ -2664,6 +2664,11 @@ body.wr-shared #youLab{display:none!important}
 .wr-sharebar.bad{border-color:color-mix(in srgb,#c8462f 60%,var(--line));background:color-mix(in srgb,#c8462f 8%,transparent)}
 
 .wr-connect form{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.wr-connect select{max-width:100%;padding:11px 13px;border:1px solid var(--grid);border-radius:8px;background:var(--page);color:var(--ink-1);font:inherit}
+#espnAccess{margin-top:16px;padding:16px;border:1px solid var(--grid);border-radius:10px}
+#espnAccess[hidden]{display:none}
+#espnAccessForm label{display:flex;flex-direction:column;gap:6px;flex:1 1 260px;min-width:0;font-size:14px}
+#espnAccessForm input{min-width:0;width:100%;box-sizing:border-box;font-size:16px}
 .wr-connect input{min-width:min(100%,460px);flex:1;padding:11px 13px;border:1px solid var(--grid);
   border-radius:8px;background:var(--page);color:var(--ink-1);font:inherit}
 .wr-settings{display:grid;grid-template-columns:repeat(4,minmax(112px,1fr));gap:10px;margin-top:12px}
@@ -2794,10 +2799,23 @@ body.wr-shared #youLab{display:none!important}
     </div>
     <div class="wr-connect">
       <form id="connectForm">
-        <input id="leagueInput" inputmode="url" autocomplete="url" placeholder="Sleeper, ESPN, or public Yahoo league URL" aria-label="Fantasy league URL or Sleeper ID">
+        <select id="leagueProvider" aria-label="Platform for a league ID"><option value="auto">Detect from URL</option><option value="sleeper">Sleeper</option><option value="espn">ESPN</option><option value="yahoo">Yahoo</option></select>
+        <input id="leagueInput" inputmode="url" autocomplete="url" placeholder="League URL or ID" aria-label="Fantasy league URL or ID">
         <button class="wr-btn">Add league</button>
       </form>
-      <p class="wr-status" id="connectionStatus">Sleeper connects directly. Public Yahoo leagues are read without a cookie; their projections come from Sleeper's season feed. ESPN uses the connection in the <a href="draft-leagues.html">draft room</a>.</p>
+      <p class="wr-status" id="connectionStatus" role="status">Paste a league URL, or choose a platform and enter its ID. Private ESPN leagues connect here after an access check.</p>
+      <section id="espnAccess" hidden data-ddb-skip>
+        <h3>Connect your private ESPN league</h3>
+        <p class="wr-note" id="espnAccessNote"></p>
+        <p class="wr-note">On a computer, sign in to ESPN. Open Developer Tools (F12 in Chrome or Edge), then Application → Cookies → the ESPN domain. Copy the full values named espn_s2 and SWID below.</p>
+        <p class="wr-note">These are sensitive ESPN session cookies. Submit only your own. They are encrypted under your Data Dawgs account and reused until they expire.</p>
+        <form id="espnAccessForm" autocomplete="off">
+          <label>espn_s2<input id="wrEspnS2" type="password" autocomplete="off" spellcheck="false" required></label>
+          <label>SWID<input id="wrEspnSwid" type="password" autocomplete="off" spellcheck="false" required></label>
+          <button class="wr-btn" type="submit">Connect and open league</button>
+          <button class="wr-mini" id="espnAccessCancel" type="button">Cancel</button>
+        </form>
+      </section>
     </div>
     <div class="wr-saved" id="seededLeague"></div>
     <div class="wr-saved" id="savedList"></div>
@@ -4683,7 +4701,9 @@ function paintStations(){
 function cleanShelf(raw){
   const out=[];
   (Array.isArray(raw)?raw:[]).forEach(x=>{
-    if(!x||!/^\d{6,24}$/.test(String(x.leagueId)))return;
+    if(!x)return;
+    const validId=x.provider==='espn'||x.provider==='yahoo'?/^\d{1,12}$/:/^\d{6,24}$/;
+    if(!validId.test(String(x.leagueId)))return;
     const focus=x.focusRosterId==null?null:Number(x.focusRosterId);
     /* Per-module horizons ride the shelf entry. Anything that is not one of the
        two real boards is dropped rather than carried forward. */
@@ -4806,7 +4826,11 @@ function paintSwitch(){
    its upstream is already public. Shared readers never receive a session header. */
 function shareAdapter(){
   const p=state&&state.ref&&state.ref.provider;
-  return p&&(p==='espn'||p==='yahoo')&&window.DDProviders?DDProviders[p]:null;
+  if(!p||!['espn','yahoo'].includes(p)||!window.DDProviders)return null;
+  const adapter=DDProviders[p];
+  if(p!=='espn')return adapter;
+  const scope={leagueId:state.ref.id,season:state.league.season};
+  return {shareStatus:()=>adapter.shareStatus(scope),shareCreate:()=>adapter.shareCreate(scope),shareRevoke:()=>adapter.shareRevoke(scope)};
 }
 async function paintShare(){
   const box=$('shareBox'),adapter=shareAdapter();
@@ -4814,8 +4838,10 @@ async function paintShare(){
   const eligible=!SHARED&&adapter&&adapter.shareStatus;
   box.hidden=!eligible;
   if(!eligible)return;
-  let st=null;
+  paintShareUrl(null);
+  const current=state;let st=null;
   try{ st=await adapter.shareStatus(); }catch(e){ return }
+  if(state!==current)return;
   paintShareUrl(st&&st.url?st.url:null);
 }
 function paintShareUrl(url){
@@ -5014,14 +5040,15 @@ async function fetchLeague(id){
 /* ESPN, assembled by the Worker into the shape fetchLeague() returns for Sleeper.
    Everything downstream — replacement level, VOR, the schedule sim, trades — reads
    that shape and is untouched. The Worker holds the credentials; this never sees them. */
-async function fetchLeagueEspn(id,share){
+async function fetchLeagueEspn(id,share,credentials){
   if(!(window.DDProviders&&DDProviders.espn&&DDProviders.espn.warroom))
     throw Error('This build has no ESPN War Room adapter.');
   /* A shared link does not know its league id until the feed answers — the token is the
      only thing the reader holds — so the ref is built from what comes back. */
-  const feed=await DDProviders.espn.warroom(share?{share:share}:undefined);
+  const feed=share?await DDProviders.espn.warroom({share}):await DDProviders.espn.openWarroom({
+    leagueId:String(id),season:String(ESPN_WR_SEASON),...(credentials||{})});
   const L=feed.league||{};
-  const ref={provider:'espn',id:String(id!=null?id:(L.id||''))};
+  const ref={provider:'espn',id:String(L.id||'')};
   /* ⚠️ `Number(p.p)||0` turned a MISSING projection into a real 0 — the same bug the Worker
      was just fixed for, one layer down. A 0 is a data point and it drags replacement level
      down for everyone; absent has to stay absent. `paid` is the auction price from ESPN's
@@ -5106,10 +5133,26 @@ async function fetchLeagueYahoo(id,share){
   return st;
 }
 
+// This War Room's player and pricing feeds are for the 2026 season.
+const ESPN_WR_SEASON=2026;
+function parseWarroomInput(input,provider='auto'){
+  const value=String(input||'').trim();
+  if(/^\d+$/.test(value)){
+    if(provider==='auto' && value.length<=12)
+      throw Error('Choose ESPN, Sleeper, or Yahoo beside the ID, or paste the full league URL.');
+    return window.DDProviders?.parse(providerInput(provider,value));
+  }
+  const ref=window.DDProviders?.parse(value);
+  if(ref?.provider==='espn'){
+    const season=new URL(value).searchParams.get('seasonId');
+    if(season && season!==String(ESPN_WR_SEASON))throw Error('This War Room currently uses the '+ESPN_WR_SEASON+' season. Paste that season’s league URL.');
+  }
+  return ref;
+}
 let leagueLoadGeneration=0;
-async function connect(input){
-  const ref=window.DDProviders?.parse(input);
-  if(!ref)throw Error('Paste a Sleeper ID or a Sleeper, ESPN, or Yahoo league URL.');
+async function connect(input,credentials){
+  const ref=parseWarroomInput(input,$('leagueProvider').value);
+  if(!ref)throw Error('Paste a Sleeper, ESPN, or Yahoo league URL, or choose a platform for its ID.');
   if(!['sleeper','espn','yahoo'].includes(ref.provider))throw Error('Unsupported provider.');
   const generation=++leagueLoadGeneration;
   state=null;DD=null;DDPICKS=null;sim=null;
@@ -5117,7 +5160,7 @@ async function connect(input){
   document.querySelectorAll('.wr-has-league').forEach(el=>el.classList.add('wr-hide'));
   $('connectionStatus').className='wr-status';$('connectionStatus').textContent='Reading '+ref.provider+' league '+ref.id+'…';
   try{
-    const next=ref.provider==='espn'?await fetchLeagueEspn(ref.id):ref.provider==='yahoo'?await fetchLeagueYahoo(ref.id):await fetchLeague(ref.id);
+    const next=ref.provider==='espn'?await fetchLeagueEspn(ref.id,null,credentials):ref.provider==='yahoo'?await fetchLeagueYahoo(ref.id):await fetchLeague(ref.id);
     if(generation!==leagueLoadGeneration)return false;
     await loadMV();
     if(Number(next.league?.settings?.type)===2)await loadDynastyMV();
@@ -5234,6 +5277,7 @@ async function openLeague(provider,id,opts){
      always reads as a Sleeper league id — which is how reopening a saved ESPN league
      ended up asking Sleeper for league 110404 and getting a 404. Hand each provider back
      the URL shape it recognises. */
+  $('leagueProvider').value=provider;
   $('leagueInput').value=providerInput(provider,id);
   $('connectForm').requestSubmit();
 }
@@ -5592,10 +5636,10 @@ document.addEventListener('click',e=>{
     paintShelf();paintSwitch();saveAccountShelf();return}
 });
 
-$('connectForm').addEventListener('submit',async e=>{
-  e.preventDefault();
+async function submitLeague(credentials){
+  const input=$('leagueInput').value;
   const st=$('connectionStatus');
-  try{if(await connect($('leagueInput').value)===false)return;st.className='wr-status good';st.textContent=readShelf().length+' league'+(readShelf().length===1?'':'s')+' saved. This league is open now.';$('leagueInput').value='';
+  try{if(await connect(input,credentials)===false)return;hideEspnAccess();st.className='wr-status good';st.textContent=readShelf().length+' league'+(readShelf().length===1?'':'s')+' saved. This league is open now.';$('leagueInput').value='';
     /* ⚠️ Connecting from the Leagues sheet used to leave you there, so the
        "which team is yours" gate — which lives on My Team — never came into
        view and the league looked connected but inert. An autoload is exempt:
@@ -5604,6 +5648,14 @@ $('connectForm').addEventListener('submit',async e=>{
     if(!quietOpen){SHEETS.show('report');window.scrollTo({top:0,behavior:'smooth'})}}
   catch(err){
     st.className='wr-status bad';st.textContent=err.message;
+    if(err.needsCredentials){
+      const ref=parseWarroomInput(input,$('leagueProvider').value);
+      if(ref?.provider==='espn'){
+        $('leagueInput').value=providerInput('espn',ref.id);$('leagueProvider').value='espn';
+        $('espnAccessNote').textContent='ESPN requires authorization for league '+ref.id+' ('+ESPN_WR_SEASON+').';
+        $('espnAccess').hidden=false;SHEETS.show('leagues');$('wrEspnS2').focus();
+      }
+    }
     /* A network blip is not a reason to make someone re-pick a league they saved. */
     if(quietOpen){
       $('stripText').innerHTML='Could not open that league. '+esc(err.message)
@@ -5613,7 +5665,23 @@ $('connectForm').addEventListener('submit',async e=>{
     }
   }
   finally{quietOpen=false}
+}
+function hideEspnAccess(){
+  $('espnAccess').hidden=true;$('wrEspnS2').value='';$('wrEspnSwid').value='';
+}
+$('connectForm').addEventListener('submit',async e=>{
+  e.preventDefault();hideEspnAccess();await submitLeague();
 });
+$('espnAccessForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const credentials={s2:$('wrEspnS2').value.trim(),swid:$('wrEspnSwid').value.trim()};
+  $('wrEspnS2').value='';$('wrEspnSwid').value='';
+  const button=e.submitter;if(button)button.disabled=true;
+  try{await submitLeague(credentials)}finally{if(button)button.disabled=false}
+});
+$('espnAccessCancel').onclick=hideEspnAccess;
+$('leagueInput').addEventListener('input',hideEspnAccess);
+$('leagueProvider').addEventListener('change',hideEspnAccess);
 $('flowNav').onclick=e=>{const b=e.target.closest('[data-flow]');if(b)SHEETS.show(b.dataset.flow)};
 $('teamPicker').onchange=()=>{
   tradeFilter=null;

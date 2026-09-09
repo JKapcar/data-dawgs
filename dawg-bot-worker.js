@@ -959,6 +959,31 @@ const ESPN_KV_PREFIX = "espn:cred:";
 const ESPN_CRED_TTL = 60 * 60 * 24 * 120;   // 120 days; ESPN cookies outlive a season
 
 function espnKvKey(uid) { return ESPN_KV_PREFIX + uid; }
+// The original account connection stays readable by the draft rig. War Room reads
+// use an explicit league + season, never whichever connection was saved last.
+function espnLeagueKey(uid, leagueId, season) { return "espn:league:" + uid + ":" + season + ":" + leagueId; }
+async function espnStored(env, uid, leagueId, season) {
+  const kv = env.RL;
+  const open = async key => {
+    const blob = await kv.get(key);
+    return blob ? espnOpen(env, uid, blob) : null;
+  };
+  if (!leagueId) return open(espnKvKey(uid));
+  const matches = c => c && String(c.leagueId) === String(leagueId) && String(c.season) === String(season);
+  const scoped = await open(espnLeagueKey(uid, leagueId, season));
+  if (matches(scoped)) return scoped;
+  const legacy = await open(espnKvKey(uid));
+  return matches(legacy) ? legacy : null;
+}
+async function espnListKeys(kv, prefix) {
+  const keys = []; let cursor;
+  do {
+    const page = await kv.list({ prefix, ...(cursor ? { cursor } : {}) });
+    keys.push(...page.keys.map(k => k.name));
+    cursor = page.list_complete ? null : page.cursor;
+  } while (cursor);
+  return keys;
+}
 
 /* ---- shared league links ----------------------------------------------------
  * Eleven managers in a twelve-team league have no ESPN cookie in this Worker, and
@@ -1002,10 +1027,12 @@ async function handleEspnShareRead(request, url, env, cors) {
 
   let blob = null;
   try { blob = await kv.get(espnKvKey(rec.uid)); } catch { blob = null; }
-  const cred = blob ? await espnOpen(env, rec.uid, blob) : null;
+  const cred = rec.scoped
+    ? await espnStored(env, rec.uid, rec.leagueId, rec.season)
+    : (blob ? await espnOpen(env, rec.uid, blob) : null);
   if (!cred)
     return json({ error: "The league owner's ESPN connection has expired, so this shared view cannot refresh. Ask them to reconnect." }, 409, cors);
-  if (String(cred.leagueId) !== String(rec.leagueId))
+  if (String(cred.leagueId) !== String(rec.leagueId) || String(cred.season) !== String(rec.season))
     return json({ error: "The league owner is no longer connected to this league, so this link no longer resolves." }, 409, cors);
 
   const r = await espnWarroomFeed(cred);
@@ -1067,6 +1094,8 @@ async function espnFetch(leagueId, season, views, cred) {
   if (!res.ok) return { ok: false, status: res.status, reason: `ESPN answered ${res.status}.` };
   let body;
   try { body = await res.json(); } catch { return { ok: false, status: res.status, reason: "ESPN's answer was not JSON." }; }
+  if (String(body.id) !== String(leagueId) || String(body.seasonId) !== String(season))
+    return { ok: false, status: 409, reason: "ESPN returned a different league or season. Nothing was loaded or saved." };
   return { ok: true, status: res.status, body };
 }
 
@@ -1438,21 +1467,35 @@ async function handleEspn(request, url, env, cors) {
   if (!uid) return json({ error: "This account predates per-user ids. Sign in again to connect ESPN." }, 409, cors);
 
   const path = url.pathname.replace(/^\/espn\/?/, "");
-  const stored = async () => {
-    let blob = null;
-    try { blob = await kv.get(espnKvKey(uid)); } catch { blob = null; }
-    return blob ? espnOpen(env, uid, blob) : null;
-  };
+  const leagueId = url.searchParams.get("leagueId");
+  const season = url.searchParams.get("season");
+  const scoped = leagueId !== null || season !== null;
+  if (scoped && (!/^\d{1,12}$/.test(leagueId || "") || !/^\d{4}$/.test(season || "")))
+    return json({ error: "Specify both an ESPN league id and a four-digit season." }, 400, cors);
+  const stored = () => espnStored(env, uid, leagueId, season);
+  const shareKey = ESPN_SHARE_OF_PREFIX + uid + (scoped ? ":" + season + ":" + leagueId : "");
 
   if (path === "connect" && request.method === "DELETE") {
-    try { await kv.delete(espnKvKey(uid)); } catch {}
-    /* a share reads through the credential, so disconnecting must revoke it too —
-       otherwise a link the owner believes is dead sits there returning 409s forever */
-    try {
-      const tok = await kv.get(ESPN_SHARE_OF_PREFIX + uid);
+    const revoke = async key => {
+      const tok = await kv.get(key);
       if (tok) await kv.delete(ESPN_SHARE_PREFIX + tok);
-      await kv.delete(ESPN_SHARE_OF_PREFIX + uid);
-    } catch {}
+      await kv.delete(key);
+    };
+    if (scoped) {
+      await kv.delete(espnLeagueKey(uid, leagueId, season));
+      await revoke(shareKey);
+      const legacy = await espnStored(env, uid);
+      if (legacy && String(legacy.leagueId) === leagueId && String(legacy.season) === season) {
+        await kv.delete(espnKvKey(uid));
+        await revoke(ESPN_SHARE_OF_PREFIX + uid);
+      }
+    } else {
+      // The original Disconnect control promises to remove the account credentials.
+      for (const key of await espnListKeys(kv, "espn:league:" + uid + ":")) await kv.delete(key);
+      for (const key of await espnListKeys(kv, ESPN_SHARE_OF_PREFIX + uid + ":")) await revoke(key);
+      await kv.delete(espnKvKey(uid));
+      await revoke(ESPN_SHARE_OF_PREFIX + uid);
+    }
     return json({ ok: true, connected: false }, 200, cors);
   }
 
@@ -1476,19 +1519,34 @@ async function handleEspn(request, url, env, cors) {
     if ((s2 && !swid) || (swid && !s2)) return json({ error: "ESPN needs both espn_s2 and SWID, or neither." }, 400, cors);
     if (s2.length > 4096 || swid.length > 256) return json({ error: "Those values are longer than ESPN's." }, 400, cors);
 
+    if (scoped && (leagueId !== url.searchParams.get("leagueId") || season !== url.searchParams.get("season")))
+      return json({ error: "The connection must match the requested league and season." }, 400, cors);
+    // Reuse only this caller's saved credentials, and verify access to the target.
+    const legacy = await espnStored(env, uid);
+    const previous = await espnStored(env, uid, leagueId, season);
+    const available = s2 ? { s2, swid } : (previous && previous.s2 ? previous : legacy);
     // Public first: if the league reads without credentials, store none.
     let cred = null;
     let probe = await espnFetch(leagueId, season, ["mSettings"], null);
     if (!probe.ok && (probe.status === 401 || probe.status === 403)) {
-      if (!s2) return json({ error: probe.reason, needsCredentials: true }, 401, cors);
-      cred = { s2, swid };
+      if (!available || !available.s2) return json({ error: probe.reason, needsCredentials: true }, 401, cors);
+      cred = available;
       probe = await espnFetch(leagueId, season, ["mSettings"], cred);
     }
     if (!probe.ok) return json({ error: probe.reason, needsCredentials: probe.status === 401 || probe.status === 403 }, 400, cors);
 
     const record = { leagueId, season: Number(season), at: new Date().toISOString(),
       s2: cred ? cred.s2 : "", swid: cred ? cred.swid : "" };
-    try { await kv.put(espnKvKey(uid), await espnSeal(env, uid, record), { expirationTtl: ESPN_CRED_TTL }); }
+    try {
+      const opts = { expirationTtl: ESPN_CRED_TTL };
+      const sealed = await espnSeal(env, uid, record);
+      const sameLegacy = legacy && String(legacy.leagueId) === leagueId && String(legacy.season) === season;
+      if (legacy && !sameLegacy && !scoped)
+        await kv.put(espnLeagueKey(uid, legacy.leagueId, legacy.season), await espnSeal(env, uid, legacy), opts);
+      await kv.put(espnLeagueKey(uid, leagueId, season), sealed, opts);
+      // A new War Room league must not replace an existing draft-room connection.
+      if (!scoped || !legacy || sameLegacy) await kv.put(espnKvKey(uid), sealed, opts);
+    }
     catch { return json({ error: "Could not save the connection." }, 500, cors); }
     const league = espnNormalizeLeague(probe.body);
     return json({ ok: true, connected: true, private: !!cred, league }, 200, cors);
@@ -1515,7 +1573,7 @@ async function handleEspn(request, url, env, cors) {
 
   if (path === "share" && request.method === "GET") {
     let tok = null;
-    try { tok = await kv.get(ESPN_SHARE_OF_PREFIX + uid); } catch { tok = null; }
+    try { tok = await kv.get(shareKey); } catch { tok = null; }
     return json({ ok: true, shared: !!tok, url: tok ? `${SITE}/fantasy-warroom.html?share=${tok}` : null }, 200, cors);
   }
 
@@ -1523,21 +1581,21 @@ async function handleEspn(request, url, env, cors) {
     const cred = await stored();
     if (!cred) return json({ error: "Connect an ESPN league before sharing it." }, 404, cors);
     let tok = null;
-    try { tok = await kv.get(ESPN_SHARE_OF_PREFIX + uid); } catch { tok = null; }
+    try { tok = await kv.get(shareKey); } catch { tok = null; }
     if (!tok) {
       tok = espnShareToken();
-      const rec = { uid, leagueId: String(cred.leagueId), season: cred.season, at: Date.now() };
+      const rec = { uid, leagueId: String(cred.leagueId), season: cred.season, scoped, at: Date.now() };
       await kv.put(ESPN_SHARE_PREFIX + tok, JSON.stringify(rec), { expirationTtl: ESPN_CRED_TTL });
-      await kv.put(ESPN_SHARE_OF_PREFIX + uid, tok, { expirationTtl: ESPN_CRED_TTL });
+      await kv.put(shareKey, tok, { expirationTtl: ESPN_CRED_TTL });
     }
     return json({ ok: true, url: `${SITE}/fantasy-warroom.html?share=${tok}` }, 200, cors);
   }
 
   if (path === "share" && request.method === "DELETE") {
     let tok = null;
-    try { tok = await kv.get(ESPN_SHARE_OF_PREFIX + uid); } catch { tok = null; }
+    try { tok = await kv.get(shareKey); } catch { tok = null; }
     if (tok) { try { await kv.delete(ESPN_SHARE_PREFIX + tok); } catch {} }
-    try { await kv.delete(ESPN_SHARE_OF_PREFIX + uid); } catch {}
+    try { await kv.delete(shareKey); } catch {}
     return json({ ok: true, shared: false }, 200, cors);
   }
 

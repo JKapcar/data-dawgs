@@ -31,6 +31,7 @@ jobs:
           cd work && node assemble.mjs && cd ..
           git diff --exit-code -- dawg-bot-worker.js
       - run: node --check dawg-bot-worker.js
+      - run: node work/test-espn-connections.mjs
       - run: node work/test-cfb-market-capture.mjs
       - run: node work/test-backup.mjs
       - run: node work/test-identity.mjs
