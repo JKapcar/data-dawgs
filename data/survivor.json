@@ -3,16 +3,20 @@
  "tier": "labs",
  "graded": false,
  "as_of": "2026-09-09",
- "source": "nfelo 807d7b66 ratings + nflverse/nfldata 2026 schedule.",
- "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"market\" = derived from a real line, \"model\" = Elo-only. Ownership is modelled, not observed.",
+ "source": "nfelo c44081fa published forecasts and ratings + nflverse/nfldata 2026 schedule.",
+ "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"nfelo\" = published nfelo forecast without an extra blend; \"nfelo-season\" = nfelo pre-market calculation with current team/QB strength and game-specific HFA. Ownership is modelled, not observed.",
  "field_notes": {
-  "mm": "model expected margin, home perspective (points)",
+  "mm": "Legacy margin diagnostic; not used to calculate win probabilities",
   "mk": "market-implied home win probability (null when no line); derivation and provenance are named by mk_src",
   "mk_src": "nfelo-mirror | carried:2026-08-06 | null",
   "mk_obs": "when the market input was observed; null when no line",
   "mk_book": "source book; null because the nfelo upstream output does not identify it",
-  "p": "blended home win probability actually used",
-  "src": "market | model"
+  "season_p": "nfelo pre-market logistic probability using current base ratings, QB adjustments and game-specific HFA",
+  "season_elo_dif": "Base home minus away Elo plus HFA Elo and net QB adjustment",
+  "nfp": "Published nfelo home win probability; null when unavailable. No additional market blend.",
+  "nfelo_obs": "Upstream commit timestamp for the published forecast",
+  "p": "Home win probability used: published nfelo forecast or nfelo-based full-season projection",
+  "src": "nfelo | nfelo-season"
  },
  "data": {
   "meta": {
@@ -24,9 +28,18 @@
    "model_su": 0.6575,
    "blend_su": 0.6674,
    "market_su": 0.6677,
-   "nfelo_sha": "807d7b66",
+   "nfelo_sha": "c44081fa",
    "sched_src": "nflverse/nfldata",
-   "market_observed_at": "2026-09-09T12:40:49.000Z"
+   "market_observed_at": "2026-09-09T16:40:48.000Z",
+   "probability_method": "nfelo-season-v1",
+   "probability_method_since": "2026-09-09",
+   "season_projection": {
+    "z": 401.62,
+    "qb_weight": 1,
+    "hfa_sha": "fe4e41899b94e465d583e4c919ff39840dc64aa6",
+    "hfa_committed_at": "2026-07-28T19:48:05Z",
+    "assumption": "Current base team strength and QB adjustments held fixed for future games; game-specific HFA from nfelohfa. No extra market regression."
+   }
   },
   "elo": {
    "SEA": 1628,
@@ -234,10 +247,14 @@
     "mm": 4.784,
     "mk": 0.6311,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.6338,
-    "src": "market"
+    "nfp": 0.6311,
+    "season_p": 0.680150729228051,
+    "season_elo_dif": 131.5947301311288,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.6311,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_SF_LA",
@@ -248,10 +265,14 @@
     "mm": 3.449,
     "mk": 0.6311,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.6242,
-    "src": "market"
+    "nfp": 0.5766,
+    "season_p": 0.5390122970025685,
+    "season_elo_dif": 27.273746191936745,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.5766,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_ATL_PIT",
@@ -262,10 +283,14 @@
     "mm": 3.067,
     "mk": 0.6311,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.6214,
-    "src": "market"
+    "nfp": 0.6311,
+    "season_p": 0.6164690595841341,
+    "season_elo_dif": 82.77825123109442,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.6311,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_BAL_IND",
@@ -276,10 +301,14 @@
     "mm": -0.775,
     "mk": 0.3689,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.3952,
-    "src": "market"
+    "nfp": 0.4398,
+    "season_p": 0.4887388330781537,
+    "season_elo_dif": -7.85808060501877,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.4398,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_BUF_HOU",
@@ -290,10 +319,14 @@
     "mm": 0.535,
     "mk": 0.4427,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.461,
-    "src": "market"
+    "nfp": 0.4428,
+    "season_p": 0.49940680790108877,
+    "season_elo_dif": -0.413861660554538,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.4428,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_CHI_CAR",
@@ -304,10 +337,14 @@
     "mm": -0.911,
     "mk": 0.387,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.408,
-    "src": "market"
+    "nfp": 0.415,
+    "season_p": 0.4733666912705509,
+    "season_elo_dif": -18.59927474043615,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.415,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_CLE_JAX",
@@ -318,10 +355,14 @@
     "mm": 5.594,
     "mk": 0.7865,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.7586,
-    "src": "market"
+    "nfp": 0.7231,
+    "season_p": 0.6742145345217031,
+    "season_elo_dif": 126.85826589545358,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.7231,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_NO_DET",
@@ -332,10 +373,14 @@
     "mm": 6.527,
     "mk": 0.7453,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.7319,
-    "src": "market"
+    "nfp": 0.7453,
+    "season_p": 0.7106807108505262,
+    "season_elo_dif": 156.7511368429714,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.7453,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_NYJ_TEN",
@@ -346,10 +391,14 @@
     "mm": 3.046,
     "mk": 0.5573,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.5659,
-    "src": "market"
+    "nfp": 0.5573,
+    "season_p": 0.6049496503537958,
+    "season_elo_dif": 74.32651999853087,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.5573,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_TB_CIN",
@@ -360,10 +409,14 @@
     "mm": 2.774,
     "mk": 0.6311,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.6193,
-    "src": "market"
+    "nfp": 0.6311,
+    "season_p": 0.6069343191825279,
+    "season_elo_dif": 75.77628359484792,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.6311,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_ARI_LAC",
@@ -374,10 +427,14 @@
     "mm": 4.309,
     "mk": 0.8111,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.7713,
-    "src": "market"
+    "nfp": 0.7487,
+    "season_p": 0.6553223641699432,
+    "season_elo_dif": 112.06880142833761,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.7487,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_GB_MIN",
@@ -388,10 +445,14 @@
     "mm": 4.513,
     "mk": 0.5573,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.5768,
-    "src": "market"
+    "nfp": 0.6051,
+    "season_p": 0.6353771954046001,
+    "season_elo_dif": 96.8658426630574,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.6051,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_MIA_LV",
@@ -402,10 +463,14 @@
     "mm": 1.595,
     "mk": 0.6311,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.6108,
-    "src": "market"
+    "nfp": 0.6244,
+    "season_p": 0.5688815437817925,
+    "season_elo_dif": 48.365180370095636,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.6244,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_WAS_PHI",
@@ -416,10 +481,14 @@
     "mm": 4.131,
     "mk": 0.666,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.6554,
-    "src": "market"
+    "nfp": 0.6167,
+    "season_p": 0.6021503638647697,
+    "season_elo_dif": 72.28597246921927,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.6167,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_DAL_NYG",
@@ -430,10 +499,14 @@
     "mm": 1.023,
     "mk": 0.4053,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.4363,
-    "src": "market"
+    "nfp": 0.4541,
+    "season_p": 0.48717935725670747,
+    "season_elo_dif": -8.946736348754985,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.4541,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_DEN_KC",
@@ -444,10 +517,14 @@
     "mm": 0.862,
     "mk": 0.5947,
     "mk_src": "nfelo-mirror",
-    "mk_obs": "2026-09-09T12:40:49.000Z",
+    "mk_obs": "2026-09-09T16:40:48.000Z",
     "mk_book": null,
-    "p": 0.5777,
-    "src": "market"
+    "nfp": 0.5133,
+    "season_p": 0.48170240962139393,
+    "season_elo_dif": -12.771664988930116,
+    "nfelo_obs": "2026-09-09T16:40:48.000Z",
+    "p": 0.5133,
+    "src": "nfelo"
    },
    {
     "id": "2026_02_DET_BUF",
@@ -460,8 +537,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.5835,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.5874323221134876,
+    "season_elo_dif": 61.63366475536331,
+    "nfelo_obs": null,
+    "p": 0.5874323221134876,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_02_CAR_ATL",
@@ -474,8 +555,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.548,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.5909374455229478,
+    "season_elo_dif": 64.15951165893367,
+    "nfelo_obs": null,
+    "p": 0.5909374455229478,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_02_CIN_HOU",
@@ -488,8 +573,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.5679,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.6115761957067027,
+    "season_elo_dif": 79.17726870693681,
+    "nfelo_obs": null,
+    "p": 0.6115761957067027,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_02_CLE_TB",
@@ -502,8 +591,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.654,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.5913137079276541,
+    "season_elo_dif": 64.43104352152095,
+    "nfelo_obs": null,
+    "p": 0.5913137079276541,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_02_GB_NYJ",
@@ -516,8 +609,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.34,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.43680940198362195,
+    "season_elo_dif": -44.32415608647011,
+    "nfelo_obs": null,
+    "p": 0.43680940198362195,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_02_MIN_CHI",
@@ -530,8 +627,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.5989,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.5154177075516777,
+    "season_elo_dif": 10.760120637190226,
+    "nfelo_obs": null,
+    "p": 0.5154177075516777,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_02_NO_BAL",
@@ -544,8 +645,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.7264,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.7194462143234618,
+    "season_elo_dif": 164.2554305358051,
+    "nfelo_obs": null,
+    "p": 0.7194462143234618,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_02_PHI_TEN",
@@ -558,8 +663,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.3655,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.3680360039333378,
+    "season_elo_dif": -94.3011912944975,
+    "nfelo_obs": null,
+    "p": 0.3680360039333378,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_02_PIT_NE",
@@ -572,8 +681,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.6594,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.6572721459604276,
+    "season_elo_dif": 113.57645978388318,
+    "nfelo_obs": null,
+    "p": 0.6572721459604276,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_02_JAX_DEN",
@@ -586,8 +699,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.5694,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.6113092372248904,
+    "season_elo_dif": 78.9812793220919,
+    "nfelo_obs": null,
+    "p": 0.6113092372248904,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_02_LV_LAC",
@@ -600,8 +717,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.743,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.6283818360169702,
+    "season_elo_dif": 91.62024104778462,
+    "nfelo_obs": null,
+    "p": 0.6283818360169702,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_02_MIA_SF",
@@ -614,8 +735,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.7835,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.7150960076164773,
+    "season_elo_dif": 160.51378594280635,
+    "nfelo_obs": null,
+    "p": 0.7150960076164773,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_02_SEA_ARI",
@@ -628,8 +753,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.2278,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.2944193542457708,
+    "season_elo_dif": -152.44704155772146,
+    "nfelo_obs": null,
+    "p": 0.2944193542457708,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_02_WAS_DAL",
@@ -642,8 +771,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.6146,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.5695508707461179,
+    "season_elo_dif": 48.84128392345233,
+    "nfelo_obs": null,
+    "p": 0.5695508707461179,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_02_IND_KC",
@@ -656,8 +789,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.6857,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.6620415807874892,
+    "season_elo_dif": 117.28187441230352,
+    "nfelo_obs": null,
+    "p": 0.6620415807874892,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_02_NYG_LA",
@@ -670,8 +807,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.7433,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.7289975968624188,
+    "season_elo_dif": 172.5973816402942,
+    "nfelo_obs": null,
+    "p": 0.7289975968624188,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_ATL_GB",
@@ -684,8 +825,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.7132,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.6218570527759318,
+    "season_elo_dif": 86.76379978125487,
+    "nfelo_obs": null,
+    "p": 0.6218570527759318,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_CAR_CLE",
@@ -698,8 +843,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.4935,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.5721829791181975,
+    "season_elo_dif": 50.71531870474591,
+    "nfelo_obs": null,
+    "p": 0.5721829791181975,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_CIN_PIT",
@@ -712,8 +861,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.4931,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.5639534288142943,
+    "season_elo_dif": 44.86511706891329,
+    "nfelo_obs": null,
+    "p": 0.5639534288142943,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_HOU_IND",
@@ -726,8 +879,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.4735,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.4660133791448039,
+    "season_elo_dif": -23.748590006993844,
+    "nfelo_obs": null,
+    "p": 0.4660133791448039,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_KC_MIA",
@@ -740,8 +897,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.2958,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.440566423077566,
+    "season_elo_dif": -41.662907675585295,
+    "nfelo_obs": null,
+    "p": 0.440566423077566,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_LAC_BUF",
@@ -754,8 +915,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.6209,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.721613901499734,
+    "season_elo_dif": 166.1330635129499,
+    "nfelo_obs": null,
+    "p": 0.721613901499734,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_NE_JAX",
@@ -768,8 +933,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.525,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.5682053329353584,
+    "season_elo_dif": 47.884361926288236,
+    "nfelo_obs": null,
+    "p": 0.5682053329353584,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_NYJ_DET",
@@ -782,8 +951,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.7774,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.7772792857813198,
+    "season_elo_dif": 218.00595607952442,
+    "nfelo_obs": null,
+    "p": 0.7772792857813198,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_SEA_WAS",
@@ -796,8 +969,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.3832,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.43710010714708547,
+    "season_elo_dif": -44.11805862751257,
+    "nfelo_obs": null,
+    "p": 0.43710010714708547,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_TEN_NYG",
@@ -810,8 +987,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.6119,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.6735864604103843,
+    "season_elo_dif": 126.35976639997557,
+    "nfelo_obs": null,
+    "p": 0.6735864604103843,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_ARI_SF",
@@ -824,8 +1005,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.7908,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.6769336281995693,
+    "season_elo_dif": 129.0221659532637,
+    "nfelo_obs": null,
+    "p": 0.6769336281995693,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_MIN_TB",
@@ -838,8 +1023,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.5166,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.4687333421562441,
+    "season_elo_dif": -21.84279187697907,
+    "nfelo_obs": null,
+    "p": 0.4687333421562441,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_BAL_DAL",
@@ -852,8 +1041,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.4582,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.4487218717425724,
+    "season_elo_dif": -35.90222702509668,
+    "nfelo_obs": null,
+    "p": 0.4487218717425724,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_LV_NO",
@@ -866,8 +1059,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.6274,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.6126532592918481,
+    "season_elo_dif": 79.96850296239981,
+    "nfelo_obs": null,
+    "p": 0.6126532592918481,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_LA_DEN",
@@ -880,8 +1077,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.4505,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.5616708270135311,
+    "season_elo_dif": 43.24704052977231,
+    "nfelo_obs": null,
+    "p": 0.5616708270135311,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_03_PHI_CHI",
@@ -894,8 +1095,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.5247,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.556052959300946,
+    "season_elo_dif": 39.27240809368937,
+    "nfelo_obs": null,
+    "p": 0.556052959300946,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_PIT_CLE",
@@ -908,8 +1113,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.4642,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.476478907348785,
+    "season_elo_dif": -16.422444185282167,
+    "nfelo_obs": null,
+    "p": 0.476478907348785,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_IND_WAS",
@@ -922,8 +1131,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.5313,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.5328322210272243,
+    "season_elo_dif": 22.939569656469757,
+    "nfelo_obs": null,
+    "p": 0.5328322210272243,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_ARI_NYG",
@@ -936,8 +1149,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6133,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6602326420998064,
+    "season_elo_dif": 115.87353050490624,
+    "nfelo_obs": null,
+    "p": 0.6602326420998064,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_DAL_HOU",
@@ -950,8 +1167,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6228,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6290142001098594,
+    "season_elo_dif": 92.09273642707176,
+    "nfelo_obs": null,
+    "p": 0.6290142001098594,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_GB_TB",
@@ -964,8 +1185,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5418,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5507403073060966,
+    "season_elo_dif": 35.523050786078336,
+    "nfelo_obs": null,
+    "p": 0.5507403073060966,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_JAX_CIN",
@@ -978,8 +1203,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5039,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5191240194941475,
+    "season_elo_dif": 13.349061220915289,
+    "nfelo_obs": null,
+    "p": 0.5191240194941475,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_LA_PHI",
@@ -992,8 +1221,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5225,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5736261120703122,
+    "season_elo_dif": 51.744043254227705,
+    "nfelo_obs": null,
+    "p": 0.5736261120703122,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_NE_BUF",
@@ -1006,8 +1239,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5898,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5646715290394095,
+    "season_elo_dif": 45.37455351469489,
+    "nfelo_obs": null,
+    "p": 0.5646715290394095,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_NYJ_CHI",
@@ -1020,8 +1257,12 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.7612,
-    "src": "market"
+    "nfp": null,
+    "season_p": 0.7504068547518066,
+    "season_elo_dif": 192.00011938671773,
+    "nfelo_obs": null,
+    "p": 0.7504068547518066,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_TEN_BAL",
@@ -1034,8 +1275,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7325,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7542617293577687,
+    "season_elo_dif": 195.60872977382724,
+    "nfelo_obs": null,
+    "p": 0.7542617293577687,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_MIA_MIN",
@@ -1048,8 +1293,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7028,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7415738697927352,
+    "season_elo_dif": 183.86886284546995,
+    "nfelo_obs": null,
+    "p": 0.7415738697927352,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_DEN_SF",
@@ -1062,8 +1311,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5339,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.530569050637433,
+    "season_elo_dif": 21.354213278290942,
+    "nfelo_obs": null,
+    "p": 0.530569050637433,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_KC_LV",
@@ -1076,8 +1329,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4279,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.3959807846985632,
+    "season_elo_dif": -73.64772730548967,
+    "nfelo_obs": null,
+    "p": 0.3959807846985632,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_LAC_SEA",
@@ -1090,8 +1347,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7292,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7424073429001679,
+    "season_elo_dif": 184.62824012938387,
+    "nfelo_obs": null,
+    "p": 0.7424073429001679,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_DET_CAR",
@@ -1104,8 +1365,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4297,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.43641317802281493,
+    "season_elo_dif": -44.60511143324284,
+    "nfelo_obs": null,
+    "p": 0.43641317802281493,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_04_ATL_NO",
@@ -1118,8 +1383,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5326,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5118146779178651,
+    "season_elo_dif": 8.244462931337786,
+    "nfelo_obs": null,
+    "p": 0.5118146779178651,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_05_TB_DAL",
@@ -1132,8 +1401,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5771,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6110088626444796,
+    "season_elo_dif": 78.76081587471299,
+    "nfelo_obs": null,
+    "p": 0.6110088626444796,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_05_PHI_JAX",
@@ -1146,8 +1419,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5691,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5698747337643139,
+    "season_elo_dif": 49.071717953452705,
+    "nfelo_obs": null,
+    "p": 0.5698747337643139,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_05_CIN_MIA",
@@ -1160,8 +1437,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.489,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5027198888218011,
+    "season_elo_dif": 1.8976454366611932,
+    "nfelo_obs": null,
+    "p": 0.5027198888218011,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_05_CLE_NYJ",
@@ -1174,8 +1455,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.467,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4779182200402328,
+    "season_elo_dif": -15.416163351027492,
+    "nfelo_obs": null,
+    "p": 0.4779182200402328,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_05_HOU_TEN",
@@ -1188,8 +1473,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.3958,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.37157934165226736,
+    "season_elo_dif": -91.64923917580231,
+    "nfelo_obs": null,
+    "p": 0.37157934165226736,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_05_IND_PIT",
@@ -1202,8 +1491,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5864,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6103622524733898,
+    "season_elo_dif": 78.28643836897031,
+    "nfelo_obs": null,
+    "p": 0.6103622524733898,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_05_LV_NE",
@@ -1216,8 +1509,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7167,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7716442677596126,
+    "season_elo_dif": 212.37875104603964,
+    "nfelo_obs": null,
+    "p": 0.7716442677596126,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_05_MIN_NO",
@@ -1230,8 +1527,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4356,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4210665377094503,
+    "season_elo_dif": -55.535179512974494,
+    "nfelo_obs": null,
+    "p": 0.4210665377094503,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_05_NYG_WAS",
@@ -1244,8 +1545,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.594,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5911396892904788,
+    "season_elo_dif": 64.30545242530266,
+    "nfelo_obs": null,
+    "p": 0.5911396892904788,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_05_DEN_LAC",
@@ -1258,8 +1563,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4565,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4266471941920748,
+    "season_elo_dif": -51.54915124663516,
+    "nfelo_obs": null,
+    "p": 0.4266471941920748,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_05_CHI_GB",
@@ -1272,8 +1581,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5279,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.49508968775570866,
+    "season_elo_dif": -3.4259633002476235,
+    "nfelo_obs": null,
+    "p": 0.49508968775570866,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_05_DET_ARI",
@@ -1286,8 +1599,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.3944,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4190650717796859,
+    "season_elo_dif": -56.9682001859242,
+    "nfelo_obs": null,
+    "p": 0.4190650717796859,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_05_SF_SEA",
@@ -1300,8 +1617,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6613,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6651043944770374,
+    "season_elo_dif": 119.67487560445775,
+    "nfelo_obs": null,
+    "p": 0.6651043944770374,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_05_BAL_ATL",
@@ -1314,8 +1635,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4708,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4823061561164503,
+    "season_elo_dif": -12.349893467142877,
+    "nfelo_obs": null,
+    "p": 0.4823061561164503,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_05_BUF_LA",
@@ -1328,8 +1653,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5561,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5888355172553651,
+    "season_elo_dif": 62.64404720391293,
+    "nfelo_obs": null,
+    "p": 0.5888355172553651,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_06_SEA_DEN",
@@ -1342,8 +1671,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4908,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.49322216115372314,
+    "season_elo_dif": -4.729088882748691,
+    "nfelo_obs": null,
+    "p": 0.49322216115372314,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_06_HOU_JAX",
@@ -1356,8 +1689,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5681,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5104597362413688,
+    "season_elo_dif": 7.298670072147889,
+    "nfelo_obs": null,
+    "p": 0.5104597362413688,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_06_BAL_CLE",
@@ -1370,8 +1707,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4478,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.40672997072884665,
+    "season_elo_dif": -65.84408642133062,
+    "nfelo_obs": null,
+    "p": 0.40672997072884665,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_06_CAR_PHI",
@@ -1384,8 +1725,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6664,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6314647044540249,
+    "season_elo_dif": 93.92686664674679,
+    "nfelo_obs": null,
+    "p": 0.6314647044540249,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_06_CHI_ATL",
@@ -1398,8 +1743,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5036,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.530292052075905,
+    "season_elo_dif": 21.160236918497503,
+    "nfelo_obs": null,
+    "p": 0.530292052075905,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_06_NO_NYG",
@@ -1412,8 +1761,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.578,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5907253243897267,
+    "season_elo_dif": 64.00646716195342,
+    "nfelo_obs": null,
+    "p": 0.5907253243897267,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_06_NYJ_NE",
@@ -1426,8 +1779,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7598,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7527777299643861,
+    "season_elo_dif": 194.21506732019284,
+    "nfelo_obs": null,
+    "p": 0.7527777299643861,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_06_PIT_TB",
@@ -1440,8 +1797,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5368,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5337868923572514,
+    "season_elo_dif": 23.608599336238782,
+    "nfelo_obs": null,
+    "p": 0.5337868923572514,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_06_TEN_IND",
@@ -1454,8 +1815,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6563,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6697185977937952,
+    "season_elo_dif": 123.30064916880846,
+    "nfelo_obs": null,
+    "p": 0.6697185977937952,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_06_ARI_LA",
@@ -1468,8 +1833,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7336,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7331944152038224,
+    "season_elo_dif": 176.32091214520045,
+    "nfelo_obs": null,
+    "p": 0.7331944152038224,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_06_BUF_LV",
@@ -1482,8 +1851,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.3737,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.3958360181454461,
+    "season_elo_dif": -73.75330456073452,
+    "nfelo_obs": null,
+    "p": 0.3958360181454461,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_06_LAC_KC",
@@ -1496,8 +1869,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6308,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6381773365648838,
+    "season_elo_dif": 98.97748625770505,
+    "nfelo_obs": null,
+    "p": 0.6381773365648838,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_06_DAL_GB",
@@ -1510,8 +1887,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5709,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5933351140135916,
+    "season_elo_dif": 65.89113333920868,
+    "nfelo_obs": null,
+    "p": 0.5933351140135916,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_06_WAS_SF",
@@ -1524,8 +1905,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6233,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6609006543750543,
+    "season_elo_dif": 116.39318302305482,
+    "nfelo_obs": null,
+    "p": 0.6609006543750543,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_07_NE_CHI",
@@ -1538,8 +1923,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5253,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.554371862547107,
+    "season_elo_dif": 38.085052066524895,
+    "nfelo_obs": null,
+    "p": 0.554371862547107,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_07_PIT_NO",
@@ -1552,8 +1941,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5034,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4437540306304595,
+    "season_elo_dif": -39.40878829975664,
+    "nfelo_obs": null,
+    "p": 0.4437540306304595,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_07_CIN_BAL",
@@ -1566,8 +1959,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6309,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5847593180718731,
+    "season_elo_dif": 59.711759304961745,
+    "nfelo_obs": null,
+    "p": 0.5847593180718731,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_07_CLE_TEN",
@@ -1580,8 +1977,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4955,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4763470513752347,
+    "season_elo_dif": -16.514643352496613,
+    "nfelo_obs": null,
+    "p": 0.4763470513752347,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_07_IND_MIN",
@@ -1594,8 +1995,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6513,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6662692508171627,
+    "season_elo_dif": 120.58782958218816,
+    "nfelo_obs": null,
+    "p": 0.6662692508171627,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_07_MIA_NYJ",
@@ -1608,8 +2013,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4954,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.43184843811681944,
+    "season_elo_dif": -47.84613590405756,
+    "nfelo_obs": null,
+    "p": 0.43184843811681944,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_07_NYG_HOU",
@@ -1622,8 +2031,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6534,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6520395569286479,
+    "season_elo_dif": 109.53947277582674,
+    "nfelo_obs": null,
+    "p": 0.6520395569286479,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_07_SF_ATL",
@@ -1636,8 +2049,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4865,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5339535849544607,
+    "season_elo_dif": 23.725434458351316,
+    "nfelo_obs": null,
+    "p": 0.5339535849544607,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_07_TB_CAR",
@@ -1650,8 +2067,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5298,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4972819503630946,
+    "season_elo_dif": -1.8963622262668665,
+    "nfelo_obs": null,
+    "p": 0.4972819503630946,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_07_DEN_ARI",
@@ -1664,8 +2085,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.3909,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.37215691340289897,
+    "season_elo_dif": -91.21795267497278,
+    "nfelo_obs": null,
+    "p": 0.37215691340289897,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_07_GB_DET",
@@ -1678,8 +2103,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6394,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6475284332406759,
+    "season_elo_dif": 106.0817999930543,
+    "nfelo_obs": null,
+    "p": 0.6475284332406759,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_07_LA_LV",
@@ -1692,8 +2121,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.3807,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.3818459204697727,
+    "season_elo_dif": -84.02235176464747,
+    "nfelo_obs": null,
+    "p": 0.3818459204697727,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_07_KC_SEA",
@@ -1706,8 +2139,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6685,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7165386473462605,
+    "season_elo_dif": 161.7507538716788,
+    "nfelo_obs": null,
+    "p": 0.7165386473462605,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_07_DAL_PHI",
@@ -1720,8 +2157,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6218,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6111231464929918,
+    "season_elo_dif": 78.84468854576694,
+    "nfelo_obs": null,
+    "p": 0.6111231464929918,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_08_CAR_GB",
@@ -1734,8 +2175,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6173,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.633592143580126,
+    "season_elo_dif": 95.52331144018854,
+    "nfelo_obs": null,
+    "p": 0.633592143580126,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_08_ARI_DAL",
@@ -1748,8 +2193,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6442,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.682299045620532,
+    "season_elo_dif": 133.32026685366122,
+    "nfelo_obs": null,
+    "p": 0.682299045620532,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_08_ATL_TB",
@@ -1762,8 +2211,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5658,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5598206381682916,
+    "season_elo_dif": 41.93685056733321,
+    "nfelo_obs": null,
+    "p": 0.5598206381682916,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_08_BAL_BUF",
@@ -1776,8 +2229,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.595,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.636722340105388,
+    "season_elo_dif": 97.87937106252961,
+    "nfelo_obs": null,
+    "p": 0.636722340105388,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_08_CLE_PIT",
@@ -1790,8 +2247,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6143,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5924097422191553,
+    "season_elo_dif": 65.22244418528217,
+    "nfelo_obs": null,
+    "p": 0.5924097422191553,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_08_IND_JAX",
@@ -1804,8 +2265,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6376,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6560387372802495,
+    "season_elo_dif": 112.62226007914174,
+    "nfelo_obs": null,
+    "p": 0.6560387372802495,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_08_LV_NYJ",
@@ -1818,8 +2283,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5107,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5607060331929211,
+    "season_elo_dif": 42.5636837258468,
+    "nfelo_obs": null,
+    "p": 0.5607060331929211,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_08_MIN_DET",
@@ -1832,8 +2301,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.569,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5525027877765382,
+    "season_elo_dif": 36.765957329996894,
+    "nfelo_obs": null,
+    "p": 0.5525027877765382,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_08_TEN_CIN",
@@ -1846,8 +2319,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.672,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7106463273558397,
+    "season_elo_dif": 156.7219704688655,
+    "nfelo_obs": null,
+    "p": 0.7106463273558397,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_08_LAC_LA",
@@ -1860,8 +2337,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6758,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6422706034303782,
+    "season_elo_dif": 102.07711071686285,
+    "nfelo_obs": null,
+    "p": 0.6422706034303782,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_08_KC_DEN",
@@ -1874,8 +2355,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.587346171783988,
+    "season_elo_dif": 61.57166498893011,
+    "nfelo_obs": null,
+    "p": 0.587346171783988,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_08_NE_MIA",
@@ -1888,8 +2373,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4144,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.39174296720907,
+    "season_elo_dif": -76.74393141613527,
+    "nfelo_obs": null,
+    "p": 0.39174296720907,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_08_PHI_WAS",
@@ -1902,8 +2391,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5021,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.48461687144169696,
+    "season_elo_dif": -10.73597246921927,
+    "nfelo_obs": null,
+    "p": 0.48461687144169696,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_08_CHI_SEA",
@@ -1916,8 +2409,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6768,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7248291066369646,
+    "season_elo_dif": 168.93467806460393,
+    "nfelo_obs": null,
+    "p": 0.7248291066369646,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_09_JAX_BAL",
@@ -1930,8 +2427,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5733,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5743155543140667,
+    "season_elo_dif": 52.23582052587703,
+    "nfelo_obs": null,
+    "p": 0.5743155543140667,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_09_CIN_ATL",
@@ -1944,8 +2445,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5405,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.47438319364337406,
+    "season_elo_dif": -17.88813416218113,
+    "nfelo_obs": null,
+    "p": 0.47438319364337406,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_09_CLE_NO",
@@ -1958,8 +2463,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5555,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5831949723454636,
+    "season_elo_dif": 58.588655885525526,
+    "nfelo_obs": null,
+    "p": 0.5831949723454636,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_09_DAL_IND",
@@ -1972,8 +2481,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5526,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5626545520933015,
+    "season_elo_dif": 43.94414642007792,
+    "nfelo_obs": null,
+    "p": 0.5626545520933015,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_09_DEN_CAR",
@@ -1986,8 +2499,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4261,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4329618484588745,
+    "season_elo_dif": -47.05486392229141,
+    "nfelo_obs": null,
+    "p": 0.4329618484588745,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_09_DET_MIA",
@@ -2000,8 +2517,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4097,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4141648925168136,
+    "season_elo_dif": -60.48482017546685,
+    "nfelo_obs": null,
+    "p": 0.4141648925168136,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_09_LA_WAS",
@@ -2014,8 +2535,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4611,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5055295889754374,
+    "season_elo_dif": 3.8580707850084366,
+    "nfelo_obs": null,
+    "p": 0.5055295889754374,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_09_NYG_PHI",
@@ -2028,8 +2553,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6525,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6094483155899225,
+    "season_elo_dif": 77.61642489452193,
+    "nfelo_obs": null,
+    "p": 0.6094483155899225,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_09_NYJ_KC",
@@ -2042,8 +2571,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7366,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7580412493521641,
+    "season_elo_dif": 199.18404357964286,
+    "nfelo_obs": null,
+    "p": 0.7580412493521641,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_09_HOU_LAC",
@@ -2056,8 +2589,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4853,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4272502907480746,
+    "season_elo_dif": -51.11920185239537,
+    "nfelo_obs": null,
+    "p": 0.4272502907480746,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_09_LV_SF",
@@ -2070,8 +2607,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6985,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7252736245712419,
+    "season_elo_dif": 169.32360557271073,
+    "nfelo_obs": null,
+    "p": 0.7252736245712419,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_09_ARI_SEA",
@@ -2084,8 +2625,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7817,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7910933952034043,
+    "season_elo_dif": 232.24704155772147,
+    "nfelo_obs": null,
+    "p": 0.7910933952034043,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_09_GB_NE",
@@ -2098,8 +2643,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6348,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6521064640954989,
+    "season_elo_dif": 109.59091123372272,
+    "nfelo_obs": null,
+    "p": 0.6521064640954989,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_09_TB_CHI",
@@ -2112,8 +2661,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6191,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6356256325405245,
+    "season_elo_dif": 97.0529125141693,
+    "nfelo_obs": null,
+    "p": 0.6356256325405245,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_09_BUF_MIN",
@@ -2126,8 +2679,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5357,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5439610424199222,
+    "season_elo_dif": 30.75037791463979,
+    "nfelo_obs": null,
+    "p": 0.5439610424199222,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_10_WAS_NYG",
@@ -2140,8 +2697,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5322,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5221939086698646,
+    "season_elo_dif": 15.49454757469735,
+    "nfelo_obs": null,
+    "p": 0.5221939086698646,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_10_NE_DET",
@@ -2154,8 +2715,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5681,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5053974792614819,
+    "season_elo_dif": 3.765888759331574,
+    "nfelo_obs": null,
+    "p": 0.5053974792614819,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_10_BUF_NYJ",
@@ -2168,8 +2733,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.3247,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.2780907086405688,
+    "season_elo_dif": -166.38962083488772,
+    "nfelo_obs": null,
+    "p": 0.2780907086405688,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_10_CAR_NO",
@@ -2182,8 +2751,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5635,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5458855031802948,
+    "season_elo_dif": 32.10397459027145,
+    "nfelo_obs": null,
+    "p": 0.5458855031802948,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_10_HOU_CLE",
@@ -2196,8 +2769,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4627,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.48469044077102746,
+    "season_elo_dif": -10.684595823305699,
+    "nfelo_obs": null,
+    "p": 0.48469044077102746,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_10_JAX_TEN",
@@ -2210,8 +2787,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.3911,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.35228694327923005,
+    "season_elo_dif": -106.2229092479502,
+    "nfelo_obs": null,
+    "p": 0.35228694327923005,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_10_KC_ATL",
@@ -2224,8 +2805,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4944,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.520021687904724,
+    "season_elo_dif": 13.97631272557237,
+    "nfelo_obs": null,
+    "p": 0.520021687904724,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_10_MIA_IND",
@@ -2238,8 +2823,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6191,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6455293564187754,
+    "season_elo_dif": 104.55603326328178,
+    "nfelo_obs": null,
+    "p": 0.6455293564187754,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_10_MIN_GB",
@@ -2252,8 +2841,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4905,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.47555883902623236,
+    "season_elo_dif": -17.065842663057396,
+    "nfelo_obs": null,
+    "p": 0.47555883902623236,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_10_LA_ARI",
@@ -2266,8 +2859,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.3802,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.36508107685629465,
+    "season_elo_dif": -96.52091214520047,
+    "nfelo_obs": null,
+    "p": 0.36508107685629465,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_10_SEA_LV",
@@ -2280,8 +2877,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.3234,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.31934590545584285,
+    "season_elo_dif": -131.99848117716846,
+    "nfelo_obs": null,
+    "p": 0.31934590545584285,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_10_SF_DAL",
@@ -2294,8 +2895,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5031,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5069483879127249,
+    "season_elo_dif": 4.848100900397505,
+    "nfelo_obs": null,
+    "p": 0.5069483879127249,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_10_PIT_CIN",
@@ -2308,8 +2913,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5571,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5005158238996829,
+    "season_elo_dif": 0.3598829310867133,
+    "nfelo_obs": null,
+    "p": 0.5005158238996829,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_10_LAC_BAL",
@@ -2322,8 +2931,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6529,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6509841653201801,
+    "season_elo_dif": 108.7286924504203,
+    "nfelo_obs": null,
+    "p": 0.6509841653201801,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_11_IND_HOU",
@@ -2336,8 +2949,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.633,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6241257602376497,
+    "season_elo_dif": 88.44859000699384,
+    "nfelo_obs": null,
+    "p": 0.6241257602376497,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_11_ARI_KC",
@@ -2350,8 +2967,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.692,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7130856336511578,
+    "season_elo_dif": 158.79628768604266,
+    "nfelo_obs": null,
+    "p": 0.7130856336511578,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_11_BAL_CAR",
@@ -2364,8 +2985,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4398,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.42586164501489737,
+    "season_elo_dif": -52.10940512607654,
+    "nfelo_obs": null,
+    "p": 0.42586164501489737,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_11_JAX_NYG",
@@ -2378,8 +3003,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4649,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4756341943049187,
+    "season_elo_dif": -17.013142847974635,
+    "nfelo_obs": null,
+    "p": 0.4756341943049187,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_11_MIA_BUF",
@@ -2392,8 +3021,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7266,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7345353876064072,
+    "season_elo_dif": 177.51848493083017,
+    "nfelo_obs": null,
+    "p": 0.7345353876064072,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_11_NO_CHI",
@@ -2406,8 +3039,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6507,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6948077831819739,
+    "season_elo_dif": 143.49530015016472,
+    "nfelo_obs": null,
+    "p": 0.6948077831819739,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_11_TB_DET",
@@ -2420,8 +3057,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6596,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.644252796741087,
+    "season_elo_dif": 103.58374920697597,
+    "nfelo_obs": null,
+    "p": 0.644252796741087,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_11_TEN_DAL",
@@ -2434,8 +3075,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6661,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6951859911383187,
+    "season_elo_dif": 143.80650274873057,
+    "nfelo_obs": null,
+    "p": 0.6951859911383187,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_11_NYJ_LAC",
@@ -2448,8 +3093,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6766,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6970053244365799,
+    "season_elo_dif": 145.30655732193782,
+    "nfelo_obs": null,
+    "p": 0.6970053244365799,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_11_LV_DEN",
@@ -2462,8 +3111,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7239,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.728739285148031,
+    "season_elo_dif": 172.36939229441978,
+    "nfelo_obs": null,
+    "p": 0.728739285148031,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_11_PIT_PHI",
@@ -2476,8 +3129,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6096,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.631747830828499,
+    "season_elo_dif": 94.13910375671871,
+    "nfelo_obs": null,
+    "p": 0.631747830828499,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_11_MIN_SF",
@@ -2490,8 +3147,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5432,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5223374926875275,
+    "season_elo_dif": 15.594923097336412,
+    "nfelo_obs": null,
+    "p": 0.5223374926875275,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_11_CIN_WAS",
@@ -2504,8 +3165,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5557,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5767419959625649,
+    "season_elo_dif": 53.96824835641273,
+    "nfelo_obs": null,
+    "p": 0.5767419959625649,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_GB_LA",
@@ -2518,8 +3183,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6532,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6743420210698482,
+    "season_elo_dif": 126.95951195233056,
+    "nfelo_obs": null,
+    "p": 0.6743420210698482,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_CHI_DET",
@@ -2532,8 +3201,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6054,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6146070011998424,
+    "season_elo_dif": 81.40583669280667,
+    "nfelo_obs": null,
+    "p": 0.6146070011998424,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_PHI_DAL",
@@ -2546,8 +3219,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5034,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5013692547774465,
+    "season_elo_dif": 0.9553114542330619,
+    "nfelo_obs": null,
+    "p": 0.5013692547774465,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_KC_BUF",
@@ -2560,8 +3237,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6178,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.633635088008256,
+    "season_elo_dif": 95.55557725524486,
+    "nfelo_obs": null,
+    "p": 0.633635088008256,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_DEN_PIT",
@@ -2574,8 +3255,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4862,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4773089428632869,
+    "season_elo_dif": -15.84210103226333,
+    "nfelo_obs": null,
+    "p": 0.4773089428632869,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_ATL_MIN",
@@ -2588,8 +3273,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6566,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6096369154018467,
+    "season_elo_dif": 77.75464244431228,
+    "nfelo_obs": null,
+    "p": 0.6096369154018467,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_BAL_HOU",
@@ -2602,8 +3291,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5484,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5574933999588301,
+    "season_elo_dif": 40.29050940197508,
+    "nfelo_obs": null,
+    "p": 0.5574933999588301,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_LV_CLE",
@@ -2616,8 +3309,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6061,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.659307724927603,
+    "season_elo_dif": 115.15484707687429,
+    "nfelo_obs": null,
+    "p": 0.659307724927603,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_NO_CIN",
@@ -2630,8 +3327,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6158,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6320539738908347,
+    "season_elo_dif": 94.36867123084335,
+    "nfelo_obs": null,
+    "p": 0.6320539738908347,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_NYG_IND",
@@ -2644,8 +3345,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5847,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5870949395423021,
+    "season_elo_dif": 61.390882768832896,
+    "nfelo_obs": null,
+    "p": 0.5870949395423021,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_NYJ_MIA",
@@ -2658,8 +3363,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6294,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6303222339664589,
+    "season_elo_dif": 93.07113590405757,
+    "nfelo_obs": null,
+    "p": 0.6303222339664589,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_TEN_JAX",
@@ -2672,8 +3381,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7241,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7048963892203728,
+    "season_elo_dif": 151.8729092479502,
+    "nfelo_obs": null,
+    "p": 0.7048963892203728,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_SEA_SF",
@@ -2686,8 +3399,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4612,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.39488134498736804,
+    "season_elo_dif": -74.44987560445774,
+    "nfelo_obs": null,
+    "p": 0.39488134498736804,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_WAS_ARI",
@@ -2700,8 +3417,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4809,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4940821606318348,
+    "season_elo_dif": -4.128982930208899,
+    "nfelo_obs": null,
+    "p": 0.4940821606318348,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_NE_LAC",
@@ -2714,8 +3435,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4649,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.43841884869977676,
+    "season_elo_dif": -43.18350999825502,
+    "nfelo_obs": null,
+    "p": 0.43841884869977676,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_12_CAR_TB",
@@ -2728,8 +3453,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5964,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5721563746599674,
+    "season_elo_dif": 50.696362226266864,
+    "nfelo_obs": null,
+    "p": 0.5721563746599674,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_13_KC_LA",
@@ -2742,8 +3471,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6107,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6575280302288458,
+    "season_elo_dif": 113.77462445915779,
+    "nfelo_obs": null,
+    "p": 0.6575280302288458,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_13_CIN_CLE",
@@ -2756,8 +3489,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5175,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5057941472183481,
+    "season_elo_dif": 4.042672883631127,
+    "nfelo_obs": null,
+    "p": 0.5057941472183481,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_13_DET_ATL",
@@ -2770,8 +3507,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4606,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.44880218385729187,
+    "season_elo_dif": -35.84559977430918,
+    "nfelo_obs": null,
+    "p": 0.44880218385729187,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_13_GB_NO",
@@ -2784,8 +3525,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5084,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5242478660417356,
+    "season_elo_dif": 16.930663150082907,
+    "nfelo_obs": null,
+    "p": 0.5242478660417356,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_13_JAX_CHI",
@@ -2798,8 +3543,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5408,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5268139836850307,
+    "season_elo_dif": 18.725690140236658,
+    "nfelo_obs": null,
+    "p": 0.5268139836850307,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_13_LAC_TB",
@@ -2812,8 +3561,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5663,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6210840359574289,
+    "season_elo_dif": 86.19064955061063,
+    "nfelo_obs": null,
+    "p": 0.6210840359574289,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_13_SF_NYG",
@@ -2826,8 +3579,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4705,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5161211122591395,
+    "season_elo_dif": 11.251364551642524,
+    "nfelo_obs": null,
+    "p": 0.5161211122591395,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_13_WAS_TEN",
@@ -2840,8 +3597,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4572,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.43386239805714616,
+    "season_elo_dif": -46.415218825278224,
+    "nfelo_obs": null,
+    "p": 0.43386239805714616,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_13_MIA_DEN",
@@ -2854,8 +3615,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7109,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7412613885182162,
+    "season_elo_dif": 183.5845726645154,
+    "nfelo_obs": null,
+    "p": 0.7412613885182162,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_13_PHI_ARI",
@@ -2868,8 +3633,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4199,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4259940497678185,
+    "season_elo_dif": -52.01495539942817,
+    "nfelo_obs": null,
+    "p": 0.4259940497678185,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_13_BUF_NE",
@@ -2882,8 +3651,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5365,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5049095715592972,
+    "season_elo_dif": 3.425446485305109,
+    "nfelo_obs": null,
+    "p": 0.5049095715592972,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_13_CAR_MIN",
@@ -2896,8 +3669,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6849,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7237465775306411,
+    "season_elo_dif": 167.98915410324594,
+    "nfelo_obs": null,
+    "p": 0.7237465775306411,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_13_HOU_PIT",
@@ -2910,8 +3687,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.515,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5203959373642025,
+    "season_elo_dif": 14.237848361976468,
+    "nfelo_obs": null,
+    "p": 0.5203959373642025,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_13_DAL_SEA",
@@ -2924,8 +3705,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7149,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7452461181372282,
+    "season_elo_dif": 187.22677470406023,
+    "nfelo_obs": null,
+    "p": 0.7452461181372282,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_14_MIN_NE",
@@ -2938,8 +3723,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5642,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5530117752187093,
+    "season_elo_dif": 37.12506857066532,
+    "nfelo_obs": null,
+    "p": 0.5530117752187093,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_14_ATL_CLE",
@@ -2952,8 +3741,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5404,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5598474195991542,
+    "season_elo_dif": 41.95580704581225,
+    "nfelo_obs": null,
+    "p": 0.5598474195991542,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_14_CHI_MIA",
@@ -2966,8 +3759,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4521,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4507412000081188,
+    "season_elo_dif": -34.47898348266016,
+    "nfelo_obs": null,
+    "p": 0.4507412000081188,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_14_DEN_NYJ",
@@ -2980,8 +3777,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.3415,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.3766719877906398,
+    "season_elo_dif": -87.85570856857298,
+    "nfelo_obs": null,
+    "p": 0.3766719877906398,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_14_HOU_WAS",
@@ -2994,8 +3795,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5011,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5275146466056054,
+    "season_elo_dif": 19.215979649475912,
+    "nfelo_obs": null,
+    "p": 0.5275146466056054,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_14_IND_PHI",
@@ -3008,8 +3813,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.632,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6136147821427089,
+    "season_elo_dif": 80.67554212568902,
+    "nfelo_obs": null,
+    "p": 0.6136147821427089,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_14_NO_CAR",
@@ -3022,8 +3831,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5631,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.567940391787556,
+    "season_elo_dif": 47.696025409728556,
+    "nfelo_obs": null,
+    "p": 0.567940391787556,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_14_TB_BAL",
@@ -3036,8 +3849,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6501,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6749127792627614,
+    "season_elo_dif": 127.41304289980967,
+    "nfelo_obs": null,
+    "p": 0.6749127792627614,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_14_TEN_DET",
@@ -3050,8 +3867,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7409,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7783676419719018,
+    "season_elo_dif": 219.10443608099354,
+    "nfelo_obs": null,
+    "p": 0.7783676419719018,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_14_LAC_LV",
@@ -3064,8 +3885,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4972,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5013326303683728,
+    "season_elo_dif": 0.9297589522153871,
+    "nfelo_obs": null,
+    "p": 0.5013326303683728,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_14_KC_CIN",
@@ -3078,8 +3903,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5173,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5228660528175987,
+    "season_elo_dif": 15.964446887753503,
+    "nfelo_obs": null,
+    "p": 0.5228660528175987,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_14_LA_SF",
@@ -3092,8 +3921,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5227,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5116095273679075,
+    "season_elo_dif": 8.101253808063262,
+    "nfelo_obs": null,
+    "p": 0.5116095273679075,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_14_NYG_SEA",
@@ -3106,8 +3939,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.742,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7718914426084663,
+    "season_elo_dif": 212.62351105281522,
+    "nfelo_obs": null,
+    "p": 0.7718914426084663,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_14_BUF_GB",
@@ -3120,8 +3957,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4627,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.48464623760876135,
+    "season_elo_dif": -10.715464748417617,
+    "nfelo_obs": null,
+    "p": 0.48464623760876135,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_14_PIT_JAX",
@@ -3134,8 +3975,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6153,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6208751114748117,
+    "season_elo_dif": 86.03582171017142,
+    "nfelo_obs": null,
+    "p": 0.6208751114748117,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_SF_LAC",
@@ -3148,8 +3993,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.486,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4992785227036643,
+    "season_elo_dif": -0.5033645249261127,
+    "nfelo_obs": null,
+    "p": 0.4992785227036643,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_SEA_PHI",
@@ -3162,8 +4011,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4609,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.437362462650747,
+    "season_elo_dif": -43.9320861582933,
+    "nfelo_obs": null,
+    "p": 0.437362462650747,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_CHI_BUF",
@@ -3176,8 +4029,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6266,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6431426750913232,
+    "season_elo_dif": 102.73950144816999,
+    "nfelo_obs": null,
+    "p": 0.6431426750913232,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_ATL_WAS",
@@ -3190,8 +4047,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5783,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6015601798435226,
+    "season_elo_dif": 71.85638251859386,
+    "nfelo_obs": null,
+    "p": 0.6015601798435226,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_BAL_PIT",
@@ -3204,8 +4065,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.46419758883085577,
+    "season_elo_dif": -25.021642236048457,
+    "nfelo_obs": null,
+    "p": 0.46419758883085577,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_CIN_CAR",
@@ -3218,8 +4083,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5094,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5254584384262144,
+    "season_elo_dif": 17.777354178885204,
+    "nfelo_obs": null,
+    "p": 0.5254584384262144,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_CLE_NYG",
@@ -3232,8 +4101,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5702,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5926833705416175,
+    "season_elo_dif": 65.42012304747895,
+    "nfelo_obs": null,
+    "p": 0.5926833705416175,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_IND_TEN",
@@ -3246,8 +4119,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4667,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.43797123513565833,
+    "season_elo_dif": -43.500649168808465,
+    "nfelo_obs": null,
+    "p": 0.43797123513565833,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_JAX_HOU",
@@ -3260,8 +4137,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5585,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5401554385394093,
+    "season_elo_dif": 28.076329927852115,
+    "nfelo_obs": null,
+    "p": 0.5401554385394093,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_MIA_GB",
@@ -3274,8 +4155,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6366,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6335651356914606,
+    "season_elo_dif": 95.50302018241254,
+    "nfelo_obs": null,
+    "p": 0.6335651356914606,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_NO_TB",
@@ -3288,8 +4173,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5961,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.604491742841057,
+    "season_elo_dif": 73.99238763599541,
+    "nfelo_obs": null,
+    "p": 0.604491742841057,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_NYJ_ARI",
@@ -3302,8 +4191,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6143,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6773605220100756,
+    "season_elo_dif": 129.3627558936002,
+    "nfelo_obs": null,
+    "p": 0.6773605220100756,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_DAL_LA",
@@ -3316,8 +4209,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6603,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.635190959713274,
+    "season_elo_dif": 96.72564529153924,
+    "nfelo_obs": null,
+    "p": 0.635190959713274,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_DEN_LV",
@@ -3330,8 +4227,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.3914,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.34629741098863004,
+    "season_elo_dif": -110.81939229441977,
+    "nfelo_obs": null,
+    "p": 0.34629741098863004,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_DET_MIN",
@@ -3344,8 +4245,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5576,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5399528054448944,
+    "season_elo_dif": 27.9340426700031,
+    "nfelo_obs": null,
+    "p": 0.5399528054448944,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_15_NE_KC",
@@ -3358,8 +4263,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5345,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5645227298126715,
+    "season_elo_dif": 45.26897625945003,
+    "nfelo_obs": null,
+    "p": 0.5645227298126715,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_HOU_PHI",
@@ -3372,8 +4281,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5623,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5728658011746178,
+    "season_elo_dif": 51.20195211869518,
+    "nfelo_obs": null,
+    "p": 0.5728658011746178,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_GB_CHI",
@@ -3386,8 +4299,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5982,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.574301737903239,
+    "season_elo_dif": 52.22596330024762,
+    "nfelo_obs": null,
+    "p": 0.574301737903239,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_BUF_DEN",
@@ -3400,8 +4317,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.545,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5871994570624262,
+    "season_elo_dif": 61.46608773368526,
+    "nfelo_obs": null,
+    "p": 0.5871994570624262,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_LA_SEA",
@@ -3414,8 +4335,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6232,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6022741866344115,
+    "season_elo_dif": 72.37612941252101,
+    "nfelo_obs": null,
+    "p": 0.6022741866344115,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_ARI_NO",
@@ -3428,8 +4353,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.599,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6346147412090766,
+    "season_elo_dif": 96.29206334295282,
+    "nfelo_obs": null,
+    "p": 0.6346147412090766,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_CAR_PIT",
@@ -3442,8 +4371,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.622,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.628271406232979,
+    "season_elo_dif": 91.53776289002808,
+    "nfelo_obs": null,
+    "p": 0.628271406232979,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_CIN_IND",
@@ -3456,8 +4389,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5463,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5443568225406936,
+    "season_elo_dif": 31.028678699942972,
+    "nfelo_obs": null,
+    "p": 0.5443568225406936,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_CLE_BAL",
@@ -3470,8 +4407,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6736,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6586496572200081,
+    "season_elo_dif": 114.64408642133063,
+    "nfelo_obs": null,
+    "p": 0.6586496572200081,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_LAC_MIA",
@@ -3484,8 +4425,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5125,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5627539155818702,
+    "season_elo_dif": 44.01457858211975,
+    "nfelo_obs": null,
+    "p": 0.5627539155818702,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_NE_NYJ",
@@ -3498,8 +4443,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.3494,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.30286330805343353,
+    "season_elo_dif": -145.41506732019283,
+    "nfelo_obs": null,
+    "p": 0.30286330805343353,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_TB_ATL",
@@ -3512,8 +4461,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5608,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5540575464797255,
+    "season_elo_dif": 37.8631494326668,
+    "nfelo_obs": null,
+    "p": 0.5540575464797255,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_WAS_MIN",
@@ -3526,8 +4479,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6424,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6602644461975979,
+    "season_elo_dif": 115.8982599257184,
+    "nfelo_obs": null,
+    "p": 0.6602644461975979,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_TEN_LV",
@@ -3540,8 +4497,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5871,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5897246277539013,
+    "season_elo_dif": 63.28479627562233,
+    "nfelo_obs": null,
+    "p": 0.5897246277539013,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_SF_KC",
@@ -3554,8 +4515,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5555,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5433547428878357,
+    "season_elo_dif": 30.32412173277894,
+    "nfelo_obs": null,
+    "p": 0.5433547428878357,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_JAX_DAL",
@@ -3568,8 +4533,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4975,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5233940223108232,
+    "season_elo_dif": 16.333593500780353,
+    "nfelo_obs": null,
+    "p": 0.5233940223108232,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_16_NYG_DET",
@@ -3582,8 +4551,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6765,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6870636371088801,
+    "season_elo_dif": 137.16966968101798,
+    "nfelo_obs": null,
+    "p": 0.6870636371088801,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_BAL_CIN",
@@ -3596,8 +4569,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4937,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.47924789997803485,
+    "season_elo_dif": -14.486759304961737,
+    "nfelo_obs": null,
+    "p": 0.47924789997803485,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_BUF_MIA",
@@ -3610,8 +4587,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.3883,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.36349104420735234,
+    "season_elo_dif": -97.71848493083016,
+    "nfelo_obs": null,
+    "p": 0.36349104420735234,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_DEN_NE",
@@ -3624,8 +4605,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5549,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5979171598774403,
+    "season_elo_dif": 69.20935875161986,
+    "nfelo_obs": null,
+    "p": 0.5979171598774403,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_IND_CLE",
@@ -3638,8 +4623,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5346,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5534920506134344,
+    "season_elo_dif": 37.46399418368814,
+    "nfelo_obs": null,
+    "p": 0.5534920506134344,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_KC_LAC",
@@ -3652,8 +4641,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4939,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.45671159844728665,
+    "season_elo_dif": -30.27748625770505,
+    "nfelo_obs": null,
+    "p": 0.45671159844728665,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_LA_TB",
@@ -3666,8 +4659,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4484,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4913487386561588,
+    "season_elo_dif": -6.036461166252224,
+    "nfelo_obs": null,
+    "p": 0.4913487386561588,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_MIN_NYJ",
@@ -3680,8 +4677,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.3502,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.3385896707417906,
+    "season_elo_dif": -116.78999874952751,
+    "nfelo_obs": null,
+    "p": 0.3385896707417906,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_NO_ATL",
@@ -3694,8 +4695,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5936,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.580219206171478,
+    "season_elo_dif": 56.45553706866222,
+    "nfelo_obs": null,
+    "p": 0.580219206171478,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_NYG_DAL",
@@ -3708,8 +4713,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5952,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5596933213806459,
+    "season_elo_dif": 41.84673634875499,
+    "nfelo_obs": null,
+    "p": 0.5596933213806459,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_PIT_TEN",
@@ -3722,8 +4731,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4433,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.41855028358241225,
+    "season_elo_dif": -57.33708753777878,
+    "nfelo_obs": null,
+    "p": 0.41855028358241225,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_SEA_CAR",
@@ -3736,8 +4749,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.3562,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.38688364311230083,
+    "season_elo_dif": -80.3089528050401,
+    "nfelo_obs": null,
+    "p": 0.38688364311230083,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_WAS_JAX",
@@ -3750,8 +4767,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6286,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6354991823638835,
+    "season_elo_dif": 96.95769042267197,
+    "nfelo_obs": null,
+    "p": 0.6354991823638835,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_LV_ARI",
@@ -3764,8 +4785,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5628,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5739169043954423,
+    "season_elo_dif": 51.951439619447,
+    "nfelo_obs": null,
+    "p": 0.5739169043954423,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_DET_CHI",
@@ -3778,8 +4803,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5204,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5204765193396678,
+    "season_elo_dif": 14.294163307193323,
+    "nfelo_obs": null,
+    "p": 0.5204765193396678,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_PHI_SF",
@@ -3792,8 +4821,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5635,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5969489793726263,
+    "season_elo_dif": 68.50721055383555,
+    "nfelo_obs": null,
+    "p": 0.5969489793726263,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_17_HOU_GB",
@@ -3806,8 +4839,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.51,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5260960569729127,
+    "season_elo_dif": 18.22339691213692,
+    "nfelo_obs": null,
+    "p": 0.5260960569729127,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_ATL_CAR",
@@ -3820,8 +4857,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5323,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5224026711140382,
+    "season_elo_dif": 15.640488341066344,
+    "nfelo_obs": null,
+    "p": 0.5224026711140382,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_CHI_MIN",
@@ -3834,8 +4875,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5999,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5976835371497179,
+    "season_elo_dif": 69.03987936280978,
+    "nfelo_obs": null,
+    "p": 0.5976835371497179,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_CLE_CIN",
@@ -3848,8 +4893,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6083,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6069083911305938,
+    "season_elo_dif": 75.75732711636888,
+    "nfelo_obs": null,
+    "p": 0.6069083911305938,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_DAL_WAS",
@@ -3862,8 +4911,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.562,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5667620438494683,
+    "season_elo_dif": 46.85871607654767,
+    "nfelo_obs": null,
+    "p": 0.5667620438494683,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_DET_GB",
@@ -3876,8 +4929,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4847,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4579148942969973,
+    "season_elo_dif": -29.4317999930543,
+    "nfelo_obs": null,
+    "p": 0.4579148942969973,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_JAX_IND",
@@ -3890,8 +4947,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4867,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.47126192172935666,
+    "season_elo_dif": -20.072260079141728,
+    "nfelo_obs": null,
+    "p": 0.47126192172935666,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_LAC_DEN",
@@ -3904,8 +4965,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6657,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6798443551543218,
+    "season_elo_dif": 131.34915124663516,
+    "nfelo_obs": null,
+    "p": 0.6798443551543218,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_LV_KC",
@@ -3918,8 +4983,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.6916,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6982040851461452,
+    "season_elo_dif": 146.29772730548967,
+    "nfelo_obs": null,
+    "p": 0.6982040851461452,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_MIA_NE",
@@ -3932,8 +5001,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7036,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7104363891414118,
+    "season_elo_dif": 156.54393141613528,
+    "nfelo_obs": null,
+    "p": 0.7104363891414118,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_NYJ_BUF",
@@ -3946,8 +5019,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.7803,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7744715146579084,
+    "season_elo_dif": 215.18962083488773,
+    "nfelo_obs": null,
+    "p": 0.7744715146579084,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_PHI_NYG",
@@ -3960,8 +5037,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4708,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.45370599206259116,
+    "season_elo_dif": -32.39142489452192,
+    "nfelo_obs": null,
+    "p": 0.45370599206259116,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_PIT_BAL",
@@ -3974,8 +5055,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.625,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.6042576761109013,
+    "season_elo_dif": 73.82164223604846,
+    "nfelo_obs": null,
+    "p": 0.6042576761109013,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_SEA_LA",
@@ -3988,8 +5073,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.5019,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.4662594349161223,
+    "season_elo_dif": -23.576129412521006,
+    "nfelo_obs": null,
+    "p": 0.4662594349161223,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_SF_ARI",
@@ -4002,8 +5091,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.4197,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.38700167571885136,
+    "season_elo_dif": -80.22216595326373,
+    "nfelo_obs": null,
+    "p": 0.38700167571885136,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_TB_NO",
@@ -4016,8 +5109,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.53,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.5083233444139376,
+    "season_elo_dif": 5.80761236400458,
+    "nfelo_obs": null,
+    "p": 0.5083233444139376,
+    "src": "nfelo-season"
    },
    {
     "id": "2026_18_TEN_HOU",
@@ -4030,8 +5127,12 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
-    "p": 0.72,
-    "src": "model"
+    "nfp": null,
+    "season_p": 0.7276951831738567,
+    "season_elo_dif": 171.44923917580232,
+    "nfelo_obs": null,
+    "p": 0.7276951831738567,
+    "src": "nfelo-season"
    }
   ],
   "ownership": {

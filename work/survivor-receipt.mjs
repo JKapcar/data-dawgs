@@ -78,7 +78,7 @@ const ENTRIES = {
     cfg: {
       entries: 200, lives: 1, lifeLost: 0, buybacks: false, buybackThrough: 4,
       buybackRate: 0.35, reuse: false, used: [], tiebreak: "split",
-      blendMarket: 0.75, chalk: 2.4, sims: 3000, popularity: {},
+      chalk: 2.4, sims: 3000, popularity: {},
       doublePickFrom: 0, doublePickWeeks: [], week18Mode: "normal", objective: "winnings",
     },
   },
@@ -266,7 +266,7 @@ if (CMD === "capture") {
     config: {
       entries: cfg.entries, lives: cfg.lives, reuse: cfg.reuse,
       double_pick_weeks: cfg.doublePickWeeks, week18_mode: cfg.week18Mode,
-      blend_market: cfg.blendMarket, chalk: cfg.chalk, used_teams: cfg.used,
+      probability_method: "nfelo-season-v1", chalk: cfg.chalk, used_teams: cfg.used,
     },
 
     input_snapshot_id: snapshotId,

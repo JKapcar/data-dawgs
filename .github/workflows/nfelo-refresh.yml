@@ -13,11 +13,11 @@ name: nfelo refresh
 #
 # ⚠️ NEVER on push. Refresh on a schedule or by explicit dispatch only.
 #
-# Four pulls daily; every successful run wakes the receipt gate. No manual line pull.
+# One pull daily; every successful run wakes the receipt gate. No manual line pull.
 
 on:
   schedule:
-    - cron: "0 5,11,17,23 * * *"
+    - cron: "45 14 * * *"
   workflow_dispatch:
 
 permissions:
@@ -55,6 +55,7 @@ jobs:
         run: |
           node work/build-survivor-snapshot.mjs
           node tools/build-data.js survivor.json models.json
+          node work/test-survivor-nfelo.mjs
 
       - name: Stamp service worker, republish manifest, validate
         run: |
