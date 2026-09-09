@@ -52,6 +52,9 @@ const Y_ANCHOR = '    if (url.pathname === "/espn" || url.pathname.startsWith("/
 
 const W_START = "/* ===== DD-WARROOM-BLOCK START — generated from shared browser engines + work/warroom-worker.js; edit THERE ===== */";
 const W_END = "/* ===== DD-WARROOM-BLOCK END ===== */";
+const F_START = "/* ===== DD-FORECAST-LIVE START — generated from work/forecast-live*.js; edit THERE ===== */";
+const F_END = "/* ===== DD-FORECAST-LIVE END ===== */";
+const forecast = readFileSync("forecast-live.js", "utf8") + "\n" + readFileSync("forecast-live-worker.js", "utf8");
 const W_ROUTE = '    if (url.pathname === "/sleeper/warroom") return handleSleeperWarroom(request, url, env, cors); // DD-WARROOM-ROUTE';
 function privateWrapper(file, root, suffix) {
   let source = readFileSync(file, "utf8").trimEnd();
@@ -116,6 +119,8 @@ function transform(input) {
 
   const ws = t.indexOf(W_START), we = t.indexOf(W_END);
   if (ws >= 0 && we > ws) t = t.slice(0, ws) + t.slice(we + W_END.length);
+  const fs = t.indexOf(F_START), fe = t.indexOf(F_END);
+  if (fs >= 0 && fe > fs) t = t.slice(0, fs) + t.slice(fe + F_END.length);
 
   /* 4. strip any previously injected route (marked or legacy) */
   t = t
@@ -160,6 +165,7 @@ function transform(input) {
     + "\n\n" + Y_START + "\n" + yahoo + "\n" + Y_END
     + "\n\n" + R_START + "\n" + rankings + "\n" + R_END
     + "\n\n" + W_START + "\n" + warroom + "\n" + W_END
+    + "\n\n" + F_START + "\n" + forecast.trimEnd() + "\n" + F_END
     + "\n\n" + START + "\n" + block + "\n" + END + "\n";
 }
 
