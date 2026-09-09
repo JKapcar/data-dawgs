@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - "sw.js"
+      - "guillotine*.js"
+      - "guillotine.html"
+      - "tools/guillotine-*"
+      - "tests/guillotine-weekly.test.cjs"
       - "dd-live-state.js"
       - "warroom-weekly.js"
       - "fantasy-warroom.html"
@@ -16,6 +20,10 @@ on:
   pull_request:
     paths:
       - "sw.js"
+      - "guillotine*.js"
+      - "guillotine.html"
+      - "tools/guillotine-*"
+      - "tests/guillotine-weekly.test.cjs"
       - "dd-live-state.js"
       - "warroom-weekly.js"
       - "fantasy-warroom.html"
@@ -40,3 +48,4 @@ jobs:
       - run: node --check dd-live-state.js
       - run: node --check warroom-weekly.js
       - run: node --test tests/service-worker.test.js tests/live-state.test.js tests/warroom-weekly.test.js
+      - run: node --test tests/guillotine-weekly.test.cjs

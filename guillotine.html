@@ -840,6 +840,9 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
   .gx-tabs button{flex:1 1 calc(50% - 6px);padding:11px 8px;font-size:11.5px;letter-spacing:.03em}}
 @media(max-width:390px){.gx-stage{margin-left:-2px;margin-right:-2px}.gx-wheelbox canvas{max-width:calc(100vw - 54px)}.gx-tabs{margin-right:-8px}.hero-card{padding:15px 12px}.statrow{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}.grpmenu a[class*="kennel-"]{font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;font-weight:800;letter-spacing:.01em}.grpmenu a.kennel-scoreboard{color:#8ed6ff}.grpmenu a.kennel-nfeloml{color:#c9b3ff}.grpmenu a.kennel-qb{color:#ffc06a}.grpmenu a.kennel-wepa{color:#7ce7b0}.grpmenu a.kennel-srs{color:#ff9bb4}.grpmenu a.kennel-hfa{color:#ffe082}.grpmenu a.kennel-units{color:#8ee8e3}.grpmenu a.kennel-receipts{color:#f2c4ff}.grpmenu a.kennel-regimes{color:#a8d88c}</style>
+<link rel="stylesheet" href="/guillotine-weekly.css">
+<script>window.GW_WEEKLY_MODE=new URLSearchParams(location.search).get("view")!=="history";document.documentElement.classList.add(window.GW_WEEKLY_MODE?"gw-weekly-mode":"gw-history-mode");</script>
+<style>.gw-weekly-mode #gwLegacy,.gw-history-mode #gw{display:none!important}</style>
 </head>
 <body>
 <div class="wrap">
@@ -2476,7 +2479,23 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
 </script>
 
-  <div class="lab-hd"><span class="lab-chip">Labs</span></div>
+<main id="gw" class="gw">
+<div class="lab-hd"><span class="lab-chip">Last Dawg Standing</span></div>
+<h1>Survive this week.<br>Keep your next move.</h1>
+<p class="sub">Weekly Sleeper projections, your actual lineup, and the whole surviving field. Start/sit decisions and waiver comparisons use the same player-level simulation.</p>
+<div class="gw-controls"><input id="gwLeague" aria-label="Sleeper league ID" placeholder="Sleeper league ID or URL"><button class="btn" id="gwLoad">Connect league</button><select id="gwSaved" aria-label="Saved leagues"><option value="">Saved leagues</option></select><select id="gwFocus" aria-label="Your focus team"><option value="">Choose your team</option></select></div>
+<p id="gwStatus" class="gw-note" role="status">Connect a league to begin.</p><div id="gwError" class="gw-error" hidden></div>
+<div id="gwMetrics" class="gw-metrics"></div>
+<nav class="gw-tabs" aria-label="Guillotine tools"><button data-panel="board" aria-selected="true">Power ranks</button><button data-panel="lineup" aria-selected="false">Start / sit</button><button data-panel="waivers" aria-selected="false">Waivers + FAAB</button><button data-panel="outlook" aria-selected="false">Season outlook</button><button data-panel="receipts" aria-selected="false">Track record</button></nav>
+<section data-view="board"><div class="gw-card"><h2>This week’s survival board <span class="gw-badge">Modeled</span></h2><p class="gw-note">Current Sleeper starters, not automatically optimized opponents. Rank is probability of surviving this week. The score range is a modeled 80% interval. Click a team to investigate.</p><div id="gwBoard" class="gw-scroll"></div></div><div class="gw-card"><h2>The chop line</h2><div id="gwChop"></div><p class="gw-note">Pregame forecast, not in-game win probability. Injury designations of Out, IR, PUP, suspended or inactive score zero; questionable players retain Sleeper’s projection. Correlation uses a historical same-team estimate; opponent and negative teammate correlations are not modeled.</p></div></section>
+<section data-view="lineup" hidden><div class="gw-card"><h2>The lineup with the best modeled survival</h2><div id="gwLineup">Choose your team.</div><p class="gw-note">Tests legal combinations against the same opponent simulations. Players whose games started cannot be moved into or out of your starting lineup. Suggestions do not submit changes to Sleeper.</p></div><div class="gw-card"><h2>Weak spots</h2><div id="gwWeak"></div></div></section>
+<section data-view="waivers" hidden><div class="gw-card"><h2>Your acquisition plan</h2><div class="gw-controls"><label>Maximum cash to consider this cycle <input id="gwCap" type="range" min="0" max="100" value="15" step="5"> <output id="gwCapOut">15%</output></label><button class="btn" id="gwReplan">Recalculate</button></div><p class="gw-note">This is your adjustable spending limit, not a prediction of winning bids. Default 15% is a planning assumption. Increase it when survival matters more than preserving cash.</p><div id="gwWaivers">Choose your team.</div></div><div class="gw-card"><h2>Who still has money?</h2><div id="gwBudgets" class="gw-scroll"></div></div><div class="gw-card"><h2>Case’s prior-season market</h2><div id="gwHistory"></div></div><div class="gw-card"><h2>Observed winning bids</h2><div id="gwBids"></div><p class="gw-note">Only completed Sleeper waiver transactions. We cannot observe losing bids. Historical ranges describe winning bids at the same position; they are not player-specific clearing-price predictions. A separate league’s history is never silently pooled with yours.</p></div></section>
+<section data-view="outlook" hidden><div class="gw-card"><h2>Current-roster season scenario</h2><p class="gw-note">Holds current weekly player strength fixed, applies known future byes, and reselects legal starters each week. No future acquisitions, changing player roles, or injuries are forecast. This scenario illustrates roster exposure; it is not a calibrated championship forecast.</p><button class="btn" id="gwSeason">Run the season scenario</button><div id="gwOutlook"></div></div></section>
+<section data-view="receipts" hidden><div class="gw-card"><h2>Forecasts we can grade</h2><div id="gwReceipts"></div><p class="gw-note">The daily job freezes the public league’s current-starter probabilities before the first kickoff, inside a 24-hour gate. It never backfills a missed prediction. Actual completed-week scores determine grades; ties follow Sleeper’s chopped rules. No player names or ownership identities are stored in this ledger.</p></div></section>
+<details class="gw-card"><summary>How the numbers work</summary><div id="gwMethod"></div><p class="gw-note">Historical projection errors estimate uncertainty, but historical Sleeper projections can be revised. They do not prove predictive accuracy. The prospective ledger measures the current model going forward. Every player’s expected points use this league’s scoring weights; no season-total-to-weekly division.</p><p class="gw-note">One elimination per week. Sleeper uses total season points to break ties; Week 1 ties eliminate the team with the better draft position. Roster-empty elimination inference is shown explicitly and can be overridden below.</p><div id="gwActive"></div><button class="btn" id="gwApplyActive">Apply surviving-team overrides</button></details>
+<p class="gw-note"><a href="https://sleeper.com/leagues/1400972302392262656/team" target="_blank" rel="noopener">Open DawgPound Royale in Sleeper</a> · <a href="https://support.sleeper.com/en/articles/12005468-introduction-to-chopped-leagues" target="_blank" rel="noopener">Sleeper chopped rules</a> · <a href="/data/guillotine-weekly.json">Dated player inputs</a></p>
+<p class="gw-note"><a href="?view=history">Open saved leagues and historical tools</a> · <a href="/fantasy-warroom.html">Draft war room</a></p></main>
+<div id="gwLegacy"><div class="gw-card"><h2>Historical tools</h2><p>These legacy tools use completed team scores and older valuation assumptions. For current weekly survival, start/sit and FAAB decisions, <a href="guillotine.html">open the weekly dashboard</a>.</p></div>  <div class="lab-hd"><span class="lab-chip">Labs</span></div>
   <h1 style="margin:10px 0 0;font-size:27px;font-weight:800;letter-spacing:-.01em">Last Dawg Standing</h1>
   <p class="lab-sub" style="margin-top:4px;font-weight:750;color:var(--accent)">The Guillotine League Companion</p>
   <p class="lab-sub">Every week the lowest-scoring team is eliminated and its roster hits waivers. You do not need the best team &mdash; you need to not be last. That is a different problem, and it needs a different tool.</p>
@@ -2689,6 +2708,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   </footer>
 </div>
 <script>
+if (!window.GW_WEEKLY_MODE) {
+
 /* ============================================================================
    SLEEPER SYNC — the real one
    ============================================================================
@@ -3492,8 +3513,12 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   var saved=cfg();
   if(saved.id){ elId.value=saved.id; sync(saved.id); }
 })();
+
+}
 </script>
 <script>
+if (!window.GW_WEEKLY_MODE) {
+
 /* ======================= LAST DAWG STANDING V1 ===========================
    One modeled week; no live-score claim. Account sync stores only league IDs
    and an unverified focus roster. Prediction receipts remain local-device V1. */
@@ -3969,8 +3994,12 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   async function loadShelf(){var l=shelf(),me=window.DDAuth&&DDAuth.me&&DDAuth.me();if(me)try{var r=await fetch("https://toto.jkapcar4.workers.dev/auth/guillotine-state",{headers:DDAuth.headers()}),j=await r.json();if(r.ok&&j.state&&Array.isArray(j.state.leagues)){j.state.leagues.forEach(function(x){if(!l.some(function(y){return y.leagueId===x.leagueId;}))l.push(x);});write(SHELF,l);last=JSON.stringify({leagues:l.map(function(x){return {leagueId:String(x.leagueId),focusRosterId:x.focusRosterId==null?null:Number(x.focusRosterId)};})});document.getElementById("gxShelfState").textContent="Account + device";}}catch(e){}paintShelf(l);}
   addEventListener("gx-ready",function(e){paint(e.detail);});addEventListener("dd-auth",loadShelf);loadShelf();if(window.__GX)paint(window.__GX);
 })();
+
+}
 </script>
 <script>
+if (!window.GW_WEEKLY_MODE) {
+
 /* ---------------- Toto's surface: the Guillotine companion ----------------
    The page's own sim state lives inside an IIFE and escapes only into the DOM, so
    sync() stashes what matters on window.__GX. If nobody has connected a league there
@@ -4048,6 +4077,10 @@ window.DD_BOTCTX = {
     return L.join('\n');
   }
 };
+
+}
 </script>
-</body>
-</html>
+</div>
+<script src="/guillotine-engine.js"></script>
+<script src="/guillotine-weekly.js"></script>
+</body></html>
