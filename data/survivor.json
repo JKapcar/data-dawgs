@@ -3,16 +3,18 @@
  "tier": "labs",
  "graded": false,
  "as_of": "2026-09-09",
- "source": "nfelo 807d7b66 ratings + nflverse/nfldata 2026 schedule.",
- "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"market\" = derived from a real line, \"model\" = Elo-only. Ownership is modelled, not observed.",
+ "source": "nfelo 807d7b66 published forecasts and ratings + nflverse/nfldata 2026 schedule.",
+ "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"nfelo\" = published nfelo forecast without an extra blend; \"model\" = ratings-only estimate when no forecast is available. Ownership is modelled, not observed.",
  "field_notes": {
   "mm": "model expected margin, home perspective (points)",
   "mk": "market-implied home win probability (null when no line); derivation and provenance are named by mk_src",
   "mk_src": "nfelo-mirror | carried:2026-08-06 | null",
   "mk_obs": "when the market input was observed; null when no line",
   "mk_book": "source book; null because the nfelo upstream output does not identify it",
-  "p": "blended home win probability actually used",
-  "src": "market | model"
+  "nfp": "Published nfelo home win probability; null when unavailable. No additional market blend.",
+  "nfelo_obs": "Upstream commit timestamp for the published forecast",
+  "p": "Home win probability used: published nfelo forecast or ratings-only estimate",
+  "src": "nfelo | model"
  },
  "data": {
   "meta": {
@@ -26,7 +28,9 @@
    "market_su": 0.6677,
    "nfelo_sha": "807d7b66",
    "sched_src": "nflverse/nfldata",
-   "market_observed_at": "2026-09-09T12:40:49.000Z"
+   "market_observed_at": "2026-09-09T12:40:49.000Z",
+   "probability_method": "nfelo-direct-v1",
+   "probability_method_since": "2026-09-09"
   },
   "elo": {
    "SEA": 1628,
@@ -236,8 +240,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.6338,
-    "src": "market"
+    "nfp": 0.6311,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.6311,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_SF_LA",
@@ -250,8 +256,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.6242,
-    "src": "market"
+    "nfp": 0.5766,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.5766,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_ATL_PIT",
@@ -264,8 +272,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.6214,
-    "src": "market"
+    "nfp": 0.6311,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.6311,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_BAL_IND",
@@ -278,8 +288,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.3952,
-    "src": "market"
+    "nfp": 0.4398,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.4398,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_BUF_HOU",
@@ -292,8 +304,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.461,
-    "src": "market"
+    "nfp": 0.4428,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.4428,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_CHI_CAR",
@@ -306,8 +320,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.408,
-    "src": "market"
+    "nfp": 0.415,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.415,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_CLE_JAX",
@@ -320,8 +336,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.7586,
-    "src": "market"
+    "nfp": 0.7231,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.7231,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_NO_DET",
@@ -334,8 +352,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.7319,
-    "src": "market"
+    "nfp": 0.7453,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.7453,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_NYJ_TEN",
@@ -348,8 +368,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.5659,
-    "src": "market"
+    "nfp": 0.5573,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.5573,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_TB_CIN",
@@ -362,8 +384,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.6193,
-    "src": "market"
+    "nfp": 0.6311,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.6311,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_ARI_LAC",
@@ -376,8 +400,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.7713,
-    "src": "market"
+    "nfp": 0.7487,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.7487,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_GB_MIN",
@@ -390,8 +416,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.5768,
-    "src": "market"
+    "nfp": 0.6051,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.6051,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_MIA_LV",
@@ -404,8 +432,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.6108,
-    "src": "market"
+    "nfp": 0.6244,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.6244,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_WAS_PHI",
@@ -418,8 +448,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.6554,
-    "src": "market"
+    "nfp": 0.6167,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.6167,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_DAL_NYG",
@@ -432,8 +464,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.4363,
-    "src": "market"
+    "nfp": 0.4541,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.4541,
+    "src": "nfelo"
    },
    {
     "id": "2026_01_DEN_KC",
@@ -446,8 +480,10 @@
     "mk_src": "nfelo-mirror",
     "mk_obs": "2026-09-09T12:40:49.000Z",
     "mk_book": null,
-    "p": 0.5777,
-    "src": "market"
+    "nfp": 0.5133,
+    "nfelo_obs": "2026-09-09T12:40:49.000Z",
+    "p": 0.5133,
+    "src": "nfelo"
    },
    {
     "id": "2026_02_DET_BUF",
@@ -460,8 +496,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.5835,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.585,
+    "src": "model"
    },
    {
     "id": "2026_02_CAR_ATL",
@@ -474,8 +512,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.548,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.5939,
+    "src": "model"
    },
    {
     "id": "2026_02_CIN_HOU",
@@ -488,8 +528,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.5679,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.6167,
+    "src": "model"
    },
    {
     "id": "2026_02_CLE_TB",
@@ -502,8 +544,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.654,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.5885,
+    "src": "model"
    },
    {
     "id": "2026_02_GB_NYJ",
@@ -516,8 +560,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.34,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.4201,
+    "src": "model"
    },
    {
     "id": "2026_02_MIN_CHI",
@@ -530,8 +576,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.5989,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.5262,
+    "src": "model"
    },
    {
     "id": "2026_02_NO_BAL",
@@ -544,8 +592,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.7264,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.6806,
+    "src": "model"
    },
    {
     "id": "2026_02_PHI_TEN",
@@ -558,8 +608,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.3655,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.3968,
+    "src": "model"
    },
    {
     "id": "2026_02_PIT_NE",
@@ -572,8 +624,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.6594,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.6301,
+    "src": "model"
    },
    {
     "id": "2026_02_JAX_DEN",
@@ -586,8 +640,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.5694,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.5869,
+    "src": "model"
    },
    {
     "id": "2026_02_LV_LAC",
@@ -600,8 +656,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.743,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.6277,
+    "src": "model"
    },
    {
     "id": "2026_02_MIA_SF",
@@ -614,8 +672,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.7835,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.685,
+    "src": "model"
    },
    {
     "id": "2026_02_SEA_ARI",
@@ -628,8 +688,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.2278,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.323,
+    "src": "model"
    },
    {
     "id": "2026_02_WAS_DAL",
@@ -642,8 +704,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.6146,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.5646,
+    "src": "model"
    },
    {
     "id": "2026_02_IND_KC",
@@ -656,8 +720,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.6857,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.6249,
+    "src": "model"
    },
    {
     "id": "2026_02_NYG_LA",
@@ -670,8 +736,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.7433,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.6897,
+    "src": "model"
    },
    {
     "id": "2026_03_ATL_GB",
@@ -684,8 +752,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.7132,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.5871,
+    "src": "model"
    },
    {
     "id": "2026_03_CAR_CLE",
@@ -698,8 +768,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.4935,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.5713,
+    "src": "model"
    },
    {
     "id": "2026_03_CIN_PIT",
@@ -712,8 +784,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.4931,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.5695,
+    "src": "model"
    },
    {
     "id": "2026_03_HOU_IND",
@@ -726,8 +800,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.4735,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.4916,
+    "src": "model"
    },
    {
     "id": "2026_03_KC_MIA",
@@ -740,8 +816,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.2958,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.443,
+    "src": "model"
    },
    {
     "id": "2026_03_LAC_BUF",
@@ -754,8 +832,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.6209,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.6824,
+    "src": "model"
    },
    {
     "id": "2026_03_NE_JAX",
@@ -768,8 +848,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.525,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.5479,
+    "src": "model"
    },
    {
     "id": "2026_03_NYJ_DET",
@@ -782,8 +864,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.7774,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.7636,
+    "src": "model"
    },
    {
     "id": "2026_03_SEA_WAS",
@@ -796,8 +880,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.3832,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.4004,
+    "src": "model"
    },
    {
     "id": "2026_03_TEN_NYG",
@@ -810,8 +896,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.6119,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.6359,
+    "src": "model"
    },
    {
     "id": "2026_03_ARI_SF",
@@ -824,8 +912,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.7908,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.6989,
+    "src": "model"
    },
    {
     "id": "2026_03_MIN_TB",
@@ -838,8 +928,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.5166,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.4689,
+    "src": "model"
    },
    {
     "id": "2026_03_BAL_DAL",
@@ -852,8 +944,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.4582,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.4873,
+    "src": "model"
    },
    {
     "id": "2026_03_LV_NO",
@@ -866,8 +960,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.6274,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.5985,
+    "src": "model"
    },
    {
     "id": "2026_03_LA_DEN",
@@ -880,8 +976,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.4505,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.5522,
+    "src": "model"
    },
    {
     "id": "2026_03_PHI_CHI",
@@ -894,8 +992,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.5247,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.5466,
+    "src": "model"
    },
    {
     "id": "2026_04_PIT_CLE",
@@ -908,8 +1008,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.4642,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.5112,
+    "src": "model"
    },
    {
     "id": "2026_04_IND_WAS",
@@ -922,8 +1024,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.5313,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.5727,
+    "src": "model"
    },
    {
     "id": "2026_04_ARI_NYG",
@@ -936,6 +1040,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6133,
     "src": "model"
    },
@@ -950,6 +1056,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6228,
     "src": "model"
    },
@@ -964,6 +1072,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5418,
     "src": "model"
    },
@@ -978,6 +1088,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5039,
     "src": "model"
    },
@@ -992,6 +1104,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5225,
     "src": "model"
    },
@@ -1006,6 +1120,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5898,
     "src": "model"
    },
@@ -1020,8 +1136,10 @@
     "mk_src": "carried:2026-08-06",
     "mk_obs": "2026-08-06",
     "mk_book": null,
-    "p": 0.7612,
-    "src": "market"
+    "nfp": null,
+    "nfelo_obs": null,
+    "p": 0.729,
+    "src": "model"
    },
    {
     "id": "2026_04_TEN_BAL",
@@ -1034,6 +1152,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7325,
     "src": "model"
    },
@@ -1048,6 +1168,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7028,
     "src": "model"
    },
@@ -1062,6 +1184,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5339,
     "src": "model"
    },
@@ -1076,6 +1200,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4279,
     "src": "model"
    },
@@ -1090,6 +1216,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7292,
     "src": "model"
    },
@@ -1104,6 +1232,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4297,
     "src": "model"
    },
@@ -1118,6 +1248,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5326,
     "src": "model"
    },
@@ -1132,6 +1264,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5771,
     "src": "model"
    },
@@ -1146,6 +1280,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5691,
     "src": "model"
    },
@@ -1160,6 +1296,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.489,
     "src": "model"
    },
@@ -1174,6 +1312,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.467,
     "src": "model"
    },
@@ -1188,6 +1328,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.3958,
     "src": "model"
    },
@@ -1202,6 +1344,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5864,
     "src": "model"
    },
@@ -1216,6 +1360,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7167,
     "src": "model"
    },
@@ -1230,6 +1376,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4356,
     "src": "model"
    },
@@ -1244,6 +1392,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.594,
     "src": "model"
    },
@@ -1258,6 +1408,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4565,
     "src": "model"
    },
@@ -1272,6 +1424,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5279,
     "src": "model"
    },
@@ -1286,6 +1440,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.3944,
     "src": "model"
    },
@@ -1300,6 +1456,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6613,
     "src": "model"
    },
@@ -1314,6 +1472,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4708,
     "src": "model"
    },
@@ -1328,6 +1488,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5561,
     "src": "model"
    },
@@ -1342,6 +1504,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4908,
     "src": "model"
    },
@@ -1356,6 +1520,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5681,
     "src": "model"
    },
@@ -1370,6 +1536,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4478,
     "src": "model"
    },
@@ -1384,6 +1552,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6664,
     "src": "model"
    },
@@ -1398,6 +1568,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5036,
     "src": "model"
    },
@@ -1412,6 +1584,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.578,
     "src": "model"
    },
@@ -1426,6 +1600,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7598,
     "src": "model"
    },
@@ -1440,6 +1616,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5368,
     "src": "model"
    },
@@ -1454,6 +1632,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6563,
     "src": "model"
    },
@@ -1468,6 +1648,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7336,
     "src": "model"
    },
@@ -1482,6 +1664,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.3737,
     "src": "model"
    },
@@ -1496,6 +1680,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6308,
     "src": "model"
    },
@@ -1510,6 +1696,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5709,
     "src": "model"
    },
@@ -1524,6 +1712,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6233,
     "src": "model"
    },
@@ -1538,6 +1728,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5253,
     "src": "model"
    },
@@ -1552,6 +1744,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5034,
     "src": "model"
    },
@@ -1566,6 +1760,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6309,
     "src": "model"
    },
@@ -1580,6 +1776,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4955,
     "src": "model"
    },
@@ -1594,6 +1792,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6513,
     "src": "model"
    },
@@ -1608,6 +1808,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4954,
     "src": "model"
    },
@@ -1622,6 +1824,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6534,
     "src": "model"
    },
@@ -1636,6 +1840,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4865,
     "src": "model"
    },
@@ -1650,6 +1856,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5298,
     "src": "model"
    },
@@ -1664,6 +1872,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.3909,
     "src": "model"
    },
@@ -1678,6 +1888,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6394,
     "src": "model"
    },
@@ -1692,6 +1904,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.3807,
     "src": "model"
    },
@@ -1706,6 +1920,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6685,
     "src": "model"
    },
@@ -1720,6 +1936,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6218,
     "src": "model"
    },
@@ -1734,6 +1952,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6173,
     "src": "model"
    },
@@ -1748,6 +1968,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6442,
     "src": "model"
    },
@@ -1762,6 +1984,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5658,
     "src": "model"
    },
@@ -1776,6 +2000,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.595,
     "src": "model"
    },
@@ -1790,6 +2016,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6143,
     "src": "model"
    },
@@ -1804,6 +2032,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6376,
     "src": "model"
    },
@@ -1818,6 +2048,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5107,
     "src": "model"
    },
@@ -1832,6 +2064,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.569,
     "src": "model"
    },
@@ -1846,6 +2080,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.672,
     "src": "model"
    },
@@ -1860,6 +2096,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6758,
     "src": "model"
    },
@@ -1874,6 +2112,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6,
     "src": "model"
    },
@@ -1888,6 +2128,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4144,
     "src": "model"
    },
@@ -1902,6 +2144,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5021,
     "src": "model"
    },
@@ -1916,6 +2160,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6768,
     "src": "model"
    },
@@ -1930,6 +2176,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5733,
     "src": "model"
    },
@@ -1944,6 +2192,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5405,
     "src": "model"
    },
@@ -1958,6 +2208,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5555,
     "src": "model"
    },
@@ -1972,6 +2224,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5526,
     "src": "model"
    },
@@ -1986,6 +2240,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4261,
     "src": "model"
    },
@@ -2000,6 +2256,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4097,
     "src": "model"
    },
@@ -2014,6 +2272,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4611,
     "src": "model"
    },
@@ -2028,6 +2288,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6525,
     "src": "model"
    },
@@ -2042,6 +2304,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7366,
     "src": "model"
    },
@@ -2056,6 +2320,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4853,
     "src": "model"
    },
@@ -2070,6 +2336,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6985,
     "src": "model"
    },
@@ -2084,6 +2352,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7817,
     "src": "model"
    },
@@ -2098,6 +2368,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6348,
     "src": "model"
    },
@@ -2112,6 +2384,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6191,
     "src": "model"
    },
@@ -2126,6 +2400,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5357,
     "src": "model"
    },
@@ -2140,6 +2416,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5322,
     "src": "model"
    },
@@ -2154,6 +2432,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5681,
     "src": "model"
    },
@@ -2168,6 +2448,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.3247,
     "src": "model"
    },
@@ -2182,6 +2464,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5635,
     "src": "model"
    },
@@ -2196,6 +2480,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4627,
     "src": "model"
    },
@@ -2210,6 +2496,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.3911,
     "src": "model"
    },
@@ -2224,6 +2512,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4944,
     "src": "model"
    },
@@ -2238,6 +2528,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6191,
     "src": "model"
    },
@@ -2252,6 +2544,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4905,
     "src": "model"
    },
@@ -2266,6 +2560,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.3802,
     "src": "model"
    },
@@ -2280,6 +2576,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.3234,
     "src": "model"
    },
@@ -2294,6 +2592,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5031,
     "src": "model"
    },
@@ -2308,6 +2608,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5571,
     "src": "model"
    },
@@ -2322,6 +2624,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6529,
     "src": "model"
    },
@@ -2336,6 +2640,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.633,
     "src": "model"
    },
@@ -2350,6 +2656,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.692,
     "src": "model"
    },
@@ -2364,6 +2672,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4398,
     "src": "model"
    },
@@ -2378,6 +2688,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4649,
     "src": "model"
    },
@@ -2392,6 +2704,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7266,
     "src": "model"
    },
@@ -2406,6 +2720,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6507,
     "src": "model"
    },
@@ -2420,6 +2736,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6596,
     "src": "model"
    },
@@ -2434,6 +2752,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6661,
     "src": "model"
    },
@@ -2448,6 +2768,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6766,
     "src": "model"
    },
@@ -2462,6 +2784,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7239,
     "src": "model"
    },
@@ -2476,6 +2800,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6096,
     "src": "model"
    },
@@ -2490,6 +2816,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5432,
     "src": "model"
    },
@@ -2504,6 +2832,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5557,
     "src": "model"
    },
@@ -2518,6 +2848,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6532,
     "src": "model"
    },
@@ -2532,6 +2864,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6054,
     "src": "model"
    },
@@ -2546,6 +2880,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5034,
     "src": "model"
    },
@@ -2560,6 +2896,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6178,
     "src": "model"
    },
@@ -2574,6 +2912,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4862,
     "src": "model"
    },
@@ -2588,6 +2928,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6566,
     "src": "model"
    },
@@ -2602,6 +2944,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5484,
     "src": "model"
    },
@@ -2616,6 +2960,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6061,
     "src": "model"
    },
@@ -2630,6 +2976,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6158,
     "src": "model"
    },
@@ -2644,6 +2992,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5847,
     "src": "model"
    },
@@ -2658,6 +3008,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6294,
     "src": "model"
    },
@@ -2672,6 +3024,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7241,
     "src": "model"
    },
@@ -2686,6 +3040,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4612,
     "src": "model"
    },
@@ -2700,6 +3056,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4809,
     "src": "model"
    },
@@ -2714,6 +3072,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4649,
     "src": "model"
    },
@@ -2728,6 +3088,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5964,
     "src": "model"
    },
@@ -2742,6 +3104,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6107,
     "src": "model"
    },
@@ -2756,6 +3120,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5175,
     "src": "model"
    },
@@ -2770,6 +3136,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4606,
     "src": "model"
    },
@@ -2784,6 +3152,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5084,
     "src": "model"
    },
@@ -2798,6 +3168,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5408,
     "src": "model"
    },
@@ -2812,6 +3184,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5663,
     "src": "model"
    },
@@ -2826,6 +3200,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4705,
     "src": "model"
    },
@@ -2840,6 +3216,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4572,
     "src": "model"
    },
@@ -2854,6 +3232,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7109,
     "src": "model"
    },
@@ -2868,6 +3248,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4199,
     "src": "model"
    },
@@ -2882,6 +3264,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5365,
     "src": "model"
    },
@@ -2896,6 +3280,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6849,
     "src": "model"
    },
@@ -2910,6 +3296,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.515,
     "src": "model"
    },
@@ -2924,6 +3312,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7149,
     "src": "model"
    },
@@ -2938,6 +3328,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5642,
     "src": "model"
    },
@@ -2952,6 +3344,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5404,
     "src": "model"
    },
@@ -2966,6 +3360,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4521,
     "src": "model"
    },
@@ -2980,6 +3376,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.3415,
     "src": "model"
    },
@@ -2994,6 +3392,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5011,
     "src": "model"
    },
@@ -3008,6 +3408,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.632,
     "src": "model"
    },
@@ -3022,6 +3424,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5631,
     "src": "model"
    },
@@ -3036,6 +3440,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6501,
     "src": "model"
    },
@@ -3050,6 +3456,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7409,
     "src": "model"
    },
@@ -3064,6 +3472,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4972,
     "src": "model"
    },
@@ -3078,6 +3488,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5173,
     "src": "model"
    },
@@ -3092,6 +3504,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5227,
     "src": "model"
    },
@@ -3106,6 +3520,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.742,
     "src": "model"
    },
@@ -3120,6 +3536,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4627,
     "src": "model"
    },
@@ -3134,6 +3552,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6153,
     "src": "model"
    },
@@ -3148,6 +3568,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.486,
     "src": "model"
    },
@@ -3162,6 +3584,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4609,
     "src": "model"
    },
@@ -3176,6 +3600,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6266,
     "src": "model"
    },
@@ -3190,6 +3616,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5783,
     "src": "model"
    },
@@ -3204,6 +3632,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5,
     "src": "model"
    },
@@ -3218,6 +3648,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5094,
     "src": "model"
    },
@@ -3232,6 +3664,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5702,
     "src": "model"
    },
@@ -3246,6 +3680,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4667,
     "src": "model"
    },
@@ -3260,6 +3696,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5585,
     "src": "model"
    },
@@ -3274,6 +3712,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6366,
     "src": "model"
    },
@@ -3288,6 +3728,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5961,
     "src": "model"
    },
@@ -3302,6 +3744,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6143,
     "src": "model"
    },
@@ -3316,6 +3760,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6603,
     "src": "model"
    },
@@ -3330,6 +3776,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.3914,
     "src": "model"
    },
@@ -3344,6 +3792,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5576,
     "src": "model"
    },
@@ -3358,6 +3808,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5345,
     "src": "model"
    },
@@ -3372,6 +3824,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5623,
     "src": "model"
    },
@@ -3386,6 +3840,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5982,
     "src": "model"
    },
@@ -3400,6 +3856,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.545,
     "src": "model"
    },
@@ -3414,6 +3872,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6232,
     "src": "model"
    },
@@ -3428,6 +3888,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.599,
     "src": "model"
    },
@@ -3442,6 +3904,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.622,
     "src": "model"
    },
@@ -3456,6 +3920,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5463,
     "src": "model"
    },
@@ -3470,6 +3936,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6736,
     "src": "model"
    },
@@ -3484,6 +3952,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5125,
     "src": "model"
    },
@@ -3498,6 +3968,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.3494,
     "src": "model"
    },
@@ -3512,6 +3984,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5608,
     "src": "model"
    },
@@ -3526,6 +4000,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6424,
     "src": "model"
    },
@@ -3540,6 +4016,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5871,
     "src": "model"
    },
@@ -3554,6 +4032,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5555,
     "src": "model"
    },
@@ -3568,6 +4048,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4975,
     "src": "model"
    },
@@ -3582,6 +4064,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6765,
     "src": "model"
    },
@@ -3596,6 +4080,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4937,
     "src": "model"
    },
@@ -3610,6 +4096,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.3883,
     "src": "model"
    },
@@ -3624,6 +4112,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5549,
     "src": "model"
    },
@@ -3638,6 +4128,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5346,
     "src": "model"
    },
@@ -3652,6 +4144,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4939,
     "src": "model"
    },
@@ -3666,6 +4160,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4484,
     "src": "model"
    },
@@ -3680,6 +4176,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.3502,
     "src": "model"
    },
@@ -3694,6 +4192,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5936,
     "src": "model"
    },
@@ -3708,6 +4208,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5952,
     "src": "model"
    },
@@ -3722,6 +4224,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4433,
     "src": "model"
    },
@@ -3736,6 +4240,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.3562,
     "src": "model"
    },
@@ -3750,6 +4256,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6286,
     "src": "model"
    },
@@ -3764,6 +4272,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5628,
     "src": "model"
    },
@@ -3778,6 +4288,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5204,
     "src": "model"
    },
@@ -3792,6 +4304,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5635,
     "src": "model"
    },
@@ -3806,6 +4320,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.51,
     "src": "model"
    },
@@ -3820,6 +4336,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5323,
     "src": "model"
    },
@@ -3834,6 +4352,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5999,
     "src": "model"
    },
@@ -3848,6 +4368,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6083,
     "src": "model"
    },
@@ -3862,6 +4384,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.562,
     "src": "model"
    },
@@ -3876,6 +4400,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4847,
     "src": "model"
    },
@@ -3890,6 +4416,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4867,
     "src": "model"
    },
@@ -3904,6 +4432,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6657,
     "src": "model"
    },
@@ -3918,6 +4448,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.6916,
     "src": "model"
    },
@@ -3932,6 +4464,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7036,
     "src": "model"
    },
@@ -3946,6 +4480,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.7803,
     "src": "model"
    },
@@ -3960,6 +4496,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4708,
     "src": "model"
    },
@@ -3974,6 +4512,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.625,
     "src": "model"
    },
@@ -3988,6 +4528,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.5019,
     "src": "model"
    },
@@ -4002,6 +4544,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.4197,
     "src": "model"
    },
@@ -4016,6 +4560,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.53,
     "src": "model"
    },
@@ -4030,6 +4576,8 @@
     "mk_src": null,
     "mk_obs": null,
     "mk_book": null,
+    "nfp": null,
+    "nfelo_obs": null,
     "p": 0.72,
     "src": "model"
    }

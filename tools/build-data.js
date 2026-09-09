@@ -400,7 +400,7 @@ write('models.json', {
       home_field_advantage_points: SV.meta.hfa,
       residual_sd_points: SV.meta.sd,
       spread_formula: 'expected_margin_home = (elo_home - elo_away) / elo_per_point + hfa',
-      win_prob_formula: 'P(home win) = 1 - Phi(0.5 - expected_margin / residual_sd)  [normal CDF]',
+      win_prob_formula: 'Ratings fallback only: P(home win) = Phi(expected_margin / residual_sd)',
       backtest: {
         model_straight_up: SV.meta.model_su,
         blend_straight_up: SV.meta.blend_su,
@@ -426,7 +426,7 @@ write('models.json', {
       defaults: {
         entries: 200, lives: 1, buybacks: false, buyback_through: 4, buyback_rate: 0.35,
         double_pick_from: 0, reuse_teams: false, start_week: 1, tiebreak: 'split',
-        blend_market_weight: 0.75, field_chalk_exponent: 2.4, sims: 3000,
+        probability_method: "nfelo-direct-v1", field_chalk_exponent: 2.4, sims: 3000,
       },
       known_limitation:
         'Double-pick weeks are recorded but NOT simulated. Every survival number after a double-pick week ' +
@@ -445,18 +445,20 @@ write('survivor.json', {
   tier: tierOf('survivor.html'),
   graded: false,
   as_of: SV.meta.captured,
-  source: 'nfelo ' + SV.meta.nfelo_sha + ' ratings + ' + SV.meta.sched_src + ' 2026 schedule.',
+  source: 'nfelo ' + SV.meta.nfelo_sha + ' published forecasts and ratings + ' + SV.meta.sched_src + ' 2026 schedule.',
   note:
     'Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: ' +
-    '"market" = derived from a real line, "model" = Elo-only. Ownership is modelled, not observed.',
+    '"nfelo" = published nfelo forecast without an extra blend; "model" = ratings-only estimate when no forecast is available. Ownership is modelled, not observed.',
   field_notes: {
     mm: 'model expected margin, home perspective (points)',
     mk: 'market-implied home win probability (null when no line); derivation and provenance are named by mk_src',
     mk_src: 'nfelo-mirror | carried:2026-08-06 | null',
     mk_obs: 'when the market input was observed; null when no line',
     mk_book: 'source book; null because the nfelo upstream output does not identify it',
-    p: 'blended home win probability actually used',
-    src: 'market | model',
+    nfp: 'Published nfelo home win probability; null when unavailable. No additional market blend.',
+    nfelo_obs: 'Upstream commit timestamp for the published forecast',
+    p: 'Home win probability used: published nfelo forecast or ratings-only estimate',
+    src: 'nfelo | model',
   },
   data: { meta: SV.meta, elo: SV.elo, teams: SV.teams, games: SV.games, ownership: SV.ownership || {} },
 });

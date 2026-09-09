@@ -33,18 +33,18 @@
    {
     "path": "/data/models.json",
     "url": "https://datadawgs216.com/data/models.json",
-    "bytes": 2794,
+    "bytes": 2805,
     "as_of": "2026-09-09",
-    "sha256": "91d41f5749ec27e74395626393f4c2a1fc4b6948b2fe23bdbf351d199ffdb85b",
+    "sha256": "3f5a086aeb0e94bfe351709d82f3fcaed127e09060654c19fb9a0a4340ab3fa6",
     "note": "These are the exact parameters the site uses. Return them alongside any number you derive from them. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
     "path": "/data/survivor.json",
     "url": "https://datadawgs216.com/data/survivor.json",
-    "bytes": 75138,
+    "bytes": 86735,
     "as_of": "2026-09-09",
-    "sha256": "c9239df99b74558a2efcaea8f1c2702db59f1bea576c1fab61b731b379c86779",
-    "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"market\" = derived from a real line, \"model\" = Elo-only. Ownership is modelled, not observed."
+    "sha256": "156d83f06e0cc1114169f6fc0fcc62915a71feb1c2b5b8ff36b0187765f2fc81",
+    "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"nfelo\" = published nfelo forecast without an extra blend; \"model\" = ratings-only estimate when no forecast is available. Ownership is modelled, not observed."
    },
    {
     "path": "/data/epa-teams.json",
@@ -384,8 +384,8 @@
    {
     "path": "/data/method.md",
     "url": "https://datadawgs216.com/data/method.md",
-    "bytes": 6368,
-    "sha256": "3a4770841a4712c2c174d1d04693cd075ad9fae5469e1370860a72e14a4f239f",
+    "bytes": 7217,
+    "sha256": "13399ac24a1f957f860d2e2307f301517237a04a99b6716b3b83505fbeedfceb",
     "as_of": "2026-09-04"
    },
    {

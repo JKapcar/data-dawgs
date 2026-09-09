@@ -109,3 +109,18 @@ reader-local override or observed ownership in the target pool. Equal weighting
 is uncalibrated; missing ETR teams retain their normalized ESPN mass. Later weeks
 retain the chalk fallback. Existing receipts remain unchanged; new captures include
 the model provenance. See [sources, scope and formula](survivor-ownership-method.md).
+
+
+### Survivor probability revision — 2026-09-09
+
+At the owner's direction, Survivor now uses nfelo's published home win probability
+directly (latest close field, falling back to open). The prior 75% market / 25%
+ratings-margin blend and its user control are retired. Old saved blend settings
+have no effect. When nfelo has not published a game forecast, season planning uses
+a labeled ratings estimate: Phi(((home rating - away rating) / 23.58 + 2.1) / 13.18).
+This fallback is not nfelo's official game projection. Market inputs remain for
+provenance but no longer enter Survivor's probability calculation.
+
+This revision applies to the board and future receipts. Existing receipts remain
+unchanged with their original probabilities and method. Historical blend backtests
+do not validate this new policy. Ownership and pool rules are unchanged.

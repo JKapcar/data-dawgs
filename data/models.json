@@ -11,7 +11,7 @@
    "home_field_advantage_points": 2.1,
    "residual_sd_points": 13.18,
    "spread_formula": "expected_margin_home = (elo_home - elo_away) / elo_per_point + hfa",
-   "win_prob_formula": "P(home win) = 1 - Phi(0.5 - expected_margin / residual_sd)  [normal CDF]",
+   "win_prob_formula": "Ratings fallback only: P(home win) = Phi(expected_margin / residual_sd)",
    "backtest": {
     "model_straight_up": 0.6575,
     "blend_straight_up": 0.6674,
@@ -60,7 +60,7 @@
     "reuse_teams": false,
     "start_week": 1,
     "tiebreak": "split",
-    "blend_market_weight": 0.75,
+    "probability_method": "nfelo-direct-v1",
     "field_chalk_exponent": 2.4,
     "sims": 3000
    },
