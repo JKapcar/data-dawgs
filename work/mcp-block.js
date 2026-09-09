@@ -3132,13 +3132,14 @@ const MCP_TOOLS = [
     title: "Survivor pick EV",
     catalog: "core",
     readOnlyHint: true,
-    description: "Ranks every legal survivor pick for a week by closed-form expected value: win probability × expected share of the surviving field (one-week leverage). Ownership comes from the posted weekly snapshot when one exists, otherwise a chalk-softmax MODEL — and a modelled ranking is a structured guess, which the payload says in words.",
+    description: "Ranks every legal survivor pick for a week by closed-form expected value: win probability × expected share of the surviving field (one-week leverage). Ownership uses the dated public blend, otherwise a chalk-softmax MODEL; supplied picks are an explicit override — and a modelled ranking is a structured guess, which the payload says in words.",
     inputSchema: {
       type: "object",
       properties: {
         week: { type: "integer", minimum: 1, maximum: 18, description: "NFL week" },
         entries: { type: "integer", minimum: 2, description: "Pool size (default 200). Drives how much fading the chalk is worth." },
         used: { type: "array", items: { type: "string" }, description: "Teams you have already spent (abbreviations)" },
+        use_posted_ownership: { type: "boolean", description: "Opt into separately supplied picks; default false matches the public board." },
       },
       required: ["week"],
       additionalProperties: false,
@@ -3147,8 +3148,7 @@ const MCP_TOOLS = [
       const D = await mcpSurvivor();
       const week = args.week;
       if (!(week >= 1 && week <= 18)) return toolErr("week must be 1-18");
-      // Per-team table for the week, from the shipped blend (market 0.75 where a
-      // line existed at capture — the same numbers survivor.html renders by default).
+      // Use the public snapshot probabilities without another market blend.
       const tab = {};
       for (const g of D.games) {
         if (g.wk !== week) continue;
@@ -3161,7 +3161,7 @@ const MCP_TOOLS = [
       // The field's distribution deliberately ignores YOUR used list — the field is not you.
       let pop = null, ownership = "modelled", ageHours, stale;
       const kv = env.RL;   // names RL explicitly, matching survivorKV
-      if (kv) {
+      if (kv && args.use_posted_ownership === true) {
         const hit = await kv.get(survivorKey(D.meta.season, week));
         if (hit) {
           const rec = JSON.parse(hit);
@@ -3173,6 +3173,18 @@ const MCP_TOOLS = [
             ageHours = Math.round((Date.now() - rec.stored) / 3.6e5) / 10;
             stale = ageHours > 72;
           }
+        }
+      }
+      let ownershipSource = ownership === "posted" ? "supplied-picks" : "chalk-softmax", ownershipAsOf = null;
+      const dated = D.ownership && D.ownership[String(week)];
+      const teams = Object.keys(tab);
+      if (!pop && dated && dated.season === D.meta.season && dated.week === week &&
+          dated.shares && teams.every(t => Number.isFinite(dated.shares[t]) && dated.shares[t] >= 0)) {
+        const total = teams.reduce((n, t) => n + dated.shares[t], 0);
+        if (total > 0) {
+          pop = Object.fromEntries(teams.map(t => [t, dated.shares[t] / total]));
+          ownershipSource = dated.model_id || "dated-public-blend";
+          ownershipAsOf = dated.as_of;
         }
       }
       if (!pop) {
@@ -3222,11 +3234,12 @@ const MCP_TOOLS = [
 
       return toolText({
         season: D.meta.season, week, entries, ownership, ageHours, stale,
-        asOf: D.meta.captured,
+        asOf: D.meta.captured, nfeloRevision: D.meta.nfelo_sha,
+        dataSource: SITE + "/data/survivor.json", ownershipSource, ownershipAsOf,
         ownership_adjustment: "alive-count projection; pick mix assumed independent of survival",
-    model: "One-week closed-form leverage: equity = P(win) × E[1/(1+survivors)], games independent, field mass survives by ownership share, E[1/(1+S)] by second-order Taylor. Win probabilities are the " + D.meta.captured + " snapshot blend (market 0.75 where a line existed). No future-value term: a team spent today is not priced against the weeks it could have covered — survivor.html's optimal-path view does that.",
+    model: "One-week closed-form leverage: equity = P(win) × E[1/(1+survivors)], games independent, field mass survives by ownership share, E[1/(1+S)] by second-order Taylor. Win probabilities are the " + D.meta.captured + " public nfelo snapshot, without an additional market blend. No future-value term: a team spent today is not priced against the weeks it could have covered — survivor.html's optimal-path view does that.",
         note: ownership === "modelled"
-          ? "OWNERSHIP IS MODELLED (chalk softmax, exponent 2.4), not observed. A modelled ranking cannot see narrative picks and is wrong exactly where fading the field pays most. Post real pick data via /survivor-picks and this caveat disappears."
+          ? "OWNERSHIP IS MODELLED (" + ownershipSource + "), not observed league submissions or a calibrated pool forecast."
           : (stale ? "Posted ownership is over 72h old — treat as directional-only." : undefined),
         rows,
       });
@@ -3351,10 +3364,11 @@ const MCP_TOOLS = [
     title: "NFL matchup read",
     catalog: "core",
     readOnlyHint: true,
-    description: "Elo-based read on any two NFL teams: rating gap, expected margin if hosted, win probability from the site's margin model, plus every 2026 scheduled meeting with the blended probability the survivor board uses. Ratings are a preseason snapshot and the payload names it.",
+    description: "Scheduled NFL matchup probabilities from the public survivor snapshot. Use week when teams meet twice. Unscheduled matchups return a separately labelled hypothetical Elo diagnostic.",
     inputSchema: {
       type: "object",
       properties: {
+        week: { type: "integer", minimum: 1, maximum: 18, description: "Select the scheduled week; required to disambiguate multiple meetings." },
         home: { type: "string", description: "Hosting team — abbreviation or name" },
         away: { type: "string", description: "Visiting team — abbreviation or name" },
       },
@@ -3382,23 +3396,32 @@ const MCP_TOOLS = [
       if (!H) return toolErr("Unknown team: " + args.home);
       if (!A) return toolErr("Unknown team: " + args.away);
       if (H === A) return toolErr("That is the same team twice.");
+      if (args.week !== undefined && (!Number.isInteger(args.week) || args.week < 1 || args.week > 18)) return toolErr("week must be 1-18");
       const M = D.meta;
       const margin = (D.elo[H] - D.elo[A]) / M.elo_per_pt + M.hfa;
       const p = mcpNcdf(margin / M.sd);
       const meetings = D.games
         .filter(g => (g.h === H && g.a === A) || (g.h === A && g.a === H))
         .map(g => ({ week: g.wk, date: g.d, home: g.h, away: g.a, pHomeWin: g.p, src: g.src }));
+      const selected = meetings.filter(g => args.week === undefined || g.week === args.week);
+      if (args.week !== undefined && !selected.length) return toolErr("No scheduled meeting in that week.");
+      if (selected.length > 1) return toolErr("Multiple scheduled meetings: supply week (" + selected.map(g => g.week).join(", ") + ").");
+      const game = selected[0];
+      const scheduledP = game ? (game.home === H ? game.pHomeWin : 1 - game.pHomeWin) : null;
       return toolText({
         home: { team: H, name: (D.teams[H] || {}).full, elo: D.elo[H] },
         away: { team: A, name: (D.teams[A] || {}).full, elo: D.elo[A] },
         eloGap: Math.round((D.elo[H] - D.elo[A]) * 10) / 10,
-        expectedMarginAtHome: Math.round(margin * 100) / 100,
-        pHomeWin: Math.round(p * 1e4) / 1e4,
-        model: "expected_margin = (elo_home − elo_away) / " + M.elo_per_pt + " + " + M.hfa + " HFA; P(home) = Φ(margin / " + M.sd + "). Elo-only — no injuries, no rest, no weather. Ratings are the nfelo " + M.nfelo_sha + " snapshot captured " + M.captured + "; they do NOT update in-season here.",
+        asOf: M.captured, nfeloRevision: M.nfelo_sha, dataSource: SITE + "/data/survivor.json",
+        probabilityKind: game ? "scheduled" : "hypothetical-elo",
+        selectedGame: game || null,
+        expectedMarginAtHome: game ? null : Math.round(margin * 100) / 100,
+        pHomeWin: game ? scheduledP : Math.round(p * 1e4) / 1e4,
+        model: game ? "Scheduled probability from survivor.json; nfelo " + M.nfelo_sha + "; no additional blend. pHomeWin refers to the requested home team; selectedGame preserves actual venue."
+          : "Hypothetical Elo-only diagnostic, not a published nfelo forecast: normal CDF of ((home Elo - away Elo)/" + M.elo_per_pt + " + " + M.hfa + ")/" + M.sd + "; snapshot " + M.nfelo_sha,
         scheduledMeetings2026: meetings.length ? meetings : "none",
-        note: meetings.length
-          ? "Per-meeting pHomeWin is the survivor board's blend (market 0.75 where a line existed at capture) and can differ from the Elo-only number above."
-          : undefined,
+        note: game ? "Future games may use nfelo-season projections; inspect selectedGame.src."
+          : "No scheduled meeting exists. The hypothetical calculation omits game-specific QB and home-field adjustments.",
       });
     },
   },

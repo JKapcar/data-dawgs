@@ -76,6 +76,7 @@ const sgoGames = [sgoGame("sgo-401", "CLE", "PIT"), sgoGame("sgo-402", "DET", "G
   sgoGame("sgo-403", "SF", "SEA"), sgoGame("sgo-409", "CLE", "BAL")];
 const survJson = { data: {
   meta: { season: 2026, captured: "2026-08-06", elo_per_pt: 23.58, hfa: 2.1, sd: 13.18, nfelo_sha: "0d3f8418" },
+  ownership: { "1": {season:2026, week:1, as_of:"2026-09-07", model_id:"test-dated-blend", shares:{SEA:0.1,ARI:0.2,PIT:0.3,CLE:0.4}} },
   elo: { SEA: 1620, ARI: 1420, PIT: 1520, CLE: 1500 },
   teams: { SEA: { n: "Seahawks", loc: "Seattle", full: "Seattle Seahawks" },
            ARI: { n: "Cardinals", loc: "Arizona", full: "Arizona Cardinals" },
@@ -1010,7 +1011,7 @@ function refLeverage(week, pop, games, entries, used) {
 }
 {
   // week 1 HAS a posted snapshot ({CLE:40}) → renormalised over the teams playing
-  const j = await (await req(call("dd_survivor_ev", { week: 1 }))).json();
+  const j = await (await req(call("dd_survivor_ev", { week: 1, use_posted_ownership: true }))).json();
   const d = text(j);
   ok(d.ownership === "posted" && d.stale === false, "stored snapshot → posted, hour-old is not stale");
   const cle = d.rows.find((r) => r.team === "CLE"), sea = d.rows.find((r) => r.team === "SEA");
@@ -1024,6 +1025,15 @@ function refLeverage(week, pop, games, entries, used) {
   ok(j.result.isError === true && /used list/.test(j.result.content[0].text), "all teams used → tool error, used list is case-insensitive");
   const j2 = await (await req(call("dd_survivor_ev", { week: 7 }))).json();
   ok(j2.result.isError === true, "week with no games in the snapshot → tool error");
+}
+{
+  const d = text(await (await req(call("dd_survivor_ev", {week:1, entries:500, used:["SEA"]}))).json());
+  const shares = survJson.data.ownership["1"].shares;
+  const reference = refLeverage(1, shares, survJson.data.games, 500, new Set(["SEA"]));
+  ok(d.ownershipSource === "test-dated-blend" && d.ownershipAsOf === "2026-09-07", "public blend provenance returned despite stored picks");
+  ok(d.rows.every(r => r.pop === shares[r.team]), "used teams do not distort field ownership");
+  ok(reference.every(r => Math.abs(d.rows.find(x => x.team === r.team).equity-r.equity)<1e-6), "dated blend EV matches independent page calculation");
+  ok(d.nfeloRevision === survJson.data.meta.nfelo_sha, "snapshot revision exposed");
 }
 // dd_optimize_survivor_path: the Worker calls the exact shared browser engine.
 {
@@ -1139,17 +1149,27 @@ function refNcdf(z) {
   const d = text(j);
   ok(d.home.team === "SEA" && d.away.team === "ARI", "abbreviation and nickname both resolve");
   const margin = (1620 - 1420) / 23.58 + 2.1;
-  ok(Math.abs(d.expectedMarginAtHome - Math.round(margin * 100) / 100) < 1e-9, "margin follows the published formula");
-  ok(Math.abs(d.pHomeWin - refNcdf(margin / 13.18)) < 2e-4, "win prob is Φ(margin/SD), checked against an independent CDF");
+  ok(d.expectedMarginAtHome === null, "scheduled forecasts do not carry an unrelated diagnostic margin");
+  ok(d.pHomeWin === 0.8 && d.probabilityKind === "scheduled", "headline matches the exact scheduled probability");
   ok(Array.isArray(d.scheduledMeetings2026) && d.scheduledMeetings2026[0].week === 1 && d.scheduledMeetings2026[0].pHomeWin === 0.8,
      "the week-1 meeting is listed with the board's blended number");
-  ok(/Elo-only/.test(d.model) && /0d3f8418/.test(d.model), "model names itself AND its snapshot (invariant 6)");
+  ok(/Scheduled/.test(d.model) && /0d3f8418/.test(d.model), "model names itself AND its snapshot (invariant 6)");
 }
 {
   const j = await (await req(call("dd_analyze_matchup", { home: "the 1972 dolphins", away: "SEA" }))).json();
   ok(j.result.isError === true, "unknown team → tool error");
   const j2 = await (await req(call("dd_analyze_matchup", { home: "browns", away: "Cleveland" }))).json();
   ok(j2.result.isError === true, "same team by two names → tool error");
+}
+{
+  const d = text(await (await req(call("dd_analyze_matchup", {home:"ARI",away:"SEA",week:1}))).json());
+  ok(Math.abs(d.pHomeWin-0.2)<1e-12 && d.selectedGame.home === "SEA", "reverse orientation preserves actual venue and complements probability");
+  const missing = await (await req(call("dd_analyze_matchup", {home:"SEA",away:"ARI",week:2}))).json();
+  ok(missing.result.isError, "nonexistent scheduled week rejected");
+  const future = text(await (await req(call("dd_analyze_matchup", {home:"SEA",away:"PIT",week:2}))).json());
+  ok(future.pHomeWin === 0.7, "future-week probability matches snapshot exactly");
+  const hypo = text(await (await req(call("dd_analyze_matchup", {home:"SEA",away:"CLE"}))).json());
+  ok(hypo.probabilityKind === "hypothetical-elo" && /not a published/.test(hypo.model), "unscheduled diagnostic is explicitly distinguished");
 }
 // Pound calculators: pure MCP results must stay in parity with work/pound-core.js.
 {
