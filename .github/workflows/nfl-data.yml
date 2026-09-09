@@ -146,10 +146,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash work/request-survivor-pages-build.sh
 
-      - name: Refresh recommendations after canonical results
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh workflow run nfelo-refresh.yml --ref main
+      # nfelo-refresh.yml owns the single daily forecast refresh.
 
       - name: Check pipeline health after bot dispatch
         if: ${{ always() && github.actor == 'github-actions[bot]' }}

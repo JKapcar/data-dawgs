@@ -160,9 +160,13 @@ const prev = JSON.parse(m[1]);
 for (const k of ["headline", "calibration", "seasons", "ats"])
   if (!prev[k]) die("existing blob missing " + k);
 
+const seasonRun = spawnSync("python3", ["tools/nfelo-season-inputs.py", "--nfelo", up, "--season", String(SEASON)], {cwd: ROOT, encoding: "utf8", maxBuffer: 4 * 1024 * 1024});
+if (seasonRun.status !== 0) die("season inputs failed: " + seasonRun.stderr);
+const seasonInputs = JSON.parse(seasonRun.stdout);
 const NF = {
   headline: prev.headline, calibration: prev.calibration, seasons: prev.seasons, ats: prev.ats,
   ratings,
+  season_inputs: seasonInputs,
   week1: upcoming, // compat key: the page's "projections" table reads this
   upcoming_week: upcomingWeek,
   games,
@@ -173,7 +177,7 @@ const NF = {
     model_version: modelVersion,
     ratings_as_of: { season: ratingsSeason, week: ratingsWeek },
     backtest_captured: prev.meta && prev.meta.backtest_captured || prev.meta && prev.meta.captured || null,
-    refresh: "tools/nfelo-refresh.mjs, scheduled at 05,11,17,23 UTC by .github/workflows/nfelo-refresh.yml",
+    refresh: "tools/nfelo-refresh.mjs, scheduled daily at 14:45 UTC by .github/workflows/nfelo-refresh.yml",
   },
 };
 
@@ -195,7 +199,7 @@ if (CHECK) {
   console.log(diffs.length ? diffs.join("\n") : "no line/probability moves in upcoming week");
   process.exit(0);
 }
-if (!contentChanged && prevSha === sha) { console.log("nothing to write"); process.exit(0); }
+if (!contentChanged && prevSha === sha && prev.meta?.refresh === NF.meta.refresh) { console.log("nothing to write"); process.exit(0); }
 
 let out = html.replace(m[0], "<script>window.NF=" + JSON.stringify(NF) + ";</script>");
 out = out.replace(/(<h2>Power ratings &mdash; )\d{4} Week \d+(<\/h2>)/,
@@ -204,9 +208,9 @@ out = out.replace(/(<h2>Power ratings &mdash; )\d{4} Week \d+(<\/h2>)/,
 /* idempotent copy fix: the page used to describe itself as a frozen snapshot */
 out = out.replace(
   "- ⚠️ IT IS A SNAPSHOT, NOT A FEED. Ratings are frozen at capture and will not move for an injury or a transaction until the next pull.",
-  "- ⚠️ IT IS A DAILY MIRROR, NOT A LIVE FEED. tools/nfelo-refresh.mjs pulls upstream output four times daily (meta.captured_at says when); lines can move after that, and ratings move only after games are played.",
+  "- ⚠️ IT IS A DAILY MIRROR, NOT A LIVE FEED. tools/nfelo-refresh.mjs pulls upstream output once daily (meta.captured_at says when); lines can move after that, and ratings move only after games are played.",
 );
-out = out.replace("tools/nfelo-refresh.mjs pulls upstream output once a day", "tools/nfelo-refresh.mjs pulls upstream output four times daily");
+out = out.replace(/tools\/nfelo-refresh\.mjs pulls upstream output (four times daily|once a day)/g, "tools/nfelo-refresh.mjs pulls upstream output once daily");
 fs.writeFileSync(PAGE, out);
 console.log("wrote nfelo.html blob");
 

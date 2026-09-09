@@ -25,26 +25,26 @@
    {
     "path": "/data/nfelo.json",
     "url": "https://datadawgs216.com/data/nfelo.json",
-    "bytes": 33650,
+    "bytes": 75053,
     "as_of": "2026-09-09",
-    "sha256": "1de001e21cf84cfdcb8bd203e0a5efc49b496ba03eeee35934795a4506598888",
+    "sha256": "54113ca2c9d199ab4526a0d7b58b0d105e6213e9542ab18aa6a1dfb861e0dbbf",
     "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp)."
    },
    {
     "path": "/data/models.json",
     "url": "https://datadawgs216.com/data/models.json",
-    "bytes": 2794,
+    "bytes": 3183,
     "as_of": "2026-09-09",
-    "sha256": "91d41f5749ec27e74395626393f4c2a1fc4b6948b2fe23bdbf351d199ffdb85b",
-    "note": "These are the exact parameters the site uses. Return them alongside any number you derive from them. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
+    "sha256": "86b8cd54a7259ba4855976efa7cd5064a5636f8edb299ae0897937eb6d4577e6",
+    "note": "Survivor uses nfelo published probabilities or nfelo-season-v1, not the legacy margin model below. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
     "path": "/data/survivor.json",
     "url": "https://datadawgs216.com/data/survivor.json",
-    "bytes": 75138,
+    "bytes": 113380,
     "as_of": "2026-09-09",
-    "sha256": "c9239df99b74558a2efcaea8f1c2702db59f1bea576c1fab61b731b379c86779",
-    "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"market\" = derived from a real line, \"model\" = Elo-only. Ownership is modelled, not observed."
+    "sha256": "5f6376b14835adcbe150b58b291365f2717e6070df6ca000cc9da8dca3671c36",
+    "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"nfelo\" = published nfelo forecast without an extra blend; \"nfelo-season\" = nfelo pre-market calculation with current team/QB strength and game-specific HFA. Ownership is modelled, not observed."
    },
    {
     "path": "/data/epa-teams.json",
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 37420,
-    "as_of": "2026-09-03",
-    "sha256": "db2afcfce3d4bcb653dffb28faebf6702536a78e20965f8bcfa181cb07b3b9d8",
+    "bytes": 38048,
+    "as_of": "2026-09-09",
+    "sha256": "ab1b174764b942984c68da5bf26eba64ed4a547e90f3f4d358d3300f31a666fd",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -351,6 +351,38 @@
     "note": "Percent units. ESPN is an observed pre-lock public pick snapshot, not final ownership. ETR is projected Splash ownership. Exact observation times and sample sizes unavailable; as_of is ingestion date. No account identifiers retained."
    },
    {
+    "path": "/data/guillotine-calibration.json",
+    "url": "https://datadawgs216.com/data/guillotine-calibration.json",
+    "bytes": 2627,
+    "as_of": "2026-09-09",
+    "sha256": "be3f57bc37c6b47fe0ab95d94219f384a0d007fd9088ff76d59b39e9bb70b3c1",
+    "note": "Historical Sleeper projections can be revised after games. These are descriptive uncertainty estimates, not out-of-sample calibration. Correlation between opposing NFL teams and negative teammate correlations are not modeled."
+   },
+   {
+    "path": "/data/guillotine-market-history.json",
+    "url": "https://datadawgs216.com/data/guillotine-market-history.json",
+    "bytes": 2037,
+    "as_of": "2026-09-09",
+    "sha256": "04f64e887927d6f27c4f71899280a59dab21279a1cba1a245519decaff4562df",
+    "note": "Separate league and season. Completed winning bids only, not losing bids or winning probabilities. Positions and player quality are not matched; stage summaries are context, not target-specific prices. Fractions use the original FAAB budget, not current remaining cash."
+   },
+   {
+    "path": "/data/guillotine-receipts.json",
+    "url": "https://datadawgs216.com/data/guillotine-receipts.json",
+    "bytes": 6204,
+    "as_of": "2026-09-09",
+    "sha256": "52978acc8aa1bf0541adce6f91571e4b07283948a2820a1b566069994f552bc6",
+    "note": "Prospective pregame forecasts. Roster IDs only; no ownership identities or player rosters. Multiclass Brier is the sum of squared chop-probability errors; lower is better. Repeated full ties await resolution."
+   },
+   {
+    "path": "/data/guillotine-weekly.json",
+    "url": "https://datadawgs216.com/data/guillotine-weekly.json",
+    "bytes": 624051,
+    "as_of": "2026-09-09",
+    "sha256": "d2e07c4be2079ae8285010bc537b6df42c9e6bb369c91c50769e7588b14f1028",
+    "note": "Daily snapshot. Player timestamps are source update times. Projections are not live scores. Historical uncertainty is descriptive, not prospectively validated."
+   },
+   {
     "path": "/data/leagues/pepperoninipples.json",
     "url": "https://datadawgs216.com/data/leagues/pepperoninipples.json",
     "bytes": 2205,
@@ -384,8 +416,8 @@
    {
     "path": "/data/method.md",
     "url": "https://datadawgs216.com/data/method.md",
-    "bytes": 6368,
-    "sha256": "3a4770841a4712c2c174d1d04693cd075ad9fae5469e1370860a72e14a4f239f",
+    "bytes": 8493,
+    "sha256": "e45a5261762e5a7552ab6e471011d282e3084a53f00230d39b7d63e261ea5ea1",
     "as_of": "2026-09-04"
    },
    {

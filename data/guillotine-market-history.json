@@ -1,0 +1,48 @@
+{
+  "as_of": "2026-09-09",
+  "built": "2026-09-09T17:38:40.953321+00:00",
+  "source": "Sleeper previous_league_id chain from 1389344040964599808; completed 2025 waiver transactions for 1271591988650594304",
+  "note": "Separate league and season. Completed winning bids only, not losing bids or winning probabilities. Positions and player quality are not matched; stage summaries are context, not target-specific prices. Fractions use the original FAAB budget, not current remaining cash.",
+  "canonical_url": "https://datadawgs216.com/data/guillotine-market-history.json",
+  "data": {
+    "reference_league_id": "1389344040964599808",
+    "history_league_id": "1271591988650594304",
+    "season": 2025,
+    "name": "Case\u2019s Guillotine League",
+    "starting_faab": 1000,
+    "reception_points": 1.0,
+    "teams": 17,
+    "completed_winning_bids": 170,
+    "zero_dollar_wins": 42,
+    "stages": [
+      {
+        "stage": "Early (W1\u20136)",
+        "n": 74,
+        "p25_fraction": 0.003,
+        "median_fraction": 0.023,
+        "p75_fraction": 0.075,
+        "max_fraction": 0.652
+      },
+      {
+        "stage": "Middle (W7\u201312)",
+        "n": 78,
+        "p25_fraction": 0.0,
+        "median_fraction": 0.006,
+        "p75_fraction": 0.044,
+        "max_fraction": 0.581
+      },
+      {
+        "stage": "Late (W13\u201318)",
+        "n": 18,
+        "p25_fraction": 0.0,
+        "median_fraction": 0.001,
+        "p75_fraction": 0.003,
+        "max_fraction": 0.021
+      }
+    ],
+    "limitations": "Separate league and season. Completed winning bids only, not losing bids or winning probabilities. Positions and player quality are not matched; stage summaries are context, not target-specific prices. Fractions use the original FAAB budget, not current remaining cash."
+  },
+  "tier": "labs",
+  "tier_meaning": "Pup \u2014 live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
+  "graded": false
+}

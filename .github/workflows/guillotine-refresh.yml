@@ -1,0 +1,48 @@
+name: Guillotine daily weekly inputs and receipts
+on:
+  schedule:
+    - cron: '15 14 * * *'
+  workflow_dispatch:
+  # Initialize or re-check the job when its configuration is deployed.
+  push:
+    branches: [main]
+    paths: [".github/workflows/guillotine-refresh.yml"]
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: guillotine-refresh
+  cancel-in-progress: false
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: node --test tests/guillotine-weekly.test.cjs
+      - name: Read public player inputs and grade prospective forecasts
+        run: |
+          python tools/guillotine-refresh.py
+          python tools/guillotine-history.py
+          node tools/guillotine-receipts.cjs
+          node tools/data-manifest.js
+          node tools/validate-data.js
+      - name: Publish validated daily data
+        run: |
+          git add data/guillotine-weekly.json data/guillotine-calibration.json data/guillotine-receipts.json data/guillotine-market-history.json data/index.json
+          if git diff --cached --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Refresh guillotine weekly player inputs and prospective grades'
+          node tools/guillotine-publication-gate.cjs
+          bash work/publish-survivor-pipeline.sh
+      - name: Request Pages publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash work/request-survivor-pages-build.sh

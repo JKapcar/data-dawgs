@@ -1,3 +1,4 @@
+import { seasonProbability } from "./nfelo-season-probability.mjs";
 /* Rebuild survivor.html's window.SV snapshot from the repo's own canonical data.
  *
  *   node work/build-survivor-snapshot.mjs --check    # regenerate and diff, write nothing
@@ -16,6 +17,7 @@
  *   elo   <- data/nfelo.json          data.ratings[].nfelo
  *   games <- data/nfl-schedule.json   data.games[]
  *   mm    <- (elo_home - elo_away) / elo_per_pt + hfa
+ *   nfp   <- data/nfelo.json          published nfelo home win probability (no extra blend)
  *   mk    <- data/nfelo.json          data.games[].market spread-implied probability
  *
  * nfelo identifies when it observed each market row but not the book. That limitation is
@@ -73,6 +75,8 @@ try { OLD = JSON.parse(oldRaw); } catch (e) { die("existing window.SV is not JSO
 /* ---- inputs --------------------------------------------------------------- */
 const nfelo = readJSON("data/nfelo.json");
 const sched = readJSON("data/nfl-schedule.json");
+const seasonInputs = nfelo.data.season_inputs;
+if (!seasonInputs || seasonInputs.nfelo_sha !== nfelo.data.meta.sha_full || seasonInputs.season !== sched.data.season) die("Missing or mismatched nfelo season inputs");
 const ratings = nfelo.data && nfelo.data.ratings;
 const nfeloGames = nfelo.data && nfelo.data.games;
 const games = sched.data && sched.data.games;
@@ -90,6 +94,9 @@ if (sched.data.season !== OLD.meta.season)
 const meta = {
   ...OLD.meta,
   captured: (nfelo.data.meta && nfelo.data.meta.captured) || nfelo.as_of || OLD.meta.captured,
+  probability_method: "nfelo-season-v1",
+  season_projection: { z: seasonInputs.z, qb_weight: seasonInputs.qb_weight, hfa_sha: seasonInputs.hfa_sha, hfa_committed_at: seasonInputs.hfa_committed_at, assumption: seasonInputs.assumption },
+  probability_method_since: "2026-09-09",
   market_observed_at: (nfelo.data.meta && nfelo.data.meta.upstream_committed_at) || null,
   nfelo_sha: (nfelo.data.meta && nfelo.data.meta.sha) || OLD.meta.nfelo_sha,
 };
@@ -181,7 +188,11 @@ for (const g of games) {
 
   const canonical = canonId(g);
   const prior = oldByTeams.get(`${g.week}|${h}|${a}`) || oldByCanon.get(canonical);
+  const seasonProjection = seasonProbability(seasonInputs, canonical);
   const mirrored = nfeloByCanon.get(canonical);
+  const nfp = mirrored ? (mirrored.nfelo?.p_home_close ?? mirrored.nfelo?.p_home_open ?? mirrored.hwp) : null;
+  if (mirrored && (!Number.isFinite(nfp) || nfp < 0 || nfp > 1))
+    die(`invalid published nfelo probability for ${canonical}`);
   const mirrorMk = mirrored && mirrored.market &&
     (mirrored.market.p_home_implied_close ?? mirrored.market.p_home_implied_open);
   const mk = mirrorMk ?? (prior && prior.mk != null ? prior.mk : null);
@@ -204,32 +215,17 @@ for (const g of games) {
     mk_src,
     mk_obs,
     mk_book: null,
-    // p and src are what the PAGE recomputes at the configured blend; the stored values
-    // are the 0.75 default, which is what /data/survivor.json publishes.
-    p: null, src: mk == null ? "model" : "market",
+    nfp,
+    season_p: seasonProjection.p,
+    season_elo_dif: seasonProjection.eloDifference,
+    nfelo_obs: nfp == null ? null : meta.market_observed_at,
+    p: null, src: nfp == null ? "nfelo-season" : "nfelo",
   });
 }
 
-/* p at the published 0.75 blend, using the page's own ncdf/nppf so the file and the
-   page can never disagree about what 0.75 means. Lifted rather than re-derived. */
-const lift = name => {
-  const m = new RegExp(`\\nfunction ${name}\\s*\\(`).exec(html);
-  if (!m) die(`could not lift ${name} from survivor.html — it was renamed`);
-  const from = m.index + 1;
-  let depth = 0, started = false;
-  for (let i = from; i < html.length; i++) {
-    const c = html[i];
-    if (c === "{") { depth++; started = true; }
-    else if (c === "}") { depth--; if (started && depth === 0) return html.slice(from, i + 1); }
-  }
-  die(`could not find the end of ${name}`);
-};
-const { ncdf, nppf } = new Function(lift("ncdf") + "\n" + lift("nppf") + "\nreturn {ncdf,nppf};")();
-const BLEND = 0.75;
+/* Published forecasts override the full-season pre-market calculation. */
 for (const g of out) {
-  if (g.mk == null) { g.p = Math.round(ncdf(g.mm / meta.sd) * 10000) / 10000; continue; }
-  const mkm = nppf(Math.min(Math.max(g.mk, 1e-6), 1 - 1e-6)) * meta.sd;
-  g.p = Math.round(ncdf((BLEND * mkm + (1 - BLEND) * g.mm) / meta.sd) * 10000) / 10000;
+  g.p = g.nfp ?? g.season_p;
 }
 
 const ownership = buildOwnership(readJSON("data/survivor-ownership-inputs.json"), out, meta.season);
@@ -259,7 +255,7 @@ if (marketTotal < oldMarket)
     + `A schedule change moved a game the snapshot had a price for; reconcile by hand.`);
 
 const upcomingWeek = nfelo.data.upcoming_week ?? Math.min(...nfeloGames.map(g => g.week));
-console.log(`\nweek ${upcomingWeek} market/blend changes:`);
+console.log(`\nweek ${upcomingWeek} nfelo probability changes:`);
 for (const g of out.filter(g => g.wk === upcomingWeek)) {
   const prior = oldByTeams.get(`${g.wk}|${g.h}|${g.a}`) || oldByCanon.get(g.id);
   console.log(`  ${g.a}@${g.h} mk ${prior && prior.mk != null ? prior.mk : "null"} -> ${g.mk ?? "null"}; `
@@ -276,7 +272,7 @@ const note = (f, msg) => { byField[f] = (byField[f] || 0) + 1; diffs.push(msg); 
 for (const g of out) {
   const prior = oldByTeams.get(`${g.wk}|${g.h}|${g.a}`);
   if (!prior) { note("new", `NEW ${g.id}`); continue; }
-  for (const f of ["id", "wk", "h", "a", "d", "src", "mk_src", "mk_obs", "mk_book"])
+  for (const f of ["id", "wk", "h", "a", "d", "src", "mk_src", "mk_obs", "mk_book", "nfp", "nfelo_obs", "season_p", "season_elo_dif"])
     if (prior[f] !== g[f]) note(f, `${f} ${g.id}: ${JSON.stringify(prior[f])} -> ${JSON.stringify(g[f])}`);
   if (Math.abs((prior.mm ?? 0) - (g.mm ?? 0)) > 0.005) note("mm", `mm ${g.id}: ${prior.mm} -> ${g.mm}`);
   if ((prior.mk ?? null) !== (g.mk ?? null)) note("mk", `mk ${g.id}: ${prior.mk} -> ${g.mk}`);

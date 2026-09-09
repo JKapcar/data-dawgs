@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-03",
+ "as_of": "2026-09-09",
  "source": "Generated from the site itself. Tier is read from each page's live chip.",
  "tier": "labs",
  "graded": false,
@@ -670,14 +670,26 @@
    "page": "/guillotine.html",
    "machine": [
     {
+     "kind": "json",
+     "url": "/data/guillotine-weekly.json",
+     "status": "live",
+     "covers": "daily Sleeper weekly player statistics and descriptive uncertainty; league odds computed privately in browser"
+    },
+    {
+     "kind": "json",
+     "url": "/data/guillotine-receipts.json",
+     "status": "live",
+     "covers": "prospective pregame forecasts and completed-week grades"
+    },
+    {
      "kind": "mcp",
      "tool": "dd_guillotine_odds",
-     "status": "live"
+     "status": "live",
+     "covers": "legacy completed-team-score model only; not the current weekly dashboard"
     }
    ],
-   "planned": [
-    "json:/data/guillotine.json"
-   ],
+   "planned": [],
+   "gap": "Current odds, legal lineups and waiver survival gains run in the browser. FAAB ceilings are budgeting heuristics; season results are fixed-roster scenarios.",
    "tier": "labs"
   },
   {
@@ -1045,6 +1057,6 @@
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-09-03",
+ "built": "2026-09-09",
  "canonical_url": "https://datadawgs216.com/data/surfaces.json"
 }

@@ -32,6 +32,7 @@ for attempt in 1 2 3; do
       if(!ids.has(r.receipt_id) && Date.now()>=Date.parse(r.kickoff_at))
         throw new Error("Capture missed publication deadline: "+r.receipt_id);
   '
+  if [ -f tools/guillotine-publication-gate.cjs ]; then node tools/guillotine-publication-gate.cjs; fi
   if git push origin HEAD:main; then
     echo "Published commit $(git rev-parse HEAD)"
     sha256sum data/survivor.json data/survivor-receipts.json
