@@ -3011,12 +3011,12 @@ body.wr-shared #youLab{display:none!important}
       </article>
 
       <article class="wr-card">
-        <h3>Best buys</h3>
+        <h3 id="mnBestTitle">Best buys</h3>
         <p class="wr-note" id="mnBestNote">Worth the most above what was paid for them.</p>
         <div class="wr-srlist" id="mnBest"></div>
       </article>
       <article class="wr-card">
-        <h3>Biggest overpays</h3>
+        <h3 id="mnWorstTitle">Biggest overpays</h3>
         <p class="wr-note" id="mnWorstNote">Cost the most above what they are worth.</p>
         <div class="wr-srlist" id="mnWorst"></div>
       </article>
@@ -4092,8 +4092,25 @@ function paintDraftCapital(){
     +'DataDawg$ dynasty board, '+(DDPICKS.asOf||'undated')+', ungraded.';
 }
 
+function clearMoneyCards(message){
+  ['mnBest','mnWorst','mnSell','mnBuy','mnPaid','mnScatter','mnRadars','mnBars'].forEach(id=>{if($(id))$(id).innerHTML='';});
+  ['mnBestNote','mnWorstNote','mnSellNote','mnBuyNote'].forEach(id=>{if($(id))$(id).textContent=message||'Select a league with available projections and prices.';});
+  $('mnBestTitle').textContent='Best buys';$('mnWorstTitle').textContent='Biggest overpays';
+}
+let moneyFilterKey=null;
+function syncMoneyFilters(){
+  const key=keyOf(state.ref.provider,state.ref.id);
+  if(key===moneyFilterKey)return;
+  if(moneyFilterKey&&LOADED.has(moneyFilterKey))LOADED.get(moneyFilterKey).state.moneyFilters={team:mnTeam,positions:[...mnPaidPos],labels:mnPaidLab};
+  const f=state.moneyFilters;
+  mnTeam=f&&f.team!=='ALL'&&state.teams[Number(f.team)]?f.team:'ALL';
+  mnPaidPos=new Set(f?.positions||['QB','RB','WR','TE','K','DST']);mnPaidLab=f?.labels||'top';
+  moneyFilterKey=key;
+}
 function renderMoney(){
+  clearMoneyCards();
   if(!state)return;
+  syncMoneyFilters();
   paintDraftCapital();
   /* ⚠️ This was state.teams.map(teamMoney), which handed Array.map's INDEX to the
      horizon parameter. It only worked because mvOf silently fell back to the page
@@ -4102,6 +4119,7 @@ function renderMoney(){
   const me=mnMe(),M=state.teams.map(t=>teamMoney(t,mnH)),mine=M.find(x=>x.t===me);
   const weeklyReady=renderWeeklyMoney(M);
   if(!weeklyReady){
+    clearMoneyCards(state.league.name+' · Weekly lineup projections unavailable; recommendations withheld.');
     $('mnTiles').innerHTML='';$('mnDynasty').innerHTML='';
     $('mnTable').closest('.wr-grid').classList.add('wr-hide');
     return;
@@ -4118,6 +4136,7 @@ function renderMoney(){
     const reason=!held?'No rostered players yet.':mnH==='season'&&!ddActive(mnH)&&!mvColumn()
       ? 'No league-specific price board is loaded, and Market Value has no matching column for this '+M.length+'-team format.'
       : 'No published prices matched the rostered players on this value horizon.';
+    clearMoneyCards(state.league.name+' · '+reason);
     $('mnTiles').innerHTML='';
     $('mnDynasty').innerHTML='<div class="wr-warn" role="status"><b>Roster pricing unavailable</b><p>'+esc(reason)+' Your rosters are loaded, but dollar totals, rankings and shares cannot be calculated.</p><p>Unpriced does not mean worth $0.</p></div>';
     $('mnTable').innerHTML='';
@@ -4387,7 +4406,9 @@ function renderMoney(){
       ? 'Cost more than they are worth, same basis'+(losses.length>10?', worst 10 of '+losses.length+'.':'.')
       : 'Same basis as the card on the left.';
   } else {
-    const byRes=all.slice().sort((x,y)=>y.r-x.r);
+    $('mnBestTitle').textContent='Projection upside per dollar';
+    $('mnWorstTitle').textContent='Projection downside per dollar';
+    const byRes=shown.slice().sort((x,y)=>y.r-x.r);
     const list=arr=>arr.map(p=>'<div class="sr"><span class="p">'+esc(p.name)+'</span>'
       +'<span class="t">'+esc(p.team)+' \u00b7 worth '+fmt$(p.x)+'</span>'
       +'<span class="'+(p.r>=0?'wr-up':'wr-down')+'">'+(p.r>=0?'+':'')+p.r.toFixed(1)+'/wk</span></div>').join('')
@@ -4399,6 +4420,10 @@ function renderMoney(){
     $('mnBestNote').textContent=why;
     $('mnWorstNote').textContent=why;
   }
+
+  const cardSource=[state.league.name, state.ref.provider+' '+state.ref.id, mnH,
+    valueLabel('money'), valueAsOf('money')||'undated'].join(' · ');
+  ['mnBestNote','mnWorstNote'].forEach(id=>{$(id).textContent=cardSource+' — '+$(id).textContent;});
 
   /* ---- small-multiple radars, one per team ---- */
   const axes=POS_ORDER.filter(P=>state.slots[P]);
@@ -5060,34 +5085,42 @@ async function fetchLeagueYahoo(id,share){
   return st;
 }
 
+let leagueLoadGeneration=0;
 async function connect(input){
   const ref=window.DDProviders?.parse(input);
   if(!ref)throw Error('Paste a Sleeper ID or a Sleeper, ESPN, or Yahoo league URL.');
-  if(!['sleeper','espn','yahoo'].includes(ref.provider))throw Error(ref.provider.toUpperCase()+' is not connected yet.');
-  const svc=ref.provider==='espn'?'ESPN':ref.provider==='yahoo'?'Yahoo':'Sleeper';
-  $('connectionStatus').className='wr-status';$('connectionStatus').textContent='Reading '+svc+' league '+ref.id+'…';
-  state=ref.provider==='espn'?await fetchLeagueEspn(ref.id):ref.provider==='yahoo'?await fetchLeagueYahoo(ref.id):await fetchLeague(ref.id);
-  state.defaults=JSON.stringify(state.settings);
-  sim=null;tradeFilter=null;
-  $('playoffSpots').value=state.settings.playoffSpots;
-  $('playoffStart').value=state.settings.playoffStart;
-  $('sigma').value=state.settings.sigma;
-  $('teamPicker').innerHTML=state.teams.map((t,i)=>'<option value="'+i+'">'+esc(t.name)+'</option>').join('');
-  $('teamPicker').value=String(pickMyTeam(state.teams,state.ref,state.users));
-  LOADED.set(keyOf(ref.provider,ref.id),{state,sim:null});
-  /* Both boards load up front now: any card can ask for either at any time, so
-     loading the dynasty board lazily off one global would strand the others. */
-  await loadMV();if(isDynastyLeague())await loadDynastyMV();
-  await loadDD();   /* DataDawg$ if this league has a board; otherwise PMV stands */
-  await loadDraftCapital();   /* dynasty only; picks are assets, not roster value */
-  rememberLeague(ref,state.league.name);
-  setLoaded(true);
-  render();
-  try{const u=new URL(location.href);u.searchParams.set('league',ref.id);
-    /* A bare ?league= id reads as Sleeper on the next load, so a non-Sleeper league must
-       say which provider it came from or the deep link 404s against Sleeper's API. */
-    if(ref.provider&&ref.provider!=='sleeper')u.searchParams.set('provider',ref.provider);else u.searchParams.delete('provider');
-    history.replaceState(null,'',u.pathname+u.search+location.hash)}catch(e){}
+  if(!['sleeper','espn','yahoo'].includes(ref.provider))throw Error('Unsupported provider.');
+  const generation=++leagueLoadGeneration;
+  state=null;DD=null;DDPICKS=null;sim=null;
+  clearMoneyCards('Loading '+ref.provider+' '+ref.id+'…');
+  document.querySelectorAll('.wr-has-league').forEach(el=>el.classList.add('wr-hide'));
+  $('connectionStatus').className='wr-status';$('connectionStatus').textContent='Reading '+ref.provider+' league '+ref.id+'…';
+  try{
+    const next=ref.provider==='espn'?await fetchLeagueEspn(ref.id):ref.provider==='yahoo'?await fetchLeagueYahoo(ref.id):await fetchLeague(ref.id);
+    if(generation!==leagueLoadGeneration)return false;
+    await loadMV();
+    if(Number(next.league?.settings?.type)===2)await loadDynastyMV();
+    await loadDD(next);
+    await loadDraftCapital(next);
+    if(generation!==leagueLoadGeneration)return false;
+    state=next;DD=next.ddValues||null;DDPICKS=next.ddPicks||null;
+    state.defaults=JSON.stringify(state.settings);sim=null;tradeFilter=null;
+    $('playoffSpots').value=state.settings.playoffSpots;
+    $('playoffStart').value=state.settings.playoffStart;
+    $('sigma').value=state.settings.sigma;
+    $('teamPicker').innerHTML=state.teams.map((t,i)=>'<option value="'+i+'">'+esc(t.name)+'</option>').join('');
+    $('teamPicker').value=String(pickMyTeam(state.teams,state.ref,state.users));
+    LOADED.set(keyOf(ref.provider,ref.id),{state,sim:null});
+    rememberLeague(ref,state.league.name);setLoaded(true);render();
+    try{const u=new URL(location.href);u.searchParams.set('league',ref.id);
+      if(ref.provider!=='sleeper')u.searchParams.set('provider',ref.provider);else u.searchParams.delete('provider');
+      history.replaceState(null,'',u.pathname+u.search+location.hash)}catch(e){}
+    return true;
+  }catch(error){
+    if(generation!==leagueLoadGeneration)return false;
+    clearMoneyCards('League load failed. Previous recommendations withheld.');
+    throw error;
+  }
 }
 
 /* Restore a league already parsed this session. No network call, so switching back and
@@ -5096,6 +5129,7 @@ async function connect(input){
 function restore(key){
   const entry=LOADED.get(key);
   if(!entry)return false;
+  ++leagueLoadGeneration;clearMoneyCards();
   state=entry.state;DD=state.ddValues||null;DDPICKS=state.ddPicks||null;sim=entry.sim||null;tradeFilter=null;
   $('playoffSpots').value=state.settings.playoffSpots;
   $('playoffStart').value=state.settings.playoffStart;
@@ -5540,7 +5574,7 @@ document.addEventListener('click',e=>{
 $('connectForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const st=$('connectionStatus');
-  try{await connect($('leagueInput').value);st.className='wr-status good';st.textContent=readShelf().length+' league'+(readShelf().length===1?'':'s')+' saved. This league is open now.';$('leagueInput').value='';
+  try{if(await connect($('leagueInput').value)===false)return;st.className='wr-status good';st.textContent=readShelf().length+' league'+(readShelf().length===1?'':'s')+' saved. This league is open now.';$('leagueInput').value='';
     /* ⚠️ Connecting from the Leagues sheet used to leave you there, so the
        "which team is yours" gate — which lives on My Team — never came into
        view and the league looked connected but inert. An autoload is exempt:
