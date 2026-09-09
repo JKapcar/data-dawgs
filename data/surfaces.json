@@ -31,6 +31,7 @@
    "dd_draft_bozo_leg",
    "dd_submit_bozo_leg",
    "dd_draft_board",
+   "dd_fantasy_leagues",
    "dd_war_room",
    "dd_draft_pool",
    "dd_survivor_week",
@@ -104,6 +105,7 @@
     "dd_draft_bozo_leg",
     "dd_submit_bozo_leg",
     "dd_draft_board",
+    "dd_fantasy_leagues",
     "dd_war_room",
     "dd_draft_pool",
     "dd_survivor_week",
@@ -153,6 +155,7 @@
     "dd_draft_bozo_leg": "Draft a Bozo leg",
     "dd_submit_bozo_leg": "Submit your Bozo leg (two-phase)",
     "dd_draft_board": "Live auction board",
+    "dd_fantasy_leagues": "Your saved fantasy leagues",
     "dd_war_room": "Your connected fantasy league",
     "dd_draft_pool": "Draft player pool",
     "dd_survivor_week": "Survivor ownership snapshot",
@@ -196,8 +199,8 @@
   "surfaces": 23,
   "with_live_machine_access": 18,
   "with_no_machine_access": 5,
-  "mcp_tools_registered": 44,
-  "mcp_tools_live": 44,
+  "mcp_tools_registered": 45,
+  "mcp_tools_live": 45,
   "mcp_tools_staged": 0,
   "mcp_tools_core": 17,
   "mcp_tools_planned": 6
@@ -302,7 +305,7 @@
     }
    ],
    "planned": [],
-   "gap": "League rows are per-account and deliberately have no public JSON. A Sleeper league is read client-side from its public URL and is not stored server-side, so dd_war_room cannot resolve one even while the page is showing it.",
+   "gap": "Sleeper shared context is live in dd_war_room and discoverable through dd_fantasy_leagues. Exact waiver deadlines, game locks and spendable FAAB after transfers remain unavailable; expanded weekly context for ESPN/Yahoo is future work. A personal-account end-to-end call still needs verification.",
    "tier": "labs"
   },
   {
