@@ -29,12 +29,16 @@ def main():
     ap = argparse.ArgumentParser()
     for arg in ['source', 'reference', 'projections', 'league', 'output']:
         ap.add_argument('--' + arg, required=True)
+    ap.add_argument('--source-as-of', help='Explicit date for a user-supplied replacement source snapshot')
     args = ap.parse_args()
     for name in ['source', 'reference', 'projections', 'output']:
         assert not Path(getattr(args, name)).resolve().is_relative_to(ROOT), 'Private files must stay outside repo'
     ref = json.loads(Path(args.reference).read_text(encoding='utf-8-sig'))
     sha = hashlib.sha256(Path(args.source).read_bytes()).hexdigest()
-    assert sha == ref['data']['source_snapshot_sha256'], 'Not the reference board source'
+    source_matches = sha == ref['data']['source_snapshot_sha256']
+    assert source_matches or args.source_as_of, 'Replacement source requires an explicit snapshot date'
+    source_date = args.source_as_of or ref['as_of']
+    datetime.date.fromisoformat(source_date)
     source = list(csv.DictReader(open(args.source, encoding='utf-8-sig')))
     league = json.load(urllib.request.urlopen('https://api.sleeper.app/v1/league/' + args.league))
     assert league['season'] == '2026' and league['settings']['type'] == 3
@@ -48,7 +52,7 @@ def main():
     funcs = ast.Module(body=[n for n in tree.body if isinstance(n, ast.FunctionDef)
                             and n.name in {'mvkey', 'build'}], type_ignores=[])
     ns = dict(re=re, unicodedata=unicodedata, collections=collections, ETR=source,
-              SHA=sha, TODAY=ref['as_of'],
+              SHA=sha, TODAY=source_date,
               COL={(False, 1): 'ETR Full PPR', (False, .5): 'ETR Half PPR'},
               BASE={1: 'ppr', .5: 'half'},
               SCENARIOS={'budget_only': (0, 0), 'cautious': (.25, .25),
@@ -106,7 +110,8 @@ def main():
                   budget_kind='nominal', floor=1, reserve=0, room_key='room',
                   custom_scheme='custom', dynasty=False,
                   scoring_note='Live Sleeper scoring settings, including reception and interception points.',
-                  notes=['Same source snapshot and conversion function as the reference league.',
+                  notes=[('Same source snapshot' if source_matches else 'User-supplied replacement source snapshot')
+                         + '; same conversion function as the reference league.',
                          'Guillotine season-total valuation; not a survival model or a bid recommendation.'])
     board = ns['build'](config)
     # Match the reference guillotine denomination: scale exact nominal values
@@ -150,7 +155,8 @@ def main():
     assert not d['validation']['negative_prices']
     d['validation']['priced_by_pos'] = validate_starter_coverage(rows, positions, teams)
     Path(args.output).write_text(json.dumps(board, indent=2), encoding='utf-8')
-    print(json.dumps({'source_hash_matches': True, 'league': league['name'], **d['validation']}))
+    print(json.dumps({'source_hash_matches_reference': source_matches, 'source_as_of': source_date,
+                      'league': league['name'], **d['validation']}))
 
 if __name__ == '__main__':
     main()
