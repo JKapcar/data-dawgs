@@ -16,8 +16,8 @@ const makeSlate = require("./mkslate.js");
 // Counts are pinned deliberately: a tool appearing or vanishing should break a test, not
 // slip through. They live here so adding a tool is one edit, not nine.
 // ⚠️ COUNTS, NOT A GUESS — bump these in the same commit that adds or retires a tool.
-// 56 = 25 core + 31 full. dd_war_room took full from 30 to 31.
-const N_TOOLS = 56, N_CORE = 25;
+// 57 = 25 core + 32 full, including account-scoped fantasy league discovery.
+const N_TOOLS = 57, N_CORE = 25;
 const WRITE_TOOLS = ["dd_submit_bozo_leg", "sd_start_session", "sd_log_set", "sd_log_sets",
                      "sd_finish_session", "sd_log_measurement", "sd_log_nutrition"];
 let pass = 0, fail = 0;
@@ -2396,10 +2396,6 @@ ok((assembled.match(/function solveLineups/g) || []).length === 1 && assembled.i
    "assembled Worker contains one private copy of the shared DFS engine");
 ok((assembled.match(/function solvePath/g) || []).length === 1 && assembled.includes("const mcpSurvivorPathRoot = {}"),
    "assembled Worker contains one private copy of the shared survivor path engine");
-ok(blockSrc.includes('enum: ["yahoo", "espn", "sleeper"]') &&
-   blockSrc.includes('"Sleeper is UNREACHABLE from dd_war_room.') &&
-   blockSrc.indexOf('if (want === "sleeper")') < blockSrc.indexOf('const yahoo = (!want || want === "yahoo")'),
-   "dd_war_room names browser-only Sleeper as UNREACHABLE before checking stored connections");
 ok(!assembled.includes(PASS), "no hardcoded secrets in the source");
 
 console.log(`\n${pass} passed, ${fail} failed`);

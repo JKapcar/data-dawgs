@@ -57,6 +57,11 @@ jobs:
             exit 1
           fi
       - run: node --check dawg-bot-worker.js
+      - run: node work/test-espn-connections.mjs
+      - run: node work/test-espn-setup.mjs
+      - run: node work/test-sleeper-context.mjs
+      - run: node work/test-warroom-isolation.mjs
+      - run: node --test tests/warroom-weekly.test.js
       - run: node work/test-cfb-market-capture.mjs
       - run: node work/test-backup.mjs
       - run: node work/test-identity.mjs

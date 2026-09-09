@@ -14,5 +14,5 @@ assert.equal(DDDefault.build(source,{...config,ppr:0}).meta.basis,'std');assert.
 assert.throws(()=>DDDefault.build(source,{...config,teams:0}));assert.throws(()=>DDDefault.build(source,{...config,ppr:undefined}));
 assert.throws(()=>DDDefault.build(source,{...config,slots:{...config.slots,IDP:1}}));
 assert.equal(b.meta.source_published_at,null);assert.match(b.meta.note,/custom scoring bonuses/);
-const html=fs.readFileSync('fantasy-warroom.html','utf8');assert(html.includes("||await defaultDD(st)"));assert(html.includes("dynasty:dyn||null"));
+const html=fs.readFileSync('fantasy-warroom.html','utf8');assert(html.includes("||(!st.context?await defaultDD(st):null)"));assert(html.includes("dynasty:dyn||null"));
 console.log('Default DataDawg$: exact budget totals, format/depth response, unique players, invalid-input refusal, source dates and custom-board precedence passed.');

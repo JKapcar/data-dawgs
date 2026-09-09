@@ -16,10 +16,15 @@ base.state={ref:{provider:'sleeper',id:'B'},teams:[{},{}]};base.LOADED.set('slee
 base.state=base.LOADED.get('espn:A').state;vm.runInContext('syncMoneyFilters()',base);assert.equal(base.mnTeam,'1');assert.deepEqual([...base.mnPaidPos],['RB']);
 // Deferred network completion: latest selected league wins even if the first finishes last.
 const pending={};const mk=id=>({ref:{provider:'sleeper',id},league:{name:id,settings:{}},settings:{},teams:[{name:id}],ddValues:{id},ddPicks:null});
-Object.assign(base,{window:{DDProviders:{parse:id=>({provider:'sleeper',id})}},document:{querySelectorAll:()=>[]},fetchLeague:id=>new Promise(resolve=>pending[id]=resolve),loadMV:async()=>{},loadDynastyMV:async()=>{},loadDD:async()=>{},loadDraftCapital:async()=>{},pickMyTeam:()=>0,rememberLeague(){},setLoaded(){},render(){},esc:x=>x,URL,location:{href:'https://example.test/'},history:{replaceState(){}},DD:null,DDPICKS:null,sim:null,tradeFilter:null});
+Object.assign(base,{parseWarroomInput:id=>({provider:'sleeper',id}),window:{DDProviders:{parse:id=>({provider:'sleeper',id})}},document:{querySelectorAll:()=>[]},fetchLeague:id=>new Promise(resolve=>pending[id]=resolve),loadMV:async()=>{},loadDynastyMV:async()=>{},loadDD:async()=>{},loadDraftCapital:async()=>{},pickMyTeam:()=>0,rememberLeague(){},setLoaded(){},render(){},esc:x=>x,URL,location:{href:'https://example.test/'},history:{replaceState(){}},DD:null,DDPICKS:null,sim:null,tradeFilter:null});
 a=html.indexOf('let leagueLoadGeneration=0;');b=html.indexOf('\n/* Restore a league',a);vm.runInContext(html.slice(a,b),base);
 const first=vm.runInContext('connect("first")',base),second=vm.runInContext('connect("second")',base);
 pending.second(mk('second'));assert.equal(await second,true);pending.first(mk('first'));assert.equal(await first,false);assert.equal(base.state.ref.id,'second');assert.equal(base.DD.id,'second');
+// Display names can collide; account changes must be identified by immutable UID.
+let session=Buffer.from(JSON.stringify({u:'alice',n:'Matt'})).toString('base64url')+'.synthetic';
+base.window.DDAuth={me:()=>({name:'Matt'}),token:()=>session};base.atob=atob;
+vm.runInContext(fn('wrAccountKey'),base);assert.equal(base.wrAccountKey(),'uid:alice');
+session=Buffer.from(JSON.stringify({u:'bob',n:'Matt'})).toString('base64url')+'.synthetic';assert.equal(base.wrAccountKey(),'uid:bob');
 // Parse every inline executable script after editing.
 for(const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)){if(/application\/ld\+json/.test(m[1]))continue;new vm.Script(m[2]);}
 console.log('War Room isolation: stale cards cleared; filters isolated/restored; late response rejected; inline scripts parse.');

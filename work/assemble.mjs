@@ -50,6 +50,20 @@ const Y_ROUTE =
   '    if (url.pathname === "/yahoo" || url.pathname.startsWith("/yahoo/")) return handleYahoo(request, url, env, cors);';
 const Y_ANCHOR = '    if (url.pathname === "/espn" || url.pathname.startsWith("/espn/")) return handleEspn(request, url, env, cors);';
 
+const W_START = "/* ===== DD-WARROOM-BLOCK START — generated from shared browser engines + work/warroom-worker.js; edit THERE ===== */";
+const W_END = "/* ===== DD-WARROOM-BLOCK END ===== */";
+const W_ROUTE = '    if (url.pathname === "/sleeper/warroom") return handleSleeperWarroom(request, url, env, cors); // DD-WARROOM-ROUTE';
+function privateWrapper(file, root, suffix) {
+  let source = readFileSync(file, "utf8").trimEnd();
+  if (!source.endsWith(suffix)) fail(file + " wrapper changed");
+  source = source.slice(0, -suffix.length) + "})(" + root + ");";
+  return "const " + root + " = {};\n" + source;
+}
+const warroom = privateWrapper("../warroom-weekly.js", "wrWeeklyRoot", "})(typeof globalThis!=='undefined'?globalThis:this);")
+  + "\n" + privateWrapper("../datadawg-default.js", "wrDefaultRoot", "})(typeof module!=='undefined'?module.exports:window);")
+  + "\n" + privateWrapper("../warroom-sleeper.js", "wrSleeperRoot", "})(typeof module!=='undefined'?module.exports:globalThis);")
+  + "\n" + readFileSync("warroom-worker.js", "utf8").trimEnd();
+
 let src = readFileSync(TARGET, "utf8");
 const before = src;
 
@@ -100,10 +114,14 @@ function transform(input) {
   const ys = t.indexOf(Y_START), ye = t.indexOf(Y_END);
   if (ys >= 0 && ye > ys) t = t.slice(0, ys) + t.slice(ye + Y_END.length);
 
+  const ws = t.indexOf(W_START), we = t.indexOf(W_END);
+  if (ws >= 0 && we > ws) t = t.slice(0, ws) + t.slice(we + W_END.length);
+
   /* 4. strip any previously injected route (marked or legacy) */
   t = t
     .split("\n")
     .filter(line => {
+      if (line.includes("DD-WARROOM-ROUTE")) return false;
       if (line.includes("DD-MCP-ROUTE")) return false;
       if (/if \(url\.pathname === "\/mcp"/.test(line)) return false;
       // the legacy one-line comment that used to sit above the route
@@ -135,12 +153,13 @@ function transform(input) {
   }
   t = t.replace(ANCHOR, ANCHOR + "\n" + ROUTE);
   t = t.replace(R_ANCHOR, R_ANCHOR + "\n" + R_ROUTE);
-  t = t.replace(Y_ANCHOR, Y_ANCHOR + "\n" + Y_ROUTE);
+  t = t.replace(Y_ANCHOR, Y_ANCHOR + "\n" + Y_ROUTE + "\n" + W_ROUTE);
 
   /* 7. inject the blocks, Yahoo and rankings before MCP's write-scope boundary */
   return t.replace(/\s+$/, "")
     + "\n\n" + Y_START + "\n" + yahoo + "\n" + Y_END
     + "\n\n" + R_START + "\n" + rankings + "\n" + R_END
+    + "\n\n" + W_START + "\n" + warroom + "\n" + W_END
     + "\n\n" + START + "\n" + block + "\n" + END + "\n";
 }
 
@@ -151,6 +170,10 @@ const once = (needle, what) => {
   const n = out.split(needle).length - 1;
   if (n !== 1) fail(`${what}: expected exactly 1, found ${n}`);
 };
+once(W_START, "War Room block start");
+once(W_END, "War Room block end");
+once("DD-WARROOM-ROUTE", "War Room route");
+once("async function handleSleeperWarroom(", "Sleeper handler");
 once("const MCP_PROTOS", "MCP_PROTOS declaration");
 once("const MCP_TOOLS", "MCP_TOOLS declaration");
 once("const mcpDdfsRoot", "private DFS engine root");
