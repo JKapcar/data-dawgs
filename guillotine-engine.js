@@ -10,8 +10,16 @@ function hash(s){let h=2166136261;for(const c of String(s))h=Math.imul(h^c.charC
 function normals(n,seed){const r=rng(seed),a=new Float64Array(n);for(let i=0;i<n;i+=2){const z=Math.sqrt(-2*Math.log(Math.max(1e-12,r()))),t=2*Math.PI*r();a[i]=z*Math.cos(t);if(i+1<n)a[i+1]=z*Math.sin(t);}return a;}
 function quantile(a,p){const b=Array.from(a).sort((x,y)=>x-y);return b[Math.floor((b.length-1)*p)]??null;}
 function slots(league){const s=league.roster_positions.filter(x=>!['BN','IR'].includes(x));for(const p of s)if(!POS[p])throw Error('Unsupported starting slot '+p);return s;}
+function calibrationFor(feed,league){
+ const signature=s=>JSON.stringify(Object.entries(s).filter(([k,v])=>v!==0&&!/^(def_|pts_allow|fg|xp|st_|sack$|int$|ff$|fum_rec$|safe$|blk_kick$)/.test(k)).sort());
+ const wanted=signature(league.scoring_settings);
+ const candidates=[feed.calibrations?.[league.league_id],feed.calibration,...Object.values(feed.calibrations||{})];
+ const c=candidates.find(c=>c&&signature(c.scoring)===wanted);
+ if(!c)throw Error('Scoring changed or not yet supported: no matching weekly calibration for this league.');
+ return c;
+}
 function makePlayers(feed,league,now=Date.now()){
- const C=feed.calibration;if(!C||!Array.isArray(feed.players))throw Error('Missing weekly player inputs');if(JSON.stringify(Object.entries(C.scoring).sort())!==JSON.stringify(Object.entries(league.scoring_settings).filter(([k,v])=>v!==0&&!/^(def_|pts_allow|fg|xp|st_|sack$|int$|ff$|fum_rec$|safe$|blk_kick$)/.test(k)).sort()))throw Error('Scoring changed: refresh the calibration for this league before using odds');
+ const C=calibrationFor(feed,league);if(!Array.isArray(feed.players))throw Error('Missing weekly player inputs');
  const out={};for(const row of feed.players){const mu=score(row.stats,league.scoring_settings),pos=row.position;if(!POS.SUPER_FLEX.includes(pos)||mu===null||row.has_projection===false)continue;const bucket=C.buckets[pos+':'+(mu>=15?'high':mu>=7?'mid':'low')]||C.buckets[pos];if(!bucket)throw Error('Missing uncertainty for '+pos);
  const unavailable=['Out','IR','PUP','Suspended','Inactive'].some(x=>x.toLowerCase()===String(row.injury||'').toLowerCase())||!row.opponent;
  out[row.id]={...row,mean:unavailable?0:mu,sd:unavailable?0:bucket.sd,uncertaintyN:bucket.n,unavailable,started:Number.isFinite(Date.parse(row.kickoff))&&Date.parse(row.kickoff)<=now};}
@@ -65,6 +73,6 @@ function waiver(roster,rosters,players,league,B,transactions,capFraction=.15){co
  const valueCap=Math.min(cap,Math.round(cap*clamp(delta/Math.max(.01,1-base.best.survival),0,1)));const suggested=cost?Math.min(valueCap,Math.ceil(cost[1])+1):null;
  rows.push({id:p.id,drop:unused[0],mean:p.mean,delta,survival:result.best.survival,competitors,maxRival,cost,bidN:bids.length,valueCap,suggested,lineup:result.best.ids});}
  rows.sort((a,b)=>b.delta-a.delta);return {rows:rows.slice(0,15),base,left,cap,reserve:left-cap,screened:screen.length,evaluated:Math.min(screen.length,40),fraction:capFraction};}
-return root.GXEngine={VERSION,score,slots,makePlayers,enumerate,meanLineup,partialLineup,samples,total,board,optimize,evaluate,waiver,budget,quantile,tieLoser,hash};
+return root.GXEngine={VERSION,calibrationFor,score,slots,makePlayers,enumerate,meanLineup,partialLineup,samples,total,board,optimize,evaluate,waiver,budget,quantile,tieLoser,hash};
 })(typeof self!=='undefined'?self:globalThis);
 if(typeof module!=='undefined')module.exports=globalThis.GXEngine;
