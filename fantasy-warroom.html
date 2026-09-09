@@ -1703,7 +1703,7 @@ nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo 
 cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator. Its build roadmap is at cfb.html#roadmap and is our own planning surface, not a public destination.
 markets.html — the prediction-markets section, its own top-level group labelled Markets. ai.html — the A.I. Model Board, its own top-level group. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
 data.html — the Library: every machine-readable file, shelved by the surface that owns it. connect.html — forwards to the connector card on signon.html#connect, which is where you point your own AI (Claude, ChatGPT, Gemini or any MCP client) at the site.
-signon.html — sign in, sign up, recover an account, and join a Bozo league by searching its name and entering its shared password; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, DDCC Profile, SwoleDawg and DateDawg. swoledawg.html — body and training. datedawg.html — local-only reciprocal-acceptance analysis of a Hinge export; no upload or backend memory. fantasy-warroom.html — the fantasy league war room.
+signon.html — sign in, sign up, recover an account, and join a Bozo league by searching its name and entering its shared password; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, DDCC Profile, SwoleDawg and DateDawg. swoledawg.html — body and training. datedawg.html — local-only reciprocal-acceptance analysis of a Hinge export; no upload or backend memory. fantasy-warroom.html — the fantasy league war room. Its Money sheet selects the best legal current-week Sleeper lineup, shows projected points and weekly rank, and uses that lineup for dollar starter/bench splits. Full-roster dollar rank includes the bench; season grades and simulations remain separate.
 rankings.html — the Dog Track: ranking services graded against actual finishes. draft-leagues.html — create or join a draft league, import Sleeper, connect public Yahoo, or connect ESPN. cfb-power.html — CFB conference power curves. radar.html — the radar view.
 Machine surfaces: /data/index.json lists every file with its as_of and hash; /llms.txt is the curated index; /data/surfaces.json maps pages to files and MCP tools.
 NAVIGATION: the banner is Sign in/account, then exactly seven groups — Arena, Markets, A.I., NFL, CFB, Data, Dawgs — then the theme button. The wordmark is Home. There is no top-level Sports group and no top-level Receipts group: NFL and CFB are separate groups, and receipts.html is an item under Data.
@@ -2590,6 +2590,8 @@ table.wr-matrix{min-width:520px}
 .wr-tile .td{font-size:12px;color:var(--ink-3)}
 .wr-tile .tv .tname{display:block;font-size:17px;line-height:1.25;letter-spacing:-.02em;overflow-wrap:anywhere;padding:3px 0 2px}
 table.wr-money{font-size:13px;min-width:560px}
+#mnWeeklyLineup{min-width:0;width:100%}
+#mnWeeklyLineup th{white-space:normal}
 table.wr-money th{cursor:pointer;white-space:nowrap;user-select:none}
 table.wr-money th:hover{color:var(--accent)}
 table.wr-money tr.avg td{border-top:2px solid var(--grid);color:var(--ink-3);font-style:italic}
@@ -2941,12 +2943,18 @@ body.wr-shared #youLab{display:none!important}
       <span class="lab">Priced on</span>
       <button type="button" data-h="season">This season</button><button type="button" data-h="dynasty">Overall dynasty</button>
     </div>
+    <article class="wr-card wr-hide" id="mnWeeklyCard" style="margin-bottom:16px">
+      <div class="wr-row"><h3 class="wr-grow" id="mnWeeklyTitle">Best lineup this week</h3><button type="button" class="wr-mini" id="mnWeeklyRefresh">Refresh projections</button></div>
+      <p class="wr-note" id="mnWeeklyNote" role="status"></p>
+      <div class="wr-tiles" id="mnWeeklyTiles"></div>
+      <details><summary>See your selected starters</summary><div style="overflow-x:auto"><table class="wr-money" id="mnWeeklyLineup"></table></div></details>
+    </article>
     <div class="wr-tiles" id="mnTiles"></div>
     <div id="mnDynasty"></div>
     <div class="wr-grid">
       <article class="wr-card wr-full">
         <h3>The money table</h3>
-        <p class="wr-note">Starting value, bench value, and league rank.</p>
+        <p class="wr-note">Full-roster dollars include the bench. For Sleeper leagues, the starter split uses the best lineup by current-week projected points.</p>
         <div style="overflow-x:auto"><table class="wr-money" id="mnTable"></table></div>
       </article>
 
@@ -2979,7 +2987,7 @@ body.wr-shared #youLab{display:none!important}
 
       <article class="wr-card wr-full">
         <h3>Where the money is</h3>
-        <p class="wr-note">Roster dollars by position, with the bench pooled as one segment. Dashed = league average.</p>
+        <p class="wr-note" id="mnBarsNote">Roster dollars by position, with the bench pooled as one segment. Dashed = league average.</p>
         <div id="mnBars"></div>
         <div class="wr-legend" id="mnLegend"></div>
       </article>
@@ -3189,12 +3197,19 @@ body.wr-shared #youLab{display:none!important}
         this-season price and the independent overall board in <a href="/data/dynasty-ranks.json"><code>/data/dynasty-ranks.json</code></a>, selecting 1QB or
         Superflex / TE-premium dynasty values from the actual roster slots. The Money sheet shows both prices and their delta for every player. Keeper rules vary too much to infer a multi-year value
         without contract length and keeper cost, so the page labels them and stays on this-season values.</dd>
-        <dt>Not modeled</dt>
+        <dt>Current-week lineups on Money</dt>
+        <dd>For Sleeper leagues, the Money sheet reads the current NFL week and maximizes projected points across
+        each roster's legal starting slots, using Sleeper's weekly stat projections and the league's scoring settings.
+        Its weekly score and rank use those lineups; the dollar charts split the dated roster prices between the same
+        starters and bench. Full-roster dollars still include both. Missing weekly projections are excluded and counted;
+        incomplete lineups withhold comparisons. The week and capture time are shown, with a refresh button.
+        This is a projected lineup, not your submitted lineup, and game locks are not enforced.</dd>
+        <dt>Not modeled in the season simulation</dt>
         <dd>Injuries, byes, trades, waivers, lineup decisions, in-season projection updates, and correlation between
         the two teams in a matchup. Before three completed weeks, σ is a stated generic assumption, not an estimate
         from your league.</dd>
         <dt>Not built yet</dt>
-        <dd>Rest-of-season or per-week projections · private Yahoo league reads · the man-games replacement
+        <dd>Rest-of-season curves or a weekly-input season simulation · private Yahoo league reads · the man-games replacement
         baseline · multi-player and 2-for-1 trades · playoff-odds re-simulation of a proposed trade.</dd>
         <!-- ⚠️ THE MACHINE ANSWER BELONGS ON THE PAGE, NOT ONLY IN llms.txt. A reader
              that got here by URL never sees the index, and the thing it most needs to
@@ -3225,6 +3240,7 @@ body.wr-shared #youLab{display:none!important}
 <footer class="foot">Data Dawgs · Data, Not Dogma · <a href="/llms.txt">For machines</a> · All model and market numbers carry their date.</footer>
 
 <script src="draft-providers.js"></script>
+<script src="warroom-weekly.js"></script>
 <script>
 /* ============================================================================
    DDSheets — ported verbatim from survivor.html. Hash beats memory beats first;
@@ -3763,7 +3779,7 @@ function svgSplit(mine,league,horizon){
   const avg={st:Math.round(league.reduce((a,t)=>a+t.st,0)/league.length),bn:Math.round(league.reduce((a,t)=>a+t.bn,0)/league.length)};
   return '<svg viewBox="0 0 '+W+' '+H+'" class="wr-svg wr-svg-small" role="img" aria-label="Starter and bench market value against the league average">'
     +row(14,'You',mine.st,mine.bn,true)+row(58,'League avg',avg.st,avg.bn,false)+'</svg>'
-    +'<p class="wr-note">Solid is the lineup you start, faded is the bench. Dollars are '+esc(labelFor(horizon))
+    +'<p class="wr-note">Solid is the best season-projected lineup, faded is the bench. Dollars are '+esc(labelFor(horizon))
     +(asOfFor(horizon)?' as of '+esc(asOfFor(horizon)):'')+'.</p>';
 }
 
@@ -3791,8 +3807,9 @@ function renderReport(){
     +'<div class="wr-sub"><b>'+(sim?Math.round(sim.odds[me.id]*100)+'%':'—')+'</b><span>Playoff odds</span></div>';
 
   const rank=state.teams.slice().sort((a,b)=>b.total-a.total).indexOf(me)+1;
-  $('rcSummary').textContent='Ranked '+rank+' of '+state.teams.length+' on projected starter value. '
+  $('rcSummary').textContent='Season view: ranked '+rank+' of '+state.teams.length+' on projected starter value. '
     +'Grades are z-scores against this league, not a curve — if everyone drafted alike, everyone gets a B.'
+    +(state.ref.provider==='sleeper'?' The Money sheet shows your separate best lineup for the current week.':'')
     +(sim?'':' Playoff odds are blank until you run the simulation on the Standings sheet.');
 
   const mineAx=axes.map(a=>me.values[a]||0);
@@ -3874,15 +3891,68 @@ let mnPaidPos=new Set(['QB','RB','WR','TE','K','DST']), mnPaidLab='top';
 const MN_LABEL_TOP=10;
 
 function teamMoney(t,horizon){
-  const {starters,bench}=chooseStarters(t.players,state.slots);
+  const lineup=moneyLineup(t),{starters,bench}=lineup;
   const byPos={};POS_ORDER.forEach(p=>byPos[p]=0);
   let unpriced=0;
   starters.forEach(p=>{const v=mvOf(p,horizon);if(v==null)unpriced++;else byPos[p.pos]=(byPos[p.pos]||0)+v});
   const st=Object.values(byPos).reduce((a,b)=>a+b,0);
   const bn=bench.reduce((a,p)=>{const v=mvOf(p,horizon);if(v==null)unpriced++;return a+(v||0)},0);
-  return {t,byPos,st,bn,total:st+bn,unpriced,n:t.players.length};
+  const roster=rosterMoney(t.players,horizon);
+  return {t,byPos,st,bn,total:roster.dollars,unpriced:roster.unpriced,n:t.players.length,lineup};
 }
 function fmt$(n){return '$'+Math.round(n).toLocaleString('en-US')}
+
+function moneyLineup(t){
+  if(state.ref.provider!=='sleeper')return {...chooseStarters(t.players,state.slots),ready:true};
+  const w=state.weekly;
+  if(!w||!w.ready)return {ready:false,starters:[],bench:t.players.slice(),error:w?.error||'Weekly projections have not loaded.'};
+  return DDWeekly.optimize(t.players,state.league.roster_positions,w.byId);
+}
+function renderWeeklyMoney(M){
+  const sleeper=state.ref.provider==='sleeper',card=$('mnWeeklyCard');
+  card.classList.toggle('wr-hide',!sleeper);
+  $('mnBarsNote').textContent='Full-roster dollars, including the bench. '
+    +(sleeper?'Starters maximize current-week Sleeper projected points. ':'Starters use season projections. ')
+    +'Dashed = league average roster dollars.';
+  if(!sleeper)return true;
+  const w=state.weekly,me=M.find(r=>r.t===mnMe()),ready=M.filter(r=>r.lineup.ready);
+  $('mnWeeklyRefresh').disabled=!!state.weeklyLoading;
+  $('mnWeeklyTitle').textContent=w?.ready?'Best lineup · '+w.season+' Week '+w.week:'Weekly lineup unavailable';
+  if(!w?.ready){
+    $('mnWeeklyNote').textContent=(w?.error||'Weekly projections have not loaded.')+' Refresh to retry. No season-average lineup is substituted.';
+    $('mnWeeklyTiles').innerHTML='';$('mnWeeklyLineup').innerHTML='';return false;
+  }
+  const allReady=ready.length===M.length;
+  const avg=allReady?M.reduce((n,r)=>n+r.lineup.points,0)/M.length:null;
+  const rank=allReady?1+M.filter(r=>r.lineup.points>me.lineup.points+1e-9).length:null;
+  const missing=M.reduce((n,r)=>n+(r.lineup.missing||0),0);
+  $('mnWeeklyNote').textContent='Sleeper projections, scored with this league’s settings. Captured '
+    +new Date(w.capturedAt).toLocaleString()+'. Best legal lineup among players with weekly projections; this does not change your Sleeper lineup or enforce game locks. '
+    +(missing?missing+' rostered players have no weekly projection and are excluded from lineup selection. ':'')
+    +(!allReady?'A complete projected lineup is unavailable for '+(M.length-ready.length)+' teams; league comparisons and dollar splits are withheld. ':'')
+    +'Dollar values below keep their own dated price source.';
+  $('mnWeeklyTiles').innerHTML=[
+    ['Your best lineup',me.lineup.ready?me.lineup.points.toFixed(2)+' pts':'Unavailable','Week '+w.week+' projection'],
+    ['League average',avg==null?'—':avg.toFixed(2)+' pts','best projected starting lineups'],
+    ['Weekly lineup rank',rank==null?'—':rank+' of '+M.length,'ranked by projected points']
+  ].map(([l,v,d])=>'<div class="wr-tile"><div class="tl">'+l+'</div><div class="tv">'+v+'</div><div class="td">'+d+'</div></div>').join('');
+  $('mnWeeklyLineup').innerHTML='<thead><tr><th>Slot</th><th>Player</th><th>Projected points</th></tr></thead><tbody>'
+    +(me.lineup.assignments||[]).map(a=>'<tr><td>'+esc(a.slot)+'</td><td style="text-align:left">'+esc(a.player.name)+'</td><td>'+a.points.toFixed(2)+'</td></tr>').join('')+'</tbody>';
+  return allReady;
+}
+async function refreshMoneyWeek(){
+  const st=state;if(!st||st.ref.provider!=='sleeper'||st.weeklyLoading)return;
+  st.weeklyLoading=true;$('mnWeeklyRefresh').disabled=true;
+  st.weekly=await DDWeekly.load(st.league);
+  st.weeklyLoading=false;
+  if(state===st)renderMoney();
+}
+function refreshMoneyWeekIfStale(){
+  if(state?.ref.provider==='sleeper'&&Date.now()-Date.parse(state.weekly?.capturedAt||'1970-01-01')>5*60*1000)
+    refreshMoneyWeek();
+}
+$('mnWeeklyRefresh').onclick=refreshMoneyWeek;
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&SHEETS?.current==='money')refreshMoneyWeekIfStale();});
 
 function mnStackedBars(M){
   /* ⚠️ This charted STARTERS only, which quietly hid a third of every roster: two teams with
@@ -4030,6 +4100,12 @@ function renderMoney(){
      toggle. It does not fall back any more. */
   const mnH=hz('money');
   const me=mnMe(),M=state.teams.map(t=>teamMoney(t,mnH)),mine=M.find(x=>x.t===me);
+  const weeklyReady=renderWeeklyMoney(M);
+  if(!weeklyReady){
+    $('mnTiles').innerHTML='';$('mnDynasty').innerHTML='';
+    $('mnTable').closest('.wr-grid').classList.add('wr-hide');
+    return;
+  }
   const totals=M.map(x=>x.total),leagueTotal=totals.reduce((a,b)=>a+b,0);
   const avgTotal=leagueTotal/M.length;
   // Missing prices are not zero-dollar valuations. Suppress comparisons until
@@ -4058,7 +4134,7 @@ function renderMoney(){
     ['League average',fmt$(avgTotal),(mine.total>=avgTotal?'+':'−')+fmt$(Math.abs(mine.total-avgTotal))+' for you'],
     /* Before a draft every roster is empty, so leagueTotal is 0 and the share is 0/0.
        Say "no priced players yet" rather than printing NaN%. */
-    ['Your rank',rank+' of '+M.length,leagueTotal>0?(mine.total/leagueTotal*100).toFixed(1)+(ddActive(mnH)?'% share of priced board held':'% of all money'):'no priced players yet'],
+    ['Roster value rank',rank+' of '+M.length,leagueTotal>0?(mine.total/leagueTotal*100).toFixed(1)+(ddActive(mnH)?'% share of priced board held':'% of all money'):'no priced players yet'],
     ['Starting / bench',fmt$(mine.st)+' / '+fmt$(mine.bn),Math.round(mine.st/(mine.total||1)*100)+'% of it starts'],
     ['Richest roster','<span class="tname">'+esc(richest.t.name)+'</span>',fmt$(richest.total)],
     ['Leanest roster','<span class="tname">'+esc(leanest.t.name)+'</span>',fmt$(leanest.total)],
@@ -4861,14 +4937,19 @@ async function fetchLeague(id){
   const [league,users,rosters]=await Promise.all([fetchJson(API+'/league/'+ref.id),fetchJson(API+'/league/'+ref.id+'/users'),fetchJson(API+'/league/'+ref.id+'/rosters')]);
   if(!league?.league_id)throw Error('Sleeper did not return a league for that ID.');
   const playoffStart=Number(league.settings?.playoff_week_start)||15;
-  const [players,weeklyMatchups]=await Promise.all([fetchJson(PROJ_SEASON),Promise.all(Array.from({length:playoffStart-1},(_,i)=>fetchJson(API+'/league/'+ref.id+'/matchups/'+(i+1)).catch(()=>[])))]);
+  const [players,weeklyMatchups,weekly]=await Promise.all([fetchJson(PROJ_SEASON),Promise.all(Array.from({length:playoffStart-1},(_,i)=>fetchJson(API+'/league/'+ref.id+'/matchups/'+(i+1)).catch(()=>[]))),DDWeekly.load(league)]);
   /* Mirrors espnProjection()'s `appliedTotal / wk`: the league's own regular season, not a
      flat 17. Keeping p in points-per-week is what lets replacement(), starterValues(),
      VOR_FLOOR and sigma stay exactly as they were -- the divisor is constant across every
      player, so it cannot reorder anyone or change a single VOR ratio. */
   const REG_WEEKS=Math.max(1,playoffStart-1);
-  const pool=players.filter(p=>p.player&&['QB','RB','WR','TE','K','DEF'].includes(p.player.position)).map(p=>({id:String(p.player_id),name:p.player.full_name||p.player.first_name+' '+p.player.last_name,pos:p.player.position==='DEF'?'DST':p.player.position,p:points(p,league.scoring_settings)/REG_WEEKS,team:p.team}));
+  const pool=players.filter(p=>p.player&&['QB','RB','WR','TE','K','DEF'].includes(p.player.position)).map(p=>({id:String(p.player_id),name:p.player.full_name||p.player.first_name+' '+p.player.last_name,pos:p.player.position==='DEF'?'DST':p.player.position,positions:p.player.fantasy_positions||[p.player.position],p:points(p,league.scoring_settings)/REG_WEEKS,team:p.team}));
   const byId=Object.fromEntries(pool.map(p=>[p.id,p])),user=Object.fromEntries(users.map(u=>[u.user_id,u]));
+  // A rostered player absent from the season feed still belongs to the roster.
+  // Weekly-only players can start; players with no projection stay explicitly unknown.
+  rosters.forEach(r=>(r.players||[]).forEach(pid=>{const id=String(pid);if(!byId[id]){
+    byId[id]={...(weekly.players?.get(id)||{id,name:'Sleeper player '+id,pos:'Unknown'}),p:null};pool.push(byId[id]);
+  }}));
   const teams=rosters.map(r=>({id:String(r.roster_id),ownerId:String(r.owner_id||''),name:user[r.owner_id]?.metadata?.team_name||user[r.owner_id]?.display_name||'Roster '+r.roster_id,players:(r.players||[]).map(id=>byId[id]).filter(Boolean),starters:new Set(r.starters||[])}));
   const schedule=weeklyMatchups.map(rows=>{const groups={};(rows||[]).forEach(x=>{if(x.matchup_id!=null)(groups[x.matchup_id]=groups[x.matchup_id]||[]).push(String(x.roster_id))});return Object.values(groups).filter(g=>g.length===2)});
   const st={ref,league,users,slots:slots(league.roster_positions),pool,teams,schedule,horizon:(()=>{
@@ -4881,6 +4962,7 @@ async function fetchLeague(id){
     return {report:ok(saved.report),money:ok(saved.money),trades:ok(saved.trades)};
   })(),settings:{playoffSpots:Number(league.settings?.playoff_teams)||Math.max(2,Math.round(teams.length/3)),playoffStart,sigma:20},defaults:null};
   st.defaults=JSON.stringify(st.settings);
+  st.weekly=weekly;
   return st;
 }
 /* ESPN, assembled by the Worker into the shape fetchLeague() returns for Sleeper.
@@ -5022,6 +5104,7 @@ function restore(key){
   $('teamPicker').value=String(pickMyTeam(state.teams,state.ref,state.users));
   setLoaded(true);
   render();
+  if(SHEETS?.current==='money')refreshMoneyWeekIfStale();
   if(sim){const me=state.teams[+$('teamPicker').value||0];$('odds').classList.remove('is-empty');$('odds').innerHTML=Math.round(sim.odds[me.id]*100)+'<small>%</small>';
     $('oddsNote').textContent='Chance '+me.name+' makes the playoffs across 20,000 deterministic seasons.'}
   try{const u=new URL(location.href);u.searchParams.set('league',state.ref.id);
@@ -5430,7 +5513,7 @@ SHEETS=DDSheets({key:'warroom',mount:'#sheets',sheets:[
   {id:'all',label:'All Leagues',panel:'#sheetAll'},
   {id:'settings',label:'Settings',panel:'#sheetSettings'},
   {id:'method',label:'Method & Footnotes',panel:'#sheetMethod'}
-],onShow(id){syncFlow(id);paintStrip(id);if(id==='all')renderPortfolio();if(id==='dynasty')renderDynastyLens()}});
+],onShow(id){syncFlow(id);paintStrip(id);if(id==='money')refreshMoneyWeekIfStale();if(id==='all')renderPortfolio();if(id==='dynasty')renderDynastyLens()}});
 
 document.addEventListener('click',e=>{
   const jump=e.target.closest('[data-sheet]');
@@ -5590,10 +5673,11 @@ window.DD_BOTCTX = {
     ['What is this room not modeling?','What is missing']]},
   sys: `RIGHT NOW you are on the Fantasy League War Room — a calculator that prices one connected fantasy league against its own replacement level and simulates its schedule.
 - When roster pricing is unavailable, do not quote zero-dollar totals, roster value ranks or shares. Missing prices are not zero values. Market Value only supports exact published formats; an 18-team league needs its own matching board.
+- MONEY SHEET WEEKLY LINEUPS: Sleeper leagues select the best legal starting lineup using CURRENT-WEEK Sleeper stat projections scored under that league's settings. Quote the displayed week and capture time. Weekly lineup rank is projected points; roster-dollar rank is the dated value of starters PLUS bench, not a weekly rank. Dollar starter/bench splits use the weekly lineup. Missing weekly projections are excluded and counted; incomplete lineups withhold comparisons, with no season fallback. These are suggested lineups, not submitted lineups; game locks are not enforced. Other providers' splits and the My Team/Standings/Trades season calculations still use season projections. Never interpret generic playoff simulations as guillotine survival odds.
 - IT IS A CALCULATOR, NOT A FORECASTER. Nothing on this page is logged before kickoff, so nothing here is a receipt and none of it appears on the model scoreboard. Never describe an odds number here as a graded or tracked forecast.
 - ⚠️ IF NO LEAGUE IS CONNECTED THERE ARE NO NUMBERS AT ALL. The sheets show empty states that explain the method. Do not invent standings, odds or trades for a league that is not loaded, and do not fall back to generic 12-team defaults.
 - INPUTS ARE THIRD-PARTY AND FROZEN. Rosters, scoring and schedule come from the provider at the moment of connection. Projections are ESPN's own season split for ESPN, and Sleeper's season projection for both Sleeper and Yahoo — Yahoo supplies no projections. On a Yahoo disagreement chart the far side is therefore SLEEPER, never Yahoo. Those inputs are unaudited, spread evenly over the league's regular season, and this page produces none of its own. ⚠️ EVERY SIMULATED WEEK REUSES THAT ONE SEASON AVERAGE — no byes, no opponent adjustment, no rest-of-season curve. Say so whenever anyone asks how much the playoff odds are worth.
-- NOT MODELED: injuries, byes, trades, waivers, lineup decisions, in-season projection updates, and correlation between the two teams in a matchup. Before three completed weeks, σ is a stated generic assumption rather than an estimate from the league.
+- NOT MODELED IN THE SEASON SIMULATION: injuries, byes, trades, waivers, lineup decisions, in-season projection updates, and correlation between the two teams in a matchup. The Money sheet's separate weekly lineup uses its dated Sleeper weekly projection snapshot. Before three completed weeks, σ is a stated generic assumption rather than an estimate from the league.
 - YAHOO 773763 PRICING uses DataDawg$ dated 2026-08-28, tier labs, graded: false. It is an OPENING-STATE AUCTION TARGET, not a clearing price and not a max bid. Low/high are conversion-sensitivity bands, never bid ceilings or player-outcome intervals. Keeper inflation is unmodelled; the keeper deadline is 2026-09-08. The chart grades a buy as DataDawg$ minus paid. A roster's share of the priced board is NOT the share of what the league spent.
 - NOT BUILT: private Yahoo league reads, Yahoo write access, the man-games baseline, multi-player trades, and Stage 2 playoff re-simulation. Say so plainly rather than describing how to use them.
 - AN EDITED SETTING IS A WHAT-IF and is marked pool_eligible false. Do not present an overridden run as the league's own number.
