@@ -4032,6 +4032,22 @@ function renderMoney(){
   const me=mnMe(),M=state.teams.map(t=>teamMoney(t,mnH)),mine=M.find(x=>x.t===me);
   const totals=M.map(x=>x.total),leagueTotal=totals.reduce((a,b)=>a+b,0);
   const avgTotal=leagueTotal/M.length;
+  // Missing prices are not zero-dollar valuations. Suppress comparisons until
+  // at least one held player has a price; restore them when switching boards.
+  const pricedCount=M.reduce((n,r)=>n+r.n-r.unpriced,0);
+  const moneyGrid=$('mnTable').closest('.wr-grid');
+  moneyGrid.classList.toggle('wr-hide',!pricedCount);
+  if(!pricedCount){
+    const held=M.reduce((n,r)=>n+r.n,0);
+    const reason=!held?'No rostered players yet.':mnH==='season'&&!ddActive(mnH)&&!mvColumn()
+      ? 'No league-specific price board is loaded, and Market Value has no matching column for this '+M.length+'-team format.'
+      : 'No published prices matched the rostered players on this value horizon.';
+    $('mnTiles').innerHTML='';
+    $('mnDynasty').innerHTML='<div class="wr-warn" role="status"><b>Roster pricing unavailable</b><p>'+esc(reason)+' Your rosters are loaded, but dollar totals, rankings and shares cannot be calculated.</p><p>Unpriced does not mean worth $0.</p></div>';
+    $('mnTable').innerHTML='';
+    $('mnCaveat').textContent=reason+' Unpriced does not mean worth $0.';
+    return;
+  }
   const ranked=M.slice().sort((a,b)=>b.total-a.total);
   const rank=ranked.indexOf(mine)+1;
   const richest=ranked[0],leanest=ranked[ranked.length-1];
@@ -4067,17 +4083,17 @@ function renderMoney(){
   /* ---- table, sortable, league-average row pinned regardless of sort ---- */
   const cols=[['name','Team',0],['total','Total',1],['st','Starting',1],['bn','Bench',1],
               ['share','Share',1],['ppl','Per player',1],['unpriced','No price',1]];
-  const val=(r,k)=>k==='name'?r.t.name:k==='share'?r.total/leagueTotal*100:k==='ppl'?r.total/(r.n||1):r[k];
+  const val=(r,k)=>k==='name'?r.t.name:k==='share'?(leagueTotal>0?r.total/leagueTotal*100:0):k==='ppl'?r.total/(r.n||1):r[k];
   const sorted=M.slice().sort((a,b)=>{const x=val(a,mnSort.key),y=val(b,mnSort.key);
     return (typeof x==='string'?String(x).localeCompare(String(y)):x-y)*mnSort.dir});
-  const cell=(r,k)=>k==='name'?esc(r.t.name):k==='share'?(r.total/leagueTotal*100).toFixed(1)+'%'
+  const cell=(r,k)=>k==='name'?esc(r.t.name):k==='share'?(leagueTotal>0?(r.total/leagueTotal*100).toFixed(1)+'%':'—')
     :k==='ppl'?fmt$(r.total/(r.n||1)):k==='unpriced'?(r.unpriced||'—'):fmt$(r[k]);
   const avgRow={t:{name:'League average'},total:avgTotal,st:M.reduce((a,r)=>a+r.st,0)/M.length,
     bn:M.reduce((a,r)=>a+r.bn,0)/M.length,n:M.reduce((a,r)=>a+r.n,0)/M.length,
     unpriced:Math.round(M.reduce((a,r)=>a+r.unpriced,0)/M.length)};
   $('mnTable').innerHTML='<thead><tr>'+cols.map(([k,l])=>'<th data-k="'+k+'">'+l+(mnSort.key===k?(mnSort.dir<0?' ▾':' ▴'):'')+'</th>').join('')+'</tr></thead>'
     +'<tbody>'+sorted.map(r=>'<tr class="'+(r.t===me?'wr-you':'')+'">'+cols.map(([k])=>'<td>'+cell(r,k)+'</td>').join('')+'</tr>').join('')
-    +'<tr class="avg">'+cols.map(([k])=>'<td>'+(k==='name'?'League average':k==='share'?(100/M.length).toFixed(1)+'%':cell(avgRow,k))+'</td>').join('')+'</tr></tbody>';
+    +'<tr class="avg">'+cols.map(([k])=>'<td>'+(k==='name'?'League average':k==='share'?(leagueTotal>0?(100/M.length).toFixed(1)+'%':'—'):cell(avgRow,k))+'</td>').join('')+'</tr></tbody>';
   $('mnTable').querySelectorAll('th').forEach(th=>th.onclick=()=>{
     const k=th.dataset.k;
     mnSort=mnSort.key===k?{key:k,dir:-mnSort.dir}:{key:k,dir:k==='name'?1:-1};
@@ -4159,7 +4175,8 @@ function renderMoney(){
   const rate=vorSum>0?mvSum/vorSum:null;
   const all=rate==null?[]:skill.map(p=>{
     const implied=Math.max(0,p.vor*rate);
-    return {name:p.name,pos:p.pos,team:p.team,ti:p.ti,x:p.mv,y:implied,d:implied-p.mv};
+    return {name:p.name,pos:p.pos,team:p.team,ti:p.ti,x:p.mv,y:implied,d:implied-p.mv,
+      r:rate>0?p.vor-p.mv/rate:0};
   });
   const shown=mnTeam==='ALL'?all:all.filter(p=>String(p.ti)===String(mnTeam));
   /* ⚠️ Only players the projection puts ABOVE replacement. Below it the implied value is
@@ -5572,6 +5589,7 @@ window.DD_BOTCTX = {
     ['How should I read these playoff odds?','Reading the odds'],
     ['What is this room not modeling?','What is missing']]},
   sys: `RIGHT NOW you are on the Fantasy League War Room — a calculator that prices one connected fantasy league against its own replacement level and simulates its schedule.
+- When roster pricing is unavailable, do not quote zero-dollar totals, roster value ranks or shares. Missing prices are not zero values. Market Value only supports exact published formats; an 18-team league needs its own matching board.
 - IT IS A CALCULATOR, NOT A FORECASTER. Nothing on this page is logged before kickoff, so nothing here is a receipt and none of it appears on the model scoreboard. Never describe an odds number here as a graded or tracked forecast.
 - ⚠️ IF NO LEAGUE IS CONNECTED THERE ARE NO NUMBERS AT ALL. The sheets show empty states that explain the method. Do not invent standings, odds or trades for a league that is not loaded, and do not fall back to generic 12-team defaults.
 - INPUTS ARE THIRD-PARTY AND FROZEN. Rosters, scoring and schedule come from the provider at the moment of connection. Projections are ESPN's own season split for ESPN, and Sleeper's season projection for both Sleeper and Yahoo — Yahoo supplies no projections. On a Yahoo disagreement chart the far side is therefore SLEEPER, never Yahoo. Those inputs are unaudited, spread evenly over the league's regular season, and this page produces none of its own. ⚠️ EVERY SIMULATED WEEK REUSES THAT ONE SEASON AVERAGE — no byes, no opponent adjustment, no rest-of-season curve. Say so whenever anyone asks how much the playoff odds are worth.
