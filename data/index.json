@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 37420,
-    "as_of": "2026-09-03",
-    "sha256": "db2afcfce3d4bcb653dffb28faebf6702536a78e20965f8bcfa181cb07b3b9d8",
+    "bytes": 38048,
+    "as_of": "2026-09-09",
+    "sha256": "ab1b174764b942984c68da5bf26eba64ed4a547e90f3f4d358d3300f31a666fd",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -349,6 +349,38 @@
     "as_of": "2026-09-07",
     "sha256": "9a64298455e11670796138fc35e4fbd9992f27313a29d988da0e8979f85d4796",
     "note": "Percent units. ESPN is an observed pre-lock public pick snapshot, not final ownership. ETR is projected Splash ownership. Exact observation times and sample sizes unavailable; as_of is ingestion date. No account identifiers retained."
+   },
+   {
+    "path": "/data/guillotine-calibration.json",
+    "url": "https://datadawgs216.com/data/guillotine-calibration.json",
+    "bytes": 2627,
+    "as_of": "2026-09-09",
+    "sha256": "be3f57bc37c6b47fe0ab95d94219f384a0d007fd9088ff76d59b39e9bb70b3c1",
+    "note": "Historical Sleeper projections can be revised after games. These are descriptive uncertainty estimates, not out-of-sample calibration. Correlation between opposing NFL teams and negative teammate correlations are not modeled."
+   },
+   {
+    "path": "/data/guillotine-market-history.json",
+    "url": "https://datadawgs216.com/data/guillotine-market-history.json",
+    "bytes": 2037,
+    "as_of": "2026-09-09",
+    "sha256": "04f64e887927d6f27c4f71899280a59dab21279a1cba1a245519decaff4562df",
+    "note": "Separate league and season. Completed winning bids only, not losing bids or winning probabilities. Positions and player quality are not matched; stage summaries are context, not target-specific prices. Fractions use the original FAAB budget, not current remaining cash."
+   },
+   {
+    "path": "/data/guillotine-receipts.json",
+    "url": "https://datadawgs216.com/data/guillotine-receipts.json",
+    "bytes": 6207,
+    "as_of": "2026-09-09",
+    "sha256": "dfa0160dd3bc9294794242f4237a2865b1dcdcb4d75cb833c8bfa10c4fa2df84",
+    "note": "Prospective pregame forecasts. Roster IDs only; no ownership identities or player rosters. Multiclass Brier is the sum of squared chop-probability errors; lower is better. Repeated full ties await resolution."
+   },
+   {
+    "path": "/data/guillotine-weekly.json",
+    "url": "https://datadawgs216.com/data/guillotine-weekly.json",
+    "bytes": 624050,
+    "as_of": "2026-09-09",
+    "sha256": "54cafb81fb7a924f82315ec62b1e55d550a2a0d9f6e465c71c38b1eff5cd3456",
+    "note": "Daily snapshot. Player timestamps are source update times. Projections are not live scores. Historical uncertainty is descriptive, not prospectively validated."
    },
    {
     "path": "/data/leagues/pepperoninipples.json",
