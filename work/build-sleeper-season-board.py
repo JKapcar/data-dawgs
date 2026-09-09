@@ -9,6 +9,22 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
+def projection_names(source):
+    """The original builder's source-priced projection universe, across formats."""
+    columns = ['ETR Full PPR', 'ETR Half PPR', 'ETR Std',
+               'ETR Superflex Full', 'ETR Superflex Half']
+    return {r['Player'] for r in source
+            if r['Position'] in {'QB', 'RB', 'WR', 'TE'}
+            and any(float(r[c]) > 0 for c in columns)}
+
+def validate_starter_coverage(rows, positions, teams):
+    """A paid player pool must accommodate the league's dedicated starters."""
+    counts = collections.Counter(r['pos'] for r in rows if r['target'] > 0)
+    for pos in ['QB', 'RB', 'WR', 'TE']:
+        need = positions.count(pos) * teams
+        assert counts[pos] >= need, f'{pos}: only {counts[pos]} priced for {need} starting slots'
+    return dict(counts)
+
 def main():
     ap = argparse.ArgumentParser()
     for arg in ['source', 'reference', 'projections', 'league', 'output']:
@@ -75,9 +91,15 @@ def main():
     ns['REPL'] = {('etr12', sch): replacement(pools['base'], baseline_slots, 12),
                   ('room', sch): replacement(pools['base'], positions, teams),
                   ('room', 'custom'): replacement(pools['room'], positions, teams)}
+    # Match NAMES in the original builder. Its projection input contains ONLY
+    # skill players with a positive prior in at least one source format. Applying
+    # the depth delta to the entire export gives unvalued fringe RB/WRs a uniform
+    # premium, which can displace starting QBs and TEs from the paid roster pool.
+    eligible_names = projection_names(source)
     ns['PROJ'] = {r['Player']: {sch: scored[namekey(r['Player'])]['base'],
                               'custom': scored[namekey(r['Player'])]['room']}
-                  for r in source if namekey(r['Player']) in scored}
+                  for r in source if r['Player'] in eligible_names
+                  and namekey(r['Player']) in scored}
     config = dict(name=league['name'], provider='sleeper', league_id=args.league,
                   teams=teams, rec=rec, superflex=False, k=False, dst=False,
                   paid_slots_per_team=len(positions), budget_per_team=200,
@@ -115,6 +137,7 @@ def main():
                      faab_total=teams*budget, slots_per_team=len(positions),
                      paid_slots=teams*len(positions), reception=rec, kicker=False, dst=False)
     d['method']['baseline_slots'] = baseline_slots
+    d['method']['projection_universe'] = 'Skill players priced above zero in at least one source format, matching the original builder'
     d['method']['denomination'] = 'live_teams x FAAB, Hamilton-rounded to an exact total'
     d['interpretation'] = 'Season-total roster comparator in FAAB units, not a survival model or a bid recommendation.'
     board['note'] = 'PRIVATE. Dated, ungraded season-total valuation in FAAB units. Rebuild as live teams change.'
@@ -125,6 +148,7 @@ def main():
     assert d['validation']['target_sum'] == teams * budget
     assert d['validation']['priced_players'] == teams * len(positions)
     assert not d['validation']['negative_prices']
+    d['validation']['priced_by_pos'] = validate_starter_coverage(rows, positions, teams)
     Path(args.output).write_text(json.dumps(board, indent=2), encoding='utf-8')
     print(json.dumps({'source_hash_matches': True, 'league': league['name'], **d['validation']}))
 
