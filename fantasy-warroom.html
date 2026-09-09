@@ -3240,6 +3240,7 @@ body.wr-shared #youLab{display:none!important}
 <footer class="foot">Data Dawgs · Data, Not Dogma · <a href="/llms.txt">For machines</a> · All model and market numbers carry their date.</footer>
 
 <script src="draft-providers.js"></script>
+<script src="datadawg-default.js"></script>
 <script src="warroom-weekly.js"></script>
 <script>
 /* ============================================================================
@@ -3435,6 +3436,18 @@ async function ddFromWorker(provider,leagueId,pool,horizon,teams){
     return by.size?{by,meta:j.dd,picks}:null;
   }catch(e){ return null; }
 }
+let defaultSourcePromise=null;
+async function defaultDD(st){
+  try{
+    if(!defaultSourcePromise)defaultSourcePromise=fetch('data/datadawg-default.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw Error('Default source unavailable');return r.json();}).catch(e=>{defaultSourcePromise=null;throw e;});
+    const envelope=await defaultSourcePromise;
+    const result=DDDefault.build(envelope.data,{teams:st.teams.length,ppr:st.league.scoring_settings?.rec,slots:st.slots,budget:st.league.auction_budget||null});
+    const by=new Map();result.players.forEach(p=>{const k=ddKey(p);if(k)by.set(k,p.target);});
+    result.meta.league=st.league.name;result.meta.provider=st.ref.provider;result.meta.league_id=st.ref.id;
+    st.defaultValueError=null;
+    return {by,meta:result.meta};
+  }catch(e){st.defaultValueError=e.message;return null;}
+}
 async function loadDD(st=state){
   if(!st||!st.ref){if(st===state)DD={season:null,dynasty:null};return null;}
   const prov=st.ref.provider;
@@ -3448,7 +3461,7 @@ async function loadDD(st=state){
   const wantDyn=Number(st&&st.league&&st.league.settings&&st.league.settings.type)===2&&!feed;
   const dyn=wantDyn?await ddFromWorker(prov,st.ref.id,st.pool,'dynasty',st.teams):null;
   const published=await ddFromYahooPublic(prov,st.ref.id);
-  const got=published||(feed?ddFromFeed(st.pool):await ddFromWorker(prov,st.ref.id,st.pool,'season',st.teams));
+  const got=published||(feed?ddFromFeed(st.pool):await ddFromWorker(prov,st.ref.id,st.pool,'season',st.teams))||await defaultDD(st);
   /* the feed path carries no meta block of its own, so take it off the feed body */
   if(got&&!got.meta&&st.dd)got.meta=st.dd;
   if(dyn&&!dyn.meta&&st.dd)dyn.meta=st.dd;
@@ -3608,7 +3621,7 @@ function usesDynasty(mod){return hz(mod)==='dynasty'}
    14-team league 12-team prices: right arithmetic, wrong question, and unfalsifiable from
    the outside. DataDawg$ is ungraded (tier: labs) and the copy says so. */
 function labelFor(h){
-  if(ddActive(h))return 'DataDawg$';
+  if(ddActive(h))return ddBoard(h).meta?.model_id==='datadawg-default-season-v1'?'DataDawg$ (default)':'DataDawg$';
   return h==='dynasty'?'Overall dynasty value':'PMV (Public Market Value)';
 }
 function asOfFor(h){
@@ -4092,8 +4105,9 @@ function paintDraftCapital(){
     +'DataDawg$ dynasty board, '+(DDPICKS.asOf||'undated')+', ungraded.';
 }
 
+function stDefaultError(){return state?.defaultValueError?'Default DataDawg$ unavailable: '+state.defaultValueError:'';}
 function clearMoneyCards(message){
-  ['mnBest','mnWorst','mnSell','mnBuy','mnPaid','mnScatter','mnRadars','mnBars'].forEach(id=>{if($(id))$(id).innerHTML='';});
+  ['mnBest','mnWorst','mnSell','mnBuy','mnPaid','mnScatter','mnRadars','mnBars','mnDefaultSource'].forEach(id=>{if($(id))$(id).innerHTML='';});
   ['mnBestNote','mnWorstNote','mnSellNote','mnBuyNote'].forEach(id=>{if($(id))$(id).textContent=message||'Select a league with available projections and prices.';});
   $('mnBestTitle').textContent='Best buys';$('mnWorstTitle').textContent='Biggest overpays';
 }
@@ -4116,6 +4130,12 @@ function renderMoney(){
      horizon parameter. It only worked because mvOf silently fell back to the page
      toggle. It does not fall back any more. */
   const mnH=hz('money');
+  let sourceNote=$('mnDefaultSource');
+  if(!sourceNote){sourceNote=document.createElement('p');sourceNote.id='mnDefaultSource';sourceNote.className='wr-note';$('mnTiles').before(sourceNote);}
+  const defaultMeta=ddBoard(mnH)?.meta;
+  sourceNote.textContent=defaultMeta?.model_id==='datadawg-default-season-v1'
+    ? defaultMeta.note+' '+defaultMeta.budget_per_team+' dollars per team ('+defaultMeta.budget_kind+').'
+    : stDefaultError();
   const me=mnMe(),M=state.teams.map(t=>teamMoney(t,mnH)),mine=M.find(x=>x.t===me);
   const weeklyReady=renderWeeklyMoney(M);
   if(!weeklyReady){
@@ -4977,6 +4997,7 @@ async function fetchLeague(id){
   }}));
   const teams=rosters.map(r=>({id:String(r.roster_id),ownerId:String(r.owner_id||''),name:user[r.owner_id]?.metadata?.team_name||user[r.owner_id]?.display_name||'Roster '+r.roster_id,players:(r.players||[]).map(id=>byId[id]).filter(Boolean),starters:new Set(r.starters||[])}));
   const schedule=weeklyMatchups.map(rows=>{const groups={};(rows||[]).forEach(x=>{if(x.matchup_id!=null)(groups[x.matchup_id]=groups[x.matchup_id]||[]).push(String(x.roster_id))});return Object.values(groups).filter(g=>g.length===2)});
+  league.auction_budget=null; // Sleeper connection does not report an auction budget; default uses a nominal scale.
   const st={ref,league,users,slots:slots(league.roster_positions),pool,teams,schedule,horizon:(()=>{
     /* Seeded from the league type, overridden by whatever was saved for THIS league.
        A saved 'dynasty' on a league that has no dynasty board is discarded rather
@@ -5019,7 +5040,7 @@ async function fetchLeagueEspn(id,share){
   const positions=[];
   (L.slots||[]).forEach(x=>{ for(let i=0;i<x.count;i++) positions.push(x.slot==='BENCH'?'BN':x.slot); });
   const league={
-    name:L.name||'ESPN league', league_id:String(L.id||id), season:L.season,
+    name:L.name||'ESPN league', league_id:String(L.id||id), season:L.season, auction_budget:L.budget||null,
     roster_positions:positions,
     /* ⚠️ NOT {} - mvColumn() resolves the PMV column from the reception value, and an empty
        scoring_settings made every ESPN league read as unpriced. The Worker already sends this
@@ -5065,7 +5086,7 @@ async function fetchLeagueYahoo(id,share){
   (L.slots||[]).forEach(x=>{for(let i=0;i<x.count;i++)positions.push(x.slot==='BENCH'?'BN':x.slot)});
   const ppr=Number(L.scoring&&L.scoring.ppr);
   const league={
-    name:L.name||'Yahoo league',league_id:String(L.id||id),season:L.season,
+    name:L.name||'Yahoo league',league_id:String(L.id||id),season:L.season,auction_budget:L.budget||null,
     roster_positions:positions,
     /* Feed fixtures deliberately do not supply scoring_settings. This mapping is the
        source of truth for mvColumn(); losing rec silently unprices the Money tab. */

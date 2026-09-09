@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 const html=fs.readFileSync(new URL('../fantasy-warroom.html',import.meta.url),'utf8');
 function fn(name){const a=html.indexOf('function '+name+'(');let i=html.indexOf('{',a),depth=1,j=i+1;for(;depth;j++){if(html[j]==='{')depth++;if(html[j]==='}')depth--;}return html.slice(a,j);}
 const els=new Proxy({}, {get(o,k){return o[k] ||= {innerHTML:'OLD PLAYER',textContent:'OLD SOURCE',classList:{add(){},toggle(){}},closest(){return this}};}});
-const base={$:id=>els[id],state:{ref:{provider:'sleeper',id:'B'},league:{name:'League B'},teams:[{}]},LOADED:new Map(),mnTeam:'ALL',mnPaidPos:new Set(['QB']),mnPaidLab:'top',keyOf:(p,id)=>p+':'+id,paintDraftCapital(){},hz:()=> 'season',mnMe:()=>null,teamMoney:()=>({}),renderWeeklyMoney:()=>false};
+const base={$:id=>els[id],state:{ref:{provider:'sleeper',id:'B'},league:{name:'League B'},teams:[{}]},LOADED:new Map(),mnTeam:'ALL',mnPaidPos:new Set(['QB']),mnPaidLab:'top',keyOf:(p,id)=>p+':'+id,paintDraftCapital(){},hz:()=> 'season',ddBoard:()=>null,stDefaultError:()=>'',mnMe:()=>null,teamMoney:()=>({}),renderWeeklyMoney:()=>false};
 vm.createContext(base);
 vm.runInContext(fn('clearMoneyCards')+';let moneyFilterKey=null;'+fn('syncMoneyFilters'),base);
 let a=html.indexOf('function renderMoney(){'),b=html.indexOf('  const totals=',a);

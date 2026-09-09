@@ -5,7 +5,7 @@
 // meant a JS-only fix never invalidated a phone's cache.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "3afa8e48ca";
+const VERSION = "a3db217d1b";
 // A policy revision also invalidates old caches when only this file changes.
 const CACHE = "dd-" + VERSION + "-public-v2";
 

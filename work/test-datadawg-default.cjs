@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const {DDDefault}=require('../datadawg-default.js');
+const source=JSON.parse(fs.readFileSync('data/datadawg-default.json')).data;
+const config={teams:12,ppr:0.5,slots:{QB:1,RB:2,WR:2,TE:1,FLEX:1,DST:1,BN:6}};
+const total=b=>b.players.reduce((s,p)=>s+Math.round(p.target*100),0);
+const b=DDDefault.build(source,config);
+assert.equal(total(b),240000);assert.equal(b.meta.budget_kind,'nominal comparison scale');
+const more=DDDefault.build(source,{...config,teams:14,budget:250});assert.equal(total(more),350000);assert.equal(more.meta.budget_kind,'reported auction budget');
+assert.equal(new Set(b.players.map(p=>p.id)).size,b.players.length);assert(b.players.every(p=>Number.isFinite(p.target)&&p.target>=0));
+const sf=DDDefault.build(source,{...config,slots:{...config.slots,SUPERFLEX:1}});assert.equal(sf.meta.basis,'sfHalf');
+assert.notEqual(sf.players.find(p=>p.id==='00-0034857').target,b.players.find(p=>p.id==='00-0034857').target);
+const deep=DDDefault.build(source,{...config,slots:{...config.slots,FLEX:3}});assert.notDeepEqual(deep.players.map(p=>p.target),b.players.map(p=>p.target));
+assert.equal(DDDefault.build(source,{...config,ppr:0}).meta.basis,'std');assert.equal(DDDefault.build(source,{...config,ppr:1}).meta.basis,'full');
+assert.throws(()=>DDDefault.build(source,{...config,teams:0}));assert.throws(()=>DDDefault.build(source,{...config,ppr:undefined}));
+assert.throws(()=>DDDefault.build(source,{...config,slots:{...config.slots,IDP:1}}));
+assert.equal(b.meta.source_published_at,null);assert.match(b.meta.note,/custom scoring bonuses/);
+const html=fs.readFileSync('fantasy-warroom.html','utf8');assert(html.includes("||await defaultDD(st)"));assert(html.includes("dynasty:dyn||null"));
+console.log('Default DataDawg$: exact budget totals, format/depth response, unique players, invalid-input refusal, source dates and custom-board precedence passed.');
