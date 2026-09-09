@@ -1024,7 +1024,62 @@ button.btn.sm{font-size:12.5px;padding:7px 12px}
 label.fld[hidden], .statrow[hidden], .card[hidden], .sheet[hidden], .banner[hidden],
 .prog[hidden], .bars[hidden], .grid2[hidden], .grid3[hidden], .chkrow[hidden],
 .btnrow[hidden], .fstabs[hidden], .lu[hidden]{display:none !important}
-.nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}.grpmenu a[class*="kennel-"]{font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;font-weight:800;letter-spacing:.01em}.grpmenu a.kennel-scoreboard{color:#8ed6ff}.grpmenu a.kennel-nfeloml{color:#c9b3ff}.grpmenu a.kennel-qb{color:#ffc06a}.grpmenu a.kennel-wepa{color:#7ce7b0}.grpmenu a.kennel-srs{color:#ff9bb4}.grpmenu a.kennel-hfa{color:#ffe082}.grpmenu a.kennel-units{color:#8ee8e3}.grpmenu a.kennel-receipts{color:#f2c4ff}.grpmenu a.kennel-regimes{color:#a8d88c}</style>
+.nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}.grpmenu a[class*="kennel-"]{font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;font-weight:800;letter-spacing:.01em}.grpmenu a.kennel-scoreboard{color:#8ed6ff}.grpmenu a.kennel-nfeloml{color:#c9b3ff}.grpmenu a.kennel-qb{color:#ffc06a}.grpmenu a.kennel-wepa{color:#7ce7b0}.grpmenu a.kennel-srs{color:#ff9bb4}.grpmenu a.kennel-hfa{color:#ffe082}.grpmenu a.kennel-units{color:#8ee8e3}.grpmenu a.kennel-receipts{color:#f2c4ff}.grpmenu a.kennel-regimes{color:#a8d88c}
+/* ==== BEGIN showdown validator css ==== */
+/* Mobile first: one column, and nothing that can push the page sideways at 380px. */
+.sdgrid{display:grid;grid-template-columns:1fr;gap:0 14px}
+.sdslots{display:grid;grid-template-columns:1fr;gap:8px;margin:12px 0 14px}
+.sdslot{display:grid;grid-template-columns:44px 1fr;gap:8px;align-items:center}
+.sdslot .tag{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-3);text-align:right}
+.sdslot .tag.cpt{color:var(--accent)}
+.sdmeter{position:sticky;top:0;z-index:5;background:var(--surface-1);border:1px solid var(--border);
+  border-radius:11px;padding:9px 12px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+  margin:0 0 12px}
+.sdmeter b{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}
+.sdmeter span{font-size:12px;color:var(--ink-3)}
+.sdmeter i{display:block;flex:1 0 100%;height:4px;border-radius:3px;background:var(--grid);
+  overflow:hidden;position:relative}
+.sdmeter i::after{content:"";position:absolute;inset:0 auto 0 0;width:var(--pct,0%);
+  background:var(--accent);border-radius:3px}
+.sdmeter.over b{color:var(--bad)}
+.sdmeter.over i::after{background:var(--bad)}
+.sdchips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.sdchip{font-size:11px;font-weight:800;letter-spacing:.04em;padding:4px 9px;border-radius:999px;
+  border:1px solid var(--border);color:var(--ink-2);background:var(--page)}
+.sdchip.hard{border-color:color-mix(in srgb,var(--bad) 55%,transparent);color:var(--bad)}
+.sdchip.soft{border-color:color-mix(in srgb,var(--warn) 55%,transparent);color:var(--warn)}
+.sdchip.info{border-color:color-mix(in srgb,var(--accent) 45%,transparent);color:var(--accent)}
+.sdchip.good{border-color:color-mix(in srgb,var(--good) 55%,transparent);color:var(--good)}
+.sdflag{border-left:3px solid var(--border);padding:7px 0 7px 11px;margin:0 0 9px}
+.sdflag.hard{border-left-color:var(--bad)}
+.sdflag.soft{border-left-color:var(--warn)}
+.sdflag.info{border-left-color:var(--accent)}
+.sdflag h5{margin:0 0 3px;font-size:13px;font-weight:750;color:var(--ink-1);line-height:1.45}
+.sdflag p{margin:0;font-size:12.5px;color:var(--ink-3);line-height:1.55}
+.sdflag .rid{font-size:10px;font-weight:800;color:var(--ink-3);opacity:.7;margin-right:6px}
+.sdgroup{margin:0 0 4px}
+.sdgroup>summary{cursor:pointer;font-size:11px;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-3);padding:6px 0;list-style:none}
+.sdgroup>summary::-webkit-details-marker{display:none}
+.sdgroup>summary::before{content:"▸ ";opacity:.6}
+.sdgroup[open]>summary::before{content:"▾ "}
+.sdrow{display:flex;gap:8px;align-items:baseline;justify-content:space-between;
+  padding:8px 0;border-top:1px solid var(--grid);font-size:13px;flex-wrap:wrap}
+.sdrow .nm{font-weight:700}
+.sdbar{display:grid;grid-template-columns:minmax(90px,1fr) 2fr auto;gap:8px;align-items:center;
+  font-size:12.5px;padding:4px 0}
+.sdbar i{display:block;height:6px;border-radius:3px;background:var(--grid);position:relative}
+.sdbar i::after{content:"";position:absolute;inset:0 auto 0 0;width:var(--pct,0%);
+  background:var(--accent);border-radius:3px}
+.sdscroll{overflow-x:auto}
+@media(min-width:720px){
+  .sdgrid{grid-template-columns:repeat(3,1fr)}
+  .sdslots{grid-template-columns:1fr 1fr}
+}
+/* ==== END showdown validator css ==== */
+
+</style>
 </head>
 
 
@@ -2678,8 +2733,60 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <button data-s="bankroll">Bankroll<span class="kbd">5</span></button>
     <button data-s="screener">Screener<span class="kbd">6</span></button>
     <button data-s="standings">Standings<span class="kbd">7</span></button>
-    <button data-s="method">Method<span class="kbd">8</span></button>
+    <button data-s="showdown">Showdown<span class="kbd">8</span></button>
+    <button data-s="method">Method<span class="kbd">9</span></button>
   </div>
+
+
+<!-- ==== BEGIN showdown validator UI ==== -->
+<section class="sheet" id="sh-showdown" hidden>
+  <div class="card">
+    <h3>8 · Showdown validator <span class="rt" id="sdState"></span></h3>
+    <p class="sub">Judges how a DK Showdown lineup is <em>built</em>, and how likely it is to be duplicated.
+    It does not build lineups and it does not tell you a lineup is good. Load the player pool on the
+    <a href="#slate" data-goto="slate">Slate</a> sheet first — this sheet reads that pool.</p>
+    <div class="sdgrid">
+      <label class="fld"><span>Favourite</span><select class="fi" id="sdFav"></select></label>
+      <label class="fld"><span>Spread <span class="hint">— favourite's number</span></span>
+        <input class="fi" id="sdSpread" type="number" step="0.5" value="-3.5" inputmode="decimal"></label>
+      <label class="fld"><span>Total</span><input class="fi" id="sdTotal" type="number" step="0.5" value="44.5" inputmode="decimal"></label>
+    </div>
+    <p class="note" id="sdPoolMsg"></p>
+  </div>
+
+  <div class="card">
+    <h3>The lineup</h3>
+    <div class="sdmeter" id="sdMeter"><b id="sdSal">$0</b><span id="sdSalNote">of $50,000</span><i id="sdBar"></i></div>
+    <div class="sdslots" id="sdSlots"></div>
+    <div class="btnrow">
+      <button class="btn sm" id="sdCheck">Validate</button>
+      <button class="btn sm ghost" id="sdAdd">Add to portfolio</button>
+      <button class="btn sm ghost" id="sdClear">Clear</button>
+    </div>
+    <p class="note" id="sdMsg"></p>
+  </div>
+
+  <div class="card" id="sdResultCard" hidden>
+    <h3>Result <span class="rt" id="sdBadge"></span></h3>
+    <div id="sdResult"></div>
+  </div>
+
+  <div class="card">
+    <h3>Portfolio <span class="rt" id="sdCount">0 lineups</span></h3>
+    <p class="sub">Paste DK upload rows (<span class="mono">CPT,FLEX,FLEX,FLEX,FLEX,FLEX</span> of player names or DK ids),
+    one lineup per line, or add them from the builder above.</p>
+    <textarea class="fi mono" id="sdPaste" rows="4" spellcheck="false" placeholder="Josh Allen,Stefon Diggs,..."></textarea>
+    <div class="btnrow">
+      <button class="btn sm" id="sdImport">Import rows</button>
+      <button class="btn sm ghost" id="sdValidateAll">Validate all</button>
+      <button class="btn sm ghost" id="sdExport">Copy DK upload CSV</button>
+      <button class="btn sm ghost" id="sdWipe">Empty it</button>
+    </div>
+    <p class="note" id="sdPortMsg"></p>
+    <div id="sdPortfolio"></div>
+  </div>
+</section>
+<!-- ==== END showdown validator UI ==== -->
 
 <!-- ======================================================= SLATE -->
 <section class="sheet" id="sh-slate" hidden>
@@ -7119,9 +7226,921 @@ async function doStandingsImport(text) {
   }
 }
 
+
+/* ==== BEGIN showdown validator (generated by work/patch-showdown-validator.py) ==== */
+/* Pasted from dfs/showdown/ by work/patch-showdown-validator.py — do not hand-edit
+   this block. Edit the module and re-run the script. The same source runs headless
+   under `node --test tests/showdown-validator.test.js`. */
+/* ---- source: dfs/showdown/construction.js ---- */
+/**
+ * Showdown construction helpers — build shape, stack profile, max-projection baseline.
+ *
+ * DK Showdown only (C3): 6 spots, 1 CPT at 1.5x salary and 1.5x points, $50,000 cap,
+ * players from exactly two teams.
+ *
+ * Pure and deterministic (C5): no randomness, no network, no clock.
+ *
+ * Module format matches the other DFS modules in work/ (UMD, global + CommonJS) so the
+ * source can be pasted into dfs.html under a `source:` comment the way dfs-engine.js and
+ * dfs-validators.js already are, and still be require()d headless by the tests.
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === "object" && module.exports) module.exports = api;
+  if (root) root.DDSDBuild = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  "use strict";
+
+  var SALARY_CAP = 50000;
+  var ROSTER_SIZE = 6;
+  var CPT_MULT = 1.5;
+
+  function indexPlayers(slate) {
+    var by = {};
+    (slate.players || []).forEach(function (p) { if (p && p.id != null) by[String(p.id)] = p; });
+    return by;
+  }
+
+  /** Resolve a lineup's ids to Player objects. Returns null for any id not in the slate. */
+  function resolve(lineup, slate) {
+    var by = indexPlayers(slate);
+    var cpt = by[String(lineup.cpt)] || null;
+    var flex = (lineup.flex || []).map(function (id) { return by[String(id)] || null; });
+    return { cpt: cpt, flex: flex, all: [cpt].concat(flex) };
+  }
+
+  function salaryOf(p, isCpt) {
+    var base = +p.salary || 0;
+    return isCpt ? base * CPT_MULT : base;
+  }
+
+  function lineupSalary(res) {
+    var t = res.cpt ? salaryOf(res.cpt, true) : 0;
+    res.flex.forEach(function (p) { if (p) t += salaryOf(p, false); });
+    return t;
+  }
+
+  function lineupProj(res) {
+    var t = res.cpt ? (+res.cpt.proj || 0) * CPT_MULT : 0;
+    res.flex.forEach(function (p) { if (p) t += (+p.proj || 0); });
+    return t;
+  }
+
+  /** The two teams the slate is played between. Order is [away, home] when both are given. */
+  function slateTeams(slate) {
+    if (slate.away && slate.home) return [slate.away, slate.home];
+    var seen = [];
+    (slate.players || []).forEach(function (p) {
+      if (p && p.team && seen.indexOf(p.team) < 0) seen.push(p.team);
+    });
+    return seen;
+  }
+
+  /**
+   * The favored team, plus a note when we had to infer it.
+   * A pick'em (spread 0) is scored as home-favored so the build type still has a stable
+   * orientation; the note travels with the result so the UI never presents that as read.
+   */
+  function favoriteOf(slate) {
+    var notes = [];
+    var fav = slate.favorite;
+    if (+slate.spread === 0) {
+      fav = slate.home;
+      notes.push({ code: "pickem_favorite", message: "Spread is 0; the home team is treated as the favorite for build orientation." });
+    }
+    if (!fav) {
+      fav = slate.home || slateTeams(slate)[0] || null;
+      notes.push({ code: "favorite_missing", message: "No favorite on the slate; build orientation is a guess." });
+    }
+    return { favorite: fav, notes: notes };
+  }
+
+  /**
+   * Build shape, always written favorite-first: "5-1" is 5 favorite / 1 dog, "1-5" the
+   * reverse. heavySide is the team with more players (the CPT counts as a player) and is
+   * null for a 3-3, which has no heavy side by definition.
+   */
+  function classifyBuild(lineup, slate) {
+    var res = resolve(lineup, slate);
+    var fav = favoriteOf(slate);
+    var favSide = 0, dogSide = 0;
+    var count = {};
+    res.all.forEach(function (p) {
+      if (!p) return;
+      count[p.team] = (count[p.team] || 0) + 1;
+      if (p.team === fav.favorite) favSide++; else dogSide++;
+    });
+    var heavySide = null;
+    var teams = Object.keys(count);
+    if (teams.length === 1) heavySide = teams[0];
+    else if (favSide > dogSide) heavySide = fav.favorite;
+    else if (dogSide > favSide) heavySide = teams.filter(function (t) { return t !== fav.favorite; })[0] || null;
+    return {
+      type: favSide + "-" + dogSide,
+      heavySide: heavySide,
+      favSide: favSide,
+      dogSide: dogSide,
+      favorite: fav.favorite,
+      notes: fav.notes
+    };
+  }
+
+  function isWRTE(p) { return p.pos === "WR" || p.pos === "TE"; }
+
+  /**
+   * Stack profile, all counts taken relative to the CAPTAIN's team.
+   * WR/TE counts are FLEX-only — the captain is excluded from his own stack count, so a
+   * CPT WR with one teammate WR reads as sameTeamWRTE:1.
+   */
+  function stackProfile(lineup, slate) {
+    var res = resolve(lineup, slate);
+    var cpt = res.cpt;
+    var out = {
+      sameTeamWRTE: 0, oppWRTE: 0, sameTeamRB: 0,
+      hasOwnQB: false, hasOppQB: false,
+      ownK: false, oppK: false,
+      dstTeammates: 0
+    };
+    if (!cpt) return out;
+    var own = cpt.team;
+
+    res.flex.forEach(function (p) {
+      if (!p) return;
+      var same = p.team === own;
+      if (isWRTE(p)) { if (same) out.sameTeamWRTE++; else out.oppWRTE++; }
+      if (p.pos === "RB" && same) out.sameTeamRB++;
+    });
+
+    res.all.forEach(function (p) {
+      if (!p) return;
+      var same = p.team === own;
+      if (p.pos === "QB") { if (same) out.hasOwnQB = true; else out.hasOppQB = true; }
+      if (p.pos === "K") { if (same) out.ownK = true; else out.oppK = true; }
+    });
+
+    // Teammates behind the defense, counting the captain. The D/ST itself is not its own
+    // teammate, so a 5-man onslaught with the D/ST reads as 4.
+    var dst = res.all.filter(function (p) { return p && p.pos === "DST"; })[0];
+    if (dst) {
+      out.dstTeammates = res.all.filter(function (p) {
+        return p && p !== dst && p.team === dst.team;
+      }).length;
+    }
+    return out;
+  }
+
+  /**
+   * Projection total of the best legal lineup on the slate, with the captain at 1.5x.
+   *
+   * Brute force over every captain, then a greedy-with-backtracking fill of the five FLEX
+   * spots. The pool is one game — at most ~40 players — so the exhaustive captain loop is
+   * cheap, and within a captain the five best-projecting affordable players are optimal
+   * unless the cap binds, which the salary-aware pass handles.
+   *
+   * Cached per slate id. A slate object without an id is computed every call rather than
+   * risk serving a stale number for a changed pool.
+   */
+  var maxProjCache = {};
+  function computeSlateMaxProj(slate) {
+    var key = slate && slate.id;
+    if (key && Object.prototype.hasOwnProperty.call(maxProjCache, key)) return maxProjCache[key];
+
+    var pool = (slate.players || []).filter(function (p) { return p && +p.salary > 0; });
+    var best = 0;
+    for (var c = 0; c < pool.length; c++) {
+      var cpt = pool[c];
+      var budget = SALARY_CAP - salaryOf(cpt, true);
+      if (budget < 0) continue;
+      var rest = pool.filter(function (p) { return p !== cpt; })
+        .sort(function (a, b) { return (+b.proj || 0) - (+a.proj || 0); });
+      var total = bestFive(rest, budget);
+      if (total == null) continue;
+      var score = (+cpt.proj || 0) * CPT_MULT + total;
+      if (score > best) best = score;
+    }
+    if (key) maxProjCache[key] = best;
+    return best;
+  }
+
+  /**
+   * Highest projection reachable with exactly five of `rest` under `budget`.
+   * Depth-first over a projection-sorted pool with two prunes: a remaining-best bound and
+   * a cheapest-tail feasibility bound. Returns null when five cannot be afforded.
+   */
+  function bestFive(rest, budget) {
+    var n = rest.length;
+    if (n < 5) return null;
+    // Suffix maxima of projection and minima of salary, for the two prunes.
+    var cheapestTail = new Array(n + 1).fill(0);
+    var salSorted = rest.map(function (p) { return +p.salary || 0; }).slice().sort(function (a, b) { return a - b; });
+    var cheapestFive = salSorted.slice(0, 5).reduce(function (a, b) { return a + b; }, 0);
+    if (cheapestFive > budget) return null;
+
+    var bestProjFrom = new Array(n + 1).fill(0);
+    for (var i = n - 1; i >= 0; i--) bestProjFrom[i] = Math.max(bestProjFrom[i + 1], +rest[i].proj || 0);
+    var minSalFrom = new Array(n + 1).fill(Infinity);
+    for (var j = n - 1; j >= 0; j--) minSalFrom[j] = Math.min(minSalFrom[j + 1], +rest[j].salary || 0);
+    cheapestTail = minSalFrom;
+
+    var best = null;
+    (function walk(start, picked, spent, proj) {
+      if (picked === 5) { if (best == null || proj > best) best = proj; return; }
+      var need = 5 - picked;
+      if (start + need > n) return;
+      if (spent + cheapestTail[start] * need > budget) return;
+      if (best != null && proj + bestProjFrom[start] * need <= best) return;
+      for (var k = start; k <= n - need; k++) {
+        var p = rest[k];
+        var s = spent + (+p.salary || 0);
+        if (s > budget) continue;
+        walk(k + 1, picked + 1, s, proj + (+p.proj || 0));
+      }
+    })(0, 0, 0, 0);
+    return best;
+  }
+
+  function clearCache() { maxProjCache = {}; }
+
+  return {
+    SALARY_CAP: SALARY_CAP,
+    ROSTER_SIZE: ROSTER_SIZE,
+    CPT_MULT: CPT_MULT,
+    resolve: resolve,
+    salaryOf: salaryOf,
+    lineupSalary: lineupSalary,
+    lineupProj: lineupProj,
+    slateTeams: slateTeams,
+    favoriteOf: favoriteOf,
+    classifyBuild: classifyBuild,
+    stackProfile: stackProfile,
+    computeSlateMaxProj: computeSlateMaxProj,
+    clearCache: clearCache
+  };
+});
+/* ---- source: dfs/showdown/rules.js ---- */
+// Rule thresholds derived from proprietary research. Do not add source statistics here.
+//
+// Every rule is a condition, a severity and a GENERIC sentence. No percentages, no
+// frequencies, no counts of how often a shape wins, no provider names, no article
+// references. If a future rule cannot be explained without a statistic, it does not go in
+// this file — the explanation belongs in the private research notes, not the public repo.
+//
+// Severity:
+//   hard  likely a construction error
+//   soft  deviates from what tends to win
+//   info  context only, no judgement implied
+//
+// Adding a rule: append an object with a stable id, keep ids monotonic, and give it at
+// least one firing and one non-firing test in tests/showdown-validator.test.js. Ids R21
+// and R22 are permanently reserved for the portfolio rules P21/P22 so cross-references in
+// the research notes stay valid; do not reuse them for lineup rules.
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === "object" && module.exports) module.exports = api;
+  if (root) root.DDSDRules = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  "use strict";
+
+  var MOBILE_QB_RUSH_SHARE = 0.20;
+
+  function isMobileQB(p) {
+    return !!p && p.pos === "QB" && typeof p.rushShare === "number" && p.rushShare >= MOBILE_QB_RUSH_SHARE;
+  }
+
+  /**
+   * Rule objects.
+   *   when(ctx)     -> truthy to fire. Return undefined to SKIP (missing data), which is
+   *                    different from returning false (evaluated, did not fire).
+   *   severity      -> string, or fn(ctx) for the rules whose weight depends on the roster
+   *   needs         -> optional guard: "ownership" rules are skipped when ownership is
+   *                    incomplete, so a missing column never produces a confident flag
+   *
+   * ctx = { cpt, flex, all, build, stacks, own, slate, pool, fired }
+   */
+  var RULES = [
+    {
+      id: "R01", category: "cpt_stack",
+      severity: function (ctx) { return isMobileQB(ctx.cpt) ? "info" : "soft"; },
+      when: function (ctx) { return ctx.cpt.pos === "QB" && ctx.stacks.sameTeamWRTE === 0; },
+      message: "Captain quarterback with none of his own pass catchers.",
+      fix: "Add at least one same-team pass catcher.",
+      // A rushing quarterback carries his own ceiling, so the same shape is context
+      // rather than a deviation.
+      messageAlt: "Captain quarterback with none of his own pass catchers, which a rushing quarterback can carry on his own.",
+      altWhen: function (ctx) { return isMobileQB(ctx.cpt); }
+    },
+    {
+      id: "R02", category: "bringback", severity: "soft",
+      when: function (ctx) { return ctx.cpt.pos === "QB" && ctx.stacks.oppWRTE === 0; },
+      message: "Captain quarterback with no pass catcher from the other side.",
+      fix: "Consider one opposing pass catcher."
+    },
+    {
+      id: "R03", category: "kicker", severity: "soft",
+      when: function (ctx) {
+        if (ctx.cpt.pos !== "QB") return false;
+        if (!ctx.stacks.oppK) return false;
+        var ownKAvailable = ctx.pool.some(function (p) { return p.pos === "K" && p.team === ctx.cpt.team; });
+        if (!ownKAvailable) return undefined;
+        return !ctx.stacks.ownK;
+      },
+      message: "The opposing kicker is rostered while the captain's own kicker is available and is not.",
+      fix: "Prefer the captain's own kicker."
+    },
+    {
+      id: "R04", category: "cpt_stack", severity: "hard",
+      when: function (ctx) { return ctx.cpt.pos === "RB" && ctx.stacks.sameTeamWRTE >= 3; },
+      message: "Captain running back behind a full stack of his own pass catchers.",
+      fix: "Drop to two or fewer same-team pass catchers."
+    },
+    {
+      id: "R05", category: "cpt_stack", severity: "hard",
+      when: function (ctx) { return ctx.cpt.pos === "WR" && ctx.stacks.sameTeamWRTE >= 2; },
+      message: "Captain receiver alongside two or more of his own pass catchers, which splits one passing game too many ways.",
+      fix: "Move the captain to this team's QB, or cut to one teammate pass catcher."
+    },
+    {
+      id: "R06", category: "bringback", severity: "soft",
+      when: function (ctx) { return ctx.cpt.pos === "WR" && ctx.stacks.oppWRTE === 0; },
+      message: "Captain receiver with no pass catcher from the other side.",
+      fix: "Consider one opposing pass catcher."
+    },
+    {
+      id: "R07", category: "qb_presence", severity: "soft",
+      when: function (ctx) { return ctx.cpt.pos === "WR" && !ctx.stacks.hasOwnQB && !ctx.stacks.hasOppQB; },
+      message: "Captain receiver with no quarterback in the lineup at all.",
+      fix: "Naked-receiver builds usually carry the opposing quarterback."
+    },
+    {
+      id: "R08", category: "cpt_stack", severity: "hard",
+      when: function (ctx) { return ctx.cpt.pos === "TE" && !ctx.stacks.hasOwnQB; },
+      message: "Captain tight end without the quarterback throwing to him.",
+      fix: "Pair the captain tight end with his QB."
+    },
+    {
+      id: "R09", category: "build_cpt", severity: "hard",
+      when: function (ctx) { return ctx.build.type === "5-1" && ctx.cpt.team !== ctx.build.favorite; },
+      message: "Captain from the light side of an unbalanced build is a low-frequency winner.",
+      fix: "Captain should come from the heavy side."
+    },
+    {
+      id: "R10", category: "build_qb", severity: "hard",
+      when: function (ctx) {
+        if (ctx.build.type !== "5-1") return false;
+        return !ctx.all.some(function (p) { return p.pos === "QB" && p.team === ctx.build.heavySide; });
+      },
+      message: "An unbalanced build stacked on one side without that side's quarterback.",
+      fix: "The heavy side of an onslaught almost always includes its QB."
+    },
+    {
+      id: "R11", category: "bringback", severity: "hard",
+      when: function (ctx) {
+        if (ctx.build.type !== "5-1") return false;
+        var lone = ctx.all.filter(function (p) { return p.team !== ctx.build.heavySide; });
+        return lone.length === 1 && lone[0].pos === "DST";
+      },
+      message: "The single player from the other side is the defense, which cannot score with the side it is bringing back from.",
+      fix: "Use a skill player as the single bring-back."
+    },
+    {
+      id: "R12", category: "build_cpt", severity: "soft",
+      when: function (ctx) { return ctx.build.type === "4-2" && ctx.cpt.team !== ctx.build.favorite; },
+      message: "Captain from the lighter side of the build.",
+      fix: "Captain usually comes from the heavy side."
+    },
+    {
+      id: "R13", category: "bringback", severity: "soft",
+      when: function (ctx) {
+        if (ctx.build.type !== "4-2") return false;
+        return ctx.all.some(function (p) {
+          return p.team !== ctx.build.heavySide && (p.pos === "DST" || p.pos === "K");
+        });
+      },
+      message: "A bring-back slot spent on a kicker or a defense rather than a skill player.",
+      fix: "Bring-back pieces are usually skill players."
+    },
+    {
+      id: "R14", category: "dst", severity: "soft",
+      when: function (ctx) {
+        if (!ctx.all.some(function (p) { return p.pos === "DST"; })) return false;
+        return ctx.stacks.dstTeammates < 3;
+      },
+      message: "A defense without much of its own offense alongside it.",
+      fix: "Defenses win with three or more teammates."
+    },
+    {
+      id: "R15", category: "dst_k", severity: "soft",
+      when: function (ctx) {
+        return !ctx.all.some(function (p) { return p.pos === "DST" || p.pos === "K"; });
+      },
+      message: "Six skill players, no kicker and no defense.",
+      fix: "Six skill players should be a deliberate choice."
+    },
+    {
+      id: "R16", category: "build", severity: "info",
+      when: function (ctx) { return ctx.build.type === "3-3"; },
+      message: "Balanced builds are the lowest-conviction script.",
+      fix: "Pick a side if you have a read on one."
+    },
+    {
+      id: "R17", category: "dupe", severity: "hard", needs: "ownership",
+      when: function (ctx) {
+        if (ctx.own.relativeProj == null) return undefined;
+        return ctx.own.cumulative >= 2.00 && ctx.own.relativeProj >= 0.99;
+      },
+      message: "Very high duplication risk: a popular roster at essentially the maximum-projection build.",
+      fix: "Change the captain or swap one popular piece for a similar-projection alternative."
+    },
+    {
+      id: "R18", category: "dupe", severity: "soft", needs: "ownership",
+      when: function (ctx) {
+        if (ctx.own.relativeProj == null) return undefined;
+        return ctx.own.cumulative >= 1.80 && ctx.own.cumulative < 2.00 &&
+               ctx.own.relativeProj >= 0.95 && ctx.own.relativeProj < 0.99;
+      },
+      message: "Elevated duplication risk: a popular roster close to the maximum-projection build.",
+      fix: "One swap off the chalk usually clears this band."
+    },
+    {
+      id: "R19", category: "dupe", severity: "soft", needs: "ownership",
+      when: function (ctx) {
+        if (ctx.own.relativeProj == null) return undefined;
+        if (ctx.fired.R17 || ctx.fired.R18) return false;
+        return ctx.own.relativeProj > 0.95;
+      },
+      message: "This roster sits in the maximum-projection band.",
+      fix: "Sharp portfolios sit just below the max-projection band."
+    },
+    {
+      id: "R20", category: "cpt_own", severity: "info",
+      when: function (ctx) {
+        if (typeof ctx.cpt.cptOwn !== "number") return undefined;
+        return ctx.cpt.cptOwn < 0.05;
+      },
+      message: "A captain the field is largely ignoring.",
+      fix: "Low-owned captains need a projection reason, not just leverage."
+    },
+    {
+      id: "R23", category: "kicker", severity: "info",
+      when: function (ctx) {
+        if (ctx.build.type !== "5-1") return false;
+        if (typeof ctx.slate.favKickerFieldUsage51 !== "number") return undefined;
+        var favK = ctx.all.some(function (p) { return p.pos === "K" && p.team === ctx.build.favorite; });
+        return favK && ctx.slate.favKickerFieldUsage51 > 0.40;
+      },
+      message: "The favoured kicker in an onslaught is no longer a quiet piece.",
+      fix: "Favoured kicker in onslaughts is now well-used by the field."
+    },
+    {
+      id: "R24", category: "kicker", severity: "info", lean: "positive",
+      when: function (ctx) {
+        if (typeof ctx.slate.spread !== "number") return undefined;
+        var dog = ctx.all.some(function (p) { return p.pos === "K" && p.team !== ctx.build.favorite; });
+        return dog && Math.abs(ctx.slate.spread) <= 7;
+      },
+      message: "Underdog kicker in a close game.",
+      fix: "Underdog kickers in tight spreads are a reasonable lean."
+    },
+    {
+      id: "R25", category: "cpt_own", severity: "info",
+      when: function (ctx) { return ctx.cpt.pos === "K"; },
+      message: "Kicker at captain.",
+      fix: "Kicker captains are viable but rare; make sure there is a ceiling case."
+    }
+  ];
+
+  /** Portfolio-level rules. Evaluated by validatePortfolio, never by validateLineup. */
+  var PORTFOLIO_RULES = [
+    { id: "P21a", category: "cpt_diversity", severity: "soft", minLineups: 10,
+      message: "The portfolio leans on very few captains.",
+      fix: "Spread captains across at least six players once you are past ten lineups." },
+    { id: "P21b", category: "cpt_diversity", severity: "soft",
+      message: "One captain carries too much of the portfolio.",
+      fix: "Trim the heaviest captain's exposure." },
+    { id: "P22", category: "hygiene", severity: "soft",
+      message: "Too many lineups in the portfolio carry a hard construction flag.",
+      fix: "Fix or drop the flagged lineups before uploading." },
+    { id: "P26", category: "build", severity: "info",
+      message: "Build-type distribution across the portfolio.",
+      fix: "A portfolio weighted toward balanced builds is a portfolio without a script." },
+    { id: "P27", category: "leverage", severity: "info",
+      message: "Players whose portfolio exposure is far from their projected ownership.",
+      fix: "Deliberate leverage is fine; accidental leverage is worth a second look." }
+  ];
+
+  return {
+    MOBILE_QB_RUSH_SHARE: MOBILE_QB_RUSH_SHARE,
+    isMobileQB: isMobileQB,
+    RULES: RULES,
+    PORTFOLIO_RULES: PORTFOLIO_RULES
+  };
+});
+/* ---- source: dfs/showdown/dupeRisk.js ---- */
+/**
+ * Duplication risk for a DK Showdown lineup.
+ *
+ * Three independent readings, then a tier:
+ *   cumulative   Σ own(flex) + cptOwn(cpt)  — how much of the field's attention the roster holds
+ *   product      Π own(flex) × cptOwn(cpt)  — the naive independent-draw likelihood
+ *   relativeProj lineup projection ÷ the slate's max-projection lineup
+ *
+ * The tier is the only thing the UI shows. Expected dupe COUNTS are deliberately not
+ * produced here: they are a function of field size and entry count this module does not
+ * take, and publishing them invites reading a modelled number as a measured one.
+ * work/dfs-dupe-model.js remains the place for E[dupes] on the classic side.
+ *
+ * Ownership is a FRACTION (0–1) in this module, matching the Player contract. The older
+ * DFS ingest carries ownership on a 0–100 scale; normalise at the boundary, not here.
+ */
+(function (root, factory) {
+  var api = factory(
+    null
+  );
+  if (typeof module === "object" && module.exports) module.exports = api;
+  if (root) root.DDSDDupe = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function (Build) {
+  "use strict";
+
+  function build() {
+    return Build || (typeof globalThis !== "undefined" ? globalThis.DDSDBuild : null);
+  }
+
+  function num(v) { return typeof v === "number" && isFinite(v) ? v : null; }
+
+  /**
+   * Captain ownership, falling back to FLEX ownership when the CPT-specific number is
+   * absent. The fallback overstates the captain slot badly, so it is always reported as a
+   * data_missing note rather than silently absorbed.
+   */
+  function cptOwnership(cpt) {
+    var c = num(cpt && cpt.cptOwn);
+    if (c != null) return { value: c, note: null };
+    var f = num(cpt && cpt.own);
+    if (f != null) {
+      return {
+        value: f,
+        note: { code: "data_missing", field: "cptOwn", message: "No captain ownership for " + cpt.name + "; FLEX ownership used instead, which overstates the captain slot." }
+      };
+    }
+    return { value: null, note: { code: "data_missing", field: "cptOwn", message: "No ownership for " + (cpt ? cpt.name : "the captain") + "; duplication rules are skipped." } };
+  }
+
+  /**
+   * @returns {{cumulative:number|null, product:number|null, logProduct:number|null,
+   *            relativeProj:number|null, complete:boolean, notes:Array}}
+   */
+  function ownershipProfile(lineup, slate, res) {
+    var B = build();
+    res = res || B.resolve(lineup, slate);
+    var notes = [];
+    var missing = false;
+
+    var cptOwn = cptOwnership(res.cpt);
+    if (cptOwn.note) notes.push(cptOwn.note);
+    if (cptOwn.value == null) missing = true;
+
+    var cumulative = cptOwn.value == null ? null : cptOwn.value;
+    var product = cptOwn.value == null ? null : cptOwn.value;
+
+    res.flex.forEach(function (p) {
+      if (!p) return;
+      var o = num(p.own);
+      if (o == null) {
+        missing = true;
+        notes.push({ code: "data_missing", field: "own", message: "No ownership for " + p.name + "; duplication rules are skipped." });
+        return;
+      }
+      if (cumulative != null) cumulative += o;
+      if (product != null) product *= o;
+    });
+
+    if (missing) { cumulative = null; product = null; }
+
+    var maxProj = num(slate.slateMaxProj);
+    if (maxProj == null) maxProj = B.computeSlateMaxProj(slate);
+    var relativeProj = null;
+    if (maxProj > 0) relativeProj = B.lineupProj(res) / maxProj;
+    else notes.push({ code: "data_missing", field: "slateMaxProj", message: "No max-projection baseline for this slate; the relative-projection reading is unavailable." });
+
+    return {
+      cumulative: cumulative,
+      product: product,
+      logProduct: product != null && product > 0 ? Math.log10(product) : null,
+      relativeProj: relativeProj,
+      complete: !missing,
+      notes: notes
+    };
+  }
+
+  /**
+   * Tier from the 2-D grid of cumulative ownership against relative projection.
+   *
+   * severe   both readings are at their worst — the roster is popular AND it is the
+   *          lineup the field's optimiser also lands on
+   * elevated both readings are near the top of their band
+   * moderate one reading alone is high
+   * low      neither
+   *
+   * `fired` is the set of rule ids the engine has already evaluated, so the tier and the
+   * flags can never disagree about which band a lineup is in.
+   */
+  function riskTier(profile, fired) {
+    fired = fired || {};
+    if (!profile.complete || profile.cumulative == null) {
+      return { tier: "unknown", note: "Ownership is incomplete, so duplication cannot be read." };
+    }
+    if (fired.R17) return { tier: "severe", note: "Popular roster at essentially the maximum-projection build — the shape most likely to be shared." };
+    if (fired.R18) return { tier: "elevated", note: "Popular roster close to the maximum-projection build." };
+    if ((profile.relativeProj != null && profile.relativeProj > 0.95) || profile.cumulative >= 1.80) {
+      return { tier: "moderate", note: "One of the two duplication readings is high; the other is not." };
+    }
+    return { tier: "low", note: "Neither ownership nor projection puts this roster in a crowded band." };
+  }
+
+  return {
+    cptOwnership: cptOwnership,
+    ownershipProfile: ownershipProfile,
+    riskTier: riskTier
+  };
+});
+/* ---- source: dfs/showdown/validator.js ---- */
+/**
+ * DK Showdown construction validator — the engine.
+ *
+ * validateLineup(lineup, slate)      -> one lineup's build, stacks, ownership and flags
+ * validatePortfolio(lineups, slate)  -> per-lineup results plus portfolio-level findings
+ *
+ * The engine holds no thresholds. Every judgement lives in rules.js, so a rule can be
+ * retuned without touching this file. Pure and deterministic (C5).
+ *
+ * Hard errors are not rule flags. A lineup that is not a legal DK Showdown entry comes
+ * back valid:false with `errors` populated and NO rules evaluated — grading construction
+ * on an illegal roster would be advice about a lineup that cannot be entered.
+ */
+(function (root, factory) {
+  var req = typeof require === "function" ? require : null;
+  var api = factory(
+    null,
+    null,
+    null
+  );
+  if (typeof module === "object" && module.exports) module.exports = api;
+  if (root) root.DDSDValidator = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function (BuildIn, RulesIn, DupeIn) {
+  "use strict";
+
+  var g = typeof globalThis !== "undefined" ? globalThis : {};
+  function B() { return BuildIn || g.DDSDBuild; }
+  function R() { return RulesIn || g.DDSDRules; }
+  function D() { return DupeIn || g.DDSDDupe; }
+
+  var SEVERITY_ORDER = { hard: 0, soft: 1, info: 2 };
+
+  /** Legality, before any judgement. Returns [] for a legal entry. */
+  function hardErrors(lineup, slate, res) {
+    var Bx = B();
+    var errors = [];
+    var ids = [lineup.cpt].concat(lineup.flex || []);
+
+    if (ids.length !== Bx.ROSTER_SIZE) {
+      errors.push({ code: "roster_size", message: "A Showdown lineup is one captain and five flex players; this has " + ids.length + "." });
+    }
+    var unresolved = [];
+    if (!res.cpt) unresolved.push(String(lineup.cpt));
+    res.flex.forEach(function (p, i) { if (!p) unresolved.push(String((lineup.flex || [])[i])); });
+    if (unresolved.length) {
+      errors.push({ code: "unknown_player", message: "Not on this slate: " + unresolved.join(", ") + "." });
+      return errors; // everything below needs resolved players
+    }
+
+    var seen = {}, dupes = [];
+    res.all.forEach(function (p) {
+      if (seen[p.id]) dupes.push(p.name);
+      seen[p.id] = true;
+    });
+    if (dupes.length) {
+      errors.push({ code: "duplicate_player", message: "The same player fills more than one slot: " + dupes.join(", ") + "." });
+    }
+
+    var salary = Bx.lineupSalary(res);
+    if (salary > Bx.SALARY_CAP) {
+      errors.push({ code: "over_cap", message: "Salary " + salary.toLocaleString("en-US") + " is over the " + Bx.SALARY_CAP.toLocaleString("en-US") + " cap." });
+    }
+
+    var teams = [];
+    res.all.forEach(function (p) { if (teams.indexOf(p.team) < 0) teams.push(p.team); });
+    var allowed = Bx.slateTeams(slate);
+    var foreign = teams.filter(function (t) { return allowed.indexOf(t) < 0; });
+    if (foreign.length) {
+      errors.push({ code: "foreign_team", message: "Players from outside this game: " + foreign.join(", ") + "." });
+    } else if (teams.length > 2) {
+      errors.push({ code: "too_many_teams", message: "A Showdown lineup uses exactly two teams; this has " + teams.length + "." });
+    }
+
+    return errors;
+  }
+
+  function ownBand(v) {
+    if (typeof v !== "number") return null;
+    if (v < 0.05) return "<5";
+    if (v < 0.25) return "5-25";
+    if (v < 0.40) return "25-40";
+    return "40+";
+  }
+
+  function severityOf(rule, ctx) {
+    return typeof rule.severity === "function" ? rule.severity(ctx) : rule.severity;
+  }
+
+  /**
+   * @param {{id?:string, cpt:string, flex:string[]}} lineup
+   * @param {object} slate
+   * @returns {object} see dfs/showdown/README.md for the full output shape
+   */
+  function validateLineup(lineup, slate) {
+    var Bx = B(), Rx = R(), Dx = D();
+    var res = Bx.resolve(lineup, slate);
+    var out = {
+      lineupId: lineup.id != null ? String(lineup.id) : null,
+      valid: true,
+      errors: [],
+      notes: [],
+      flags: [],
+      score: { hard: 0, soft: 0, info: 0 }
+    };
+
+    var errors = hardErrors(lineup, slate, res);
+    if (errors.length) {
+      out.valid = false;
+      out.errors = errors;
+      return out;
+    }
+
+    var build = Bx.classifyBuild(lineup, slate);
+    var stacks = Bx.stackProfile(lineup, slate);
+    var own = Dx.ownershipProfile(lineup, slate, res);
+    build.notes.forEach(function (n) { out.notes.push(n); });
+    own.notes.forEach(function (n) { out.notes.push(n); });
+
+    var fired = {};
+    var ctx = {
+      cpt: res.cpt, flex: res.flex, all: res.all,
+      build: build, stacks: stacks, own: own,
+      slate: slate, pool: slate.players || [],
+      fired: fired
+    };
+
+    Rx.RULES.forEach(function (rule) {
+      if (rule.needs === "ownership" && !own.complete) return;
+      var hit;
+      try { hit = rule.when(ctx); } catch (e) {
+        out.notes.push({ code: "rule_error", message: "Rule " + rule.id + " could not be evaluated." });
+        return;
+      }
+      if (hit === undefined) {
+        out.notes.push({ code: "data_missing", rule: rule.id, message: "Rule " + rule.id + " needs data this slate does not carry." });
+        return;
+      }
+      if (!hit) return;
+      fired[rule.id] = true;
+      var sev = severityOf(rule, ctx);
+      var useAlt = typeof rule.altWhen === "function" && rule.altWhen(ctx) && rule.messageAlt;
+      var flag = {
+        rule: rule.id,
+        severity: sev,
+        category: rule.category,
+        message: useAlt ? rule.messageAlt : rule.message,
+        fix: rule.fix
+      };
+      if (rule.lean) flag.lean = rule.lean;
+      out.flags.push(flag);
+      out.score[sev]++;
+    });
+
+    out.flags.sort(function (a, b) {
+      var d = SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity];
+      return d !== 0 ? d : (a.rule < b.rule ? -1 : a.rule > b.rule ? 1 : 0);
+    });
+
+    var tier = Dx.riskTier(own, fired);
+    out.build = { type: build.type, heavySide: build.heavySide, favSide: build.favSide, dogSide: build.dogSide };
+    out.cpt = {
+      id: res.cpt.id, name: res.cpt.name, pos: res.cpt.pos, team: res.cpt.team,
+      side: res.cpt.team === build.favorite ? "fav" : "dog",
+      cptOwn: typeof res.cpt.cptOwn === "number" ? res.cpt.cptOwn : null,
+      ownBand: ownBand(typeof res.cpt.cptOwn === "number" ? res.cpt.cptOwn : res.cpt.own)
+    };
+    out.stacks = stacks;
+    out.salary = Bx.lineupSalary(res);
+    out.proj = Bx.lineupProj(res);
+    out.ownership = { cumulative: own.cumulative, product: own.product, logProduct: own.logProduct, relativeProj: own.relativeProj };
+    out.dupeRisk = { tier: tier.tier, note: tier.note };
+    return out;
+  }
+
+  function round(v, dp) {
+    var m = Math.pow(10, dp);
+    return Math.round(v * m) / m;
+  }
+
+  /**
+   * Portfolio findings. Per-lineup results come back in `lineups` in input order; the
+   * portfolio flags describe the set, not any one entry.
+   */
+  function validatePortfolio(lineups, slate) {
+    var Rx = R();
+    var results = (lineups || []).map(function (l) { return validateLineup(l, slate); });
+    var legal = results.filter(function (r) { return r.valid; });
+    var n = legal.length;
+    var out = {
+      lineups: results,
+      count: results.length,
+      legalCount: n,
+      flags: [],
+      cptExposure: [],
+      buildMix: {},
+      leverage: []
+    };
+    if (!n) return out;
+
+    var byRule = {};
+    Rx.PORTFOLIO_RULES.forEach(function (r) { byRule[r.id] = r; });
+    function raise(id, extra) {
+      var r = byRule[id];
+      var f = { rule: id, severity: r.severity, category: r.category, message: r.message, fix: r.fix };
+      if (extra) for (var k in extra) if (Object.prototype.hasOwnProperty.call(extra, k)) f[k] = extra[k];
+      out.flags.push(f);
+    }
+
+    // --- captain concentration (P21a / P21b) ---
+    var cptCount = {};
+    legal.forEach(function (r) {
+      var key = r.cpt.id;
+      cptCount[key] = cptCount[key] || { id: key, name: r.cpt.name, count: 0 };
+      cptCount[key].count++;
+    });
+    out.cptExposure = Object.keys(cptCount).map(function (k) {
+      return { id: cptCount[k].id, name: cptCount[k].name, count: cptCount[k].count, exposure: round(cptCount[k].count / n, 4) };
+    }).sort(function (a, b) {
+      return b.exposure - a.exposure || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+    });
+
+    var uniqueCpts = out.cptExposure.length;
+    if (n >= 10 && uniqueCpts < 6) raise("P21a", { uniqueCaptains: uniqueCpts });
+    var over = out.cptExposure.filter(function (e) { return e.exposure > 0.40; });
+    if (over.length) raise("P21b", { players: over.map(function (e) { return { name: e.name, exposure: e.exposure }; }) });
+
+    // --- hard-flag share (P22) ---
+    var withHard = legal.filter(function (r) { return r.score.hard > 0; }).length;
+    var hardShare = round(withHard / n, 4);
+    out.hardShare = hardShare;
+    if (hardShare > 0.10) raise("P22", { share: hardShare, lineups: withHard });
+
+    // --- build mix (P26) ---
+    legal.forEach(function (r) {
+      out.buildMix[r.build.type] = (out.buildMix[r.build.type] || 0) + 1;
+    });
+    Object.keys(out.buildMix).forEach(function (k) { out.buildMix[k] = { count: out.buildMix[k], share: round(out.buildMix[k] / n, 4) }; });
+    var balanced = out.buildMix["3-3"] ? out.buildMix["3-3"].share : 0;
+    raise("P26", { mix: out.buildMix, balancedShare: balanced, balancedHeavy: balanced > 0.35 });
+
+    // --- leverage (P27): portfolio exposure against projected FLEX ownership ---
+    var flexCount = {};
+    legal.forEach(function (r) {
+      var l = (lineups || [])[results.indexOf(r)];
+      (l.flex || []).forEach(function (id) {
+        flexCount[String(id)] = (flexCount[String(id)] || 0) + 1;
+      });
+    });
+    var byId = {};
+    (slate.players || []).forEach(function (p) { byId[String(p.id)] = p; });
+    Object.keys(flexCount).forEach(function (id) {
+      var p = byId[id];
+      if (!p || typeof p.own !== "number" || p.own <= 0) return;
+      var exposure = flexCount[id] / n;
+      var ratio = exposure / p.own;
+      if (ratio < 0.75 || ratio > 1.25) {
+        out.leverage.push({ id: id, name: p.name, exposure: round(exposure, 4), own: p.own, ratio: round(ratio, 3) });
+      }
+    });
+    out.leverage.sort(function (a, b) { return b.ratio - a.ratio || (a.name < b.name ? -1 : 1); });
+    if (out.leverage.length) raise("P27", { players: out.leverage });
+
+    return out;
+  }
+
+  return {
+    validateLineup: validateLineup,
+    validatePortfolio: validatePortfolio,
+    hardErrors: hardErrors,
+    ownBand: ownBand
+  };
+});
+/* ==== END showdown validator ==== */
+
 /* ---------------------------------------------------------------- sheets */
 
-const SHEETS = ["slate", "solver", "sim", "exposure", "bankroll", "screener", "standings", "method"];
+const SHEETS = ["slate", "solver", "sim", "exposure", "bankroll", "screener", "standings", "showdown", "method"];
 function show(name) {
   if (SHEETS.indexOf(name) < 0) name = "slate";
   S.sheet = name; save();
@@ -7132,16 +8151,281 @@ function show(name) {
   if (name === "bankroll") { renderBankroll(); }
   if (name === "screener") renderScreener();
   if (name === "standings") renderStandings();
+  if (name === "showdown") renderShowdown();
   if (name === "method") renderMethod();
   if (name === "sim") renderSim();
   botContext();
 }
+
+
+/* ==== BEGIN showdown validator ui ==== */
+/* ---------------------------------------------------------------- showdown validator ui */
+/* Adapts the page's pool (work/dfs-slate-ingest.js shape: sal / own on a 0-100 scale) to
+   the validator's Player contract (salary / own as a 0-1 fraction). The scale conversion
+   lives here, at the boundary, and nowhere else. */
+const SD = { lineup: { cpt: "", flex: ["", "", "", "", ""] }, portfolio: [], lastSlate: null };
+
+function sdPool() {
+  return (S.players || [])
+    .filter(p => p && p.sal > 0)
+    .map(p => ({
+      id: p.dkId || (p.name + "|" + p.team),
+      name: p.name,
+      team: p.team,
+      pos: p.pos,
+      salary: p.sal,
+      proj: p.proj != null ? p.proj : 0,
+      own: p.own != null ? p.own / 100 : undefined,
+      cptOwn: p.cptOwn != null ? p.cptOwn / 100 : undefined
+    }));
+}
+
+function sdSlate() {
+  const players = sdPool();
+  const teams = [];
+  players.forEach(p => { if (p.team && teams.indexOf(p.team) < 0) teams.push(p.team); });
+  const fav = $("sdFav").value || teams[0] || "";
+  return {
+    id: "sd-" + teams.join("-") + "-" + fav + "-" + $("sdSpread").value,
+    home: teams[0] || "", away: teams[1] || "",
+    favorite: fav,
+    spread: parseFloat($("sdSpread").value),
+    total: parseFloat($("sdTotal").value),
+    players: players,
+    favKickerFieldUsage51: null
+  };
+}
+
+function sdFmt(n, dp) { return n == null ? "—" : (+n).toFixed(dp == null ? 2 : dp); }
+function sdPct(n) { return n == null ? "—" : Math.round(n * 100) + "%"; }
+function sdEsc(t) { return String(t == null ? "" : t).replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c])); }
+
+function renderShowdown() {
+  const players = sdPool();
+  const teams = [];
+  players.forEach(p => { if (p.team && teams.indexOf(p.team) < 0) teams.push(p.team); });
+  const sel = $("sdFav"), keep = sel.value;
+  sel.innerHTML = teams.map(t => `<option value="${sdEsc(t)}">${sdEsc(t)}</option>`).join("");
+  if (teams.indexOf(keep) >= 0) sel.value = keep;
+
+  const priced = players.filter(p => p.proj > 0).length;
+  const owned = players.filter(p => p.own != null).length;
+  $("sdState").textContent = players.length ? players.length + " players" : "no pool";
+  $("sdPoolMsg").textContent = !players.length
+    ? "No pool loaded. Upload a DK Showdown salary file on the Slate sheet."
+    : teams.length !== 2
+      ? "This pool has " + teams.length + " team(s). Showdown needs exactly two — load a single-game file."
+      : priced === 0
+        ? "Salaries loaded, no projections yet. The relative-projection and duplication readings need them."
+        : owned === 0
+          ? "Projections loaded, no ownership. Duplication rules will be skipped and said so."
+          : "Pool ready: " + priced + " projected, " + owned + " with ownership.";
+
+  sdRenderSlots(players);
+  sdMeter();
+  sdRenderPortfolio();
+}
+
+function sdRenderSlots(players) {
+  const opts = seed => ['<option value="">—</option>'].concat(
+    players.slice().sort((a, b) => b.salary - a.salary || a.name.localeCompare(b.name))
+      .map(p => `<option value="${sdEsc(p.id)}"${p.id === seed ? " selected" : ""}>${sdEsc(p.name)} · ${sdEsc(p.team)} ${sdEsc(p.pos)} · $${p.salary.toLocaleString("en-US")}</option>`)
+  ).join("");
+  const rows = [`<div class="sdslot"><span class="tag cpt">CPT</span><select class="fi" data-sd="cpt">${opts(SD.lineup.cpt)}</select></div>`];
+  for (let i = 0; i < 5; i++) {
+    rows.push(`<div class="sdslot"><span class="tag">FLEX</span><select class="fi" data-sd="${i}">${opts(SD.lineup.flex[i])}</select></div>`);
+  }
+  $("sdSlots").innerHTML = rows.join("");
+}
+
+function sdMeter() {
+  const by = {}; sdPool().forEach(p => by[p.id] = p);
+  let total = 0, filled = 0;
+  if (SD.lineup.cpt && by[SD.lineup.cpt]) { total += by[SD.lineup.cpt].salary * 1.5; filled++; }
+  SD.lineup.flex.forEach(id => { if (id && by[id]) { total += by[id].salary; filled++; } });
+  const m = $("sdMeter");
+  $("sdSal").textContent = "$" + Math.round(total).toLocaleString("en-US");
+  $("sdSalNote").textContent = "of $50,000 · " + filled + "/6 filled" +
+    (filled === 6 ? " · $" + Math.round(50000 - total).toLocaleString("en-US") + " left" : "");
+  m.classList.toggle("over", total > 50000);
+  m.style.setProperty("--pct", Math.min(100, (total / 50000) * 100) + "%");
+}
+
+function sdFlagHtml(f) {
+  return `<div class="sdflag ${f.severity}"><h5><span class="rid">${sdEsc(f.rule)}</span>${sdEsc(f.message)}</h5>` +
+         `<p>${sdEsc(f.fix)}</p></div>`;
+}
+
+function sdResultHtml(r) {
+  if (!r.valid) {
+    return `<div class="sdchips"><span class="sdchip hard">Not a legal entry</span></div>` +
+      r.errors.map(e => `<div class="sdflag hard"><h5>${sdEsc(e.message)}</h5></div>`).join("") +
+      `<p class="note">Construction is not graded on a lineup that cannot be entered.</p>`;
+  }
+  const tierClass = { severe: "hard", elevated: "soft", moderate: "info", low: "good", unknown: "" }[r.dupeRisk.tier] || "";
+  const chips = [
+    `<span class="sdchip">${sdEsc(r.build.type)} ${sdEsc(r.build.heavySide || "even")}</span>`,
+    `<span class="sdchip">CPT ${sdEsc(r.cpt.name)} · ${sdEsc(r.cpt.pos)} · ${r.cpt.side === "fav" ? "favourite" : "dog"}</span>`,
+    `<span class="sdchip ${tierClass}">dupe: ${sdEsc(r.dupeRisk.tier)}</span>`,
+    r.score.hard ? `<span class="sdchip hard">${r.score.hard} hard</span>` : "",
+    r.score.soft ? `<span class="sdchip soft">${r.score.soft} soft</span>` : "",
+    r.score.info ? `<span class="sdchip info">${r.score.info} info</span>` : ""
+  ].join("");
+
+  const stack = r.stacks;
+  const facts = [
+    ["Salary", "$" + Math.round(r.salary).toLocaleString("en-US")],
+    ["Projection", sdFmt(r.proj, 1)],
+    ["Vs. max-projection", r.ownership.relativeProj == null ? "—" : sdPct(r.ownership.relativeProj)],
+    ["Cumulative ownership", r.ownership.cumulative == null ? "—" : sdPct(r.ownership.cumulative)],
+    ["Captain's own catchers", String(stack.sameTeamWRTE)],
+    ["Bring-back catchers", String(stack.oppWRTE)]
+  ].map(([k, v]) => `<div class="sdrow"><span>${k}</span><b class="nm">${sdEsc(v)}</b></div>`).join("");
+
+  const groups = ["hard", "soft", "info"].map(sev => {
+    const fs = r.flags.filter(f => f.severity === sev);
+    if (!fs.length) return "";
+    const label = { hard: "Likely errors", soft: "Deviates from what wins", info: "Context" }[sev];
+    return `<details class="sdgroup"${sev === "info" ? "" : " open"}><summary>${label} · ${fs.length}</summary>` +
+           fs.map(sdFlagHtml).join("") + `</details>`;
+  }).join("");
+
+  const notes = r.notes.length
+    ? `<details class="sdgroup"><summary>Not checked · ${r.notes.length}</summary>` +
+      r.notes.map(n => `<p class="note">${sdEsc(n.message)}</p>`).join("") + `</details>`
+    : "";
+
+  return `<div class="sdchips">${chips}</div>` +
+    (r.flags.length ? groups : `<p class="note">Nothing flagged. That is not the same as a good lineup.</p>`) +
+    `<div style="margin-top:10px">${facts}</div>` +
+    `<p class="note" style="margin-top:10px">${sdEsc(r.dupeRisk.note)}</p>` + notes;
+}
+
+function sdValidateCurrent() {
+  const lineup = { id: "builder", cpt: SD.lineup.cpt, flex: SD.lineup.flex.slice() };
+  if (!lineup.cpt || lineup.flex.some(x => !x)) {
+    $("sdMsg").textContent = "Fill all six slots first.";
+    $("sdMsg").className = "note warn";
+    return null;
+  }
+  const r = DDSDValidator.validateLineup(lineup, sdSlate());
+  $("sdMsg").textContent = "";
+  $("sdResultCard").hidden = false;
+  $("sdBadge").textContent = r.valid ? (r.score.hard ? r.score.hard + " hard" : "clean") : "illegal";
+  $("sdResult").innerHTML = sdResultHtml(r);
+  return r;
+}
+
+function sdRenderPortfolio() {
+  $("sdCount").textContent = SD.portfolio.length + " lineup" + (SD.portfolio.length === 1 ? "" : "s");
+  const host = $("sdPortfolio");
+  if (!SD.portfolio.length) { host.innerHTML = ""; return; }
+  const p = DDSDValidator.validatePortfolio(SD.portfolio, sdSlate());
+  const by = {}; sdPool().forEach(x => by[x.id] = x);
+
+  const rows = p.lineups.map((r, i) => {
+    const l = SD.portfolio[i];
+    const nm = [l.cpt].concat(l.flex).map(id => (by[id] || {}).name || id).join(", ");
+    const badge = !r.valid ? `<span class="sdchip hard">illegal</span>`
+      : `<span class="sdchip ${r.score.hard ? "hard" : r.score.soft ? "soft" : "good"}">${r.score.hard}H ${r.score.soft}S ${r.score.info}I</span>`;
+    return `<div class="sdrow"><span class="nm">${i + 1}. ${sdEsc(nm)}</span>${badge}</div>`;
+  }).join("");
+
+  const cptBars = p.cptExposure.map(e =>
+    `<div class="sdbar"><span>${sdEsc(e.name)}</span><i style="--pct:${Math.round(e.exposure * 100)}%"></i><b>${sdPct(e.exposure)}</b></div>`
+  ).join("");
+
+  const mix = Object.keys(p.buildMix).sort().map(k =>
+    `<div class="sdbar"><span>${sdEsc(k)}</span><i style="--pct:${Math.round(p.buildMix[k].share * 100)}%"></i><b>${sdPct(p.buildMix[k].share)}</b></div>`
+  ).join("");
+
+  const lev = p.leverage.length
+    ? p.leverage.map(x => `<div class="sdrow"><span class="nm">${sdEsc(x.name)}</span><span>${sdPct(x.exposure)} used vs ${sdPct(x.own)} field · ${sdFmt(x.ratio, 2)}x</span></div>`).join("")
+    : `<p class="note">Nothing outside the band.</p>`;
+
+  host.innerHTML =
+    (p.flags.length ? `<div style="margin:10px 0">${p.flags.map(sdFlagHtml).join("")}</div>` : "") +
+    `<details class="sdgroup" open><summary>Lineups · ${p.count}</summary>${rows}</details>` +
+    `<details class="sdgroup"><summary>Captain exposure</summary>${cptBars}</details>` +
+    `<details class="sdgroup"><summary>Build mix</summary>${mix}</details>` +
+    `<details class="sdgroup"><summary>Leverage outliers · ${p.leverage.length}</summary>${lev}</details>`;
+}
+
+/* Import accepts DK ids or names, six per row. Unmatched cells are reported rather than
+   dropped — a silently shortened lineup would validate as the wrong thing. */
+function sdImportRows(text) {
+  const pool = sdPool();
+  const byId = {}, byName = {};
+  pool.forEach(p => { byId[p.id] = p.id; byName[p.name.toLowerCase().replace(/[^a-z]/g, "")] = p.id; });
+  const bad = [];
+  const out = [];
+  String(text || "").split(/\r?\n/).forEach((line, n) => {
+    const cells = line.split(/[,\t]/).map(c => c.trim()).filter(Boolean);
+    if (cells.length < 6) { if (cells.length) bad.push("row " + (n + 1) + ": " + cells.length + " players"); return; }
+    const ids = cells.slice(0, 6).map(c => byId[c] || byName[c.toLowerCase().replace(/[^a-z]/g, "")] || null);
+    const miss = cells.slice(0, 6).filter((c, i) => !ids[i]);
+    if (miss.length) { bad.push("row " + (n + 1) + ": not on this slate — " + miss.join(", ")); return; }
+    out.push({ id: "p" + (SD.portfolio.length + out.length + 1), cpt: ids[0], flex: ids.slice(1) });
+  });
+  return { lineups: out, errors: bad };
+}
+
+function sdExportCsv() {
+  const by = {}; sdPool().forEach(p => by[p.id] = p);
+  return ["CPT,FLEX,FLEX,FLEX,FLEX,FLEX"].concat(
+    SD.portfolio.map(l => [l.cpt].concat(l.flex).map(id => (by[id] || {}).name || id).join(","))
+  ).join("\n");
+}
+
+function sdBoot() {
+  $("sdSlots").addEventListener("change", e => {
+    const sel = e.target.closest("select[data-sd]");
+    if (!sel) return;
+    const k = sel.dataset.sd;
+    if (k === "cpt") SD.lineup.cpt = sel.value; else SD.lineup.flex[+k] = sel.value;
+    sdMeter();
+  });
+  ["sdFav", "sdSpread", "sdTotal"].forEach(id => $(id).addEventListener("change", () => {
+    if (!$("sdResultCard").hidden) sdValidateCurrent();
+    sdRenderPortfolio();
+  }));
+  $("sdCheck").addEventListener("click", sdValidateCurrent);
+  $("sdClear").addEventListener("click", () => {
+    SD.lineup = { cpt: "", flex: ["", "", "", "", ""] };
+    $("sdResultCard").hidden = true;
+    renderShowdown();
+  });
+  $("sdAdd").addEventListener("click", () => {
+    if (!SD.lineup.cpt || SD.lineup.flex.some(x => !x)) { $("sdMsg").textContent = "Fill all six slots first."; $("sdMsg").className = "note warn"; return; }
+    SD.portfolio.push({ id: "p" + (SD.portfolio.length + 1), cpt: SD.lineup.cpt, flex: SD.lineup.flex.slice() });
+    $("sdMsg").textContent = "Added."; $("sdMsg").className = "note good";
+    sdRenderPortfolio();
+  });
+  $("sdImport").addEventListener("click", () => {
+    const res = sdImportRows($("sdPaste").value);
+    res.lineups.forEach(l => SD.portfolio.push(l));
+    $("sdPortMsg").textContent = (res.lineups.length ? "Imported " + res.lineups.length + ". " : "") +
+      (res.errors.length ? "Skipped " + res.errors.length + " — " + res.errors.slice(0, 3).join("; ") : "");
+    $("sdPortMsg").className = "note" + (res.errors.length ? " warn" : " good");
+    if (res.lineups.length) $("sdPaste").value = "";
+    sdRenderPortfolio();
+  });
+  $("sdValidateAll").addEventListener("click", sdRenderPortfolio);
+  $("sdWipe").addEventListener("click", () => { SD.portfolio = []; $("sdPortMsg").textContent = ""; sdRenderPortfolio(); });
+  $("sdExport").addEventListener("click", async () => {
+    if (!SD.portfolio.length) { $("sdPortMsg").textContent = "Nothing to copy."; $("sdPortMsg").className = "note warn"; return; }
+    try { await navigator.clipboard.writeText(sdExportCsv()); $("sdPortMsg").textContent = "Copied."; $("sdPortMsg").className = "note good"; }
+    catch (_) { $("sdPortMsg").textContent = "Clipboard refused; select the rows in the box above instead."; $("sdPortMsg").className = "note warn"; $("sdPaste").value = sdExportCsv(); }
+  });
+}
+/* ==== END showdown validator ui ==== */
 
 /* ---------------------------------------------------------------- wiring */
 
 function boot() {
   writeCfg();
   renderStrip(); renderPool(); renderSolveStats(); renderLineups();
+  sdBoot();
   show(location.hash.slice(1) || S.sheet || "slate");
 
   $("fsTabs").addEventListener("click", e => {
