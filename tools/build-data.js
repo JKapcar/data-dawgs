@@ -748,7 +748,7 @@ const UPSTREAM_MODELS = [
 ];
 
 const MODEL_CONTRACTS = {
-  contract_version: '1.6.0',
+  contract_version: '1.7.0',
   canonical_game_id: 'season_week_away_home using canonical current team abbreviations, for example 2026_01_PIT_CLE',
   canonical_schedule: '/data/nfl-schedule.json; integrity.snapshot_id is SHA-256 over canonical ordered game rows',
   normalized_receipt_ledger: '/data/model-receipts.json; existing rows are append-only and results remain separate',
@@ -803,12 +803,13 @@ const MODEL_CONTRACTS = {
    * contract does. No page reads any of this yet: the schema is settled first because
    * a season of entries stored in the wrong shape cannot be re-collected. */
   forecast_challenge_contract: {
-    status: 'storage and entrants; no page, no grading and no leaderboard is built',
+    status: 'Live NFL contest: Worker forecast receipts, per-game kickoff locks, independently captured finals, derived total and common-sample leaderboards. See /forecast/board health for actual operational status.',
+    live_runtime: { version: 'nfl-live-1', board: 'https://toto.jkapcar4.workers.dev/forecast/board', packet: 'https://toto.jkapcar4.workers.dev/forecast/packet', cadence: 'existing five-minute Worker cron; browser checks each minute', horizon_days: 8, nfelo_max_age_hours: 36, archive: '/data/model-receipts.json', toto: 'Separate ChatGPT/Codex-authored agent; versioned public forecast-toto.json imported before kickoff. The on-page chat assistant is not itself the scheduled forecasting entrant.' },
     scoring: {
       formula: 'points = 25 - 100 * (p - r)^2, p = probability on the team picked, r = 1 win / 0 loss',
       ceiling: 25,
       floor: -75,
-      neutral: 'A slider left at 50 scores exactly 0 either way.',
+      neutral: 'A deliberate, touched 50 scores exactly 0 either way. Untouched entries do not enter the scored sample.',
       equivalence: 'A linear transform of the Brier score, so one number ranks humans and models both ways.',
       side_invariance: 'The formula is symmetric under p -> 1-p, r -> 1-r, so the canonical home-probability form scores identically to the picked-side form.',
       replicates: 'FiveThirtyEight NFL Forecasting Game.',
@@ -836,7 +837,7 @@ const MODEL_CONTRACTS = {
       granularity: 'One entry per entrant per game. No running total is stored anywhere. Points, Brier, ranks, coverage and every slice are queries over the entry table, because a total is a view and a stored view is the copy that goes stale.',
       idempotency: 'A repeat submission carrying an idempotency_key already stored on that entry is a no-op, not a revision: revision does not move, submitted_at does not move, and it costs nothing against the write cap. An agent retrying after a timeout it never saw the answer to must not be recorded as having changed its mind.',
       write_caps: 'Humans and agents have separate daily counters and separate ceilings, because a cap sized for a person dragging sliders would let one busy bot lock its owner out of the website.',
-      touched_is_separate: 'touched is its own field and is NEVER derived from the value. An untouched slider and a deliberate 50 are identical in value and opposite in meaning; both score zero, but the first is an absence. Untouched entries are excluded from the human consensus, or every lurker drags the crowd to 50 and the independence the human line exists to supply is gone.',
+      touched_is_separate: 'touched is its own field and is NEVER derived from the value. An untouched slider and a deliberate 50 are identical in value and opposite in meaning. The deliberate 50 scores zero; the untouched entry is absent from grades, coverage and crowd aggregation.',
       touched_is_client_asserted: 'The server cannot observe a drag, so touched is reported by the client and labelled as such — the same honesty rule as priceSource "self" on a Bozo leg.',
       canonical_probability: 'home_win_probability is always P(home) and is DERIVED server-side from slider_value and slider_side. A client may not submit it, so the raw input and the scored number cannot disagree.',
       server_time: 'submitted_at is the server clock. A client-supplied timestamp is ignored.',
@@ -850,7 +851,7 @@ const MODEL_CONTRACTS = {
       formula: 'Mean of logits over touched entries, back-transformed. n>=5 drops ceil(0.1n) from each end by logit; 3<=n<5 uses the median.',
       clamp: [0.01, 0.99],
       clamp_reason: 'Sliders reach 0 and 100 — the -75 floor is exactly p=0 on a winner — so an unclamped logit is infinite and one certain entry would swallow the mean.',
-      humans_only: 'Agent entries are EXCLUDED from the crowd line. Its whole reason to exist is being an independent signal to grade the models against, and bots are model-driven by construction, so admitting them would turn the crowd into a weighted average of the same models it is supposed to be independent of. Agents still compete and still score; they are simply not the crowd. This is the touched rule one level up: untouched sliders drag the crowd toward 50, model-following bots drag it toward the models, and both destroy the only property the human line supplies.',
+      humans_only: 'Agent entries are EXCLUDED from the crowd line. Agents compete and score separately. Human forecasts can use visible model hints, so excluding bots does not guarantee independence from the models.',
       minimum_touched: 3,
       minimum_reason: 'Below three touched entries no row is written at all. An empty node is honest where a row built on one person is not.',
       log_odds_reason: 'Probability averaging is systematically underconfident and costs most where forecasters agree, which is where points are earned.',
@@ -862,9 +863,8 @@ const MODEL_CONTRACTS = {
       recomputable: 'contributors_sha256 is SHA-256 over the canonical contributing rows in append order, so anyone can recompute the consensus once entries become readable at lock.',
     },
     not_built_yet: [
-      'Grading. No outcome is joined, no score is stored and no leaderboard exists.',
-      'Registration of dd-crowd-* as a line in /data/model-receipts.json. Sealed rows must exist first.',
-      'Any page. No slider UI and no challenge entry in the navigation.',
+      'A calibrated model-skill claim requires an adequate graded common sample.',
+      'Market benchmark and additional forecasting agents are not part of the current scored roster.',
     ],
   },
 };
@@ -1056,7 +1056,7 @@ write('upstream-models.json', {
 });
 
 write('model-contracts.json', {
-  as_of: '2026-08-10', source: 'Data Dawgs normalized forecasting and calculator contract, revised 2026-08-10 to add the forecasting challenge storage contract.',
+  as_of: '2026-09-09', source: 'Data Dawgs normalized forecasting and calculator contract, revised 2026-09-09 for the live NFL contest.',
   tier: TIERS.pound, graded: false,
   note: 'A contract is not a forecast. It prevents incompatible models and missing values from being silently normalized into false agreement.',
   data: MODEL_CONTRACTS,

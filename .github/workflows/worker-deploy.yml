@@ -64,6 +64,9 @@ jobs:
       - run: node --test tests/warroom-weekly.test.js
       - run: node work/test-cfb-market-capture.mjs
       - run: node work/test-backup.mjs
+      - run: node work/test-forecast-store.mjs
+      - run: node work/test-forecast-live.mjs
+      - run: node tools/validate-forecast-toto.mjs
       - run: node work/test-identity.mjs
       - run: node work/test-mcp.mjs
       - run: node work/test-swoledawg.mjs
