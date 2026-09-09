@@ -1,6 +1,10 @@
 # Last Dawg Standing weekly engine
 
-Default dashboard: `guillotine.html`. Existing account shelves, historical scores and legacy tools remain at `guillotine.html?view=history`. Only one mode executes. Weekly Sleeper roster/user/transaction reads stay in the browser. No ownership identities, names or rosters are published in the daily feed or receipts.
+Default dashboard: `guillotine.html` opens the original companion: Chop Wheel, Am I Safe, Full Board, The Money, Weak Spots, season curves, week-by-week decay, and one-season simulations. The new player-level calculations are an additional **Weekly decisions** sheet. `?view=weekly` deep-links to that sheet; older `?view=history` links still reach the original dashboard.
+
+The original league setup and account shelf remain authoritative. Weekly decisions follows that league and focus, starts its worker only when opened, and clears its results when league setup changes. Its focus selector updates the companion's focus too. Existing local preferences, votes, and account-saved leagues are retained; a device that only used the weekly release imports its last league/focus. Toto uses the active sheet's model context. These two models remain labeled separately; the restoration does not change either model's mathematics.
+
+Weekly Sleeper roster/user/transaction reads stay in the browser. No ownership identities, names or rosters are published in the daily feed or receipts.
 
 ## Calculations
 

@@ -2,9 +2,9 @@
 (function(){'use strict';if(!window.GW_WEEKLY_MODE)return;
 const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),pct=x=>(100*x).toFixed(1)+'%',num=x=>Number.isFinite(x)?x.toFixed(1):'—',cash=x=>'$'+Math.round(x),KEY='dd-guillotine-weekly-v1';
 let saved;try{saved=JSON.parse(localStorage.getItem(KEY)||'{}');}catch{saved={};}let league,rosters,users,feed,result,players,transactions,focusResult,schedule,excluded=[],generation=0,focusGeneration=0,seq=0,pending=new Map();
-const worker=new Worker('/guillotine-compute.js');worker.onmessage=e=>{const p=pending.get(e.data.id);if(!p)return;pending.delete(e.data.id);e.data.error?p.reject(Error(e.data.error)):p.resolve(e.data.result);};worker.onerror=()=>{for(const p of pending.values())p.reject(Error('Calculation worker failed. Refresh to retry.'));pending.clear();};
-function calc(op,payload){return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});worker.postMessage({id,op,payload});});}
-function save(){localStorage.setItem(KEY,JSON.stringify(saved));}
+let loadingLeague=null;let worker;function startWorker(){if(worker)return;worker=new Worker('/guillotine-compute.js');worker.onmessage=e=>{const p=pending.get(e.data.id);if(!p)return;pending.delete(e.data.id);e.data.error?p.reject(Error(e.data.error)):p.resolve(e.data.result);};worker.onerror=()=>{for(const p of pending.values())p.reject(Error('Calculation worker failed. Refresh to retry.'));pending.clear();};}
+function calc(op,payload){startWorker();return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});worker.postMessage({id,op,payload});});}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(saved));}catch{}}
 function error(e){$('gwError').hidden=false;$('gwError').textContent=e.message||e;}
 async function get(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('Data request failed ('+r.status+')');return r.json();}
 function name(rid){const r=rosters?.find(x=>String(x.roster_id)===String(rid)),u=users?.find(x=>x.user_id===r?.owner_id);return u?.metadata?.team_name||u?.display_name||'Roster '+rid;}
@@ -20,13 +20,13 @@ async function load(){const token=++generation;++focusGeneration;result=null;foc
  if(f.data.season!==Number(l.season)||f.data.week!==Math.max(1,Math.min(18,st.display_week)))throw Error('The daily player feed is not for this league’s current week. Forecasts are withheld until it refreshes.');
  if(!Number.isFinite(Date.parse(f.data.fetched_at))||Date.now()-Date.parse(f.data.fetched_at)>48*3600000)throw Error('Weekly inputs are over 48 hours old. Forecasts are withheld.');
  const tx=await Promise.all(Array.from({length:f.data.week},(_,i)=>get('https://api.sleeper.app/v1/league/'+id+'/transactions/'+(i+1))));if(token!==generation)return;
- league=l;rosters=r;users=u;feed={...f.data,calibration:GXEngine.calibrationFor(f.data,l)};transactions=tx.flat();schedule=sc.data.games;
+ $('gwSleeperLink').href='https://sleeper.com/leagues/'+id+'/team';league=l;rosters=r;users=u;feed={...f.data,calibration:GXEngine.calibrationFor(f.data,l)};transactions=tx.flat();schedule=sc.data.games;
  excluded=(saved[id]?.excluded)||r.filter(x=>feed.week>1&&!(x.players||[]).length).map(x=>String(x.roster_id));
  $('gwFocus').innerHTML='<option value="">Choose your team</option>'+r.map(x=>'<option value="'+x.roster_id+'">'+esc(name(x.roster_id))+'</option>').join('');$('gwFocus').value=saved[id]?.focus||'';
  saved.last=id;saved[id]={...saved[id],name:l.name};save();$('gwSaved').innerHTML='<option value="">Saved leagues</option>'+Object.keys(saved).filter(k=>/^\d+$/.test(k)).map(k=>'<option value="'+k+'">'+esc(saved[k].name||k)+'</option>').join('');
- setStatus('Simulating current starting lineups…');result=await calc('load',{feed,league,rosters,transactions,excluded,now:Date.now()});if(token!==generation)return;players=result.players;render();await selectFocus();
+ setStatus('Simulating current starting lineups…');const loaded=await calc('load',{feed,league,rosters,transactions,excluded,now:Date.now()});if(token!==generation)return;result=loaded;players=result.players;render();await selectFocus();
  setStatus(l.name+' · Week '+feed.week+' · '+r.length+' rosters · fetched '+new Date(feed.fetched_at).toLocaleString()+' · '+result.n.toLocaleString()+' simulations. Refresh after roster changes.');
- }catch(e){error(e);$('gwMetrics').innerHTML='';$('gwBoard').innerHTML='Forecast unavailable. Resolve the data issue above.';for(const id of ['gwLineup','gwWaivers','gwOutlook'])$(id).textContent='Forecast unavailable: '+(e.message||e);setStatus('No new forecast published.');}finally{$('gwLoad').disabled=false;}}
+ }catch(e){if(token!==generation)return;error(e);$('gwMetrics').innerHTML='';$('gwBoard').innerHTML='Forecast unavailable. Resolve the data issue above.';for(const id of ['gwLineup','gwWaivers','gwOutlook'])$(id).textContent='Forecast unavailable: '+(e.message||e);setStatus('No new forecast published.');}finally{if(token===generation)$('gwLoad').disabled=false;}}
 function render(){const alive=rosters.filter(r=>!excluded.includes(String(r.roster_id))),pool=alive.reduce((s,r)=>s+GXEngine.budget(r,league),0);
  $('gwMetrics').innerHTML=metric(result.active.length,'Surviving teams')+metric(num(result.chop),'Median chop line')+metric(cash(pool),'FAAB left in the field')+metric('Week '+feed.week,'Weekly projections');
  $('gwBoard').innerHTML=table(['Rank / team','Survive','Projected score','80% score range'],result.rows.map((r,i)=>'<tr data-rid="'+r.rid+'"><td>'+(i+1)+'. '+esc(name(r.rid))+'</td><td><span class="bar"><i style="width:'+100*r.survival+'%"></i></span>'+pct(r.survival)+'</td><td>'+num(r.mean)+'</td><td>'+num(r.lo)+' – '+num(r.hi)+'</td></tr>'));
@@ -57,9 +57,34 @@ async function season(){if(!result)return;$('gwSeason').disabled=true;$('gwOutlo
  const aliveCount=Object.fromEntries(Array.from({length:last-feed.week+1},(_,i)=>[feed.week+i,new Array(active.length).fill(0)]));for(let k=0;k<n;k++){let a=active.map((_,i)=>i),cumulative=active.map(r=>(r.settings?.fpts||0)+(r.settings?.fpts_decimal||0)/100);for(let w=feed.week;w<=last;w++){let low=Infinity,ties=[];for(const j of a){const x=Math.round(scores[w][j][k]*100);cumulative[j]+=x/100;if(x<low){low=x;ties=[j];}else if(x===low)ties.push(j);}let lo=GXEngine.tieLoser(active.map((r,i)=>({...r,settings:{...r.settings,fpts:cumulative[i],fpts_decimal:0}})),ties,w);if(lo==null)lo=ties[k%ties.length];a=a.filter(j=>j!==lo);for(const j of a)aliveCount[w][j]++;}}
  $('gwOutlook').innerHTML='<div class="gw-scroll">'+table(['Team',...Object.keys(aliveCount).map(w=>'W'+w)],active.map((r,i)=>'<tr><td>'+esc(name(r.roster_id))+'</td>'+Object.values(aliveCount).map(a=>'<td style="background:rgba(179,75,5,'+(a[i]/n*.22)+')">'+Math.round(100*a[i]/n)+'%</td>').join('')+'</tr>'))+'</div><p class="gw-note">'+n+' draws. Only this fixed-roster, repeated-strength scenario is modeled; actual future pickups can substantially change it. Empty positions score zero. Unresolved simulated ties are split across draws.</p>'+(holes.length?'<details><summary>Future empty-slot warnings ('+holes.length+')</summary><p>'+holes.map(esc).join('<br>')+'</p></details>':'');
  }catch(e){error(e);}finally{$('gwSeason').disabled=false;}}
-$('gwLoad').onclick=load;$('gwFocus').onchange=selectFocus;$('gwCap').oninput=()=>{$('gwCapOut').textContent=$('gwCap').value+'%';};$('gwReplan').onclick=selectFocus;$('gwSeason').onclick=season;$('gwSaved').onchange=()=>{if($('gwSaved').value){$('gwLeague').value=$('gwSaved').value;load();}};
+$('gwLoad').onclick=()=>window.GW_INTEGRATED?openWeekly(true):load();$('gwFocus').onchange=()=>{if(window.GW_INTEGRATED&&league)window.dispatchEvent(new CustomEvent('gx-focus',{detail:{leagueId:league.league_id,rid:choice()}}));selectFocus();};$('gwCap').oninput=()=>{$('gwCapOut').textContent=$('gwCap').value+'%';};$('gwReplan').onclick=selectFocus;$('gwSeason').onclick=season;$('gwSaved').onchange=()=>{if($('gwSaved').value){$('gwLeague').value=$('gwSaved').value;load();}};
 $('gwApplyActive').onclick=()=>{if(!league)return;saved[league.league_id]={...saved[league.league_id],excluded:Array.from(document.querySelectorAll('[data-active]')).filter(x=>!x.checked).map(x=>x.dataset.active)};save();load();};
 $('gwLeague').onkeydown=e=>{if(e.key==='Enter')load();};document.querySelectorAll('[data-panel]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-panel]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));document.querySelectorAll('[data-view]').forEach(x=>x.hidden=x.dataset.view!==b.dataset.panel);});
-window.DD_BOTCTX={label:'Last Dawg Standing',title:'Ask Toto about this weekly model',sys:'Use the current weekly model only. Do not call dd_guillotine_odds: it is a legacy historical-score tool and does not power this dashboard. It uses Sleeper weekly player statistics and league scoring, not historical team averages. Survival is a pregame simulation, not live scoring. Uncertainty fitted to possibly revised historical projections is descriptive, not validated. Same-team positive correlation is estimated; other correlations are omitted. FAAB planning ceilings are user-budget heuristics, not prices. Cost ranges summarize observed winning bids only; never claim known losing bids or independent market value. Suggestions do not write to Sleeper. Season outputs are fixed-roster scenarios. Focus selection is not verified ownership.',ctx:()=>JSON.stringify({league:league?.name,week:feed?.week,as_of:feed?.fetched_at,board:result?.rows?.map(r=>({...r,name:name(r.rid)})),focus:choice(),recommendation:focusResult?{current:focusResult.current,optimized:focusResult.optimized,plan:focusResult.plan}:null,limitations:feed?.calibration?.limitation})};
-$('gwLeague').value=new URLSearchParams(location.search).get('league')||saved.last||'1400972302392262656';load();
+const dashboardContext=window.DD_BOTCTX;const weeklyContext={label:'Last Dawg Standing',title:'Ask Toto about this weekly model',sys:'Use the current weekly model only. Do not call dd_guillotine_odds: it is a legacy historical-score tool and does not power this dashboard. It uses Sleeper weekly player statistics and league scoring, not historical team averages. Survival is a pregame simulation, not live scoring. Uncertainty fitted to possibly revised historical projections is descriptive, not validated. Same-team positive correlation is estimated; other correlations are omitted. FAAB planning ceilings are user-budget heuristics, not prices. Cost ranges summarize observed winning bids only; never claim known losing bids or independent market value. Suggestions do not write to Sleeper. Season outputs are fixed-roster scenarios. Focus selection is not verified ownership.',ctx:()=>JSON.stringify({league:league?.name,week:feed?.week,as_of:feed?.fetched_at,board:result?.rows?.map(r=>({...r,name:name(r.rid)})),focus:choice(),recommendation:focusResult?{current:focusResult.current,optimized:focusResult.optimized,plan:focusResult.plan}:null,limitations:feed?.calibration?.limitation})};
+function clearWeekly(){
+ ++generation;++focusGeneration;loadingLeague=null;result=null;focusResult=null;league=null;players=null;feed=null;
+ if(worker){worker.terminate();worker=null;}for(const p of pending.values())p.reject(Error('League selection changed.'));pending.clear();
+ for(const id of ['gwMetrics','gwBoard','gwChop','gwLineup','gwWaivers','gwWeak','gwBudgets','gwBids','gwOutlook','gwReceipts','gwMethod','gwHistory','gwActive'])$(id).textContent='';
+ $('gwError').hidden=true;$('gwFocus').innerHTML='<option value="">Choose your team</option>';$('gwLoad').disabled=false;
+ setStatus('Connect a league in League setup above to use weekly decisions.');
+}
+function openWeekly(refresh=false){
+ if($('gw').hidden)return;window.DD_BOTCTX=weeklyContext;
+ const g=window.__GX;if(!g?.leagueId){setStatus('Connect a league in League setup above to use weekly decisions.');return;}
+ const id=String(g.leagueId),focus=g.me?.rid==null?'':String(g.me.rid);
+ saved[id]={...saved[id],focus};$('gwLeague').value=id;
+ if(loadingLeague===id)return;
+ if(refresh||!result||String(league?.league_id)!==id){loadingLeague=id;load().finally(()=>{if(loadingLeague===id)loadingLeague=null;});return;}
+ if(choice()!==focus){$('gwFocus').value=focus;selectFocus();}
+}
+if(window.GW_INTEGRATED){
+ window.addEventListener('gx-sheet-change',e=>{if(e.detail.key==='weekly')openWeekly();else window.DD_BOTCTX=dashboardContext;});
+ window.addEventListener('gx-loading',()=>{clearWeekly();});
+ window.addEventListener('gx-ready',()=>{if(!$('gw').hidden)openWeekly();});
+ clearWeekly();
+ if(new URLSearchParams(location.search).get('view')==='weekly')document.querySelector('[data-gx-sheet="weekly"]').click();
+}else{
+ window.DD_BOTCTX=weeklyContext;
+ $('gwLeague').value=new URLSearchParams(location.search).get('league')||saved.last||'1400972302392262656';load();
+}
 })();
