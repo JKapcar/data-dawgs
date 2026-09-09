@@ -2912,160 +2912,64 @@ const MCP_TOOLS = [
       });
     },
   },
-  /* ⚠️ THE ONLY TOOL HERE THAT READS A LEAGUE OUTSIDE THIS SITE, and the only reason it
-     can is that the caller signed in and connected one. Yahoo and ESPN connections are
-     stored per account (yahooKvKey / espnKvKey, both keyed by uid), so this resolves the
-     SAME credential the page uses and returns the SAME feed — it is not a second read of
-     the provider with its own idea of the league.
-
-     ⚠️ NO leagueId ARGUMENT, ON PURPOSE. Accepting one would turn a per-account tool into
-     a way to read any league id somebody can guess, and both providers hand back rosters
-     and team names. The credential decides which league this answers about. A caller who
-     wants a different league connects it on the site.
-
-     ⚠️ SLEEPER IS NOT HERE, and the tool says so rather than reporting "not connected".
-     Sleeper is read straight from the browser by public URL and no connection is stored
-     server-side, so there is nothing for this to resolve. Reporting it as unconnected
-     would be a wrong answer to a question the user can see the answer to on screen. */
+  /* IDs select only the caller's saved records. Team selection is a viewing
+     preference, never evidence of provider ownership. */
+  {
+    name: "dd_fantasy_leagues",
+    title: "Your saved fantasy leagues",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "List this account's saved Sleeper and connected ESPN/Yahoo leagues. Returns exact league IDs and saved team choices, never credentials. Save Sleeper leagues while signed in at the War Room first. Saving a public roster does not prove ownership.",
+    inputSchema: {type:"object",properties:{provider:{type:"string",enum:["sleeper","espn","yahoo"]}},additionalProperties:false},
+    async run(args,env,caller){
+      if(caller?.kind!=="user")return toolErr("Use a personal connection from "+SITE+"/connect.html.");
+      try{wrArgs(args,true);return toolText({leagues:wrPublicConnections(await wrConnections(env,caller.uid||caller.name,args.provider)),next:"Call dd_war_room with provider and league_id; choose team_id from that league's teams."});}
+      catch(e){return toolErr("League discovery failed: "+e.message);}
+    }
+  },
   {
     name: "dd_war_room",
     title: "Your connected fantasy league",
     catalog: "full",
     readOnlyHint: true,
-    description:
-      "The caller's OWN connected fantasy league as the War Room reads it: teams, rosters, each player's " +
-      "position and projection, and DataDawg$ where a board exists for that league. DataDawg$ is this site's " +
-      "converted auction dollars for THAT league's settings — priced against its own replacement level, not a " +
-      "generic board and not what anybody paid. Covers the Yahoo and ESPN connections, which are stored per " +
-      "account; a Sleeper league is read in the browser by public URL and is not stored here, so it cannot be " +
-      "resolved by this tool. Needs a personal connection: the shared league connector is not signed in as " +
-      "anybody and has no league. The `dd` block reports how many of the league's players the board matched — " +
-      "an unmatched player has no DataDawg$, which is a gap in the join and never a valuation of zero. " +
-      "Returns ROSTERED players only by default — pass scope:\"full\" for free agents, which roughly triples " +
-      "the payload and is worth it only for a waiver-wire question.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        scope: {
-          type: "string",
-          enum: ["rosters", "full"],
-          description: "How much of the player pool to return. \"rosters\" (the default) returns only players somebody actually holds — that is 161 of 629 rows in a typical 14-team league and about a quarter of the payload. \"full\" adds every free agent, which is what a waiver-wire or best-available question needs and nothing else does. Ask for full deliberately; it is large enough to crowd out the reasoning it was fetched for.",
-        },
-        provider: {
-          type: "string",
-          enum: ["yahoo", "espn", "sleeper"],
-          description: "Which provider to read. Yahoo and ESPN use the caller's stored connection. Sleeper is accepted only so the tool can report that browser-only leagues are unreachable. Omit it and the tool resolves the one stored connection that exists, or names both and refuses to guess when the caller has connected two.",
-        },
-      },
-      additionalProperties: false,
-    },
-    async run(args, env, caller) {
-      if (!caller || caller.kind !== "user")
-        return toolErr(
-          "This reads the league YOU connected, and the shared league connector is not signed in as anybody. " +
-          "Mint a personal URL at " + SITE + "/connect.html and this works.");
-      const kv = env && env.RL;
-      if (!kv) return toolErr("League connections are not configured on this deployment.");
-      const uid = caller.uid || caller.name;
-
-      const want = args && args.provider ? String(args.provider).toLowerCase() : null;
-      if (want === "sleeper")
-        return toolErr(
-          "Sleeper is UNREACHABLE from dd_war_room. A Sleeper league is read only in your browser from its " +
-          "public URL and is not stored server-side, so this tool cannot read it even while the War Room page is showing it.");
-      const yahoo = (!want || want === "yahoo") ? await yahooStored(kv, uid) : null;
-      let espn = null;
-      if (!want || want === "espn") {
-        let blob = null;
-        try { blob = await kv.get(espnKvKey(uid)); } catch { blob = null; }
-        if (blob) { try { espn = await espnOpen(env, uid, blob); } catch { espn = null; } }
-      }
-
-      /* ⚠️ REFUSE, DO NOT PICK. Two connected leagues and no `provider` is genuinely
-         ambiguous, and answering about the wrong one is worse than answering about
-         neither — every number below would be right about a league nobody asked about. */
-      if (!want && yahoo && espn)
-        return toolErr(
-          "You have both a Yahoo and an ESPN league connected. Say which one: " +
-          'provider "yahoo" (league ' + yahoo.leagueId + ') or provider "espn" (league ' + espn.leagueId + ").");
-
-      const provider = yahoo ? "yahoo" : espn ? "espn" : null;
-      if (!provider)
-        return toolErr(
-          (want ? "No " + want + " league is connected to this account." : "No Yahoo or ESPN league is connected to this account.") +
-          " Connect one at " + SITE + "/fantasy-warroom.html. A Sleeper league is read in your browser from its " +
-          "public URL and is not stored here, so it cannot be read by this tool even while the page is showing it.");
-
-      const cred = provider === "yahoo" ? yahoo : espn;
-      const feed = provider === "yahoo" ? await yahooWarroomFeed(cred, env) : await espnWarroomFeed(cred);
-      if (!feed.ok)
-        return toolErr("Could not read the " + provider + " league: " + (feed.reason || "upstream refused"));
-
-      // The same decoration the page's own /warroom route applies — one code path, so a
-      // number here can never disagree with the number on screen.
-      ddDecorateBody(await ddLoadBoard(env, provider, cred.leagueId, "season"), feed.body);
-
-      /* ⚠️ THE FREE AGENTS ARE DROPPED BY DEFAULT, and that is a usability fix, not a
-         cosmetic one. This returned the whole feed once: 93 KB, of which the pool was
-         86 KB — 629 player rows for a league where 161 are rostered. That is roughly
-         23k tokens, which overflows a tool-result budget outright, so the answer a
-         caller wanted never arrived and the context it needed to reason with was gone.
-         A tool nobody can afford to call is not a live tool.
-         ⚠️ THE POOL CANNOT SIMPLY BE OMITTED. teams[].players holds IDS ("y:40896"),
-         and every name, position, projection and DataDawg$ lives in the pool rows they
-         point at. Drop the pool and the rosters become unreadable id lists. So it is
-         FILTERED to the ids the rosters reference, never removed.
-         ⚠️ The counts below describe WHAT WAS RETURNED. ddDecorateBody's own matched /
-         unmatched are league-wide and would contradict a trimmed pool on their face —
-         reporting 406 matched beside 161 rows invites exactly the wrong conclusion. */
-      const full = (args && args.scope) === "full";
-      const body = feed.body || {};
-      const allPool = Array.isArray(body.pool) ? body.pool : [];
-      let pool = allPool, omitted = 0;
-      if (!full && allPool.length) {
-        const held = new Set();
-        for (const t of (Array.isArray(body.teams) ? body.teams : []))
-          for (const id of (t && Array.isArray(t.players) ? t.players : [])) held.add(id);
-        // A league that reports no rosters at all would filter to nothing and look empty,
-        // which is a worse answer than a big one. Keep the whole pool in that case.
-        if (held.size) { pool = allPool.filter(x => x && held.has(x.id)); omitted = allPool.length - pool.length; }
-      }
-      const withDd = pool.filter(x => x && x.dd).length;
-
-      return toolText({
-        provider,
-        leagueId: cred.leagueId,
-        you: cred.teamId != null ? String(cred.teamId) : null,
-        ...body,
-        pool,
-        dd: {
-          ...(body.dd || {}),
-          // ⚠️ Named for the rows actually in this payload. `matched`/`unmatched` on the
-          // spread-in dd block stay league-wide; these two are the ones that describe
-          // what the caller is holding.
-          returnedRows: pool.length,
-          returnedWithDollars: withDd,
-          note: withDd < pool.length
-            ? (pool.length - withDd) + " of the returned players have no DataDawg$ — the board did not match "
-              + "them. That is a gap in the join, never a valuation of zero."
-            : "Every returned player carries DataDawg$.",
-        },
-        scope: {
-          returned: full ? "full" : "rosters",
-          rosteredRows: full ? undefined : pool.length,
-          freeAgentsOmitted: full ? 0 : omitted,
-          howToGetThem: full || !omitted ? undefined
-            : "Call again with scope:\"full\" for the " + omitted + " free agents. It is roughly three times "
-              + "this payload, so ask for it only when the question is about who is available.",
-        },
-        method: {
-          dollars: SITE + "/data/datadawg-dollars-method.md",
-          page: SITE + "/fantasy-warroom.html",
-          note: "DataDawg$ is converted for THIS league's settings against its own replacement level. It is not " +
-                "Market Value, not what anyone paid, and not comparable across leagues with different rosters.",
-        },
-      });
-    },
+    description: "Read the caller's saved Sleeper or connected ESPN/Yahoo league. Discover IDs with dd_fantasy_leagues. Multiple matches require explicit selection. Sleeper uses the website's shared current-context feed: actual starters/bench/IR/taxi, matchups and scores, scoring and waiver rules, current-week transactions, weekly projections and season DataDawg$. Coverage and source timestamps disclose missing data. Spendable FAAB, precise deadlines, pending claims and game locks are not inferred. Dollars are season comparisons, never weekly points. Defaults to rostered players; scope available/full is paginated with limit/offset. Requires a personal AI connection.",
+    inputSchema: {type:"object",properties:{
+      provider:{type:"string",enum:["yahoo","espn","sleeper"]},
+      league_id:{type:"string",description:"Exact ID from your saved leagues; never another account's private connection."},
+      season:{type:"string",pattern:"^[0-9]{4}$"},
+      week:{type:"integer",minimum:1,maximum:18,description:"Sleeper current week only; historical roster reconstruction is unsupported."},
+      team_id:{type:"string",description:"Roster ID in this league; overrides the saved viewing preference for this read."},
+      scope:{type:"string",enum:["rosters","available","full"]},
+      position:{type:"string",enum:["QB","RB","WR","TE","K","DST"]},
+      limit:{type:"integer",minimum:1,maximum:100},offset:{type:"integer",minimum:0},
+      refresh:{type:"boolean",description:"Bypass the 30-second context cache. Player metadata and season inputs retain their separately dated caches."}
+    },additionalProperties:false},
+    async run(args,env,caller){
+      if(caller?.kind!=="user")return toolErr("This reads your saved leagues. Use a personal connection at "+SITE+"/connect.html.");
+      try{
+        wrArgs(args);
+        const uid=caller.uid||caller.name;
+        let rows=await wrConnections(env,uid,args.provider);
+        if(args.league_id!=null)rows=rows.filter(r=>r.leagueId===String(args.league_id));
+        if(args.season!=null)rows=rows.filter(r=>r.provider==='sleeper'||String(r.season)===String(args.season));
+        if(!rows.length)return toolErr("No matching league is saved on this account. Save it while signed in at "+SITE+"/fantasy-warroom.html, then use dd_fantasy_leagues.");
+        if(rows.length!==1)return toolText({selectionRequired:true,leagues:wrPublicConnections(rows),note:"Choose provider, league_id, and season when needed. No league was guessed."});
+        const chosen=rows[0];let body;
+        if(chosen.provider==='sleeper')body=await wrSleeperFeed(env,uid,{leagueId:chosen.leagueId,season:args.season,week:args.week,refresh:args.refresh});
+        else{
+          if(args.week!=null)throw Error("Week-specific context is currently supported only for Sleeper.");
+          const feed=chosen.provider==='yahoo'?await yahooWarroomFeed(chosen.credential,env):await espnWarroomFeed(chosen.credential);
+          if(!feed.ok)throw Error(feed.reason||"Provider connection expired or refused access.");
+          body=feed.body;
+          if(String(body.league?.id)!==chosen.leagueId)throw Error("Provider returned a different league; result withheld.");
+          ddDecorateBody(await ddLoadBoard(env,chosen.provider,chosen.leagueId,"season"),body);
+          body.provider=chosen.provider;body.leagueId=chosen.leagueId;
+          body.identity={provider:chosen.provider,leagueId:chosen.leagueId,season:chosen.season||null,week:null};
+          body.context={coverage:{currentWeek:{status:"unavailable",reason:"Expanded weekly context currently supports Sleeper only."}}};
+        }
+        return toolText(wrSlice(body,args,chosen.teamId));
+      }catch(e){return toolErr("Could not read the selected league: "+e.message);}
+    }
   },
   {
     name: "dd_draft_pool",
@@ -5083,7 +4987,7 @@ const MCP_TOOLS = [
         pages: {
           "index.html": "Home — what Data Dawgs is and the working-dawg taxonomy (Pup / Dawgs / The DawgHouse).",
           "bigboard.html": "Draft big board over the MV pool.",
-          "fantasy-warroom.html": "Fantasy War Room — a connected Sleeper, public Yahoo or ESPN league with every roster priced in DataDawg$ against THAT league's own replacement level. The rows are one account's league and have no public JSON; dd_war_room reads the caller's own Yahoo or ESPN connection. A Sleeper league is read in the browser and is not stored here.",
+          "fantasy-warroom.html": "Fantasy War Room — a connected Sleeper, public Yahoo or ESPN league with every roster priced in DataDawg$ against THAT league's own replacement level. The rows are one account's league and have no public JSON; dd_fantasy_leagues discovers the caller's saved leagues; dd_war_room reads the selected Sleeper shared context or ESPN/Yahoo connected roster feed. Sleeper reports coverage and refresh times, with exact deadlines, spendable FAAB and game locks explicitly unavailable.",
           "datadawg-dollars.html": "DataDawg$ — our own converted auction dollars for one league room: Target $, conversion-sensitivity bands, ETR delta. Not MV; MV is the market snapshot this converts.",
           "auction.html": "Auction draft operator (league passphrase gate).",
           "board.html": "Live draft board — mirrors the auction via Firebase.",

@@ -1730,6 +1730,7 @@ export default {
     // DD-YAHOO-ROUTE — public share read first; every other Yahoo route is session-gated in handleYahoo.
     if (url.pathname.startsWith("/yahoo/share/") && request.method === "GET") return handleYahooShareRead(request, url, env, cors);
     if (url.pathname === "/yahoo" || url.pathname.startsWith("/yahoo/")) return handleYahoo(request, url, env, cors);
+    if (url.pathname === "/sleeper/warroom") return handleSleeperWarroom(request, url, env, cors); // DD-WARROOM-ROUTE
 
     // ⚠️ Identity is SITE-WIDE, not Bozo's. /auth/* is canonical; the /bozo/* spellings
     // are permanent aliases because bozo.html in the wild (and any phone with a cached
@@ -11098,6 +11099,379 @@ async function rankingsAliasAdd(request, env, cors) {
 }
 /* ===== DD-RANKINGS-BLOCK END ===== */
 
+/* ===== DD-WARROOM-BLOCK START — generated from shared browser engines + work/warroom-worker.js; edit THERE ===== */
+const wrWeeklyRoot = {};
+/* Current-week Sleeper projections and exact legal lineup selection.
+   A missing projection stays missing. Season averages and dollar values never
+   enter this optimizer. No lineup is submitted to the provider. */
+(function(root){
+  'use strict';
+  const POS=['QB','RB','WR','TE','K','DEF'];
+  const RESERVE=new Set(['BN','IR','TAXI']);
+  const FLEX={FLEX:['RB','WR','TE'],'W/R/T':['RB','WR','TE'],
+    WRRB_FLEX:['RB','WR'],REC_FLEX:['WR','TE'],
+    SUPER_FLEX:['QB','RB','WR','TE'],SUPERFLEX:['QB','RB','WR','TE']};
+  const norm=p=>p==='DEF'?'DST':p;
+  function score(row,scoring){
+    const stats=row&&row.stats;
+    if(!stats||typeof stats!=='object')return null;
+    let total=0,known=false;
+    for(const [k,weight] of Object.entries(scoring||{})){
+      const x=stats[k];
+      if(x==null||x===''||!Number.isFinite(Number(x))||!Number.isFinite(Number(weight)))continue;
+      known=true;total+=Number(x)*Number(weight);
+    }
+    return known?total:null;
+  }
+  function optimize(players,rawSlots,byId){
+    const groups=[];
+    for(const slot of rawSlots||[]){
+      if(RESERVE.has(slot))continue;
+      const eligible=FLEX[slot]||('QB RB WR TE K DST DEF'.split(' ').includes(slot)?[norm(slot)]:null);
+      if(!eligible)return {ready:false,error:'Unsupported starting slot: '+slot,starters:[],bench:players.slice()};
+      const g=groups.find(g=>g.slot===slot);
+      if(g)g.count++;else groups.push({slot,eligible,count:1});
+    }
+    const needed=groups.reduce((n,g)=>n+g.count,0);
+    if(!needed)return {ready:false,error:'No starting slots are configured.',starters:[],bench:players.slice()};
+    // Capacity-state DP: each player can be used once, even when flex slots
+    // overlap. For equal fill counts retain the highest projected point total.
+    const zero=groups.map(()=>0);
+    let states=new Map([[zero.join(','),{counts:zero,points:0,assignments:[]}]]);
+    let missing=0;
+    const seen=new Set();
+    for(const player of players){
+      const id=String(player.id);
+      if(seen.has(id))continue;
+      seen.add(id);
+      const projected=byId.get(id);
+      if(projected==null||!Number.isFinite(projected)){missing++;continue;}
+      const positions=(player.positions?.length?player.positions:[player.pos]).map(norm);
+      const next=new Map(states);
+      for(const prior of states.values()){
+        groups.forEach((g,i)=>{
+          if(prior.counts[i]>=g.count||!positions.some(p=>g.eligible.includes(p)))return;
+          const counts=prior.counts.slice();counts[i]++;
+          const k=counts.join(','),points=prior.points+projected;
+          if(!next.has(k)||points>next.get(k).points){
+            next.set(k,{counts,points,assignments:prior.assignments.concat({slot:g.slot,player,points:projected})});
+          }
+        });
+      }
+      states=next;
+    }
+    const full=states.get(groups.map(g=>g.count).join(','));
+    const best=full||[...states.values()].sort((a,b)=>
+      b.assignments.length-a.assignments.length||b.points-a.points)[0];
+    const used=new Set(best.assignments.map(a=>String(a.player.id)));
+    const assignments=best.assignments.slice().sort((a,b)=>groups.findIndex(g=>g.slot===a.slot)-groups.findIndex(g=>g.slot===b.slot));
+    return {ready:!!full,points:full?best.points:null,missing,needed,
+      error:full?null:'Only '+best.assignments.length+' of '+needed+' starting slots have eligible projected players.',
+      assignments,starters:assignments.map(a=>a.player),bench:players.filter(p=>!used.has(String(p.id)))};
+  }
+  async function load(league,fetcher){
+    fetcher=fetcher||root.fetch.bind(root);
+    const get=async url=>{const r=await fetcher(url,{cache:'no-store'});if(!r.ok)throw Error('Sleeper request failed ('+r.status+').');return r.json();};
+    try{
+      const nfl=await get('https://api.sleeper.app/v1/state/nfl');
+      const season=String(league.season||'');
+      if(season!==String(nfl.season)||!['regular','pre'].includes(nfl.season_type))
+        throw Error('Current regular-season projections are unavailable for this league season.');
+      const week=nfl.season_type==='pre'?1:Number(nfl.week);
+      if(!Number.isInteger(week)||week<1||week>18)throw Error('Sleeper has not identified a current regular-season week.');
+      const url='https://api.sleeper.app/projections/nfl/'+season+'/'+week+'?season_type=regular&order_by=pts_ppr'
+        +POS.map(p=>'&position[]='+p).join('');
+      const rows=await get(url);
+      if(!Array.isArray(rows)||!rows.length)throw Error('Sleeper has no projections for week '+week+'.');
+      const byId=new Map(),players=new Map();
+      rows.forEach(r=>{if(r&&r.player_id!=null){
+        const id=String(r.player_id),v=score(r,league.scoring_settings),p=r.player||{};
+        if(v!=null)byId.set(id,v);
+        players.set(id,{id,name:p.full_name||[p.first_name,p.last_name].filter(Boolean).join(' ')||'Sleeper player '+id,
+          pos:norm(p.position||'Unknown'),positions:p.fantasy_positions||[p.position||'Unknown'],team:r.team||p.team});
+      }});
+      if(!byId.size)throw Error('No weekly projection stats match this league scoring.');
+      return {ready:true,season,week,byId,players,capturedAt:new Date().toISOString(),source:url};
+    }catch(e){return {ready:false,error:e.message||'Weekly projections could not be loaded.',capturedAt:new Date().toISOString()};}
+  }
+  const api={score,optimize,load};
+  if(typeof module!=='undefined'&&module.exports)module.exports=api;
+  else root.DDWeekly=api;
+})(wrWeeklyRoot);
+const wrDefaultRoot = {};
+/* Default season DataDawg$: supplied auction priors, standard format/depth conversion.
+   No provider projection blend and no implied dynasty or one-week forecast. */
+(function(root){
+'use strict';
+const POS=['QB','RB','WR','TE','K','DST'];
+const eligible=(p,s)=>p===s||s==='FLEX'&&['RB','WR','TE'].includes(p)||s==='SUPERFLEX'&&['QB','RB','WR','TE'].includes(p)||s==='REC_FLEX'&&['WR','TE'].includes(p)||s==='WRRB_FLEX'&&['WR','RB'].includes(p);
+function build(source,config){
+ const n=Number(config.teams),rec=Number(config.ppr),slots=config.slots||{};
+ if(!Number.isInteger(n)||n<2||n>32||!Number.isFinite(rec)||rec<0||rec>1)throw Error('Default values require 2–32 teams and reception scoring between 0 and 1.');
+ const sf=!!slots.SUPERFLEX||Number(slots.QB)>1;
+ // Source has no standard-scoring superflex column: preserve disclosed half-PPR prior.
+ const basis=sf?(rec>=0.75?'sfFull':'sfHalf'):(rec<0.25?'std':rec>0.75?'full':'half');
+ const baseSlots={QB:1,RB:2,WR:2,TE:1,FLEX:1,K:1,DST:1,...(sf?{SUPERFLEX:1}:{} )};
+ const records=source.players.map(p=>({...p,value:Number(p.values[basis])}));
+ if(records.some(p=>!Number.isFinite(p.value)||p.value<0))throw Error('Invalid default source values.');
+ function demand(shape,teams){
+  const used=new Set(),out={};
+  const ordered=[...POS,...Object.keys(shape).filter(s=>!POS.includes(s)&&!['BN','IR','TAXI'].includes(s))];
+  for(const slot of ordered){
+   if(!POS.includes(slot)&&!['FLEX','SUPERFLEX','REC_FLEX','WRRB_FLEX'].includes(slot)&&shape[slot])throw Error('Unsupported starter slot: '+slot);
+   const candidates=records.filter(p=>eligible(p.pos,slot)).sort((a,b)=>b.value-a.value||a.id.localeCompare(b.id));
+   let remaining=(Number(shape[slot])||0)*teams;
+   for(const p of candidates){if(!remaining)break;if(!used.has(p.id)){used.add(p.id);remaining--;}}
+   if(remaining)throw Error('Source does not cover required '+slot+' starters.');
+  }
+  for(const pos of POS)out[pos]=Math.max(0,...records.filter(p=>p.pos===pos&&!used.has(p.id)).map(p=>p.value));
+  return out;
+ }
+ const base=demand(baseSlots,12),target=demand(slots,n);
+ const active=p=>Object.keys(slots).some(s=>!['BN','IR','TAXI'].includes(s)&&slots[s]>0&&eligible(p.pos,s));
+ const count=n*Object.entries(slots).filter(([s])=>!['IR','TAXI'].includes(s)).reduce((a,[,v])=>a+Number(v),0);
+ if(!Number.isInteger(count)||count<1)throw Error('Roster size unavailable.');
+ const budget=Number(config.budget)>0?Number(config.budget):200;
+ const floor=config.floor===0?0:1,totalCents=Math.round(n*budget*100);
+ const ranked=records.filter(active).map(p=>({...p,weight:Math.max(0,p.value-1+0.5*(base[p.pos]-target[p.pos]))})).sort((a,b)=>b.weight-a.weight||b.value-a.value||a.id.localeCompare(b.id));
+ if(ranked.length<count)throw Error('Source player coverage is smaller than the league roster capacity.');
+ const paid=ranked.slice(0,count),reserve=count*floor*100,weight=paid.reduce((a,p)=>a+p.weight,0);
+ if(totalCents<reserve||weight<=0)throw Error('Budget or positive source weights unavailable.');
+ const rows=paid.map(p=>{const exact=floor*100+(totalCents-reserve)*p.weight/weight;return {p,cents:Math.floor(exact),fraction:exact-Math.floor(exact)};});
+ let remainder=totalCents-rows.reduce((a,r)=>a+r.cents,0);
+ for(const r of rows.slice().sort((a,b)=>b.fraction-a.fraction||a.p.id.localeCompare(b.p.id))){if(remainder--<=0)break;r.cents++;}
+ const values=new Map(ranked.map(p=>[p.id,0]));rows.forEach(r=>values.set(r.p.id,r.cents/100));
+ return {players:ranked.map(p=>({...p,target:values.get(p.id)})),meta:{model_id:'datadawg-default-season-v1',basis,as_of:source.received_at,source_published_at:source.published_at||null,source_sha256:source.sha256,horizon:'season',tier:'labs',graded:false,teams:n,budget_per_team:budget,budget_kind:config.budget>0?'reported auction budget':'nominal comparison scale',depth_pass_through:0.5,roster_slots:count,
+ note:'Default DataDawg$: supplied ETR auction inputs; 50% of the change in positional replacement value; normalized across roster capacity. Received '+source.received_at+'; source publication date unavailable. Season comparison only, not weekly or dynasty values. Standard format approximation: custom scoring bonuses, keeper inflation and guillotine survival are not modeled.'+(sf&&rec!==0.5&&rec!==1?' Superflex uses nearest supplied PPR format.':!sf&&![0,0.5,1].includes(rec)?' Uses nearest supplied PPR format.':'')}};
+}
+root.DDDefault={build};
+})(wrDefaultRoot);
+const wrSleeperRoot = {};
+/* One public Sleeper snapshot for the Worker and the War Room. No account secrets,
+   no ownership inference, and no season averages substituted for weekly points. */
+(function(root){
+'use strict';
+const API='https://api.sleeper.app/v1', PROJ='https://api.sleeper.app/projections/nfl/';
+const POS=['QB','RB','WR','TE','K','DEF'];
+const num=x=>x==null||x===''||!Number.isFinite(Number(x))?null:Number(x);
+const ids=xs=>[...new Set((xs||[]).filter(x=>x!=null&&String(x)!=='0').map(String))];
+function slots(raw){const out={};for(let s of raw||[]){s=({'W/R/T':'FLEX',SUPER_FLEX:'SUPERFLEX',DEF:'DST'}[s]||s);out[s]=(out[s]||0)+1;}return out;}
+async function load(input,get,weeklyEngine){
+  const leagueId=String(input.leagueId||'');
+  if(!/^\d{6,24}$/.test(leagueId))throw Error('Invalid Sleeper league ID.');
+  const sources={}, coverage={};
+  async function read(key,url,optional=false,ttl=0){
+    try{const r=await get(url,ttl);sources[key]={url,fetchedAt:r.fetchedAt};coverage[key]={status:'available'};return r.data;}
+    catch(e){if(!optional)throw Error(key+': '+e.message);coverage[key]={status:'unavailable',reason:e.message};sources[key]={url,fetchedAt:null};return null;}
+  }
+  const [raw,nfl,users,rosters]=await Promise.all([
+    read('league',API+'/league/'+leagueId),read('nflState',API+'/state/nfl'),
+    read('users',API+'/league/'+leagueId+'/users'),read('rosters',API+'/league/'+leagueId+'/rosters')]);
+  if(String(raw?.league_id)!==leagueId||!Array.isArray(users)||!Array.isArray(rosters)||!rosters.length)throw Error('Sleeper returned an incomplete or different league.');
+  if(rosters.some(r=>r.league_id!=null&&String(r.league_id)!==leagueId))throw Error('Sleeper returned rosters from a different league.');
+  const season=String(raw.season||'');
+  if(!/^\d{4}$/.test(season)||(input.season!=null&&String(input.season)!==season))throw Error('The requested season does not match this league.');
+  const current=season===String(nfl?.season)&&['regular','pre'].includes(nfl?.season_type);
+  const week=current?(nfl.season_type==='pre'?1:Number(nfl.week)):null;
+  if(week!=null&&(!Number.isInteger(week)||week<1||week>18))throw Error('Sleeper has not identified a current regular-season week.');
+  if(input.week!=null&&Number(input.week)!==week)throw Error('This feed supports the current week only; it cannot attach current rosters to a historical week.');
+  const playoffStart=Number(raw.settings?.playoff_week_start)||19, weeks=Math.max(1,Math.min(18,playoffStart-1));
+  const projURL=PROJ+season+'?season_type=regular&order_by=pts_ppr'+POS.map(p=>'&position[]='+p).join('');
+  const weekURL=PROJ+season+'/'+week+'?season_type=regular&order_by=pts_ppr'+POS.map(p=>'&position[]='+p).join('');
+  const [seasonRows,weeklyRows,dictionary,transactions,matches,playoffMatchups]=await Promise.all([
+    read('seasonProjections',projURL,true,3600000),
+    week==null?null:read('weeklyProjections',weekURL,true),
+    read('playerStatus',API+'/players/nfl',true,300000),
+    week==null?null:read('transactions',API+'/league/'+leagueId+'/transactions/'+week,true),
+    Promise.all(Array.from({length:weeks},(_,i)=>read('matchupsWeek'+(i+1),API+'/league/'+leagueId+'/matchups/'+(i+1),true))),
+    week>weeks?read('matchupsWeek'+week,API+'/league/'+leagueId+'/matchups/'+week,true):null
+  ]);
+  const safeUsers=users.map(u=>({user_id:String(u.user_id),display_name:u.display_name||null,metadata:{team_name:u.metadata?.team_name||null}}));
+  const user=new Map(safeUsers.map(u=>[u.user_id,u])), byId=new Map();
+  function player(id,p={}){
+    id=String(id);const d=dictionary?.[id]||{}, info={...d,...p};
+    if(!byId.has(id))byId.set(id,{id,name:info.full_name||[info.first_name,info.last_name].filter(Boolean).join(' ')||'Sleeper player '+id,
+      pos:info.position==='DEF'?'DST':info.position||'Unknown',positions:info.fantasy_positions||[info.position||'Unknown'],team:info.team||null,
+      p:null,weeklyPoints:null,injuryStatus:d.injury_status||null,status:d.status||null,gameLocked:null,byeWeek:num(d.bye_week)});
+    return byId.get(id);
+  }
+  for(const [id,p] of Object.entries(dictionary||{}))if(p.active!==false&&POS.includes(p.position))player(id,p);
+  for(const row of Array.isArray(seasonRows)?seasonRows:[]){if(row.player_id==null)continue;const p=player(row.player_id,row.player);p.p=weeklyEngine.score(row,raw.scoring_settings);if(p.p!=null)p.p/=weeks;}
+  const weeklyPoints={};
+  for(const row of Array.isArray(weeklyRows)?weeklyRows:[]){if(row.player_id==null)continue;const p=player(row.player_id,row.player);p.weeklyPoints=weeklyEngine.score(row,raw.scoring_settings);if(p.weeklyPoints!=null)weeklyPoints[p.id]=p.weeklyPoints;}
+  const teams=rosters.map(r=>{
+    const held=ids([...(r.players||[]),...(r.reserve||[]),...(r.taxi||[]),...(r.starters||[])]);held.forEach(id=>player(id));
+    const starters=ids(r.starters),reserve=ids(r.reserve),taxi=ids(r.taxi),s=r.settings||{};
+    const decimal=(whole,fraction)=>num(s[whole])==null?null:num(s[whole])+(num(s[fraction])||0)/100;
+    return {id:String(r.roster_id),owner:String(r.owner_id||''),name:user.get(String(r.owner_id))?.metadata.team_name||user.get(String(r.owner_id))?.display_name||'Roster '+r.roster_id,
+      players:held,starters,startingSlots:(r.starters||[]).map(x=>String(x)==='0'?null:String(x)),reserve,taxi,
+      bench:held.filter(id=>!starters.includes(id)&&!reserve.includes(id)&&!taxi.includes(id)),
+      standings:{wins:num(s.wins),losses:num(s.losses),ties:num(s.ties),pointsFor:decimal('fpts','fpts_decimal'),pointsAgainst:decimal('fpts_against','fpts_against_decimal')},
+      faab:{initialBudget:num(raw.settings?.waiver_budget),used:num(s.waiver_budget_used),remaining:null,reason:'Current spendable balance is not reported; budget transfers are not reconstructed.'},waiverPosition:num(s.waiver_position)};
+  });
+  const held=new Set(teams.flatMap(t=>t.players)),pool=[...byId.values()].map(p=>({...p,rostered:held.has(p.id)}));
+  const schedule=matches.map(rows=>{const groups={};for(const m of Array.isArray(rows)?rows:[])if(m.matchup_id!=null)(groups[m.matchup_id]||=[]).push(String(m.roster_id));return Object.values(groups).filter(x=>x.length===2);});
+  const matchupRows=week==null?null:week>weeks?playoffMatchups:matches[week-1];
+  const matchups=Array.isArray(matchupRows)?matchupRows.map(m=>({teamId:String(m.roster_id),matchupId:m.matchup_id,points:num(m.points),customPoints:num(m.custom_points),starters:ids(m.starters),players:ids(m.players),playerPoints:m.players_points||null})):null;
+  const ready=Object.keys(weeklyPoints).length>0;
+  const weekly={ready,season,week,points:weeklyPoints,capturedAt:sources.weeklyProjections?.fetchedAt||null,source:sources.weeklyProjections?.url||null,
+    error:ready?null:coverage.weeklyProjections?.reason||'Current-week projections matching this league scoring are unavailable.'};
+  coverage.weeklyProjections={status:ready?'available':'unavailable',reason:weekly.error};
+  coverage.injuries={status:dictionary?'partial':'unavailable',reason:'Provider injury/status labels when reported; null is unknown, not healthy.'};
+  coverage.byes={status:'partial',reason:'Bye week only when explicitly reported in player metadata; missing is unknown.'};
+  coverage.rosterEligibility={status:raw.roster_positions?.length?'available':'unavailable',reason:'Exact roster slots and provider position eligibility, including restricted flex slots.'};
+  coverage.availablePlayers={status:dictionary?'partial':'unavailable',reason:'Unrostered players only. Pending claims, add eligibility, and game locks are not exposed.'};
+  coverage.gameLocks={status:'unavailable',reason:'No authoritative game-lock state in this feed.'};
+  coverage.faab={status:'partial',reason:'Initial budget and amount used are reported; spendable balance after transfers is unknown.'};
+  coverage.deadlines={status:'unavailable',reason:'Raw waiver settings and trade deadline week are reported; exact timestamp and timezone are not established.'};
+  coverage.standings={status:'partial',reason:'Provider wins, losses, ties and points; official tiebreak order is not reconstructed.'};
+  coverage.lineups={status:'available',reason:'Actual starters, bench, IR and taxi; selected roster does not prove account ownership.'};
+  coverage.matchups={status:matchups?.length?'available':'unavailable',reason:matchups?.length?null:'No current-week matchup rows were returned.'};
+  if(!Array.isArray(transactions))coverage.transactions={status:'unavailable',reason:'Current-week transactions unavailable.'};
+  if(!Array.isArray(seasonRows)||!seasonRows.length)coverage.seasonProjections={status:'unavailable',reason:'No season projection rows returned.'};
+  const settings=raw.settings||{};
+  const rules=Object.fromEntries(Object.entries(settings).filter(([k])=>/waiver|trade_deadline|trade_review|reserve|taxi|lock|disable_adds|disable_trades|elimination|type/.test(k)));
+  return {provider:'sleeper',leagueId,identity:{provider:'sleeper',leagueId,season,week},fetchedAt:new Date().toISOString(),
+    league:{id:leagueId,league_id:leagueId,name:raw.name,season,sport:raw.sport,status:raw.status,settings,scoring_settings:raw.scoring_settings||{},roster_positions:raw.roster_positions||[],auction_budget:null},
+    users:safeUsers,teams,pool,slots:slots(raw.roster_positions),schedule,weekly,
+    context:{matchups,transactions:Array.isArray(transactions)?transactions.map(t=>({id:t.transaction_id,type:t.type,status:t.status,created:t.created,updated:t.status_updated,rosterIds:t.roster_ids,adds:t.adds,drops:t.drops,waiverBudget:t.waiver_budget,draftPicks:t.draft_picks})):null,
+      waiverRules:rules,exactDeadlines:null,coverage,sources,availabilityMeaning:'Unrostered does not mean immediately claimable.'}};
+}
+function hydrate(feed){
+  const pool=feed.pool||[],byId=new Map(pool.map(p=>[String(p.id),p]));
+  return {...feed,teams:feed.teams.map(t=>({...t,ownerId:t.owner,players:t.players.map(id=>byId.get(String(id))).filter(Boolean),starters:new Set(t.starters)})),
+    weekly:{...feed.weekly,byId:new Map(Object.entries(feed.weekly.points||{})),players:byId}};
+}
+root.DDSleeper={load,hydrate,slots};
+})(wrSleeperRoot);
+/* Account selection stays separate from the public Sleeper adapter. A saved roster
+   is a viewing preference, never evidence that a user controls that Sleeper team. */
+const WR_PUBLIC_CACHE=new Map(), WR_CONTEXT_CACHE=new Map();
+function wrCachePut(cache,key,value,ttl){
+  if(cache.size>=32)cache.delete(cache.keys().next().value);
+  cache.set(key,{value,expires:Date.now()+ttl});
+}
+async function wrPublicGet(url,ttl=0){
+  const hit=WR_PUBLIC_CACHE.get(url);
+  if(ttl&&hit?.expires>Date.now())return hit.value;
+  const r=await fetch(url,{signal:AbortSignal.timeout(15000)});
+  if(!r.ok)throw Error('Source request failed ('+r.status+').');
+  const value={data:await r.json(),fetchedAt:new Date().toISOString()};
+  if(ttl)wrCachePut(WR_PUBLIC_CACHE,url,value,ttl);
+  return value;
+}
+async function wrSleeperFeed(env,uid,input){
+  // The lookup key includes the requested season/week; the stored key also carries
+  // the resolved season/week. Current-week requests cannot survive an NFL rollover
+  // for longer than this 30-second cache. No stale result is returned after failure.
+  const prefix=JSON.stringify([uid||'public','sleeper',String(input.leagueId),input.season||'current',input.week||'current']);
+  const cached=[...WR_CONTEXT_CACHE.values()].find(entry=>entry.lookup===prefix&&entry.expires>Date.now());
+  let body;
+  if(!input.refresh&&cached?.expires>Date.now())body=structuredClone(cached.value);
+  else{
+    body=await wrSleeperRoot.DDSleeper.load(input,wrPublicGet,wrWeeklyRoot.DDWeekly);
+    body.cache={key:JSON.stringify(['sleeper',body.identity.leagueId,body.identity.season,body.identity.week]),maxAgeSeconds:30};
+    const key=JSON.stringify([uid||'public','sleeper',body.identity.leagueId,body.identity.season,body.identity.week]);
+    wrCachePut(WR_CONTEXT_CACHE,key,structuredClone(body),30000);
+    WR_CONTEXT_CACHE.get(key).lookup=prefix;
+  }
+  // Custom boards retain the existing authenticated-only boundary. The public
+  // fallback uses the exact same default engine and inputs as the browser.
+  if(body.identity.season!=='2026'){body.dd={matched:0,unmatched:body.pool.length,horizon:'season',error:'The available dollar inputs cover 2026 only.'};return body;}
+  const board=uid?await ddLoadBoard(env,'sleeper',body.leagueId,'season'):null;
+  if(board)ddDecorateBody(board,body);
+  else{
+    try{
+      const source=(await wrPublicGet('https://datadawgs216.com/data/datadawg-default.json',3600000)).data;
+      const result=wrDefaultRoot.DDDefault.build(source.data,{teams:body.teams.length,ppr:body.league.scoring_settings.rec,slots:body.slots,budget:null});
+      const by=new Map(result.players.map(p=>[ddPlayerKey(p),{v:p.target}]));
+      ddDecorateBody({by,meta:{...result.meta,provider:'sleeper',league_id:body.leagueId,league:body.league.name}},body);
+    }catch(e){body.dd={matched:0,unmatched:body.pool.length,horizon:'season',error:e.message};}
+  }
+  return body;
+}
+async function handleSleeperWarroom(request,url,env,cors){
+  if(request.method!=='GET')return json({error:'Use GET.'},405,cors);
+  let uid=null;
+  if(request.headers.has('X-Bozo-Session')){
+    const auth=await sessionAuth(request,env);
+    if(auth.err||!auth.uid)return json({error:auth.err||'Sign in with a UID account.'},auth.code||401,cors);
+    uid=auth.uid;
+  }
+  try{
+    const body=await wrSleeperFeed(env,uid,{leagueId:url.searchParams.get('leagueId'),season:url.searchParams.get('season')||undefined,week:url.searchParams.get('week')||undefined,refresh:url.searchParams.get('refresh')==='1'});
+    return json(body,200,{...cors,'Cache-Control':'private, no-store'});
+  }catch(e){return json({error:e.message},502,{...cors,'Cache-Control':'no-store'});}
+}
+async function wrConnections(env,uid,provider){
+  const rows=[];
+  if(!provider||provider==='sleeper'){
+    const result=await fbGet(env,'/users/'+encodeURIComponent(uid)+'/guillotineState');
+    if(result.ok===false)throw Error('The account league shelf could not be read.');
+    const state=salvageGuillotineState(result.data?.state||{leagues:[]});
+    for(const league of state.leagues)rows.push({provider:'sleeper',leagueId:league.leagueId,teamId:league.focusRosterId,selection:'Saved viewing preference; ownership unverified.'});
+  }
+  if(!provider||provider==='yahoo'){
+    const c=await yahooStored(env.RL,uid);
+    if(c)rows.push({provider:'yahoo',leagueId:String(c.leagueId),season:c.season||null,teamId:c.teamId??null,credential:c});
+  }
+  if(!provider||provider==='espn'){
+    const keys=await espnListKeys(env.RL,'espn:league:'+uid+':');
+    const all=[await espnStored(env,uid)];
+    for(const k of keys){const parts=k.split(':');const season=parts[parts.length-2],id=parts[parts.length-1];all.push(await espnStored(env,uid,id,season));}
+    const seen=new Set();
+    for(const c of all){if(!c)continue;const key=String(c.season)+':'+c.leagueId;if(seen.has(key))continue;seen.add(key);rows.push({provider:'espn',leagueId:String(c.leagueId),season:String(c.season),teamId:c.teamId??null,credential:c});}
+  }
+  return rows;
+}
+function wrPublicConnections(rows){return rows.map(({credential,...r})=>r);}
+function wrSlice(body,args,selectedTeam){
+  const teams=body.teams||[],teamId=args.team_id!=null?String(args.team_id):selectedTeam!=null?String(selectedTeam):null;
+  if(teamId!=null&&!teams.some(t=>String(t.id)===teamId))throw Error('That team is not in the selected league. Choose one of teams[].id.');
+  const held=new Set(teams.flatMap(t=>(t.players||[]).map(String))),all=body.pool||[];
+  const scope=args.scope||'rosters',offset=args.offset||0,limit=args.limit||50;
+  let pool=scope==='rosters'?all.filter(p=>held.has(String(p.id))):scope==='available'?all.filter(p=>!held.has(String(p.id))):all;
+  if(args.position)pool=pool.filter(p=>p.pos===args.position);
+  if(scope==='available')pool.sort((a,b)=>(b.weeklyPoints??-Infinity)-(a.weeklyPoints??-Infinity)||String(a.id).localeCompare(String(b.id)));
+  const total=pool.length;
+  if(scope!=='rosters')pool=pool.slice(offset,offset+limit);
+  const returned=new Set(pool.map(p=>String(p.id)));
+  const weekly=body.weekly?{...body.weekly,points:Object.fromEntries(Object.entries(body.weekly.points||{}).filter(([id])=>returned.has(id)))}:undefined;
+  let lineup;
+  if(body.provider==='sleeper'&&teamId!=null){
+    const team=teams.find(t=>String(t.id)===teamId),excluded=new Set([...(team.reserve||[]),...(team.taxi||[])]);
+    const players=all.filter(p=>team.players.includes(p.id)&&!excluded.has(p.id));
+    const points=new Map(Object.entries(body.weekly?.points||{}));
+    const candidate=body.weekly?.ready?wrWeeklyRoot.DDWeekly.optimize(players,body.league.roster_positions,points):{ready:false,error:body.weekly?.error};
+    const actual=team.startingSlots||team.starters||[];
+    const actualComplete=actual.length>0&&actual.every(id=>id!=null&&points.has(id));
+    lineup={teamId,actualStarters:actual,actualProjectedPoints:actualComplete?actual.reduce((n,id)=>n+points.get(id),0):null,
+      candidateReady:candidate.ready,candidateProjectedPoints:candidate.points??null,
+      candidateAssignments:(candidate.assignments||[]).map(a=>({slot:a.slot,playerId:a.player.id,points:a.points})),error:candidate.error||null,
+      note:'Same weekly optimizer as the Money sheet. IR/taxi excluded. Game locks and injury availability are not enforced: inspect the provider before acting. This is not a submitted lineup.'};
+  }
+  return {...body,users:undefined,lineup,you:teamId,teamSelection:teamId==null?'Choose team_id before personalized advice.':'Viewing preference; ownership unverified.',pool,weekly,
+    dd:{...(body.dd||{}),returnedRows:pool.length,returnedWithDollars:pool.filter(p=>p.dd!=null).length},
+    scope:{returned:scope,total,returnedRows:pool.length,offset:scope==='rosters'?0:offset,nextOffset:scope!=='rosters'&&offset+pool.length<total?offset+pool.length:null,
+      freeAgentsOmitted:scope==='rosters'?all.filter(p=>!held.has(String(p.id))).length:undefined,
+      note:scope==='available'?'Unrostered players ordered by weekly projected points, missing projections last. This is not a waiver recommendation; verify claim eligibility in the provider.':undefined}};
+}
+
+function wrArgs(args,discovery=false){
+  if(!args||typeof args!=='object'||Array.isArray(args))throw Error('Arguments must be an object.');
+  const allowed=discovery?['provider']:['provider','league_id','season','week','team_id','scope','position','limit','offset','refresh'];
+  if(Object.keys(args).some(k=>!allowed.includes(k)))throw Error('Unsupported argument.');
+  if(args.provider!=null&&!['sleeper','espn','yahoo'].includes(args.provider))throw Error('Unsupported provider.');
+  if(args.scope!=null&&!['rosters','available','full'].includes(args.scope))throw Error('Unsupported scope.');
+  if(args.position!=null&&!['QB','RB','WR','TE','K','DST'].includes(args.position))throw Error('Unsupported position.');
+  for(const [key,min,max] of [['limit',1,100],['offset',0,100000],['week',1,18]])if(args[key]!=null&&(!Number.isInteger(args[key])||args[key]<min||args[key]>max))throw Error('Invalid '+key+'.');
+  for(const key of ['league_id','team_id'])if(args[key]!=null&&(typeof args[key]!=='string'||!/^[a-zA-Z0-9_.-]{1,40}$/.test(args[key])))throw Error('Invalid '+key+'.');
+  if(args.season!=null&&(typeof args.season!=='string'||!/^\d{4}$/.test(args.season)))throw Error('Invalid season.');
+  if(args.refresh!=null&&typeof args.refresh!=='boolean')throw Error('refresh must be boolean.');
+  return args;
+}
+/* ===== DD-WARROOM-BLOCK END ===== */
+
 /* ===== DD-MCP-BLOCK START — generated from work/mcp-block.js; edit THERE ===== */
 /* Shared DFS engine — generated verbatim from work/dfs-engine.js except for its private root. */
 const mcpDdfsRoot = {};
@@ -15523,160 +15897,64 @@ const MCP_TOOLS = [
       });
     },
   },
-  /* ⚠️ THE ONLY TOOL HERE THAT READS A LEAGUE OUTSIDE THIS SITE, and the only reason it
-     can is that the caller signed in and connected one. Yahoo and ESPN connections are
-     stored per account (yahooKvKey / espnKvKey, both keyed by uid), so this resolves the
-     SAME credential the page uses and returns the SAME feed — it is not a second read of
-     the provider with its own idea of the league.
-
-     ⚠️ NO leagueId ARGUMENT, ON PURPOSE. Accepting one would turn a per-account tool into
-     a way to read any league id somebody can guess, and both providers hand back rosters
-     and team names. The credential decides which league this answers about. A caller who
-     wants a different league connects it on the site.
-
-     ⚠️ SLEEPER IS NOT HERE, and the tool says so rather than reporting "not connected".
-     Sleeper is read straight from the browser by public URL and no connection is stored
-     server-side, so there is nothing for this to resolve. Reporting it as unconnected
-     would be a wrong answer to a question the user can see the answer to on screen. */
+  /* IDs select only the caller's saved records. Team selection is a viewing
+     preference, never evidence of provider ownership. */
+  {
+    name: "dd_fantasy_leagues",
+    title: "Your saved fantasy leagues",
+    catalog: "full",
+    readOnlyHint: true,
+    description: "List this account's saved Sleeper and connected ESPN/Yahoo leagues. Returns exact league IDs and saved team choices, never credentials. Save Sleeper leagues while signed in at the War Room first. Saving a public roster does not prove ownership.",
+    inputSchema: {type:"object",properties:{provider:{type:"string",enum:["sleeper","espn","yahoo"]}},additionalProperties:false},
+    async run(args,env,caller){
+      if(caller?.kind!=="user")return toolErr("Use a personal connection from "+SITE+"/connect.html.");
+      try{wrArgs(args,true);return toolText({leagues:wrPublicConnections(await wrConnections(env,caller.uid||caller.name,args.provider)),next:"Call dd_war_room with provider and league_id; choose team_id from that league's teams."});}
+      catch(e){return toolErr("League discovery failed: "+e.message);}
+    }
+  },
   {
     name: "dd_war_room",
     title: "Your connected fantasy league",
     catalog: "full",
     readOnlyHint: true,
-    description:
-      "The caller's OWN connected fantasy league as the War Room reads it: teams, rosters, each player's " +
-      "position and projection, and DataDawg$ where a board exists for that league. DataDawg$ is this site's " +
-      "converted auction dollars for THAT league's settings — priced against its own replacement level, not a " +
-      "generic board and not what anybody paid. Covers the Yahoo and ESPN connections, which are stored per " +
-      "account; a Sleeper league is read in the browser by public URL and is not stored here, so it cannot be " +
-      "resolved by this tool. Needs a personal connection: the shared league connector is not signed in as " +
-      "anybody and has no league. The `dd` block reports how many of the league's players the board matched — " +
-      "an unmatched player has no DataDawg$, which is a gap in the join and never a valuation of zero. " +
-      "Returns ROSTERED players only by default — pass scope:\"full\" for free agents, which roughly triples " +
-      "the payload and is worth it only for a waiver-wire question.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        scope: {
-          type: "string",
-          enum: ["rosters", "full"],
-          description: "How much of the player pool to return. \"rosters\" (the default) returns only players somebody actually holds — that is 161 of 629 rows in a typical 14-team league and about a quarter of the payload. \"full\" adds every free agent, which is what a waiver-wire or best-available question needs and nothing else does. Ask for full deliberately; it is large enough to crowd out the reasoning it was fetched for.",
-        },
-        provider: {
-          type: "string",
-          enum: ["yahoo", "espn", "sleeper"],
-          description: "Which provider to read. Yahoo and ESPN use the caller's stored connection. Sleeper is accepted only so the tool can report that browser-only leagues are unreachable. Omit it and the tool resolves the one stored connection that exists, or names both and refuses to guess when the caller has connected two.",
-        },
-      },
-      additionalProperties: false,
-    },
-    async run(args, env, caller) {
-      if (!caller || caller.kind !== "user")
-        return toolErr(
-          "This reads the league YOU connected, and the shared league connector is not signed in as anybody. " +
-          "Mint a personal URL at " + SITE + "/connect.html and this works.");
-      const kv = env && env.RL;
-      if (!kv) return toolErr("League connections are not configured on this deployment.");
-      const uid = caller.uid || caller.name;
-
-      const want = args && args.provider ? String(args.provider).toLowerCase() : null;
-      if (want === "sleeper")
-        return toolErr(
-          "Sleeper is UNREACHABLE from dd_war_room. A Sleeper league is read only in your browser from its " +
-          "public URL and is not stored server-side, so this tool cannot read it even while the War Room page is showing it.");
-      const yahoo = (!want || want === "yahoo") ? await yahooStored(kv, uid) : null;
-      let espn = null;
-      if (!want || want === "espn") {
-        let blob = null;
-        try { blob = await kv.get(espnKvKey(uid)); } catch { blob = null; }
-        if (blob) { try { espn = await espnOpen(env, uid, blob); } catch { espn = null; } }
-      }
-
-      /* ⚠️ REFUSE, DO NOT PICK. Two connected leagues and no `provider` is genuinely
-         ambiguous, and answering about the wrong one is worse than answering about
-         neither — every number below would be right about a league nobody asked about. */
-      if (!want && yahoo && espn)
-        return toolErr(
-          "You have both a Yahoo and an ESPN league connected. Say which one: " +
-          'provider "yahoo" (league ' + yahoo.leagueId + ') or provider "espn" (league ' + espn.leagueId + ").");
-
-      const provider = yahoo ? "yahoo" : espn ? "espn" : null;
-      if (!provider)
-        return toolErr(
-          (want ? "No " + want + " league is connected to this account." : "No Yahoo or ESPN league is connected to this account.") +
-          " Connect one at " + SITE + "/fantasy-warroom.html. A Sleeper league is read in your browser from its " +
-          "public URL and is not stored here, so it cannot be read by this tool even while the page is showing it.");
-
-      const cred = provider === "yahoo" ? yahoo : espn;
-      const feed = provider === "yahoo" ? await yahooWarroomFeed(cred, env) : await espnWarroomFeed(cred);
-      if (!feed.ok)
-        return toolErr("Could not read the " + provider + " league: " + (feed.reason || "upstream refused"));
-
-      // The same decoration the page's own /warroom route applies — one code path, so a
-      // number here can never disagree with the number on screen.
-      ddDecorateBody(await ddLoadBoard(env, provider, cred.leagueId, "season"), feed.body);
-
-      /* ⚠️ THE FREE AGENTS ARE DROPPED BY DEFAULT, and that is a usability fix, not a
-         cosmetic one. This returned the whole feed once: 93 KB, of which the pool was
-         86 KB — 629 player rows for a league where 161 are rostered. That is roughly
-         23k tokens, which overflows a tool-result budget outright, so the answer a
-         caller wanted never arrived and the context it needed to reason with was gone.
-         A tool nobody can afford to call is not a live tool.
-         ⚠️ THE POOL CANNOT SIMPLY BE OMITTED. teams[].players holds IDS ("y:40896"),
-         and every name, position, projection and DataDawg$ lives in the pool rows they
-         point at. Drop the pool and the rosters become unreadable id lists. So it is
-         FILTERED to the ids the rosters reference, never removed.
-         ⚠️ The counts below describe WHAT WAS RETURNED. ddDecorateBody's own matched /
-         unmatched are league-wide and would contradict a trimmed pool on their face —
-         reporting 406 matched beside 161 rows invites exactly the wrong conclusion. */
-      const full = (args && args.scope) === "full";
-      const body = feed.body || {};
-      const allPool = Array.isArray(body.pool) ? body.pool : [];
-      let pool = allPool, omitted = 0;
-      if (!full && allPool.length) {
-        const held = new Set();
-        for (const t of (Array.isArray(body.teams) ? body.teams : []))
-          for (const id of (t && Array.isArray(t.players) ? t.players : [])) held.add(id);
-        // A league that reports no rosters at all would filter to nothing and look empty,
-        // which is a worse answer than a big one. Keep the whole pool in that case.
-        if (held.size) { pool = allPool.filter(x => x && held.has(x.id)); omitted = allPool.length - pool.length; }
-      }
-      const withDd = pool.filter(x => x && x.dd).length;
-
-      return toolText({
-        provider,
-        leagueId: cred.leagueId,
-        you: cred.teamId != null ? String(cred.teamId) : null,
-        ...body,
-        pool,
-        dd: {
-          ...(body.dd || {}),
-          // ⚠️ Named for the rows actually in this payload. `matched`/`unmatched` on the
-          // spread-in dd block stay league-wide; these two are the ones that describe
-          // what the caller is holding.
-          returnedRows: pool.length,
-          returnedWithDollars: withDd,
-          note: withDd < pool.length
-            ? (pool.length - withDd) + " of the returned players have no DataDawg$ — the board did not match "
-              + "them. That is a gap in the join, never a valuation of zero."
-            : "Every returned player carries DataDawg$.",
-        },
-        scope: {
-          returned: full ? "full" : "rosters",
-          rosteredRows: full ? undefined : pool.length,
-          freeAgentsOmitted: full ? 0 : omitted,
-          howToGetThem: full || !omitted ? undefined
-            : "Call again with scope:\"full\" for the " + omitted + " free agents. It is roughly three times "
-              + "this payload, so ask for it only when the question is about who is available.",
-        },
-        method: {
-          dollars: SITE + "/data/datadawg-dollars-method.md",
-          page: SITE + "/fantasy-warroom.html",
-          note: "DataDawg$ is converted for THIS league's settings against its own replacement level. It is not " +
-                "Market Value, not what anyone paid, and not comparable across leagues with different rosters.",
-        },
-      });
-    },
+    description: "Read the caller's saved Sleeper or connected ESPN/Yahoo league. Discover IDs with dd_fantasy_leagues. Multiple matches require explicit selection. Sleeper uses the website's shared current-context feed: actual starters/bench/IR/taxi, matchups and scores, scoring and waiver rules, current-week transactions, weekly projections and season DataDawg$. Coverage and source timestamps disclose missing data. Spendable FAAB, precise deadlines, pending claims and game locks are not inferred. Dollars are season comparisons, never weekly points. Defaults to rostered players; scope available/full is paginated with limit/offset. Requires a personal AI connection.",
+    inputSchema: {type:"object",properties:{
+      provider:{type:"string",enum:["yahoo","espn","sleeper"]},
+      league_id:{type:"string",description:"Exact ID from your saved leagues; never another account's private connection."},
+      season:{type:"string",pattern:"^[0-9]{4}$"},
+      week:{type:"integer",minimum:1,maximum:18,description:"Sleeper current week only; historical roster reconstruction is unsupported."},
+      team_id:{type:"string",description:"Roster ID in this league; overrides the saved viewing preference for this read."},
+      scope:{type:"string",enum:["rosters","available","full"]},
+      position:{type:"string",enum:["QB","RB","WR","TE","K","DST"]},
+      limit:{type:"integer",minimum:1,maximum:100},offset:{type:"integer",minimum:0},
+      refresh:{type:"boolean",description:"Bypass the 30-second context cache. Player metadata and season inputs retain their separately dated caches."}
+    },additionalProperties:false},
+    async run(args,env,caller){
+      if(caller?.kind!=="user")return toolErr("This reads your saved leagues. Use a personal connection at "+SITE+"/connect.html.");
+      try{
+        wrArgs(args);
+        const uid=caller.uid||caller.name;
+        let rows=await wrConnections(env,uid,args.provider);
+        if(args.league_id!=null)rows=rows.filter(r=>r.leagueId===String(args.league_id));
+        if(args.season!=null)rows=rows.filter(r=>r.provider==='sleeper'||String(r.season)===String(args.season));
+        if(!rows.length)return toolErr("No matching league is saved on this account. Save it while signed in at "+SITE+"/fantasy-warroom.html, then use dd_fantasy_leagues.");
+        if(rows.length!==1)return toolText({selectionRequired:true,leagues:wrPublicConnections(rows),note:"Choose provider, league_id, and season when needed. No league was guessed."});
+        const chosen=rows[0];let body;
+        if(chosen.provider==='sleeper')body=await wrSleeperFeed(env,uid,{leagueId:chosen.leagueId,season:args.season,week:args.week,refresh:args.refresh});
+        else{
+          if(args.week!=null)throw Error("Week-specific context is currently supported only for Sleeper.");
+          const feed=chosen.provider==='yahoo'?await yahooWarroomFeed(chosen.credential,env):await espnWarroomFeed(chosen.credential);
+          if(!feed.ok)throw Error(feed.reason||"Provider connection expired or refused access.");
+          body=feed.body;
+          if(String(body.league?.id)!==chosen.leagueId)throw Error("Provider returned a different league; result withheld.");
+          ddDecorateBody(await ddLoadBoard(env,chosen.provider,chosen.leagueId,"season"),body);
+          body.provider=chosen.provider;body.leagueId=chosen.leagueId;
+          body.identity={provider:chosen.provider,leagueId:chosen.leagueId,season:chosen.season||null,week:null};
+          body.context={coverage:{currentWeek:{status:"unavailable",reason:"Expanded weekly context currently supports Sleeper only."}}};
+        }
+        return toolText(wrSlice(body,args,chosen.teamId));
+      }catch(e){return toolErr("Could not read the selected league: "+e.message);}
+    }
   },
   {
     name: "dd_draft_pool",
@@ -17694,7 +17972,7 @@ const MCP_TOOLS = [
         pages: {
           "index.html": "Home — what Data Dawgs is and the working-dawg taxonomy (Pup / Dawgs / The DawgHouse).",
           "bigboard.html": "Draft big board over the MV pool.",
-          "fantasy-warroom.html": "Fantasy War Room — a connected Sleeper, public Yahoo or ESPN league with every roster priced in DataDawg$ against THAT league's own replacement level. The rows are one account's league and have no public JSON; dd_war_room reads the caller's own Yahoo or ESPN connection. A Sleeper league is read in the browser and is not stored here.",
+          "fantasy-warroom.html": "Fantasy War Room — a connected Sleeper, public Yahoo or ESPN league with every roster priced in DataDawg$ against THAT league's own replacement level. The rows are one account's league and have no public JSON; dd_fantasy_leagues discovers the caller's saved leagues; dd_war_room reads the selected Sleeper shared context or ESPN/Yahoo connected roster feed. Sleeper reports coverage and refresh times, with exact deadlines, spendable FAAB and game locks explicitly unavailable.",
           "datadawg-dollars.html": "DataDawg$ — our own converted auction dollars for one league room: Target $, conversion-sensitivity bands, ETR delta. Not MV; MV is the market snapshot this converts.",
           "auction.html": "Auction draft operator (league passphrase gate).",
           "board.html": "Live draft board — mirrors the auction via Firebase.",

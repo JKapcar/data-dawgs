@@ -2666,7 +2666,15 @@ body.wr-shared #youLab{display:none!important}
 .wr-connect form{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 .wr-connect select{max-width:100%;padding:11px 13px;border:1px solid var(--grid);border-radius:8px;background:var(--page);color:var(--ink-1);font:inherit}
 #espnAccess{margin-top:16px;padding:16px;border:1px solid var(--grid);border-radius:10px}
-#espnAccess[hidden]{display:none}
+#espnAccess[hidden],#espnDesktopSteps[hidden],#espnSetupLink[hidden]{display:none}
+#espnAccessTitle,#espnStepsTitle{scroll-margin-top:160px}
+.wr-setup-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0}
+.wr-setup-steps{padding-left:24px;line-height:1.65}.wr-setup-steps li{margin:12px 0}
+#espnDesktopSteps{margin-top:20px;border-top:1px solid var(--grid);padding-top:16px}
+#wrContextDetails{overflow-x:auto}#wrContextDetails td{white-space:normal}
+#espnSetupLink{width:100%;box-sizing:border-box;font-size:16px}
+#espnAccessForm{display:flex;flex-wrap:wrap;gap:14px;margin-top:18px}
+@media(max-width:600px){.wr-setup-actions>*{width:100%;text-align:center}#espnAccessForm .wr-btn{width:100%}}
 #espnAccessForm label{display:flex;flex-direction:column;gap:6px;flex:1 1 260px;min-width:0;font-size:14px}
 #espnAccessForm input{min-width:0;width:100%;box-sizing:border-box;font-size:16px}
 .wr-connect input{min-width:min(100%,460px);flex:1;padding:11px 13px;border:1px solid var(--grid);
@@ -2755,11 +2763,11 @@ body.wr-shared #youLab{display:none!important}
   <span class="wr-dot"></span>
   <div class="wr-who">
     <div class="wr-whorow">
-      <button type="button" class="wr-pick" id="leagueBtn" aria-haspopup="true" aria-expanded="false">No league connected</button>
+      <button type="button" class="wr-pick" id="leagueBtn" aria-haspopup="true" aria-expanded="false">Connect your league</button>
       <span class="wr-youlab wr-hide" id="youLab">you are</span>
       <button type="button" class="wr-pick sm wr-hide" id="teamBtn" aria-haspopup="true" aria-expanded="false">&mdash;</button>
     </div>
-    <div class="wr-meta" id="stripText">Add or open a league to begin.</div>
+    <div class="wr-meta" id="stripText">Paste your league link to get started.</div>
   </div>
   <div class="wr-stripright">
     <button type="button" class="wr-iconbtn" id="gearBtn" aria-haspopup="true" aria-expanded="false" aria-label="Settings and methodology">&#9881;</button>
@@ -2794,27 +2802,47 @@ body.wr-shared #youLab{display:none!important}
 <section id="sheetLeagues" hidden>
   <div class="wr-leaguehub">
     <div class="wr-leaguehead">
-      <div><h2>Your fantasy leagues</h2><p>Add once. Open or switch anytime.</p></div>
+      <div><h2>Your fantasy leagues</h2><p>Paste your league link. Connect access if needed. Then choose your team.</p></div>
       <span class="wr-sync" id="shelfState">Checking saved leagues…</span>
     </div>
+    <p class="wr-note" id="wrSetupAccount"><a href="signon.html?next=fantasy-warroom.html%23leagues">Sign in or create your Data Dawgs account</a> to connect ESPN, save leagues across devices, and use your own AI.</p>
     <div class="wr-connect">
+      <p class="wr-note"><strong>Start here:</strong> copy the address of your league’s page from Sleeper, ESPN, or Yahoo and paste it below. Private ESPN leagues need an extra setup step on a computer.</p>
       <form id="connectForm">
         <select id="leagueProvider" aria-label="Platform for a league ID"><option value="auto">Detect from URL</option><option value="sleeper">Sleeper</option><option value="espn">ESPN</option><option value="yahoo">Yahoo</option></select>
         <input id="leagueInput" inputmode="url" autocomplete="url" placeholder="League URL or ID" aria-label="Fantasy league URL or ID">
-        <button class="wr-btn">Add league</button>
+        <button class="wr-btn">Connect league</button>
       </form>
       <p class="wr-status" id="connectionStatus" role="status">Paste a league URL, or choose a platform and enter its ID. Private ESPN leagues connect here after an access check.</p>
-      <section id="espnAccess" hidden data-ddb-skip>
-        <h3>Connect your private ESPN league</h3>
+      <section id="espnAccess" hidden data-ddb-skip aria-labelledby="espnAccessTitle">
+        <h3 id="espnAccessTitle" tabindex="-1">One more step: connect ESPN</h3>
         <p class="wr-note" id="espnAccessNote"></p>
-        <p class="wr-note">On a computer, sign in to ESPN. Open Developer Tools (F12 in Chrome or Edge), then Application → Cookies → the ESPN domain. Copy the full values named espn_s2 and SWID below.</p>
-        <p class="wr-note">These are sensitive ESPN session cookies. Submit only your own. They are encrypted under your Data Dawgs account and reused until they expire.</p>
-        <form id="espnAccessForm" autocomplete="off">
-          <label>espn_s2<input id="wrEspnS2" type="password" autocomplete="off" spellcheck="false" required></label>
-          <label>SWID<input id="wrEspnSwid" type="password" autocomplete="off" spellcheck="false" required></label>
-          <button class="wr-btn" type="submit">Connect and open league</button>
-          <button class="wr-mini" id="espnAccessCancel" type="button">Cancel</button>
-        </form>
+        <p>You can see your private league because you are signed in to ESPN. Data Dawgs needs your ESPN access details to read it too.</p>
+        <p><strong>Use a computer for this setup.</strong> After connecting, you can open your league here on your phone while signed in to the same Data Dawgs account.</p>
+        <div class="wr-setup-actions">
+          <button id="espnShowSteps" type="button" class="wr-btn" aria-expanded="false" aria-controls="espnDesktopSteps">I’m on a computer — show me how</button>
+          <button id="espnCopySetup" type="button" class="wr-mini">Copy link to finish on a computer</button>
+          <button class="wr-mini" id="espnAccessCancel" type="button">Do this later</button>
+        </div>
+        <p id="espnSetupStatus" class="wr-status" role="status"></p>
+        <input id="espnSetupLink" type="text" readonly hidden aria-label="Link to continue ESPN setup" data-ddb-skip>
+        <div id="espnDesktopSteps" hidden>
+          <h4 id="espnStepsTitle" tabindex="-1">Get your two ESPN access values</h4>
+          <ol class="wr-setup-steps">
+            <li><a id="espnOpenLeague" href="https://fantasy.espn.com/football/" target="_blank" rel="noopener noreferrer">Open your league on ESPN ↗</a> in Chrome or Edge on a computer. Sign in to the ESPN account that can see this league.</li>
+            <li>On the ESPN page, open the browser’s tools: press <strong>Ctrl + Shift + I</strong> on Windows, or <strong>⌘ + Option + I</strong> on a Mac.</li>
+            <li>Choose <strong>Application</strong> at the top of the tools. If it is hidden, look under <strong>»</strong>. In the left sidebar, expand <strong>Cookies</strong> under Storage and select the ESPN address.</li>
+            <li>Find the row named <strong>espn_s2</strong>. Copy its entire <strong>Value</strong> and paste it in the first box below. Then copy the <strong>SWID</strong> value into the second box, keeping any curly braces.</li>
+            <li>Select <strong>Connect ESPN and choose my team</strong>. We’ll check access and open your league.</li>
+          </ol>
+          <details><summary>Can’t find those rows?</summary><p class="wr-note">Check that your league is visible on the ESPN page and that you selected an ESPN address under Cookies. Reload the ESPN page after signing in, then check again. These are browser cookie values, not your ESPN password or league ID. <a href="https://developer.chrome.com/docs/devtools/application/cookies" target="_blank" rel="noopener noreferrer">See Chrome’s illustrated guide ↗</a>.</p></details>
+          <p class="wr-note">Treat these values like a password: paste only your own into this form, not into chat or a message. Data Dawgs stores them encrypted and uses them to read your league. You may need to reconnect when they expire.</p>
+          <form id="espnAccessForm" autocomplete="off">
+            <label>1. ESPN access value <small>Copy the Value for espn_s2</small><input id="wrEspnS2" type="password" autocomplete="off" spellcheck="false" required></label>
+            <label>2. ESPN account value <small>Copy the Value for SWID, including braces</small><input id="wrEspnSwid" type="password" autocomplete="off" spellcheck="false" required></label>
+            <button class="wr-btn" type="submit">Connect ESPN and choose my team</button>
+          </form>
+        </div>
       </section>
     </div>
     <div class="wr-saved" id="seededLeague"></div>
@@ -2844,6 +2872,13 @@ body.wr-shared #youLab{display:none!important}
   </div>
 </section>
 
+<article id="wrCurrentContext" class="wr-card wr-has-league wr-hide" style="margin-bottom:16px" hidden>
+  <h2>Current league context</h2>
+  <p class="wr-note">Want to ask your own AI about this league? <a href="signon.html#connect">Connect your AI</a> after saving your league and choosing your team. This step is optional.</p>
+  <p id="wrContextSummary" class="wr-note"></p>
+  <button id="wrContextRefresh" type="button" class="wr-btn">Refresh league</button>
+  <div id="wrContextDetails"></div>
+</article>
 <section id="sheetReport">
   <article class="wr-card wr-full wr-gate wr-hide" id="teamGate">
     <h2 id="gateTitle">Which team is yours?</h2>
@@ -3238,9 +3273,9 @@ body.wr-shared #youLab{display:none!important}
         <dt>Machine access</dt>
         <dd>The numbers on this page are <b>your</b> league, so there is no public JSON of them and there is not
         going to be — a file here would publish every connected league's valuations. The machine surface is the
-        <code>dd_war_room</code> MCP tool, which reads the Yahoo or ESPN league <em>you</em> connected, signed in as
-        you. A Sleeper league is read in your browser from its public URL and is not stored on the server, so that
-        tool cannot reach one even while this page is showing it. The pricing method is public and league-agnostic:
+        <code>dd_war_room</code> MCP tool, which reads leagues saved on your account. Sleeper uses this page’s shared current-context feed;
+        ESPN and Yahoo provide their connected roster feeds. Sign in here and save a Sleeper league, then use
+        <code>dd_fantasy_leagues</code> in your personal AI connection to select it. Missing source coverage stays explicit. The pricing method is public and league-agnostic:
         <a href="/data/datadawg-dollars-method.md">datadawg-dollars-method.md</a>. Everything the site publishes for
         machines, with an honest live/planned/none status per surface, is in
         <a href="/data/surfaces.json">surfaces.json</a>.</dd>
@@ -3260,6 +3295,7 @@ body.wr-shared #youLab{display:none!important}
 <script src="draft-providers.js"></script>
 <script src="datadawg-default.js"></script>
 <script src="warroom-weekly.js"></script>
+<script src="warroom-sleeper.js"></script>
 <script>
 /* ============================================================================
    DDSheets — ported verbatim from survivor.html. Hash beats memory beats first;
@@ -3419,7 +3455,7 @@ function ddFromFeed(pool){
   (pool||[]).forEach(p=>{if(p&&p.dd&&Number.isFinite(Number(p.dd.v))){const k=ddKey(p);if(k)by.set(k,Number(p.dd.v));}});
   return by.size?{by,meta}:null;
 }
-/* Sleeper never touches the Worker, so ask for exactly the keys this page holds. */
+/* Dynasty boards still use the authenticated key lookup. */
 async function ddFromWorker(provider,leagueId,pool,horizon,teams){
   const tok=(window.DDAuth&&DDAuth.token&&DDAuth.token())||'';
   if(!tok)return null;                       /* signed out: PMV, silently and correctly */
@@ -3469,17 +3505,17 @@ async function defaultDD(st){
 async function loadDD(st=state){
   if(!st||!st.ref){if(st===state)DD={season:null,dynasty:null};return null;}
   const prov=st.ref.provider;
-  const feed=(prov==='espn'||prov==='yahoo');
+  const feed=(prov==='espn'||prov==='yahoo'||!!st.context);
   /* ⚠️ A dynasty league needs BOTH boards: the horizon is per module, so a manager can be
      looking at season money and dynasty trades in the same session. The feed path carries
      only the season board — ESPN and Yahoo dynasty rooms would need the Worker path too,
      and neither exists today, so that stays a lookup rather than an assumption. */
   /* Use the state being loaded, not global `state`: portfolio loading resolves saved
      leagues off-screen, and the active league may have a different type. */
-  const wantDyn=Number(st&&st.league&&st.league.settings&&st.league.settings.type)===2&&!feed;
+  const wantDyn=Number(st&&st.league&&st.league.settings&&st.league.settings.type)===2&&prov==='sleeper';
   const dyn=wantDyn?await ddFromWorker(prov,st.ref.id,st.pool,'dynasty',st.teams):null;
   const published=await ddFromYahooPublic(prov,st.ref.id);
-  const got=published||(feed?ddFromFeed(st.pool):await ddFromWorker(prov,st.ref.id,st.pool,'season',st.teams))||await defaultDD(st);
+  const got=published||(feed?ddFromFeed(st.pool):await ddFromWorker(prov,st.ref.id,st.pool,'season',st.teams))||(!st.context?await defaultDD(st):null);
   /* the feed path carries no meta block of its own, so take it off the feed body */
   if(got&&!got.meta&&st.dd)got.meta=st.dd;
   if(dyn&&!dyn.meta&&st.dd)dyn.meta=st.dd;
@@ -3567,8 +3603,8 @@ const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>\"]/g,
 const fnv=s=>{let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return h>>>0};
 
 /* ---------------------------------------------------------------- math ---- */
-function slots(raw){const out={};(raw||[]).forEach(x=>{x=({"W/R/T":'FLEX',WRRB_FLEX:'FLEX',REC_FLEX:'FLEX',SUPER_FLEX:'SUPERFLEX',DEF:'DST'}[x]||x);out[x]=(out[x]||0)+1});return out}
-function eligible(pos,slot){return pos===slot||slot==='FLEX'&&['RB','WR','TE'].includes(pos)||slot==='SUPERFLEX'&&['QB','RB','WR','TE'].includes(pos)}
+function slots(raw){const out={};(raw||[]).forEach(x=>{x=({"W/R/T":'FLEX',SUPER_FLEX:'SUPERFLEX',DEF:'DST'}[x]||x);out[x]=(out[x]||0)+1});return out}
+function eligible(pos,slot){return pos===slot||slot==='FLEX'&&['RB','WR','TE'].includes(pos)||slot==='SUPERFLEX'&&['QB','RB','WR','TE'].includes(pos)||slot==='WRRB_FLEX'&&['RB','WR'].includes(pos)||slot==='REC_FLEX'&&['WR','TE'].includes(pos)}
 function points(row,scoring){let n=0;for(const[k,v]of Object.entries(scoring||{})){const x=Number(row.stats?.[k]);if(Number.isFinite(x)&&Number.isFinite(Number(v)))n+=x*Number(v)}return n||Number(row.stats?.pts_half_ppr)||0}
 /* ⚠️ replacement() returns {rank,pts} per position. Subtracting the OBJECT here made
    every VOR total NaN, which then made the simulation report the first N rosters at
@@ -3591,10 +3627,14 @@ function replacement(pool,s){
     for(const p of eligible){const c=byPos[p][used[p]];if(c&&(!best||c.p>best.p)){best=c;bp=p}}
     if(!bp)return;used[bp]++}};
   const flexSlots=(s.FLEX||0)*teams, sfSlots=(s.SUPERFLEX||0)*teams;
+  fill(['RB','WR'],(s.WRRB_FLEX||0)*teams);
+  fill(['WR','TE'],(s.REC_FLEX||0)*teams);
   fill(['RB','WR','TE'],flexSlots);
   fill(['QB','RB','WR','TE'],sfSlots);
   const r={};
   POS.forEach(p=>{const next=byPos[p][used[p]];r[p]={rank:used[p]+1,pts:next?next.p:0}});
+  r.WRRB_FLEX={rank:(s.WRRB_FLEX||0)*teams||1,pts:Math.max(r.RB.pts,r.WR.pts)};
+  r.REC_FLEX={rank:(s.REC_FLEX||0)*teams||1,pts:Math.max(r.WR.pts,r.TE.pts)};
   r.FLEX={rank:flexSlots||1,pts:Math.max(r.RB.pts,r.WR.pts,r.TE.pts)};
   r.SUPERFLEX={rank:sfSlots||1,pts:Math.max(r.QB.pts,r.RB.pts,r.WR.pts,r.TE.pts)};
   return r;
@@ -3937,7 +3977,10 @@ function moneyLineup(t){
   if(state.ref.provider!=='sleeper')return {...chooseStarters(t.players,state.slots),ready:true};
   const w=state.weekly;
   if(!w||!w.ready)return {ready:false,starters:[],bench:t.players.slice(),error:w?.error||'Weekly projections have not loaded.'};
-  return DDWeekly.optimize(t.players,state.league.roster_positions,w.byId);
+  const excluded=new Set([...(t.reserve||[]),...(t.taxi||[])]);
+  const result=DDWeekly.optimize(t.players.filter(p=>!excluded.has(p.id)),state.league.roster_positions,w.byId);
+  result.bench=result.bench.concat(t.players.filter(p=>excluded.has(p.id)));
+  return result;
 }
 function renderWeeklyMoney(M){
   const sleeper=state.ref.provider==='sleeper',card=$('mnWeeklyCard');
@@ -3974,9 +4017,9 @@ function renderWeeklyMoney(M){
 async function refreshMoneyWeek(){
   const st=state;if(!st||st.ref.provider!=='sleeper'||st.weeklyLoading)return;
   st.weeklyLoading=true;$('mnWeeklyRefresh').disabled=true;
-  st.weekly=await DDWeekly.load(st.league);
-  st.weeklyLoading=false;
-  if(state===st)renderMoney();
+  try{await connect('https://sleeper.com/leagues/'+st.ref.id);}
+  catch(e){$('connectionStatus').textContent='Refresh failed: '+e.message;$('connectionStatus').className='wr-status bad';}
+  finally{st.weeklyLoading=false;$('mnWeeklyRefresh').disabled=false;}
 }
 function refreshMoneyWeekIfStale(){
   if(state?.ref.provider==='sleeper'&&Date.now()-Date.parse(state.weekly?.capturedAt||'1970-01-01')>5*60*1000)
@@ -4626,15 +4669,18 @@ function leagueRow(entry){
   });
 }
 async function loadAllSaved(){
+  const generation=leagueLoadGeneration;
   const btn=$('pfLoadAll');btn.disabled=true;await Promise.all([loadMV(),loadDynastyMV()]);
-  const todo=readShelf().filter(x=>!LOADED.has(keyOf(x.provider,x.leagueId)));
+  const todo=readShelf().filter(x=>x.provider==='sleeper'||!LOADED.has(keyOf(x.provider,x.leagueId)));
   let done=0;
   for(const x of todo){
+    if(generation!==leagueLoadGeneration)break;
     $('pfStatus').textContent='Reading '+x.name+'… ('+(++done)+' of '+todo.length+')';
     try{
       const st=x.provider==='espn'?await fetchLeagueEspn(x.leagueId):x.provider==='yahoo'?await fetchLeagueYahoo(x.leagueId):await fetchLeague(x.leagueId);
-      await loadDD(st);await loadDraftCapital(st);LOADED.set(keyOf(x.provider,x.leagueId),{state:st,sim:null});
-    }catch(e){$('pfStatus').textContent='Could not read '+x.name+': '+e.message}
+      await loadDD(st);await loadDraftCapital(st);if(generation!==leagueLoadGeneration)break;
+      LOADED.set(keyOf(x.provider,x.leagueId),{state:st,sim:null});
+    }catch(e){if(generation!==leagueLoadGeneration)break;LOADED.delete(keyOf(x.provider,x.leagueId));$('pfStatus').textContent='Could not read '+x.name+': '+e.message}
   }
   btn.disabled=false;renderPortfolio();
 }
@@ -5005,26 +5051,17 @@ function saveFocus(){
 }
 async function fetchLeague(id){
   const ref={provider:'sleeper',id:String(id)};
-  const [league,users,rosters]=await Promise.all([fetchJson(API+'/league/'+ref.id),fetchJson(API+'/league/'+ref.id+'/users'),fetchJson(API+'/league/'+ref.id+'/rosters')]);
-  if(!league?.league_id)throw Error('Sleeper did not return a league for that ID.');
-  const playoffStart=Number(league.settings?.playoff_week_start)||15;
-  const [players,weeklyMatchups,weekly]=await Promise.all([fetchJson(PROJ_SEASON),Promise.all(Array.from({length:playoffStart-1},(_,i)=>fetchJson(API+'/league/'+ref.id+'/matchups/'+(i+1)).catch(()=>[]))),DDWeekly.load(league)]);
-  /* Mirrors espnProjection()'s `appliedTotal / wk`: the league's own regular season, not a
-     flat 17. Keeping p in points-per-week is what lets replacement(), starterValues(),
-     VOR_FLOOR and sigma stay exactly as they were -- the divisor is constant across every
-     player, so it cannot reorder anyone or change a single VOR ratio. */
-  const REG_WEEKS=Math.max(1,playoffStart-1);
-  const pool=players.filter(p=>p.player&&['QB','RB','WR','TE','K','DEF'].includes(p.player.position)).map(p=>({id:String(p.player_id),name:p.player.full_name||p.player.first_name+' '+p.player.last_name,pos:p.player.position==='DEF'?'DST':p.player.position,positions:p.player.fantasy_positions||[p.player.position],p:points(p,league.scoring_settings)/REG_WEEKS,team:p.team}));
-  const byId=Object.fromEntries(pool.map(p=>[p.id,p])),user=Object.fromEntries(users.map(u=>[u.user_id,u]));
-  // A rostered player absent from the season feed still belongs to the roster.
-  // Weekly-only players can start; players with no projection stay explicitly unknown.
-  rosters.forEach(r=>(r.players||[]).forEach(pid=>{const id=String(pid);if(!byId[id]){
-    byId[id]={...(weekly.players?.get(id)||{id,name:'Sleeper player '+id,pos:'Unknown'}),p:null};pool.push(byId[id]);
-  }}));
-  const teams=rosters.map(r=>({id:String(r.roster_id),ownerId:String(r.owner_id||''),name:user[r.owner_id]?.metadata?.team_name||user[r.owner_id]?.display_name||'Roster '+r.roster_id,players:(r.players||[]).map(id=>byId[id]).filter(Boolean),starters:new Set(r.starters||[])}));
-  const schedule=weeklyMatchups.map(rows=>{const groups={};(rows||[]).forEach(x=>{if(x.matchup_id!=null)(groups[x.matchup_id]=groups[x.matchup_id]||[]).push(String(x.roster_id))});return Object.values(groups).filter(g=>g.length===2)});
-  league.auction_budget=null; // Sleeper connection does not report an auction budget; default uses a nominal scale.
-  const st={ref,league,users,slots:slots(league.roster_positions),pool,teams,schedule,horizon:(()=>{
+  const tok=window.DDAuth?.token?.()||'';
+  const response=await fetch(DD_WORKER+'/sleeper/warroom?leagueId='+encodeURIComponent(ref.id)+'&refresh=1',{
+    cache:'no-store',headers:tok?{'X-Bozo-Session':tok}:{}
+  });
+  const feed=await response.json();
+  if(!response.ok)throw Error(feed.error||'Shared league feed unavailable ('+response.status+').');
+  if(feed.provider!=='sleeper'||String(feed.identity?.leagueId)!==ref.id||String(feed.league?.league_id)!==ref.id)
+    throw Error('The shared feed returned a different league; result withheld.');
+  const shared=DDSleeper.hydrate(feed),league=shared.league,teams=shared.teams;
+  const playoffStart=Number(league.settings?.playoff_week_start)||19;
+  const st={...shared,ref,horizon:(()=>{
     /* Seeded from the league type, overridden by whatever was saved for THIS league.
        A saved 'dynasty' on a league that has no dynasty board is discarded rather
        than honoured. */
@@ -5034,7 +5071,6 @@ async function fetchLeague(id){
     return {report:ok(saved.report),money:ok(saved.money),trades:ok(saved.trades)};
   })(),settings:{playoffSpots:Number(league.settings?.playoff_teams)||Math.max(2,Math.round(teams.length/3)),playoffStart,sigma:20},defaults:null};
   st.defaults=JSON.stringify(st.settings);
-  st.weekly=weekly;
   return st;
 }
 /* ESPN, assembled by the Worker into the shape fetchLeague() returns for Sleeper.
@@ -5182,6 +5218,7 @@ async function connect(input,credentials){
     return true;
   }catch(error){
     if(generation!==leagueLoadGeneration)return false;
+    LOADED.delete(keyOf(ref.provider,ref.id));
     clearMoneyCards('League load failed. Previous recommendations withheld.');
     throw error;
   }
@@ -5271,7 +5308,7 @@ async function openShared(token,provider){
 }
 
 async function openLeague(provider,id,opts){
-  if(restore(keyOf(provider,id)))return;
+  if(provider!=='sleeper'&&restore(keyOf(provider,id)))return;
   quietOpen=!!(opts&&opts.quiet);
   /* ⚠️ connect() routes on what it can parse out of this one string, so a bare numeric id
      always reads as a Sleeper league id — which is how reopening a saved ESPN league
@@ -5288,8 +5325,22 @@ function providerInput(provider,id){
 }
 
 /* ----------------------------------------------------------- rendering ---- */
+function renderCurrentContext(){
+  const card=$('wrCurrentContext'),ctx=state?.context;
+  card.hidden=!ctx;if(!ctx)return;
+  const team=state.teams[+$('teamPicker').value||0],w=state.weekly;
+  const match=ctx.matchups?.find(m=>m.teamId===team?.id);
+  $('wrContextSummary').textContent=state.league.name+' · '+state.identity.season+' · '+(state.identity.week?'Week '+state.identity.week:'Current week unavailable')
+    +' · Updated '+new Date(state.fetchedAt).toLocaleString()+'. '+(state.focusGuessed?'Choose your team.':team.name)
+    +(match?.points!=null?' · '+match.points+' actual points':'')+'. Season dollars and weekly projected points are separate.';
+  $('wrContextDetails').innerHTML='<details><summary>Coverage and sources</summary><table><thead><tr><th>Data</th><th>Coverage</th><th>Detail</th></tr></thead><tbody>'
+    +Object.entries(ctx.coverage).filter(([k])=>!k.startsWith('matchupsWeek')).map(([key,c])=>'<tr><td>'+esc(key)+'</td><td>'+esc(c.status)+'</td><td>'+esc(c.reason||'')
+      +(ctx.sources[key]?.fetchedAt?' · Read '+esc(new Date(ctx.sources[key].fetchedAt).toLocaleString()):'')+'</td></tr>').join('')+'</tbody></table></details>';
+}
+$('wrContextRefresh').onclick=refreshMoneyWeek;
 function render(){
   if(!state)return;
+  renderCurrentContext();
   /* ⚠️ The metric is owned here, not only by runSim(). Opening a second league nulled `sim`
      but left the previous league's number painted in #odds — a stale probability attributed
      to a roster it was never computed from. */
@@ -5637,6 +5688,7 @@ document.addEventListener('click',e=>{
 });
 
 async function submitLeague(credentials){
+  renderSetupAccount();
   const input=$('leagueInput').value;
   const st=$('connectionStatus');
   try{if(await connect(input,credentials)===false)return;hideEspnAccess();st.className='wr-status good';st.textContent=readShelf().length+' league'+(readShelf().length===1?'':'s')+' saved. This league is open now.';$('leagueInput').value='';
@@ -5652,8 +5704,11 @@ async function submitLeague(credentials){
       const ref=parseWarroomInput(input,$('leagueProvider').value);
       if(ref?.provider==='espn'){
         $('leagueInput').value=providerInput('espn',ref.id);$('leagueProvider').value='espn';
-        $('espnAccessNote').textContent='ESPN requires authorization for league '+ref.id+' ('+ESPN_WR_SEASON+').';
-        $('espnAccess').hidden=false;SHEETS.show('leagues');$('wrEspnS2').focus();
+        $('espnAccessNote').textContent='League '+ref.id+' · '+ESPN_WR_SEASON+' · access is not connected yet.';
+        $('espnOpenLeague').href=providerInput('espn',ref.id);
+        $('espnSetupLink').value=location.origin+location.pathname+'?provider=espn&league='+encodeURIComponent(ref.id)+'#leagues';
+        $('espnAccess').hidden=false;SHEETS.show('leagues');
+        $('espnAccessTitle').focus({preventScroll:true});$('espnAccessTitle').scrollIntoView({block:'start',behavior:'smooth'});
       }
     }
     /* A network blip is not a reason to make someone re-pick a league they saved. */
@@ -5667,7 +5722,9 @@ async function submitLeague(credentials){
   finally{quietOpen=false}
 }
 function hideEspnAccess(){
-  $('espnAccess').hidden=true;$('wrEspnS2').value='';$('wrEspnSwid').value='';
+  $('espnAccess').hidden=true;$('espnDesktopSteps').hidden=true;$('espnShowSteps').setAttribute('aria-expanded','false');
+  $('espnSetupStatus').textContent='';$('espnSetupLink').hidden=true;$('espnSetupLink').value='';
+  $('wrEspnS2').value='';$('wrEspnSwid').value='';
 }
 $('connectForm').addEventListener('submit',async e=>{
   e.preventDefault();hideEspnAccess();await submitLeague();
@@ -5679,6 +5736,15 @@ $('espnAccessForm').addEventListener('submit',async e=>{
   const button=e.submitter;if(button)button.disabled=true;
   try{await submitLeague(credentials)}finally{if(button)button.disabled=false}
 });
+$('espnShowSteps').onclick=()=>{
+  $('espnDesktopSteps').hidden=false;$('espnShowSteps').setAttribute('aria-expanded','true');
+  $('espnStepsTitle').focus({preventScroll:true});$('espnStepsTitle').scrollIntoView({block:'start',behavior:'smooth'});
+};
+$('espnCopySetup').onclick=async()=>{
+  const link=$('espnSetupLink').value;
+  try{await navigator.clipboard.writeText(link);$('espnSetupStatus').textContent='Link copied. Open it on your computer and sign in to the same Data Dawgs account. The link contains your league ID only.';}
+  catch(e){$('espnSetupLink').hidden=false;$('espnSetupLink').focus();$('espnSetupLink').select();$('espnSetupStatus').textContent='Copy this link and open it on your computer.';}
+};
 $('espnAccessCancel').onclick=hideEspnAccess;
 $('leagueInput').addEventListener('input',hideEspnAccess);
 $('leagueProvider').addEventListener('change',hideEspnAccess);
@@ -5743,6 +5809,28 @@ $('meName').onchange=()=>{
 };
 setLoaded(false);
 paintShelf();paintSwitch();loadAccountShelf();
+function renderSetupAccount(){
+  const me=window.DDAuth?.me?.();
+  let next=location.pathname+location.search+'#leagues';
+  try{const ref=parseWarroomInput($('leagueInput').value,$('leagueProvider').value);if(ref)next=location.pathname+'?provider='+ref.provider+'&league='+encodeURIComponent(ref.id)+'#leagues';}catch(e){}
+  $('wrSetupAccount').innerHTML=me?'Signed in as <strong>'+esc(me.name)+'</strong>. Connect a league below, then choose your team.'
+    :'<a href="signon.html?next='+encodeURIComponent(next)+'">Sign in or create your Data Dawgs account</a> to connect ESPN, save leagues across devices, and use your own AI.';
+}
+renderSetupAccount();
+function wrAccountKey(){
+  if(!window.DDAuth?.me?.())return null;
+  try{const payload=JSON.parse(atob(window.DDAuth.token().split('.')[0].replace(/-/g,'+').replace(/_/g,'/')));return payload.u?'uid:'+payload.u:'legacy:'+payload.n;}
+  catch(e){return null;}
+}
+let wrAccount=wrAccountKey();
+addEventListener('dd-auth',()=>{
+  const account=wrAccountKey();
+  renderSetupAccount();
+  if(account!==wrAccount){
+    wrAccount=account;++leagueLoadGeneration;LOADED.clear();state=sim=null;DD=null;DDPICKS=null;
+    clearMoneyCards('Account changed. Open a league to load its current data.');setLoaded(false);renderPortfolio();
+  }
+});
 addEventListener('dd-auth',loadAccountShelf);
 /* ---------------------------------------------------------------- entry ----
    You should land on a league, not on a list. The picker only leads when there
@@ -5795,6 +5883,7 @@ window.DD_BOTCTX = {
     ['How should I read these playoff odds?','Reading the odds'],
     ['What is this room not modeling?','What is missing']]},
   sys: `RIGHT NOW you are on the Fantasy League War Room — a calculator that prices one connected fantasy league against its own replacement level and simulates its schedule.
+- SLEEPER CURRENT CONTEXT comes from the shared Worker feed also used by dd_war_room. Use its league, season, week, source times and coverage. Actual starters are distinct from projected candidate lineups. Game locks, exact waiver deadlines and spendable FAAB after transfers are unknown; do not infer them. Unrostered players may still require a waiver claim. IR and taxi players are excluded from weekly candidate starters. The season dollar model does not model guillotine survival.
 - When roster pricing is unavailable, do not quote zero-dollar totals, roster value ranks or shares. Missing prices are not zero values. Market Value only supports exact published formats; an 18-team league needs its own matching board.
 - MONEY SHEET WEEKLY LINEUPS: Sleeper leagues select the best legal starting lineup using CURRENT-WEEK Sleeper stat projections scored under that league's settings. Quote the displayed week and capture time. Weekly lineup rank is projected points; roster-dollar rank is the dated value of starters PLUS bench, not a weekly rank. Dollar starter/bench splits use the weekly lineup. Missing weekly projections are excluded and counted; incomplete lineups withhold comparisons, with no season fallback. These are suggested lineups, not submitted lineups; game locks are not enforced. Other providers' splits and the My Team/Standings/Trades season calculations still use season projections. Never interpret generic playoff simulations as guillotine survival odds.
 - IT IS A CALCULATOR, NOT A FORECASTER. Nothing on this page is logged before kickoff, so nothing here is a receipt and none of it appears on the model scoreboard. Never describe an odds number here as a graded or tracked forecast.

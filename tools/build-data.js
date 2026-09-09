@@ -1226,7 +1226,7 @@ const MCP_REGISTRY = (() => {
 // endpoint served 43: the map under-claims and every caller of a retired name keeps
 // working. Deploying first and failing to commit would leave this file claiming two tools
 // are live that answer -32602, which is the one thing it exists to prevent.
-const MCP_STAGED = [];
+const MCP_STAGED = ['dd_fantasy_leagues'];
 const MCP_LIVE = MCP_REGISTRY.map(t => t.name).filter(n => !MCP_STAGED.includes(n));
 for (const n of MCP_STAGED)
   if (!MCP_REGISTRY.some(t => t.name === n)) throw new Error(`${n} is listed as staged but is not in the registry`);
@@ -1326,9 +1326,8 @@ const SURFACES = [
      specifically so it cannot be walked. The machine surface is therefore an authenticated
      MCP tool, which is a real surface and is recorded as one; the method beside it is public
      because the method is not anybody's data.
-     ⚠️ Sleeper is named in the gap on purpose. It is read in the browser from a public URL
-     with nothing stored server-side, so dd_war_room genuinely cannot reach it — a reader who
-     assumes "connected league" means all three providers would be wrong about one. */
+     Sleeper shared context and account discovery are implemented in the release branch.
+     Keep production coverage at Yahoo/ESPN until the new Worker has been verified. */
   { id: 'war-room', domain: 'data', name: 'Fantasy War Room — your league at its own replacement level',
     page: '/fantasy-warroom.html',
     machine: [{ kind: 'mcp', tool: 'dd_war_room', status: 'live',
@@ -1340,7 +1339,7 @@ const SURFACES = [
     reading: [{ url: '/fantasy-warroom.html', title: 'Your league, priced against its own replacement level',
                 covers: 'Connect a Sleeper, public Yahoo or ESPN league and see every roster priced in DataDawg$ for that league\'s own settings — replacement level moves with roster shape, so two leagues with the same team count can price the same player differently. Carries the disagreement view against the provider\'s own projections.' }],
     planned: [],
-    gap: 'League rows are per-account and deliberately have no public JSON. A Sleeper league is read client-side from its public URL and is not stored server-side, so dd_war_room cannot resolve one even while the page is showing it.' },
+    gap: 'Production dd_war_room covers connected Yahoo and ESPN. Shared Sleeper context and dd_fantasy_leagues are implemented but await Worker deployment and authenticated runtime verification. Exact waiver deadlines, game locks and spendable FAAB after transfers remain unavailable; expanded weekly context for ESPN/Yahoo is future work.' },
   { id: 'draft-strategy', domain: 'data', name: '2026 draft strategy', page: '/strategy.html',
     machine: [{ kind: 'markdown', url: '/data/strategy.md', status: 'live' }],
     reading: [{ url: '/strategy.html', title: '2026 draft strategy',

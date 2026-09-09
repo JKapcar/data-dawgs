@@ -68,7 +68,9 @@
    "dd_guillotine_odds",
    "dd_site_map"
   ],
-  "tools_staged": [],
+  "tools_staged": [
+   "dd_fantasy_leagues"
+  ],
   "catalogs": {
    "status": "LIVE since 2026-08-09. Both /mcp/core/<credential> and /mcp/full/<credential> answer, and GET /mcp/ advertises them. The bare /mcp/<credential> is unchanged and still full. A leading `core`/`full` is only read as a catalog when a credential follows it, or when the credential arrived in a header — so no passphrase can be stranded by its own name. NOT VERIFIED IN PRODUCTION: the per-catalog tools/list counts, which need a credential.",
    "why": "Forty-three tool schemas cost 10-25k context tokens in every conversation that connects. core is the everyday league surface; full is everything and stays the default, so the bare /mcp/<credential> URL keeps serving every tool a live connector may already be calling.",
@@ -104,6 +106,7 @@
     "dd_draft_bozo_leg",
     "dd_submit_bozo_leg",
     "dd_draft_board",
+    "dd_fantasy_leagues",
     "dd_war_room",
     "dd_draft_pool",
     "dd_survivor_week",
@@ -153,6 +156,7 @@
     "dd_draft_bozo_leg": "Draft a Bozo leg",
     "dd_submit_bozo_leg": "Submit your Bozo leg (two-phase)",
     "dd_draft_board": "Live auction board",
+    "dd_fantasy_leagues": "Your saved fantasy leagues",
     "dd_war_room": "Your connected fantasy league",
     "dd_draft_pool": "Draft player pool",
     "dd_survivor_week": "Survivor ownership snapshot",
@@ -196,9 +200,9 @@
   "surfaces": 23,
   "with_live_machine_access": 18,
   "with_no_machine_access": 5,
-  "mcp_tools_registered": 44,
+  "mcp_tools_registered": 45,
   "mcp_tools_live": 44,
-  "mcp_tools_staged": 0,
+  "mcp_tools_staged": 1,
   "mcp_tools_core": 17,
   "mcp_tools_planned": 6
  },
@@ -302,7 +306,7 @@
     }
    ],
    "planned": [],
-   "gap": "League rows are per-account and deliberately have no public JSON. A Sleeper league is read client-side from its public URL and is not stored server-side, so dd_war_room cannot resolve one even while the page is showing it.",
+   "gap": "Production dd_war_room covers connected Yahoo and ESPN. Shared Sleeper context and dd_fantasy_leagues are implemented but await Worker deployment and authenticated runtime verification. Exact waiver deadlines, game locks and spendable FAAB after transfers remain unavailable; expanded weekly context for ESPN/Yahoo is future work.",
    "tier": "labs"
   },
   {

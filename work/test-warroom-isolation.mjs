@@ -20,6 +20,11 @@ Object.assign(base,{parseWarroomInput:id=>({provider:'sleeper',id}),window:{DDPr
 a=html.indexOf('let leagueLoadGeneration=0;');b=html.indexOf('\n/* Restore a league',a);vm.runInContext(html.slice(a,b),base);
 const first=vm.runInContext('connect("first")',base),second=vm.runInContext('connect("second")',base);
 pending.second(mk('second'));assert.equal(await second,true);pending.first(mk('first'));assert.equal(await first,false);assert.equal(base.state.ref.id,'second');assert.equal(base.DD.id,'second');
+// Display names can collide; account changes must be identified by immutable UID.
+let session=Buffer.from(JSON.stringify({u:'alice',n:'Matt'})).toString('base64url')+'.synthetic';
+base.window.DDAuth={me:()=>({name:'Matt'}),token:()=>session};base.atob=atob;
+vm.runInContext(fn('wrAccountKey'),base);assert.equal(base.wrAccountKey(),'uid:alice');
+session=Buffer.from(JSON.stringify({u:'bob',n:'Matt'})).toString('base64url')+'.synthetic';assert.equal(base.wrAccountKey(),'uid:bob');
 // Parse every inline executable script after editing.
 for(const m of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)){if(/application\/ld\+json/.test(m[1]))continue;new vm.Script(m[2]);}
 console.log('War Room isolation: stale cards cleared; filters isolated/restored; late response rejected; inline scripts parse.');
