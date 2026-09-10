@@ -4387,9 +4387,24 @@ function isSiteAdmin(auth, env) {
 // May this session act on another member's leg in THIS league? The league manager or
 // the site admin, and nothing in the request can say so. Leagues created before the uid
 // re-key carry `manager` (a display name) and no `managerUid`; both shapes are honoured.
+// Who may GRANT that power: the league's creator (the account that created it, or the
+// manager on leagues that predate a real createdBy) and the site admin. Delegates cannot.
+function isLeagueOwner(state, auth, env) {
+  if (!state || !auth) return false;
+  if (isSiteAdmin(auth, env)) return true;
+  const creator = typeof state.createdBy === "string" && state.createdBy !== "seed" ? state.createdBy : null;
+  if (creator) return auth.name != null && creator === auth.name;
+  if (state.managerUid && auth.uid && state.managerUid === auth.uid) return true;
+  return typeof state.manager === "string" && state.manager !== "" && state.manager === auth.name;
+}
+const bozoDelegates = state => (state && state.delegates && typeof state.delegates === "object") ? state.delegates : {};
+
 function canActFor(state, auth, env) {
   if (!state || !auth) return false;
   if (isSiteAdmin(auth, env)) return true;
+  // "League manager access" granted in league settings by the creator — a member key on
+  // the stored roster, never anything the request says about itself.
+  { const me = memberKeyOf(state, auth); if (me && bozoDelegates(state)[me] === true) return true; }
   if (state.managerUid && auth.uid && state.managerUid === auth.uid) return true;
   if (auth.name == null || auth.name === "") return false;
   if (state.managerUid && memberNameAt(state, state.managerUid) === auth.name) return true;
@@ -5133,6 +5148,24 @@ async function leagueSettings(request, env, cors) {
      selection twice, whatever any league once preferred. */
   const dupesRetired = has("allowDupes");
   if (has("allowEdit"))  patch.allowEdit  = body.allowEdit !== false;
+
+  // ⚠️ "League manager access": which members may file, replace or remove a leg FOR
+  // another member (Phase 2.7 proxy submit). Only the league's creator (or the site admin)
+  // can change the set; a manager who was merely delegated cannot widen it. Keys are
+  // resolved against the STORED roster — a name that is not a member is dropped, not
+  // invented — and the whole map is replaced, so unticking someone really removes them.
+  if (has("delegates")) {
+    if (!isLeagueOwner(lg, auth, env))
+      return json({ error: "Only the person who created this league can grant manager access." }, 403, cors);
+    const raw = body.delegates && typeof body.delegates === "object" && !Array.isArray(body.delegates) ? body.delegates : {};
+    const next = {};
+    for (const [ref, on] of Object.entries(raw)) {
+      if (on !== true) continue;
+      const key = memberKeyOfRef(lg, ref);
+      if (key) next[key] = true;
+    }
+    patch.delegates = next;
+  }
 
   // ⚠️ Format is immutable once the league has locked a ticket. Before that it is just a
   // choice on a league nobody has played yet, so let a manager fix a mis-click.
@@ -6399,7 +6432,10 @@ async function commitBozoLeg(env, lid, state, name, p, via = null, mkey = null, 
     // branch expected() has always wanted for those.
     dir: (p.side === "over" || p.side === "under") ? p.side : "over",
     price: Math.round(Number(p.price)),
-    label: String(p.label).slice(0, 90),
+    label: String(bozoLabelWithPeriod(p.label, bozoPeriodOf(p))).slice(0, 90),
+    // Phase 2.8: which part of the game the number is about. Always explicit on a new leg;
+    // legs from before this field read as "game".
+    period: bozoPeriodOf(p),
     prop: p.prop ? String(p.prop).slice(0, 80) : null,
     // ⚠️ Where the PRICE came from, not where the pick came from. "captured" is
     // server-only and carries the SGO/DraftKings receipt fields below. "self" is limited
@@ -6608,7 +6644,8 @@ async function bozoPick(request, env, cors) {
     let code = ""; for (const n of rnd) code += alphabet[n % alphabet.length];
     p.submissionId = code;
     const mine = (state.picks || {})[mkey] || null;
-    const echo = p.label + " — " + p.game + ", " + (p.mkt === "ml" ? "moneyline" : p.mkt + " " + p.line) +
+    const echo = p.label + " — " + p.game + ", " + (BOZO_PERIOD_LABEL[p.period] ? BOZO_PERIOD_LABEL[p.period] + " " : "") +
+      (p.mkt === "ml" ? "moneyline" : p.mkt + " " + p.line) +
       " at " + p.price + " (other side " + (p.priceOpp == null ? "not captured" : p.priceOpp) + "), " +
       (p.priceSource === "captured" ? "captured from DraftKings via SGO" : "self-priced; not CLV-eligible") + "." +
       (proxy ? " Submitted FOR " + name + " by you as league manager; it will be marked as such and stamped with the server time of this submission, not backdated." : "") +
@@ -6638,10 +6675,15 @@ async function bozoPick(request, env, cors) {
 
 // The selection: what you'd tap on the DK bet slip. Two players cannot both have it,
 // because DK will not put the same selection on one parlay twice.
+// ⚠️ A period is part of the identity (Phase 2.8): "Eagles -3 1h" and "Eagles -3 game" are
+// two different DraftKings selections. The segment is appended ONLY for a non-game period,
+// so a full-game key stays byte-identical to the keys already stored on live boards and
+// keeps colliding with them.
 const selectionKeyOf = p => [
   String(p.eventId), p.mkt, String(p.side),
   p.mkt === "ml" ? "" : String(p.line ?? ""),
   String(p.prop || ""),
+  ...(bozoPeriodOf(p) !== "game" ? [bozoPeriodOf(p)] : []),
 ].join("|");
 
 // The MARKET INSTANCE: the question, without the answer. Two different sides of one
@@ -6662,6 +6704,7 @@ const marketKeyOf = p => [
   : p.mkt === "prop" ? String(p.prop || "") + "|" + String(p.line ?? "")
   : p.mkt === "other" ? String(p.prop || "")
   : "",
+  ...(bozoPeriodOf(p) !== "game" ? [bozoPeriodOf(p)] : []),
 ].join("|");
 
 // A future is not an SGP-legal leg — DK will not parlay "to win the division" with game
@@ -6673,6 +6716,7 @@ function validatePick(p, name, existing, band, format, mkey = null) {
   if (!LEAGUE[p.sport]) return "Unknown sport.";
   if (!BOZO_GRADEABLE_SPORTS.has(p.sport)) return "sport_not_gradeable";
   if (!MARKETS.includes(p.mkt)) return "Unknown market.";
+  { const periodErr = bozoPeriodError(p); if (periodErr) return periodErr; }
   if (!p.eventId || !p.game) return "Pick a game.";
   if (!p.label || !p.side) return "Incomplete pick.";
   if (p.mkt === "other" && !String(p.prop || "").trim())
@@ -7276,11 +7320,46 @@ const bozoTeamNorm = (s, registry) => {
   return registry && typeof registry[fallback] === "string" ? registry[fallback] : fallback;
 };
 
-// The two sides of each game-level market.
-const BOZO_ODD_IDS = {
-  ml:     ["points-home-game-ml-home", "points-away-game-ml-away"],
-  spread: ["points-home-game-sp-home", "points-away-game-sp-away"],
-  total:  ["points-all-game-ou-over",  "points-all-game-ou-under"],
+/* ---------------- period markets (Phase 2.8, D21) ----------------
+   A spread / ML / total leg can be for a period rather than the full game. Absent =
+   "game" on every read path — legs written before this existed carry no field. Props and
+   `other` are game-only. NHL and MLB stay game-only for now: periods and innings are not
+   halves, and nobody has asked. Worst Beat for a period leg is Phase 2.8b (scaled SD). */
+const BOZO_PERIODS = ["game", "1h", "2h", "1q", "2q", "3q", "4q"];
+const BOZO_PERIOD_LABEL = { game: "", "1h": "1st half", "2h": "2nd half",
+  "1q": "1st quarter", "2q": "2nd quarter", "3q": "3rd quarter", "4q": "4th quarter" };
+const BOZO_PERIOD_FRACTION = { game: 1, "1h": 0.5, "2h": 0.5, "1q": 0.25, "2q": 0.25, "3q": 0.25, "4q": 0.25 };
+const BOZO_SPORT_PERIODS = { nfl: BOZO_PERIODS, cfb: BOZO_PERIODS, nba: BOZO_PERIODS,
+  cbb: ["game", "1h", "2h"], mlb: ["game"], nhl: ["game"] };
+const bozoPeriodOf = p => { const v = p && p.period; return v == null || v === "" ? "game" : String(v).toLowerCase(); };
+// The rejection, or null. Shared by the capture (before any fetch) and validatePick, so a
+// bad period is refused once, in one wording, on every path.
+function bozoPeriodError(p) {
+  const period = bozoPeriodOf(p);
+  if (!BOZO_PERIODS.includes(period)) return `Unknown period "${period}". Use game, 1h, 2h or 1q to 4q.`;
+  if (period === "game") return null;
+  if (p.mkt === "prop" || p.mkt === "other")
+    return "Props and other markets are full-game only — a period applies to spread, moneyline and total.";
+  const allowed = BOZO_SPORT_PERIODS[p.sport] || ["game"];
+  if (!allowed.includes(period)) return `${BOZO_PERIOD_LABEL[period]} markets are not supported for ${p.sport} yet.`;
+  return null;
+}
+// The two sides of each game-level market. SGO's oddID grammar is
+// {statID}-{entityID}-{periodID}-{betTypeID}-{sideID}, so the period is the third token:
+// a first-half moneyline is points-home-1h-ml-home. "game" reproduces the original table.
+const bozoOddIds = (mkt, period = "game") => {
+  const pd = BOZO_PERIODS.includes(period) ? period : "game";
+  if (mkt === "ml")     return [`points-home-${pd}-ml-home`, `points-away-${pd}-ml-away`];
+  if (mkt === "spread") return [`points-home-${pd}-sp-home`, `points-away-${pd}-sp-away`];
+  if (mkt === "total")  return [`points-all-${pd}-ou-over`,  `points-all-${pd}-ou-under`];
+  return null;
+};
+// "UAB ML · 1st half". Idempotent: a label that already names the period is left alone,
+// so the page's preview and the server's stamp cannot double it.
+const bozoLabelWithPeriod = (label, period) => {
+  const suffix = BOZO_PERIOD_LABEL[period] || "";
+  const str = String(label || "");
+  return suffix && !str.toLowerCase().includes(suffix.toLowerCase()) ? str + " · " + suffix : str;
 };
 
 /* ---------------- player props ----------------
@@ -7368,7 +7447,7 @@ function bozoDkOutcome(odd, field, wanted) {
 // Returns { price, opp, line, snapshotAt } in the orientation of the leg, or a reason.
 function bozoDkQuote(event, pick, registry) {
   if (pick.mkt === "prop") return bozoDkPropQuote(event, pick);
-  const ids = BOZO_ODD_IDS[pick.mkt];
+  const ids = bozoOddIds(pick.mkt, bozoPeriodOf(pick));
   if (!ids) return { reason: "market-not-matchable" };
   const odds = (event && event.odds) || {};
   const a = odds[ids[0]], b = odds[ids[1]];
@@ -7522,7 +7601,8 @@ async function bozoCloseTargets(env, nowMs) {
   return out;
 }
 
-async function bozoFetchEvents(env, sport, startMs, needProps) {
+// `periods` is every period the bucket's legs need, so the oddID filter asks for them all.
+async function bozoFetchEvents(env, sport, startMs, needProps, periods = ["game"]) {
   if (!env.SGO_KEY) throw new Error("Worker misconfigured: SGO_KEY secret not set");
   const leagueID = BOZO_SGO_LEAGUE[sport];
   if (!leagueID) return [];
@@ -7536,7 +7616,12 @@ async function bozoFetchEvents(env, sport, startMs, needProps) {
   // markets — so filtering by id first would rule out the very rows we need to search.
   // Game-only buckets keep the narrow filter, because most ticks are game-only and
   // pulling every prop on a full NFL Sunday for no reason is wasteful.
-  if (!needProps) url.searchParams.set("oddID", [...new Set(Object.values(BOZO_ODD_IDS).flat())].join(","));
+  if (!needProps) {
+    const ids = new Set();
+    for (const pd of (periods && periods.length ? periods : ["game"]))
+      for (const m of ["ml", "spread", "total"]) for (const id of bozoOddIds(m, pd)) ids.add(id);
+    url.searchParams.set("oddID", [...ids].join(","));
+  }
   url.searchParams.set("includeOpposingOdds", "true");
   // ⚠️ Alt lines are NOT optional here. Bozo's favourites-only band pushes players onto
   // bought-down numbers constantly, so the number they took is frequently not the main
@@ -7619,6 +7704,9 @@ function bozoSelfPricedEntry(p, reason) {
 // without fetching SGO again.
 async function bozoCaptureEntry(env, input) {
   const p = { ...input };
+  p.period = bozoPeriodOf(p);
+  const periodErr = bozoPeriodError(p);
+  if (periodErr) return { ok: false, reason: "bad_period", error: periodErr };
   if (!BOZO_GRADEABLE_SPORTS.has(p.sport)) return { ok: false, reason: "sport_not_gradeable",
     error: `${p.sport || "That sport"} cannot be submitted until it has a Worker-reachable grading adapter.` };
   let startMs = Date.parse(p.startsAt || "");
@@ -7640,7 +7728,7 @@ async function bozoCaptureEntry(env, input) {
   let events, registry;
   try {
     [events, registry] = await Promise.all([
-      bozoFetchEvents(env, p.sport, startMs, p.mkt === "prop"),
+      bozoFetchEvents(env, p.sport, startMs, p.mkt === "prop", [p.period]),
       bozoTeamRegistry(env, p.sport),
     ]);
   } catch (e) {
@@ -7668,6 +7756,7 @@ async function bozoCaptureEntry(env, input) {
   };
   if (agreement) agreement.needsConfirmation = agreement.probabilityPointDifference > 1.5;
   return { ok: true, p: { ...p,
+    period: p.period, label: bozoLabelWithPeriod(p.label, p.period),
     line: quote.line, price: quote.price, priceOpp: quote.opp,
     priceSource: "captured", entryBook: BOZO_CLOSE_BOOK, entryProvider: "sgo",
     entrySnapshotAt: quote.snapshotAt || new Date().toISOString(),
@@ -7733,7 +7822,8 @@ async function runBozoCloseCapture(env, nowMs) {
     let events = [];
     let fetchErr = null;
     const needProps = bucket.legs.some(t => t.pick.mkt === "prop");
-    try { events = await bozoFetchEvents(env, bucket.sport, bucket.startMs, needProps); }
+    const periods = [...new Set(bucket.legs.map(t => bozoPeriodOf(t.pick)))];
+    try { events = await bozoFetchEvents(env, bucket.sport, bucket.startMs, needProps, periods); }
     catch (e) { fetchErr = String((e && e.message) || e); }
     const registry = await bozoTeamRegistry(env, bucket.sport);
 
@@ -15683,6 +15773,7 @@ const MCP_TOOLS = [
           you: me ? (x.who || playerName(k)) === me : undefined,
           sport: x.sport, game: x.game, eventId: x.eventId,
           mkt: x.mkt, side: x.side, line: x.mkt === "ml" ? null : x.line,
+          period: x.period || "game",     // Phase 2.8; absent on older legs = full game
           price: x.price, priceSource: x.priceSource || "self", clvEligible: x.clvEligible === true,
           priceOpp: x.entryPriceOpp ?? null, entryBook: x.entryBook || null,
           entryProvider: x.entryProvider || null, entrySnapshotAt: x.entrySnapshotAt || null,
@@ -15804,6 +15895,7 @@ const MCP_TOOLS = [
         label: { type: "string", description: "How the leg reads on the ticket, e.g. \"BUF -6.5\"" },
         prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
         startsAt: { type: "string", description: "Kickoff ISO timestamp. Optional when eventId resolves from the Worker schedule cache; otherwise required." },
+        period: { type: "string", enum: ["game", "1h", "2h", "1q", "2q", "3q", "4q"], description: "Which part of the game (default game). Spread, moneyline and total only; props and other are full-game. NFL/CFB/NBA take halves and quarters, NCAAB halves." },
         league: { type: "string", description: "League id (default: main)" },
         forUid: { type: "string", description: "Draft FOR another member (their member key or display name). Only this league's manager or the site admin may; the leg is marked commissionerModified and timestamped at the manager's write, never backdated. Omit for your own leg." },
       },
@@ -15866,6 +15958,7 @@ const MCP_TOOLS = [
         typedPrice: args.price,
         label: String(args.label || "").slice(0, 90),
         prop: args.prop ? String(args.prop).slice(0, 80) : null,
+        period: args.period ? String(args.period).toLowerCase() : "game",
         startsAt: typeof args.startsAt === "string" ? args.startsAt : null,
       };
       const captured = await bozoCaptureEntry(env, input);
@@ -15971,6 +16064,7 @@ const MCP_TOOLS = [
         prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
         priceOpp: { type: "number", description: "Deprecated input; the Worker captures the opposite DraftKings side itself." },
         startsAt: { type: "string", description: "Kickoff ISO timestamp. Optional when eventId resolves from the Worker schedule cache; phase two needs only confirm." },
+        period: { type: "string", enum: ["game", "1h", "2h", "1q", "2q", "3q", "4q"], description: "Which part of the game (default game). Spread, moneyline and total only; props and other are full-game. NFL/CFB/NBA take halves and quarters, NCAAB halves." },
         league: { type: "string", description: "League id (default: main)" },
         forUid: { type: "string", description: "Submit FOR another member (their member key or display name). Only this league's manager or the site admin may. Phase one only; phase two needs just confirm." },
         confirm: { type: "string", description: "PHASE TWO ONLY: the confirm_code returned by phase one, after the human approved the echo. Sends the bet." },
@@ -16121,6 +16215,7 @@ const MCP_TOOLS = [
         typedPrice: args.price,
         label: String(args.label || "").slice(0, 90),
         prop: args.prop ? String(args.prop).slice(0, 80) : null,
+        period: args.period ? String(args.period).toLowerCase() : "game",
         startsAt: typeof args.startsAt === "string" ? args.startsAt : null,
       };
       const captured = await bozoCaptureEntry(env, input);
@@ -16144,7 +16239,8 @@ const MCP_TOOLS = [
       // The echo IS the safety mechanism (spec §4.1): the human reads the parsed bet in
       // plain English before anything can happen. Consequences ride in the same sentence.
       const echo =
-        p.label + " — " + p.game + ", " + (p.mkt === "ml" ? "moneyline" : p.mkt + " " + p.line) +
+        p.label + " — " + p.game + ", " + (BOZO_PERIOD_LABEL[p.period] ? BOZO_PERIOD_LABEL[p.period] + " " : "") +
+        (p.mkt === "ml" ? "moneyline" : p.mkt + " " + p.line) +
         " at " + p.price + " (opposite side " + (p.priceOpp == null ? "not captured" : p.priceOpp) + "), for " + who +
         (proxy ? " (submitted by " + name + " as league manager; marked as such and stamped with the server time of the confirm, not backdated)" : "") +
         ", week " + (lg.week || 1) + " in league " + lid + "." +

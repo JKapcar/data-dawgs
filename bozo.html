@@ -3814,6 +3814,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <option value="spread">Spread</option><option value="ml">Moneyline</option>
       <option value="total">Total</option><option value="prop">Player prop</option>
       <option value="other">Other</option></select></div>
+    <!-- Phase 2.8: which part of the game. Shown for spread / ML / total only; props and
+         other are full-game and the Worker refuses anything else. -->
+    <div class="f" id="periodWrap" style="display:none"><label>Period</label><select id="fPeriod"></select></div>
     <div class="f w2"><label>Side</label><select id="fSide"></select></div>
     <div class="f" id="lineWrap"><label id="lineLbl">Number</label><input id="fLine" type="number" step="0.5" placeholder="6.5"></div>
     <div class="f" id="priceWrap"><label id="priceLbl">Price check <span class="opt">optional</span></label>
@@ -3880,6 +3883,14 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <span class="row" style="gap:8px">
         <select id="sLockRule"><option value="all">When every member is in</option><option value="count">At a fixed number of legs</option></select>
         <input id="sLockCount" type="number" min="2" max="64" style="width:72px;display:none"></span></div>
+
+    <!-- League manager access: who may file a leg FOR another member. Ticked by the league's
+         creator only; everyone else sees the list read-only. The Worker enforces both. -->
+    <div style="padding:11px 0;border-bottom:1px solid var(--grid)">
+      <span class="rl">League manager access</span>
+      <span class="rd" id="sDelegatesNote">members who can submit, replace or remove a leg for someone else — every such leg is marked and logged</span>
+      <div class="lev" id="sDelegates"></div>
+    </div>
 
     <div style="padding:11px 0;border-bottom:1px solid var(--grid)">
       <span class="rl">Tiebreakers in the weekly draw</span>
@@ -4540,10 +4551,30 @@ function beatDeficit(mkt, dir, line, margin, total, sd){
    ⚠️ `line` is what this side GIVES UP: positive lays points, negative takes them. So a
    stored 8.5 prints "-8.5" and a stored -1.5 prints "+1.5". That inversion looks odd
    until you remember the number is the handicap, not the display. */
-function legLabel(mk, side, line, prop, gameShort){
-  if(mk==='ml') return side+' ML';
-  if(mk==='spread') return `${side} ${line>0?'-':'+'}${Math.abs(line)}`;
-  if(mk==='total') return `${gameShort||''} ${side==='over'?'o':'u'}${line}`;
+/* ---------------- Phase 2.8: period markets ----------------
+   Mirrors the Worker's BOZO_SPORT_PERIODS. The Worker is the enforcer; this only decides
+   what the select offers, and the server re-stamps the label suffix idempotently. */
+const PERIOD_LABEL = {game:'Full game','1h':'1st half','2h':'2nd half','1q':'1st quarter','2q':'2nd quarter','3q':'3rd quarter','4q':'4th quarter'};
+const ALL_PERIODS = Object.keys(PERIOD_LABEL);
+const SPORT_PERIODS = {nfl:ALL_PERIODS, cfb:ALL_PERIODS, nba:ALL_PERIODS, cbb:['game','1h','2h'], mlb:['game'], nhl:['game']};
+const periodOf = () => (document.getElementById('fPeriod')||{}).value || 'game';
+function paintPeriod(){
+  const wrap=document.getElementById('periodWrap'), sel=document.getElementById('fPeriod');
+  if(!wrap||!sel) return;
+  const mk=document.getElementById('fMkt').value, sp=document.getElementById('fSport').value;
+  const allowed = SPORT_PERIODS[sp] || ['game'];
+  const on = ['spread','ml','total'].includes(mk) && allowed.length > 1;
+  const keep = sel.value;
+  sel.innerHTML = (on ? allowed : ['game']).map(p=>`<option value="${p}">${PERIOD_LABEL[p]}</option>`).join('');
+  sel.value = (on && allowed.includes(keep)) ? keep : 'game';
+  wrap.style.display = on ? '' : 'none';
+}
+function legLabel(mk, side, line, prop, gameShort, period){
+  const pd = period || periodOf();
+  const sfx = pd && pd!=='game' ? ' · '+PERIOD_LABEL[pd] : '';
+  if(mk==='ml') return side+' ML'+sfx;
+  if(mk==='spread') return `${side} ${line>0?'-':'+'}${Math.abs(line)}`+sfx;
+  if(mk==='total') return `${gameShort||''} ${side==='over'?'o':'u'}${line}`+sfx;
   return `${prop||''} ${side==='over'?'o':'u'}${line}`;
 }
 
@@ -4552,8 +4583,9 @@ function legLabel(mk, side, line, prop, gameShort){
    your leg is gone BEFORE you press the button rather than from a rejection afterwards.
    If they ever drift from the Worker's versions the failure is a warning that is wrong,
    never a leg that gets through — /bozo/pick re-derives both and refuses on its own. */
-const pageSelectionKey = (eventId, mk, side, line, prop) =>
-  [String(eventId), mk, String(side), mk==='ml' ? '' : String(line ?? ''), String(prop||'')].join('|');
+const pageSelectionKey = (eventId, mk, side, line, prop, period) =>
+  [String(eventId), mk, String(side), mk==='ml' ? '' : String(line ?? ''), String(prop||''),
+   ...((period && period!=='game') ? [period] : [])].join('|');
 const pageMarketKey = (eventId, mk, line, prop) =>
   [String(eventId), mk,
    mk==='total'  ? String(line ?? '')
@@ -4583,12 +4615,12 @@ function paintLegPreview(){
 
   /* ---- is it still available? ---- */
   const mineKey = ME ? kEnc(ME.name) : null;
-  const mySel = pageSelectionKey(eventId, mk, side, line, prop);
+  const mySel = pageSelectionKey(eventId, mk, side, line, prop, periodOf());
   const myMkt = pageMarketKey(eventId, mk, line, prop);
   let clash = null;
   for(const [who, x] of Object.entries(S.picks||{})){
     if(who === mineKey || !x) continue;
-    const theirSel = x.selectionKey || pageSelectionKey(x.eventId, x.mkt, x.side, x.line, x.prop);
+    const theirSel = x.selectionKey || pageSelectionKey(x.eventId, x.mkt, x.side, x.line, x.prop, x.period);
     if(theirSel === mySel){ clash = { who, kind:'taken', label:x.label }; break; }
     const theirMkt = x.marketKey || pageMarketKey(x.eventId, x.mkt, x.line, x.prop);
     if(theirMkt === myMkt && String(x.side) !== String(side)){
@@ -4632,6 +4664,7 @@ function rankOfMine(){
 }
 
 function paintSides(){
+  paintPeriod();
   const sp=document.getElementById('fSport').value, id=document.getElementById('fGame').value;
   const g=(GAMES[sp]||[]).find(x=>x.id===id), mk=document.getElementById('fMkt').value;
   const sel=document.getElementById('fSide');
@@ -4726,6 +4759,20 @@ const allAccounts = () => ROSTER.map(p=>p.name);
 // isManager runs THIS league. The Worker enforces both — this only decides what shows.
 const isAdmin = () => !!ME && ME.name === ADMIN;
 const isManager = () => !!ME && (isAdmin() || (league()?.manager) === ME.name);
+// Phase 2.7: "league manager access" — the manager, the site admin, or a member the
+// league's creator ticked in League Settings. Read off the live league node.
+const isDelegate = () => !!ME && !!((S&&S.delegates)||{})[kEnc(ME.name)];
+const canProxy = () => isManager() || isDelegate();
+// Only the creator (or the site admin) can change who has that access.
+const isCreator = () => !!ME && (isAdmin() || ((S&&S.createdBy && S.createdBy!=='seed') ? S.createdBy===ME.name : (league()?.manager)===ME.name));
+function paintDelegates(){
+  const box=document.getElementById('sDelegates'); if(!box) return;
+  const cur=(S&&S.delegates)||{}, mgr=league()?.manager, mine=isCreator();
+  const rows = Object.keys((S&&S.members)||{}).map(k=>({k,n:memberLabel(k)})).sort((a,b)=>a.n.localeCompare(b.n));
+  box.innerHTML = rows.map(({k,n})=>`<label><input type="checkbox" data-dk="${esc(k)}" ${cur[k]===true?'checked':''} ${(!mine||n===mgr)?'disabled':''}> ${esc(n)}${n===mgr?' <span class="opt">manager · always</span>':''}</label>`).join('');
+  const note=document.getElementById('sDelegatesNote');
+  if(note && !mine) note.textContent='members who can submit a leg for someone else — only the league\'s creator can change this list';
+}
 
 /* ---------------- Phase 2.7: submitting as another member ----------------
    The manager can file, replace or remove a leg FOR an absent member. The select below
@@ -4735,7 +4782,7 @@ const isManager = () => !!ME && (isAdmin() || (league()?.manager) === ME.name);
 function paintAsSelect(){
   const wrap=document.getElementById('asWrap'), sel=document.getElementById('fAs');
   if(!wrap||!sel) return;
-  if(!ME || !isManager()){ wrap.style.display='none'; sel.innerHTML=''; return; }
+  if(!ME || !canProxy()){ wrap.style.display='none'; sel.innerHTML=''; return; }
   const meKey = kEnc(ME.name), keep = sel.value;
   // Active roster only: a chopped Royale member funds the ticket and gets no leg, and the
   // Worker would 409 anyway. Names through esc() — a display name is user text.
@@ -5796,7 +5843,7 @@ function paintLeague(){
 
   const adm = document.getElementById('lgAdmin');
   adm.style.display = isManager() ? '' : 'none';
-  if(isManager() && !lgDirty) fillSettings();
+  if(isManager() && !lgDirty){ fillSettings(); paintDelegates(); }
   paintRoster();
 }
 
@@ -6068,6 +6115,11 @@ document.getElementById('dSave').onclick = async ()=>{
     levers,
   };
   if(body.lockRule==='count') body.lockCount = +document.getElementById('sLockCount').value;
+  // League manager access: only the creator can send it, and it is the WHOLE map.
+  if(isCreator()){
+    body.delegates = {};
+    document.querySelectorAll('#sDelegates input[data-dk]').forEach(cb=>{ if(cb.checked && !cb.disabled) body.delegates[cb.dataset.dk]=true; });
+  }
   // Only sent while the format is still editable — after the first lock the control is
   // a statement rather than a <select>, and there is nothing to send.
   const fs = document.getElementById('sFormat');
@@ -6097,6 +6149,7 @@ async function submitLeg(){
     return e.textContent='Describe the bet — an "other" leg needs to say what it actually is.';
   const label = legLabel(mk, side, line, fProp.value, g.short);
   const pick = {sport:sp, eventId:id, game:g.short, mkt:mk, side, line: mk==='ml'?0:line,
+    period: ['spread','ml','total'].includes(mk) ? periodOf() : 'game',   // Phase 2.8
     ...(typedPrice===null?{}:{typedPrice}), label, prop: fProp.value||null,
     // ⚠️ Kickoff, straight off the ESPN game you picked. This is what schedules the
     // closing-price capture — event ids don't line up between ESPN and the odds source,
@@ -7618,6 +7671,7 @@ document.getElementById('fSport').innerHTML =
 document.getElementById('fSport').onchange = ()=>loadGames(fSport.value);
 document.getElementById('fGame').onchange = paintSides;
 document.getElementById('fMkt').onchange = ()=>{ paintSides(); paintPriceWarn(); };
+document.getElementById('fPeriod').onchange = ()=>{ paintLegPreview(); };
 document.getElementById('fAs').onchange = ()=>{ render(); };
 /* ⚠️ Registered BEFORE paintPriceWarn, so the warning never reads a half-cleaned box.
    Strips anything that isn't a digit — a pasted "-238", a stray "." from that same

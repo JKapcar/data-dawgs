@@ -1,0 +1,653 @@
+{
+ "success": true,
+ "notice": "Derived on 2026-09-10 from tests/fixtures/sgo-ncaaf-2026-09-05.json, a live SportsGameOdds capture (lastUpdatedAt 2026-09-03T23:19Z): one event, its 1h markets only, every value untouched. Not hand-written.",
+ "data": [
+  {
+   "eventID": "f5mweoy6d2NQvns6K9mB",
+   "sportID": "FOOTBALL",
+   "leagueID": "NCAAF",
+   "type": "match",
+   "teams": {
+    "home": {
+     "teamID": "STANFORD_NCAAF",
+     "names": {
+      "long": "Stanford"
+     },
+     "colors": {
+      "primary": "#374DF5",
+      "secondary": "",
+      "primaryContrast": "#FFFFFF",
+      "secondaryContrast": ""
+     },
+     "statEntityID": "home"
+    },
+    "away": {
+     "teamID": "MIAMI_NCAAF",
+     "names": {
+      "long": "Miami"
+     },
+     "colors": {
+      "primary": "#374DF5",
+      "secondary": "",
+      "primaryContrast": "#FFFFFF",
+      "secondaryContrast": ""
+     },
+     "statEntityID": "away"
+    }
+   },
+   "status": {
+    "started": false,
+    "completed": false,
+    "cancelled": false,
+    "ended": false,
+    "live": false,
+    "delayed": false,
+    "currentPeriodID": "",
+    "previousPeriodID": "",
+    "displayShort": "",
+    "displayLong": "Upcoming",
+    "inBreak": false,
+    "startsAt": "2026-09-05T01:00:00.000Z",
+    "previousStartsAt": [],
+    "hardStart": true,
+    "periods": {
+     "started": [],
+     "ended": []
+    },
+    "oddsPresent": true,
+    "oddsAvailable": true,
+    "finalized": false
+   },
+   "odds": {
+    "points-all-1h-ou-over": {
+     "oddID": "points-all-1h-ou-over",
+     "opposingOddID": "points-all-1h-ou-under",
+     "marketName": "1st Half Over/Under",
+     "statID": "points",
+     "statEntityID": "all",
+     "periodID": "1h",
+     "betTypeID": "ou",
+     "sideID": "over",
+     "started": false,
+     "ended": false,
+     "cancelled": false,
+     "bookOddsAvailable": true,
+     "fairOddsAvailable": true,
+     "fairOdds": "+104",
+     "bookOdds": "-111",
+     "fairOverUnder": "26",
+     "bookOverUnder": "26.5",
+     "openFairOdds": "-101",
+     "openBookOdds": "-115",
+     "openFairOverUnder": "79.5",
+     "openBookOverUnder": "79.5",
+     "scoringSupported": true,
+     "byBookmaker": {
+      "fanduel": {
+       "odds": "-110",
+       "overUnder": "26.5",
+       "lastUpdatedAt": "2026-09-03T23:19:48.008Z",
+       "available": true,
+       "deeplink": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.604260654&selectionId=7017916",
+       "altLines": [
+        {
+         "odds": "-104",
+         "overUnder": "24.5",
+         "lastUpdatedAt": "2026-09-01T15:46:24.206Z",
+         "available": false
+        },
+        {
+         "odds": "-110",
+         "overUnder": "25.5",
+         "lastUpdatedAt": "2026-09-01T04:13:35.360Z",
+         "available": false
+        }
+       ]
+      },
+      "caesars": {
+       "odds": "+100",
+       "overUnder": "26.5",
+       "lastUpdatedAt": "2026-09-03T21:17:54.271Z",
+       "available": false,
+       "deeplink": "https://sportsbook.caesars.com/us/nj/bet/betslip?selectionIds=a63f759d-5b96-3831-8ec6-817aa5a3d5c5",
+       "altLines": [
+        {
+         "odds": "-114",
+         "overUnder": "26",
+         "lastUpdatedAt": "2026-09-03T23:19:46.508Z",
+         "available": true
+        }
+       ]
+      },
+      "draftkings": {
+       "odds": "-112",
+       "overUnder": "26.5",
+       "lastUpdatedAt": "2026-09-03T23:19:32.008Z",
+       "available": true,
+       "deeplink": "https://sportsbook.draftkings.com/event/34180766?outcomes=0OU86029898O2650_1"
+      },
+      "bovada": {
+       "odds": "-110",
+       "overUnder": "25.5",
+       "lastUpdatedAt": "2026-09-03T23:19:22.508Z",
+       "available": true
+      },
+      "betmgm": {
+       "odds": "-108",
+       "overUnder": "26.5",
+       "lastUpdatedAt": "2026-09-03T23:19:45.008Z",
+       "available": true,
+       "deeplink": "https://sports.nj.betmgm.com/en/sports?options=6:43728-3532414-5552068"
+      },
+      "espnbet": {
+       "odds": "-115",
+       "overUnder": "26.5",
+       "lastUpdatedAt": "2026-09-03T23:19:50.037Z",
+       "available": true
+      }
+     }
+    },
+    "points-all-1h-ou-under": {
+     "oddID": "points-all-1h-ou-under",
+     "opposingOddID": "points-all-1h-ou-over",
+     "marketName": "1st Half Over/Under",
+     "statID": "points",
+     "statEntityID": "all",
+     "periodID": "1h",
+     "betTypeID": "ou",
+     "sideID": "under",
+     "started": false,
+     "ended": false,
+     "cancelled": false,
+     "bookOddsAvailable": true,
+     "fairOddsAvailable": true,
+     "fairOdds": "-104",
+     "bookOdds": "-110",
+     "fairOverUnder": "26",
+     "bookOverUnder": "26.5",
+     "openFairOdds": "+101",
+     "openBookOdds": "-113",
+     "openFairOverUnder": "79.5",
+     "openBookOverUnder": "79.5",
+     "scoringSupported": true,
+     "byBookmaker": {
+      "fanduel": {
+       "odds": "-110",
+       "overUnder": "26.5",
+       "lastUpdatedAt": "2026-09-03T23:19:48.008Z",
+       "available": true,
+       "deeplink": "https://sportsbook.fanduel.com/addToBetslip?marketId=42.604260654&selectionId=7017917",
+       "altLines": [
+        {
+         "odds": "-118",
+         "overUnder": "24.5",
+         "lastUpdatedAt": "2026-09-01T15:46:24.206Z",
+         "available": false
+        },
+        {
+         "odds": "-110",
+         "overUnder": "25.5",
+         "lastUpdatedAt": "2026-09-01T04:13:35.360Z",
+         "available": false
+        }
+       ]
+      },
+      "caesars": {
+       "odds": "-121",
+       "overUnder": "26.5",
+       "lastUpdatedAt": "2026-09-03T21:17:54.271Z",
+       "available": false,
+       "deeplink": "https://sportsbook.caesars.com/us/nj/bet/betslip?selectionIds=fe248c9e-3104-317a-b984-8fcdb2f0d17b",
+       "altLines": [
+        {
+         "odds": "-108",
+         "overUnder": "26",
+         "lastUpdatedAt": "2026-09-03T23:19:46.508Z",
+         "available": true
+        }
+       ]
+      },
+      "draftkings": {
+       "odds": "-108",
+       "overUnder": "26.5",
+       "lastUpdatedAt": "2026-09-03T23:19:32.008Z",
+       "available": true,
+       "deeplink": "https://sportsbook.draftkings.com/event/34180766?outcomes=0OU86029898U2650_3"
+      },
+      "bovada": {
+       "odds": "-110",
+       "overUnder": "25.5",
+       "lastUpdatedAt": "2026-09-03T23:19:22.508Z",
+       "available": true
+      },
+      "betmgm": {
+       "odds": "-110",
+       "overUnder": "26.5",
+       "lastUpdatedAt": "2026-09-03T23:19:45.008Z",
+       "available": true,
+       "deeplink": "https://sports.nj.betmgm.com/en/sports?options=6:43728-3532414-5552069"
+      },
+      "espnbet": {
+       "odds": "-115",
+       "overUnder": "26.5",
+       "lastUpdatedAt": "2026-09-03T23:19:50.037Z",
+       "available": true
+      }
+     }
+    },
+    "points-away-1h-sp-away": {
+     "oddID": "points-away-1h-sp-away",
+     "opposingOddID": "points-home-1h-sp-home",
+     "marketName": "1st Half Spread",
+     "statID": "points",
+     "statEntityID": "away",
+     "periodID": "1h",
+     "betTypeID": "sp",
+     "sideID": "away",
+     "started": false,
+     "ended": false,
+     "cancelled": false,
+     "bookOddsAvailable": true,
+     "fairOddsAvailable": true,
+     "fairOdds": "-105",
+     "bookOdds": "-117",
+     "fairSpread": "-13.5",
+     "bookSpread": "-13.5",
+     "openFairOdds": "-102",
+     "openBookOdds": "-120",
+     "openFairSpread": "-13.5",
+     "openBookSpread": "-13.5",
+     "scoringSupported": true,
+     "byBookmaker": {
+      "fanduel": {
+       "odds": "-128",
+       "spread": "-13.5",
+       "lastUpdatedAt": "2026-09-03T23:18:38.155Z",
+       "available": true,
+       "deeplink": "https://sportsbook.fanduel.com/addToBetslip?marketId=717.184000971&selectionId=558823"
+      },
+      "caesars": {
+       "odds": "-115",
+       "spread": "-13.5",
+       "lastUpdatedAt": "2026-09-03T23:19:46.508Z",
+       "available": true,
+       "deeplink": "https://sportsbook.caesars.com/us/nj/bet/betslip?selectionIds=38292ecd-be3b-3212-b24a-5c747309dd01"
+      },
+      "draftkings": {
+       "odds": "-115",
+       "spread": "-13.5",
+       "lastUpdatedAt": "2026-09-03T23:19:32.008Z",
+       "available": true,
+       "deeplink": "https://sportsbook.draftkings.com/event/34180766?outcomes=0HC86029898N1350_3"
+      },
+      "bovada": {
+       "odds": "-115",
+       "spread": "-13.5",
+       "lastUpdatedAt": "2026-09-03T23:19:22.508Z",
+       "available": true
+      },
+      "espnbet": {
+       "odds": "-130",
+       "spread": "-13.5",
+       "lastUpdatedAt": "2026-09-03T23:19:50.037Z",
+       "available": true,
+       "deeplink": "https://espnbet.app.link/?market_selection_id[0]=c8d1183a-0eaf-49fd-ae8b-612f5f42b2b7&odds_numerator[0]=2&odds_denominator[0]=1"
+      }
+     }
+    },
+    "points-home-1h-sp-home": {
+     "oddID": "points-home-1h-sp-home",
+     "opposingOddID": "points-away-1h-sp-away",
+     "marketName": "1st Half Spread",
+     "statID": "points",
+     "statEntityID": "home",
+     "periodID": "1h",
+     "betTypeID": "sp",
+     "sideID": "home",
+     "started": false,
+     "ended": false,
+     "cancelled": false,
+     "bookOddsAvailable": true,
+     "fairOddsAvailable": true,
+     "fairOdds": "+105",
+     "bookOdds": "-105",
+     "fairSpread": "+13.5",
+     "bookSpread": "+13.5",
+     "openFairOdds": "+102",
+     "openBookOdds": "-115",
+     "openFairSpread": "+13.5",
+     "openBookSpread": "+13.5",
+     "scoringSupported": true,
+     "byBookmaker": {
+      "fanduel": {
+       "odds": "+104",
+       "spread": "+13.5",
+       "lastUpdatedAt": "2026-09-03T23:18:38.155Z",
+       "available": true,
+       "deeplink": "https://sportsbook.fanduel.com/addToBetslip?marketId=717.184000971&selectionId=975028"
+      },
+      "caesars": {
+       "odds": "-106",
+       "spread": "+13.5",
+       "lastUpdatedAt": "2026-09-03T23:19:46.508Z",
+       "available": true,
+       "deeplink": "https://sportsbook.caesars.com/us/nj/bet/betslip?selectionIds=21af6239-4377-3957-bae4-1fd8137866bf"
+      },
+      "draftkings": {
+       "odds": "-105",
+       "spread": "+13.5",
+       "lastUpdatedAt": "2026-09-03T23:19:32.008Z",
+       "available": true,
+       "deeplink": "https://sportsbook.draftkings.com/event/34180766?outcomes=0HC86029898P1350_1"
+      },
+      "bovada": {
+       "odds": "-105",
+       "spread": "+13.5",
+       "lastUpdatedAt": "2026-09-03T23:19:22.508Z",
+       "available": true
+      },
+      "espnbet": {
+       "odds": "+100",
+       "spread": "+13.5",
+       "lastUpdatedAt": "2026-09-03T23:19:50.037Z",
+       "available": true,
+       "deeplink": "https://espnbet.app.link/?market_selection_id[0]=9eafef7f-bf74-465d-bbbb-e93e56e13fe2&odds_numerator[0]=2&odds_denominator[0]=1"
+      }
+     }
+    },
+    "points-away-1h-ml-away": {
+     "oddID": "points-away-1h-ml-away",
+     "opposingOddID": "points-home-1h-ml-home",
+     "marketName": "1st Half Moneyline",
+     "statID": "points",
+     "statEntityID": "away",
+     "periodID": "1h",
+     "betTypeID": "ml",
+     "sideID": "away",
+     "started": false,
+     "ended": false,
+     "cancelled": false,
+     "bookOddsAvailable": true,
+     "fairOddsAvailable": true,
+     "fairOdds": "-798",
+     "bookOdds": "-1522",
+     "openFairOdds": "-847",
+     "openBookOdds": "-1600",
+     "scoringSupported": true,
+     "byBookmaker": {
+      "fanduel": {
+       "odds": "-1450",
+       "lastUpdatedAt": "2026-09-03T23:18:38.155Z",
+       "available": true,
+       "deeplink": "https://sportsbook.fanduel.com/addToBetslip?marketId=717.184001002&selectionId=558823"
+      },
+      "caesars": {
+       "odds": "-1250",
+       "lastUpdatedAt": "2026-09-02T16:30:15.229Z",
+       "available": false,
+       "deeplink": "https://sportsbook.caesars.com/us/nj/bet/betslip?selectionIds=c2ec86e4-266c-328c-a5d2-7bddb0dbb91f"
+      },
+      "draftkings": {
+       "odds": "-1200",
+       "lastUpdatedAt": "2026-09-03T23:19:32.008Z",
+       "available": true,
+       "deeplink": "https://sportsbook.draftkings.com/event/34180766?outcomes=0ML86029898_3"
+      },
+      "bovada": {
+       "odds": "-1100",
+       "lastUpdatedAt": "2026-09-03T23:19:22.508Z",
+       "available": true
+      },
+      "espnbet": {
+       "odds": "-2500",
+       "lastUpdatedAt": "2026-09-03T23:19:50.037Z",
+       "available": true,
+       "deeplink": "https://espnbet.app.link/?market_selection_id[0]=82e0cdf0-24a4-46a1-8bd2-b7021c69bdec&odds_numerator[0]=2&odds_denominator[0]=1"
+      },
+      "betmgm": {
+       "odds": "-1100",
+       "lastUpdatedAt": "2026-09-03T23:19:37.508Z",
+       "available": true,
+       "deeplink": "https://sports.nj.betmgm.com/en/sports?options=6:43728-3532410-5552043"
+      }
+     }
+    },
+    "points-home-1h-ml-home": {
+     "oddID": "points-home-1h-ml-home",
+     "opposingOddID": "points-away-1h-ml-away",
+     "marketName": "1st Half Moneyline",
+     "statID": "points",
+     "statEntityID": "home",
+     "periodID": "1h",
+     "betTypeID": "ml",
+     "sideID": "home",
+     "started": false,
+     "ended": false,
+     "cancelled": false,
+     "bookOddsAvailable": true,
+     "fairOddsAvailable": true,
+     "fairOdds": "+798",
+     "bookOdds": "+750",
+     "openFairOdds": "+847",
+     "openBookOdds": "+800",
+     "scoringSupported": true,
+     "byBookmaker": {
+      "fanduel": {
+       "odds": "+890",
+       "lastUpdatedAt": "2026-09-03T23:18:38.155Z",
+       "available": true,
+       "deeplink": "https://sportsbook.fanduel.com/addToBetslip?marketId=717.184001002&selectionId=975028"
+      },
+      "caesars": {
+       "odds": "+700",
+       "lastUpdatedAt": "2026-09-02T16:30:15.229Z",
+       "available": false,
+       "deeplink": "https://sportsbook.caesars.com/us/nj/bet/betslip?selectionIds=596490cf-01d5-318b-b19f-f32714e30502"
+      },
+      "draftkings": {
+       "odds": "+750",
+       "lastUpdatedAt": "2026-09-03T23:19:32.008Z",
+       "available": true,
+       "deeplink": "https://sportsbook.draftkings.com/event/34180766?outcomes=0ML86029898_1"
+      },
+      "bovada": {
+       "odds": "+650",
+       "lastUpdatedAt": "2026-09-03T23:19:22.508Z",
+       "available": true
+      },
+      "espnbet": {
+       "odds": "+800",
+       "lastUpdatedAt": "2026-09-03T23:19:50.037Z",
+       "available": true,
+       "deeplink": "https://espnbet.app.link/?market_selection_id[0]=8559eb11-d213-4aa4-b38d-eeca5c078b72&odds_numerator[0]=2&odds_denominator[0]=1"
+      },
+      "betmgm": {
+       "odds": "+750",
+       "lastUpdatedAt": "2026-09-03T23:19:37.508Z",
+       "available": true,
+       "deeplink": "https://sports.nj.betmgm.com/en/sports?options=6:43728-3532410-5552044"
+      }
+     }
+    },
+    "points-away-1h-ou-over": {
+     "oddID": "points-away-1h-ou-over",
+     "opposingOddID": "points-away-1h-ou-under",
+     "marketName": "Miami 1st Half Points Over/Under",
+     "statID": "points",
+     "statEntityID": "away",
+     "periodID": "1h",
+     "betTypeID": "ou",
+     "sideID": "over",
+     "started": false,
+     "ended": false,
+     "cancelled": false,
+     "bookOddsAvailable": true,
+     "fairOddsAvailable": true,
+     "fairOdds": "+111",
+     "bookOdds": "-103",
+     "fairOverUnder": "20.5",
+     "bookOverUnder": "20.5",
+     "openFairOdds": "+112",
+     "openBookOdds": "-125",
+     "openFairOverUnder": "20.5",
+     "openBookOverUnder": "19.5",
+     "scoringSupported": true,
+     "byBookmaker": {}
+    },
+    "points-away-1h-ou-under": {
+     "oddID": "points-away-1h-ou-under",
+     "opposingOddID": "points-away-1h-ou-over",
+     "marketName": "Miami 1st Half Points Over/Under",
+     "statID": "points",
+     "statEntityID": "away",
+     "periodID": "1h",
+     "betTypeID": "ou",
+     "sideID": "under",
+     "started": false,
+     "ended": false,
+     "cancelled": false,
+     "bookOddsAvailable": true,
+     "fairOddsAvailable": true,
+     "fairOdds": "-111",
+     "bookOdds": "-128",
+     "fairOverUnder": "20.5",
+     "bookOverUnder": "20.5",
+     "openFairOdds": "-112",
+     "openBookOdds": "-105",
+     "openFairOverUnder": "20.5",
+     "openBookOverUnder": "19.5",
+     "scoringSupported": true,
+     "byBookmaker": {}
+    },
+    "points-away-1h-yn-no": {
+     "oddID": "points-away-1h-yn-no",
+     "opposingOddID": "points-away-1h-yn-yes",
+     "marketName": "Miami Any 1st Half Points Yes/No",
+     "statID": "points",
+     "statEntityID": "away",
+     "periodID": "1h",
+     "betTypeID": "yn",
+     "sideID": "no",
+     "started": false,
+     "ended": false,
+     "cancelled": false,
+     "bookOddsAvailable": false,
+     "fairOddsAvailable": false,
+     "fairOdds": "+9091",
+     "scoringSupported": true
+    },
+    "points-away-1h-yn-yes": {
+     "oddID": "points-away-1h-yn-yes",
+     "opposingOddID": "points-away-1h-yn-no",
+     "marketName": "Miami Any 1st Half Points Yes/No",
+     "statID": "points",
+     "statEntityID": "away",
+     "periodID": "1h",
+     "betTypeID": "yn",
+     "sideID": "yes",
+     "started": false,
+     "ended": false,
+     "cancelled": false,
+     "bookOddsAvailable": false,
+     "fairOddsAvailable": false,
+     "fairOdds": "-9091",
+     "bookOdds": "-10000",
+     "scoringSupported": true,
+     "byBookmaker": {}
+    },
+    "points-home-1h-ou-over": {
+     "oddID": "points-home-1h-ou-over",
+     "opposingOddID": "points-home-1h-ou-under",
+     "marketName": "Stanford 1st Half Points Over/Under",
+     "statID": "points",
+     "statEntityID": "home",
+     "periodID": "1h",
+     "betTypeID": "ou",
+     "sideID": "over",
+     "started": false,
+     "ended": false,
+     "cancelled": false,
+     "bookOddsAvailable": true,
+     "fairOddsAvailable": true,
+     "fairOdds": "-111",
+     "bookOdds": "-129",
+     "fairOverUnder": "3.5",
+     "bookOverUnder": "3.5",
+     "openFairOdds": "+100",
+     "openBookOdds": "-135",
+     "openFairOverUnder": "7",
+     "openBookOverUnder": "6.5",
+     "scoringSupported": true,
+     "byBookmaker": {}
+    },
+    "points-home-1h-ou-under": {
+     "oddID": "points-home-1h-ou-under",
+     "opposingOddID": "points-home-1h-ou-over",
+     "marketName": "Stanford 1st Half Points Over/Under",
+     "statID": "points",
+     "statEntityID": "home",
+     "periodID": "1h",
+     "betTypeID": "ou",
+     "sideID": "under",
+     "started": false,
+     "ended": false,
+     "cancelled": false,
+     "bookOddsAvailable": true,
+     "fairOddsAvailable": true,
+     "fairOdds": "+111",
+     "bookOdds": "-103",
+     "fairOverUnder": "3.5",
+     "bookOverUnder": "3.5",
+     "openFairOdds": "+100",
+     "openBookOdds": "+105",
+     "openFairOverUnder": "7",
+     "openBookOverUnder": "6.5",
+     "scoringSupported": true,
+     "byBookmaker": {}
+    },
+    "points-home-1h-yn-no": {
+     "oddID": "points-home-1h-yn-no",
+     "opposingOddID": "points-home-1h-yn-yes",
+     "marketName": "Stanford Any 1st Half Points Yes/No",
+     "statID": "points",
+     "statEntityID": "home",
+     "periodID": "1h",
+     "betTypeID": "yn",
+     "sideID": "no",
+     "started": false,
+     "ended": false,
+     "cancelled": false,
+     "bookOddsAvailable": false,
+     "fairOddsAvailable": false,
+     "fairOdds": "+409",
+     "bookOdds": "+375",
+     "openFairOdds": "+409",
+     "openBookOdds": "+375",
+     "scoringSupported": true,
+     "byBookmaker": {}
+    },
+    "points-home-1h-yn-yes": {
+     "oddID": "points-home-1h-yn-yes",
+     "opposingOddID": "points-home-1h-yn-no",
+     "marketName": "Stanford Any 1st Half Points Yes/No",
+     "statID": "points",
+     "statEntityID": "home",
+     "periodID": "1h",
+     "betTypeID": "yn",
+     "sideID": "yes",
+     "started": false,
+     "ended": false,
+     "cancelled": false,
+     "bookOddsAvailable": false,
+     "fairOddsAvailable": false,
+     "fairOdds": "-409",
+     "bookOdds": "-625",
+     "openFairOdds": "-409",
+     "openBookOdds": "-625",
+     "scoringSupported": true,
+     "byBookmaker": {}
+    }
+   }
+  }
+ ]
+}

@@ -2331,6 +2331,7 @@ const MCP_TOOLS = [
           you: me ? (x.who || playerName(k)) === me : undefined,
           sport: x.sport, game: x.game, eventId: x.eventId,
           mkt: x.mkt, side: x.side, line: x.mkt === "ml" ? null : x.line,
+          period: x.period || "game",     // Phase 2.8; absent on older legs = full game
           price: x.price, priceSource: x.priceSource || "self", clvEligible: x.clvEligible === true,
           priceOpp: x.entryPriceOpp ?? null, entryBook: x.entryBook || null,
           entryProvider: x.entryProvider || null, entrySnapshotAt: x.entrySnapshotAt || null,
@@ -2452,6 +2453,7 @@ const MCP_TOOLS = [
         label: { type: "string", description: "How the leg reads on the ticket, e.g. \"BUF -6.5\"" },
         prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
         startsAt: { type: "string", description: "Kickoff ISO timestamp. Optional when eventId resolves from the Worker schedule cache; otherwise required." },
+        period: { type: "string", enum: ["game", "1h", "2h", "1q", "2q", "3q", "4q"], description: "Which part of the game (default game). Spread, moneyline and total only; props and other are full-game. NFL/CFB/NBA take halves and quarters, NCAAB halves." },
         league: { type: "string", description: "League id (default: main)" },
         forUid: { type: "string", description: "Draft FOR another member (their member key or display name). Only this league's manager or the site admin may; the leg is marked commissionerModified and timestamped at the manager's write, never backdated. Omit for your own leg." },
       },
@@ -2514,6 +2516,7 @@ const MCP_TOOLS = [
         typedPrice: args.price,
         label: String(args.label || "").slice(0, 90),
         prop: args.prop ? String(args.prop).slice(0, 80) : null,
+        period: args.period ? String(args.period).toLowerCase() : "game",
         startsAt: typeof args.startsAt === "string" ? args.startsAt : null,
       };
       const captured = await bozoCaptureEntry(env, input);
@@ -2619,6 +2622,7 @@ const MCP_TOOLS = [
         prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
         priceOpp: { type: "number", description: "Deprecated input; the Worker captures the opposite DraftKings side itself." },
         startsAt: { type: "string", description: "Kickoff ISO timestamp. Optional when eventId resolves from the Worker schedule cache; phase two needs only confirm." },
+        period: { type: "string", enum: ["game", "1h", "2h", "1q", "2q", "3q", "4q"], description: "Which part of the game (default game). Spread, moneyline and total only; props and other are full-game. NFL/CFB/NBA take halves and quarters, NCAAB halves." },
         league: { type: "string", description: "League id (default: main)" },
         forUid: { type: "string", description: "Submit FOR another member (their member key or display name). Only this league's manager or the site admin may. Phase one only; phase two needs just confirm." },
         confirm: { type: "string", description: "PHASE TWO ONLY: the confirm_code returned by phase one, after the human approved the echo. Sends the bet." },
@@ -2769,6 +2773,7 @@ const MCP_TOOLS = [
         typedPrice: args.price,
         label: String(args.label || "").slice(0, 90),
         prop: args.prop ? String(args.prop).slice(0, 80) : null,
+        period: args.period ? String(args.period).toLowerCase() : "game",
         startsAt: typeof args.startsAt === "string" ? args.startsAt : null,
       };
       const captured = await bozoCaptureEntry(env, input);
@@ -2792,7 +2797,8 @@ const MCP_TOOLS = [
       // The echo IS the safety mechanism (spec §4.1): the human reads the parsed bet in
       // plain English before anything can happen. Consequences ride in the same sentence.
       const echo =
-        p.label + " — " + p.game + ", " + (p.mkt === "ml" ? "moneyline" : p.mkt + " " + p.line) +
+        p.label + " — " + p.game + ", " + (BOZO_PERIOD_LABEL[p.period] ? BOZO_PERIOD_LABEL[p.period] + " " : "") +
+        (p.mkt === "ml" ? "moneyline" : p.mkt + " " + p.line) +
         " at " + p.price + " (opposite side " + (p.priceOpp == null ? "not captured" : p.priceOpp) + "), for " + who +
         (proxy ? " (submitted by " + name + " as league manager; marked as such and stamped with the server time of the confirm, not backdated)" : "") +
         ", week " + (lg.week || 1) + " in league " + lid + "." +

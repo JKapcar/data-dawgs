@@ -117,9 +117,10 @@ function rig() {
     'const LG = lid => "/bozo/leagues/" + lid;',
     'const playerName = k => { try { return decodeURIComponent(k); } catch { return k; } };',
     between('const memberRec = (lg, key)', '// Everything that existed before leagues belongs to DEFAULT_LEAGUE'),
+    between('const BOZO_PERIODS = [', '/* ---------------- player props ----------------'),   // Phase 2.8 helpers the route calls
     between('async function commitBozoLeg(', 'async function bozoPick('),
     between('async function bozoPick(', '/* ---------- the DraftKings SGP rule'),
-    'this.api = { memberKeyOf, memberKeys, memberNameAt, isSiteAdmin, canActFor, memberKeyOfRef, bozoTargetSeat, bozoPick };',
+    'this.api = { memberKeyOf, memberKeys, memberNameAt, isSiteAdmin, canActFor, isLeagueOwner, memberKeyOfRef, bozoTargetSeat, bozoPick };',
   ].join('\n'), sandbox);
   const api = sandbox.api;
   const post = (auth, body) => { ctx.auth = auth; return api.bozoPick({ method: 'POST', body }, env, {}); };
@@ -323,4 +324,25 @@ test('the board locks on the proxy leg that fills it, like any other', async () 
   assert.equal(res.status, 200);
   assert.equal(res.body.placed, true);
   assert.equal(r.ctx.placed, true);
+});
+
+test('league manager access: a delegated member can act for others, an undelegated one cannot, and only the creator grants it', async () => {
+  const r = rig(); r.seed({ createdBy: 'Manny', delegates: { u_sue: true } });
+  assert.equal(r.api.canActFor(r.league(), SUE, r.env), true, 'delegate');
+  assert.equal(r.api.canActFor(r.league(), ROGER, r.env), false, 'not delegated');
+  const res = await r.submit(SUE, { forUid: 'u_rog' });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  assert.equal(r.league().picks.u_rog.submittedBy, 'u_sue');
+  assert.equal(r.league().picks.u_rog.commissionerModified, true);
+  assert.equal(r.audit()[0].byName, 'Sue');
+  assert.equal((await r.submit(ROGER, { forUid: 'u_sue' })).status, 403);
+  // the grant itself
+  assert.equal(r.api.isLeagueOwner(r.league(), MGR, r.env), true, 'creator');
+  assert.equal(r.api.isLeagueOwner(r.league(), SUE, r.env), false, 'a delegate cannot widen the set');
+  assert.equal(r.api.isLeagueOwner(r.league(), ADMIN, r.env), true, 'site admin');
+  const legacy = { ...r.league(), createdBy: 'seed' };
+  assert.equal(r.api.isLeagueOwner(legacy, MGR, r.env), true, 'seeded league falls back to the manager');
+  // the settings route resolves names to roster keys and drops strangers
+  assert.match(worker, /if \(!isLeagueOwner\(lg, auth, env\)\)\s*return json\(\{ error: "Only the person who created this league can grant manager access\." \}, 403, cors\);/);
+  assert.match(worker, /const key = memberKeyOfRef\(lg, ref\);\s*if \(key\) next\[key\] = true;/);
 });
