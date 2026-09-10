@@ -1,0 +1,44 @@
+{
+ "as_of": "2026-09-10",
+ "what": "The standard deviations Bozo's Worst Beat lever divides by. Full-game values per sport; period legs scale them.",
+ "source": "dawg-bot-worker.js ROYALE_SD (the grader) and bozo.html SPORTS (the simulator). The grader's table is authoritative; a test pins this file to it.",
+ "game": {
+  "nfl": {
+   "sd": 13.5,
+   "tot": 10.5
+  },
+  "cfb": {
+   "sd": 16.5,
+   "tot": 13.0
+  },
+  "nba": {
+   "sd": 11.5,
+   "tot": 17.0
+  },
+  "cbb": {
+   "sd": 10.5,
+   "tot": 13.0
+  },
+  "mlb": {
+   "sd": 4.4,
+   "tot": 4.2
+  },
+  "nhl": {
+   "sd": 2.3,
+   "tot": 2.1
+  }
+ },
+ "period_fraction": {
+  "game": 1,
+  "1h": 0.5,
+  "2h": 0.5,
+  "1q": 0.25,
+  "2q": 0.25,
+  "3q": 0.25,
+  "4q": 0.25
+ },
+ "period_rule": "SD(period) = SD(game) x sqrt(period_fraction). beatBasis = \"scaled-sd\". A model, not a measurement: it assumes segment variance adds independently. Pending Phase 4.3 calibration per (sport, period, market).",
+ "calibrated_periods": {},
+ "props_and_other": "max(|line| x 0.55, 1) \u2014 an openly placeholder guess, flagged everywhere.",
+ "known_gap": "bozo.html SPORTS carries cfb sd 16 / tot 14 while the grader carries 16.5 / 13.0; the simulator's Worst Beat therefore differs slightly from the grader's for CFB full-game legs. Recorded, not yet reconciled."
+}

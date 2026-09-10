@@ -8083,11 +8083,28 @@ function rInvNorm(p) {
 }
 
 const rDir = x => ((x && (x.dir || x.side)) === "under") ? "under" : "over";
+// Which legs are hand-graded: props, `other`, and (Phase 2.8b) any period leg.
+const bozoIsManualLeg = p => !!p && (p.mkt === "prop" || p.mkt === "other" || bozoPeriodOf(p) !== "game");
+// Where a leg's Worst Beat SD comes from — see the stamp in bozoGrade.
+function bozoBeatBasis(p, row) {
+  if (p.mkt === "prop" || p.mkt === "other") return royaleBeatDeficit(p, row || {}).basis;
+  return bozoPeriodOf(p) === "game" ? "sd" : "scaled-sd";
+}
+/* ⚠️ PERIOD LEGS USE A SCALED SD (D21). A half is modelled as game SD × √0.5 and a
+   quarter as game SD × √0.25 — the variance of a sum of independent segments scales
+   with the fraction of the game played. That is a documented model, not an assumed
+   hold: it keeps a 1H leg eligible for the lever instead of silently skipping it, and
+   docs/bozo-sd.json records it as pending calibration (Phase 4.3). A calibrated
+   per-period SD in ROYALE_SD_PERIOD wins when one exists. */
+const ROYALE_SD_PERIOD = {};   // { nfl: { "1h": { sd, tot } } } once Phase 4.3 calibrates
 function rSd(x) {
   const s = ROYALE_SD[x.sport] || ROYALE_SD.nfl;
-  return x.mkt === "total" ? s.tot
-       : (x.mkt === "prop" || x.mkt === "other") ? Math.max(Math.abs(Number(x.line) || 0) * .55, 1)
-       : s.sd;
+  if (x.mkt === "prop" || x.mkt === "other") return Math.max(Math.abs(Number(x.line) || 0) * .55, 1);
+  const period = bozoPeriodOf(x);
+  const cal = period !== "game" && ROYALE_SD_PERIOD[x.sport] && ROYALE_SD_PERIOD[x.sport][period];
+  if (cal) return x.mkt === "total" ? cal.tot : cal.sd;
+  const base = x.mkt === "total" ? s.tot : s.sd;
+  return base * Math.sqrt(BOZO_PERIOD_FRACTION[period] ?? 1);
 }
 function rExpected(x) {
   const sd = rSd(x), p = Math.min(.98, Math.max(.02, rImp(x.price) - .022));
@@ -8147,7 +8164,7 @@ function royaleBeatDeficit(x, r) {
   const edge = x.mkt === "total" ? (rDir(x) === "under" ? (line - actual) : (actual - line))
              : x.mkt === "ml"    ? actual
              :                     (actual - line);
-  return { v: -edge / sd, basis: "margin" };
+  return { v: -edge / sd, basis: bozoPeriodOf(x) === "game" ? "margin" : "scaled-sd" };
 }
 
 /* Score every losing leg on one lever.
@@ -8524,6 +8541,12 @@ async function bozoGradeFromScheduleKv(env, state, supplied) {
   const pending = [], docs = new Map(), sources = {};
   for (const [key, pick] of Object.entries(state.picks || {})) {
     if (!pick || pick.mkt === "prop" || pick.mkt === "other") continue;
+    // ⚠️ Phase 2.8b: a PERIOD leg is hand-graded. The schedule sources carry final scores
+    // only — cfbfastR's schedules CSV has no line scores and nflverse's games.csv has no
+    // quarters — and grading "BYU 1st half ML" off the full-game margin would be a
+    // confidently wrong result, which is worse than a blank. The supplied manual row for
+    // it passes through untouched, exactly as a prop's does. See bozoManualLegs().
+    if (bozoPeriodOf(pick) !== "game") continue;
     if (!BOZO_GRADEABLE_SPORTS.has(pick.sport)) {
       pending.push({ key, player: pick.who || playerName(key), reason: "sport_not_gradeable" });
       continue;
@@ -8648,12 +8671,12 @@ async function bozoGrade(request, env, cors) {
       const picks = state.picks || {};
       const byMarket = new Map();
       for (const [key, p] of Object.entries(picks)) {
-        if (!p || (p.mkt !== "prop" && p.mkt !== "other")) continue;
+        if (!p || !bozoIsManualLeg(p)) continue;
         const r = body.results[key] || body.results[playerName(key)];
         if (!r) continue;
         const outcome = r.result || (r.won === true ? "won" : r.won === false ? "lost" : null);
         if (outcome == null) continue;
-        const mk = [p.eventId, p.mkt, p.prop || "", p.line ?? "", p.side ?? ""].join("|");
+        const mk = [p.eventId, p.mkt, p.prop || "", p.line ?? "", p.side ?? "", bozoPeriodOf(p)].join("|");
         if (!byMarket.has(mk)) byMarket.set(mk, []);
         byMarket.get(mk).push({ who: playerName(key), outcome, label: p.label });
       }
@@ -8665,6 +8688,19 @@ async function bozoGrade(request, env, cors) {
             `${group.map(g => g.who + " = " + g.outcome).join(", ")} — but that's the same selection `
             + `(${group[0].label}) on the same game, so it can only have one outcome. Fix the odd one out and grade again.`
           }, 409, cors);
+      }
+      // ⚠️ Worst Beat's inputs are stamped here, from the stored pick (D21). `beatSd` is
+      // the SD the lever divides by and `beatBasis` says where it came from: "sd" for a
+      // full-game margin market, "scaled-sd" for a period leg (game SD × √fraction, a
+      // documented model pending Phase 4.3 calibration), and the binary legs' basis
+      // (close / entry / entry-raw) as royaleBeatDeficit already reports it.
+      for (const [key, p] of Object.entries(picks)) {
+        const rk = body.results[key] ? key : (body.results[playerName(key)] ? playerName(key) : null);
+        if (!rk || !p) continue;
+        const row = body.results[rk];
+        if (!row || typeof row !== "object") continue;
+        row.beatSd = rSd(p);
+        row.beatBasis = bozoBeatBasis(p, row);
       }
       await fbPut(env, LG(lid) + "/results", body.results);
     }

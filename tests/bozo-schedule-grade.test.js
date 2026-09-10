@@ -34,7 +34,12 @@ const context = vm.createContext({
   bzNorm: s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''),
   playerName: s => decodeURIComponent(s),
 });
-vm.runInContext(worker.slice(scheduleStart, scheduleEnd)
+// Phase 2.8: the grade route stamps beatSd/beatBasis and classifies manual legs, so it
+// needs the period helpers and the Worst Beat SD table in scope.
+const sliceBetween = (a, b) => { const x = worker.indexOf(a); const y = worker.indexOf(b, x); assert.ok(x >= 0 && y > x, a); return worker.slice(x, y); };
+vm.runInContext(sliceBetween('const ROYALE_SD = {', 'function rExpected(')   // the schedule slice already carries the period helpers
+  + '\n' + sliceBetween('function royaleBeatDeficit(', '/* Score every losing leg on one lever.')
+  + '\n' + worker.slice(scheduleStart, scheduleEnd)
   + '\n' + worker.slice(aliasStart, aliasEnd)
   + '\n' + worker.slice(encodingStart, encodingEnd)
   + '\n' + worker.slice(hmacStart, hmacEnd)

@@ -3734,7 +3734,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
           first one anybody looks at.</p></div></li>
       <li class="act"><span class="no">II</span><div><h3>Worst Beat</h3>
         <p>Finished furthest under its number, measured in standard deviations &mdash; so a blowout
-          in a low-variance market counts for more than a blowout anywhere.</p></div></li>
+          in a low-variance market counts for more than a blowout anywhere. A half or quarter leg
+          uses the game SD scaled by the square root of the fraction played (a half is &times;0.71,
+          a quarter &times;0.5) &mdash; a stated model, not a measured one, until it is calibrated.
+          The table is <a href="/docs/bozo-sd.json">/docs/bozo-sd.json</a>.</p></div></li>
       <li class="act"><span class="no">III</span><div><h3>Last In</h3>
         <p>The final leg submitted. The only lever you can move by acting: it belongs to whoever
           files last, and it moves to the next person the moment they enter.</p></div></li>
@@ -4279,12 +4282,17 @@ function invNorm(p){
   q=p-.5; r=q*q;
   return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
 }
+// Phase 2.8b (D21): a period leg's SD is the game SD × √(fraction of the game). A
+// documented model pending calibration, and the same rule the Worker's grader applies,
+// so the simulator and the live chop agree on what "worst" means for a 1H leg.
+const PERIOD_FRACTION = {game:1,'1h':.5,'2h':.5,'1q':.25,'2q':.25,'3q':.25,'4q':.25};
+const isManualLeg = x => !!x && (x.mkt==='prop' || x.mkt==='other' || (x.period && x.period!=='game'));
 function sdOf(x){ const s=SPORTS[x.sport];
   // ⚠️ "other" inherits the PROP guess (line x 0.55) because that is honestly all we
   // know about an arbitrary number. It is flagged as soft everywhere props are.
-  return x.mkt==='total' ? s.tot
-       : (x.mkt==='prop' || x.mkt==='other') ? Math.max(Math.abs(x.line)*.55,1)
-       : s.sd; }
+  if(x.mkt==='prop' || x.mkt==='other') return Math.max(Math.abs(x.line)*.55,1);
+  const base = x.mkt==='total' ? s.tot : s.sd;
+  return base * Math.sqrt(PERIOD_FRACTION[x.period||'game'] ?? 1); }
 /* Expected result = the number, shifted by what the price says. A −175 favorite
    laying 3 is expected to clear 3; a −110 laying 3 is expected to land on it.
    That shift is why moneylines need no reference spread typed in: line is 0 and
@@ -6247,6 +6255,7 @@ function paintSlip(players, picks, status, live){
     }
     const sub = `${SPORTS[x.sport]?SPORTS[x.sport].n:esc(x.sport)} · ${esc(x.game)}`
       + (x.mkt==='prop' ? ' · prop' : x.mkt==='other' ? ' · other' : '')
+      + ((x.period && x.period!=='game' && r.actual==null && !open) ? ' · needs manual grade' : '')
       + (r.actual!=null ? ` · finished ${r.actual}` : '');
     /* ⚠️ NAME THE EXPOSURE, don't imply it. The legs are listed in submission order and a
        comment in this file has always said the bottom one is the one Last In would pick —
@@ -6844,6 +6853,7 @@ HOW TO TALK ABOUT THE NUMBERS:
 - "Bozo odds" and "leg wins" are SIMULATION output, not observation. Say so whenever you quote them.
 - The simulation draws every leg INDEPENDENTLY. Two legs on the same game are not independent. If the state flags correlated legs, mention it rather than quoting the cash probability as if it were clean.
 - Prop legs use a placeholder standard deviation (line x 0.55) that is openly a guess. Flag a prop before leaning on its Worst Beat exposure.
+- Period legs (1h, 2h, quarters) use the game SD scaled by the square root of the fraction played (beatBasis "scaled-sd"), a documented model pending calibration. They are hand-graded: no Worker-reachable score source carries per-period scores.
 - Worst CLV is measured only when both sides of the DraftKings entry and both sides of the kickoff close were captured. A missing side is unmeasured, never zero, and the lever passes it.
 - priceSource=captured means the Worker fetched both DraftKings sides through SGO at submit and froze them for confirmation. priceSource=self is limited to unresolved props and Other legs; those are visibly badged and clvEligible=false. Never mix self-priced legs into CLV.
 - The "As it stands / If every leg lost" panel is a read-only hypothetical over currently filed legs. It assumes every filed leg loses, does not know results, and never names a bozo. Before the card locks there is no running order at all. Never present the panel as a prediction, a probability, or a graded outcome.
@@ -7449,12 +7459,18 @@ async function autoGrade(){
   render();
 }
 function paintManual(live){
-  const need = live.filter(x => x.mkt==='prop' || x.mkt==='other');
+  // Phase 2.8b: period legs are hand-graded too — no Worker-reachable source has
+  // per-period scores. The actual for a spread or moneyline is the PERIOD margin for the
+  // side taken (BYU minus ARIZ at halftime); for a total it is the period's points.
+  const need = live.filter(isManualLeg);
+  const hint = x => (x.period && x.period!=='game')
+    ? (x.mkt==='total' ? `${PERIOD_LABEL[x.period]} points` : `${PERIOD_LABEL[x.period]} margin, ${esc(x.side)} minus opponent`)
+    : 'actual';
   document.getElementById('manual').innerHTML =
-    (need.length ? `<div class="lil" style="margin-bottom:6px">Manual — props and other markets</div>` +
-      need.map(x=>`<div class="gr"><span><b>${esc(x.p)}</b> <span class="pk">${esc(x.label)}</span></span>
+    (need.length ? `<div class="lil" style="margin-bottom:6px">Manual — props, other markets and period legs</div>` +
+      need.map(x=>`<div class="gr"><span><b>${esc(x.p)}</b> <span class="pk">${esc(x.label)}</span>${(x.period && x.period!=='game')?' <span class="cst warn" title="No score source carries per-period scores; type the period result">period · manual grade</span>':''}</span>
         <select data-w="${esc(x.p)}"><option value="">—</option><option value="1">Won</option><option value="0">Lost</option><option value="p">Push / void</option></select>
-        <input type="number" step="0.5" data-a="${esc(x.p)}" placeholder="actual"></div>`).join('') : '')
+        <input type="number" step="0.5" data-a="${esc(x.p)}" placeholder="${hint(x)}"></div>`).join('') : '')
     + paintCloses(live)
     + `<div class="row" style="margin-top:14px"><button class="btn" id="finish">Name the bozo</button></div>`;
   document.getElementById('finish').onclick = decide;
@@ -7467,8 +7483,8 @@ function paintManual(live){
      being able to disagree with yourself. */
   const sameMarket = {};
   for(const x of live){
-    if(x.mkt!=='prop' && x.mkt!=='other') continue;
-    const k = [x.eventId, x.mkt, x.prop||'', x.line??'', x.side??''].join('|');
+    if(!isManualLeg(x)) continue;
+    const k = [x.eventId, x.mkt, x.prop||'', x.line??'', x.side??'', x.period||'game'].join('|');
     (sameMarket[k] = sameMarket[k] || []).push(x.p);
   }
   const twins = Object.values(sameMarket).filter(g=>g.length>1);
