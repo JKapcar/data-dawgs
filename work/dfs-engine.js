@@ -466,7 +466,7 @@ function solveShowdown(players, cfg, site, onProgress) {
     const set = new Uint8Array(N);
     for (const id of res.ids) { set[id] = 1; expCount[id]++; inLineups[id].push(acceptedSets.length); }
     acceptedSets.push(set);
-    let trueProj = (players[res.cpt].proj || 0) * site.cptMult;
+    let trueProj = Number.isFinite(players[res.cpt].cptProj)?players[res.cpt].cptProj:(players[res.cpt].proj || 0) * site.cptMult;
     for (const id of res.ids) if (id !== res.cpt) trueProj += players[id].proj || 0;
     out.push({ ids: res.ids, cpt: res.cpt, proj: trueProj, drawnProj: res.proj, sal: res.sal });
     if (onProgress && (n % 5 === 0 || n === count - 1)) onProgress(n + 1, count);
@@ -486,8 +486,8 @@ function bestShowdown(players, proj, pool, cfg, site, cap, floor,
   const cptList = pool.slice().sort((a, b) => proj[b] * site.cptMult - proj[a] * site.cptMult);
   for (const cpt of cptList) {
     if (aborted || Date.now() > deadline) break;
-    const cptSal = Math.round(players[cpt].sal * site.cptSalMult);
-    const cptProj = proj[cpt] * site.cptMult;
+    const cptSal = players[cpt].cptSal || Math.round(players[cpt].sal * site.cptSalMult);
+    const cptProj = proj[cpt] * (Number.isFinite(players[cpt].cptProj)&&players[cpt].proj>0?players[cpt].cptProj/players[cpt].proj:site.cptMult);
     if (cptSal > cap) continue;
     const list = pool.filter(i => i !== cpt).sort((a, b) => proj[b] - proj[a]);
     if (list.length < flexN) continue;
@@ -836,223 +836,146 @@ function cvFor(pos, mean) {
  *        payout: {kind:'param', paidFrac, alpha, rake} | {kind:'table', rows:[{from,to,prize}]},
  *        site }
  */
-function simulate(players, lineups, cfg, onProgress) {
-  const N = players.length;
-  const site = SITES[cfg.site] || SITES.dk_classic;
-  const sims = Math.max(200, cfg.sims | 0 || 10000);
-  const fieldSize = Math.max(2, cfg.fieldSize | 0 || 10000);
-  const ourN = lineups.length;
-  const sampleN = Math.max(50, Math.min(cfg.fieldSample | 0 || 2000, Math.max(2, fieldSize - ourN)));
-  const rand = rng(cfg.seed || 99);
-  const roles = assignRoles(players);
-
-  /* ---- per-game correlation ---- */
-  const games = {};
-  players.forEach((p, i) => (games[p.gid] || (games[p.gid] = [])).push(i));
-  const gameKeys = Object.keys(games);
-  const chol = {}, warn = [];
-  for (const g of gameKeys) {
-    const ids = games[g], n = ids.length;
-    const M = new Float64Array(n * n);
-    const seen = {};
-    for (let a = 0; a < n; a++) {
-      const ra = roles[ids[a]], ta = players[ids[a]].team;
-      for (let b = 0; b < n; b++) {
-        if (a === b) { M[a * n + b] = 1; continue; }
-        const rb = roles[ids[b]], tb = players[ids[b]].team;
-        M[a * n + b] = corrBetween(ra, rb, ta === tb, ta === tb && ra === rb);
-      }
+// Wilson intervals describe Monte Carlo error conditional on the fixed modelled field.
+// They do not cover projection, correlation, opponent-model or selection uncertainty.
+function wilson(hits,n,z=1.96){
+  if(!n)return [0,1];
+  const p=hits/n,d=1+z*z/n,m=(p+z*z/(2*n))/d,h=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n))/d;
+  return [Math.max(0,m-h),Math.min(1,m+h)];
+}
+function lineupKey(l){
+  return (l.cpt!=null?l.cpt+'c|':'')+(l.ids||l).slice().sort((a,b)=>a-b).join(',');
+}
+function lowerBound(a,v){let l=0,r=a.length;while(l<r){const m=(l+r)>>>1;if(a[m]<v)l=m+1;else r=m;}return l;}
+function upperBound(a,v){let l=0,r=a.length;while(l<r){const m=(l+r)>>>1;if(a[m]<=v)l=m+1;else r=m;}return l;}
+function tieOutcome(sorted,score,fieldSize,pay){
+  const scale=(fieldSize-1)/sorted.length,upper=upperBound(sorted,score+1e-8);
+  const above=Math.min(fieldSize-1,Math.round((sorted.length-upper)*scale));
+  const tied=Math.min(fieldSize-1-above,Math.round((upper-lowerBound(sorted,score-1e-8))*scale));
+  return {above,tied,rank:1+above+tied/2,prize:pay.shared(above,tied)};
+}
+function simulate(players,lineups,cfg,onProgress){
+  const N=players.length,site=SITES[cfg.site]||SITES.dk_classic;
+  const sims=Math.max(200,cfg.sims|0||10000),split=Math.floor(sims/2),ourN=lineups.length;
+  const seed=cfg.seed||99,rand=rng(seed^0x1a2b3c4d),fieldRand=rng(seed^0x7f4a7c15);
+  if(!ourN)throw new Error('No candidates to simulate.');
+  const roles=assignRoles(players),games={},chol={},warn=[];
+  players.forEach((p,i)=>(games[p.gid]||(games[p.gid]=[])).push(i));
+  for(const g of Object.keys(games)){
+    const ids=games[g],n=ids.length,M=new Float64Array(n*n);
+    for(let a=0;a<n;a++)for(let b=0;b<n;b++){
+      const ia=ids[a],ib=ids[b],same=players[ia].team===players[ib].team;
+      M[a*n+b]=a===b?1:corrBetween(roles[ia],roles[ib],same,same&&roles[ia]===roles[ib]);
     }
-    const c = cholesky(M, n);
-    if (c.failed) warn.push("game " + g + ": correlation matrix would not factor, players drawn independently");
-    chol[g] = { L: c.L, ids, n };
+    const c=cholesky(M,n);if(c.failed)warn.push('Game '+g+': correlation matrix failed; independent scores used.');
+    chol[g]={L:c.L,ids,n};
   }
-
-  /* ---- score shape ---- */
-  const mu = new Float64Array(N), sigma = new Float64Array(N), isNorm = new Uint8Array(N);
-  for (let i = 0; i < N; i++) {
-    const p = players[i], m = Math.max(0, p.proj || 0);
-    mu[i] = m;
-    const cv = cvFor(p.pos, m);
-    if (p.pos === "DST") { isNorm[i] = 1; sigma[i] = cv * Math.max(m, 3); }
-    else sigma[i] = Math.sqrt(Math.log(1 + cv * cv));
+  const mu=new Float64Array(N),sigma=new Float64Array(N),isNorm=new Uint8Array(N);
+  players.forEach((p,i)=>{mu[i]=Math.max(0,p.proj||0);const cv=cvFor(p.pos,mu[i]);
+    if(p.pos==='DST'){isNorm[i]=1;sigma[i]=cv*Math.max(mu[i],3);}else sigma[i]=Math.sqrt(Math.log(1+cv*cv));});
+  const specifications=[{key:'main',fieldSize:Math.max(2,cfg.fieldSize|0||10000),entryFee:cfg.entryFee||1,payout:cfg.payout||{}},...(cfg.contestProfiles||[])];
+  for(const c of specifications){
+    c.fieldSize=Math.max(2,Math.floor(c.fieldSize));c.entryFee=c.entryFee||1;
+    if(!Number.isFinite(c.fieldSize)||c.fieldSize>10000000)throw new Error('Invalid contest field size.');
   }
-
-  /* ---- field ---- */
-  const field = buildField(players, roles, cfg, site, sampleN, rand, onProgress);
-  if (field.tooHard || field.length < 25) {
-    warn.push("Could not build a believable field from these salaries and ownership — " +
-              (field.length ? "only " + field.length + " valid opponent lineups were found." :
-               "no valid opponent lineup could be assembled.") +
-              " Check that ownership is set and that the salary cap is reachable.");
-  }
-
-  /* ---- payout curve ---- */
-  const pay = payoutFn(cfg.payout || {}, fieldSize, cfg.entryFee || 1);
-
-  /* ---- simulate ---- */
-  const score = new Float64Array(N);
-  const z = new Float64Array(N);
-  const fieldScore = new Float64Array(field.length);
-  const ourScore = new Float64Array(ourN);
-  const BINS = 4096;
-  const hist = new Int32Array(BINS + 1);
-
-  const accPay = new Float64Array(ourN), accCash = new Int32Array(ourN),
-        accWin = new Int32Array(ourN), accTop1 = new Int32Array(ourN),
-        accScore = new Float64Array(ourN), accScore2 = new Float64Array(ourN),
-        accRank = new Float64Array(ourN);
-  const winLineup = new Int32Array(N);
-  const cptMult = site.showdown ? site.cptMult : 1;
-
-  for (let s = 0; s < sims; s++) {
-    // correlated draws, one game at a time
-    for (const g of gameKeys) {
-      const { L, ids, n } = chol[g];
-      for (let a = 0; a < n; a++) z[a] = gauss(rand);
-      for (let a = 0; a < n; a++) {
-        let v = 0, row = a * n;
-        for (let b = 0; b <= a; b++) v += L[row + b] * z[b];
-        const id = ids[a];
-        score[id] = isNorm[id] ? mu[id] + sigma[id] * v
-                               : mu[id] * Math.exp(sigma[id] * v - sigma[id] * sigma[id] / 2);
-      }
-    }
-
-    let lo = Infinity, hi = -Infinity, fieldMax = -Infinity;
-    for (let f = 0; f < field.length; f++) {
-      const L9 = field[f]; let t = 0;
-      for (let k = 0; k < L9.length; k++) t += score[L9[k]];
-      if (L9.cpt !== undefined) t += score[L9.cpt] * (cptMult - 1);
-      fieldScore[f] = t;
-      if (t < lo) lo = t;
-      if (t > hi) hi = t;
-      if (t > fieldMax) fieldMax = t;
-    }
-    for (let o = 0; o < ourN; o++) {
-      const l = lineups[o]; let t = 0;
-      for (let k = 0; k < l.ids.length; k++) t += score[l.ids[k]];
-      if (l.cpt !== undefined) t += score[l.cpt] * (cptMult - 1);
-      ourScore[o] = t;
-      if (t < lo) lo = t;
-      if (t > hi) hi = t;
-    }
-
-    // histogram rank: counting how many field lineups beat us, without sorting the field
-    const span = hi - lo || 1, inv = BINS / span;
-    hist.fill(0);
-    for (let f = 0; f < field.length; f++) {
-      let b = ((fieldScore[f] - lo) * inv) | 0;
-      if (b > BINS) b = BINS;
-      hist[b]++;
-    }
-    for (let b = BINS - 1; b >= 0; b--) hist[b] += hist[b + 1];   // count at or above bin
-
-    // best lineup on the slate this week, for win-lineup share
-    let bestF = -Infinity, bestIdx = -1, bestIsOurs = false;
-    for (let f = 0; f < field.length; f++) if (fieldScore[f] > bestF) { bestF = fieldScore[f]; bestIdx = f; bestIsOurs = false; }
-    for (let o = 0; o < ourN; o++) if (ourScore[o] > bestF) { bestF = ourScore[o]; bestIdx = o; bestIsOurs = true; }
-    const bestL = bestIsOurs ? lineups[bestIdx].ids : field[bestIdx];
-    for (let k = 0; k < bestL.length; k++) winLineup[bestL[k]]++;
-
-    const scale = (fieldSize - ourN) / field.length;
-    for (let o = 0; o < ourN; o++) {
-      const v = ourScore[o];
-      let b = ((v - lo) * inv) | 0; if (b > BINS) b = BINS; if (b < 0) b = 0;
-      // hist[b+1] counts field lineups in strictly higher bins — a conservative "above"
-      const above = (b < BINS ? hist[b + 1] : 0) * scale;
-      let ours = 0;
-      for (let q = 0; q < ourN; q++) if (q !== o && ourScore[q] > v) ours++;
-      const rank = 1 + above + ours;
-      const prize = pay(rank);
-      accPay[o] += prize;
-      if (prize > 0) accCash[o]++;
-      // ⚠️ Win rate is decided on the EXACT field maximum, not on the histogram. The
-      // histogram counts "lineups in a strictly higher bin", so anything sharing our bin
-      // reads as beaten — harmless 300 places deep, but at the very top that is the
-      // difference between winning the tournament and not, and it biases win% upward.
-      if (v > fieldMax && ours === 0) accWin[o]++;
-      if (rank <= Math.max(1, fieldSize * 0.01)) accTop1[o]++;
-      accScore[o] += v; accScore2[o] += v * v; accRank[o] += rank;
-    }
-    if (onProgress && (s % 250 === 0)) onProgress("sim", s, sims);
-  }
-
-  const fee = cfg.entryFee || 1;
-  const perLineup = [];
-  for (let o = 0; o < ourN; o++) {
-    const m = accScore[o] / sims;
-    perLineup.push({
-      i: o,
-      mean: m,
-      sd: Math.sqrt(Math.max(0, accScore2[o] / sims - m * m)),
-      ev: accPay[o] / sims,
-      roi: (accPay[o] / sims - fee) / fee,
-      cash: accCash[o] / sims,
-      win: accWin[o] / sims,
-      top1: accTop1[o] / sims,
-      meanRank: accRank[o] / sims
-    });
-  }
-
-  // per-player exposure vs how often they show up in the slate's best lineup
-  const inOurs = new Int32Array(N);
-  lineups.forEach(l => l.ids.forEach(i => inOurs[i]++));
-  const perPlayer = [];
-  for (let i = 0; i < N; i++) {
-    if (!(players[i].proj > 0)) continue;
-    const wl = winLineup[i] / sims;
-    perPlayer.push({
-      i,
-      own: players[i].own || 0,
-      winLineup: wl * 100,
-      leverage: wl * 100 - (players[i].own || 0),
-      ourExposure: ourN ? (inOurs[i] / ourN) * 100 : 0
-    });
-  }
-
-  // duplication, measured off the sampled field and scaled
-  const key = l => (l.cpt !== undefined ? l.cpt + "c|" : "") + l.slice().sort((a, b) => a - b).join(",");
-  const fieldKeys = {};
-  for (const f of field) { const k = key(f); fieldKeys[k] = (fieldKeys[k] || 0) + 1; }
-  const scaleF = (fieldSize - ourN) / field.length;
-  lineups.forEach((l, o) => {
-    const k = key(l.ids);
-    perLineup[o].dupes = (fieldKeys[k] || 0) * scaleF;
+  const largest=Math.max(...specifications.map(c=>c.fieldSize)),sampleN=Math.min(largest-1,Math.max(1,cfg.fieldSample|0||2000));
+  // Explicit opponents support replay and deterministic verification; they are not user candidates.
+  const field=cfg.opponentLineups?cfg.opponentLineups.map(l=>{const a=(l.ids||l).slice().sort((a,b)=>a-b);a.cpt=l.cpt;return a;}):buildField(players,roles,cfg,site,sampleN,fieldRand,onProgress);
+  if(!field.length)throw new Error('No legal opponent field could be generated. Check salary, projection and ownership inputs.');
+  if(field.length<sampleN)warn.push('Opponent sample incomplete: '+field.length+' of '+sampleN+'.');
+  // Canonical addition order makes exact duplicate scores equal regardless of roster ordering.
+  field.forEach(l=>l.sort((a,b)=>a-b));
+  const candidates=lineups.map(l=>({ids:l.ids.slice().sort((a,b)=>a-b),cpt:l.cpt}));
+  const candidateKeys=candidates.map(lineupKey),fieldKeys=field.map(lineupKey);
+  const metrics=['pay','cash','profit','win','top1','top10','cutoff','cutoffShare','cutoffShare2','firstShare','rank'];
+  const accum=()=>Object.fromEntries(metrics.map(k=>[k,new Float64Array(ourN)]));
+  const counts=new Map();
+  const contests=specifications.map(c=>{
+    const m=Math.min(field.length,c.fieldSize-1);
+    if(!counts.has(m)){const keys=new Map();for(let i=0;i<m;i++)keys.set(fieldKeys[i],(keys.get(fieldKeys[i])||0)+1);counts.set(m,{keys,scores:new Float64Array(m)});}
+    const pay=payoutFn(c.payout||{},c.fieldSize,c.entryFee),scale=(c.fieldSize-1)/m;
+    const duplicates=candidateKeys.map(k=>(counts.get(m).keys.get(k)||0)*scale);
+    const dupeCI=candidateKeys.map(k=>wilson(counts.get(m).keys.get(k)||0,m).map(x=>x*(c.fieldSize-1)));
+    const paid=Math.min(c.fieldSize,Math.max(1,c.paidPlaces||pay.paid));
+    return {...c,m,pay,paid,duplicates,dupeCI,full:m===c.fieldSize-1,train:accum(),validation:accum()};
   });
-
-  return {
-    perLineup, perPlayer, warn,
-    meta: {
-      sims, fieldSize, fieldSample: field.length, entries: ourN,
-      entryFee: fee, payout: cfg.payout,
-      corr: CORR.meta,
-      fieldOwnershipError: field.ownErr,
-      fieldMedianProj: field.medProj,
-      fieldP90Proj: field.p90Proj,
-      fieldMedianSalary: field.medSal,
-      ourMedianProj: (() => {
-        const a = lineups.map(l => l.proj != null ? l.proj
-          : l.ids.reduce((t, i) => t + (players[i].proj || 0), 0)).sort((x, y) => x - y);
-        return a.length ? a[a.length >> 1] : null;
-      })()
+  const score=new Float64Array(N),z=new Float64Array(N),fScore=new Float64Array(field.length),oScore=new Float64Array(ourN);
+  const accScore=new Float64Array(ourN),accScore2=new Float64Array(ourN),winLineup=new Float64Array(N);
+  function scoreLineup(ids,cpt){let v=0;for(const id of ids)v+=score[id];if(cpt!=null)v+=score[cpt]*(site.showdown?0.5:0);return v;}
+  for(let s=0;s<sims;s++){
+    for(const g of Object.keys(chol)){
+      const {L,ids,n}=chol[g];for(let a=0;a<n;a++)z[a]=gauss(rand);
+      for(let a=0;a<n;a++){let v=0;for(let b=0;b<=a;b++)v+=L[a*n+b]*z[b];const id=ids[a];
+        score[id]=isNorm[id]?mu[id]+sigma[id]*v:mu[id]*Math.exp(sigma[id]*v-sigma[id]*sigma[id]/2);}
     }
-  };
+    let best=-Infinity,bestIndex=0;
+    for(let f=0;f<field.length;f++){fScore[f]=scoreLineup(field[f],field[f].cpt);if(fScore[f]>best){best=fScore[f];bestIndex=f;}}
+    // A property of the sampled opponent field, not the exact best possible lineup.
+    for(const id of field[bestIndex])winLineup[id]++;
+    for(let o=0;o<ourN;o++){const l=candidates[o];oScore[o]=scoreLineup(l.ids,l.cpt);accScore[o]+=oScore[o];accScore2[o]+=oScore[o]*oScore[o];}
+    for(const [m,group] of counts){group.scores.set(fScore.subarray(0,m));group.scores.sort();}
+    for(const c of contests){
+      const a=s<split?c.train:c.validation,sorted=counts.get(c.m).scores,top1=Math.max(1,Math.floor(c.fieldSize*.01)),top10=Math.max(1,Math.floor(c.fieldSize*.10));
+      for(let o=0;o<ourN;o++){
+        const t=tieOutcome(sorted,oScore[o],c.fieldSize,c.pay),atTop=t.above===0;
+        const share=Math.max(0,Math.min(t.tied+1,c.paid-t.above))/(t.tied+1);
+        a.pay[o]+=t.prize;a.cash[o]+=+(t.prize>0);a.profit[o]+=+(t.prize>c.entryFee+1e-9);
+        a.win[o]+=+atTop;a.top1[o]+=+(t.above<top1);a.top10[o]+=+(t.above<top10);a.cutoff[o]+=+(t.above<c.paid);
+        a.cutoffShare[o]+=share;a.cutoffShare2[o]+=share*share;a.firstShare[o]+=atTop?1/(1+t.tied):0;a.rank[o]+=t.rank;
+      }
+    }
+    if(onProgress&&s%100===0)onProgress('sim',s,sims);
+  }
+  function summary(c,o,a,n){
+    const out={n,ci:{}};
+    for(const k of ['cash','profit','top1','top10','cutoff']){out[k]=a[k][o]/n;out.ci[k]=wilson(a[k][o],n);}
+    out.cutoffShare=a.cutoffShare[o]/n;
+    // Conservative bounded-mean interval handles fractional credit at tied cutoffs.
+    const variance=Math.max(0,(a.cutoffShare2[o]-a.cutoffShare[o]*a.cutoffShare[o]/n)/(n-1));
+    const radius=Math.sqrt(2*variance*Math.log(60)/n)+3*Math.log(60)/n;
+    out.ci.cutoffShare=[Math.max(0,out.cutoffShare-radius),Math.min(1,out.cutoffShare+radius)];
+    out.top1Share=out.top1/(1+c.duplicates[o]);out.ci.top1Share=out.ci.top1.map(v=>v/(1+c.duplicates[o]));
+    out.win=c.full?a.win[o]/n:null;out.firstShare=c.full?a.firstShare[o]/n:null;out.ci.win=c.full?wilson(a.win[o],n):null;
+    out.meanRank=a.rank[o]/n;out.ev=a.pay[o]/n;out.roi=(out.ev-c.entryFee)/c.entryFee;
+    // Top-heavy payout tails cannot be resolved by scaling a small opponent sample.
+    out.approxRoi=out.roi;if(!c.full&&(c.payout||{}).kind!=='flat'){out.roi=null;out.ev=null;}
+    return out;
+  }
+  const outcomes={};
+  for(const c of contests){
+    const perLineup=[],all=accum();
+    for(const k of metrics)for(let o=0;o<ourN;o++)all[k][o]=c.train[k][o]+c.validation[k][o];
+    for(let o=0;o<ourN;o++){
+      const m=accScore[o]/sims;
+      perLineup.push({i:o,...summary(c,o,all,sims),mean:m,sd:Math.sqrt(Math.max(0,accScore2[o]/sims-m*m)),dupes:c.duplicates[o],dupeCI:c.dupeCI[o],train:summary(c,o,c.train,split),validation:summary(c,o,c.validation,sims-split)});
+    }
+    outcomes[c.key]={perLineup,meta:{fieldSize:c.fieldSize,fieldSample:c.m,fullField:c.full,paidPlaces:c.paid,entryFee:c.entryFee,top1Resolved:c.full||c.m*.01>=20,rankMethod:c.full?'full modelled field':'scaled empirical opponent field',firstPlaceAvailable:c.full}};
+  }
+  const inOurs=new Int32Array(N);lineups.forEach(l=>l.ids.forEach(i=>inOurs[i]++));
+  const perPlayer=players.map((p,i)=>({i,own:p.own||0,winLineup:winLineup[i]/sims*100,leverage:winLineup[i]/sims*100-(p.own||0),ourExposure:inOurs[i]/ourN*100})).filter(r=>players[r.i].proj>0);
+  const main=outcomes.main;
+  const captainProjectionMismatch=site.showdown?players.filter(p=>Number.isFinite(p.cptProj)&&Math.abs(p.cptProj-1.5*p.proj)>.15).length:0;
+  if(captainProjectionMismatch)warn.push('Some captain projections disagree with 1.5× FLEX scoring. Reconcile the input before selecting entries.');
+  if(!main.meta.fullField)warn.push('Ranks use a scaled opponent sample; first place and top-heavy ROI are unavailable. Zero observed duplicates does not prove uniqueness.');
+  return {perLineup:main.perLineup,contests:outcomes,perPlayer,warn,meta:{...main.meta,engineVersion:2,captainProjectionMismatch,correlationFailed:warn.some(w=>w.includes('correlation matrix failed')),candidateMode:'independent entries',tiePayouts:true,sims,trainingSims:split,validationSims:sims-split,seed,entries:ourN,entryFee:cfg.entryFee||1,payout:cfg.payout,corr:CORR.meta,fieldOwnershipError:field.ownErr,fieldCaptainOwnershipError:field.cptErr,fieldMedianProj:field.medProj,fieldP90Proj:field.p90Proj,fieldMedianSalary:field.medSal,ourMedianProj:lineups.map(l=>l.proj||0).sort((a,b)=>a-b)[ourN>>1],uncertainty:'Monte Carlo intervals conditional on this field and score model; not model-error bounds.'}};
 }
 
 /* ---- field construction -------------------------------------------------- */
 
 function buildField(players, roles, cfg, site, sampleN, rand, onProgress) {
   const N = players.length;
-  const target = new Float64Array(N);
-  for (let i = 0; i < N; i++) target[i] = Math.max(0, (players[i].own || 0)) / 100;
-  const eligible = [];
-  for (let i = 0; i < N; i++) if (players[i].proj > 0 && target[i] > 0) eligible.push(i);
-  const byPos = { QB: [], RB: [], WR: [], TE: [], DST: [] };
-  for (const i of eligible) if (byPos[players[i].pos]) byPos[players[i].pos].push(i);
-
-  const w = new Float64Array(N);
-  for (const i of eligible) w[i] = target[i];
+  const target=new Float64Array(N),flexTarget=new Float64Array(N),cptTarget=new Float64Array(N);
+  const eligible=[],w=new Float64Array(N),cw=new Float64Array(N),ownershipFloor=cfg.ownershipFloor||0.0025;
+  for(let i=0;i<N;i++){
+    const p=players[i];target[i]=Math.max(0,p.own||0)/100;
+    const captain=Number.isFinite(p.cptOwn)?p.cptOwn/100:target[i]/6;
+    cptTarget[i]=Math.max(ownershipFloor,captain);
+    flexTarget[i]=Math.max(ownershipFloor,Number.isFinite(p.flexOwn)?p.flexOwn/100:target[i]-captain);
+    if(p.proj>0&&p.sal>0&&(site.showdown||target[i]>0))eligible.push(i);
+    w[i]=site.showdown?flexTarget[i]:target[i];cw[i]=cptTarget[i];
+  }
+  const byPos={QB:[],RB:[],WR:[],TE:[],DST:[]};
+  for(const i of eligible)if(byPos[players[i].pos])byPos[players[i].pos].push(i);
   const stackRate = cfg.fieldStackRate == null ? 0.6 : cfg.fieldStackRate;
   const cap = site.cap;
   const floor = cfg.fieldMinSalary == null ? Math.round(cap * 0.98) : cfg.fieldMinSalary;
@@ -1062,7 +985,7 @@ function buildField(players, roles, cfg, site, sampleN, rand, onProgress) {
   // salary cap and the roster shape distort it. Three calibration passes reweight toward
   // the target and the residual error is reported, rather than quietly presenting the
   // first pass as if it hit.
-  let ownErr = null;
+  let ownErr = null, cptErr=null;
   for (let pass = 0; pass < 3; pass++) {
     out = [];
     let guard = 0, tries = 0;
@@ -1070,27 +993,28 @@ function buildField(players, roles, cfg, site, sampleN, rand, onProgress) {
     // cap used to burn three passes of 120,000 attempts and hand back an empty field.
     while (out.length < sampleN && guard < sampleN * 12) {
       guard++; tries++;
-      const l = site.showdown ? sampleShowdown(players, byPos, w, cap, rand, site, eligible, floor)
+      const l = site.showdown ? sampleShowdown(players, byPos, w, cap, rand, site, eligible, floor, cw)
                               : sampleClassic(players, roles, byPos, w, cap, rand, stackRate, floor);
       if (l) out.push(l);
-      if (tries === 500 && out.length < 25) break;
+      if (tries === 500 && out.length < Math.min(25,sampleN)) break;
     }
-    if (out.length < 25) { out.tooHard = true; break; }
-    const got = new Float64Array(N);
-    for (const l of out) for (const id of l) got[id]++;
-    let err = 0, n = 0;
-    for (const i of eligible) {
-      const realized = got[i] / out.length;
-      err += Math.abs(realized - target[i]); n++;
-      if (pass < 2) {
-        const ratio = realized > 1e-6 ? target[i] / realized : 3;
-        w[i] = Math.max(1e-6, w[i] * Math.min(3, Math.max(0.33, ratio)));
+    if (!out.length) { out.tooHard = true; break; }
+    const got=new Float64Array(N),captainGot=new Float64Array(N);
+    for(const l of out){for(const id of l)got[id]++;if(l.cpt!=null)captainGot[l.cpt]++;}
+    let err=0,ce=0,n=0;
+    for(const i of eligible){
+      const realized=got[i]/out.length,realCpt=captainGot[i]/out.length,realFlex=realized-realCpt;
+      err+=Math.abs(realized-target[i]);ce+=Math.abs(realCpt-cptTarget[i]);n++;
+      if(pass<2){
+        const adjust=(wanted,observed)=>Math.min(3,Math.max(.33,observed>1e-6?wanted/observed:3));
+        w[i]=Math.max(1e-8,w[i]*adjust(site.showdown?flexTarget[i]:target[i],site.showdown?realFlex:realized));
+        if(site.showdown)cw[i]=Math.max(1e-8,cw[i]*adjust(cptTarget[i],realCpt));
       }
     }
-    ownErr = n ? (err / n) * 100 : null;
+    ownErr=n?err/n*100:null;cptErr=site.showdown&&n?ce/n*100:null;
     if (onProgress) onProgress("field", pass + 1, 3);
   }
-  out.ownErr = ownErr;
+  out.ownErr = ownErr;out.cptErr=cptErr;
   // how strong the modelled field turned out, so the page can show it rather than assume it
   if (out.length) {
     const pr = out.map(l => {
@@ -1227,15 +1151,16 @@ function sampleClassic(players, roles, byPos, w, cap, rand, stackRate, floor) {
   return null;
 }
 
-function sampleShowdown(players, byPos, w, cap, rand, site, eligible, floor) {
+function sampleShowdown(players, byPos, w, cap, rand, site, eligible, floor, cptWeights) {
   for (let attempt = 0; attempt < 8; attempt++) {
     const used = {}, ids = [];
     let left = site.size - 1;
     const cptRoom = cap - cheapestK(eligible, left, used, players);
-    const cpt = pick(eligible, w, rand, used, cptRoom / site.cptSalMult, players, null);
+    const captains=eligible.filter(i=>(players[i].cptSal||Math.round(players[i].sal*site.cptSalMult))<=cptRoom);
+    const cpt = pick(captains, cptWeights||w, rand, used, null, players, null);
     if (cpt < 0) return null;
     used[cpt] = 1; ids.push(cpt);
-    let sal = Math.round(players[cpt].sal * site.cptSalMult), ok = true;
+    let sal = players[cpt].cptSal || Math.round(players[cpt].sal * site.cptSalMult), ok = true;
     while (left > 0) {
       const max = cap - sal - cheapestK(eligible, left - 1, used, players);
       const min = floor ? floor - sal - costliestK(eligible, left - 1, used, players) : null;
@@ -1246,7 +1171,7 @@ function sampleShowdown(players, byPos, w, cap, rand, site, eligible, floor) {
     if (!ok || sal > cap) continue;
     const teams = {}; let nt = 0;
     for (const id of ids) if (!teams[players[id].team]) { teams[players[id].team] = 1; nt++; }
-    if (nt < 2) continue;
+    if (nt !== 2) continue;
     ids.cpt = cpt; ids.sal = sal;
     return ids;
   }
@@ -1255,40 +1180,35 @@ function sampleShowdown(players, byPos, w, cap, rand, site, eligible, floor) {
 
 /* ---- payouts ------------------------------------------------------------- */
 
-function payoutFn(spec, fieldSize, entryFee) {
-  if (spec.kind === "table" && spec.rows && spec.rows.length) {
-    const rows = spec.rows.slice().sort((a, b) => a.from - b.from);
-    return function (rank) {
-      const r = Math.round(rank);
-      for (const row of rows) if (r >= row.from && r <= row.to) return row.prize;
-      return 0;
-    };
+function payoutFn(spec,fieldSize,entryFee){
+  const prizes=new Float64Array(fieldSize+1),prefix=new Float64Array(fieldSize+1);
+  if(spec.kind==='table'&&spec.rows&&spec.rows.length){
+    const covered=new Uint8Array(fieldSize+1);
+    for(const row of spec.rows){
+      if(!Number.isInteger(row.from)||!Number.isInteger(row.to)||row.from<1||row.to>fieldSize||row.to<row.from||!Number.isFinite(row.prize)||row.prize<0)throw new Error('Invalid payout tier.');
+      for(let i=row.from;i<=row.to;i++){if(covered[i])throw new Error('Overlapping payout tiers.');covered[i]=1;prizes[i]=row.prize;}
+    }
+  }else{
+    const fraction=spec.paidFrac==null?.2:spec.paidFrac,alpha=spec.alpha==null?1.15:spec.alpha,rake=spec.rake==null?.15:spec.rake;
+    if(!(fraction>0&&fraction<=1)||!(rake>=0&&rake<1)||!Number.isFinite(alpha))throw new Error('Invalid payout settings.');
+    const paid=Math.max(1,Math.round(fieldSize*fraction)),pool=fieldSize*entryFee*(1-rake);
+    let norm=0;for(let i=1;i<=paid;i++)norm+=(prizes[i]=spec.kind==='flat'?1:Math.pow(i,-alpha));
+    for(let i=1;i<=paid;i++)prizes[i]=prizes[i]/norm*pool;
   }
-  // parametric: prize(r) proportional to r^-alpha over the paid places.
-  // alpha is "how top-heavy" — 1.15 puts roughly 15-18% of the pool on first in a
-  // large field, which is about where DraftKings' big tournaments sit.
-  const paidFrac = spec.paidFrac == null ? 0.2 : spec.paidFrac;
-  const alpha = spec.alpha == null ? 1.15 : spec.alpha;
-  const rake = spec.rake == null ? 0.15 : spec.rake;
-  const paid = Math.max(1, Math.round(fieldSize * paidFrac));
-  const pool = fieldSize * entryFee * (1 - rake);
-  if (spec.kind === "flat") {
-    const prize = pool / paid;
-    return rank => (rank <= paid ? prize : 0);
-  }
-  let H = 0;
-  const step = paid > 5000 ? Math.ceil(paid / 5000) : 1;
-  for (let r = 1; r <= paid; r += step) H += Math.pow(r, -alpha) * step;
-  return function (rank) {
-    if (rank > paid || rank < 1) return 0;
-    return pool * Math.pow(rank, -alpha) / H;
+  let paid=0;for(let i=1;i<=fieldSize;i++){prefix[i]=prefix[i-1]+prizes[i];if(prizes[i]>0)paid=i;}
+  const pay=rank=>prizes[Math.min(fieldSize+1,Math.max(0,Math.round(rank)))]||0;
+  pay.shared=(above,tied)=>{
+    const a=Math.min(fieldSize-1,Math.max(0,Math.round(above))),n=Math.min(fieldSize-a,Math.max(1,Math.round(tied)+1));
+    return (prefix[a+n]-prefix[a])/n;
   };
+  pay.paid=paid;pay.total=prefix[fieldSize];return pay;
 }
 
 root.DDFS.simulate = simulate;
 root.DDFS.CORR = CORR;
 root.DDFS.assignRoles = assignRoles;
 root.DDFS.payoutFn = payoutFn;
+root.DDFS.tieOutcome=tieOutcome;root.DDFS.wilson=wilson;root.DDFS.lineupKey=lineupKey;
 
 })(typeof module !== "undefined" && module.exports ? module.exports : (typeof self !== "undefined" ? self : this));
 
