@@ -37,3 +37,7 @@ const page=fs.readFileSync(require('node:path').join(__dirname,'../dfs.html'),'u
 const start=page.indexOf('/**',page.indexOf('/* ---- CSV / slate ingest')),end=page.indexOf('/* ---- DK draftables ingest',start);
 assert.equal(page.slice(start,end).trim(),fs.readFileSync(require('node:path').join(__dirname,'dfs-slate-ingest.js'),'utf8').trim());
 console.log('Both import paths agree on low ownership, Ceiling is retained, stale CPT estimates are cleared, and page parser matches source');
+
+const noCaptainSalary=I.readUpload('Name,Team,Position,Salary,Projection,Total Own%,CPT Own%\nSynthetic K,AAA,K,4000,8,40,3\nSynthetic QB,BBB,QB,10000,20,80,25',[]);
+assert.equal(noCaptainSalary.showdown,true);assert.equal(noCaptainSalary.players.length,2);assert.equal(noCaptainSalary.players[0].pos,'K');
+console.log('A captain-ownership column detects Showdown even without a captain salary column');

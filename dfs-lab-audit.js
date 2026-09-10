@@ -43,7 +43,7 @@ function optimum(players,cfg){
  const deadline=Date.now()+(cfg.auditTimeLimitMs||10000);let best=null,nodes=0,aborted=false;
  for(const cpt of pool){
   if(Date.now()>deadline){aborted=true;break;}
-  const p=players[cpt],cSal=Number.isFinite(p.cptSal)?p.cptSal:p.sal*1.5,cProj=Number.isFinite(p.cptProj)?p.cptProj:p.proj*1.5;
+  const p=players[cpt],cSal=Number.isFinite(p.cptSal)&&p.cptSal>0?p.cptSal:Math.round(p.sal*1.5),cProj=Number.isFinite(p.cptProj)?p.cptProj:p.proj*1.5;
   const flex=pool.filter(i=>i!==cpt).sort((a,b)=>players[b].proj-players[a].proj),picked=[cpt],teams=new Map([[p.team,1]]);
   function visit(from,need,salary,projection){
    if(aborted)return;

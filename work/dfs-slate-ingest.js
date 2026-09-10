@@ -152,7 +152,7 @@
     }
 
     // Scan for showdown signal first (any CPT roster position)
-    var anyCpt = !!(opts.combined && idx.cptSal >= 0);
+    var anyCpt = !!(opts.combined && (idx.cptSal >= 0 || headerKind === "etr-showdown"));
     if (idx.rp >= 0) {
       for (var s = hdr + 1; s < rows.length; s++) {
         var rp0 = String(rows[s][idx.rp] || "").trim().toUpperCase();

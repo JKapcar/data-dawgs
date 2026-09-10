@@ -31,3 +31,7 @@ assert.ok(Math.abs(e.slots.reduce((s,p)=>s+p.logShare,0)-1)<1e-12);
 // never use either to silently exclude candidates.
 assert.ok(e.coreProduct>=e.product);
 console.log('Independent maximum, custom CPT fields, changed rules, corrupted outputs, zero/missing ownership, and retained punts pass');
+
+const fallback=players.map(p=>({...p,cptSal:0,cptProj:undefined,lock:false,excl:false}));
+assert.equal(A.reconcile(fallback,cfg,P.generate(fallback,cfg)).maxStatus,'PASS');
+console.log('Missing captain salaries use the legal 1.5× fallback in both independent searches');
