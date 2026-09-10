@@ -88,7 +88,8 @@ test('surface generator reports the deployed Pound MCP tools as live', () => {
   // ("43 of 43 tools"), not only against surfaces.json, which is generated from the same list.
   // ⚠️ A stale count here throws, and a throw kills the FILE, not just this test. That is how
   // the nav order assertions below sat green-by-absence while the shipped bar disagreed with them.
-  assert.equal(surfaces.counts.mcp_tools_live, 43);
+  // 46 as of 2026-09-10: 45 on main plus dd_bozo_admin_actions (Bozo Phase 2.7).
+  assert.equal(surfaces.counts.mcp_tools_live, 46);
   assert.ok(surfaces.mcp.tools_live.includes('dd_survivor_ev'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_optimize_survivor_path'));
   assert.ok(surfaces.mcp.tools_live.includes('dd_analyze_matchup'));
@@ -484,7 +485,8 @@ test('the deployed CFB MCP tools are live while unimplemented candidate names re
   // ("43 of 43 tools"), not only against surfaces.json, which is generated from the same list.
   // ⚠️ A stale count here throws, and a throw kills the FILE, not just this test. That is how
   // the nav order assertions below sat green-by-absence while the shipped bar disagreed with them.
-  assert.equal(surfaces.counts.mcp_tools_live, 43);
+  // 46 as of 2026-09-10: 45 on main plus dd_bozo_admin_actions (Bozo Phase 2.7).
+  assert.equal(surfaces.counts.mcp_tools_live, 46);
   /* CEP-5A Stage 3: the sixteen CFB tools ride on the cfb surface, whose page renders
      the roadmap that names them. The DawgHouse surface must no longer claim them, and
      its pound-tools.json entry must stop advertising a roadmap it does not render. */

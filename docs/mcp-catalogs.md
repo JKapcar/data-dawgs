@@ -62,8 +62,9 @@ leg is stamped `submittedBy` / `commissionerModified: true`, carries the server 
 the manager's write (D20, never backdated), and writes one `admin/actions` audit row —
 the second and only other Firebase write the MCP block may reach, pinned by
 `assemble.mjs` to one call. New read-only core tool `dd_bozo_admin_actions` returns this
-week's rows by display name. It is `MCP_STAGED` until the Worker deploy that carries it;
-follow the addition order below and empty the list in the deploy commit.
+week's rows by display name. Registry after this change: **46 full, 18 core** (the
+core count is 18; the full count is 46). Staged until Worker version 155 promoted on
+2026-09-10, live since; `MCP_STAGED` is empty again.
 
 ## Three decisions worth knowing
 
