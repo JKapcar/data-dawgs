@@ -41,3 +41,9 @@ console.log('Both import paths agree on low ownership, Ceiling is retained, stal
 const noCaptainSalary=I.readUpload('Name,Team,Position,Salary,Projection,Total Own%,CPT Own%\nSynthetic K,AAA,K,4000,8,40,3\nSynthetic QB,BBB,QB,10000,20,80,25',[]);
 assert.equal(noCaptainSalary.showdown,true);assert.equal(noCaptainSalary.players.length,2);assert.equal(noCaptainSalary.players[0].pos,'K');
 console.log('A captain-ownership column detects Showdown even without a captain salary column');
+
+const blanks=[{name:'Blank Own',team:'AAA',own:25,cptOwn:0,cptProj:12,ceil:25}];
+const blankInfo=I.applyProjections('Name,Team,Projection,Total Own%,CPT Own%,CPT Projection,Ceiling\nBlank Own,AAA,9,,0,,',blanks);
+assert.equal(blanks[0].own,null);assert.equal(blanks[0].cptOwn,0);assert.equal(blanks[0].cptProj,undefined);assert.equal(blanks[0].ceil,undefined);assert.deepEqual(blankInfo.updatedIds,[0]);
+assert.equal(require('../dfs-lab-audit.js').rawOwn(blanks[0],false,true),null);
+console.log('Blank ownership stays missing, blank estimates clear stale values, and snapshot coverage records unique updated players');

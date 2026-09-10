@@ -4629,7 +4629,7 @@ function banner(id, kind, html) {
         opp: tm === away ? home : (tm === home ? away : ""),
         sal: 0, dkId: "", cptId: "", cptSal: 0,
         avg: idx.avg >= 0 ? parseFloat(row[idx.avg]) || 0 : 0,
-        proj: null, own: 0, status: ""
+        proj: null, own: null, status: ""
       });
       if (rp === "CPT" || rp === "CAPTAIN") { rec.cptId = id; rec.cptSal = sal; }
       else { rec.sal = sal; rec.dkId = id; if (idx.cptSal >= 0) rec.cptSal = parseMoney(row[idx.cptSal]); }
@@ -4752,27 +4752,27 @@ function banner(id, kind, html) {
       players[hit].proj = pv;
       if (iOwn >= 0) {
         var ov = readOwn(row[iOwn]);
-        if (ov != null) players[hit].own = ov;
+        players[hit].own = ov;
       }
       if (iCptOwn >= 0) {
         var cov = readCptOwn(row[iCptOwn]);
-        if (cov != null) players[hit].cptOwn = cov;
+        players[hit].cptOwn = cov;
       }
       // An older CPT projection must not survive a new base-only projection.
       if (iCptProj < 0) delete players[hit].cptProj;
       if (iCeil < 0) delete players[hit].ceil;
       if (iCptProj >= 0) {
         var cpv = parseFloat(String(row[iCptProj]).replace(/[^0-9.\-]/g, ""));
-        if (isFinite(cpv)) players[hit].cptProj = cpv;
+        if (isFinite(cpv)) players[hit].cptProj = cpv; else delete players[hit].cptProj;
       }
       if (iCeil >= 0) {
         var cev = parseFloat(String(row[iCeil]).replace(/[^0-9.\-]/g, ""));
-        if (isFinite(cev)) players[hit].ceil = cev;
+        if (isFinite(cev)) players[hit].ceil = cev; else delete players[hit].ceil;
       }
       matched++;
     }
     return {
-      matched: matched,
+      matched: matched, updatedIds:Object.keys(seen).map(Number),
       missed: missed,
       head: head,
       cols: { name: iName, proj: iProj, own: iOwn, team: iTeam, cptOwn: iCptOwn, cptProj: iCptProj, ceil: iCeil, id: iId },
@@ -6547,7 +6547,7 @@ function runSim() {
     SIM = r; SIM.ms = Date.now() - t0; SIM.lineupKeys = lineupKeys;SIM.inputKey=labInputKey();
     banner("simWarn", "warn", r.warn && r.warn.length ? "<b>Heads up.</b> " + r.warn.map(esc).join(" ") : null);
     renderSim(); renderLineups(); drawRarity();
-    banner("simWarn", "ok", "Simulation complete. <a href=\"#exposure\" data-goto=\"exposure\">View colored lineup cloud and frontier</a>. " + esc((r.warn || []).join(" ")));
+    banner("simWarn", "ok", "Simulation complete. Use Compare contests in the Lineup Lab for contest-specific colors and candidate cards. " + esc((r.warn || []).join(" ")));
   };
   if (WORKER_URL) {
     try {
@@ -6705,7 +6705,7 @@ function labContestInspector(i){
  <p>Cash ${pct(v.cash,1)} · positive profit ${pct(v.profit,1)} · top-10% ${pct(v.top10,2)} · top-1% ${pct(v.top1,2)}.</p>
  <p>${result.meta.firstPlaceAvailable?'First place (ties included) '+pct(v.win,3)+' · first-prize share '+pct(v.firstShare,3):'First place: unavailable from a partial field.'} ${v.roi==null?'Top-heavy ROI: unavailable at this field resolution.':'Model ROI '+pct(v.roi,1)+'.'}</p>
  <p>Identical opponents in the field model: ~${labCopyText(r.dupes)} · sampling interval ${labCopyText(r.dupeCI[0])}–${labCopyText(r.dupeCI[1])}. A zero sample count does not prove uniqueness.</p>
- <p class="note">${c.key==='milly'?'Dupe-adjusted top-1% = top-1% rate ÷ (1 + modelled identical opponents). This is a selection heuristic, not expected profit. ':c.key==='cash'?'Cash means any prize; positive profit also accounts for the entry fee and ties. ':'Paid-slot share gives fractional credit when a tie crosses the payout cutoff. '}Intervals cover score-world sampling error conditional on the field and model; they do not cover forecast error. The copy axis uses the separate ownership-product proxy.</p></div>`;
+ <p class="note">${c.key==='milly'?'Dupe-adjusted top-1% = top-1% rate ÷ (1 + modelled identical opponents). This is a selection heuristic, not expected profit. ':c.key==='cash'?'Tie-adjusted cash rate credits the fraction of paid places covered by a tie. Any-prize and positive-profit rates are shown separately. ':'Paid-slot share gives fractional credit when a tie crosses the payout cutoff. '}Intervals cover score-world sampling error conditional on the field and model; they do not cover forecast error. The copy axis uses the separate ownership-product proxy.</p></div>`;
 }
 function runLabCompare(){
  if(labCompareWorker)return;
@@ -6737,7 +6737,7 @@ function labInputKey() {
 }
 function recordLabSource(text,label,info) {
  const cols=info&&info.cols,head=info&&info.head;
- const source={label,importedAt:new Date().toISOString(),revision:3,playerCount:S.players.length,columns:cols&&head?Object.fromEntries(Object.entries(cols).filter(([,i])=>i>=0).map(([k,i])=>[k,head[i]])):{},matched:info&&info.matched,missed:info&&info.missed&&info.missed.length,hash:null};
+ const source={label,importedAt:new Date().toISOString(),revision:3,playerCount:S.players.length,columns:cols&&head?Object.fromEntries(Object.entries(cols).filter(([,i])=>i>=0).map(([k,i])=>[k,head[i]])):{},matched:info&&info.matched,updatedIds:info&&info.updatedIds,missed:info&&info.missed&&info.missed.length,hash:null};
  S.labSource=source;
  if(crypto.subtle)crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)).then(buf=>{
   source.hash=Array.from(new Uint8Array(buf)).map(n=>n.toString(16).padStart(2,'0')).join('');
@@ -6752,6 +6752,7 @@ function labTrust(){
  if(S.demo)return {pass:false,reason:'Demo data; upload your slate before selecting entries.'};
  if(!s||s.revision!==3||!s.hash)return {pass:false,reason:'Reimport the CSV to record its source and fingerprint.'};
  if(s.playerCount!==S.players.length||s.missed)return {pass:false,reason:'Resolve the source player count or unmatched rows.'};
+ if(!s.updatedIds||S.players.some((p,i)=>!p.excl&&p.proj>0&&!s.updatedIds.includes(i)))return {pass:false,reason:'Some projections were retained from an earlier file. Import a complete snapshot before selecting entries.'};
  if(!s.columns.proj||!s.columns.own||!s.columns.cptOwn)return {pass:false,reason:'This snapshot mixes retained data. Import projection, total ownership and captain ownership together.'};
  if(!Number.isFinite(Date.parse(s.importedAt)))return {pass:false,reason:'Source import time is invalid. Reimport the CSV.'};
  if(Date.now()-Date.parse(s.importedAt)>DDLabAudit.config.stalenessHours*3600000)return {pass:false,reason:'Import is over '+DDLabAudit.config.stalenessHours+' hours old. Refresh the slate.'};
@@ -6833,7 +6834,7 @@ function labFillCaptains() {
 }
 function labDiagnostics(l) {
  const P=S.players,sd=S.site==='dk_showdown',cap=50000;
- const slots=lineupSlots(l).map(s=>{const p=P[s.i],isC=s.slot==='CPT';return {slot:s.slot,p,isC,sal:isC?(p.cptSal||Math.round(p.sal*1.5)):p.sal,proj:isC?(p.cptProj!=null?p.cptProj:p.proj*1.5):p.proj,ceil:p.ceil!=null?(isC?p.ceil*1.5:p.ceil):null,own:labSlotOwn(p,isC,sd)};});
+ const slots=lineupSlots(l).map(s=>{const p=P[s.i],isC=s.slot==='CPT';return {slot:s.slot,p,isC,sal:isC?(p.cptSal||Math.round(p.sal*1.5)):p.sal,proj:isC?(p.cptProj!=null?p.cptProj:p.proj*1.5):p.proj,ceil:p.ceil!=null?(isC?p.ceil*1.5:p.ceil):null,own:Math.max(+$('labOwnFloor').value,labSlotOwn(p,isC,sd))};});
  const own=slots.reduce((t,s)=>t+s.own,0),prod=slots.reduce((t,s)=>t*(s.own/100),1),ceil=slots.every(s=>s.ceil!=null)?slots.reduce((t,s)=>t+s.ceil,0):null;
  const dead=slots.filter(s=>s.p.proj<DDPareto.DEAD_PROJ).length,minOwn=Math.min(...slots.map(s=>s.own));
  const entries=labContestInfo().entries;
@@ -6863,7 +6864,7 @@ function drawRarity(){
  const st=S.labStats||{};
  const exactView=st.exact&&labScenario()==='any'&&!cptF&&!minOwn&&!hideDead&&yKey!=='ceil'&&!S.labSubset&&ownFloor===0.25;
  $('rarityNote').textContent=(exactView?'Exact frontier over every legal lineup under the Lab settings. ':'Frontier of sampled candidates, not a guarantee over every possible lineup. ')+'Chart copies = slot-ownership product × selected field size. This rough independence model is not a calibrated duplication forecast; shared lineup-building patterns can change actual duplication. Low duplication does not establish GPP suitability, and high duplication does not establish cash-game suitability. Use projection and simulated outcomes alongside duplication. '+(sd?'CPT uses captain ownership; FLEX uses total minus captain; slots under 0.25% are floored. ':'')+(yKey==='ceil'&&!hasCeil?'Ceiling sum needs a Ceiling column in the projections upload; showing projected points. ':'')+'Exposure caps and minimum uniques are not applied to the exploration pool.';
- if(ownFloor>0.25)$('rarityNote').textContent='Sensitivity view: the '+ownFloor+'% minimum is an assumption, not changed source data. This frontier is recomputed from the retained pool, not every legal lineup. '+$('rarityNote').textContent;
+ if(ownFloor>0.25)$('rarityNote').textContent='Sensitivity view: the '+ownFloor+'% minimum is an assumption, not changed source data. This frontier is recomputed from the retained pool, not every legal lineup. Simulation still uses the baseline ownership model. '+$('rarityNote').textContent;
  if(!pts.length){chart.innerHTML='<p class="note">'+(all.length?'No lineups match the filters.':'Generate candidates after uploading projections and ownership. Showdown also needs captain ownership.')+'</p>';$('rarityStats').hidden=true;return;}
  const W=Math.max(320,Math.min(920,chart.clientWidth||820)),H=W<560?380:450,L=52,R=22,T=30,B=70;
  const rawMin=Math.min(...pts.map(p=>p.x)),rawMax=Math.max(...pts.map(p=>p.x));
@@ -6904,7 +6905,7 @@ function drawRarity(){
   if(![...picker.options].some(o=>o.value===String(p.i))){const o=document.createElement('option');o.value=p.i;o.textContent='Selected dot · '+p.y.toFixed(1)+' pts · ~'+labCopyText(copies(p))+' copies';o.dataset.selectedCloud='true';picker.appendChild(o);}
   picker.value=String(p.i);
   const better=pts.filter(q=>q.x<=p.x&&q.y>p.y).sort((a,b)=>b.y-a.y)[0];
-  const core=DDLabAudit.evidence(l,S.players,sd),rows=d.slots.map((s,j)=>`<tr><td><b>${s.slot}</b></td><td>${esc(s.p.pos)}</td><td>${esc(s.p.team)}</td><td>${esc(s.p.name)}</td><td>$${s.sal.toLocaleString()}</td><td>${fmt(s.proj,1)}</td><td>${s.ceil!=null?fmt(s.ceil,1):'—'}</td><td>${fmt(s.own,2)}%</td><td>${pct(core.slots.find(v=>v.id===l.ids.find(id=>S.players[id]===s.p)).logShare,0)}</td></tr>`).join('');
+  const core=DDLabAudit.evidence(l,S.players,sd,ownFloor/100),rows=d.slots.map((s,j)=>`<tr><td><b>${s.slot}</b></td><td>${esc(s.p.pos)}</td><td>${esc(s.p.team)}</td><td>${esc(s.p.name)}</td><td>$${s.sal.toLocaleString()}</td><td>${fmt(s.proj,1)}</td><td>${s.ceil!=null?fmt(s.ceil,1):'—'}</td><td>${fmt(s.own,2)}%</td><td>${pct(core.slots.find(v=>v.id===l.ids.find(id=>S.players[id]===s.p)).logShare,0)}</td></tr>`).join('');
   const iss=[],info=[];
   $('rarityDetail').innerHTML=`<h3>Lineup #${p.i+1}${on.has(p.i)?' · On frontier':bandSet.has(p.i)?' · In band':''}${(l.dead||0)>0?' · <span style="color:#d98b2b">low projection</span>':''}</h3>
    <div class="lab-evidence"><h4>What this lineup needs</h4><p>${esc(DDLabContests.story(l,S.players))}</p><p class="note">A construction hypothesis. The simulator draws correlated fantasy points; it does not simulate play-by-play or guarantee this game script.</p></div>
@@ -6918,7 +6919,7 @@ function drawRarity(){
    <p><b>${fmt(l.proj,1)} projected</b>${d.ceil!=null?` · ceiling sum ${fmt(d.ceil,1)}`:''} · $${l.sal.toLocaleString()} ($${d.salLeft.toLocaleString()} left) · split ${esc(l.split||'')} · cumulative own ${fmt(d.own,0)}% · product ${d.prod.toExponential(2)} · lowest slot ${fmt(d.minOwn,1)}%</p>
    <p><b>Chart estimate: ~${labCopyText(copies(p))} copies</b> in ${esc(contest.label)} · ownership-only proxy.</p>
    ${labContestInspector(p.i)}
-   <p class="note">Core product, omitting the lowest-owned slot: ${core.coreProduct.toExponential(3)}. Largest single-slot rarity contribution: ${pct(core.maxLogShare,0)}${core.maxLogShare>.5?' · concentrated in one player':''}. These are diagnostics; neither excludes the lineup. Raw ownership below 0.25% uses the explicit minimum, with C=1 and no fitted co-ownership adjustment.</p>
+   <p class="note">Core product, omitting the lowest-owned slot: ${core.coreProduct.toExponential(3)}. Largest single-slot rarity contribution: ${pct(core.maxLogShare,0)}${core.maxLogShare>.5?' · concentrated in one player':''}. These are diagnostics; neither excludes the lineup. Raw ownership below ${ownFloor}% uses the selected minimum, with C=1 and no fitted co-ownership adjustment.</p>
    ${iss.length?`<p>${iss.map(x=>`<span class="pill warn">${esc(x.message)}</span>`).join(' ')}</p>`:''}${info.length?`<p class="note">${info.map(x=>esc(x.message)).join(' ')}</p>`:''}
    ${better?`<p class="note">Lineup #${better.i+1} has ${(better.y-p.y).toFixed(1)} more at equal or lower product.</p>`:''}
    <div class="btnrow"><button class="btn ghost" id="labPin" data-i="${p.i}">Pin lineup</button><button class="btn ghost" id="labCopy" data-i="${p.i}">Copy roster</button></div>`;
@@ -7460,7 +7461,7 @@ function boot() {
     const inp = e.target.closest("input.cell"); if (!inp) return;
     const i = +inp.closest("tr").dataset.i, f = inp.dataset.f;
     const raw = inp.value.trim();
-    if (raw === "") S.players[i][f] = f === "proj" ? null : (f === "own" ? 0 : null);
+    if (raw === "") S.players[i][f] = null;
     else { const v = parseFloat(raw); if (isFinite(v)) S.players[i][f] = v; }
     if(f==='proj'){delete S.players[i].cptProj;delete S.players[i].ceil;}
     if(S.labSource)S.labSource.editedAt=new Date().toISOString();

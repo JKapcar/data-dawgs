@@ -4,7 +4,7 @@
 'use strict';
 const config={maxOwnershipError:5};
 const defaults=[
- {key:'cash',label:'Cash / double-up',short:'C',fieldSize:50,paidPlaces:22,multiplier:2,metric:'cash',metricLabel:'cash rate'},
+ {key:'cash',label:'Cash / double-up',short:'C',fieldSize:50,paidPlaces:22,multiplier:2,metric:'cutoffShare',metricLabel:'tie-adjusted cash rate'},
  {key:'three',label:'3× multiplier',short:'3',fieldSize:250,paidPlaces:75,multiplier:3,metric:'cutoffShare',metricLabel:'paid-slot share'},
  {key:'five',label:'5× multiplier',short:'5',fieldSize:250,paidPlaces:45,multiplier:5,metric:'cutoffShare',metricLabel:'paid-slot share'},
  {key:'milly',label:'Milly / GPP',short:'M',fieldSize:132000,paidPlaces:26400,multiplier:null,metric:'top1Share',metricLabel:'dupe-adjusted top-1%'}

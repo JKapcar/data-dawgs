@@ -51,7 +51,7 @@ worlds for validation and provides Wilson intervals for binary rates. Fractional
 cutoff shares use a conservative bounded-mean interval. The sample field is fixed:
 these intervals do not include its uncertainty. A zero duplicate observation gets
 an explicit nonzero upper bound. First place and top-heavy ROI are unavailable
-when the opponent field is extrapolated. Cash/flat payout expectations can still
+when the opponent field is extrapolated. Flat payout expectations can still
 be estimated near their payout cutoff. Runtime captain/FLEX projection mismatch
 flags prevent recommendation labels when 1.5× scoring and the imported means disagree.
 
@@ -125,8 +125,8 @@ passing stacks with bring-backs, or same-team RB/DST builds. They filter candida
 selection and the visible cloud; the projection benchmark stays visible.
 
 Cards choose their lineup using training worlds only and show held-out rates and
-95% Monte Carlo intervals. Cash ranks by any-prize rate (positive-profit rate is
-also shown); multipliers rank by paid-slot share with fractional tied-cutoff credit;
+95% Monte Carlo intervals. Cash ranks by tie-adjusted paid-slot rate (any-prize and positive-profit rates
+are also shown); multipliers rank by paid-slot share with fractional tied-cutoff credit;
 GPP ranks by top-1% rate divided by one plus modelled identical opponents. This
 last quantity is a heuristic, not ROI. Duplicate-sampling intervals are separate
 from the score-world intervals. Overlapping card/runner-up intervals are explicitly
@@ -157,3 +157,11 @@ import → generate → audit → compare → select → change contest. It chec
 The generated `dawg-bot-worker.js` carries the same repaired engine for repository
 consistency. Publishing the Pages site does not deploy that separate Cloudflare
 service; its independent release process still applies.
+
+
+Missing ownership cells remain missing, including when a new column replaces an
+older value. They are not converted into reported zeros. Snapshot coverage tracks
+the actual updated player IDs, so a partial projection update cannot claim complete
+provenance. Blank CPT projections/ceilings also clear old estimates. Cash selection
+uses fractional credit for ties at the payout cutoff: with flat prizes, this tracks
+expected payout and avoids preferring frequent tiny tie refunds over actual returns.
