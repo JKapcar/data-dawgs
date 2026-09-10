@@ -2899,8 +2899,14 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <!-- ======================================================= EXPOSURE -->
 <section class="sheet" id="sh-exposure" hidden>
   <div class="card" id="rarityCard">
-    <h3>Lineup lab · points vs ownership product <span class="rt" id="rarityState"></span></h3>
+    <style>#labCustomWrap[hidden],#labTooltip[hidden]{display:none}#rarityCard .fi{min-height:44px}#rarityCard .btn{min-height:44px}</style>
+    <h3>Lineup lab · points vs expected copies <span class="rt" id="rarityState"></span></h3>
     <p class="sub">Showdown: every legal lineup is enumerated (not sampled). The chart plots the exact frontier, a band beneath it, and a random cloud of the rest. Tap any dot for the roster and diagnostics.</p>
+    <div class="btnrow" style="align-items:end;margin-bottom:12px">
+      <label class="fld">Contest for copy estimates<select class="fi" id="labContest"><option value="132000">Milly · 132,000 entries</option><option value="5300" selected>Bootleg · 5,300 entries</option><option value="250">Small SE · 250 entries</option><option value="custom">Custom field size</option></select></label>
+      <label class="fld" id="labCustomWrap" hidden>Custom entries<input class="fi" id="labCustomField" type="number" min="2" max="10000000" step="1" value="235"></label>
+    </div>
+    <p class="note">Preset sizes are examples; use your contest’s actual entry count. Copy estimates use slot ownership × field size, a rough independence model. This selector does not change Simulator settings.</p>
     <div class="btnrow">
       <label class="fld">Salary floor<input class="fi" type="number" id="labMinSal" min="0" max="50000" step="100" value="44000"></label>
       <label class="fld">Max per team<select class="fi" id="labMaxTeam"><option>3</option><option>4</option><option selected>5</option></select></label>
@@ -2919,7 +2925,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <label class="fld">Color by<select class="fi" id="paretoColor"><option value="roi">Simulated ROI</option><option value="win">First-place probability</option><option value="top1">Top-1% rate</option><option value="cash">Cash rate</option></select></label>
     </div>
     <div class="banner" id="rarityWarn" hidden></div><div class="statrow" id="rarityStats" hidden></div>
-    <div id="rarityChart"></div><label class="fld">Inspect frontier<select class="fi" id="paretoPick"></select></label>
+    <div id="rarityChart" style="position:relative"></div><label class="fld">Or choose a frontier lineup<select class="fi" id="paretoPick"></select></label>
     <div id="rarityDetail" aria-live="polite"></div><div id="labPins"></div><p class="note" id="rarityNote"></p>
   </div>
 
@@ -6708,7 +6714,27 @@ function renderLev() {
    ownership numbers the user pasted in. They are somebody's projection of the field.
    ========================================================================== */
 
-let FRONT = null, frontWorker = null;
+let FRONT = null, frontWorker = null, labSelection = null;
+function labContestInfo() {
+ const preset=$('labContest').value;
+ let entries=preset==='custom'?Number($('labCustomField').value):Number(preset);
+ if(!Number.isFinite(entries)||entries<2)entries=235;
+ entries=Math.min(10000000,Math.max(2,Math.round(entries)));
+ const name=preset==='132000'?'Milly':preset==='5300'?'Bootleg':preset==='250'?'Small SE':'Custom';
+ return {entries,name,label:name+' ('+entries.toLocaleString()+' entries)'};
+}
+function labCopyText(n) {
+ if(!Number.isFinite(n))return '—';
+ if(n===0)return '0';
+ if(n<0.001)return '<0.001';
+ return n.toLocaleString(undefined,{maximumFractionDigits:n<0.01?3:n<1?2:n<10?1:0});
+}
+function labSyncContest() {
+ const cfg=S.labContest||{preset:'5300',custom:235};
+ $('labContest').value=['132000','5300','250','custom'].includes(cfg.preset)?cfg.preset:'5300';
+ $('labCustomField').value=cfg.custom||235;
+ $('labCustomWrap').hidden=$('labContest').value!=='custom';
+}
 function labCfg() {
  const sd = S.site === 'dk_showdown';
  return { site: S.site, count: +$('paretoCount').value, minSalary: +$('labMinSal').value || 0, maxSalary: 50000,
@@ -6728,7 +6754,7 @@ function runFrontier() {
  const snapshot=JSON.stringify(S.players);$('rarityGo').disabled=true;$('paretoStop').hidden=false;$('rarityState').textContent='Enumerating…';banner('rarityWarn',null,null);
  const done=r=>{if(frontWorker){frontWorker.terminate();frontWorker=null;}$('rarityGo').disabled=false;$('paretoStop').hidden=true;if(JSON.stringify(S.players)!==snapshot||S.site!==cfg.site){banner('rarityWarn','warn','Your slate changed. Generate again for the updated slate.');return;}
  if(!r.lineups.length){banner('rarityWarn','warn','No legal lineups under these settings. Lower the salary floor or raise max-per-team.');return;}
- S.lineups=r.lineups;S.labSubset=false;SIM=null;FRONT=null;S.labStats=r.stats||null;S.lineupsMeta={stamp:Date.now(),site:S.site,asked:cfg.count,lab:true};save();renderStrip();renderLineups();renderSolveStats();renderExposure();
+ S.lineups=r.lineups;labSelection=null;S.labSubset=false;SIM=null;FRONT=null;S.labStats=r.stats||null;S.lineupsMeta={stamp:Date.now(),site:S.site,asked:cfg.count,lab:true};save();renderStrip();renderLineups();renderSolveStats();renderExposure();
  const st=r.stats||{};$('rarityState').textContent=(st.exact?'exact · ':'sampled · ')+(st.legal||r.lineups.length).toLocaleString()+' legal lineups';
  banner('rarityWarn','ok',(st.exact?`<b>Exact.</b> ${st.legal.toLocaleString()} legal lineups from ${st.combos.toLocaleString()} six-player combinations; frontier ${st.frontier}, band ${st.band.toLocaleString()}${st.bandKept<st.band?` (showing ${st.bandKept})`:''}, plus ${Math.min(st.cloud,st.legal).toLocaleString()} cloud dots. `:`Sampled ${r.lineups.length.toLocaleString()} candidates${r.capped?' (search budget hit)':''}. `)+'Simulate the pool or the band to color dots by tournament outcomes.');};
  const fail=e=>{$('rarityGo').disabled=false;$('paretoStop').hidden=true;banner('rarityWarn','err',esc(e.message||'Exploration failed'));if(frontWorker)frontWorker.terminate();frontWorker=null;};
@@ -6748,14 +6774,15 @@ function labDiagnostics(l) {
  const slots=lineupSlots(l).map(s=>{const p=P[s.i],isC=s.slot==='CPT';return {slot:s.slot,p,isC,sal:isC?(p.cptSal||Math.round(p.sal*1.5)):p.sal,proj:isC?(p.cptProj!=null?p.cptProj:p.proj*1.5):p.proj,ceil:p.ceil!=null?(isC?p.ceil*1.5:p.ceil):null,own:labSlotOwn(p,isC,sd)};});
  const own=slots.reduce((t,s)=>t+s.own,0),prod=slots.reduce((t,s)=>t*(s.own/100),1),ceil=slots.every(s=>s.ceil!=null)?slots.reduce((t,s)=>t+s.ceil,0):null;
  const dead=slots.filter(s=>s.p.proj<DDPareto.DEAD_PROJ).length,minOwn=Math.min(...slots.map(s=>s.own));
- const entries=+($('cfField')&&$('cfField').value)||(S.sim&&S.sim.field)||20000;
+ const entries=labContestInfo().entries;
  let dupe=null,issues=[];
  try{dupe=DDFSDupe.expectedDupes(l,P,{entries,showdown:sd});}catch(e){}
  try{const thr=DDFSDupe.thresholdForContest(entries,{smallField:entries<1000});issues=DDFSValidators.validateLineup(l,P,{showdown:sd,site:E.SITES[S.site],dupe,dupeThreshold:thr});}catch(e){}
  return {slots,own,prod,ceil,dead,minOwn,dupe,issues,salLeft:cap-l.sal,entries};
 }
 function drawRarity(){
- const chart=$('rarityChart'),sd=S.site==='dk_showdown';$('rarityCard').hidden=false;labFillCaptains();
+ const chart=$('rarityChart'),sd=S.site==='dk_showdown';$('rarityCard').hidden=false;labFillCaptains();labSyncContest();
+ const contest=labContestInfo(),copies=p=>Math.pow(10,p.x)*contest.entries;
  $('paretoCountWrap').hidden=sd;
  const yKey=$('labY').value,cptF=$('labCpt').value,minOwn=+$('labMinOwn').value||0,hideDead=$('labHideDead').checked;
  const hasCeil=S.lineups.length&&S.lineups.every(l=>Number.isFinite(l.ceil)&&l.ids.every(i=>Number.isFinite(S.players[i].ceil)));
@@ -6765,39 +6792,80 @@ function drawRarity(){
  const band=+$('labBand').value||0,bandSet=new Set();
  {let best=-Infinity;pts.slice().sort((a,b)=>a.x-b.x||b.y-a.y).forEach(p=>{if(p.y>best)best=p.y;if(p.y>=best-band)bandSet.add(p.i);});}
  S.labBand=[...bandSet];
- $('rarityDetail').textContent='Tap a dot or choose a frontier lineup to inspect it.';
- $('paretoPick').innerHTML='<option value="">Choose a frontier lineup…</option>'+front.map(p=>`<option value="${p.i}">${p.y.toFixed(1)} ${yKey==='ceil'?'ceil':'pts'} · product ${Math.pow(10,p.x).toExponential(2)} · CPT ${esc(S.players[p.l.cpt]?S.players[p.l.cpt].name:'')}</option>`).join('');
+ $('rarityDetail').textContent='Tap a dot to select a lineup. Hover or hold a dot for a quick preview.';
+ $('paretoPick').innerHTML='<option value="">Choose a frontier lineup…</option>'+front.map(p=>`<option value="${p.i}">${p.y.toFixed(1)} ${yKey==='ceil'?'ceil':'pts'} · ~${labCopyText(copies(p))} copies · CPT ${esc(S.players[p.l.cpt]?S.players[p.l.cpt].name:'')}</option>`).join('');
  const st=S.labStats||{};
  const exactView=st.exact&&!cptF&&!minOwn&&!hideDead&&yKey!=='ceil'&&!S.labSubset;
- $('rarityNote').textContent=(exactView?'Exact frontier over every legal lineup under the Lab settings. ':'Frontier of sampled candidates, not a guarantee over every possible lineup. ')+'Ownership product is an independence proxy, not duplication probability: a 0.1%-owned punt or a punt captain lowers the product 50-100x while the rest of the roster may be exactly what the field plays, so it is usually MORE duplicated than the product suggests. Use the captain, min-slot-own and dead-spot filters to make the frontier a shortlist, then simulate. '+(sd?'CPT uses captain ownership; FLEX uses total minus captain; slots under 0.05% are floored. ':'')+(yKey==='ceil'&&!hasCeil?'Ceiling sum needs a Ceiling column in the projections upload; showing projected points. ':'')+'Exposure caps and minimum uniques are not applied to the exploration pool.';
+ $('rarityNote').textContent=(exactView?'Exact frontier over every legal lineup under the Lab settings. ':'Frontier of sampled candidates, not a guarantee over every possible lineup. ')+'Chart copies = slot-ownership product × selected field size. This rough independence model is not a calibrated duplication forecast; shared lineup-building patterns can change actual duplication. Low duplication does not establish GPP suitability, and high duplication does not establish cash-game suitability. Use projection and simulated outcomes alongside duplication. '+(sd?'CPT uses captain ownership; FLEX uses total minus captain; slots under 0.05% are floored. ':'')+(yKey==='ceil'&&!hasCeil?'Ceiling sum needs a Ceiling column in the projections upload; showing projected points. ':'')+'Exposure caps and minimum uniques are not applied to the exploration pool.';
  if(!pts.length){chart.innerHTML='<p class="note">'+(all.length?'No lineups match the filters.':'Generate candidates after uploading projections and ownership. Showdown also needs captain ownership.')+'</p>';$('rarityStats').hidden=true;return;}
- const W=820,H=430,L=65,R=25,T=25,B=65,minX=Math.min(...pts.map(p=>p.x)),maxX=Math.max(...pts.map(p=>p.x)),minY=Math.min(...pts.map(p=>p.y)),maxY=Math.max(...pts.map(p=>p.y)),dx=maxX-minX||1,dy=maxY-minY||1;
+ const W=820,H=450,L=65,R=25,T=30,B=70;
+ const rawMin=Math.min(...pts.map(p=>p.x)),rawMax=Math.max(...pts.map(p=>p.x));
+ const minX=rawMin===rawMax?rawMin-0.25:rawMin,maxX=rawMin===rawMax?rawMax+0.25:rawMax;
+ const minY=Math.min(...pts.map(p=>p.y))-0.5,maxY=Math.max(...pts.map(p=>p.y))+0.5,dx=maxX-minX,dy=maxY-minY;
  const X=x=>L+(x-minX)/dx*(W-L-R),Y=y=>H-B-(y-minY)/dy*(H-T-B);
  const metric=$('paretoColor').value,stats=new Map();
  if(SIM&&SIM.lineupKeys)SIM.perLineup.forEach(r=>{const k=SIM.lineupKeys[r.i];if(k)stats.set(k,r);});
  const simOf=p=>stats.get(labKey(p.l));
  const vals=pts.map(p=>simOf(p)).filter(Boolean).map(r=>r[metric]).filter(Number.isFinite),lo=vals.length?Math.min(...vals):0,hi=vals.length?Math.max(...vals):1;
  const color=p=>{const r=simOf(p),v=r&&r[metric];if(Number.isFinite(v))return `hsl(${15+135*(v-lo)/(hi-lo||1)} 70% 45%)`;return (p.l.dead||0)>0?'#d98b2b':'#82909e';};
- let ticks='';for(let i=0;i<=4;i++){const x=minX+dx*i/4,y=minY+dy*i/4;ticks+=`<path d="M${X(x)} ${T}V${H-B} M${L} ${Y(y)}H${W-R}" stroke="var(--grid)"/><text x="${X(x)}" y="${H-B+23}" text-anchor="middle" fill="var(--ink-2)" font-size="12">${Math.pow(10,x).toExponential(1)}</text><text x="${L-8}" y="${Y(y)+4}" text-anchor="end" fill="var(--ink-2)" font-size="12">${y.toFixed(1)}</text>`;}
+ let ticks='';for(let i=0;i<=4;i++){const x=minX+dx*i/4,y=minY+dy*i/4;ticks+=`<path d="M${X(x)} ${T}V${H-B} M${L} ${Y(y)}H${W-R}" stroke="var(--grid)"/><text x="${X(x)}" y="${H-B+23}" text-anchor="middle" fill="var(--ink-2)" font-size="12">${labCopyText(Math.pow(10,x)*contest.entries)}</text><text x="${L-8}" y="${Y(y)+4}" text-anchor="end" fill="var(--ink-2)" font-size="12">${y.toFixed(1)}</text>`;}
  const order=pts.slice().sort((a,b)=>(on.has(a.i)?2:bandSet.has(a.i)?1:0)-(on.has(b.i)?2:bandSet.has(b.i)?1:0));
- chart.innerHTML=`<svg id="paretoSvg" viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;min-height:240px;touch-action:pan-y" role="img" aria-label="Lineup cloud: ${yKey==='ceil'?'ceiling sum':'projected points'} versus ownership product. Choose a frontier lineup below for accessible details.">${ticks}<text x="${L}" y="15" fill="var(--ink-1)" font-size="13">${yKey==='ceil'?'Ceiling sum':'Projected points'} ↑</text><text x="${W/2}" y="${H-12}" text-anchor="middle" fill="var(--ink-1)" font-size="13">← Lower ownership product · logarithmic scale</text>${order.map(p=>`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="${on.has(p.i)?5:bandSet.has(p.i)?3.5:2.5}" fill="${color(p)}" opacity="${on.has(p.i)?1:bandSet.has(p.i)?0.8:0.4}" ${on.has(p.i)?'stroke="var(--ink-1)" stroke-width="1.5"':''}/>`).join('')}</svg><p class="note">Outlined dots: ${exactView?'exact':'sampled'} frontier. Larger dots: within ${band} of the frontier. Orange: contains a dead spot. ${vals.length?'Red → green: lower → higher simulated '+({roi:'ROI',win:'first-place probability',top1:'top-1% rate',cash:'cash rate'}[metric])+'.':'Gray: not simulated yet.'}</p>`;
+ const bound1=Math.log10(1/contest.entries),bound5=Math.log10(5/contest.entries);
+ const zones=[{a:minX,b:bound1,color:'#22c55e',label:'Low duplication'},{a:bound1,b:bound5,color:'#eab308',label:'Moderate duplication'},{a:bound5,b:maxX,color:'#ef4444',label:'High duplication'}];
+ const shading=zones.map(z=>{const a=Math.max(minX,z.a),b=Math.min(maxX,z.b);return b>a?`<rect x="${X(a)}" y="${T}" width="${X(b)-X(a)}" height="${H-T-B}" fill="${z.color}" opacity="0.13"/>`:'';}).join('');
+ const boundaries=[bound1,bound5].filter(x=>x>minX&&x<maxX).map(x=>`<path d="M${X(x)} ${T}V${H-B}" stroke="var(--ink-2)" stroke-dasharray="5 5"/>`).join('');
+ chart.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12px;margin:8px 0" aria-label="Duplication zones"><span><b style="color:#16803c">●</b> Low duplication · &lt;1 copy</span><span><b style="color:#a87800">●</b> Moderate · 1–5 copies</span><span><b style="color:#d53c3c">●</b> High · 5+ copies</span></div>
+ <svg id="paretoSvg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%;height:auto;touch-action:pan-y;user-select:none" role="img" aria-label="Lineup cloud: ${yKey==='ceil'&&hasCeil?'ceiling sum':'projected points'} versus estimated copies in ${esc(contest.label)}. Tap a dot to select, or use the lineup dropdown.">${shading}${ticks}${boundaries}<text x="${L}" y="18" fill="var(--ink-1)" font-size="13">${yKey==='ceil'&&hasCeil?'Ceiling sum':'Projected points'} ↑</text><text x="${W/2}" y="${H-14}" text-anchor="middle" fill="var(--ink-1)" font-size="14">Estimated copies · logarithmic scale</text>${order.map(p=>`<circle data-lineup="${p.i}" cx="${X(p.x)}" cy="${Y(p.y)}" r="${on.has(p.i)?5:bandSet.has(p.i)?3.5:2.5}" fill="${color(p)}" opacity="${on.has(p.i)?1:bandSet.has(p.i)?0.8:0.4}" ${on.has(p.i)?'stroke="var(--ink-1)" stroke-width="1.5"':''}/>`).join('')}<circle id="labSelectedDot" r="9" fill="#2563eb" stroke="white" stroke-width="3" style="pointer-events:none" visibility="hidden"/></svg>
+ <p style="font-weight:700;margin:0">Expected copies of this lineup in ${esc(contest.label)} <span style="font-weight:400">· rough estimate</span></p>
+ <p class="note" style="margin-top:4px">Left = fewer expected copies. Right = more potential prize-sharing if the lineup wins.</p>
+ <div id="labTooltip" role="tooltip" hidden style="position:absolute;z-index:5;pointer-events:none;background:var(--surface-1);color:var(--ink-1);border:1px solid var(--ink-2);border-radius:10px;padding:12px;box-shadow:0 6px 24px #0003;font-size:12px;line-height:1.5;width:min(310px,calc(100% - 16px));box-sizing:border-box"></div>
+ <p class="note">Blue filled dot: selected lineup. Outlined dots: ${exactView?'exact':'sampled'} frontier. Larger dots: within ${band} points of the frontier. Orange dots: dead spot. ${vals.length?'Dot colors red → green: lower → higher simulated '+({roi:'ROI',win:'first-place probability',top1:'top-1% rate',cash:'cash rate'}[metric])+'.':'Gray dots: not simulated.'} Background colors describe duplication only.</p>`;
  $('rarityStats').hidden=false;$('rarityStats').innerHTML=`<b>${pts.length.toLocaleString()} shown</b>${all.length!==pts.length?` of ${all.length.toLocaleString()} in pool`:''} · ${front.length} frontier · ${bandSet.size.toLocaleString()} in band · best ${maxY.toFixed(1)}`;
- const detail=i=>{const p=all.find(p=>p.i===+i);if(!p)return;const l=p.l,d=labDiagnostics(l),r=simOf(p);
+ const detail=(i,scroll=true)=>{if(i==='')return;const p=pts.find(p=>p.i===+i);if(!p)return;const l=p.l,d=labDiagnostics(l),r=simOf(p);
+  labSelection=labKey(l);
+  const marker=$('labSelectedDot');marker.setAttribute('cx',X(p.x));marker.setAttribute('cy',Y(p.y));marker.setAttribute('visibility','visible');const matrix=$('paretoSvg').getScreenCTM();if(matrix)marker.setAttribute('r',7/Math.hypot(matrix.a,matrix.b));
+  const picker=$('paretoPick');picker.querySelectorAll('[data-selected-cloud]').forEach(o=>o.remove());
+  if(![...picker.options].some(o=>o.value===String(p.i))){const o=document.createElement('option');o.value=p.i;o.textContent='Selected dot · '+p.y.toFixed(1)+' pts · ~'+labCopyText(copies(p))+' copies';o.dataset.selectedCloud='true';picker.appendChild(o);}
+  picker.value=String(p.i);
   const better=pts.filter(q=>q.x<=p.x&&q.y>p.y).sort((a,b)=>b.y-a.y)[0];
   const rows=d.slots.map(s=>`<tr><td><b>${s.slot}</b></td><td>${esc(s.p.pos)}</td><td>${esc(s.p.team)}</td><td>${esc(s.p.name)}</td><td>$${s.sal.toLocaleString()}</td><td>${fmt(s.proj,1)}</td><td>${s.ceil!=null?fmt(s.ceil,1):'—'}</td><td>${fmt(s.own,1)}%</td></tr>`).join('');
   const iss=d.issues.filter(x=>x.level!=='info'),info=d.issues.filter(x=>x.level==='info');
   $('rarityDetail').innerHTML=`<h3>Lineup #${p.i+1}${on.has(p.i)?' · On frontier':bandSet.has(p.i)?' · In band':''}${(l.dead||0)>0?' · <span style="color:#d98b2b">dead spot</span>':''}</h3>
    <div class="tscroll"><table class="dtab"><thead><tr><th>Slot</th><th>Pos</th><th>Tm</th><th>Player</th><th>Salary</th><th>Proj</th><th>Ceil</th><th>Slot own</th></tr></thead><tbody>${rows}</tbody></table></div>
    <p><b>${fmt(l.proj,1)} projected</b>${d.ceil!=null?` · ceiling sum ${fmt(d.ceil,1)}`:''} · $${l.sal.toLocaleString()} ($${d.salLeft.toLocaleString()} left) · split ${esc(l.split||'')} · cumulative own ${fmt(d.own,0)}% · product ${d.prod.toExponential(2)} · lowest slot ${fmt(d.minOwn,1)}%</p>
-   <p><b>E[dupes] ${d.dupe&&d.dupe.eDupes!=null?fmt(d.dupe.eDupes,d.dupe.eDupes<10?2:1):'—'}</b> in a field of ${d.entries.toLocaleString()} (analytic prior, slot-aware)${d.dupe&&d.dupe.drivers&&d.dupe.drivers.length?` · drivers: ${d.dupe.drivers.slice(0,3).map(x=>esc(x.a)+' + '+esc(x.b)+' ×'+x.c).join(', ')}`:''}${r?` · <b>Simulated:</b> mean ${fmt(r.mean,1)} · cash ${pct(r.cash,1)} · top-1% ${pct(r.top1,2)} · win ${pct(r.win,3)} · ROI ${(r.roi*100).toFixed(1)}% · sim dupes ${fmt(r.dupes,1)}`:' · not simulated'}</p>
+   <p><b>Chart estimate: ~${labCopyText(copies(p))} copies</b> in ${esc(contest.label)} · ownership-only proxy.</p>
+   <p><b>Adjusted E[dupes] ${d.dupe&&d.dupe.eDupes!=null?fmt(d.dupe.eDupes,d.dupe.eDupes<10?2:1):'—'}</b> in a field of ${d.entries.toLocaleString()} (analytic prior, slot-aware)${d.dupe&&d.dupe.drivers&&d.dupe.drivers.length?` · drivers: ${d.dupe.drivers.slice(0,3).map(x=>esc(x.a)+' + '+esc(x.b)+' ×'+x.c).join(', ')}`:''}${r?` · <b>Simulated (${SIM.meta.fieldSize.toLocaleString()} entries):</b> mean ${fmt(r.mean,1)} · cash ${pct(r.cash,1)} · top-1% ${pct(r.top1,2)} · win ${pct(r.win,3)} · ROI ${(r.roi*100).toFixed(1)}% · sim dupes ${fmt(r.dupes,1)}`:' · not simulated'}</p>
    ${iss.length?`<p>${iss.map(x=>`<span class="pill warn">${esc(x.message)}</span>`).join(' ')}</p>`:''}${info.length?`<p class="note">${info.map(x=>esc(x.message)).join(' ')}</p>`:''}
    ${better?`<p class="note">Lineup #${better.i+1} has ${(better.y-p.y).toFixed(1)} more at equal or lower product.</p>`:''}
    <div class="btnrow"><button class="btn ghost" id="labPin" data-i="${p.i}">Pin lineup</button><button class="btn ghost" id="labCopy" data-i="${p.i}">Copy roster</button></div>`;
   $('labPin').onclick=()=>{S.labPins=S.labPins||[];if(!S.labPins.some(x=>labKey(x)===labKey(l)))S.labPins.push(l);save();renderLabPins();};
   $('labCopy').onclick=()=>{const txt=d.slots.map(s=>s.slot+' '+s.p.name).join(' · ');if(navigator.clipboard)navigator.clipboard.writeText(txt);};
-  $('rarityDetail').scrollIntoView({block:'nearest',behavior:'smooth'});};
+  if(scroll)$('rarityDetail').scrollIntoView({block:'nearest',behavior:'smooth'});};
  $('paretoPick').onchange=e=>detail(e.target.value);
- $('paretoSvg').onclick=e=>{const svg=e.currentTarget,cursor=svg.createSVGPoint();cursor.x=e.clientX;cursor.y=e.clientY;const local=cursor.matrixTransform(svg.getScreenCTM().inverse()),x=local.x,y=local.y;let best=null,dd=Infinity;for(const p of pts){const n=(X(p.x)-x)**2+(Y(p.y)-y)**2;if(n<dd){dd=n;best=p;}}if(best&&dd<1600)detail(best.i);};
+ const svg=$('paretoSvg'),tip=$('labTooltip');
+ const nearest=e=>{
+  const matrix=svg.getScreenCTM();if(!matrix)return null;
+  let best=null,dist=28*28;
+  for(const p of pts){const point=svg.createSVGPoint();point.x=X(p.x);point.y=Y(p.y);const q=point.matrixTransform(matrix),d=(q.x-e.clientX)**2+(q.y-e.clientY)**2;if(d<=dist){dist=d;best=p;}}
+  return best;
+ };
+ const preview=(p,e)=>{
+  if(!p){tip.hidden=true;return;}
+  tip.innerHTML=`<b>Lineup #${p.i+1} · ${p.l.proj.toFixed(1)} projected points</b><br>${lineupSlots(p.l).map(s=>esc(s.slot)+' '+esc(S.players[s.i].name)).join('<br>')}<br><b>~${labCopyText(copies(p))} copies in ${esc(contest.name)}</b><br>Rough ownership-only estimate<br><span style="opacity:.8">Raw product: ${Math.pow(10,p.x).toExponential(3)}</span>`;
+  tip.hidden=false;const box=chart.getBoundingClientRect();
+  tip.style.left=Math.max(8,Math.min(e.clientX-box.left+12,box.width-tip.offsetWidth-8))+'px';
+  tip.style.top=Math.max(0,e.clientY-box.top-tip.offsetHeight-14)+'px';
+ };
+ let down=null,hold=null,skipClick=false;
+ const stopHold=()=>{clearTimeout(hold);hold=null;};
+ svg.onpointerdown=e=>{down={x:e.clientX,y:e.clientY};skipClick=false;if(e.pointerType!=='mouse')hold=setTimeout(()=>{const p=nearest(e);preview(p,e);if(p)detail(p.i,false);skipClick=true;},450);};
+ svg.onpointermove=e=>{if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>10){stopHold();skipClick=true;tip.hidden=true;}else if(e.pointerType==='mouse')preview(nearest(e),e);};
+ svg.onpointerup=()=>{stopHold();down=null;};
+ svg.onpointercancel=()=>{stopHold();down=null;skipClick=true;tip.hidden=true;};
+ svg.onpointerleave=()=>{stopHold();down=null;tip.hidden=true;};
+ svg.onclick=e=>{if(skipClick){skipClick=false;return;}const p=nearest(e);if(p){tip.hidden=true;detail(p.i);}};
+ svg.oncontextmenu=e=>{e.preventDefault();};
+ const selected=pts.find(p=>labKey(p.l)===labSelection);if(selected)detail(selected.i,false);else labSelection=null;
  renderLabPins();
 }
 function renderLabPins(){
@@ -7353,6 +7421,14 @@ function boot() {
   $("expPos").addEventListener("change", renderExposure);
 $("rarityGo").addEventListener("click", runFrontier);
 $('paretoColor').addEventListener('change', drawRarity);
+['labContest','labCustomField'].forEach(id=>$(id).addEventListener('change',()=>{
+ const preset=$('labContest').value;
+ if(preset==='custom'){
+  const v=Number($('labCustomField').value);
+  if(!Number.isInteger(v)||v<2||v>10000000){$('labCustomField').value=(S.labContest&&S.labContest.custom)||235;}
+ }
+ S.labContest={preset,custom:Number($('labCustomField').value)};save();drawRarity();
+}));
 ['labY','labCpt','labMinOwn','labHideDead','labBand'].forEach(id => $(id).addEventListener('change', () => { if (S.lineups.length) drawRarity(); }));
 $('labSimBand').addEventListener('click', () => { const b = new Set(S.labBand || []); if (!b.size) { banner('rarityWarn','warn','Generate a pool first.'); return; } const keep = S.lineups.filter((l, i) => b.has(i)); if (!keep.length) return; S.lineups = keep; S.labSubset = true; SIM = null; S.labBand = keep.map((_, i) => i); S.lineupsMeta = { stamp: Date.now(), site: S.site, asked: keep.length, lab: true }; save(); renderStrip(); renderLineups(); renderSolveStats(); show('sim'); runSim(); });
 $('paretoSim').addEventListener('click', () => { show('sim'); runSim(); });
@@ -7675,7 +7751,8 @@ function botContext() {
       ["Why is the highest-projected lineup often a bad tournament entry?", "Why is chalk bad?"],
       ["What is leverage, and how should I read the win-lineup column?", "What is leverage?"],
       ["Are my results good enough to say I have an edge?", "Do I have an edge?"]] },
-    sys: `RIGHT NOW you are on the DFS Solver & Contest Simulator. It is BUILT and it computes — the solver, the contest simulator, the exposure view and the bankroll tracker all run in the browser.
+    sys: `LINEUP LAB: Chart copies are slot-ownership product times the selected illustrative contest size, an independence proxy, not calibrated duplicates. Background zones mean low (<1), moderate (1–5), high (5+) duplication; NEVER call them GPP-safe or cash-only. The chart selector does not rerun or reconfigure the simulator. Tap selects a blue-highlighted dot and roster; hover/hold previews names, projection, estimated copies and raw product.
+RIGHT NOW you are on the DFS Solver & Contest Simulator. It is BUILT and it computes — the solver, the contest simulator, the exposure view and the bankroll tracker all run in the browser.
 - ⚠️ The PROJECTIONS ARE THE USER'S OWN. This tool has no player opinions and generates no projections. Never present a projection as the site's view, and never rate a player yourself as if the page had done so.
 - ⚠️ The correlation structure IS measured — seven seasons of nflverse weekly stats, ${E.CORR.meta.games} games — but it is a league-average structure, not this game.
 - ⚠️ The simulated FIELD is the weak link: it is built from the user's ownership estimate, it is a sample of a few thousand lineups extrapolated to contest size, and a field built from ownership alone is usually softer than a real one. Say so whenever ROI comes up.
@@ -7711,7 +7788,7 @@ ${S.demo ? "- ⚠️ THE LOADED SLATE IS THE DEMO SLATE. Every player name, sala
         L.push(bs ? `⚠️ Bootstrapped 95% band on that ROI: ${(bs.lo * 100).toFixed(0)}% to ${(bs.hi * 100).toFixed(0)}%, resampling contests not entries. LEAD WITH THIS BAND, never with the point estimate.`
                   : `⚠️ Fewer than five contests logged — there is no confidence band and you must not imply the ROI figure means anything.`);
       } else L.push("Nothing is logged in the bankroll tracker.");
-      L.push("LINEUP LAB: Showdown pools are EXACT enumerations of every legal lineup under the Lab's salary floor and max-per-team (classic pools are sampled). The frontier is exact for showdown. A punt captain or a sub-0.5%-owned slot lowers the ownership product 50-100x while the rest of the roster may be exactly what the field plays; treat those frontier dots as flagged, not free. Tap a dot for the roster, slot ownership, E[dupes] (slot-aware analytic prior), validator flags and sim results. Original note: X is ownership product on a log scale; Y is projected points. Product is an independence proxy, not a duplication probability. Showdown uses CPT ownership and total-minus-CPT for FLEX. Gray points have not been simulated. Exposure caps and minimum uniques are not enforced on the exploration pool.");
+      L.push("LINEUP LAB: Showdown pools are EXACT enumerations of every legal lineup under the Lab's salary floor and max-per-team (classic pools are sampled). The frontier is exact for showdown. A punt captain or a sub-0.5%-owned slot lowers the ownership product 50-100x while the rest of the roster may be exactly what the field plays; treat those frontier dots as flagged, not free. Tap a dot for the roster, slot ownership, E[dupes] (slot-aware analytic prior), validator flags and sim results. X is estimated copies (slot-ownership product times selected contest field size) on a log scale; presets are illustrative. Green/yellow/red background zones describe low/moderate/high duplication, not contest suitability. Simulator results retain their simulation field size; Y is projected points. Product is an independence proxy, not a duplication probability. Showdown uses CPT ownership and total-minus-CPT for FLEX. Gray points have not been simulated. Exposure caps and minimum uniques are not enforced on the exploration pool.");
       L.push(`VOCABULARY: Proj = sum of the user's projections. Mean = average simulated score. Own% = projected ownership. Win-lineup% = how often a player is in the best lineup on the slate across simulations. Leverage = win-lineup% minus ownership. Dupes = expected number of other entries holding the identical lineup. Cash% = share of simulations finishing in the money. Cumulative own = the sum of the projected ownership of the nine players in a lineup, which is what "rarity" means on this page. Exchange rate = projected points gained per point of cumulative ownership added, along the frontier.`);
       return L.join("\n");
     }
