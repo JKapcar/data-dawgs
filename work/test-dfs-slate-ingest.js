@@ -27,7 +27,8 @@ const proj = I.applyProjections(fix("etr-classic-proj-synthetic.csv"), pool);
 ok("proj paste matches some", proj.matched >= 3, String(proj.matched));
 ok("large field ownership used", proj.cols.own >= 0);
 const chris = pool.find(p => p.name === "Chris Vale");
-ok("fractional own -> percent", chris && chris.own > 1 && chris.own <= 100, chris && String(chris.own));
+// The same column includes explicit 14% and 25% cells: 0.48 means 0.48%, not 48%.
+ok("percent column keeps sub-one ownership", chris && chris.own === 0.48, chris && String(chris.own));
 const jess = pool.find(p => p.name === "Jess Marlow");
 ok("kicker got proj", jess && +jess.proj === 8);
 

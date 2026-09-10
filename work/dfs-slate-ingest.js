@@ -258,6 +258,7 @@
     }
     var iCptOwn = guess(["cpt own", "captain own", "cpt ownership"]);
     var iCptProj = guess(["cpt projection", "captain projection", "cpt proj"]);
+    var iCeil = guess(["ceiling", "ceil", "90th", "p90", "upside"]);
     var iId = guess(["id"]);
 
     if (iName < 0 || iProj < 0) {
@@ -272,6 +273,22 @@
       if (p.dkId) index["id:" + p.dkId] = i;
     });
 
+    // Units belong to a column, not an individual cell. In a percent column,
+    // 0.5 is half a percent even when it appears without a percent sign.
+    function ownershipColumn(col) {
+      if (col < 0) return function () { return null; };
+      var values = rows.slice(1).map(function (r) { return parseFloat(String(r[col] || "").replace(/[%,$]/g, "")); }).filter(Number.isFinite);
+      var percent = /%/.test(head[col]) ||
+        rows.slice(1).some(function (r) { return /%/.test(r[col] || ""); }) || values.some(function (v) { return v > 1; });
+      return function (raw) {
+        if (raw == null || String(raw).trim() === "") return null;
+        var n = parseFloat(String(raw).replace(/[%,$]/g, ""));
+        if (!isFinite(n)) return null;
+        n *= percent ? 1 : 100;
+        return n >= 0 && n <= 100 ? n : null;
+      };
+    }
+    var readOwn = ownershipColumn(iOwn), readCptOwn = ownershipColumn(iCptOwn);
     var matched = 0, missed = [], seen = {};
     for (var r = 1; r < rows.length; r++) {
       var row = rows[r];
@@ -295,16 +312,23 @@
       seen[hit] = 1;
       players[hit].proj = pv;
       if (iOwn >= 0) {
-        var ov = parseOwn(row[iOwn]);
+        var ov = readOwn(row[iOwn]);
         if (ov != null) players[hit].own = ov;
       }
       if (iCptOwn >= 0) {
-        var cov = parseOwn(row[iCptOwn]);
+        var cov = readCptOwn(row[iCptOwn]);
         if (cov != null) players[hit].cptOwn = cov;
       }
+      // An older CPT projection must not survive a new base-only projection.
+      if (iCptProj < 0) delete players[hit].cptProj;
+      if (iCeil < 0) delete players[hit].ceil;
       if (iCptProj >= 0) {
         var cpv = parseFloat(String(row[iCptProj]).replace(/[^0-9.\-]/g, ""));
         if (isFinite(cpv)) players[hit].cptProj = cpv;
+      }
+      if (iCeil >= 0) {
+        var cev = parseFloat(String(row[iCeil]).replace(/[^0-9.\-]/g, ""));
+        if (isFinite(cev)) players[hit].ceil = cev;
       }
       matched++;
     }
@@ -312,7 +336,7 @@
       matched: matched,
       missed: missed,
       head: head,
-      cols: { name: iName, proj: iProj, own: iOwn, team: iTeam, cptOwn: iCptOwn, cptProj: iCptProj, id: iId },
+      cols: { name: iName, proj: iProj, own: iOwn, team: iTeam, cptOwn: iCptOwn, cptProj: iCptProj, ceil: iCeil, id: iId },
       format: classifyHeader(low)
     };
   }
@@ -336,24 +360,12 @@
     }
     var proj = applyProjections(normalized, result.players);
     if (!hasSalary && (proj.error || !proj.matched)) return { error: proj.error || "No players matched your current slate. Your loaded data has been kept." };
-    // Ownership units are column-wide, never inferred independently per player:
-    // 0.5 beside 80 means 0.5%, while an entirely fractional column is scaled.
-    if (!proj.error && proj.cols) [ [proj.cols.own, "own"], [proj.cols.cptOwn, "cptOwn"] ].forEach(function (pair) {
-      var col = pair[0]; if (col < 0) return;
-      var values = rows.slice(start + 1).map(function (r) { return parseFloat(String(r[col] || "").replace(/[%,$]/g, "")); }).filter(Number.isFinite);
-      var percent = low[col].indexOf("%") >= 0 || rows.slice(start + 1).some(function (r) { return /%/.test(r[col] || ""); }) || values.some(function (v) { return v > 1; });
-      rows.slice(start + 1).forEach(function (row) {
-        var name = normName(row[proj.cols.name]), tm = proj.cols.team >= 0 ? team(row[proj.cols.team]) : "";
-        var player = result.players.find(function (p) { return normName(p.name) === name && (!tm || p.team === tm); });
-        var val = parseFloat(String(row[col] || "").replace(/[%,$]/g, ""));
-        if (player && isFinite(val)) player[pair[1]] = val * (percent ? 1 : 100);
-      });
-    });
+    result.projectionInfo = proj.error ? null : proj;
     // Complete boards are authoritative. Keep official IDs only when name, team
     // and salary match, and never carry projections from a different upload.
     if (hasSalary) result.players.forEach(function (p) {
       var old = (existing || []).find(function (x) { return normName(x.name) === normName(p.name) && x.team === p.team && x.sal === p.sal; });
-      if (old) { if (proj.error) ["proj", "own", "cptProj", "cptOwn"].forEach(function (k) { if (old[k] != null) p[k] = old[k]; }); p.dkId = p.dkId || old.dkId || ""; p.cptId = p.cptId || (old.cptSal === p.cptSal ? old.cptId : "") || ""; p.gid = old.gid; p.opp = old.opp; }
+      if (old) { if (proj.error) ["proj", "own", "cptProj", "cptOwn", "ceil"].forEach(function (k) { if (old[k] != null) p[k] = old[k]; }); p.dkId = p.dkId || old.dkId || ""; p.cptId = p.cptId || (old.cptSal === p.cptSal ? old.cptId : "") || ""; p.gid = old.gid; p.opp = old.opp; }
     });
     var teams = Array.from(new Set(result.players.map(function (p) { return p.team; }).filter(Boolean))).sort();
     if (result.showdown && teams.length === 2) result.players.forEach(function (p) { p.opp = teams.find(function (t) { return t !== p.team; }); p.gid = teams.join("-"); });

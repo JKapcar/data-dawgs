@@ -24,3 +24,16 @@ const classic=I.readUpload('Player,Pos,Team,Salary,Proj,Large Field\nAlex Quill,
 assert.equal(classic.showdown,false);assert.equal(classic.players[0].own,20);
 if (process.argv[2]) fs.writeFileSync(process.argv[2],csv);
 console.log('Unified upload: Showdown, Classic, captain fields, ownership units, and non-destructive errors pass');
+
+// The separate paste and combined upload must use identical ownership units.
+const mixed='Name,Team,Position,Salary,Projection,Ceiling,Total Own,CPT Salary,CPT Projection,CPT Own\nLow Player,AAA,WR,1000,2,5,0.5,1500,3,0.2\nPopular Player,BBB,QB,10000,20,32,80,15000,30,20';
+const pasted=[{name:'Low Player',team:'AAA',sal:1000},{name:'Popular Player',team:'BBB',sal:10000}];
+I.applyProjections(mixed,pasted);
+const imported=I.readUpload(mixed,[]).players;
+for(const list of [pasted,imported]){assert.equal(list[0].own,0.5);assert.equal(list[0].cptOwn,0.2);assert.equal(list[0].ceil,5);}
+I.applyProjections('Name,Team,Projection,Own%\nPopular Player,BBB,22,0.5',pasted);
+assert.equal(pasted[1].proj,22);assert.equal(pasted[1].own,0.5);assert.equal(pasted[1].cptProj,undefined);assert.equal(pasted[1].ceil,undefined);
+const page=fs.readFileSync(require('node:path').join(__dirname,'../dfs.html'),'utf8');
+const start=page.indexOf('/**',page.indexOf('/* ---- CSV / slate ingest')),end=page.indexOf('/* ---- DK draftables ingest',start);
+assert.equal(page.slice(start,end).trim(),fs.readFileSync(require('node:path').join(__dirname,'dfs-slate-ingest.js'),'utf8').trim());
+console.log('Both import paths agree on low ownership, Ceiling is retained, stale CPT estimates are cleared, and page parser matches source');
