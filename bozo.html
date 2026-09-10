@@ -3803,6 +3803,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="err" id="authErr"></div>
 </div>
 
+<!-- Phase 2.9: a seat that is pending or leaving gets this note where the submit form
+     would be. Joining mid-week SUCCEEDS now, so the absence of a form needs a stated
+     reason or a successful join reads as a broken one. -->
+<div class="card" id="seatNote" style="display:none"></div>
+
 <!-- ---------- submit ---------- -->
 <div class="card" id="submitCard" style="display:none">
   <h2 class="bz" id="submitH">Your leg</h2>
@@ -3909,8 +3914,14 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="err" id="lgErr"></div>
 
     <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">Who's in this league</h3>
-    <p class="tm" style="margin:0 0 8px">The roster <em>is</em> the size — the ticket locks when everyone here has a leg in. Other than the manager, nobody is pre-added: each person creates their own account, chooses this league, and enters its shared password.</p>
+    <p class="tm" style="margin:0 0 8px">The roster <em>is</em> the size — the ticket locks when everyone here has a leg in. People normally add themselves: create an account, choose this league, enter its shared password. You can also seat someone who already has an account, and roster changes no longer wait for the board — anyone added while a ticket is placed starts playing next week.</p>
     <div id="rosBody"></div>
+    <div class="row" style="align-items:flex-end;gap:10px;margin-top:10px">
+      <div class="f" style="flex:1;min-width:180px"><label>Add someone who already has an account</label>
+        <input id="rosAdd" maxlength="60" spellcheck="false" placeholder="their display name" list="rosAddList"></div>
+      <button class="btn sm" id="rosAddGo">Add to league</button>
+    </div>
+    <datalist id="rosAddList"></datalist>
     <div class="err" id="rosErr"></div>
 
     <!-- One manager-chosen password per league. Authentication says WHO is joining;
@@ -4647,7 +4658,7 @@ function paintLegPreview(){
   /* ---- where you would land in the order ---- */
   const inNow = Object.keys(S.picks||{}).length;
   const editing = !!(mineKey && (S.picks||{})[mineKey]);
-  const size = isRoyale() ? royaleAliveNames().length : names().length;
+  const size = isRoyale() ? royaleAliveNames().length : activeNames().length;
   const wouldBe = editing ? inNow : inNow + 1;
   const lastIn = wouldBe >= size;
   h += `<div class="legrace ${lastIn?'hot':''}">`
@@ -4761,6 +4772,26 @@ const stateMembers = () => Object.keys((S&&S.members)||{}).map(memberLabel);
 // member keys so the ticket can paint immediately instead of showing a fake 0-of-8
 // board while account and directory requests finish.
 const names = () => (league()?.members) || stateMembers();
+
+/* ===== seat status (Phase 2.9) =====
+   A seat is `active` (playing this week), `pending` (joined or was added after the ticket
+   was placed — on the roster, watching, not counted) or `leaving` (removed with a leg
+   already on the placed ticket — the leg still grades, the seat goes at the roll).
+
+   ⚠️ ABSENT MEANS ACTIVE, on both sources. Two of them exist because the page paints
+   before either has necessarily arrived: the live league node (`S.members[key].status`)
+   and the directory row (`memberStatus`, keyed by display name). Reading a missing field
+   as anything but active would grey out every member of every league already running. */
+const seatStatusOf = n => {
+  const live = ((S&&S.members)||{})[kEnc(n)] || ((S&&S.members)||{})[n];
+  if(live && typeof live==='object' && live.status) return String(live.status);
+  const dir = (league()?.memberStatus||{})[n];
+  return dir ? String(dir) : 'active';
+};
+const isActiveSeat = n => seatStatusOf(n)==='active';
+// ⚠️ THE LOCK-RELEVANT ROSTER. Anything that answers "how many legs fill the board" —
+// the fill counter, Last In's denominator, the waiting list — asks this, never names().
+const activeNames = () => names().filter(isActiveSeat);
 const allAccounts = () => ROSTER.map(p=>p.name);
 
 // Two different powers. isAdmin is the site owner (creates leagues, can act anywhere);
@@ -4792,11 +4823,13 @@ function paintAsSelect(){
   if(!wrap||!sel) return;
   if(!ME || !canProxy()){ wrap.style.display='none'; sel.innerHTML=''; return; }
   const meKey = kEnc(ME.name), keep = sel.value;
-  // Active roster only: a chopped Royale member funds the ticket and gets no leg, and the
-  // Worker would 409 anyway. Names through esc() — a display name is user text.
+  // Playing roster only: a chopped Royale member funds the ticket and gets no leg, and a
+  // pending or leaving seat (Phase 2.9) is not on this week's ticket either. The Worker
+  // would 409 on all three — offering them is an invitation to a refusal. Names through
+  // esc() — a display name is user text.
   const opts = Object.keys((S&&S.members)||{})
     .map(k=>({k, n:memberLabel(k)}))
-    .filter(o=>o.k!==meKey && !(royaleOf(o.n) && royaleOf(o.n).alive===false))
+    .filter(o=>o.k!==meKey && isActiveSeat(o.n) && !(royaleOf(o.n) && royaleOf(o.n).alive===false))
     .sort((a,b)=>a.n.localeCompare(b.n));
   sel.innerHTML = `<option value="${esc(meKey)}">Myself (${esc(ME.name)})</option>`
     + opts.map(o=>`<option value="${esc(o.k)}">${esc(o.n)}</option>`).join('');
@@ -4930,7 +4963,12 @@ document.getElementById('jlJoinGo').onclick=async()=>{
     const r=await wPost('/league/join',{league:joinSelected.id,password});
     document.getElementById('jlPassword').value=''; joinSelected.already=true;
     chooseJoinLeague(joinSelected);
-    jlErr(r.already?`You already belong to ${r.name}.`:`You’re in ${r.name} — ${r.size} members now.`, true);
+    // ⚠️ A pending seat is a SUCCESS. The Worker no longer turns anyone away mid-week,
+    // so the only thing left to say is when their first leg is due — say that, in green,
+    // rather than letting "you're in" imply a board they cannot actually submit to.
+    jlErr(r.note ? `You’re in ${r.name}. ${r.note}`
+        : r.already ? `You already belong to ${r.name}.`
+        : `You’re in ${r.name} — ${r.size} members now.`, true);
     await loadLeagues(); paintHub();
   }catch(e){ jlErr(e.message); }
 };
@@ -5612,7 +5650,8 @@ function render(){
      when the week is GRADED, so between that moment and the next week opening, the
      roster has already shrunk while the graded week's legs are all still displayed —
      which without this read "2 of 1 in". */
-  const expected = isRoyale() ? Math.max(live.length, royaleAliveNames().length) : players.length;
+  const expected = isRoyale() ? Math.max(live.length, royaleAliveNames().length)
+                              : Math.max(live.length, activeNames().length);
   document.getElementById('fill').textContent = live.length+' of '+expected+' in';
 
   const open = status==='open';
@@ -5621,7 +5660,21 @@ function render(){
   // Personal entry is the last surface on This Week. A chopped Royale player doesn't
   // get one: they fund the ticket, they don't bet on it.
   const meAlive = !ME || !isRoyale() || (royaleOf(ME.name)?.alive !== false);
-  document.getElementById('submitCard').style.display = (ME && open && onWeek && meAlive) ? '' : 'none';
+  // ⚠️ A seat that is not active this week gets no form (Phase 2.9). It is not an error
+  // state and it must not read as one: they ARE in the league, the board just isn't
+  // theirs yet. The note below the card says so — a hidden card with no explanation is
+  // how a successful mid-week join looks like a failed one.
+  const meSeated = !ME || isActiveSeat(ME.name);
+  document.getElementById('submitCard').style.display = (ME && open && onWeek && meAlive && meSeated) ? '' : 'none';
+  const seatNote = document.getElementById('seatNote');
+  if(seatNote){
+    const st = ME ? seatStatusOf(ME.name) : 'active';
+    const show = !!ME && onWeek && st !== 'active';
+    seatNote.style.display = show ? '' : 'none';
+    if(show) seatNote.textContent = st==='pending'
+      ? "You're in this league. This week's ticket was already placed when you joined, so your first leg is due when the manager opens the next week."
+      : "You're leaving this league when this week is graded, so this board is closed to you.";
+  }
   // Phase 2.7 — the manager may be filing FOR someone else; the card's wording follows
   // the selected seat, and the Worker gates every write against that seat.
   paintAsSelect();
@@ -5838,7 +5891,14 @@ function paintLeague(){
     row('League', lg ? esc(lg.name) : '—', esc(LID)) +
     row('Manager','sets this league\'s band and roster', esc(lg?.manager || '—')) +
     row('Players','the roster is the size — the ticket locks when every one of them is in',
-        `${names().length}${(S.status||'open')==='open' ? ` · ${inCount} in` : ''}`) +
+        // ⚠️ Only PENDING seats are "next week". A leaving seat is also inactive but it is
+        // going the other way — counting it as an arrival is the opposite of the truth.
+        (()=>{ const joining = names().filter(n=>seatStatusOf(n)==='pending').length;
+               const going   = names().filter(n=>seatStatusOf(n)==='leaving').length;
+               return `${activeNames().length}`
+                 + (joining ? ` (+${joining} next week)` : '')
+                 + (going ? ` (−${going} after this week)` : '')
+                 + ((S.status||'open')==='open' ? ` · ${inCount} in` : ''); })()) +
     row('Legal price band','favorites only — the band bounds the parlay price, not individual embarrassment',`${bd.ceil} to ${bd.floor}`) +
     row('One leg each','one pick per person per week','fixed') +
     row('No duplicate legs','no two people on the exact same bet','fixed') +
@@ -5863,7 +5923,9 @@ const isDemo   = () => settings().synthetic === true;
 /* Live Royale state for one player, straight off the league node. Null in Standard,
    where nobody is ever out. */
 const royaleOf = p => isRoyale() ? (((S.royale||{}).status||{})[kEnc(p)] || null) : null;
-const royaleAliveNames = () => names().filter(p=>{ const r=royaleOf(p); return !r || r.alive !== false; });
+// ⚠️ Alive AND active: a seat that joined mid-week has never played, so it is trivially
+// "alive" — counting it would raise the Royale denominator for someone who cannot submit.
+const royaleAliveNames = () => activeNames().filter(p=>{ const r=royaleOf(p); return !r || r.alive !== false; });
 /* ⚠️ THE PARACHUTE. Warzone rules: get chopped once and you are re-deployed straight back
    onto the next ticket — automatically, no prompt, nothing to accept. What you carry
    afterwards is this, and it means the next chop is the one that ends you.
@@ -5890,7 +5952,7 @@ function fillSettings(){
   document.getElementById('sLockRule').value = st.lockRule;
   const lc = document.getElementById('sLockCount');
   lc.style.display = st.lockRule==='count' ? '' : 'none';
-  lc.value = st.lockCount || Math.max(2, names().length);
+  lc.value = st.lockCount || Math.max(2, activeNames().length);
 
   /* ⚠️ Format is a dropdown ONLY until the first ticket locks. After that it is a
      statement of what this season has been played under. A locked format shown as a
@@ -5959,25 +6021,41 @@ function paintRoster(){
   const body = document.getElementById('rosBody');
   if(!isManager()){ body.innerHTML=''; return; }
   const mine = names(), picks = S.picks||{}, open = (S.status||'open')==='open';
+  const playing = activeNames();
   const mgr = league()?.manager;
   body.innerHTML = mine.map(n=>{
     const hasLeg = !!picks[kEnc(n)];
-    return `<div class="ros">
-      <span class="who">${esc(n)}${n===mgr?' <span class="tm">· manager</span>':''}${hasLeg?' <span class="tm">· leg in</span>':''}
+    const st = seatStatusOf(n);
+    // ⚠️ The ONE case that still refuses is an open board with a leg in, and the tooltip
+    // now names the way out instead of blaming the calendar: clear the leg first (the
+    // manager can, from the board) and the button lights up. On a placed board a removal
+    // always succeeds — as a retirement if their leg is on the ticket, outright if not.
+    const blocked = open && hasLeg;
+    const chip = st==='pending' ? ' <span class="tm">· starts next week</span>'
+               : st==='leaving' ? ' <span class="tm">· leaving after this week</span>' : '';
+    return `<div class="ros"${st==='active'?'':' style="opacity:.68"'}>
+      <span class="who">${esc(n)}${n===mgr?' <span class="tm">· manager</span>':''}${chip}${hasLeg?' <span class="tm">· leg in</span>':''}
         <br><input class="team" data-team="${esc(n)}" value="${esc((league()?.teams||{})[kEnc(n)]||'')}" placeholder="team name (optional)"></span>
       <span class="row">
-        ${n===mgr ? '' : `<button class="btn ghost sm" data-drop="${esc(n)}"${(!open||hasLeg)?' disabled title="Roster changes wait for an open board with no leg in"':''}>Remove</button>`}
+        ${n===mgr ? '' : `<button class="btn ghost sm" data-drop="${esc(n)}"${blocked?' disabled title="They have a leg on this open board — remove the leg first, then remove them"':''}>Remove</button>`}
       </span>
     </div>`;
   }).join('') || '<p class="pend">Nobody in this league yet.</p>';
 
+  // Only accounts that are not already seated here — the Worker refuses the rest anyway,
+  // and offering them is an invitation to a 409.
+  document.getElementById('rosAddList').innerHTML =
+    allAccounts().filter(a=>!mine.includes(a)).map(a=>`<option value="${esc(a)}"></option>`).join('');
+
   // The flake escape hatch — only worth showing when it would actually do something.
   const lockRow = document.getElementById('lockRow');
-  const waiting = mine.filter(n=>!picks[kEnc(n)]);
+  // ⚠️ Active seats only. A pending member is not late — they are not playing this week —
+  // and listing them here would make a full board look permanently one leg short.
+  const waiting = playing.filter(n=>!picks[kEnc(n)]);
   const show = open && Object.keys(picks).length >= 2 && waiting.length > 0;
   lockRow.style.display = show ? '' : 'none';
   if(show) document.getElementById('lockWho').textContent =
-    `Places the ticket with ${Object.keys(picks).length} of ${mine.length} legs. Still waiting on ${waiting.join(', ')}.`;
+    `Places the ticket with ${Object.keys(picks).length} of ${playing.length} legs. Still waiting on ${waiting.join(', ')}.`;
 
   if(joinGateStatusLid!==LID){
     joinGateStatusLid=LID;
@@ -5986,6 +6064,20 @@ function paintRoster(){
 }
 
 const rosErr = m => { const e=document.getElementById('rosErr'); e.className='err'; e.textContent=m||''; return e; };
+
+document.getElementById('rosAddGo').onclick = async()=>{
+  const inp=document.getElementById('rosAdd');
+  const who=inp.value.trim();
+  rosErr('');
+  if(!who) return rosErr('Type the display name of an account.');
+  try{
+    const r=await wPost('/league/member',{player:who, action:'add'});
+    inp.value='';
+    const ok=rosErr(r.note || `${who} is in.`); ok.className='err ok';
+    await reloadLeagues();
+  }catch(e){ rosErr(e.message); }
+};
+document.getElementById('rosAdd').onkeydown = e=>{ if(e.key==='Enter'){e.preventDefault();document.getElementById('rosAddGo').click();} };
 
 async function reloadLeagues(){ await Promise.all([loadRoster(), loadLeagues()]); await refresh(); }
 
@@ -5999,7 +6091,9 @@ document.getElementById('rosBody').addEventListener('click', async e=>{
       setTimeout(()=>{ drop.dataset.armed='0'; drop.textContent='Remove'; }, 4000); return; }
     try{
       const r=await wPost('/league/member',{player:who, action:'remove'});
-      const e3=rosErr(`${who} removed — ${r.size} player${r.size===1?'':'s'} now.`); e3.className='err ok';
+      // A removal with a leg on the placed ticket RETIRES the seat rather than deleting
+      // it — the leg still grades this week. Say which of the two happened.
+      const e3=rosErr(r.note || `${who} removed — ${r.size} player${r.size===1?'':'s'} now.`); e3.className='err ok';
       await reloadLeagues();
     }catch(e2){ rosErr(e2.message); }
   }
@@ -6248,6 +6342,17 @@ function paintSlip(players, picks, status, live){
           <span><span class="who2">${esc(teamOf(p))}${chute(p)}${belt===p?'<span class="beltcrest" role="img" aria-label="Wearing the belt"></span>':''}</span>
           <span class="sel">chopped in week ${rs.eliminatedWeek ?? '?'} · funds the ticket, doesn't bet on it</span></span>
           <span class="rt"><span class="pxv dead">OUT</span></span></li>`;
+      // ⚠️ A pending or leaving seat is NOT "no leg yet" (Phase 2.9). They are on the
+      // roster and visible — the ledger and the pot still involve them — but they are not
+      // on this week's ticket and the board is not waiting on them. Same greyed treatment
+      // a chopped Royale player gets, for the same reason: absence with a stated cause.
+      const seat = seatStatusOf(p);
+      if(seat!=='active')
+        return `<li class="leg dead"><span class="mk">·</span>
+          <span><span class="who2">${esc(teamOf(p))}</span>
+          <span class="sel">${seat==='pending' ? 'joined mid-week · first leg due next week'
+                                                : 'leaving after this week · not on this ticket'}</span></span>
+          <span class="rt"><span class="pxv dead">—</span></span></li>`;
       return `<li class="${cls}"><span class="mk">${mark}</span>
         <span><span class="who2">${esc(teamOf(p))}</span>
         <span class="sel">no leg yet</span></span>
