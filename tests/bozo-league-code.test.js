@@ -60,12 +60,24 @@ test('manager and member UIs expose search plus shared-password workflow', () =>
     assert.match(signon, new RegExp(`id="${id}"`));
   assert.match(signon, /api\("\/league\/search",\{query:query\}\)/);
   assert.match(signon, /api\("\/league\/join",\{league:selectedLeague\.id,password:password\}\)/);
-  assert.doesNotMatch(bozo, /id="addPick"|id="addGo"|action:'add'/);
+  // The retired "manager files a pick for someone" UI stays retired. (Filing a LEG for an
+  // absent member is Phase 2.7's proxy submit, on the submit card, not a second form here.)
+  assert.doesNotMatch(bozo, /id="addPick"|id="addGo"/);
   for (const id of ['joinLeague', 'jlDirectory', 'jlFilter', 'jlPassword', 'jlJoinGo', 'jlOpen'])
     assert.match(bozo, new RegExp(`id="${id}"`));
   assert.match(bozo, />Create a Bozo league</);
   assert.doesNotMatch(bozo, />Book a new bill</);
+
+  /* ⚠️ THIS ASSERTION FLIPPED WITH D22 (Phase 2.9), deliberately. It used to read
+     `body.action !== "remove"` plus no `loadUsers` — i.e. a manager could not seat
+     anybody, because every non-manager had to arrive through search + shared password.
+     A manager add now exists. What did NOT change, and is what the rest of this test
+     is really defending, is that adding a SEAT never creates an IDENTITY: the target
+     must already hold a uid account, and a name with no account is refused rather than
+     seated under a name-shaped key. */
   const member = section('async function leagueMember(request, env, cors)', '// POST /league/lock');
-  assert.match(member, /body\.action !== "remove"/);
-  assert.doesNotMatch(member, /loadUsers\(env\)|action:"add"/);
+  assert.match(member, /action !== "remove" && action !== "add"/);
+  assert.match(member, /UID_RE\.test\(k\)/, 'a seat is only ever keyed by a real uid');
+  assert.match(member, /doesn't have an account yet — they need to sign up first/);
+  assert.doesNotMatch(member, /leaguePasswordHash|joinPassHash/, 'the manager path never checks or bypasses a password');
 });

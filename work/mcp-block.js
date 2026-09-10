@@ -2212,6 +2212,14 @@ const MCP_TOOLS = [
         id: lid, name: lg.name || lid, manager: lg.manager || null,
         season: lg.season || SEASON, week: lg.week || 1, status: lg.status || "open",
         members: memberNames(lg),
+        // ⚠️ A seat is not always a player THIS week (Phase 2.9). `pending` joined after
+        // the ticket was placed and starts at the next roll; `leaving` was removed with a
+        // leg already on the placed ticket and goes at the roll. Neither counts toward the
+        // lock, so `size` here is the active count and never `members.length`.
+        memberStatus: Object.fromEntries(memberKeys(lg).map(k => [memberNameAt(lg, k), memberStatusAt(lg, k)])),
+        size: activeNames(lg).length,
+        pending: memberKeys(lg).filter(k => memberStatusAt(lg, k) === "pending").map(k => memberNameAt(lg, k)),
+        leaving: memberKeys(lg).filter(k => memberStatusAt(lg, k) === "leaving").map(k => memberNameAt(lg, k)),
         legsIn: Object.keys(lg.picks || {}).length,
         // ⚠️ Two rulesets now run on the same rows. Standard names a bozo who plays
         // again; Bozo Royale ELIMINATES them. Never describe a Royale league's weekly
@@ -2357,9 +2365,10 @@ const MCP_TOOLS = [
       return toolText({
         season: lg.season || SEASON, week: lg.week || 1, status: lg.status || "open",
         band: bandOf(lg), legs,
+        memberStatus: Object.fromEntries(memberKeys(lg).map(k => [memberNameAt(lg, k), memberStatusAt(lg, k)])),
         you: me,
         yourLegIn: me ? keys.some(k => (picks[k].who || playerName(k)) === me) : null,
-        stillWaitingOn: memberKeys(lg).filter(k => !picks[k]).map(k => memberNameAt(lg, k)),
+        stillWaitingOn: waitingKeys(lg, picks).map(k => memberNameAt(lg, k)),
         leverHierarchy: lg.order || null,
         results: lg.results || null, bozo: lg.bozo || null, bozoWhy: lg.bozoWhy || null,
         caveats: [
@@ -2539,7 +2548,7 @@ const MCP_TOOLS = [
       // board and draws the lever hierarchy, and there is no undo — the only route back to
       // open advances the week and discards this one. Whoever is about to press the button
       // should know that is what the button does this time.
-      const size = memberNames(lg).length;
+      const size = activeNames(lg).length;
       const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
       const already = Object.keys(picks).length;
       const wouldBeNth = mine ? already : already + 1;
@@ -2570,7 +2579,7 @@ const MCP_TOOLS = [
         agreement: captured.agreement || null,
         band,
         legsIn: already, legsNeeded: need,
-        stillWaitingOn: memberKeys(lg).filter(k => !picks[k]).map(k => memberNameAt(lg, k)),
+        stillWaitingOn: waitingKeys(lg, picks).map(k => memberNameAt(lg, k)),
         wouldLockTheBoard: wouldLock,
         warning: wouldLock
           ? "⚠️ THIS WOULD BE THE LAST LEG. Submitting it places the ticket, locks the board for all " +
@@ -2789,7 +2798,7 @@ const MCP_TOOLS = [
           captured: { line: p.line, price: p.price, priceOpp: p.priceOpp },
           note: "That is the literal validation failure after capture. Nothing was submitted." });
 
-      const size = set.format === "royale" ? royaleRoster(lg).length : memberNames(lg).length;
+      const size = set.format === "royale" ? royaleRoster(lg).length : activeNames(lg).length;
       const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
       const already = Object.keys(picks).length;
       const wouldLock = need > 0 && (mine ? already : already + 1) >= need;

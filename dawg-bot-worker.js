@@ -4351,7 +4351,44 @@ const memberNameAt = (lg, key) => {
   return (v && typeof v === "object" && v.name) ? String(v.name) : playerName(key);
 };
 const memberKeys = lg => Object.keys((lg && lg.members) || {});
-const memberNames = lg => memberKeys(lg).map(k => memberNameAt(lg, k));
+
+/* ===== seat status (Phase 2.9, D22) =====
+   Membership is independent of the live ticket. A seat is `active` (plays this week),
+   `pending` (joined or was added while the ticket was placed — on the roster, sees the
+   board, cannot submit, does NOT count toward the lock) or `leaving` (removed while
+   their leg was on a placed ticket — the leg still grades, the seat goes at the roll).
+   Both transitional states resolve at /bozo/next.
+
+   ⚠️ ABSENT MEANS ACTIVE. Every seat written before this phase, and every legacy shape
+   (`true` as the value, the name as the key), has no `status` — reading a missing field
+   as anything but "active" would empty every live roster on deploy. So would trusting an
+   unrecognised string, which is why this normalises rather than passing the value through. */
+const MEMBER_STATUSES = ["active", "pending", "leaving"];
+const memberStatusAt = (lg, key) => {
+  const v = memberRec(lg, key);
+  const s = v && typeof v === "object" ? v.status : null;
+  return MEMBER_STATUSES.includes(s) ? s : "active";
+};
+const memberIsActive = (lg, key) => memberStatusAt(lg, key) === "active";
+
+/* ⚠️ TWO DIFFERENT QUESTIONS, and mixing them is the bug this phase exists to prevent.
+   "Who is in this league" (display, the seat cap, a rename sweep) is EVERY seat.
+   "How many legs make a full board" is the ACTIVE seats only. `memberNames(lg)` still
+   answers the first, byte-identically to before; anything doing threshold arithmetic
+   asks `activeNames`/`activeKeys` — or `memberNames(lg, { activeOnly: true })`, the
+   same list under the name the call sites already read well with. */
+const memberNames = (lg, opts) => (opts && opts.activeOnly ? activeKeys(lg) : memberKeys(lg)).map(k => memberNameAt(lg, k));
+const activeKeys = lg => memberKeys(lg).filter(k => memberIsActive(lg, k));
+const activeNames = lg => activeKeys(lg).map(k => memberNameAt(lg, k));
+// Who the board is still waiting on: active seats without a leg. A pending seat is not
+// late, it is not yet playing, and listing it would make a board look unfinished forever.
+const waitingKeys = (lg, picks) => activeKeys(lg).filter(k => !(picks || {})[k]);
+// What a seat in each state means, in the words the member reading it needs. A pending
+// seat is a success, not a rejection, and the copy has to say so or the join looks failed.
+const seatNote = status =>
+  status === "pending" ? "You're in. This week's ticket is already placed, so your first leg is due when the next week opens."
+  : status === "leaving" ? "You're on the roster until this week is graded, then the seat closes."
+  : null;
 
 /* The one resolver. Returns the map key for whoever is asking, or null if they are not
    in this league. Prefers the uid; falls back to the legacy name shapes so a demo league
@@ -4422,6 +4459,23 @@ const memberKeyOfRef = (lg, ref) => {
 // WHOSE seat a submission is for. The caller's own unless `forRef` names another member,
 // in which case the caller must be allowed to act for them. Naming yourself is a
 // self-submit. Returns { key, name, proxy } or { error, code }.
+// ⚠️ A seat that is not `active` cannot submit, and neither can the manager on its behalf
+// (Phase 2.9, 9.6). The seat is real -- it is on the roster and it sees the board -- it
+// just is not on THIS week's ticket, and it is not counted in the lock threshold either.
+// Letting a leg land for it would put a leg on a ticket nobody is waiting for.
+function bozoSeatNotPlaying(state, key, name, proxy) {
+  const st = memberStatusAt(state, key);
+  if (st === "pending")
+    return { error: proxy
+      ? name + " joined after this week's board opened — their seat starts playing when you advance the week."
+      : "You're in this league, but you joined after this week's board opened. You can submit once the next week starts.", code: 409 };
+  if (st === "leaving")
+    return { error: proxy
+      ? name + " is leaving this league at the end of this week — no new legs for them."
+      : "You're leaving this league at the end of this week — this board is closed to you.", code: 409 };
+  return null;
+}
+
 function bozoTargetSeat(state, auth, env, forRef) {
   const self = memberKeyOf(state, auth);
   const ref = forRef == null || forRef === "" ? null : String(forRef);
@@ -4432,10 +4486,14 @@ function bozoTargetSeat(state, auth, env, forRef) {
         return { error: "Only the league manager can submit for another member.", code: 403 };
       if (t === null)
         return { error: "That member is not on this league's roster.", code: 404 };
-      return { key: t, name: memberNameAt(state, t), proxy: true };
+      const name = memberNameAt(state, t);
+      const notPlaying = bozoSeatNotPlaying(state, t, name, true);
+      if (notPlaying) return notPlaying;
+      return { key: t, name, proxy: true };
     }
   }
   if (!self) return { error: "You're not in this league.", code: 403 };
+  { const notPlaying = bozoSeatNotPlaying(state, self, auth.name, false); if (notPlaying) return notPlaying; }
   return { key: self, name: auth.name, proxy: false };
 }
 
@@ -4558,8 +4616,12 @@ async function leagueList(request, env, cors) {
     || (!!viewer && (lg.manager === viewer || isMember(lg, viewer)));
   const out = Object.entries(leagues).filter(visible).map(([id, lg]) => ({
     id, name: lg.name || id, manager: lg.manager || null,
-    size: memberNames(lg).length,
+    // ⚠️ `size` is the LOCK-RELEVANT count (active seats) because that is what the board
+    // fill and "N of M legs in" mean; `members` stays every seat so the roster panel can
+    // render a pending one, and `memberStatus` is how it tells them apart.
+    size: activeNames(lg).length,
     members: memberNames(lg),
+    memberStatus: Object.fromEntries(memberKeys(lg).map(k => [memberNameAt(lg, k), memberStatusAt(lg, k)])),
     teams: lg.teams || null,
     settings: settingsOf(lg),
     week: lg.week || 1, status: lg.status || "open",
@@ -5277,39 +5339,132 @@ async function leagueMember(request, env, cors) {
   const auth = await requireManager(request, env, lid);
   if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
 
-  const player = String(body.player || "");
-  if (body.action !== "remove")
-    return json({ error: "Members must sign in and join this league themselves with its shared password." }, 400, cors);
-
-  // ⚠️ Changing the roster mid-week moves the lock threshold under a live board.
-  // Removing the last person you were waiting on would otherwise silently place the
-  // ticket; refuse while picks are in and the board is open, and say why.
   const lg = auth.league;
-  if ((lg.status || "open") !== "open")
-    return json({ error: "The ticket is placed — roster changes wait for next week." }, 409, cors);
+  const player = String(body.player || "").trim();
+  const action = String(body.action || "");
+  if (action !== "remove" && action !== "add")
+    return json({ error: "Unknown roster action." }, 400, cors);
+  if (!player) return json({ error: "Name somebody." }, 400, cors);
+
+  /* ⚠️ THE STATUS GATE IS GONE FROM BOTH BRANCHES (Phase 2.9, D22). It used to refuse
+     every roster change while the ticket was placed, because a change moved the lock
+     threshold under a live board — removing the last person you were waiting on would
+     silently place the ticket. The threshold now counts ACTIVE seats only, so a seat can
+     be added (pending) or retired (leaving) mid-week without `need` moving at all. */
+
+  if (action === "add") return leagueMemberAdd(env, cors, lid, auth, lg, player);
+
   // Resolve the seat by NAME here on purpose: this route's caller is a manager naming
   // somebody, not the member themselves, so there is no uid in hand.
   const pkey = memberKeyOf(lg, { name: player });
   if (!pkey) return json({ error: player + " is not in this league." }, 404, cors);
-  if ((lg.picks || {})[pkey])
-    return json({ error: player + " already has a leg in this week. Remove the leg first." }, 409, cors);
-  if (lg.manager === player)
+  if (lg.manager === player || (lg.managerUid && lg.managerUid === pkey))
     return json({ error: "The manager can't leave their own league." }, 400, cors);
+
+  const placed = (lg.status || "open") !== "open";
+  const hasLeg = !!(lg.picks || {})[pkey];
+
+  /* ⚠️ A LEG ON A PLACED TICKET IS NOT DELETABLE, so the seat is retired instead of
+     removed. The ticket is a real DraftKings parlay that has already been struck; the
+     leg grades this week whatever happens to the membership, and `results` has to keep
+     a name to hang it on. `leaving` is that: the seat stays until /bozo/next drops it,
+     and meanwhile it is not active, so it is out of the lock count and the waiting list. */
+  if (placed && hasLeg) {
+    try {
+      await fbPatch(env, LG(lid) + "/members/" + pkey, { status: "leaving" });
+    } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+    await bozoAdminAction(env, lid, rosterAuditRow("roster_remove", auth, lid, lg, pkey, player,
+      { status: memberStatusAt(lg, pkey) }, { status: "leaving" }));
+    const after = await loadLeague(env, lid);
+    return json({ ok: true, status: "leaving", size: memberNames(after).length, members: memberNames(after),
+                  active: activeNames(after), placed: false,
+                  note: player + " leaves when this week is graded. Their leg is on the placed ticket and still counts." }, 200, cors);
+  }
+
+  // An open board with a leg in is the one case that still refuses, and it is now a
+  // refusal with a next step: the manager can clear the leg themselves (Phase 2.7 proxy
+  // remove) and come straight back here.
+  if (hasLeg)
+    return json({ error: player + " already has a leg in this week. Remove the leg first." }, 409, cors);
 
   try {
     await fbPatch(env, LG(lid) + "/members", { [pkey]: null });
   } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
   bozoNullWriteTripwire("/league/member", auth, lid, ["members/" + pkey]);
+  await bozoAdminAction(env, lid, rosterAuditRow("roster_remove", auth, lid, lg, pkey, player,
+    { status: memberStatusAt(lg, pkey) }, null));
 
   // Re-read so the caller sees the real size, and so a removal that just completed the
   // board can lock immediately rather than waiting for someone to resubmit.
   const after = await loadLeague(env, lid);
   const picks = after.picks || {};
-  let placed = false;
-  if (Object.keys(picks).length >= memberNames(after).length && memberNames(after).length > 0)
-    placed = await placeAndDraw(env, lid, picks, after);
-  return json({ ok: true, size: memberNames(after).length, members: memberNames(after), placed }, 200, cors);
+  const size = activeNames(after).length;
+  let placedNow = false;
+  if (size > 0 && Object.keys(picks).length >= size) placedNow = await placeAndDraw(env, lid, picks, after);
+  return json({ ok: true, status: "removed", size: memberNames(after).length, members: memberNames(after),
+                active: activeNames(after), placed: placedNow }, 200, cors);
 }
+
+/* POST /league/member {action:"add", player} — the manager seats an existing account
+   (Phase 2.9, 9.3).
+
+   ⚠️ THIS ADDS A SEAT, IT DOES NOT CREATE AN IDENTITY. The target must already hold a
+   uid account; a name with no account is refused with the instruction to sign up rather
+   than seated under a name-shaped key. Inventing a key from a display name is exactly how
+   the mutable key got into league state before the uid re-key, and one add would undo it.
+   No league password is needed — the manager IS the authorization, which is the whole
+   point of the action; the password path stays for members seating themselves. */
+async function leagueMemberAdd(env, cors, lid, auth, lg, player) {
+  if (!canActFor(lg, auth, env))
+    return json({ error: "Only the league manager can add someone to this league." }, 403, cors);
+  if (isMember(lg, player))
+    return json({ error: player + " is already in this league." }, 409, cors);
+
+  let users;
+  try { users = await loadUsers(env); }
+  catch (e) { return json({ error: e.message }, 502, cors); }
+  let uid = null, matched = false;
+  for (const [key, rec] of Object.entries(users)) {
+    if (accountName(key, rec) !== player) continue;
+    matched = true;
+    const k = playerName(key);
+    if (UID_RE.test(k)) { uid = k; break; }
+  }
+  if (!uid)
+    return json({ error: matched
+      ? player + "'s sign-in predates the current account system. They need to create an account on the sign-on page, then you can add them."
+      : player + " doesn't have an account yet — they need to sign up first." }, 409, cors);
+
+  // The cap counts SEATS, not players who can submit this week: a pending seat is taken.
+  let rec = null;
+  const kv = JOIN_KV(env);
+  if (kv) { try { rec = JSON.parse((await kv.get(JOIN_LG(lid))) || "null"); } catch { rec = null; } }
+  const cap = joinCapOf(rec);
+  if (memberNames(lg).length >= cap)
+    return json({ error: "That league is full (" + cap + " members)." }, 409, cors);
+
+  const status = (lg.status || "open") === "open" ? "active" : "pending";
+  try {
+    await fbPatch(env, LG(lid) + "/members",
+                  { [uid]: { name: player, joinedAt: Date.now(), status, addedBy: auth.uid || null } });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  await bozoAdminAction(env, lid, rosterAuditRow("roster_add", auth, lid, lg, uid, player, null, { status }));
+
+  const after = await loadLeague(env, lid);
+  return json({ ok: true, status, size: memberNames(after).length, members: memberNames(after),
+                active: activeNames(after), cap,
+                note: status === "pending"
+                  ? player + " is in. This week's ticket is placed, so their first leg is due next week."
+                  : player + " is in and on this week's board." }, 200, cors);
+}
+
+// The roster half of the Phase 2.7 audit trail, in the same row shape the proxy writes
+// use so one reader renders both. `before`/`after` carry the SEAT, not a leg.
+const rosterAuditRow = (type, auth, lid, lg, key, name, before, after) => ({
+  type, byUid: auth.uid || null, byName: String(auth.name || ""),
+  forUid: key, forName: String(name || ""), leagueId: lid, week: lg.week || 1,
+  before, after, ticketWasPlaced: (lg.status || "open") !== "open",
+});
 
 // POST /league/lock {league} — the escape hatch. The board otherwise waits forever for
 // a member who never submits, which with eight friends is a matter of when, not if.
@@ -5334,7 +5489,7 @@ async function leagueLock(request, env, cors) {
 
   const placed = await placeAndDraw(env, lid, picks, lg);
   return json({ ok: true, placed, legs: n,
-                waitingOn: memberKeys(lg).filter(k => !picks[k]).map(k => memberNameAt(lg, k)) }, 200, cors);
+                waitingOn: waitingKeys(lg, picks).map(k => memberNameAt(lg, k)) }, 200, cors);
 }
 
 /* ============================ the betslip link ============================
@@ -5510,8 +5665,11 @@ async function leagueJoin(request, env, cors) {
   if (!lg) return json({ error: "That league is gone." }, 404, cors);
 
   // Existing membership is already the authorization; no password is needed to keep it.
-  if (isMember(lg, auth.name))
-    return json({ ok: true, already: true, league: lid, name: lg.name || lid, size: memberNames(lg).length }, 200, cors);
+  if (isMember(lg, auth.name)) {
+    const seat = memberKeyOf(lg, auth);
+    return json({ ok: true, already: true, league: lid, name: lg.name || lid, size: memberNames(lg).length,
+                  status: memberStatusAt(lg, seat), note: seatNote(memberStatusAt(lg, seat)) }, 200, cors);
+  }
 
   const currentHash = rec && rec.passwordHash;
   const legacyHash = rec && rec.passHash;
@@ -5524,11 +5682,13 @@ async function leagueJoin(request, env, cors) {
   } catch { return json({ error: "League password check failed." }, 502, cors); }
   if (!passwordOkay) return json({ error: "That league password is not valid." }, 403, cors);
 
-  // ⚠️ Same rule leagueMember enforces, for the same reason: joining mid-week moves
-  // the lock threshold under a live board and could place the ticket early.
-  if ((lg.status || "open") !== "open")
-    return json({ error: "This week's ticket is already placed — you can join once next week opens." }, 409, cors);
-
+  /* ⚠️ THE MID-WEEK JOIN GATE IS GONE (Phase 2.9, D22), and what replaced it is the
+     threshold, not the roster. Joining used to be refused whenever the ticket was placed,
+     because a new seat moved `need` under a live board and could place the ticket early.
+     That protected the board by turning the site away at the door -- three people were
+     blocked on 2026-09-10 while a settled Week 1 ticket sat there. The seat is now taken
+     immediately and marked `pending`: on the roster, reading the board, not counted by
+     `activeNames` and so unable to move `need` by one. /bozo/next promotes it. */
   const cap = joinCapOf(rec);
   if (memberNames(lg).length >= cap)
     return json({ error: "That league is full (" + cap + " members)." }, 409, cors);
@@ -5539,13 +5699,17 @@ async function leagueJoin(request, env, cors) {
   if (!auth.uid || !UID_RE.test(String(auth.uid)))
     return json({ error: "Your sign-in predates the current account system. Create an account on the sign-on page, then join." }, 409, cors);
 
+  // A seat taken while the ticket is placed starts `pending` and joins the count at the
+  // roll; one taken on an open board is active immediately, exactly as it always was.
+  const status = (lg.status || "open") === "open" ? "active" : "pending";
   try {
     await fbPatch(env, LG(lid) + "/members",
-                  { [auth.uid]: { name: auth.name, joinedAt: Date.now() } });
+                  { [auth.uid]: { name: auth.name, joinedAt: Date.now(), status } });
   } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
 
   const after = await loadLeague(env, lid);
-  return json({ ok: true, league: lid, name: after.name || lid, size: memberNames(after).length, cap }, 200, cors);
+  return json({ ok: true, league: lid, name: after.name || lid, size: memberNames(after).length, cap,
+                status, note: seatNote(status) }, 200, cors);
 }
 
 // POST /league/access {league, action} — manager-only password, visibility and cap.
@@ -6507,7 +6671,10 @@ async function commitBozoLeg(env, lid, state, name, p, via = null, mkey = null, 
   // chopped player never submits again, so waiting for "everyone in" would mean the
   // ticket could never lock once the first elimination landed — the board would just
   // sit open forever with the league unable to play.
-  const size = set.format === "royale" ? royaleRoster(state).length : memberNames(state).length;
+  // ⚠️ ACTIVE seats, not the member count (Phase 2.9). Someone who joined mid-week holds
+  // a pending seat: on the roster, on the board, not on this week's ticket. Counting them
+  // here would raise the threshold under a live board and strand it one leg short forever.
+  const size = set.format === "royale" ? royaleRoster(state).length : activeNames(state).length;
   const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
   let placed = false;
   if (need > 0 && Object.keys(picks).length >= need) {
@@ -8288,8 +8455,11 @@ const royaleAliveKey = (state, key) => {
   return !st || st.alive !== false;
 };
 const royaleAlive = (state, name) => royaleAliveKey(state, memberKeyOf(state, { name }));
+// ⚠️ Alive AND active (Phase 2.9). A pending seat has never played a week, so it is
+// trivially "alive" in royaleStatus — counting it would raise the Royale lock threshold
+// for a member who is not allowed to submit, and the board could never fill.
 const royaleRoster = state => Object.entries(royaleStatus(state))
-  .filter(([, s]) => s.alive).map(([k]) => k);
+  .filter(([k, s]) => s.alive && memberIsActive(state, k)).map(([k]) => k);
 
 /* Resolve one Royale week: decide the chop, re-deploy them if they still have one, and
    write an immutable record of how it was decided.
@@ -8764,6 +8934,18 @@ async function bozoNext(request, env, cors) {
     const history = Array.isArray(state.history) ? state.history : [];
     history.push({ week: state.week || 1, bozo: state.bozo || null, slip: state.slip || null });
 
+    /* ⚠️ THE ROSTER RESOLVES BEFORE ANYTHING COUNTS IT (Phase 2.9, 9.5). Pending seats
+       become active and leaving seats go, in the SAME patch that opens the new week —
+       so there is no window in which the week is open and `need` is still computed off
+       last week's active set. Both transitions are terminal: a promoted seat is an
+       ordinary member and nothing here remembers it was ever pending. */
+    const promoted = [], departed = [];
+    for (const k of memberKeys(state)) {
+      const st = memberStatusAt(state, k);
+      if (st === "pending") promoted.push(k);
+      else if (st === "leaving") departed.push(k);
+    }
+
     // ⚠️ PATCH, not PUT. A wholesale PUT of the league node would delete its ledger,
     // members and config every single week — the site whose thesis is "the receipts
     // stay up" quietly shredding its receipts. The nulls clear this week's children
@@ -8780,9 +8962,17 @@ async function bozoNext(request, env, cors) {
       // betslip link surviving means last week's settled parlay stays on the new
       // week's ticket, still clickable. Archived into `history` just above.
       slip: null,
+      // ⚠️ Per-seat paths, never a wholesale `members` replacement: a member who renamed
+      // or filed a leg between the read above and this write would otherwise be reverted
+      // to whatever the stale snapshot held.
+      ...Object.fromEntries(promoted.map(k => ["members/" + k + "/status", "active"])),
+      ...Object.fromEntries(departed.map(k => ["members/" + k, null])),
     });
-    bozoNullWriteTripwire("/bozo/next", auth, lid, ["picks", "results"]);
-    return json({ ok: true, week: (state.week || 1) + 1 }, 200, cors);
+    bozoNullWriteTripwire("/bozo/next", auth, lid,
+      ["picks", "results", ...departed.map(k => "members/" + k)]);
+    return json({ ok: true, week: (state.week || 1) + 1,
+      promoted: promoted.map(k => memberNameAt(state, k)),
+      departed: departed.map(k => memberNameAt(state, k)) }, 200, cors);
   } catch (e) {
     return json({ error: "Database write failed: " + e.message }, 502, cors);
   }
@@ -15690,6 +15880,14 @@ const MCP_TOOLS = [
         id: lid, name: lg.name || lid, manager: lg.manager || null,
         season: lg.season || SEASON, week: lg.week || 1, status: lg.status || "open",
         members: memberNames(lg),
+        // ⚠️ A seat is not always a player THIS week (Phase 2.9). `pending` joined after
+        // the ticket was placed and starts at the next roll; `leaving` was removed with a
+        // leg already on the placed ticket and goes at the roll. Neither counts toward the
+        // lock, so `size` here is the active count and never `members.length`.
+        memberStatus: Object.fromEntries(memberKeys(lg).map(k => [memberNameAt(lg, k), memberStatusAt(lg, k)])),
+        size: activeNames(lg).length,
+        pending: memberKeys(lg).filter(k => memberStatusAt(lg, k) === "pending").map(k => memberNameAt(lg, k)),
+        leaving: memberKeys(lg).filter(k => memberStatusAt(lg, k) === "leaving").map(k => memberNameAt(lg, k)),
         legsIn: Object.keys(lg.picks || {}).length,
         // ⚠️ Two rulesets now run on the same rows. Standard names a bozo who plays
         // again; Bozo Royale ELIMINATES them. Never describe a Royale league's weekly
@@ -15835,9 +16033,10 @@ const MCP_TOOLS = [
       return toolText({
         season: lg.season || SEASON, week: lg.week || 1, status: lg.status || "open",
         band: bandOf(lg), legs,
+        memberStatus: Object.fromEntries(memberKeys(lg).map(k => [memberNameAt(lg, k), memberStatusAt(lg, k)])),
         you: me,
         yourLegIn: me ? keys.some(k => (picks[k].who || playerName(k)) === me) : null,
-        stillWaitingOn: memberKeys(lg).filter(k => !picks[k]).map(k => memberNameAt(lg, k)),
+        stillWaitingOn: waitingKeys(lg, picks).map(k => memberNameAt(lg, k)),
         leverHierarchy: lg.order || null,
         results: lg.results || null, bozo: lg.bozo || null, bozoWhy: lg.bozoWhy || null,
         caveats: [
@@ -16017,7 +16216,7 @@ const MCP_TOOLS = [
       // board and draws the lever hierarchy, and there is no undo — the only route back to
       // open advances the week and discards this one. Whoever is about to press the button
       // should know that is what the button does this time.
-      const size = memberNames(lg).length;
+      const size = activeNames(lg).length;
       const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
       const already = Object.keys(picks).length;
       const wouldBeNth = mine ? already : already + 1;
@@ -16048,7 +16247,7 @@ const MCP_TOOLS = [
         agreement: captured.agreement || null,
         band,
         legsIn: already, legsNeeded: need,
-        stillWaitingOn: memberKeys(lg).filter(k => !picks[k]).map(k => memberNameAt(lg, k)),
+        stillWaitingOn: waitingKeys(lg, picks).map(k => memberNameAt(lg, k)),
         wouldLockTheBoard: wouldLock,
         warning: wouldLock
           ? "⚠️ THIS WOULD BE THE LAST LEG. Submitting it places the ticket, locks the board for all " +
@@ -16267,7 +16466,7 @@ const MCP_TOOLS = [
           captured: { line: p.line, price: p.price, priceOpp: p.priceOpp },
           note: "That is the literal validation failure after capture. Nothing was submitted." });
 
-      const size = set.format === "royale" ? royaleRoster(lg).length : memberNames(lg).length;
+      const size = set.format === "royale" ? royaleRoster(lg).length : activeNames(lg).length;
       const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
       const already = Object.keys(picks).length;
       const wouldLock = need > 0 && (mine ? already : already + 1) >= need;
