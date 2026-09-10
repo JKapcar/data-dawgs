@@ -3,7 +3,22 @@ const csv='Player,Pos,Team,Salary,Proj,Total Own,CPT Own,CPT Salary\n'+Array.fro
 const players=I.readUpload(csv,[]).players,cfg={site:'dk_showdown',count:5000,minSalary:0,maxSalary:50000,maxPerTeam:5};
 const r=P.generate(players,cfg);assert.ok(r.lineups.length>1000);assert.equal(new Set(r.lineups.map(l=>l.ids.slice().sort((a,b)=>a-b).join(',')+'|'+l.cpt)).size,r.lineups.length);
 for(const l of r.lineups)assert.ok(P.legal(l.ids,l.cpt,players,cfg));
-assert.equal(P.ownership({own:50,cptOwn:10},false,true),0.4);assert.equal(P.ownership({own:50,cptOwn:10},true,true),0.1);assert.equal(P.ownership({own:0},false,false),null);
+assert.equal(P.ownership({own:50,cptOwn:10},false,true),0.4);assert.equal(P.ownership({own:50,cptOwn:10},true,true),0.1);assert.equal(P.ownership({own:0},false,false),P.OWN_FLOOR);
 const pts=[{x:1,y:10},{x:2,y:9},{x:2,y:12},{x:3,y:12},{x:4,y:13},{x:1,y:8}];assert.deepEqual(P.frontier(pts),[pts[0],pts[2],pts[4]]);
 players[0].lock=true;players[1].excl=true;const locked=P.generate(players,{...cfg,count:100});assert.ok(locked.lineups.length);assert.ok(locked.lineups.every(l=>l.ids.includes(0)&&!l.ids.includes(1)));
 console.log(`${r.lineups.length} distinct legal Showdown candidates; slot ownership, discrete frontier, locks and exclusions pass`);
+
+// Independently exhaust every six-player subset and captain for the small fixture.
+players.forEach(p=>{p.lock=false;p.excl=false;});
+const key=l=>l.ids.slice().sort((a,b)=>a-b).join(',')+'|'+l.cpt;
+const brute=[];
+function visit(ids,start){if(ids.length===6){for(const cpt of ids)if(P.legal(ids,cpt,players,cfg))brute.push(P.describe(ids,cpt,players,true));return;}for(let i=start;i<players.length;i++)visit([...ids,i],i+1);}
+visit([],0);
+const exact=P.generate(players,{...cfg,cloud:10000});
+assert.equal(exact.stats.legal,brute.length);
+assert.deepEqual(new Set(exact.lineups.map(key)),new Set(brute.map(key)));
+const expected=P.frontier(brute.map(l=>({x:l.x,y:l.proj,l}))).map(p=>key(p.l)).sort();
+assert.deepEqual(exact.lineups.filter(l=>l.onFrontier).map(key).sort(),expected);
+players[0].lock=true;players[0].excl=true;
+assert.equal(P.generate(players,cfg).lineups.length,0);
+console.log('Exact enumeration and frontier match independent brute force; conflicting locks return no lineups');
