@@ -4,23 +4,18 @@
    sample. Classic: importance-weighted sampling (enumeration is infeasible).
    Ownership product is an independence proxy for duplication, not a probability:
    CPT slot uses captain ownership, FLEX uses total-minus-captain, both floored at
-   OWN_FLOOR so nothing is silently dropped (ETR prints 0.0% for "<0.05%"). */
+   OWN_FLOOR. Missing ownership is separately flagged by the input audit. */
 (function(root){
 'use strict';
-var OWN_FLOOR=0.0005;           // 0.05% — ETR rounds to 0.1%, 0.0% means "tiny", not zero
-var DEAD_PROJ=1.5;              // a slot projected under this is a "dead spot"
-function slotOwn(p,isCpt,sd){
- var tot=(p&&Number.isFinite(p.own))?p.own/100:null;
- if(!sd)return tot!=null&&tot>0?Math.max(tot,OWN_FLOOR):OWN_FLOOR;
- var c=(p&&Number.isFinite(p.cptOwn))?p.cptOwn/100:null;
- if(isCpt)return c!=null&&c>0?Math.max(c,OWN_FLOOR):OWN_FLOOR;
- var f=(p&&Number.isFinite(p.flexOwn))?p.flexOwn/100:(tot!=null?tot-(c||0):null);
- return f!=null&&f>0?Math.max(f,OWN_FLOOR):OWN_FLOOR;
-}
+var audit=typeof module!=='undefined'?require('./dfs-lab-audit.js'):root.DDLabAudit;
+if(!audit&&typeof importScripts==='function'){importScripts('dfs-lab-audit.js?v=20260910-hygiene');audit=root.DDLabAudit;}
+var OWN_FLOOR=audit.config.ownershipFloor;
+var DEAD_PROJ=1.5; // diagnostic only; low positive projections stay eligible
+function slotOwn(p,isCpt,sd,floor){return audit.ownership(p,isCpt,sd,floor||OWN_FLOOR);}
 /* Back-compat: ownership(p,cpt,sd) returns a floored fraction (never null). */
 function ownership(p,cpt,sd){return slotOwn(p,cpt,sd);}
 function point(l,P,sd,i){
- if(Number.isFinite(l.x))return {i:i,x:l.x,y:l.proj,l:l};
+ 
  var x=0;for(var k=0;k<l.ids.length;k++){var id=l.ids[k];x+=Math.log10(slotOwn(P[id],id===l.cpt,sd));}
  return {i:i,x:x,y:l.proj,l:l};
 }
@@ -47,12 +42,12 @@ function legal(ids,cpt,P,c){
  if(st.noOppDst&&ids.some(function(i){return i!==dst&&P[i].opp===P[dst].team;}))return false;
  return true;
 }
-function describe(ids,cpt,P,sd){
+function describe(ids,cpt,P,sd,floor){
  var sal=0,proj=0,ceil=0,own=0,x=0,dead=0,teams={},k;
  for(k=0;k<ids.length;k++){var i=ids[k],p=P[i],isC=(i===cpt);
   sal+=isC?cptSalOf(p):p.sal;proj+=isC?cptProjOf(p):p.proj;
   var ce=Number.isFinite(p.ceil)?p.ceil:(p.proj*1.6);ceil+=isC?ce*1.5:ce;
-  var o=slotOwn(p,isC,sd);own+=o*100;x+=Math.log10(o);
+  var o=slotOwn(p,isC,sd,floor);own+=o*100;x+=Math.log10(o);
   if(p.proj<DEAD_PROJ)dead++;teams[p.team]=(teams[p.team]||0)+1;}
  var tk=Object.keys(teams),split=tk.length===2?(teams[tk[0]]+'-'+teams[tk[1]]):tk.map(function(t){return teams[t];}).join('-');
  return {ids:ids.slice(),cpt:cpt,sal:sal,proj:+proj.toFixed(2),ceil:+ceil.toFixed(1),own:+own.toFixed(1),x:x,dead:dead,split:split};
@@ -83,7 +78,7 @@ function enumerateShowdown(P,c,progress){
    for(k=0;k<lockPos.length;k++)if(pick.indexOf(lockPos[k])<0)return;
    for(k=0;k<6;k++){var tot=s+extra[pick[k]];if(tot>cap||tot<minSal)continue;
     var ids=[pool[pick[0]],pool[pick[1]],pool[pick[2]],pool[pick[3]],pool[pick[4]],pool[pick[5]]];
-    var d=describe(ids,pool[pick[k]],P,true);
+    var d=describe(ids,pool[pick[k]],P,true,c.ownershipFloor);
     out.ids.push(d.ids);out.cpt.push(d.cpt);out.sal.push(d.sal);out.proj.push(d.proj);out.x.push(d.x);out.own.push(d.own);out.ceil.push(d.ceil);out.dead.push(d.dead);out.split.push(d.split);legalN++;}
    return;}
   for(var j=from;j<n-(5-depth);j++){
@@ -125,7 +120,7 @@ function generateClassic(P,c,progress){
  var seed=c.seed||216;var rand=function(){seed=(Math.imul(seed,1664525)+1013904223)|0;return (seed>>>0)/4294967296;};
  var pool=P.map(function(p,i){return i;}).filter(function(i){return !P[i].excl&&P[i].proj>0&&P[i].sal>0&&P[i].pos!=='K';});
  var result=[],seen={},trials=0;
- var add=function(ids){if(!legal(ids,undefined,P,c))return;var key=ids.slice().sort(function(a,b){return a-b;}).join(',');if(seen[key])return;seen[key]=1;result.push(describe(ids,undefined,P,false));};
+ var add=function(ids){if(!legal(ids,undefined,P,c))return;var key=ids.slice().sort(function(a,b){return a-b;}).join(',');if(seen[key])return;seen[key]=1;result.push(describe(ids,undefined,P,false,c.ownershipFloor));};
  while(result.length<target&&trials<2000000&&Date.now()<deadline){trials++;var ids=[],mode=trials%4;
   var select=function(allowed){var a=pool.filter(function(i){return ids.indexOf(i)<0&&allowed(P[i]);});if(!a.length)return -1;var weights=a.map(function(i){return mode===0?1:mode===1?Math.pow(P[i].proj,2):mode===2?1/Math.sqrt(Math.max(0.1,P[i].own||0.1)):Math.pow(P[i].proj/P[i].sal*1000,2);});var tot=0;for(var w=0;w<weights.length;w++)tot+=weights[w];var r=rand()*tot;for(var j=0;j<a.length;j++){r-=weights[j];if(r<=0)return a[j];}return a[a.length-1];};
   pool.forEach(function(i){if(P[i].lock)ids.push(i);});
@@ -139,5 +134,5 @@ function generateClassic(P,c,progress){
 function generate(P,c,progress){return c.site==='dk_showdown'?generateShowdown(P,c,progress):generateClassic(P,c,progress);}
 var api={ownership:ownership,slotOwn:slotOwn,point:point,frontier:frontier,legal:legal,generate:generate,describe:describe,OWN_FLOOR:OWN_FLOOR,DEAD_PROJ:DEAD_PROJ};
 if(typeof module!=='undefined')module.exports=api;root.DDPareto=api;
-if(typeof document==='undefined'&&typeof postMessage==='function')root.onmessage=function(e){try{postMessage({type:'done',result:generate(e.data.players,e.data.cfg,function(n,t){postMessage({type:'progress',n:n,t:t});})});}catch(err){postMessage({type:'error',message:err.message});}};
+if(typeof document==='undefined'&&typeof postMessage==='function')root.onmessage=function(e){try{var result=generate(e.data.players,e.data.cfg,function(n,t){postMessage({type:'progress',n:n,t:t});});result.audit=audit.reconcile(e.data.players,e.data.cfg,result);postMessage({type:'done',result:result});}catch(err){postMessage({type:'error',message:err.message});}};
 })(typeof self!=='undefined'?self:globalThis);
