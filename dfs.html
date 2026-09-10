@@ -2901,7 +2901,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="card" id="rarityCard">
     <style>#labCustomWrap[hidden],#labTooltip[hidden]{display:none}#rarityCard .fi{min-height:44px}#rarityCard .btn{min-height:44px}</style>
     <h3>Lineup lab · points vs expected copies <span class="rt" id="rarityState"></span></h3>
-    <p class="note" id="labSourceNote"></p>
+    <p class="note" id="labSourceNote"></p><p class="note" id="labAuditNote" aria-live="polite"></p>
     <p class="sub">Showdown: every legal lineup is enumerated (not sampled). The chart plots the exact frontier, a band beneath it, and a random cloud of the rest. Tap any dot for the roster and diagnostics.</p>
     <div class="btnrow" style="align-items:end;margin-bottom:12px">
       <label class="fld">Contest for copy estimates<select class="fi" id="labContest"><option value="132000">Milly · 132,000 entries</option><option value="5300" selected>Bootleg · 5,300 entries</option><option value="250">Small SE · 250 entries</option><option value="custom">Custom field size</option></select></label>
@@ -2919,7 +2919,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <button class="btn" id="paretoSim">Simulate this pool</button><button class="btn" id="labSimBand">Simulate frontier band</button></div>
     <p class="note">Generating replaces your lineup pool. Salary floor and max-per-team above apply to the Lab only (Solver keeps its own). Simulation uses your settings in Simulator.</p>
     <div class="btnrow">
-      <label class="fld">Rarity sensitivity<select class="fi" id="labOwnFloor"><option value="0.05">Imported ownership · 0.05% minimum</option><option value="0.5">Stress test · 0.5% minimum</option><option value="1">Stress test · 1% minimum</option></select></label>
+      <label class="fld">Rarity sensitivity<select class="fi" id="labOwnFloor"><option value="0.25">Imported ownership · 0.25% minimum</option><option value="0.5">Stress test · 0.5% minimum</option><option value="1">Stress test · 1% minimum</option></select></label>
       <label class="fld">Y axis<select class="fi" id="labY"><option value="proj">Projected points</option><option value="ceil">Ceiling sum</option></select></label>
       <label class="fld">Captain<select class="fi" id="labCpt"><option value="">Any</option></select></label>
       <label class="fld">Min slot own %<input class="fi" type="number" id="labMinOwn" min="0" max="50" step="0.1" value="0"></label>
@@ -4398,7 +4398,8 @@ root.DDFS.payoutFn = payoutFn;
 })(typeof module !== "undefined" && module.exports ? module.exports : (typeof self !== "undefined" ? self : this));
 </script>
 
-<script src="dfs-pareto.js?v=20260909"></script>
+<script src="dfs-lab-audit.js?v=20260910-hygiene"></script>
+<script src="dfs-pareto.js?v=20260910-hygiene"></script>
 <script>
 /* =========================================================================
    DFS workbench — slate ingest, solver + simulator wiring, exposure, bankroll.
@@ -6729,22 +6730,41 @@ function labInputKey() {
 }
 function recordLabSource(text,label,info) {
  const cols=info&&info.cols,head=info&&info.head;
- const source={label,importedAt:new Date().toISOString(),revision:2,columns:cols&&head?Object.fromEntries(Object.entries(cols).filter(([,i])=>i>=0).map(([k,i])=>[k,head[i]])):{},matched:info&&info.matched,missed:info&&info.missed&&info.missed.length,hash:null};
+ const source={label,importedAt:new Date().toISOString(),revision:3,playerCount:S.players.length,columns:cols&&head?Object.fromEntries(Object.entries(cols).filter(([,i])=>i>=0).map(([k,i])=>[k,head[i]])):{},matched:info&&info.matched,missed:info&&info.missed&&info.missed.length,hash:null};
  S.labSource=source;
  if(crypto.subtle)crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)).then(buf=>{
   source.hash=Array.from(new Uint8Array(buf)).map(n=>n.toString(16).padStart(2,'0')).join('');
   if(S.labSource===source){save();renderLabSource();}
  }).catch(()=>{});
 }
+function labRulesKey(){const c=labCfg();return JSON.stringify([c.site,c.minSalary,c.maxSalary,c.maxPerTeam,c.maxPerGame,c.stack]);}
+function labTrust(){
+ const a=S.labAudit,m=S.lineupsMeta,s=S.labSource;
+ if(!m||m.inputKey!==labInputKey()||m.rulesKey!==labRulesKey())return {pass:false,reason:'Generate for the current players and Lab rules.'};
+ if(!a||!a.pass)return {pass:false,reason:'Input and maximum-projection checks must pass.'};
+ if(S.demo)return {pass:false,reason:'Demo data; upload your slate before selecting entries.'};
+ if(!s||s.revision!==3||!s.hash)return {pass:false,reason:'Reimport the CSV to record its source and fingerprint.'};
+ if(s.playerCount!==S.players.length||s.missed)return {pass:false,reason:'Resolve the source player count or unmatched rows.'};
+ if(!s.columns.proj||!s.columns.own||!s.columns.cptOwn)return {pass:false,reason:'This snapshot mixes retained data. Import projection, total ownership and captain ownership together.'};
+ if(Date.now()-Date.parse(s.importedAt)>DDLabAudit.config.stalenessHours*3600000)return {pass:false,reason:'Import is over '+DDLabAudit.config.stalenessHours+' hours old. Refresh the slate.'};
+ return {pass:true,reason:'Loaded snapshot checks passed. Provider freshness is not independently verified.'};
+}
+function renderLabAudit(){
+ const el=$('labAuditNote');if(!el)return;const a=S.labAudit,m=S.lineupsMeta;
+ if(!a||!m||m.inputKey!==labInputKey()||m.rulesKey!==labRulesKey()){el.textContent='Max-projection check: PENDING · generate for the current slate and Lab rules.';return;}
+ const p=a.proof.lineup,inp=a.input;
+ el.textContent='Max-projection check: '+a.maxStatus+(p?' · independent best '+p.proj.toFixed(2)+' · chart '+Number(a.displayed).toFixed(2):'')+
+  ' · ownership: '+(inp.pass?'PASS':inp.errors.length+' missing/invalid slots')+' · '+inp.floored.length+' slots below the 0.25% minimum · product spot-check: '+(a.productPass?'PASS':'FAIL')+'. '+labTrust().reason;
+}
 function renderLabSource() {
  const box=$('labSourceNote');if(!box)return;
  const s=S.labSource;
  if(S.demo){box.textContent='Source: invented demo data.';return;}
- if(!s||s.revision!==2){box.textContent='Saved data has not been checked by the corrected ownership reader. Reimport your CSV to verify its values.';return;}
+ if(!s||s.revision!==3){box.textContent='Saved data has not been checked by the corrected ownership reader. Reimport your CSV to verify its values.';return;}
  const c=s.columns||{},dt=new Date(s.importedAt).toLocaleString();
  box.textContent='Source: '+s.label+' · imported '+dt+' · '+(s.hash?'file '+s.hash.slice(0,12)+' · ':'')+
-  'Projection: '+(c.proj||'retained from earlier data')+' · ownership: '+(c.own||'retained from earlier data')+(c.cptOwn?' · captain: '+c.cptOwn:'')+
-  (s.editedAt?' · MANUAL EDITS after import':'')+(s.missed?' · '+s.missed+' unmatched rows':'')+'. Import time is not the provider’s update time.';
+  S.players.length+' players · Projection: '+(c.proj||'retained from earlier data')+' · ownership: '+(c.own||'retained from earlier data')+(c.cptOwn?' · captain: '+c.cptOwn:'')+
+  (s.editedAt?' · MANUAL EDITS after import':'')+(Date.now()-Date.parse(s.importedAt)>DDLabAudit.config.stalenessHours*3600000?' · STALE IMPORT (over '+DDLabAudit.config.stalenessHours+' hours)':'')+(s.missed?' · '+s.missed+' unmatched rows':'')+'. Provider update time: unknown; import time is not a freshness guarantee.';
 }
 function labLineupEvidence(l) {
  const sd=S.site==='dk_showdown';
@@ -6754,7 +6774,7 @@ function labLineupEvidence(l) {
  const driver=slots.slice().sort((a,b)=>a.used-b.used)[0];
  const floorFactor=slots.reduce((v,s)=>v*Math.max(s.used,0.5)/s.used,1);
  const nearZero=slots.filter(s=>s.p.proj<DDPareto.DEAD_PROJ);
- return {slots,driver,floorFactor,nearZero};
+ return {slots,driver,floorFactor,nearZero,rarity:DDLabAudit.evidence(l,S.players,sd)};
 }
 function labContestInfo() {
  const preset=$('labContest').value;
@@ -6780,13 +6800,13 @@ function labCfg() {
  const sd = S.site === 'dk_showdown';
  return { site: S.site, count: +$('paretoCount').value, minSalary: +$('labMinSal').value || 0, maxSalary: 50000,
    maxPerTeam: +$('labMaxTeam').value || (sd ? 5 : 4), maxPerGame: S.cfg.game, bandPts: +$('labBand').value || 0,
-   cloud: Math.max(0, +$('labCloud').value), maxBand: 1500, seed: 216, timeLimitMs: 45000,
+   ownershipFloor:DDLabAudit.config.ownershipFloor, cloud: Math.max(0, +$('labCloud').value), maxBand: 1500, seed: 216, timeLimitMs: 45000,
    stack: { qbMin: S.cfg.qbMin, qbPos: S.cfg.qbPos.split(','), bringBack: S.cfg.bring, noRbVsDst: S.cfg.noRbDst, noOppDst: S.cfg.noOppDst } };
 }
 function labPlayersForWorker() {
  // the worker needs ownership split + ceiling, which enginePlayers() strips
  return S.players.map(p => ({ name: p.name, pos: p.pos, team: p.team, opp: p.opp, gid: p.gid, sal: p.sal, cptSal: p.cptSal,
-   proj: p.proj == null ? 0 : p.proj, cptProj: p.cptProj, ceil: p.ceil, own: p.own || 0, cptOwn: p.cptOwn, lock: !!p.lock, excl: !!p.excl }));
+   proj: p.proj == null ? 0 : p.proj, cptProj: p.cptProj, ceil: p.ceil, own: p.own, cptOwn: p.cptOwn, flexOwn:p.flexOwn, lock: !!p.lock, excl: !!p.excl }));
 }
 function runFrontier() {
  if (!S.players.some(p=>p.proj>0)) {banner('rarityWarn','err','Upload projections first.');return;}
@@ -6795,11 +6815,11 @@ function runFrontier() {
  const snapshot=JSON.stringify(S.players);$('rarityGo').disabled=true;$('paretoStop').hidden=false;$('rarityState').textContent='Enumerating…';banner('rarityWarn',null,null);
  const done=r=>{if(frontWorker){frontWorker.terminate();frontWorker=null;}$('rarityGo').disabled=false;$('paretoStop').hidden=true;if(JSON.stringify(S.players)!==snapshot||S.site!==cfg.site){banner('rarityWarn','warn','Your slate changed. Generate again for the updated slate.');return;}
  if(!r.lineups.length){banner('rarityWarn','warn','No legal lineups under these settings. Lower the salary floor or raise max-per-team.');return;}
- S.lineups=r.lineups;labSelection=null;S.labSubset=false;SIM=null;FRONT=null;S.labStats={...(r.stats||{}),bestProjection:Math.max(...r.lineups.map(l=>l.proj))};S.lineupsMeta={stamp:Date.now(),site:S.site,asked:cfg.count,lab:true,inputKey:labInputKey()};save();renderStrip();renderLineups();renderSolveStats();renderExposure();
+ S.lineups=r.lineups;labSelection=null;S.labSubset=false;SIM=null;FRONT=null;S.labAudit=r.audit;S.labStats={...(r.stats||{}),bestProjection:Math.max(...r.lineups.map(l=>l.proj))};S.lineupsMeta={stamp:Date.now(),site:S.site,asked:cfg.count,lab:true,inputKey:labInputKey(),rulesKey:labRulesKey()};save();renderStrip();renderLineups();renderSolveStats();renderExposure();
  const st=r.stats||{};$('rarityState').textContent=(st.exact?'exact · ':'sampled · ')+(st.legal||r.lineups.length).toLocaleString()+' legal lineups';
  banner('rarityWarn','ok',(st.exact?`<b>Exact.</b> ${st.legal.toLocaleString()} legal lineups from ${st.combos.toLocaleString()} six-player combinations; frontier ${st.frontier}, band ${st.band.toLocaleString()}${st.bandKept<st.band?` (showing ${st.bandKept})`:''}, plus ${Math.min(st.cloud,st.legal).toLocaleString()} cloud dots. `:`Sampled ${r.lineups.length.toLocaleString()} candidates${r.capped?' (search budget hit)':''}. `)+'Simulate the pool or the band to color dots by tournament outcomes.');};
  const fail=e=>{$('rarityGo').disabled=false;$('paretoStop').hidden=true;banner('rarityWarn','err',esc(e.message||'Exploration failed'));if(frontWorker)frontWorker.terminate();frontWorker=null;};
- try{frontWorker=new Worker('dfs-pareto.js?v=20260909');frontWorker.onmessage=e=>{if(e.data.type==='done')done(e.data.result);else if(e.data.type==='error')fail(e.data);else $('rarityState').textContent=e.data.n.toLocaleString()+' legal so far…';};frontWorker.onerror=fail;frontWorker.postMessage({players:labPlayersForWorker(),cfg});}catch(e){fail({message:'This browser could not start the background explorer. Try refreshing the page.'});}
+ try{frontWorker=new Worker('dfs-pareto.js?v=20260910-hygiene');frontWorker.onmessage=e=>{if(e.data.type==='done')done(e.data.result);else if(e.data.type==='error')fail(e.data);else $('rarityState').textContent=e.data.n.toLocaleString()+' legal so far…';};frontWorker.onerror=fail;frontWorker.postMessage({players:labPlayersForWorker(),cfg});}catch(e){fail({message:'This browser could not start the background explorer. Try refreshing the page.'});}
 }
 const labKey = l => (l.cpt != null ? l.cpt + 'c|' : '') + l.ids.slice().sort((a,b)=>a-b).join(',');
 function labSlotOwn(p, isCpt, sd) { return DDPareto.slotOwn(p, isCpt, sd) * 100; }
@@ -6822,7 +6842,7 @@ function labDiagnostics(l) {
  return {slots,own,prod,ceil,dead,minOwn,dupe,issues,salLeft:cap-l.sal,entries};
 }
 function drawRarity(){
- const chart=$('rarityChart'),sd=S.site==='dk_showdown';$('rarityCard').hidden=false;labFillCaptains();labSyncContest();renderLabSource();
+ const chart=$('rarityChart'),sd=S.site==='dk_showdown';$('rarityCard').hidden=false;labFillCaptains();labSyncContest();renderLabSource();renderLabAudit();
  const contest=labContestInfo(),copies=p=>Math.pow(10,p.x)*contest.entries,ownFloor=+$('labOwnFloor').value;
  const poolBest=S.labStats&&S.lineupsMeta&&S.lineupsMeta.inputKey===labInputKey()&&Number.isFinite(S.labStats.bestProjection)?S.labStats.bestProjection:Math.max(0,...S.lineups.map(l=>l.proj));
  $('paretoCountWrap').hidden=sd;
@@ -6837,9 +6857,9 @@ function drawRarity(){
  $('rarityDetail').textContent='Tap a dot to select a lineup. Hover or hold a dot for a quick preview.';
  $('paretoPick').innerHTML='<option value="">Choose a frontier lineup…</option>'+front.map(p=>`<option value="${p.i}">${p.y.toFixed(1)} ${yKey==='ceil'?'ceil':'pts'} · ~${labCopyText(copies(p))} copies · CPT ${esc(S.players[p.l.cpt]?S.players[p.l.cpt].name:'')}</option>`).join('');
  const st=S.labStats||{};
- const exactView=st.exact&&!cptF&&!minOwn&&!hideDead&&yKey!=='ceil'&&!S.labSubset&&ownFloor===0.05;
- $('rarityNote').textContent=(exactView?'Exact frontier over every legal lineup under the Lab settings. ':'Frontier of sampled candidates, not a guarantee over every possible lineup. ')+'Chart copies = slot-ownership product × selected field size. This rough independence model is not a calibrated duplication forecast; shared lineup-building patterns can change actual duplication. Low duplication does not establish GPP suitability, and high duplication does not establish cash-game suitability. Use projection and simulated outcomes alongside duplication. '+(sd?'CPT uses captain ownership; FLEX uses total minus captain; slots under 0.05% are floored. ':'')+(yKey==='ceil'&&!hasCeil?'Ceiling sum needs a Ceiling column in the projections upload; showing projected points. ':'')+'Exposure caps and minimum uniques are not applied to the exploration pool.';
- if(ownFloor>0.05)$('rarityNote').textContent='Sensitivity view: the '+ownFloor+'% minimum is an assumption, not changed source data. This frontier is recomputed from the retained pool, not every legal lineup. '+$('rarityNote').textContent;
+ const exactView=st.exact&&!cptF&&!minOwn&&!hideDead&&yKey!=='ceil'&&!S.labSubset&&ownFloor===0.25;
+ $('rarityNote').textContent=(exactView?'Exact frontier over every legal lineup under the Lab settings. ':'Frontier of sampled candidates, not a guarantee over every possible lineup. ')+'Chart copies = slot-ownership product × selected field size. This rough independence model is not a calibrated duplication forecast; shared lineup-building patterns can change actual duplication. Low duplication does not establish GPP suitability, and high duplication does not establish cash-game suitability. Use projection and simulated outcomes alongside duplication. '+(sd?'CPT uses captain ownership; FLEX uses total minus captain; slots under 0.25% are floored. ':'')+(yKey==='ceil'&&!hasCeil?'Ceiling sum needs a Ceiling column in the projections upload; showing projected points. ':'')+'Exposure caps and minimum uniques are not applied to the exploration pool.';
+ if(ownFloor>0.25)$('rarityNote').textContent='Sensitivity view: the '+ownFloor+'% minimum is an assumption, not changed source data. This frontier is recomputed from the retained pool, not every legal lineup. '+$('rarityNote').textContent;
  if(!pts.length){chart.innerHTML='<p class="note">'+(all.length?'No lineups match the filters.':'Generate candidates after uploading projections and ownership. Showdown also needs captain ownership.')+'</p>';$('rarityStats').hidden=true;return;}
  const W=820,H=450,L=65,R=25,T=30,B=70;
  const rawMin=Math.min(...pts.map(p=>p.x)),rawMax=Math.max(...pts.map(p=>p.x));
@@ -6901,7 +6921,7 @@ function drawRarity(){
  const preview=(p,e)=>{
   if(!p){tip.hidden=true;return;}
   const evidence=labLineupEvidence(p.l),driver=evidence.driver;
-  tip.innerHTML=`<b>Lineup #${p.i+1} · ${p.l.proj.toFixed(1)} projected points</b><br>${lineupSlots(p.l).map(s=>esc(s.slot)+' '+esc(S.players[s.i].name)).join('<br>')}<br><b>~${labCopyText(copies(p))} copies in ${esc(contest.name)}</b><br>${Math.max(0,poolBest-p.l.proj).toFixed(1)} projected points below pool best<br>Rarity driver: ${esc(driver.p.name)} (${driver.raw==null?'missing':fmt(driver.raw,2)+'%'})${evidence.nearZero.length?'<br>⚠ Low-projection player in this lineup':''}<br>${ownFloor>0.05?'Stress-test':'Baseline'} product: ${Math.pow(10,p.x).toExponential(3)}<br>Imported-floor product: ${Math.pow(10,DDPareto.point(p.l,S.players,sd,p.i).x).toExponential(3)}`;
+  tip.innerHTML=`<b>Lineup #${p.i+1} · ${p.l.proj.toFixed(1)} projected points</b><br>${lineupSlots(p.l).map(s=>esc(s.slot)+' '+esc(S.players[s.i].name)).join('<br>')}<br><b>~${labCopyText(copies(p))} copies in ${esc(contest.name)}</b><br>${Math.max(0,poolBest-p.l.proj).toFixed(1)} projected points below pool best<br>Rarity driver: ${esc(driver.p.name)} (${driver.raw==null?'missing':fmt(driver.raw,2)+'%'})${evidence.nearZero.length?'<br>⚠ Low-projection player in this lineup':''}<br>${ownFloor>0.25?'Stress-test':'Baseline'} product: ${Math.pow(10,p.x).toExponential(3)}<br>Imported-floor product: ${Math.pow(10,DDPareto.point(p.l,S.players,sd,p.i).x).toExponential(3)}`;
   tip.hidden=false;const box=chart.getBoundingClientRect();
   tip.style.left=Math.max(8,Math.min(e.clientX-box.left+12,box.width-tip.offsetWidth-8))+'px';
   tip.style.top=Math.max(0,e.clientY-box.top-tip.offsetHeight-14)+'px';
@@ -7482,7 +7502,7 @@ $('paretoColor').addEventListener('change', drawRarity);
  }
  S.labContest={preset,custom:Number($('labCustomField').value)};save();drawRarity();
 }));
-['labY','labCpt','labMinOwn','labHideDead','labBand','labOwnFloor'].forEach(id => $(id).addEventListener('change', () => { if (S.lineups.length) drawRarity(); }));
+['labY','labCpt','labMinOwn','labHideDead','labBand','labOwnFloor','labMinSal','labMaxTeam'].forEach(id => $(id).addEventListener('change', () => { if (S.lineups.length) drawRarity(); }));
 $('labSimBand').addEventListener('click', () => { const b = new Set(S.labBand || []); if (!b.size) { banner('rarityWarn','warn','Generate a pool first.'); return; } const keep = S.lineups.filter((l, i) => b.has(i)); if (!keep.length) return; S.lineups = keep; S.labSubset = true; SIM = null; S.labBand = keep.map((_, i) => i); S.lineupsMeta = { stamp: Date.now(), site: S.site, asked: keep.length, lab: true }; save(); renderStrip(); renderLineups(); renderSolveStats(); show('sim'); runSim(); });
 $('paretoSim').addEventListener('click', () => { show('sim'); runSim(); });
 $('paretoStop').addEventListener('click', () => { if(frontWorker)frontWorker.terminate();frontWorker=null;$('rarityGo').disabled=false;$('paretoStop').hidden=true;$('rarityState').textContent='Stopped; previous pool retained'; });
@@ -7632,7 +7652,8 @@ function applyMappedSlate(r) {
     const previous = S.players.find(x => normName(x.name) === normName(p.name) && x.team === p.team && x.sal === p.sal);
     if (previous) ["proj", "own", "cptProj", "cptOwn", "ceil"].forEach(k => { if (previous[k] != null) p[k] = previous[k]; });
   });
-  S.players = r.players; S.demo = false; S.lineups = []; SIM = null;
+  S.players = r.players; S.demo = false; S.lineups = []; S.labPins=[];S.labAudit=null;SIM = null;
+  recordLabSource(text,label||'Pasted CSV',r.projectionInfo);
   save();
   renderStrip(); renderPool(); renderLineups(); renderSolveStats(); renderExposure();
   $("stackCard").hidden = E.SITES[S.site].showdown;
@@ -7736,11 +7757,11 @@ function doSalaries(text,label) {
   if (!String(text || "").trim()) { banner("slateWarn", "err", "<b>Nothing to read.</b> Choose the DraftKings CSV or paste its contents."); return; }
   const r = DDFSIngest.readUpload(text, S.players);
   if (r.error) { banner("slateWarn", "err", "<b>Could not read that file.</b> " + esc(r.error)); return; }
-  recordLabSource(text,label||'Pasted CSV',r.projectionInfo);
   const wantShowdown = r.showdown;
   S.site = wantShowdown ? "dk_showdown" : "dk_classic";
   $("siteSel").value = S.site;
-  S.players = r.players; S.demo = false; S.lineups = []; SIM = null;
+  S.players = r.players; S.demo = false; S.lineups = []; S.labPins=[];S.labAudit=null;SIM = null;
+  recordLabSource(text,label||'Pasted CSV',r.projectionInfo);
   save();
   renderStrip(); renderPool(); renderLineups(); renderSolveStats(); renderExposure();
   $("stackCard").hidden = E.SITES[S.site].showdown;
@@ -7768,7 +7789,7 @@ function doProjections(map) {
     banner("slateWarn", "err", "<b>" + esc(r.error) + "</b>");
     return;
   }
-  recordLabSource(text,'Pasted projections',r);
+  recordLabSource(text,'Pasted projections',r);S.labPins=[];S.labAudit=null;
   $("mapBox").hidden = true;
   S.lineups = []; SIM = null; FRONT = null;
   save(); renderPool(); renderStrip();
