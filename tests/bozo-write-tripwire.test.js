@@ -14,6 +14,7 @@ test('every Bozo collection clear emits the structured null-write tripwire', () 
     '/league/delete',
     '/league/member',
     '/bozo/pick remove',
+    '/bozo/pick proxy remove',
     '/bozo/next',
   ]) {
     assert.match(worker, new RegExp(`bozoNullWriteTripwire\\("${route.replace('/', '\\/')}`), route);

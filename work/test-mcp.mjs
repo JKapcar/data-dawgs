@@ -16,8 +16,9 @@ const makeSlate = require("./mkslate.js");
 // Counts are pinned deliberately: a tool appearing or vanishing should break a test, not
 // slip through. They live here so adding a tool is one edit, not nine.
 // ⚠️ COUNTS, NOT A GUESS — bump these in the same commit that adds or retires a tool.
-// 57 = 25 core + 32 full, including account-scoped fantasy league discovery.
-const N_TOOLS = 57, N_CORE = 25;
+// 58 = 26 core + 32 full, including account-scoped fantasy league discovery and the
+// Phase 2.7 dd_bozo_admin_actions audit read (core).
+const N_TOOLS = 58, N_CORE = 26;
 const WRITE_TOOLS = ["dd_submit_bozo_leg", "sd_start_session", "sd_log_set", "sd_log_sets",
                      "sd_finish_session", "sd_log_measurement", "sd_log_nutrition"];
 let pass = 0, fail = 0;

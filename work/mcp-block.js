@@ -1960,7 +1960,10 @@ async function mcpAuth(request, url, env) {
     if (!hit) return null;
     const display = hitUser && typeof hitUser.name === "string" && hitUser.name.trim()
       ? hitUser.name.trim() : hit;
-    return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser) };
+    return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser),
+      // ⚠️ The account's role flags, read here so isSiteAdmin() has one shape to check.
+      // Never derived from anything the caller sent.
+      roles: (hitUser && hitUser.roles && typeof hitUser.roles === "object") ? hitUser.roles : null };
   }
 
   if (env.DAWG_PASS && timingSafeEqual(supplied, env.DAWG_PASS)) return { kind: "shared" };
@@ -2148,7 +2151,8 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
 }
 
 /* ------------------------------- the tools ------------------------------- */
-// All read-only except dd_submit_bozo_leg (two-phase, own leg only — see the tool).
+// All read-only except dd_submit_bozo_leg (two-phase; your own leg, or another member's
+// leg if you are this league's manager — see the tool).
 // Data tools use the same Firebase paths, KV keys and published pages
 // the site itself uses; calculator tools mirror work/pound-core.js and are parity-tested.
 
@@ -2172,7 +2176,7 @@ const MCP_TOOLS = [
           player: caller.name, anonymous: false,
           // Read everything, write one thing: your own Bozo leg, two-phase. Stated here
           // because "read-only" was a published claim and its retirement should be too.
-          access: "read-only, except your own Bozo leg via dd_submit_bozo_leg (two-phase confirm)",
+          access: "read-only, except a Bozo leg via dd_submit_bozo_leg (two-phase confirm): your own, or another member's if you manage that league",
           // This caller's own subscription state, from their own record. Everything on the
           // site is free today: plan is "free" for every account and NOTHING is gated on
           // it, so never tell a user a tool is being withheld from them on this basis.
@@ -2333,6 +2337,12 @@ const MCP_TOOLS = [
           fairEntry: x.fairEntry ?? null, entryHold: x.entryHold ?? null,
           canonicalKey: x.canonicalKey || null, providerEventIds: x.providerEventIds || {},
           startsAt: x.startsAt || null, label: x.label, prop: x.prop || null, ts: x.ts || null,
+          // ⚠️ Provenance (Phase 2.7). Display names, never keys. A leg written before proxy
+          // submit existed has neither field and reads as self-submitted.
+          submittedBy: x.commissionerModified === true
+            ? (x.submittedByName || memberNameAt(lg, x.submittedBy || "") || null)
+            : (x.who || playerName(k)),
+          commissionerModified: x.commissionerModified === true,
           // The close, once the kickoff cron has snapped it. Null until then, and null
           // FOREVER for legs it could not match — with the reason attached, so a missing
           // close is never mistaken for a leg that did not move.
@@ -2443,6 +2453,7 @@ const MCP_TOOLS = [
         prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
         startsAt: { type: "string", description: "Kickoff ISO timestamp. Optional when eventId resolves from the Worker schedule cache; otherwise required." },
         league: { type: "string", description: "League id (default: main)" },
+        forUid: { type: "string", description: "Draft FOR another member (their member key or display name). Only this league's manager or the site admin may; the leg is marked commissionerModified and timestamped at the manager's write, never backdated. Omit for your own leg." },
       },
       required: ["sport", "eventId", "game", "mkt", "side", "label"],
       additionalProperties: false,
@@ -2465,8 +2476,12 @@ const MCP_TOOLS = [
       catch (e) { return toolErr("Database unreachable: " + e.message); }
       if (!lg) return toolErr("No such league: " + lid);
 
-      if (!isMember(lg, name))
-        return toolErr("You are not in " + lid + ", so nothing can go on that board under your name.");
+      // ⚠️ WHOSE seat (Phase 2.7): your own, or another member's if you manage this league
+      // and named them with forUid. Resolved server-side; the argument names a target only.
+      const seat = bozoTargetSeat(lg, caller, env, args.forUid);
+      if (seat.error)
+        return toolErr(args.forUid ? seat.error : "You are not in " + lid + ", so nothing can go on that board under your name.");
+      const who = seat.name, mkey = seat.key, proxy = seat.proxy;
 
       const status = lg.status || "open";
       if (status !== "open")
@@ -2479,7 +2494,7 @@ const MCP_TOOLS = [
 
       const set = settingsOf(lg);
       const picks = lg.picks || {};
-      const mine = picks[memberKeyOf(lg, caller) || ""] || null;
+      const mine = picks[mkey] || null;
       if (mine && !set.allowEdit)
         return toolText({
           accepted: false, reason: "edits-locked",
@@ -2509,7 +2524,7 @@ const MCP_TOOLS = [
       // ⚠️ THE SERVER'S OWN VALIDATOR, not a copy of its rules. A second copy would drift
       // and start passing legs /bozo/pick rejects, which is worse than no check at all.
       const band = bandOf(lg);
-      const err = validatePick(p, name, picks, band, set.format);
+      const err = validatePick(p, who, picks, band, set.format, mkey);
       if (err)
         return toolText({
           accepted: false, reason: "rejected-by-the-same-validator-the-server-runs",
@@ -2530,12 +2545,14 @@ const MCP_TOOLS = [
       return toolText({
         accepted: true,
         league: lid, week: lg.week || 1, you: name,
+        forName: proxy ? who : undefined,
+        commissionerModified: proxy || undefined,
         editingAnExistingLeg: !!mine,
         // ⚠️ Editing resets your clock. The server stamps a fresh ts, and ts is what
         // decides Last In — so an edit is not free even when it is allowed.
         editResetsYourClock: !!mine || undefined,
         submit: {
-          how: "Use dd_submit_bozo_leg with the same selection fields. It performs its own fresh phase-one capture and returns a confirmation code.",
+          how: "Use dd_submit_bozo_leg with the same selection fields" + (proxy ? " and the same forUid" : "") + ". It performs its own fresh phase-one capture and returns a confirmation code.",
         },
         willBeStoredAs: {
           ...p,
@@ -2577,7 +2594,9 @@ const MCP_TOOLS = [
     readOnlyHint: false,
     destructiveHint: true,   // an edit overwrites your existing leg and resets your clock
     description:
-      "Submit (or replace) YOUR OWN leg on the live Bozo board. TWO-PHASE, and phase one writes " +
+      "Submit (or replace) YOUR OWN leg on the live Bozo board — or another member's leg, via forUid, " +
+      "if you are this league's manager or the site admin (the leg is marked commissionerModified and " +
+      "timestamped at YOUR write, never backdated; the absent member carries the Last In exposure). TWO-PHASE, and phase one writes " +
       "nothing: call with the bet fields and it validates against the live board, then returns a " +
       "plain-English echo of the parsed bet plus a confirm_code. ⚠️ SHOW THE HUMAN THE ECHO and only " +
       "call again with {confirm: code} after they have approved it — the echo is what stops a " +
@@ -2601,6 +2620,7 @@ const MCP_TOOLS = [
         priceOpp: { type: "number", description: "Deprecated input; the Worker captures the opposite DraftKings side itself." },
         startsAt: { type: "string", description: "Kickoff ISO timestamp. Optional when eventId resolves from the Worker schedule cache; phase two needs only confirm." },
         league: { type: "string", description: "League id (default: main)" },
+        forUid: { type: "string", description: "Submit FOR another member (their member key or display name). Only this league's manager or the site admin may. Phase one only; phase two needs just confirm." },
         confirm: { type: "string", description: "PHASE TWO ONLY: the confirm_code returned by phase one, after the human approved the echo. Sends the bet." },
       },
       anyOf: [
@@ -2648,8 +2668,12 @@ const MCP_TOOLS = [
         try { lg = await loadLeague(env, lid); }
         catch (e) { return toolErr("Database unreachable: " + e.message); }
         if (!lg) return toolErr("No such league: " + lid);
-        if (!isMember(lg, name))
-          return toolErr("You are not in " + lid + " any more, so nothing can go on that board under your name.");
+        // ⚠️ WHOSE seat, re-resolved from the frozen proposal — the manager role is
+        // re-checked here too, so a demotion between propose and confirm writes nothing.
+        const seat = bozoTargetSeat(lg, caller, env, pend.forUid || null);
+        if (seat.error)
+          return toolErr(pend.forUid ? seat.error : "You are not in " + lid + " any more, so nothing can go on that board under your name.");
+        const who = seat.name, proxy = seat.proxy;
         if ((lg.week || 1) !== pend.week) {
           try { await env.RL.put(kvKey, "null", { expirationTtl: 60 }); } catch {}
           return toolText({ status: "stale", detail: "The league moved to week " + (lg.week || 1) + " since this was proposed for week " + pend.week + ". Propose again on the current board." });
@@ -2658,9 +2682,9 @@ const MCP_TOOLS = [
         const picks = lg.picks || {};
         // One resolution, reused by every check below and by the write itself, so an
         // MCP leg can never land under a different key than the site form would use.
-        const mkey = memberKeyOf(lg, caller);
-        if (!mkey)
-          return toolText({ status: "not-a-member", detail: "You are not in this league." });
+        const mkey = seat.key;
+        if (pend.forKey && pend.forKey !== mkey)
+          return toolText({ status: "stale", detail: "That proposal was for a different member. Propose again." });
         const landed = picks[mkey];
         if (landed && landed.submissionId === code)
           return toolText({ status: "submitted", replayed: true, league: lid, week: pend.week,
@@ -2673,16 +2697,26 @@ const MCP_TOOLS = [
           return toolText({ status: "edits-locked", detail: "This league locks your leg the moment it lands, and yours is already in." });
         if (set.format === "royale" && !royaleAliveKey(lg, mkey))
           return toolText({ status: "chopped", detail: "You're out this season — you fund the ticket, you don't have a leg on it." });
-        const err = validatePick(pend.p, name, picks, bandOf(lg), set.format, mkey);
+        const err = validatePick(pend.p, who, picks, bandOf(lg), set.format, mkey);
         if (err) {
           try { await env.RL.put(kvKey, "null", { expirationTtl: 60 }); } catch {}
           return toolText({ status: "rejected", detail: "The board changed since this was proposed and the leg no longer passes: " + err + " Propose again." });
         }
 
         // The same single write path the site form uses, stamped as agent-submitted.
-        const out = await commitBozoLeg(env, lid, lg, name, pend.p, "mcp", mkey);
+        const { pick: written, ...out } = await commitBozoLeg(env, lid, lg, who, pend.p, "mcp", mkey,
+          { uid: caller.uid || null, name: caller.name, proxy });
+        // Audit row on a PROXY write only (Phase 2.7). bozoAdminAction lives in the
+        // hand-written half of the Worker; this block still calls no Firebase write helper
+        // itself, and assemble.mjs pins this call to exactly one place.
+        let audit;
+        if (proxy) audit = await bozoAdminAction(env, lid, {
+          type: landed ? "proxy_edit" : "proxy_submit", byUid: caller.uid || null, byName: caller.name,
+          forUid: mkey, forName: who, leagueId: lid, week: pend.week,
+          before: landed || null, after: written, ticketWasPlaced: false, via: "mcp" });
         const result = {
           status: "submitted", league: lid, week: pend.week, you: name,
+          ...(proxy ? { forName: who, commissionerModified: true, audit } : {}),
           leg: { label: pend.p.label, line: pend.p.line, price: pend.p.price,
                  priceOpp: pend.p.priceOpp, priceSource: pend.p.priceSource, game: pend.p.game },
           ts: out.ts, via: "mcp",
@@ -2704,18 +2738,24 @@ const MCP_TOOLS = [
       try { lg = await loadLeague(env, lid); }
       catch (e) { return toolErr("Database unreachable: " + e.message); }
       if (!lg) return toolErr("No such league: " + lid);
-      if (!isMember(lg, name))
-        return toolErr("You are not in " + lid + ", so nothing can go on that board under your name.");
+      // ⚠️ WHOSE seat (Phase 2.7): your own, or another member's if you manage this league
+      // and named them with forUid. Resolved server-side; the argument names a target only.
+      const seat = bozoTargetSeat(lg, caller, env, args.forUid);
+      if (seat.error)
+        return toolErr(args.forUid ? seat.error : "You are not in " + lid + ", so nothing can go on that board under your name.");
+      const who = seat.name, mkey = seat.key, proxy = seat.proxy;
       if ((lg.status || "open") !== "open")
         return toolText({ status: "board-locked", detail: "The ticket is placed and the board is locked — nothing can be added or changed for week " + (lg.week || 1) + ". The lever hierarchy has already been drawn." });
 
       const set = settingsOf(lg);
       const picks = lg.picks || {};
-      const mine = picks[memberKeyOf(lg, caller) || ""] || null;
+      const mine = picks[mkey] || null;
       if (mine && !set.allowEdit)
         return toolText({ status: "edits-locked", detail: "This league locks your leg the moment it lands, and yours is already in — no edit is possible, by league setting.", yourExistingLeg: { label: mine.label, price: mine.price, ts: mine.ts || null } });
-      if (set.format === "royale" && !royaleAlive(lg, name))
-        return toolText({ status: "chopped", detail: "You're out this season — you fund the ticket, you don't have a leg on it." });
+      if (set.format === "royale" && !royaleAliveKey(lg, mkey))
+        return toolText({ status: "chopped", detail: proxy
+          ? who + " is out this season — they fund the ticket, they don't have a leg on it."
+          : "You're out this season — you fund the ticket, you don't have a leg on it." });
 
       // Shape the selection, then resolve and freeze its live DraftKings quote. No RTDB
       // write occurs in this phase; the pending KV record is the confirmation envelope.
@@ -2738,7 +2778,7 @@ const MCP_TOOLS = [
       const p = captured.p;
       // ⚠️ The server's own validator, same as the site form and dd_draft_bozo_leg.
       const band = bandOf(lg);
-      const err = validatePick(p, name, picks, band, set.format);
+      const err = validatePick(p, who, picks, band, set.format, mkey);
       if (err)
         return toolText({ status: "rejected", detail: err, band,
           captured: { line: p.line, price: p.price, priceOpp: p.priceOpp },
@@ -2753,11 +2793,13 @@ const MCP_TOOLS = [
       // plain English before anything can happen. Consequences ride in the same sentence.
       const echo =
         p.label + " — " + p.game + ", " + (p.mkt === "ml" ? "moneyline" : p.mkt + " " + p.line) +
-        " at " + p.price + " (opposite side " + (p.priceOpp == null ? "not captured" : p.priceOpp) + "), for " + name + ", week " + (lg.week || 1) + " in league " + lid + "." +
+        " at " + p.price + " (opposite side " + (p.priceOpp == null ? "not captured" : p.priceOpp) + "), for " + who +
+        (proxy ? " (submitted by " + name + " as league manager; marked as such and stamped with the server time of the confirm, not backdated)" : "") +
+        ", week " + (lg.week || 1) + " in league " + lid + "." +
         (captured.agreement ? " Typed check " + captured.agreement.typedPrice + " vs captured " + captured.agreement.capturedPrice +
           " (" + captured.agreement.probabilityPointDifference.toFixed(2) + " probability points apart" +
           (captured.agreement.needsConfirmation ? "; explicit confirmation required" : "") + ")." : "") +
-        (mine ? " ⚠️ This REPLACES your current leg (" + mine.label + " at " + mine.price + ") and resets your submission clock — that moves you in the Last In lever." : "") +
+        (mine ? " ⚠️ This REPLACES " + (proxy ? who + "'s" : "your") + " current leg (" + mine.label + " at " + mine.price + ") and resets " + (proxy ? "their" : "your") + " submission clock — that moves " + (proxy ? "them" : "you") + " in the Last In lever." : "") +
         (wouldLock ? " ⚠️ THIS IS THE LAST LEG: confirming places the ticket, locks the board for all " + size + " and draws the lever hierarchy. No undo." : "");
 
       const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -2770,7 +2812,9 @@ const MCP_TOOLS = [
       // ⚠️ The pending record is the ONLY thing written in phase one, it lives in KV —
       // never Firebase — and it expires on its own. Nothing on the board changes here.
       try {
-        await env.RL.put(kvKey, JSON.stringify({ code, lid, week: lg.week || 1, p, echo, ts: Date.now() }), { expirationTtl: 300 });
+        // The TARGET rides in the envelope, so phase two re-resolves and re-gates it.
+        await env.RL.put(kvKey, JSON.stringify({ code, lid, week: lg.week || 1, p, echo, ts: Date.now(),
+          forUid: proxy ? mkey : null, forKey: mkey }), { expirationTtl: 300 });
       } catch (e) { return toolErr("Could not stage the confirmation: " + e.message); }
 
       return toolText({
@@ -2778,6 +2822,7 @@ const MCP_TOOLS = [
         echo,
         confirm_code: code,
         expires_in: 300,
+        forName: proxy ? who : undefined,
         editingAnExistingLeg: !!mine,
         wouldLockTheBoard: wouldLock,
         captured: { line: p.line, price: p.price, priceOpp: p.priceOpp,
@@ -2788,6 +2833,37 @@ const MCP_TOOLS = [
         warning: captured.captureWarning || null,
         note: "NOTHING has been submitted. Show the human the echo verbatim; only after they approve, call this tool again with {confirm: \"" + code + "\"}.",
       });
+    },
+  },
+  {
+    name: "dd_bozo_admin_actions",
+    title: "Commissioner actions this week",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "Every leg the league manager (or site admin) submitted, edited or removed ON BEHALF of another member this week — the audit trail behind any leg marked commissionerModified. Display names only. Empty means nobody has acted for anyone. Proxy legs carry the server time of the manager's write, never a backdated one.",
+    inputSchema: { type: "object", properties: {
+      league: { type: "string", description: "League id (default: main)" },
+      week: { type: "integer", description: "Week to read (default: the league's current week)" },
+    }, additionalProperties: false },
+    async run(args, env) {
+      const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
+      if (!lid) return toolErr("Bad league id.");
+      const lg = await loadLeague(env, lid);
+      if (!lg) return toolErr("No such league: " + lid);
+      const week = Number.isInteger(args.week) && args.week > 0 ? args.week : (lg.week || 1);
+      const brief = x => x ? { label: x.label, line: x.line ?? null, price: x.price ?? null, ts: x.ts || null } : null;
+      const actions = Object.entries((lg.admin && lg.admin.actions) || {})
+        .map(([key, r]) => ({ ts: (r && Number(r.ts)) || parseInt(key, 10) || 0, r }))
+        .filter(({ r }) => r && (r.week || 1) === week)
+        .sort((a, b) => a.ts - b.ts)
+        .map(({ ts, r }) => ({
+          at: ts ? new Date(ts).toISOString() : null, type: r.type,
+          by: r.byName || null, for: r.forName || null, week: r.week || 1,
+          via: r.via || "site", before: brief(r.before), after: brief(r.after),
+        }));
+      return toolText({ league: lid, week, actions,
+        note: actions.length ? undefined : "No commissioner actions this week.",
+        caveats: ["A proxy leg's ts is the manager's write time (D20) — not when the member decided."] });
     },
   },
   {

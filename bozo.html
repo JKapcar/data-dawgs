@@ -3804,6 +3804,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <div class="card" id="submitCard" style="display:none">
   <h2 class="bz" id="submitH">Your leg</h2>
   <div class="frm">
+    <!-- Phase 2.7: the manager can file a leg FOR an absent member. Painted only for the
+         manager; the Worker re-checks the role from the session and the stored roster, so
+         this is display, not enforcement. Value = member KEY, never a typed name. -->
+    <div class="f w4" id="asWrap" style="display:none"><label>Submitting as</label><select id="fAs"></select></div>
     <div class="f"><label>Sport</label><select id="fSport"></select></div>
     <div class="f w2"><label>Game</label><select id="fGame"><option value="">Loading…</option></select></div>
     <div class="f"><label>Market</label><select id="fMkt">
@@ -4048,6 +4052,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="slipbar" id="slipBar"></div>
   <div class="slip" id="board"></div>
   <p class="note" id="placeNote"></p>
+  <!-- Phase 2.7: every leg the manager filed for someone else this week, from the
+       league's admin/actions audit node. Hidden when empty. Phase 6 extends this. -->
+  <p class="note" id="adminActions" style="display:none"></p>
 </div>
 
 <!-- ---------- diagnostics ---------- -->
@@ -4347,6 +4354,12 @@ function priceNum(raw){
 }
 const favPrice = raw => { const n = priceNum(raw); return Number.isFinite(n) ? -Math.abs(n) : NaN; };
 const fmtPrice = n => (n > 0 ? '+' : '') + n;
+// Phase 2.7: a leg the manager filed on a member's behalf is visibly marked, always.
+// The manager's name rides on the leg itself (submittedByName), like `who`, so the badge
+// survives a rename or a departure. Legs from before proxy submit have no flag.
+const proxyBadge = x => x && x.commissionerModified === true
+  ? `<span class="cst warn" title="Filed by the league manager on this member's behalf. Timestamped at the manager's write, not backdated — the member carries the Last In exposure.">submitted by ${esc(x.submittedByName || 'the manager')}</span>`
+  : '';
 const priceSourceBadge = x => x && x.priceSource === 'captured'
   ? '<span class="cst ok" title="Both sides captured from DraftKings through SGO">DK captured</span>'
   : '<span class="cst warn" title="Self-priced; no two-sided captured entry, so this leg is excluded from CLV">self · no CLV</span>';
@@ -4713,6 +4726,36 @@ const allAccounts = () => ROSTER.map(p=>p.name);
 // isManager runs THIS league. The Worker enforces both — this only decides what shows.
 const isAdmin = () => !!ME && ME.name === ADMIN;
 const isManager = () => !!ME && (isAdmin() || (league()?.manager) === ME.name);
+
+/* ---------------- Phase 2.7: submitting as another member ----------------
+   The manager can file, replace or remove a leg FOR an absent member. The select below
+   is painted only for the manager, and its value is the member KEY (uid, or the legacy
+   name key) so a rename between paint and submit cannot redirect the write. The Worker
+   is the enforcer: identity from the session, role from the stored roster. */
+function paintAsSelect(){
+  const wrap=document.getElementById('asWrap'), sel=document.getElementById('fAs');
+  if(!wrap||!sel) return;
+  if(!ME || !isManager()){ wrap.style.display='none'; sel.innerHTML=''; return; }
+  const meKey = kEnc(ME.name), keep = sel.value;
+  // Active roster only: a chopped Royale member funds the ticket and gets no leg, and the
+  // Worker would 409 anyway. Names through esc() — a display name is user text.
+  const opts = Object.keys((S&&S.members)||{})
+    .map(k=>({k, n:memberLabel(k)}))
+    .filter(o=>o.k!==meKey && !(royaleOf(o.n) && royaleOf(o.n).alive===false))
+    .sort((a,b)=>a.n.localeCompare(b.n));
+  sel.innerHTML = `<option value="${esc(meKey)}">Myself (${esc(ME.name)})</option>`
+    + opts.map(o=>`<option value="${esc(o.k)}">${esc(o.n)}</option>`).join('');
+  sel.value = (keep && [...sel.options].some(o=>o.value===keep)) ? keep : meKey;
+  wrap.style.display='';
+}
+// {key, name} of the member the form is filing for, or null when it is the signed-in
+// member's own leg. Self is the default and the reset state after every write.
+const proxyTarget = () => {
+  const sel=document.getElementById('fAs');
+  if(!ME || !sel || !sel.value || sel.value===kEnc(ME.name)) return null;
+  return {key:sel.value, name:memberLabel(sel.value)};
+};
+const resetAsSelect = () => { const sel=document.getElementById('fAs'); if(sel && ME) sel.value=kEnc(ME.name); };
 
 /* ---------------- league config (the manager's dials) ---------------- */
 // The Worker is the enforcer (validatePick reads /bozo/config); this mirror only
@@ -5524,10 +5567,19 @@ function render(){
   // get one: they fund the ticket, they don't bet on it.
   const meAlive = !ME || !isRoyale() || (royaleOf(ME.name)?.alive !== false);
   document.getElementById('submitCard').style.display = (ME && open && onWeek && meAlive) ? '' : 'none';
-  document.getElementById('submitH').textContent = mine ? 'Your leg — editing resets your clock and price' : 'Your leg';
+  // Phase 2.7 — the manager may be filing FOR someone else; the card's wording follows
+  // the selected seat, and the Worker gates every write against that seat.
+  paintAsSelect();
+  const tgt = proxyTarget();
+  const tLeg = tgt ? (picks[tgt.key] || null) : mine;
+  document.getElementById('submitH').textContent = tgt
+    ? ('Leg for ' + tgt.name + (tLeg ? ' — replacing it resets their clock and price' : ''))
+    : (mine ? 'Your leg — editing resets your clock and price' : 'Your leg');
+  const cmBtn=document.getElementById('clearMine');
+  if(cmBtn) cmBtn.textContent = tgt ? ('Remove ' + tgt.name + "'s leg") : 'Remove my leg';
   document.getElementById('bandNote').textContent =
     `Favorites only, ${bd.ceil} to ${bd.floor} — the minus is already in the box, just type the number. No exact duplicates. Editing resets your clock and your price. The ticket locks the moment the last leg lands.`;
-  const cm=document.getElementById('clearMine'); if(cm) cm.style.display = mine ? '' : 'none';
+  const cm=document.getElementById('clearMine'); if(cm) cm.style.display = tLeg ? '' : 'none';
 
   // Two destinations, one source. The banner is news and sits under the header; the log
   // is a receipt and sits at the bottom of the board.
@@ -5563,6 +5615,7 @@ function render(){
   }
 
   paintSlip(players, picks, status, live);
+  paintAdminActions();
 
   document.getElementById('placeNote').textContent = open
     ? `Locks when every leg is in — ${Math.max(0, expected-live.length)} to go. That moment is the close for the ticket, and the server draws the hierarchy on the spot.`
@@ -6052,19 +6105,44 @@ async function submitLeg(){
     startsAt: g.start || null};
   const btn=document.getElementById('save'); btn.disabled=true;
   try{
-    const proposal = await wPost('/bozo/pick', {captureVersion:1, pick});
+    // Phase 2.7: when the manager is filing for someone else, BOTH phases name the
+    // target. The Worker resolves the seat from that key and the role from the session.
+    const tgt = proxyTarget();
+    const forUid = tgt ? {forUid: tgt.key} : {};
+    const proposal = await wPost('/bozo/pick', {captureVersion:1, pick, ...forUid});
     const agreement = proposal.agreement && proposal.agreement.needsConfirmation
       ? `\n\nYour check was ${fmtPrice(proposal.agreement.typedPrice)}; the captured price is ${fmtPrice(proposal.agreement.capturedPrice)} (${proposal.agreement.probabilityPointDifference.toFixed(2)} probability points apart).`
       : '';
     if(!window.confirm(proposal.echo + agreement + '\n\nNothing has been submitted yet. Submit this exact captured quote?')){
       e.textContent='Nothing submitted.'; btn.disabled=false; return;
     }
-    const res = await wPost('/bozo/pick', {confirm:proposal.confirm_code});
+    const res = await wPost('/bozo/pick', {confirm:proposal.confirm_code, ...forUid});
     e.className='err ok';
-    e.textContent = res.placed ? 'In — and that was the last leg. Ticket is locked.' : 'Submitted.';
+    e.textContent = (res.placed ? 'In — and that was the last leg. Ticket is locked.' : 'Submitted.')
+      + (res.forName ? ' Filed for ' + res.forName + ' and logged as a commissioner action.' : '');
+    resetAsSelect();
     await refresh();
   }catch(err){ e.className='err'; e.textContent=err.message; }
   btn.disabled=false;
+}
+
+/* ---------------- Phase 2.7: commissioner actions this week ----------------
+   One line per admin/actions row for the current week. The rows are written by the
+   Worker on PROXY writes only — a self-submit never lands here — so an empty list means
+   nobody acted for anyone, and the block hides. Names through esc(); they are user text. */
+function paintAdminActions(){
+  const el=document.getElementById('adminActions'); if(!el) return;
+  const wk = S.week||1;
+  const rows = Object.entries((S.admin&&S.admin.actions)||{})
+    .map(([key,r])=>({ts:(r&&Number(r.ts))||parseInt(key,10)||0, r}))
+    .filter(({r})=>r && (r.week||1)===wk)
+    .sort((a,b)=>a.ts-b.ts);
+  if(!rows.length){ el.style.display='none'; el.innerHTML=''; return; }
+  const verb = t => t==='proxy_remove' ? 'removed the leg of' : t==='proxy_edit' ? 'replaced the leg of' : 'submitted for';
+  el.innerHTML = '<b>Commissioner actions this week</b><br>' + rows.map(({ts,r})=>
+    `${esc(when(ts))} · ${esc(r.byName||'?')} ${verb(r.type)} ${esc(r.forName||'?')}`
+    + (r.after && r.after.label ? ` — ${esc(r.after.label)}` : '')).join('<br>');
+  el.style.display='';
 }
 
 /* ---------------- the ticket, as a parlay slip ----------------
@@ -6126,7 +6204,7 @@ function paintSlip(players, picks, status, live){
     return `<li class="${cls}"><span class="mk">${mark}</span>
       <span><span class="who2">${esc(teamOf(p))}${chute(p)}${belt===p?'<span class="beltcrest" role="img" aria-label="Wearing the belt"></span>':''}</span>
       <span class="sel">${esc(x.label)}${isLastIn?'<span class="lastin">last in</span>':''}</span>
-      <span class="mkt">${sub} · ${priceSourceBadge(x)}</span></span>
+      <span class="mkt">${sub} · ${priceSourceBadge(x)}${proxyBadge(x)}</span></span>
       <span class="rt"><span class="pxv">${x.price>0?'+':''}${x.price}</span>
       <span class="tin">${when(x.ts)}</span></span></li>`;
   }).join('');
@@ -6524,7 +6602,7 @@ function paintDiag(live, players, status){
       const mine = ME && x.p===ME.name ? ' class="me"' : '';
       const by = R.by[i];
       return `<tr${mine}><td class="who">${esc(teamOf(x.p))}</td>
-        <td class="pk">${esc(x.label)} <span class="px">${x.price>0?'+':''}${x.price}</span> ${priceSourceBadge(x)}${(x.mkt==='prop'||x.mkt==='other')?` <span class="tm">· ${x.mkt}</span>`:''}</td>
+        <td class="pk">${esc(x.label)} <span class="px">${x.price>0?'+':''}${x.price}</span> ${priceSourceBadge(x)}${proxyBadge(x)}${(x.mkt==='prop'||x.mkt==='other')?` <span class="tm">· ${x.mkt}</span>`:''}</td>
         <td data-l="Leg wins"><span class="mcell"><span class="v">${pct(R.win[i])}</span>${meter(R.win[i])}</span></td>
         <td data-l="Bozo odds"><span class="mcell"><span class="v">${pct(R.bozo[i])}</span>${meter(R.bozo[i],true)}</span></td>
         <td class="px" data-l="Killed it alone">${pct(R.solo[i])}</td>
@@ -7516,7 +7594,14 @@ async function loadRoster(){
 document.getElementById('save').onclick = submitLeg;
 document.getElementById('clearMine').onclick = async ()=>{
   const e=document.getElementById('err'); e.className='err'; e.textContent='';
-  try{ await wPost('/bozo/pick',{action:'remove'}); await refresh(); }
+  // Phase 2.7: removing ANOTHER member's leg names them in the dialog and in the body.
+  const tgt = proxyTarget();
+  if(tgt && !window.confirm(`Remove ${tgt.name}'s leg from the board? This is logged as a commissioner action.`)) return;
+  try{
+    await wPost('/bozo/pick', tgt ? {action:'remove', forUid:tgt.key} : {action:'remove'});
+    resetAsSelect();
+    await refresh();
+  }
   catch(err){ e.textContent=err.message; }
 };
 document.getElementById('autoGrade').onclick = autoGrade;
@@ -7533,6 +7618,7 @@ document.getElementById('fSport').innerHTML =
 document.getElementById('fSport').onchange = ()=>loadGames(fSport.value);
 document.getElementById('fGame').onchange = paintSides;
 document.getElementById('fMkt').onchange = ()=>{ paintSides(); paintPriceWarn(); };
+document.getElementById('fAs').onchange = ()=>{ render(); };
 /* ⚠️ Registered BEFORE paintPriceWarn, so the warning never reads a half-cleaned box.
    Strips anything that isn't a digit — a pasted "-238", a stray "." from that same
    double-duty keypad key — because the sign is painted beside the box, not typed into

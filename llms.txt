@@ -6,7 +6,7 @@
 Start with [`/data/index.json`](/data/index.json): dates, sizes and SHA-256 for every
 machine file. Cite each payload's `as_of` with every number.
 
-[`/data/surfaces.json`](/data/surfaces.json) maps pages and 43 live MCP tools: 17 core, all 43 full; `planned` is unavailable. Sole write: two-phase, own-leg `dd_submit_bozo_leg`. [Sign in](/signon.html) · [instructions](/data/dawg-project-instructions.md).
+[`/data/surfaces.json`](/data/surfaces.json) maps pages and 45 live MCP tools: 17 core, all 45 full; `dd_bozo_admin_actions` (commissioner proxy-submit audit, core) is staged in source and not yet callable; `planned` is unavailable. Sole write: two-phase `dd_submit_bozo_leg` — your own leg, or another member's if you manage that league (`forUid`; marked `commissionerModified`, never backdated). [Sign in](/signon.html) · [instructions](/data/dawg-project-instructions.md).
 
 Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHouse, stopped.
 
