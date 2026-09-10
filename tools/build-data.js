@@ -1226,9 +1226,7 @@ const MCP_REGISTRY = (() => {
 // endpoint served 43: the map under-claims and every caller of a retired name keeps
 // working. Deploying first and failing to commit would leave this file claiming two tools
 // are live that answer -32602, which is the one thing it exists to prevent.
-// dd_bozo_admin_actions (Phase 2.7 proxy-submit audit read) is in the source and not yet
-// on the endpoint. Empty this on the deploy commit — docs/mcp-catalogs.md step 3.
-const MCP_STAGED = ["dd_bozo_admin_actions"];
+const MCP_STAGED = [];
 const MCP_LIVE = MCP_REGISTRY.map(t => t.name).filter(n => !MCP_STAGED.includes(n));
 for (const n of MCP_STAGED)
   if (!MCP_REGISTRY.some(t => t.name === n)) throw new Error(`${n} is listed as staged but is not in the registry`);

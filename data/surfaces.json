@@ -30,6 +30,7 @@
    "dd_bozo_standings",
    "dd_draft_bozo_leg",
    "dd_submit_bozo_leg",
+   "dd_bozo_admin_actions",
    "dd_draft_board",
    "dd_fantasy_leagues",
    "dd_war_room",
@@ -69,9 +70,7 @@
    "dd_guillotine_odds",
    "dd_site_map"
   ],
-  "tools_staged": [
-   "dd_bozo_admin_actions"
-  ],
+  "tools_staged": [],
   "catalogs": {
    "status": "LIVE since 2026-08-09. Both /mcp/core/<credential> and /mcp/full/<credential> answer, and GET /mcp/ advertises them. The bare /mcp/<credential> is unchanged and still full. A leading `core`/`full` is only read as a catalog when a credential follows it, or when the credential arrived in a header — so no passphrase can be stranded by its own name. NOT VERIFIED IN PRODUCTION: the per-catalog tools/list counts, which need a credential.",
    "why": "Forty-three tool schemas cost 10-25k context tokens in every conversation that connects. core is the everyday league surface; full is everything and stays the default, so the bare /mcp/<credential> URL keeps serving every tool a live connector may already be calling.",
@@ -205,8 +204,8 @@
   "with_live_machine_access": 18,
   "with_no_machine_access": 5,
   "mcp_tools_registered": 46,
-  "mcp_tools_live": 45,
-  "mcp_tools_staged": 1,
+  "mcp_tools_live": 46,
+  "mcp_tools_staged": 0,
   "mcp_tools_core": 18,
   "mcp_tools_planned": 6
  },
