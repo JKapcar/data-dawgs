@@ -224,8 +224,9 @@ if (!(out.indexOf(Y_START) < out.indexOf(R_START) && out.indexOf(R_START) < out.
 // deliberately-added two-phase write tool spec'd in claude/data-dawgs-cep-identity.md §4.
 // The invariant did not get weaker, it got precise:
 //   - the block still NEVER calls a Firebase write helper directly;
-//   - the only route to a Firebase write is commitBozoLeg — the same single write path
-//     bozoPick uses — and the block may call it EXACTLY once, inside the confirm branch;
+//   - the only routes to a Firebase write are commitBozoLeg — the same single write path
+//     bozoPick uses — and, for a proxy leg, the bozoAdminAction audit row; the block may
+//     call each EXACTLY once, inside the confirm branch;
 //   - KV writes (env.RL.put) exist only for rate limits and the mcpconfirm: staging keys.
 const blockOnly = out.slice(out.indexOf(START));
 for (const banned of ["fbPut(", "fbPatch(", "fbDelete("]) {
@@ -234,6 +235,11 @@ for (const banned of ["fbPut(", "fbPatch(", "fbDelete("]) {
 const commitCalls = (blockOnly.match(/commitBozoLeg\(/g) || []).length;
 if (commitCalls !== 1)
   fail(`the MCP block calls commitBozoLeg ${commitCalls} times — exactly 1 is allowed, inside dd_submit_bozo_leg's confirm branch`);
+// Phase 2.7 (proxy submit): the confirm branch may also write ONE audit row through
+// bozoAdminAction, the hand-written half's helper, and only there. Same discipline.
+const auditCalls = (blockOnly.match(/bozoAdminAction\(/g) || []).length;
+if (auditCalls !== 1)
+  fail(`the MCP block calls bozoAdminAction ${auditCalls} times — exactly 1 is allowed, inside dd_submit_bozo_leg's confirm branch`);
 
 /* ---- the rankings block's own invariant: no public route, and no raw rank in a response ----
  * Stage A adds admin-only routes. The single public read in this feature is

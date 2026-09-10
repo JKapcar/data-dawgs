@@ -54,6 +54,17 @@ only. ⚠️ `dd_submit_bozo_leg` is the one tool on either catalog that WRITES;
 because submitting a leg is an everyday league action, and it is gated by its own
 read-back-and-confirm step rather than by catalog placement.
 
+**Amended 2026-09-10 (Bozo Phase 2.7, proxy submit).** `dd_draft_bozo_leg` and
+`dd_submit_bozo_leg` take an optional `forUid`: the league manager (or site admin) may
+draft or submit a leg FOR another member. The role is resolved server-side from the
+session and the stored roster (`canActFor`); the argument names a target only. A proxy
+leg is stamped `submittedBy` / `commissionerModified: true`, carries the server time of
+the manager's write (D20, never backdated), and writes one `admin/actions` audit row —
+the second and only other Firebase write the MCP block may reach, pinned by
+`assemble.mjs` to one call. New read-only core tool `dd_bozo_admin_actions` returns this
+week's rows by display name. It is `MCP_STAGED` until the Worker deploy that carries it;
+follow the addition order below and empty the list in the deploy commit.
+
 ## Three decisions worth knowing
 
 **The default stayed `full`.** `/mcp/<credential>` serves every registered tool, exactly as
