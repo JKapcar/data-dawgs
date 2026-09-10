@@ -3960,6 +3960,15 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         <span class="tm" id="lockWho"></span>
       </div>
     </div>
+    <!-- The opposite escape hatch: a placed board that locked before everyone was in.
+         The in-app lock is not the DraftKings bet, so until the parlay is struck the
+         manager can reopen the week. The Worker refuses once any leg's game kicks off. -->
+    <div id="reopenRow" style="display:none;margin-top:18px;border-top:1px solid var(--grid);padding-top:14px">
+      <div class="row" style="align-items:center;gap:10px">
+        <button class="btn ghost sm" id="reopenGo">Unlock this week</button>
+        <span class="tm">Reopens the board so more legs can go in. Every leg already in stays; anyone who joined since the lock can submit; the lever order is drawn fresh when it locks again. Only until the first game on the ticket kicks off.</span>
+      </div>
+    </div>
   </div>
   <p class="note" id="lgNote"></p>
 </div>
@@ -6056,6 +6065,8 @@ function paintRoster(){
   lockRow.style.display = show ? '' : 'none';
   if(show) document.getElementById('lockWho').textContent =
     `Places the ticket with ${Object.keys(picks).length} of ${playing.length} legs. Still waiting on ${waiting.join(', ')}.`;
+  document.getElementById('reopenRow').style.display =
+    ((S.status||'open')==='placed' && !Object.keys(S.results||{}).length) ? '' : 'none';
 
   if(joinGateStatusLid!==LID){
     joinGateStatusLid=LID;
@@ -6178,6 +6189,21 @@ document.getElementById('forceLock').onclick = async (ev)=>{
   }catch(e2){ rosErr(e2.message); }
 };
 
+document.getElementById('reopenGo').onclick = async (ev)=>{
+  const b=ev.target;
+  if(b.dataset.armed!=='1'){ b.dataset.armed='1'; b.textContent='Confirm — unlock it';
+    setTimeout(()=>{ b.dataset.armed='0'; b.textContent='Unlock this week'; }, 5000); return; }
+  b.dataset.armed='0'; b.textContent='Unlock this week';
+  rosErr('');
+  try{
+    const r=await wPost('/league/reopen',{});
+    const e3=rosErr(`Week ${r.week} is open again — ${r.legs} leg${r.legs===1?'':'s'} kept.`
+      + (r.promoted?.length?` ${r.promoted.join(', ')} can submit now.`:'')
+      + (r.waitingOn?.length?` Waiting on ${r.waitingOn.join(', ')}.`:'')); e3.className='err ok';
+    await refresh();
+  }catch(e2){ rosErr(e2.message); }
+};
+
 // The re-deploy cost only exists in Bozo Royale, so the field only exists there too.
 document.getElementById('nlFormat').onchange = e => {
   document.getElementById('nlBuybackWrap').style.display =
@@ -6293,9 +6319,11 @@ function paintAdminActions(){
     .filter(({r})=>r && (r.week||1)===wk)
     .sort((a,b)=>a.ts-b.ts);
   if(!rows.length){ el.style.display='none'; el.innerHTML=''; return; }
-  const verb = t => t==='proxy_remove' ? 'removed the leg of' : t==='proxy_edit' ? 'replaced the leg of' : 'submitted for';
+  const verb = t => t==='proxy_remove' ? 'removed the leg of' : t==='proxy_edit' ? 'replaced the leg of'
+    : t==='roster_add' ? 'added' : t==='roster_remove' ? 'removed' : 'submitted for';
   el.innerHTML = '<b>Commissioner actions this week</b><br>' + rows.map(({ts,r})=>
-    `${esc(when(ts))} · ${esc(r.byName||'?')} ${verb(r.type)} ${esc(r.forName||'?')}`
+    `${esc(when(ts))} · ${esc(r.byName||'?')} ` + (r.type==='reopen' ? 'unlocked the board'
+      : `${verb(r.type)} ${esc(r.forName||'?')}`)
     + (r.after && r.after.label ? ` — ${esc(r.after.label)}` : '')).join('<br>');
   el.style.display='';
 }
