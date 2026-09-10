@@ -51,7 +51,7 @@ worlds for validation and provides Wilson intervals for binary rates. Fractional
 cutoff shares use a conservative bounded-mean interval. The sample field is fixed:
 these intervals do not include its uncertainty. A zero duplicate observation gets
 an explicit nonzero upper bound. First place and top-heavy ROI are unavailable
-when the opponent field is extrapolated. Cash/flat payout expectations can still
+when the opponent field is extrapolated. Flat payout expectations can still
 be estimated near their payout cutoff. Runtime captain/FLEX projection mismatch
 flags prevent recommendation labels when 1.5× scoring and the imported means disagree.
 
@@ -114,3 +114,54 @@ HTML change includes the service-worker content stamp. Run module regressions,
 inline-source parity checks, production script compilation and cache checks.
 Then exercise the real deployed import → generate → simulate → inspect workflow.
 Test data are explicitly synthetic; never commit proprietary ETR CSVs.
+
+
+## Implemented chart behavior and verification
+
+The primary Compare contests action evaluates the entire retained pool for all
+four editable profiles in one reproducible run. The default is 8,000 worlds and
+4,000 sampled opponents. Game-plan filters retain captain-side passing stacks,
+passing stacks with bring-backs, or same-team RB/DST builds. They filter candidate
+selection and the visible cloud; the projection benchmark stays visible.
+
+Cards choose their lineup using training worlds only and show held-out rates and
+95% Monte Carlo intervals. Cash ranks by tie-adjusted paid-slot rate (any-prize and positive-profit rates
+are also shown); multipliers rank by paid-slot share with fractional tied-cutoff credit;
+GPP ranks by top-1% rate divided by one plus modelled identical opponents. This
+last quantity is a heuristic, not ROI. Duplicate-sampling intervals are separate
+from the score-world intervals. Overlapping card/runner-up intervals are explicitly
+marked unresolved. The same lineup can be selected for multiple profiles.
+
+Input audit, current-snapshot/model keys, captain scoring consistency, correlation
+matrix status and a configurable implementation quality threshold of 5 percentage
+points of ownership miss gate these labels. The 5-point threshold is an engineering
+choice, not empirically validated calibration. Provider update time remains unknown.
+
+The chart uses an SVG sized to its actual container, 30 CSS-pixel nearest-dot hit
+testing, explicit copy-count ticks, filled candidate/selection marks, and a secondary
+accessible dropdown. Tooltip and roster inspection show all six slots, ownership
+used, log-rarity contributions, core product and the construction hypothesis.
+No published pair ratios are silently treated as fitted multipliers.
+
+A regression discovered while exercising the UI: captain ownership without a CPT
+Salary column must still detect Showdown and retain kickers. Missing captain
+salary uses the legal 1.5× fallback in both independent searches.
+
+Run the committed pure tests with Node: `work/test-dfs-lab-audit.js`,
+`work/test-dfs-lab-contests.js`, `work/test-sim-v2.js`, `work/test-dfs-upload.js`,
+and `work/test-dfs-page.js`. The optional `work/test-dfs-lab-ui.cjs` uses jsdom
+(`DDFS_JSDOM` may point to a temporary install) to exercise actual UI handlers:
+import → generate → audit → compare → select → change contest. It checks a
+360-pixel chart and stale-result invalidation. Real browser checks follow deploy.
+
+The generated `dawg-bot-worker.js` carries the same repaired engine for repository
+consistency. Publishing the Pages site does not deploy that separate Cloudflare
+service; its independent release process still applies.
+
+
+Missing ownership cells remain missing, including when a new column replaces an
+older value. They are not converted into reported zeros. Snapshot coverage tracks
+the actual updated player IDs, so a partial projection update cannot claim complete
+provenance. Blank CPT projections/ceilings also clear old estimates. Cash selection
+uses fractional credit for ties at the payout cutoff: with flat prizes, this tracks
+expected payout and avoids preferring frequent tiny tie refunds over actual returns.

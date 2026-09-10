@@ -8,7 +8,7 @@
 (function(root){
 'use strict';
 var audit=typeof module!=='undefined'?require('./dfs-lab-audit.js'):root.DDLabAudit;
-if(!audit&&typeof importScripts==='function'){importScripts('dfs-lab-audit.js?v=20260910-hygiene');audit=root.DDLabAudit;}
+if(!audit&&typeof importScripts==='function'){importScripts('dfs-lab-audit.js?v=20260910-contests');audit=root.DDLabAudit;}
 var OWN_FLOOR=audit.config.ownershipFloor;
 var DEAD_PROJ=1.5; // diagnostic only; low positive projections stay eligible
 function slotOwn(p,isCpt,sd,floor){return audit.ownership(p,isCpt,sd,floor||OWN_FLOOR);}

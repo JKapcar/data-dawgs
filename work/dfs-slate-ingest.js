@@ -152,7 +152,7 @@
     }
 
     // Scan for showdown signal first (any CPT roster position)
-    var anyCpt = !!(opts.combined && idx.cptSal >= 0);
+    var anyCpt = !!(opts.combined && (idx.cptSal >= 0 || headerKind === "etr-showdown"));
     if (idx.rp >= 0) {
       for (var s = hdr + 1; s < rows.length; s++) {
         var rp0 = String(rows[s][idx.rp] || "").trim().toUpperCase();
@@ -190,7 +190,7 @@
         opp: tm === away ? home : (tm === home ? away : ""),
         sal: 0, dkId: "", cptId: "", cptSal: 0,
         avg: idx.avg >= 0 ? parseFloat(row[idx.avg]) || 0 : 0,
-        proj: null, own: 0, status: ""
+        proj: null, own: null, status: ""
       });
       if (rp === "CPT" || rp === "CAPTAIN") { rec.cptId = id; rec.cptSal = sal; }
       else { rec.sal = sal; rec.dkId = id; if (idx.cptSal >= 0) rec.cptSal = parseMoney(row[idx.cptSal]); }
@@ -313,27 +313,27 @@
       players[hit].proj = pv;
       if (iOwn >= 0) {
         var ov = readOwn(row[iOwn]);
-        if (ov != null) players[hit].own = ov;
+        players[hit].own = ov;
       }
       if (iCptOwn >= 0) {
         var cov = readCptOwn(row[iCptOwn]);
-        if (cov != null) players[hit].cptOwn = cov;
+        players[hit].cptOwn = cov;
       }
       // An older CPT projection must not survive a new base-only projection.
       if (iCptProj < 0) delete players[hit].cptProj;
       if (iCeil < 0) delete players[hit].ceil;
       if (iCptProj >= 0) {
         var cpv = parseFloat(String(row[iCptProj]).replace(/[^0-9.\-]/g, ""));
-        if (isFinite(cpv)) players[hit].cptProj = cpv;
+        if (isFinite(cpv)) players[hit].cptProj = cpv; else delete players[hit].cptProj;
       }
       if (iCeil >= 0) {
         var cev = parseFloat(String(row[iCeil]).replace(/[^0-9.\-]/g, ""));
-        if (isFinite(cev)) players[hit].ceil = cev;
+        if (isFinite(cev)) players[hit].ceil = cev; else delete players[hit].ceil;
       }
       matched++;
     }
     return {
-      matched: matched,
+      matched: matched, updatedIds:Object.keys(seen).map(Number),
       missed: missed,
       head: head,
       cols: { name: iName, proj: iProj, own: iOwn, team: iTeam, cptOwn: iCptOwn, cptProj: iCptProj, ceil: iCeil, id: iId },

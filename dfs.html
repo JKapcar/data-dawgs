@@ -2899,15 +2899,26 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <!-- ======================================================= EXPOSURE -->
 <section class="sheet" id="sh-exposure" hidden>
   <div class="card" id="rarityCard">
-    <style>#labCustomWrap[hidden],#labTooltip[hidden]{display:none}#rarityCard .fi{min-height:44px}#rarityCard .btn{min-height:44px}</style>
-    <h3>Lineup lab · points vs expected copies <span class="rt" id="rarityState"></span></h3>
+    <style>
+    #labCustomWrap[hidden],#labTooltip[hidden],#labCompareStop[hidden]{display:none}
+    #rarityCard .fi,#rarityCard .btn{min-height:44px}
+    .lab-picks{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:16px 0}
+    .lab-pick{display:flex;flex-direction:column;gap:7px;text-align:left;padding:14px;background:var(--surface-1);color:var(--ink-1);border:1px solid var(--grid);border-radius:12px;font:inherit;min-width:0}
+    button.lab-pick{cursor:pointer}.lab-pick:hover,.lab-pick:focus-visible{border-color:#2563eb}.lab-pick.current{border:2px solid #2563eb}.lab-pick.benchmark{border-top:4px solid #7c3aed}
+    .lab-pick strong{font-size:24px}.lab-pick-kind{font-weight:700;font-size:13px}.lab-pick span,.lab-pick small{line-height:1.4}.lab-pick small{font-size:11px;color:var(--ink-2)}
+    .lab-pick.waiting{opacity:.65}.lab-evidence{border:1px solid var(--grid);border-radius:12px;padding:14px;margin:14px 0}.lab-evidence h4{margin:0 0 8px}
+    @media(max-width:560px){.lab-picks{grid-template-columns:1fr 1fr}.lab-pick.benchmark{grid-column:1/-1}.lab-pick{padding:11px}.lab-pick strong{font-size:21px}#rarityCard .btnrow>.fld{min-width:140px;flex:1}#labTooltip{max-height:65vh;overflow:hidden}}
+    </style>
+    <h3>Lineup lab · find your contest fit <span class="rt" id="rarityState"></span></h3>
     <p class="note" id="labSourceNote"></p><p class="note" id="labAuditNote" aria-live="polite"></p>
-    <p class="sub">Showdown: every legal lineup is enumerated (not sampled). The chart plots the exact frontier, a band beneath it, and a random cloud of the rest. Tap any dot for the roster and diagnostics.</p>
+    <p class="sub">Start with the best projected lineup. Then compare how much projection you give up for a different path to winning. Tap a candidate card or any dot to inspect the roster.</p>
     <div class="btnrow" style="align-items:end;margin-bottom:12px">
-      <label class="fld">Contest for copy estimates<select class="fi" id="labContest"><option value="132000">Milly · 132,000 entries</option><option value="5300" selected>Bootleg · 5,300 entries</option><option value="250">Small SE · 250 entries</option><option value="custom">Custom field size</option></select></label>
+      <label class="fld">Contest goal<select class="fi" id="labTarget"><option value="milly">Milly / GPP</option><option value="cash">Cash / double-up</option><option value="three">3× multiplier</option><option value="five">5× multiplier</option></select></label>
+      <label class="fld">Contest entries<select class="fi" id="labContest"><option value="132000">Milly · 132,000 entries</option><option value="5300" selected>Bootleg · 5,300 entries</option><option value="2500">Small GPP · 2,500 entries</option><option value="250">Small SE · 250 entries</option><option value="50">Cash · 50 entries</option><option value="custom">Custom field size</option></select></label>
       <label class="fld" id="labCustomWrap" hidden>Custom entries<input class="fi" id="labCustomField" type="number" min="2" max="10000000" step="1" value="235"></label>
+      <label class="fld">Paid places<input class="fi" id="labPaidPlaces" type="number" min="1" max="10000000" value="26400"></label>
     </div>
-    <p class="note">Preset sizes are examples; use your contest’s actual entry count. Copy estimates use slot ownership × field size, a rough independence model. This selector does not change Simulator settings.</p>
+    <p class="note">Set the entry count and paid places for each goal, using your actual contests. Presets are examples. The goal controls the axis and color; the comparison evaluates all four contests. Cash, 3× and 5× use flat prizes of 2×, 3× and 5× the entry fee.</p>
     <div class="btnrow">
       <label class="fld">Salary floor<input class="fi" type="number" id="labMinSal" min="0" max="50000" step="100" value="44000"></label>
       <label class="fld">Max per team<select class="fi" id="labMaxTeam"><option>3</option><option>4</option><option selected>5</option></select></label>
@@ -2916,15 +2927,23 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <label class="fld" id="paretoCountWrap">Classic candidates<select class="fi" id="paretoCount"><option>1000</option><option selected>5000</option><option>10000</option><option>25000</option></select></label>
     </div>
     <div class="btnrow"><button class="btn" id="rarityGo">Generate exploration pool</button><button class="btn ghost" id="paretoStop" hidden>Stop</button>
-    <button class="btn" id="paretoSim">Simulate this pool</button><button class="btn" id="labSimBand">Simulate frontier band</button></div>
-    <p class="note">Generating replaces your lineup pool. Salary floor and max-per-team above apply to the Lab only (Solver keeps its own). Simulation uses your settings in Simulator.</p>
+    <button class="btn" id="paretoSim">Compare contests</button><button class="btn ghost" id="labCompareStop" hidden>Stop comparison</button><button class="btn ghost" id="labSimBand">Open Simulator</button></div>
+    <p class="note">Generate the pool first, then compare contests. The benchmark respects the salary floor, locks, exclusions and team limit. The comparison keeps candidates below the projection frontier so correlated upside remains eligible.</p>
+    <div class="btnrow">
+      <label class="fld">Game plan<select class="fi" id="labScript"><option value="any">Any legal construction</option><option value="pass">Captain-side passing stack</option><option value="back">Passing stack + bring-back</option><option value="run">Same-team RB + DST</option></select></label>
+      <label class="fld">Score worlds<select class="fi" id="labWorlds"><option value="1600">1,600 · quick, wide intervals</option><option value="8000" selected>8,000 · standard</option><option value="16000">16,000 · more precision</option></select></label>
+      <label class="fld">Opponent sample<select class="fi" id="labOpponents"><option value="2000">2,000</option><option value="4000" selected>4,000</option><option value="10000">10,000</option></select></label>
+      <label class="fld">Field salary preference<input class="fi" id="labFieldSalary" type="number" min="0" max="50000" step="100" value="48000"></label>
+    </div>
+    <p id="labCompareState" class="note" aria-live="polite"></p>
+    <div id="labRecommendations" aria-live="polite"></div>
     <div class="btnrow">
       <label class="fld">Rarity sensitivity<select class="fi" id="labOwnFloor"><option value="0.25">Imported ownership · 0.25% minimum</option><option value="0.5">Stress test · 0.5% minimum</option><option value="1">Stress test · 1% minimum</option></select></label>
       <label class="fld">Y axis<select class="fi" id="labY"><option value="proj">Projected points</option><option value="ceil">Ceiling sum</option></select></label>
       <label class="fld">Captain<select class="fi" id="labCpt"><option value="">Any</option></select></label>
       <label class="fld">Min slot own %<input class="fi" type="number" id="labMinOwn" min="0" max="50" step="0.1" value="0"></label>
-      <label class="fld"><input type="checkbox" id="labHideDead"> Hide dead spots (&lt;1.5 proj)</label>
-      <label class="fld">Color by<select class="fi" id="paretoColor"><option value="cash">Cash rate</option><option value="top10">Top-10% rate</option><option value="top1">Top-1% rate</option><option value="win">First place · full field only</option></select></label>
+      <label class="fld"><input type="checkbox" id="labHideDead"> Hide low projections (&lt;1.5 proj)</label>
+      <label class="fld">Color by<select class="fi" id="paretoColor"><option value="contest">Contest goal</option><option value="cash">Cash rate</option><option value="top10">Top-10% rate</option><option value="top1">Top-1% rate</option><option value="win">First place · full field only</option></select></label>
     </div>
     <div class="banner" id="rarityWarn" hidden></div><div class="statrow" id="rarityStats" hidden></div>
     <div id="rarityChart" style="position:relative"></div><label class="fld">Or choose a frontier lineup<select class="fi" id="paretoPick"></select></label>
@@ -4316,8 +4335,9 @@ root.DDFS.tieOutcome=tieOutcome;root.DDFS.wilson=wilson;root.DDFS.lineupKey=line
 })(typeof module !== "undefined" && module.exports ? module.exports : (typeof self !== "undefined" ? self : this));
 </script>
 
-<script src="dfs-lab-audit.js?v=20260910-hygiene"></script>
-<script src="dfs-pareto.js?v=20260910-hygiene"></script>
+<script src="dfs-lab-audit.js?v=20260910-contests"></script>
+<script src="dfs-lab-contests.js?v=20260910-contests"></script>
+<script src="dfs-pareto.js?v=20260910-contests"></script>
 <script>
 /* =========================================================================
    DFS workbench — slate ingest, solver + simulator wiring, exposure, bankroll.
@@ -4571,7 +4591,7 @@ function banner(id, kind, html) {
     }
 
     // Scan for showdown signal first (any CPT roster position)
-    var anyCpt = !!(opts.combined && idx.cptSal >= 0);
+    var anyCpt = !!(opts.combined && (idx.cptSal >= 0 || headerKind === "etr-showdown"));
     if (idx.rp >= 0) {
       for (var s = hdr + 1; s < rows.length; s++) {
         var rp0 = String(rows[s][idx.rp] || "").trim().toUpperCase();
@@ -4609,7 +4629,7 @@ function banner(id, kind, html) {
         opp: tm === away ? home : (tm === home ? away : ""),
         sal: 0, dkId: "", cptId: "", cptSal: 0,
         avg: idx.avg >= 0 ? parseFloat(row[idx.avg]) || 0 : 0,
-        proj: null, own: 0, status: ""
+        proj: null, own: null, status: ""
       });
       if (rp === "CPT" || rp === "CAPTAIN") { rec.cptId = id; rec.cptSal = sal; }
       else { rec.sal = sal; rec.dkId = id; if (idx.cptSal >= 0) rec.cptSal = parseMoney(row[idx.cptSal]); }
@@ -4732,27 +4752,27 @@ function banner(id, kind, html) {
       players[hit].proj = pv;
       if (iOwn >= 0) {
         var ov = readOwn(row[iOwn]);
-        if (ov != null) players[hit].own = ov;
+        players[hit].own = ov;
       }
       if (iCptOwn >= 0) {
         var cov = readCptOwn(row[iCptOwn]);
-        if (cov != null) players[hit].cptOwn = cov;
+        players[hit].cptOwn = cov;
       }
       // An older CPT projection must not survive a new base-only projection.
       if (iCptProj < 0) delete players[hit].cptProj;
       if (iCeil < 0) delete players[hit].ceil;
       if (iCptProj >= 0) {
         var cpv = parseFloat(String(row[iCptProj]).replace(/[^0-9.\-]/g, ""));
-        if (isFinite(cpv)) players[hit].cptProj = cpv;
+        if (isFinite(cpv)) players[hit].cptProj = cpv; else delete players[hit].cptProj;
       }
       if (iCeil >= 0) {
         var cev = parseFloat(String(row[iCeil]).replace(/[^0-9.\-]/g, ""));
-        if (isFinite(cev)) players[hit].ceil = cev;
+        if (isFinite(cev)) players[hit].ceil = cev; else delete players[hit].ceil;
       }
       matched++;
     }
     return {
-      matched: matched,
+      matched: matched, updatedIds:Object.keys(seen).map(Number),
       missed: missed,
       head: head,
       cols: { name: iName, proj: iProj, own: iOwn, team: iTeam, cptOwn: iCptOwn, cptProj: iCptProj, ceil: iCeil, id: iId },
@@ -6527,7 +6547,7 @@ function runSim() {
     SIM = r; SIM.ms = Date.now() - t0; SIM.lineupKeys = lineupKeys;SIM.inputKey=labInputKey();
     banner("simWarn", "warn", r.warn && r.warn.length ? "<b>Heads up.</b> " + r.warn.map(esc).join(" ") : null);
     renderSim(); renderLineups(); drawRarity();
-    banner("simWarn", "ok", "Simulation complete. <a href=\"#exposure\" data-goto=\"exposure\">View colored lineup cloud and frontier</a>. " + esc((r.warn || []).join(" ")));
+    banner("simWarn", "ok", "Simulation complete. Use Compare contests in the Lineup Lab for contest-specific colors and candidate cards. " + esc((r.warn || []).join(" ")));
   };
   if (WORKER_URL) {
     try {
@@ -6638,12 +6658,86 @@ function renderLev() {
    ========================================================================== */
 
 let FRONT = null, frontWorker = null, labSelection = null;
+let labCompareWorker=null,labSelectPoint=null;
+function labProfiles(){return DDLabContests.profiles(S.labProfiles||{});}
+function labActiveProfile(){return labProfiles().find(c=>c.key===(S.labTarget||'milly'));}
+function labModelKey(){return JSON.stringify([labProfiles(),S.labScript||'any',+$('labFieldSalary').value]);}
+function labScenario(){return S.labScript||'any';}
+function labModelGate(){
+ const trust=labTrust();if(!trust.pass)return trust;
+ if(!SIM||!SIM.lab||SIM.meta.engineVersion!==2||!SIM.meta.tiePayouts||SIM.inputKey!==labInputKey()||SIM.labModelKey!==labModelKey())return {pass:false,reason:'Run the comparison for these contest sizes and this game plan.'};
+ if(SIM.meta.captainProjectionMismatch)return {pass:false,reason:'Captain projections disagree with 1.5× FLEX scoring. Reconcile the source columns.'};
+ if(SIM.meta.correlationFailed)return {pass:false,reason:'The correlation model failed its matrix check.'};
+ if(SIM.meta.fieldOwnershipError>DDLabContests.config.maxOwnershipError||SIM.meta.fieldCaptainOwnershipError>DDLabContests.config.maxOwnershipError)return {pass:false,reason:'The opponent model misses imported ownership by more than '+DDLabContests.config.maxOwnershipError+' percentage points. Review the field settings before choosing entries.'};
+ return {pass:true,reason:'Model candidates selected on training worlds; rates below use separate validation worlds.'};
+}
+function labSelections(){return labModelGate().pass?DDLabContests.select(SIM,S.lineups,S.players,labScenario(),labProfiles()):[];}
+function labCurrentSim(){return SIM&&SIM.lab&&SIM.inputKey===labInputKey()&&SIM.labModelKey===labModelKey()?SIM.contests[labActiveProfile().key]:null;}
+function labRateBand(ci){return ci?pct(ci[0],2)+'–'+pct(ci[1],2):'unavailable';}
+function labJump(i){
+ if(!S.lineups[i])return;
+ $('labCpt').value='';$('labMinOwn').value='0';$('labHideDead').checked=false;
+ labSelection=labKey(S.lineups[i]);drawRarity();if(labSelectPoint)labSelectPoint(i,true);
+}
+function renderLabRecommendations(){
+ const el=$('labRecommendations');if(!el)return;
+ if(!S.lineups.length){el.innerHTML='<p class="note">Upload your slate and generate the exploration pool to establish the projection benchmark.</p>';return;}
+ const best=S.lineups.reduce((a,l,i)=>a<0||l.proj>S.lineups[a].proj?i:a,-1),gate=labModelGate();
+ const proof=best>=0&&S.labAudit&&S.labAudit.maxStatus==='PASS'&&S.lineupsMeta&&S.lineupsMeta.inputKey===labInputKey()&&S.lineupsMeta.rulesKey===labRulesKey();
+ const chosen=labSelections(),active=labActiveProfile();
+ let html=best<0?'':`<button type="button" class="lab-pick benchmark" data-lab-pick="${best}"><span class="lab-pick-kind">P · Projection benchmark</span><strong>${fmt(S.lineups[best].proj,2)} pts</strong><span>${proof?'Verified maximum under your Lab rules':'Best currently in the pool'}</span><small>${proof?'Exact input calculation; no simulation interval':'Generate to verify the maximum'}</small></button>`;
+ for(const c of labProfiles()){
+  const choice=chosen.find(x=>x.key===c.key),v=choice&&choice.validation,l=choice&&S.lineups[choice.i];
+  if(!l){html+=`<div class="lab-pick waiting"><span class="lab-pick-kind">${c.short} · ${esc(c.label)}</span><strong>Pending</strong><small>${esc(choice&&choice.unavailable||'Needs a verified comparison')}</small></div>`;continue;}
+  const cost=Math.max(0,S.lineups[best].proj-l.proj);
+  html+=`<button type="button" class="lab-pick ${c.key===active.key?'current':''}" data-lab-pick="${choice.i}" data-lab-goal="${c.key}" aria-label="Inspect ${esc(c.label)} candidate"><span class="lab-pick-kind">${c.short} · ${esc(c.label)}</span><strong>${pct(choice.value,2)}</strong><span>${esc(c.metricLabel)} · ${c.fieldSize.toLocaleString()} entries</span><small>95% MC interval ${labRateBand(choice.ci)}</small><span>${fmt(l.proj,1)} pts · −${cost.toFixed(1)} vs max</span><small>${choice.overlap?'Overlaps runner-up; ranking unresolved':'Compare the interval and model assumptions'}${v.n<2000?' · limited simulation count':''}</small></button>`;
+ }
+ el.innerHTML='<div class="lab-picks">'+html+'</div><p class="note">'+esc(gate.reason)+(gate.pass?' A lineup can fit more than one contest. These are candidates from the retained pool; no profit claim or guarantee of the best possible simulated lineup.':'')+'</p>';
+ el.querySelectorAll('[data-lab-pick]').forEach(b=>b.onclick=()=>{if(b.dataset.labGoal)S.labTarget=b.dataset.labGoal;save();labJump(+b.dataset.labPick);});
+ $('paretoSim').disabled=!!labCompareWorker;
+}
+function labContestInspector(i){
+ const result=labCurrentSim();if(!result)return '<p class="note">Run the comparison to inspect contest outcomes.</p>';
+ const r=result.perLineup.find(r=>r.i===i);if(!r)return '';
+ const v=r.validation,c=labActiveProfile();
+ return `<div class="lab-evidence"><h4>${esc(c.label)} · ${c.fieldSize.toLocaleString()} entries</h4>
+ <p><b>${pct(v[c.metric],2)} ${esc(c.metricLabel)}</b> · 95% MC interval ${labRateBand(v.ci[c.metric])} · ${v.n.toLocaleString()} held-out worlds.</p>
+ <p>Cash ${pct(v.cash,1)} · positive profit ${pct(v.profit,1)} · top-10% ${pct(v.top10,2)} · top-1% ${pct(v.top1,2)}.</p>
+ <p>${result.meta.firstPlaceAvailable?'First place (ties included) '+pct(v.win,3)+' · first-prize share '+pct(v.firstShare,3):'First place: unavailable from a partial field.'} ${v.roi==null?'Top-heavy ROI: unavailable at this field resolution.':'Model ROI '+pct(v.roi,1)+'.'}</p>
+ <p>Identical opponents in the field model: ~${labCopyText(r.dupes)} · sampling interval ${labCopyText(r.dupeCI[0])}–${labCopyText(r.dupeCI[1])}. A zero sample count does not prove uniqueness.</p>
+ <p class="note">${c.key==='milly'?'Dupe-adjusted top-1% = top-1% rate ÷ (1 + modelled identical opponents). This is a selection heuristic, not expected profit. ':c.key==='cash'?'Tie-adjusted cash rate credits the fraction of paid places covered by a tie. Any-prize and positive-profit rates are shown separately. ':'Paid-slot share gives fractional credit when a tie crosses the payout cutoff. '}Intervals cover score-world sampling error conditional on the field and model; they do not cover forecast error. The copy axis uses the separate ownership-product proxy.</p></div>`;
+}
+function runLabCompare(){
+ if(labCompareWorker)return;
+ const trust=labTrust();if(!trust.pass){banner('rarityWarn','warn',esc(trust.reason));return;}
+ const fieldInputs=DDLabAudit.inspect(S.players.map(p=>({...p,excl:false})),S.site==='dk_showdown');
+ if(!fieldInputs.pass){banner('rarityWarn','warn','The opponent field needs valid ownership for all projected players, including players excluded from your own pool.');return;}
+ const profiles=labProfiles(),active=labActiveProfile(),worlds=Math.max(1600,Math.min(20000,+$('labWorlds').value||8000));
+ const cfg={site:S.site,sims:worlds,fieldSize:active.fieldSize,fieldSample:Math.max(2000,Math.min(20000,+$('labOpponents').value||4000)),fieldMinSalary:Math.max(0,Math.min(50000,+$('labFieldSalary').value||0)),entryFee:1,seed:216,payout:active.payout,contestProfiles:profiles};
+ const input=labInputKey(),modelKey=labModelKey(),keys=S.lineups.map(labKey),snapshot=JSON.stringify(S.lineups);
+ const finish=r=>{
+  if(labCompareWorker)labCompareWorker.terminate();labCompareWorker=null;$('labCompareStop').hidden=true;
+  if(input!==labInputKey()||modelKey!==labModelKey()||snapshot!==JSON.stringify(S.lineups)){banner('rarityWarn','warn','Inputs changed during comparison. Run again for the current settings.');renderLabRecommendations();return;}
+  SIM=r;SIM.lab=true;SIM.inputKey=input;SIM.labModelKey=modelKey;SIM.lineupKeys=keys;SIM.ms=Date.now()-started;
+  $('labCompareState').textContent=worlds.toLocaleString()+' worlds · half held out';
+  drawRarity();renderSim();renderLineups();banner('rarityWarn','ok','Comparison complete. Tap a candidate card or any dot for its roster, game plan and uncertainty.');
+ };
+ const failed=e=>{if(labCompareWorker)labCompareWorker.terminate();labCompareWorker=null;$('labCompareStop').hidden=true;$('labCompareState').textContent='Comparison failed';banner('rarityWarn','err',esc(e.message||'Simulation failed.'));renderLabRecommendations();};
+ const started=Date.now();$('labCompareState').textContent='Building the opponent field…';$('labCompareStop').hidden=false;banner('rarityWarn',null,null);
+ try{
+  labCompareWorker=new Worker(WORKER_URL);labCompareWorker.onmessage=e=>{const d=e.data;
+   if(d.type==='done')finish(d.result);else if(d.type==='error')failed(d);else $('labCompareState').textContent=d.phase==='field'?'Fitting CPT and FLEX ownership…':Math.round(d.n/d.t*100)+'% · '+(d.n<worlds/2?'screening candidates':'checking held-out worlds');};
+  labCompareWorker.onerror=failed;
+  labCompareWorker.postMessage({op:'sim',players:enginePlayers(),lineups:S.lineups.map(l=>({ids:l.ids,cpt:l.cpt,proj:l.proj})),cfg});renderLabRecommendations();
+ }catch(e){failed(e);}
+}
+
 function labInputKey() {
- return JSON.stringify([S.site,S.players.map(p=>[p.name,p.team,p.sal,p.cptSal,p.proj,p.cptProj,p.own,p.cptOwn,p.flexOwn,p.ceil,!!p.lock,!!p.excl])]);
+ return JSON.stringify([S.site,S.players.map(p=>[p.name,p.pos,p.team,p.opp,p.gid,p.sal,p.cptSal,p.proj,p.cptProj,p.own,p.cptOwn,p.flexOwn,p.ceil,!!p.lock,!!p.excl])]);
 }
 function recordLabSource(text,label,info) {
  const cols=info&&info.cols,head=info&&info.head;
- const source={label,importedAt:new Date().toISOString(),revision:3,playerCount:S.players.length,columns:cols&&head?Object.fromEntries(Object.entries(cols).filter(([,i])=>i>=0).map(([k,i])=>[k,head[i]])):{},matched:info&&info.matched,missed:info&&info.missed&&info.missed.length,hash:null};
+ const source={label,importedAt:new Date().toISOString(),revision:3,playerCount:S.players.length,columns:cols&&head?Object.fromEntries(Object.entries(cols).filter(([,i])=>i>=0).map(([k,i])=>[k,head[i]])):{},matched:info&&info.matched,updatedIds:info&&info.updatedIds,missed:info&&info.missed&&info.missed.length,hash:null};
  S.labSource=source;
  if(crypto.subtle)crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)).then(buf=>{
   source.hash=Array.from(new Uint8Array(buf)).map(n=>n.toString(16).padStart(2,'0')).join('');
@@ -6658,7 +6752,9 @@ function labTrust(){
  if(S.demo)return {pass:false,reason:'Demo data; upload your slate before selecting entries.'};
  if(!s||s.revision!==3||!s.hash)return {pass:false,reason:'Reimport the CSV to record its source and fingerprint.'};
  if(s.playerCount!==S.players.length||s.missed)return {pass:false,reason:'Resolve the source player count or unmatched rows.'};
+ if(!s.updatedIds||S.players.some((p,i)=>!p.excl&&p.proj>0&&!s.updatedIds.includes(i)))return {pass:false,reason:'Some projections were retained from an earlier file. Import a complete snapshot before selecting entries.'};
  if(!s.columns.proj||!s.columns.own||!s.columns.cptOwn)return {pass:false,reason:'This snapshot mixes retained data. Import projection, total ownership and captain ownership together.'};
+ if(!Number.isFinite(Date.parse(s.importedAt)))return {pass:false,reason:'Source import time is invalid. Reimport the CSV.'};
  if(Date.now()-Date.parse(s.importedAt)>DDLabAudit.config.stalenessHours*3600000)return {pass:false,reason:'Import is over '+DDLabAudit.config.stalenessHours+' hours old. Refresh the slate.'};
  return {pass:true,reason:'Loaded snapshot checks passed. Provider freshness is not independently verified.'};
 }
@@ -6689,25 +6785,18 @@ function labLineupEvidence(l) {
  const nearZero=slots.filter(s=>s.p.proj<DDPareto.DEAD_PROJ);
  return {slots,driver,floorFactor,nearZero,rarity:DDLabAudit.evidence(l,S.players,sd)};
 }
-function labContestInfo() {
- const preset=$('labContest').value;
- let entries=preset==='custom'?Number($('labCustomField').value):Number(preset);
- if(!Number.isFinite(entries)||entries<2)entries=235;
- entries=Math.min(10000000,Math.max(2,Math.round(entries)));
- const name=preset==='132000'?'Milly':preset==='5300'?'Bootleg':preset==='250'?'Small SE':'Custom';
- return {entries,name,label:name+' ('+entries.toLocaleString()+' entries)'};
-}
+function labContestInfo(){const c=labActiveProfile();return {entries:c.fieldSize,name:c.label,label:c.label+' ('+c.fieldSize.toLocaleString()+' entries)'};}
 function labCopyText(n) {
  if(!Number.isFinite(n))return '—';
  if(n===0)return '0';
  if(n<0.001)return '<0.001';
  return n.toLocaleString(undefined,{maximumFractionDigits:n<0.01?3:n<1?2:n<10?1:0});
 }
-function labSyncContest() {
- const cfg=S.labContest||{preset:'5300',custom:235};
- $('labContest').value=['132000','5300','250','custom'].includes(cfg.preset)?cfg.preset:'5300';
- $('labCustomField').value=cfg.custom||235;
- $('labCustomWrap').hidden=$('labContest').value!=='custom';
+function labSyncContest(){
+ const c=labActiveProfile(),presets=['132000','5300','2500','250','50'];
+ $('labTarget').value=c.key;$('labContest').value=S.labCustomMode&&S.labCustomMode[c.key]?'custom':presets.includes(String(c.fieldSize))?String(c.fieldSize):'custom';
+ $('labCustomField').value=c.fieldSize;$('labCustomWrap').hidden=$('labContest').value!=='custom';$('labPaidPlaces').value=c.paidPlaces;
+ $('labScript').value=labScenario();
 }
 function labCfg() {
  const sd = S.site === 'dk_showdown';
@@ -6730,9 +6819,9 @@ function runFrontier() {
  if(!r.lineups.length){banner('rarityWarn','warn','No legal lineups under these settings. Lower the salary floor or raise max-per-team.');return;}
  S.lineups=r.lineups;labSelection=null;S.labSubset=false;SIM=null;FRONT=null;S.labAudit=r.audit;S.labStats={...(r.stats||{}),bestProjection:Math.max(...r.lineups.map(l=>l.proj))};S.lineupsMeta={stamp:Date.now(),site:S.site,asked:cfg.count,lab:true,inputKey:labInputKey(),rulesKey:labRulesKey()};save();renderStrip();renderLineups();renderSolveStats();renderExposure();
  const st=r.stats||{};$('rarityState').textContent=(st.exact?'exact · ':'sampled · ')+(st.legal||r.lineups.length).toLocaleString()+' legal lineups';
- banner('rarityWarn','ok',(st.exact?`<b>Exact.</b> ${st.legal.toLocaleString()} legal lineups from ${st.combos.toLocaleString()} six-player combinations; frontier ${st.frontier}, band ${st.band.toLocaleString()}${st.bandKept<st.band?` (showing ${st.bandKept})`:''}, plus ${Math.min(st.cloud,st.legal).toLocaleString()} cloud dots. `:`Sampled ${r.lineups.length.toLocaleString()} candidates${r.capped?' (search budget hit)':''}. `)+'Simulate the pool or the band to color dots by tournament outcomes.');};
+ banner('rarityWarn','ok',(st.exact?`<b>Exact.</b> ${st.legal.toLocaleString()} legal lineups from ${st.combos.toLocaleString()} six-player combinations; frontier ${st.frontier}, band ${st.band.toLocaleString()}${st.bandKept<st.band?` (showing ${st.bandKept})`:''}, plus ${Math.min(st.cloud,st.legal).toLocaleString()} cloud dots. `:`Sampled ${r.lineups.length.toLocaleString()} candidates${r.capped?' (search budget hit)':''}. `)+'Compare contests to find candidates and color the chart by their outcomes.');};
  const fail=e=>{$('rarityGo').disabled=false;$('paretoStop').hidden=true;banner('rarityWarn','err',esc(e.message||'Exploration failed'));if(frontWorker)frontWorker.terminate();frontWorker=null;};
- try{frontWorker=new Worker('dfs-pareto.js?v=20260910-hygiene');frontWorker.onmessage=e=>{if(e.data.type==='done')done(e.data.result);else if(e.data.type==='error')fail(e.data);else $('rarityState').textContent=e.data.n.toLocaleString()+' legal so far…';};frontWorker.onerror=fail;frontWorker.postMessage({players:labPlayersForWorker(),cfg});}catch(e){fail({message:'This browser could not start the background explorer. Try refreshing the page.'});}
+ try{frontWorker=new Worker('dfs-pareto.js?v=20260910-contests');frontWorker.onmessage=e=>{if(e.data.type==='done')done(e.data.result);else if(e.data.type==='error')fail(e.data);else $('rarityState').textContent=e.data.n.toLocaleString()+' legal so far…';};frontWorker.onerror=fail;frontWorker.postMessage({players:labPlayersForWorker(),cfg});}catch(e){fail({message:'This browser could not start the background explorer. Try refreshing the page.'});}
 }
 const labKey = l => (l.cpt != null ? l.cpt + 'c|' : '') + l.ids.slice().sort((a,b)=>a-b).join(',');
 function labSlotOwn(p, isCpt, sd) { return DDPareto.slotOwn(p, isCpt, sd) * 100; }
@@ -6745,7 +6834,7 @@ function labFillCaptains() {
 }
 function labDiagnostics(l) {
  const P=S.players,sd=S.site==='dk_showdown',cap=50000;
- const slots=lineupSlots(l).map(s=>{const p=P[s.i],isC=s.slot==='CPT';return {slot:s.slot,p,isC,sal:isC?(p.cptSal||Math.round(p.sal*1.5)):p.sal,proj:isC?(p.cptProj!=null?p.cptProj:p.proj*1.5):p.proj,ceil:p.ceil!=null?(isC?p.ceil*1.5:p.ceil):null,own:labSlotOwn(p,isC,sd)};});
+ const slots=lineupSlots(l).map(s=>{const p=P[s.i],isC=s.slot==='CPT';return {slot:s.slot,p,isC,sal:isC?(p.cptSal||Math.round(p.sal*1.5)):p.sal,proj:isC?(p.cptProj!=null?p.cptProj:p.proj*1.5):p.proj,ceil:p.ceil!=null?(isC?p.ceil*1.5:p.ceil):null,own:Math.max(+$('labOwnFloor').value,labSlotOwn(p,isC,sd))};});
  const own=slots.reduce((t,s)=>t+s.own,0),prod=slots.reduce((t,s)=>t*(s.own/100),1),ceil=slots.every(s=>s.ceil!=null)?slots.reduce((t,s)=>t+s.ceil,0):null;
  const dead=slots.filter(s=>s.p.proj<DDPareto.DEAD_PROJ).length,minOwn=Math.min(...slots.map(s=>s.own));
  const entries=labContestInfo().entries;
@@ -6755,14 +6844,17 @@ function labDiagnostics(l) {
  return {slots,own,prod,ceil,dead,minOwn,dupe,issues,salLeft:cap-l.sal,entries};
 }
 function drawRarity(){
- const chart=$('rarityChart'),sd=S.site==='dk_showdown';$('rarityCard').hidden=false;labFillCaptains();labSyncContest();renderLabSource();renderLabAudit();
+ const chart=$('rarityChart'),sd=S.site==='dk_showdown';$('rarityCard').hidden=false;labFillCaptains();labSyncContest();renderLabSource();renderLabAudit();renderLabRecommendations();
  const contest=labContestInfo(),copies=p=>Math.pow(10,p.x)*contest.entries,ownFloor=+$('labOwnFloor').value;
  const poolBest=S.labStats&&S.lineupsMeta&&S.lineupsMeta.inputKey===labInputKey()&&Number.isFinite(S.labStats.bestProjection)?S.labStats.bestProjection:Math.max(0,...S.lineups.map(l=>l.proj));
  $('paretoCountWrap').hidden=sd;
  const yKey=$('labY').value,cptF=$('labCpt').value,minOwn=+$('labMinOwn').value||0,hideDead=$('labHideDead').checked;
  const hasCeil=S.lineups.length&&S.lineups.every(l=>Number.isFinite(l.ceil)&&l.ids.every(i=>Number.isFinite(S.players[i].ceil)));
  const all=S.lineups.map((l,i)=>{const pt=DDPareto.point(l,S.players,sd,i);if(!pt)return null;const y=(yKey==='ceil'&&hasCeil)?l.ceil:l.proj;const mo=Math.min(...l.ids.map(id=>labSlotOwn(S.players[id],id===l.cpt,sd)));const x=l.ids.reduce((v,id)=>v+Math.log10(Math.max(ownFloor,labSlotOwn(S.players[id],id===l.cpt,sd))/100),0);return {i,x,y,l,mo};}).filter(Boolean);
- const pts=all.filter(p=>(!cptF||p.l.cpt===+cptF)&&p.mo>=minOwn&&!(hideDead&&(p.l.dead||0)>0));
+ const benchmark=all.reduce((best,p)=>!best||p.l.proj>best.l.proj?p:best,null);
+ const choices=labSelections(),marks=new Map();if(benchmark)marks.set(benchmark.i,['P']);choices.filter(c=>c.i!=null).forEach(c=>marks.set(c.i,[...(marks.get(c.i)||[]),c.short]));
+ const pts=all.filter(p=>p===benchmark||(DDLabContests.matches(p.l,S.players,labScenario())&&(!cptF||p.l.cpt===+cptF)&&p.mo>=minOwn&&!(hideDead&&(p.l.dead||0)>0)));
+ choices.forEach(c=>{const p=all.find(p=>p.i===c.i);if(p&&!pts.includes(p))pts.push(p);});
  const front=DDPareto.frontier(pts),on=new Set(front.map(p=>p.i));
  const band=+$('labBand').value||0,bandSet=new Set();
  {let best=-Infinity;pts.slice().sort((a,b)=>a.x-b.x||b.y-a.y).forEach(p=>{if(p.y>best)best=p.y;if(p.y>=best-band)bandSet.add(p.i);});}
@@ -6770,32 +6862,41 @@ function drawRarity(){
  $('rarityDetail').textContent='Tap a dot to select a lineup. Hover or hold a dot for a quick preview.';
  $('paretoPick').innerHTML='<option value="">Choose a frontier lineup…</option>'+front.map(p=>`<option value="${p.i}">${p.y.toFixed(1)} ${yKey==='ceil'?'ceil':'pts'} · ~${labCopyText(copies(p))} copies · CPT ${esc(S.players[p.l.cpt]?S.players[p.l.cpt].name:'')}</option>`).join('');
  const st=S.labStats||{};
- const exactView=st.exact&&!cptF&&!minOwn&&!hideDead&&yKey!=='ceil'&&!S.labSubset&&ownFloor===0.25;
+ const exactView=st.exact&&labScenario()==='any'&&!cptF&&!minOwn&&!hideDead&&yKey!=='ceil'&&!S.labSubset&&ownFloor===0.25;
  $('rarityNote').textContent=(exactView?'Exact frontier over every legal lineup under the Lab settings. ':'Frontier of sampled candidates, not a guarantee over every possible lineup. ')+'Chart copies = slot-ownership product × selected field size. This rough independence model is not a calibrated duplication forecast; shared lineup-building patterns can change actual duplication. Low duplication does not establish GPP suitability, and high duplication does not establish cash-game suitability. Use projection and simulated outcomes alongside duplication. '+(sd?'CPT uses captain ownership; FLEX uses total minus captain; slots under 0.25% are floored. ':'')+(yKey==='ceil'&&!hasCeil?'Ceiling sum needs a Ceiling column in the projections upload; showing projected points. ':'')+'Exposure caps and minimum uniques are not applied to the exploration pool.';
- if(ownFloor>0.25)$('rarityNote').textContent='Sensitivity view: the '+ownFloor+'% minimum is an assumption, not changed source data. This frontier is recomputed from the retained pool, not every legal lineup. '+$('rarityNote').textContent;
+ if(ownFloor>0.25)$('rarityNote').textContent='Sensitivity view: the '+ownFloor+'% minimum is an assumption, not changed source data. This frontier is recomputed from the retained pool, not every legal lineup. Simulation still uses the baseline ownership model. '+$('rarityNote').textContent;
  if(!pts.length){chart.innerHTML='<p class="note">'+(all.length?'No lineups match the filters.':'Generate candidates after uploading projections and ownership. Showdown also needs captain ownership.')+'</p>';$('rarityStats').hidden=true;return;}
- const W=820,H=450,L=65,R=25,T=30,B=70;
+ const W=Math.max(320,Math.min(920,chart.clientWidth||820)),H=W<560?380:450,L=52,R=22,T=30,B=70;
  const rawMin=Math.min(...pts.map(p=>p.x)),rawMax=Math.max(...pts.map(p=>p.x));
  const minX=rawMin===rawMax?rawMin-0.25:rawMin,maxX=rawMin===rawMax?rawMax+0.25:rawMax;
  const minY=Math.min(...pts.map(p=>p.y))-0.5,maxY=Math.max(...pts.map(p=>p.y))+0.5,dx=maxX-minX,dy=maxY-minY;
  const X=x=>L+(x-minX)/dx*(W-L-R),Y=y=>H-B-(y-minY)/dy*(H-T-B);
- const metric=$('paretoColor').value,stats=new Map();
- if(SIM&&SIM.lineupKeys)SIM.perLineup.forEach(r=>{const k=SIM.lineupKeys[r.i];if(k)stats.set(k,r);});
+ const metric=$('paretoColor').value==='contest'?labActiveProfile().metric:$('paretoColor').value,stats=new Map(),contestSim=labCurrentSim();
+ if(contestSim&&SIM.lineupKeys)contestSim.perLineup.forEach(r=>{const k=SIM.lineupKeys[r.i];if(k)stats.set(k,r);});
  const simOf=p=>stats.get(labKey(p.l));
- const vals=pts.map(p=>simOf(p)).filter(Boolean).map(r=>r[metric]).filter(Number.isFinite),lo=vals.length?Math.min(...vals):0,hi=vals.length?Math.max(...vals):1;
- const color=p=>{const r=simOf(p),v=r&&r[metric];if(Number.isFinite(v))return `hsl(${15+135*(v-lo)/(hi-lo||1)} 70% 45%)`;return (p.l.dead||0)>0?'#d98b2b':'#82909e';};
- let ticks='';for(let i=0;i<=4;i++){const x=minX+dx*i/4,y=minY+dy*i/4;ticks+=`<path d="M${X(x)} ${T}V${H-B} M${L} ${Y(y)}H${W-R}" stroke="var(--grid)"/><text x="${X(x)}" y="${H-B+23}" text-anchor="middle" fill="var(--ink-2)" font-size="12">${labCopyText(Math.pow(10,x)*contest.entries)}</text><text x="${L-8}" y="${Y(y)+4}" text-anchor="end" fill="var(--ink-2)" font-size="12">${y.toFixed(1)}</text>`;}
+ const vals=pts.map(p=>simOf(p)).filter(Boolean).map(r=>r.train[metric]).filter(Number.isFinite),lo=vals.length?Math.min(...vals):0,hi=vals.length?Math.max(...vals):1;
+ const color=p=>{const r=simOf(p),v=r&&r.train[metric];if(Number.isFinite(v))return `hsl(${15+135*(v-lo)/(hi-lo||1)} 70% 45%)`;return (p.l.dead||0)>0?'#d98b2b':'#82909e';};
+ let ticks='';
+ for(let i=0;i<=4;i++){const y=minY+dy*i/4;ticks+=`<path d="M${L} ${Y(y)}H${W-R}" stroke="var(--grid)"/><text x="${L-8}" y="${Y(y)+4}" text-anchor="end" fill="var(--ink-2)" font-size="12">${y.toFixed(1)}</text>`;}
+ let copyTicks=[];const smallest=Math.pow(10,minX)*contest.entries,largest=Math.pow(10,maxX)*contest.entries;
+ for(let e=Math.floor(Math.log10(smallest));e<=Math.ceil(Math.log10(largest));e++)for(const m of [1,2,5]){const n=m*Math.pow(10,e);if(n>=smallest&&n<=largest)copyTicks.push(n);}
+ const maxCopyTicks=Math.max(3,Math.floor((W-L-R)/75));
+ if(copyTicks.length>maxCopyTicks){const step=Math.ceil(copyTicks.length/maxCopyTicks);copyTicks=copyTicks.filter((_,i)=>i%step===0);}
+ if(copyTicks.length<2)copyTicks=[smallest,largest];
+ for(const n of copyTicks){const x=Math.log10(n/contest.entries);ticks+=`<path d="M${X(x)} ${T}V${H-B}" stroke="var(--grid)"/><text x="${X(x)}" y="${H-B+23}" text-anchor="middle" fill="var(--ink-2)" font-size="12">${n<.001?n.toLocaleString(undefined,{maximumFractionDigits:8}):labCopyText(n)}</text>`;}
+ const badges=[...marks].map(([i,labels])=>{const p=pts.find(p=>p.i===i);return p?`<g aria-label="${labels.join('/')} candidate"><circle cx="${X(p.x)}" cy="${Y(p.y)}" r="8" fill="${labels.includes('P')?'#7c3aed':'#2563eb'}" stroke="white" stroke-width="2"/><text x="${Math.min(W-R-10,X(p.x)+10)}" y="${Y(p.y)-10}" fill="var(--ink-1)" font-size="12" font-weight="bold">${labels.join('/')}</text></g>`:'';}).join('');
+
  const order=pts.slice().sort((a,b)=>(on.has(a.i)?2:bandSet.has(a.i)?1:0)-(on.has(b.i)?2:bandSet.has(b.i)?1:0));
  const bound1=Math.log10(1/contest.entries),bound5=Math.log10(5/contest.entries);
  const zones=[{a:minX,b:bound1,color:'#22c55e',label:'Low duplication'},{a:bound1,b:bound5,color:'#eab308',label:'Moderate duplication'},{a:bound5,b:maxX,color:'#ef4444',label:'High duplication'}];
  const shading=zones.map(z=>{const a=Math.max(minX,z.a),b=Math.min(maxX,z.b);return b>a?`<rect x="${X(a)}" y="${T}" width="${X(b)-X(a)}" height="${H-T-B}" fill="${z.color}" opacity="0.13"/>`:'';}).join('');
  const boundaries=[bound1,bound5].filter(x=>x>minX&&x<maxX).map(x=>`<path d="M${X(x)} ${T}V${H-B}" stroke="var(--ink-2)" stroke-dasharray="5 5"/>`).join('');
  chart.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:8px 18px;font-size:12px;margin:8px 0" aria-label="Duplication zones"><span><b style="color:#16803c">●</b> Low duplication · &lt;1 copy</span><span><b style="color:#a87800">●</b> Moderate · 1–5 copies</span><span><b style="color:#d53c3c">●</b> High · 5+ copies</span></div>
- <svg id="paretoSvg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%;height:auto;touch-action:pan-y;user-select:none" role="img" aria-label="Lineup cloud: ${yKey==='ceil'&&hasCeil?'ceiling sum':'projected points'} versus estimated copies in ${esc(contest.label)}. Tap a dot to select, or use the lineup dropdown.">${shading}${ticks}${boundaries}<text x="${L}" y="18" fill="var(--ink-1)" font-size="13">${yKey==='ceil'&&hasCeil?'Ceiling sum':'Projected points'} ↑</text><text x="${W/2}" y="${H-14}" text-anchor="middle" fill="var(--ink-1)" font-size="14">Estimated copies · logarithmic scale</text>${order.map(p=>`<circle data-lineup="${p.i}" cx="${X(p.x)}" cy="${Y(p.y)}" r="${on.has(p.i)?5:bandSet.has(p.i)?3.5:2.5}" fill="${color(p)}" opacity="${on.has(p.i)?1:bandSet.has(p.i)?0.8:0.4}" ${on.has(p.i)?'stroke="var(--ink-1)" stroke-width="1.5"':''}/>`).join('')}<circle id="labSelectedDot" r="9" fill="#2563eb" stroke="white" stroke-width="3" style="pointer-events:none" visibility="hidden"/></svg>
+ <svg id="paretoSvg" viewBox="0 0 ${W} ${H}" style="display:block;width:100%;height:auto;touch-action:pan-y;user-select:none" role="img" aria-label="Lineup cloud: ${yKey==='ceil'&&hasCeil?'ceiling sum':'projected points'} versus estimated copies in ${esc(contest.label)}. Tap a dot to select, or use the lineup dropdown.">${shading}${ticks}${boundaries}<text x="${L}" y="18" fill="var(--ink-1)" font-size="13">${yKey==='ceil'&&hasCeil?'Ceiling sum':'Projected points'} ↑</text><text x="${W/2}" y="${H-14}" text-anchor="middle" fill="var(--ink-1)" font-size="14">Estimated copies · logarithmic scale</text>${order.map(p=>`<circle data-lineup="${p.i}" cx="${X(p.x)}" cy="${Y(p.y)}" r="${on.has(p.i)?5:bandSet.has(p.i)?3.5:2.5}" fill="${color(p)}" opacity="${on.has(p.i)?1:bandSet.has(p.i)?0.8:0.4}" ${on.has(p.i)?'stroke="var(--ink-1)" stroke-width="1.5"':''}/>`).join('')}${badges}<circle id="labSelectedDot" r="9" fill="#2563eb" stroke="white" stroke-width="3" style="pointer-events:none" visibility="hidden"/></svg>
  <p style="font-weight:700;margin:0">Expected copies of this lineup in ${esc(contest.label)} <span style="font-weight:400">· rough estimate</span></p>
  <p class="note" style="margin-top:4px">Left = fewer expected copies. Right = more potential prize-sharing if the lineup wins.</p>
  <div id="labTooltip" role="tooltip" hidden style="position:absolute;z-index:5;pointer-events:none;background:var(--surface-1);color:var(--ink-1);border:1px solid var(--ink-2);border-radius:10px;padding:12px;box-shadow:0 6px 24px #0003;font-size:12px;line-height:1.5;width:min(310px,calc(100% - 16px));box-sizing:border-box"></div>
- <p class="note">Blue filled dot: selected lineup. Outlined dots: ${exactView?'exact':'sampled'} frontier. Larger dots: within ${band} points of the frontier. Orange dots: dead spot. ${vals.length?'Dot colors red → green: lower → higher simulated '+({roi:'ROI',win:'first-place probability',top1:'top-1% rate',top10:'top-10% rate',cash:'cash rate'}[metric])+'.':'Gray dots: not simulated.'} Background colors describe duplication only.</p>`;
+ <p class="note">Blue filled dot: selected lineup. Outlined dots: ${exactView?'exact':'sampled'} frontier. Larger dots: within ${band} points of the frontier. Orange dots: low-projection player. ${vals.length?'Dot colors red → green: lower → higher simulated '+({win:'first place',top1:'top-1% rate',top10:'top-10% rate',cash:'cash rate',cutoffShare:'paid-slot share',top1Share:'dupe-adjusted top-1%'}[metric])+' in training worlds. Candidate cards use held-out worlds.':'Gray dots: not simulated.'} P = projection benchmark; C/3/5/M = contest candidates. Background colors describe duplication only. Visual filters do not remove the benchmark or candidate cards.</p>`;
  $('rarityStats').hidden=false;$('rarityStats').innerHTML=`<b>${pts.length.toLocaleString()} shown</b>${all.length!==pts.length?` of ${all.length.toLocaleString()} in pool`:''} · ${front.length} frontier · ${bandSet.size.toLocaleString()} in band · best ${Math.max(...pts.map(p=>p.y)).toFixed(1)}`;
  const detail=(i,scroll=true)=>{if(i==='')return;const p=pts.find(p=>p.i===+i);if(!p)return;const l=p.l,d=labDiagnostics(l),r=simOf(p),ev=labLineupEvidence(l),cost=Math.max(0,poolBest-l.proj),driver=ev.driver;
   labSelection=labKey(l);
@@ -6804,37 +6905,42 @@ function drawRarity(){
   if(![...picker.options].some(o=>o.value===String(p.i))){const o=document.createElement('option');o.value=p.i;o.textContent='Selected dot · '+p.y.toFixed(1)+' pts · ~'+labCopyText(copies(p))+' copies';o.dataset.selectedCloud='true';picker.appendChild(o);}
   picker.value=String(p.i);
   const better=pts.filter(q=>q.x<=p.x&&q.y>p.y).sort((a,b)=>b.y-a.y)[0];
-  const rows=d.slots.map(s=>`<tr><td><b>${s.slot}</b></td><td>${esc(s.p.pos)}</td><td>${esc(s.p.team)}</td><td>${esc(s.p.name)}</td><td>$${s.sal.toLocaleString()}</td><td>${fmt(s.proj,1)}</td><td>${s.ceil!=null?fmt(s.ceil,1):'—'}</td><td>${fmt(s.own,1)}%</td></tr>`).join('');
-  const iss=d.issues.filter(x=>x.level!=='info'),info=d.issues.filter(x=>x.level==='info');
-  $('rarityDetail').innerHTML=`<h3>Lineup #${p.i+1}${on.has(p.i)?' · On frontier':bandSet.has(p.i)?' · In band':''}${(l.dead||0)>0?' · <span style="color:#d98b2b">dead spot</span>':''}</h3>
+  const core=DDLabAudit.evidence(l,S.players,sd,ownFloor/100),rows=d.slots.map((s,j)=>`<tr><td><b>${s.slot}</b></td><td>${esc(s.p.pos)}</td><td>${esc(s.p.team)}</td><td>${esc(s.p.name)}</td><td>$${s.sal.toLocaleString()}</td><td>${fmt(s.proj,1)}</td><td>${s.ceil!=null?fmt(s.ceil,1):'—'}</td><td>${fmt(s.own,2)}%</td><td>${pct(core.slots.find(v=>v.id===l.ids.find(id=>S.players[id]===s.p)).logShare,0)}</td></tr>`).join('');
+  const iss=[],info=[];
+  $('rarityDetail').innerHTML=`<h3>Lineup #${p.i+1}${on.has(p.i)?' · On frontier':bandSet.has(p.i)?' · In band':''}${(l.dead||0)>0?' · <span style="color:#d98b2b">low projection</span>':''}</h3>
+   <div class="lab-evidence"><h4>What this lineup needs</h4><p>${esc(DDLabContests.story(l,S.players))}</p><p class="note">A construction hypothesis. The simulator draws correlated fantasy points; it does not simulate play-by-play or guarantee this game script.</p></div>
    <div style="padding:12px 0;border-block:1px solid var(--grid);margin-bottom:12px">
     <p><b>${cost.toFixed(1)} projected points sacrificed</b> versus ${poolBest.toFixed(1)}, the ${S.lineupsMeta&&S.lineupsMeta.inputKey===labInputKey()&&st.exact?'best legal projection in the generated pool':'best projection available in this pool'}.</p>
     <p><b>Rarity driver: ${driver.cpt?'CPT':'FLEX'} ${esc(driver.p.name)}</b> · ${driver.raw==null?'ownership missing':fmt(driver.raw,2)+'% imported slot ownership'} · ${fmt(driver.projection,1)} projected points in this slot.</p>
     <p>${ev.floorFactor>1.001?`<b>Ownership-sensitive:</b> the product rises ${fmt(ev.floorFactor,1)}× if slots below 0.5% use 0.5%. Try the sensitivity selector; this lineup’s rarity depends on tiny ownership assumptions.`:'No slot changes under the 0.5% ownership stress test.'}</p>
     ${ev.nearZero.length?`<p class="warn"><b>Low-projection dependency:</b> ${ev.nearZero.map(s=>esc(s.p.name)+' ('+fmt(s.p.proj,1)+' base points)').join(', ')}. Being different does not establish a credible path to a tournament-winning score.</p>`:''}
    </div>
-   <div class="tscroll"><table class="dtab"><thead><tr><th>Slot</th><th>Pos</th><th>Tm</th><th>Player</th><th>Salary</th><th>Proj</th><th>Ceil</th><th>Slot own</th></tr></thead><tbody>${rows}</tbody></table></div>
+   <div class="tscroll"><table class="dtab"><thead><tr><th>Slot</th><th>Pos</th><th>Tm</th><th>Player</th><th>Salary</th><th>Proj</th><th>Ceil</th><th>Slot own used</th><th>Rarity share</th></tr></thead><tbody>${rows}</tbody></table></div>
    <p><b>${fmt(l.proj,1)} projected</b>${d.ceil!=null?` · ceiling sum ${fmt(d.ceil,1)}`:''} · $${l.sal.toLocaleString()} ($${d.salLeft.toLocaleString()} left) · split ${esc(l.split||'')} · cumulative own ${fmt(d.own,0)}% · product ${d.prod.toExponential(2)} · lowest slot ${fmt(d.minOwn,1)}%</p>
    <p><b>Chart estimate: ~${labCopyText(copies(p))} copies</b> in ${esc(contest.label)} · ownership-only proxy.</p>
-   <p><b>Adjusted E[dupes] ${d.dupe&&d.dupe.eDupes!=null?fmt(d.dupe.eDupes,d.dupe.eDupes<10?2:1):'—'}</b> in a field of ${d.entries.toLocaleString()} (analytic prior, slot-aware)${d.dupe&&d.dupe.drivers&&d.dupe.drivers.length?` · drivers: ${d.dupe.drivers.slice(0,3).map(x=>esc(x.a)+' + '+esc(x.b)+' ×'+x.c).join(', ')}`:''}${r?` · <b>Simulated (${SIM.meta.fieldSize.toLocaleString()} entries):</b> mean ${fmt(r.mean,1)} · cash ${pct(r.cash,1)} · top-1% ${pct(r.top1,2)} · win ${pct(r.win,3)} · ROI ${pct(r.roi,1)} · sim dupes ${fmt(r.dupes,1)}`:' · not simulated'}</p>
+   ${labContestInspector(p.i)}
+   <p class="note">Core product, omitting the lowest-owned slot: ${core.coreProduct.toExponential(3)}. Largest single-slot rarity contribution: ${pct(core.maxLogShare,0)}${core.maxLogShare>.5?' · concentrated in one player':''}. These are diagnostics; neither excludes the lineup. Raw ownership below ${ownFloor}% uses the selected minimum, with C=1 and no fitted co-ownership adjustment.</p>
    ${iss.length?`<p>${iss.map(x=>`<span class="pill warn">${esc(x.message)}</span>`).join(' ')}</p>`:''}${info.length?`<p class="note">${info.map(x=>esc(x.message)).join(' ')}</p>`:''}
    ${better?`<p class="note">Lineup #${better.i+1} has ${(better.y-p.y).toFixed(1)} more at equal or lower product.</p>`:''}
    <div class="btnrow"><button class="btn ghost" id="labPin" data-i="${p.i}">Pin lineup</button><button class="btn ghost" id="labCopy" data-i="${p.i}">Copy roster</button></div>`;
   $('labPin').onclick=()=>{S.labPins=S.labPins||[];if(!S.labPins.some(x=>labKey(x)===labKey(l)))S.labPins.push(l);save();renderLabPins();};
   $('labCopy').onclick=()=>{const txt=d.slots.map(s=>s.slot+' '+s.p.name).join(' · ');if(navigator.clipboard)navigator.clipboard.writeText(txt);};
   if(scroll)$('rarityDetail').scrollIntoView({block:'nearest',behavior:'smooth'});};
+ labSelectPoint=detail;
  $('paretoPick').onchange=e=>detail(e.target.value);
  const svg=$('paretoSvg'),tip=$('labTooltip');
  const nearest=e=>{
   const matrix=svg.getScreenCTM();if(!matrix)return null;
-  let best=null,dist=28*28;
-  for(const p of pts){const point=svg.createSVGPoint();point.x=X(p.x);point.y=Y(p.y);const q=point.matrixTransform(matrix),d=(q.x-e.clientX)**2+(q.y-e.clientY)**2;if(d<=dist){dist=d;best=p;}}
+  let best=null,dist=30*30;
+  for(const p of pts){const x=X(p.x),y=Y(p.y),sx=matrix.a*x+matrix.c*y+matrix.e,sy=matrix.b*x+matrix.d*y+matrix.f,d=(sx-e.clientX)**2+(sy-e.clientY)**2;if(d<=dist){dist=d;best=p;}}
   return best;
  };
  const preview=(p,e)=>{
   if(!p){tip.hidden=true;return;}
   const evidence=labLineupEvidence(p.l),driver=evidence.driver;
-  tip.innerHTML=`<b>Lineup #${p.i+1} · ${p.l.proj.toFixed(1)} projected points</b><br>${lineupSlots(p.l).map(s=>esc(s.slot)+' '+esc(S.players[s.i].name)).join('<br>')}<br><b>~${labCopyText(copies(p))} copies in ${esc(contest.name)}</b><br>${Math.max(0,poolBest-p.l.proj).toFixed(1)} projected points below pool best<br>Rarity driver: ${esc(driver.p.name)} (${driver.raw==null?'missing':fmt(driver.raw,2)+'%'})${evidence.nearZero.length?'<br>⚠ Low-projection player in this lineup':''}<br>${ownFloor>0.25?'Stress-test':'Baseline'} product: ${Math.pow(10,p.x).toExponential(3)}<br>Imported-floor product: ${Math.pow(10,DDPareto.point(p.l,S.players,sd,p.i).x).toExponential(3)}`;
+  const ce=DDLabAudit.evidence(p.l,S.players,sd,ownFloor/100),sr=simOf(p),metricLabel=labActiveProfile().metricLabel;
+  tip.innerHTML=`<b>Lineup #${p.i+1} · ${p.l.proj.toFixed(1)} projected points</b><br>${lineupSlots(p.l).map(s=>{const e=ce.slots.find(e=>e.id===s.i);return esc(s.slot)+' '+esc(S.players[s.i].name)+' · '+fmt(e.used*100,2)+'% own used · '+pct(e.logShare,0)+' rarity';}).join('<br>')}<br><b>~${labCopyText(copies(p))} copies in ${esc(contest.name)}</b><br>$${p.l.sal.toLocaleString()} salary · ${Math.max(0,poolBest-p.l.proj).toFixed(1)} pts below best<br>Rarity driven by: ${esc(driver.p.name)} (raw ${driver.raw==null?'missing':fmt(driver.raw,2)+'%'})<br>Product ${ce.product.toExponential(3)} · core ${ce.coreProduct.toExponential(3)} · C=1${sr?'<br>Held-out top-10% '+pct(sr.validation.top10,2)+' · top-1% '+pct(sr.validation.top1,2)+'<br>'+esc(metricLabel)+' '+pct(sr.validation[labActiveProfile().metric],2):'<br>Not simulated'}`;
+
   tip.hidden=false;const box=chart.getBoundingClientRect();
   tip.style.left=Math.max(8,Math.min(e.clientX-box.left+12,box.width-tip.offsetWidth-8))+'px';
   tip.style.top=Math.max(0,e.clientY-box.top-tip.offsetHeight-14)+'px';
@@ -7355,7 +7461,7 @@ function boot() {
     const inp = e.target.closest("input.cell"); if (!inp) return;
     const i = +inp.closest("tr").dataset.i, f = inp.dataset.f;
     const raw = inp.value.trim();
-    if (raw === "") S.players[i][f] = f === "proj" ? null : (f === "own" ? 0 : null);
+    if (raw === "") S.players[i][f] = null;
     else { const v = parseFloat(raw); if (isFinite(v)) S.players[i][f] = v; }
     if(f==='proj'){delete S.players[i].cptProj;delete S.players[i].ceil;}
     if(S.labSource)S.labSource.editedAt=new Date().toISOString();
@@ -7407,17 +7513,23 @@ function boot() {
   $("expPos").addEventListener("change", renderExposure);
 $("rarityGo").addEventListener("click", runFrontier);
 $('paretoColor').addEventListener('change', drawRarity);
-['labContest','labCustomField'].forEach(id=>$(id).addEventListener('change',()=>{
- const preset=$('labContest').value;
- if(preset==='custom'){
-  const v=Number($('labCustomField').value);
-  if(!Number.isInteger(v)||v<2||v>10000000){$('labCustomField').value=(S.labContest&&S.labContest.custom)||235;}
- }
- S.labContest={preset,custom:Number($('labCustomField').value)};save();drawRarity();
+$('labTarget').addEventListener('change',()=>{S.labTarget=$('labTarget').value;save();drawRarity();});
+['labContest','labCustomField','labPaidPlaces'].forEach(id=>$(id).addEventListener('change',()=>{
+ const c=labActiveProfile();S.labCustomMode=S.labCustomMode||{};
+ if(id==='labContest'){S.labCustomMode[c.key]=$('labContest').value==='custom';if(S.labCustomMode[c.key]){$('labCustomWrap').hidden=false;save();return;}}
+ const size=$('labContest').value==='custom'?+$('labCustomField').value:+$('labContest').value;
+ if(!Number.isInteger(size)||size<2||size>10000000){labSyncContest();return;}
+ let paid=+$('labPaidPlaces').value;
+ if(id!=='labPaidPlaces'&&size!==c.fieldSize)paid=Math.round(size*c.paidPlaces/c.fieldSize);
+ if(!Number.isInteger(paid)||paid<1||paid>size){labSyncContest();return;}
+ S.labProfiles=S.labProfiles||{};S.labProfiles[c.key]={fieldSize:size,paidPlaces:paid};save();drawRarity();
 }));
+$('labScript').addEventListener('change',()=>{S.labScript=$('labScript').value;save();drawRarity();});
+$('labFieldSalary').addEventListener('change',drawRarity);
+$('labCompareStop').addEventListener('click',()=>{if(labCompareWorker)labCompareWorker.terminate();labCompareWorker=null;$('labCompareStop').hidden=true;$('labCompareState').textContent='Comparison stopped';renderLabRecommendations();});
 ['labY','labCpt','labMinOwn','labHideDead','labBand','labOwnFloor','labMinSal','labMaxTeam'].forEach(id => $(id).addEventListener('change', () => { if (S.lineups.length) drawRarity(); }));
-$('labSimBand').addEventListener('click', () => { const b = new Set(S.labBand || []); if (!b.size) { banner('rarityWarn','warn','Generate a pool first.'); return; } const keep = S.lineups.filter((l, i) => b.has(i)); if (!keep.length) return; S.lineups = keep; S.labSubset = true; SIM = null; S.labBand = keep.map((_, i) => i); S.lineupsMeta = { stamp: Date.now(), site: S.site, asked: keep.length, lab: true }; save(); renderStrip(); renderLineups(); renderSolveStats(); show('sim'); runSim(); });
-$('paretoSim').addEventListener('click', () => { show('sim'); runSim(); });
+$('labSimBand').addEventListener('click',()=>show('sim'));
+$('paretoSim').addEventListener('click',runLabCompare);
 $('paretoStop').addEventListener('click', () => { if(frontWorker)frontWorker.terminate();frontWorker=null;$('rarityGo').disabled=false;$('paretoStop').hidden=true;$('rarityState').textContent='Stopped; previous pool retained'; });
 
   // ---- bankroll ----
@@ -7779,7 +7891,7 @@ ${S.demo ? "- ⚠️ THE LOADED SLATE IS THE DEMO SLATE. Every player name, sala
                   : `⚠️ Fewer than five contests logged — there is no confidence band and you must not imply the ROI figure means anything.`);
       } else L.push("Nothing is logged in the bankroll tracker.");
       L.push("LINEUP LAB: Showdown pools are EXACT enumerations of every legal lineup under the Lab's salary floor and max-per-team (classic pools are sampled). The frontier is exact for showdown. A punt captain or a sub-0.5%-owned slot lowers the ownership product 50-100x while the rest of the roster may be exactly what the field plays; treat those frontier dots as flagged, not free. Tap a dot for the roster, slot ownership, E[dupes] (slot-aware analytic prior), validator flags and sim results. X is estimated copies (slot-ownership product times selected contest field size) on a log scale; presets are illustrative. Green/yellow/red background zones describe low/moderate/high duplication, not contest suitability. Simulator results retain their simulation field size; Y is projected points. Product is an independence proxy, not a duplication probability. Showdown uses CPT ownership and total-minus-CPT for FLEX. Gray points have not been simulated. Exposure caps and minimum uniques are not enforced on the exploration pool.");
-      L.push(`VOCABULARY: Proj = sum of the user's projections. Mean = average simulated score. Own% = projected ownership. Win-lineup% = how often a player appears in the highest-scoring sampled opponent; not the exact slate optimum. Leverage = win-lineup% minus ownership. Dupes = expected number of other entries holding the identical lineup. Cash% = share of simulations finishing in the money. Cumulative own = the sum of the projected ownership of the nine players in a lineup, which is what "rarity" means on this page. Exchange rate = projected points gained per point of cumulative ownership added, along the frontier.`);
+      L.push(`VOCABULARY: Proj = sum of the user's projections. Mean = average simulated score. Own% = projected ownership. Win-lineup% = how often a player appears in the highest-scoring sampled opponent; not the exact slate optimum. Leverage = win-lineup% minus ownership. Dupes = expected number of other entries holding the identical lineup. Cash% = share of simulations finishing in the money. Rarity in the Lab uses captain and FLEX slot-ownership product with a 0.25% minimum; expected copies on the axis are that product times the selected entry count, an uncalibrated proxy. Cumulative ownership is only a secondary diagnostic. Contest candidates are chosen on training worlds and evaluated on held-out worlds. No GPP-safe or cash-only designation follows from duplication alone.`);
       return L.join("\n");
     }
   };
