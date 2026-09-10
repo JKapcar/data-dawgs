@@ -127,9 +127,13 @@ selection and the visible cloud; the projection benchmark stays visible.
 Cards choose their lineup using training worlds only and show held-out rates and
 95% Monte Carlo intervals. Cash ranks by tie-adjusted paid-slot rate (any-prize and positive-profit rates
 are also shown); multipliers rank by paid-slot share with fractional tied-cutoff credit;
-GPP ranks by top-1% rate divided by one plus modelled identical opponents. This
-last quantity is a heuristic, not ROI. Duplicate-sampling intervals are separate
-from the score-world intervals. Overlapping card/runner-up intervals are explicitly
+GPP ranks by top-1% rate divided by one plus the upper 95% estimate of identical
+opponents when the field is sampled. With a complete modelled field, the actual
+duplicate count is used. This conservative score prevents zero observed copies
+from receiving an unsupported uniqueness bonus. It is an engineering choice,
+not a calibrated probability or ROI. Duplicate-sampling intervals are separate
+from the score-world intervals; the displayed MC band is conditional on the chosen
+duplication penalty, not a joint confidence band for both uncertainties. Overlapping card/runner-up intervals are explicitly
 marked unresolved. The same lineup can be selected for multiple profiles.
 
 Input audit, current-snapshot/model keys, captain scoring consistency, correlation
@@ -165,3 +169,6 @@ the actual updated player IDs, so a partial projection update cannot claim compl
 provenance. Blank CPT projections/ceilings also clear old estimates. Cash selection
 uses fractional credit for ties at the payout cutoff: with flat prizes, this tracks
 expected payout and avoids preferring frequent tiny tie refunds over actual returns.
+
+Live verification also checks that changing generation rules clears the exact-frontier
+claim until the pool is regenerated. Both checks have regression coverage.

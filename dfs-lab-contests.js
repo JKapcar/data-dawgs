@@ -7,7 +7,7 @@ const defaults=[
  {key:'cash',label:'Cash / double-up',short:'C',fieldSize:50,paidPlaces:22,multiplier:2,metric:'cutoffShare',metricLabel:'tie-adjusted cash rate'},
  {key:'three',label:'3× multiplier',short:'3',fieldSize:250,paidPlaces:75,multiplier:3,metric:'cutoffShare',metricLabel:'paid-slot share'},
  {key:'five',label:'5× multiplier',short:'5',fieldSize:250,paidPlaces:45,multiplier:5,metric:'cutoffShare',metricLabel:'paid-slot share'},
- {key:'milly',label:'Milly / GPP',short:'M',fieldSize:132000,paidPlaces:26400,multiplier:null,metric:'top1Share',metricLabel:'dupe-adjusted top-1%'}
+ {key:'milly',label:'Milly / GPP',short:'M',fieldSize:132000,paidPlaces:26400,multiplier:null,metric:'top1Share',metricLabel:'conservative top-1% share'}
 ];
 function profiles(saved={}){
  return defaults.map(d=>{const v=saved[d.key]||{};const fieldSize=Math.max(2,Math.min(10000000,Math.round(v.fieldSize||d.fieldSize)));
@@ -39,9 +39,23 @@ function story(l,P){
  if(t.againstDST)text+=' A QB faces the opposing DST in this roster; those outcomes usually pull in different directions.';
  return text;
 }
+// Rank a partial-field GPP with the upper duplicate estimate, so an unseen
+// lineup does not get a free uniqueness bonus. This is a conservative score,
+// not a probability or a joint confidence interval for score and field error.
+function view(result,c){
+ if(!result||c.metric!=='top1Share')return result;
+ return {...result,perLineup:result.perLineup.map(r=>{
+  const upper=r.dupeCI&&r.dupeCI[1];
+  const duplicatePenalty=result.meta.fullField?r.dupes:Number.isFinite(upper)?Math.max(r.dupes,upper):null;
+  const adjust=v=>{if(!v)return v;const valid=Number.isFinite(duplicatePenalty)&&duplicatePenalty>=0&&Number.isFinite(v.top1);
+   return {...v,top1Share:valid?v.top1/(1+duplicatePenalty):null,ci:{...v.ci,top1Share:valid&&v.ci&&v.ci.top1?v.ci.top1.map(x=>x/(1+duplicatePenalty)):null}};
+  };
+  return {...adjust(r),duplicatePenalty,train:adjust(r.train),validation:adjust(r.validation)};
+ })};
+}
 function select(sim,lineups,P,script,configs=profiles()){
  return configs.map(c=>{
-  const result=sim&&sim.contests&&sim.contests[c.key];
+  const result=view(sim&&sim.contests&&sim.contests[c.key],c);
   if(!result)return {...c,unavailable:'Run the contest comparison.'};
   if(c.key==='milly'&&!result.meta.top1Resolved)return {...c,unavailable:'Increase the opponent sample to resolve the top 1%.'};
   const rows=result.perLineup.filter(r=>lineups[r.i]&&matches(lineups[r.i],P,script)&&Number.isFinite(r.train&&r.train[c.metric]));
@@ -51,5 +65,5 @@ function select(sim,lineups,P,script,configs=profiles()){
   return {...c,i:best.i,training:best.train[c.metric],value:v[c.metric],ci,validation:v,dupes:best.dupes,dupeCI:best.dupeCI,runnerUp:next&&next.i,overlap:!!(ci&&nci&&ci[0]<=nci[1]&&nci[0]<=ci[1]),meta:result.meta};
  });
 }
-const api={config,defaults,profiles,traits,matches,story,select};if(typeof module!=='undefined')module.exports=api;root.DDLabContests=api;
+const api={config,defaults,profiles,traits,matches,story,view,select};if(typeof module!=='undefined')module.exports=api;root.DDLabContests=api;
 })(typeof self!=='undefined'?self:globalThis);
