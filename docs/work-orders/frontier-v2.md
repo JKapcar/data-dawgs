@@ -45,6 +45,16 @@ projection and correlation model uncertainty. Use independent scoring worlds to
 evaluate a shortlist chosen on the first half of the simulations; do not reselect
 using the evaluation results.
 
+The v2 engine has separate CPT/FLEX field weights, independent candidate scoring,
+exact sorted-score ties and payout-prefix sharing. It reserves half the scoring
+worlds for validation and provides Wilson intervals for binary rates. Fractional
+cutoff shares use a conservative bounded-mean interval. The sample field is fixed:
+these intervals do not include its uncertainty. A zero duplicate observation gets
+an explicit nonzero upper bound. First place and top-heavy ROI are unavailable
+when the opponent field is extrapolated. Cash/flat payout expectations can still
+be estimated near their payout cutoff. Runtime captain/FLEX projection mismatch
+flags prevent recommendation labels when 1.5× scoring and the imported means disagree.
+
 ## 3. Contest-aware chart
 
 Keep the projection benchmark visible. Select candidates by cash rate, payout
@@ -86,6 +96,12 @@ presets are editable examples; paid places/payout structure matter as well as N.
   use pairwise intersections of lineup winning events in a portfolio objective.
   That derivation does not validate player co-ownership multipliers or N×product
   as a calibrated duplication forecast.
+
+- [ETR's Showdown sim review](https://establishtherun.com/nfl-showdown-dfs-what-are-the-sims-saying/)
+  publicly reports increasing observed cash rates across predicted-cash buckets
+  in its 33-slate sample. The remaining ROI-bucket claims are behind a subscription
+  in the version available here; they are not independently verified in this change.
+  Vendor calibration does not establish calibration of this simulator.
 
 The supplied work order's 140% total-ownership cap, fixed salary-to-tie claims,
 universal safe/unsafe copy zones and automatic punt exclusions are not acceptance
