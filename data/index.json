@@ -1,9 +1,9 @@
 {
- "as_of": "2026-09-09",
+ "as_of": "2026-09-10",
  "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
  "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
  "site": "https://datadawgs216.com",
- "built": "2026-09-09",
+ "built": "2026-09-10",
  "data": {
   "files": [
    {
@@ -354,8 +354,8 @@
     "path": "/data/guillotine-calibration.json",
     "url": "https://datadawgs216.com/data/guillotine-calibration.json",
     "bytes": 6597,
-    "as_of": "2026-09-09",
-    "sha256": "bd071b53c3a77af7ce0764e9296228ae4216573388d266750b076afafdac01b2",
+    "as_of": "2026-09-10",
+    "sha256": "f97bd2a81c48f8c76bf89a37671fd2f1a8ddb70a39b617fa5fea65299c674684",
     "note": "Historical Sleeper projections can be revised after games. These are descriptive uncertainty estimates, not out-of-sample calibration. Correlation between opposing NFL teams and negative teammate correlations are not modeled."
    },
    {
@@ -370,16 +370,16 @@
     "path": "/data/guillotine-receipts.json",
     "url": "https://datadawgs216.com/data/guillotine-receipts.json",
     "bytes": 11708,
-    "as_of": "2026-09-09",
-    "sha256": "4b3017f09055635cf93125428ed006c15d5241e395f9205814cf704d37978179",
+    "as_of": "2026-09-10",
+    "sha256": "d365114541919c3ef0cd57bde667eb06ec9fd3a4dfa35f2035790b373d761de5",
     "note": "Prospective pregame forecasts. Roster IDs only; no ownership identities or player rosters. Multiclass Brier is the sum of squared chop-probability errors; lower is better. Repeated full ties await resolution."
    },
    {
     "path": "/data/guillotine-weekly.json",
     "url": "https://datadawgs216.com/data/guillotine-weekly.json",
-    "bytes": 624051,
-    "as_of": "2026-09-09",
-    "sha256": "d2e07c4be2079ae8285010bc537b6df42c9e6bb369c91c50769e7588b14f1028",
+    "bytes": 631703,
+    "as_of": "2026-09-10",
+    "sha256": "c523d8cf694675af57bf22ffb99f89cac0312e1907094851ac14a393835b63da",
     "note": "Daily snapshot. Player timestamps are source update times. Projections are not live scores. Historical uncertainty is descriptive, not prospectively validated."
    },
    {
