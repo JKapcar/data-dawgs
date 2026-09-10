@@ -4336,7 +4336,7 @@ root.DDFS.tieOutcome=tieOutcome;root.DDFS.wilson=wilson;root.DDFS.lineupKey=line
 </script>
 
 <script src="dfs-lab-audit.js?v=20260910-contests"></script>
-<script src="dfs-lab-contests.js?v=20260910-contests"></script>
+<script src="dfs-lab-contests.js?v=20260910-confidence"></script>
 <script src="dfs-pareto.js?v=20260910-contests"></script>
 <script>
 /* =========================================================================
@@ -6647,11 +6647,10 @@ function renderLev() {
 /* ============================================================================
    PROJECTION vs RARITY
 
-   ⚠️ WHAT THE CURVE IS. Each point is a lineup that is EXACTLY optimal for one weighting
-   of projection against ownership — proved, not approximated. The line between two points
-   is a chord of the convex hull, so it is a floor: the real frontier is at or above it,
-   never below. A lineup in a dent between two vertices is optimal for no weighting at all
-   and cannot be found by this method. The note under the chart says so; do not delete it.
+   The Showdown worker can enumerate every legal lineup and retain its full Pareto
+   frontier, a projection band and a random cloud. Exactness applies only to that
+   completed search under the same input and generation rules. A changed view or
+   filtered candidate pool must not inherit the original exact-frontier claim.
 
    ⚠️ OWNERSHIP IS AN IMPORT, NOT AN OBSERVATION. Everything here is measured in the
    ownership numbers the user pasted in. They are somebody's projection of the field.
@@ -6672,7 +6671,7 @@ function labModelGate(){
  return {pass:true,reason:'Model candidates selected on training worlds; rates below use separate validation worlds.'};
 }
 function labSelections(){return labModelGate().pass?DDLabContests.select(SIM,S.lineups,S.players,labScenario(),labProfiles()):[];}
-function labCurrentSim(){return SIM&&SIM.lab&&SIM.inputKey===labInputKey()&&SIM.labModelKey===labModelKey()?SIM.contests[labActiveProfile().key]:null;}
+function labCurrentSim(){const c=labActiveProfile();return SIM&&SIM.lab&&SIM.inputKey===labInputKey()&&SIM.labModelKey===labModelKey()?DDLabContests.view(SIM.contests[c.key],c):null;}
 function labRateBand(ci){return ci?pct(ci[0],2)+'–'+pct(ci[1],2):'unavailable';}
 function labJump(i){
  if(!S.lineups[i])return;
@@ -6705,7 +6704,7 @@ function labContestInspector(i){
  <p>Cash ${pct(v.cash,1)} · positive profit ${pct(v.profit,1)} · top-10% ${pct(v.top10,2)} · top-1% ${pct(v.top1,2)}.</p>
  <p>${result.meta.firstPlaceAvailable?'First place (ties included) '+pct(v.win,3)+' · first-prize share '+pct(v.firstShare,3):'First place: unavailable from a partial field.'} ${v.roi==null?'Top-heavy ROI: unavailable at this field resolution.':'Model ROI '+pct(v.roi,1)+'.'}</p>
  <p>Identical opponents in the field model: ~${labCopyText(r.dupes)} · sampling interval ${labCopyText(r.dupeCI[0])}–${labCopyText(r.dupeCI[1])}. A zero sample count does not prove uniqueness.</p>
- <p class="note">${c.key==='milly'?'Dupe-adjusted top-1% = top-1% rate ÷ (1 + modelled identical opponents). This is a selection heuristic, not expected profit. ':c.key==='cash'?'Tie-adjusted cash rate credits the fraction of paid places covered by a tie. Any-prize and positive-profit rates are shown separately. ':'Paid-slot share gives fractional credit when a tie crosses the payout cutoff. '}Intervals cover score-world sampling error conditional on the field and model; they do not cover forecast error. The copy axis uses the separate ownership-product proxy.</p></div>`;
+ <p class="note">${c.key==='milly'?'Conservative top-1% share = top-1% rate ÷ (1 + '+(result.meta.fullField?'identical opponents in the complete modelled field':'upper 95% estimate of identical opponents')+'). The denominator here is '+labCopyText(1+r.duplicatePenalty)+'. This is a ranking score, not a calibrated probability or expected profit. ':c.key==='cash'?'Tie-adjusted cash rate credits the fraction of paid places covered by a tie. Any-prize and positive-profit rates are shown separately. ':'Paid-slot share gives fractional credit when a tie crosses the payout cutoff. '}Intervals cover score-world sampling error conditional on the field and duplication assumption; they do not cover forecast error or provide a joint interval for both sources of uncertainty. The copy axis uses the separate ownership-product proxy.</p></div>`;
 }
 function runLabCompare(){
  if(labCompareWorker)return;
@@ -6846,7 +6845,8 @@ function labDiagnostics(l) {
 function drawRarity(){
  const chart=$('rarityChart'),sd=S.site==='dk_showdown';$('rarityCard').hidden=false;labFillCaptains();labSyncContest();renderLabSource();renderLabAudit();renderLabRecommendations();
  const contest=labContestInfo(),copies=p=>Math.pow(10,p.x)*contest.entries,ownFloor=+$('labOwnFloor').value;
- const poolBest=S.labStats&&S.lineupsMeta&&S.lineupsMeta.inputKey===labInputKey()&&Number.isFinite(S.labStats.bestProjection)?S.labStats.bestProjection:Math.max(0,...S.lineups.map(l=>l.proj));
+ const currentPool=S.lineupsMeta&&S.lineupsMeta.inputKey===labInputKey()&&S.lineupsMeta.rulesKey===labRulesKey();
+ const poolBest=S.labStats&&currentPool&&Number.isFinite(S.labStats.bestProjection)?S.labStats.bestProjection:Math.max(0,...S.lineups.map(l=>l.proj));
  $('paretoCountWrap').hidden=sd;
  const yKey=$('labY').value,cptF=$('labCpt').value,minOwn=+$('labMinOwn').value||0,hideDead=$('labHideDead').checked;
  const hasCeil=S.lineups.length&&S.lineups.every(l=>Number.isFinite(l.ceil)&&l.ids.every(i=>Number.isFinite(S.players[i].ceil)));
@@ -6862,7 +6862,8 @@ function drawRarity(){
  $('rarityDetail').textContent='Tap a dot to select a lineup. Hover or hold a dot for a quick preview.';
  $('paretoPick').innerHTML='<option value="">Choose a frontier lineup…</option>'+front.map(p=>`<option value="${p.i}">${p.y.toFixed(1)} ${yKey==='ceil'?'ceil':'pts'} · ~${labCopyText(copies(p))} copies · CPT ${esc(S.players[p.l.cpt]?S.players[p.l.cpt].name:'')}</option>`).join('');
  const st=S.labStats||{};
- const exactView=st.exact&&labScenario()==='any'&&!cptF&&!minOwn&&!hideDead&&yKey!=='ceil'&&!S.labSubset&&ownFloor===0.25;
+ if(S.lineups.length&&!frontWorker)$('rarityState').textContent=currentPool?(st.exact?'exact · ':'sampled · ')+(st.legal||S.lineups.length).toLocaleString()+' legal lineups':'Previous pool · generate for the current Lab rules';
+ const exactView=currentPool&&st.exact&&labScenario()==='any'&&!cptF&&!minOwn&&!hideDead&&yKey!=='ceil'&&!S.labSubset&&ownFloor===0.25;
  $('rarityNote').textContent=(exactView?'Exact frontier over every legal lineup under the Lab settings. ':'Frontier of sampled candidates, not a guarantee over every possible lineup. ')+'Chart copies = slot-ownership product × selected field size. This rough independence model is not a calibrated duplication forecast; shared lineup-building patterns can change actual duplication. Low duplication does not establish GPP suitability, and high duplication does not establish cash-game suitability. Use projection and simulated outcomes alongside duplication. '+(sd?'CPT uses captain ownership; FLEX uses total minus captain; slots under 0.25% are floored. ':'')+(yKey==='ceil'&&!hasCeil?'Ceiling sum needs a Ceiling column in the projections upload; showing projected points. ':'')+'Exposure caps and minimum uniques are not applied to the exploration pool.';
  if(ownFloor>0.25)$('rarityNote').textContent='Sensitivity view: the '+ownFloor+'% minimum is an assumption, not changed source data. This frontier is recomputed from the retained pool, not every legal lineup. Simulation still uses the baseline ownership model. '+$('rarityNote').textContent;
  if(!pts.length){chart.innerHTML='<p class="note">'+(all.length?'No lineups match the filters.':'Generate candidates after uploading projections and ownership. Showdown also needs captain ownership.')+'</p>';$('rarityStats').hidden=true;return;}
@@ -6896,7 +6897,7 @@ function drawRarity(){
  <p style="font-weight:700;margin:0">Expected copies of this lineup in ${esc(contest.label)} <span style="font-weight:400">· rough estimate</span></p>
  <p class="note" style="margin-top:4px">Left = fewer expected copies. Right = more potential prize-sharing if the lineup wins.</p>
  <div id="labTooltip" role="tooltip" hidden style="position:absolute;z-index:5;pointer-events:none;background:var(--surface-1);color:var(--ink-1);border:1px solid var(--ink-2);border-radius:10px;padding:12px;box-shadow:0 6px 24px #0003;font-size:12px;line-height:1.5;width:min(310px,calc(100% - 16px));box-sizing:border-box"></div>
- <p class="note">Blue filled dot: selected lineup. Outlined dots: ${exactView?'exact':'sampled'} frontier. Larger dots: within ${band} points of the frontier. Orange dots: low-projection player. ${vals.length?'Dot colors red → green: lower → higher simulated '+({win:'first place',top1:'top-1% rate',top10:'top-10% rate',cash:'cash rate',cutoffShare:'paid-slot share',top1Share:'dupe-adjusted top-1%'}[metric])+' in training worlds. Candidate cards use held-out worlds.':'Gray dots: not simulated.'} P = projection benchmark; C/3/5/M = contest candidates. Background colors describe duplication only. Visual filters do not remove the benchmark or candidate cards.</p>`;
+ <p class="note">Blue filled dot: selected lineup. Outlined dots: ${exactView?'exact':'sampled'} frontier. Larger dots: within ${band} points of the frontier. Orange dots: low-projection player. ${vals.length?'Dot colors red → green: lower → higher simulated '+({win:'first place',top1:'top-1% rate',top10:'top-10% rate',cash:'cash rate',cutoffShare:'paid-slot share',top1Share:'conservative top-1% share'}[metric])+' in training worlds. Candidate cards use held-out worlds.':'Gray dots: not simulated.'} P = projection benchmark; C/3/5/M = contest candidates. Background colors describe duplication only. Visual filters do not remove the benchmark or candidate cards.</p>`;
  $('rarityStats').hidden=false;$('rarityStats').innerHTML=`<b>${pts.length.toLocaleString()} shown</b>${all.length!==pts.length?` of ${all.length.toLocaleString()} in pool`:''} · ${front.length} frontier · ${bandSet.size.toLocaleString()} in band · best ${Math.max(...pts.map(p=>p.y)).toFixed(1)}`;
  const detail=(i,scroll=true)=>{if(i==='')return;const p=pts.find(p=>p.i===+i);if(!p)return;const l=p.l,d=labDiagnostics(l),r=simOf(p),ev=labLineupEvidence(l),cost=Math.max(0,poolBest-l.proj),driver=ev.driver;
   labSelection=labKey(l);
@@ -6910,7 +6911,7 @@ function drawRarity(){
   $('rarityDetail').innerHTML=`<h3>Lineup #${p.i+1}${on.has(p.i)?' · On frontier':bandSet.has(p.i)?' · In band':''}${(l.dead||0)>0?' · <span style="color:#d98b2b">low projection</span>':''}</h3>
    <div class="lab-evidence"><h4>What this lineup needs</h4><p>${esc(DDLabContests.story(l,S.players))}</p><p class="note">A construction hypothesis. The simulator draws correlated fantasy points; it does not simulate play-by-play or guarantee this game script.</p></div>
    <div style="padding:12px 0;border-block:1px solid var(--grid);margin-bottom:12px">
-    <p><b>${cost.toFixed(1)} projected points sacrificed</b> versus ${poolBest.toFixed(1)}, the ${S.lineupsMeta&&S.lineupsMeta.inputKey===labInputKey()&&st.exact?'best legal projection in the generated pool':'best projection available in this pool'}.</p>
+    <p><b>${cost.toFixed(1)} projected points sacrificed</b> versus ${poolBest.toFixed(1)}, the ${currentPool&&st.exact?'best legal projection in the generated pool':'best projection available in this pool'}.</p>
     <p><b>Rarity driver: ${driver.cpt?'CPT':'FLEX'} ${esc(driver.p.name)}</b> · ${driver.raw==null?'ownership missing':fmt(driver.raw,2)+'% imported slot ownership'} · ${fmt(driver.projection,1)} projected points in this slot.</p>
     <p>${ev.floorFactor>1.001?`<b>Ownership-sensitive:</b> the product rises ${fmt(ev.floorFactor,1)}× if slots below 0.5% use 0.5%. Try the sensitivity selector; this lineup’s rarity depends on tiny ownership assumptions.`:'No slot changes under the 0.5% ownership stress test.'}</p>
     ${ev.nearZero.length?`<p class="warn"><b>Low-projection dependency:</b> ${ev.nearZero.map(s=>esc(s.p.name)+' ('+fmt(s.p.proj,1)+' base points)').join(', ')}. Being different does not establish a credible path to a tournament-winning score.</p>`:''}
