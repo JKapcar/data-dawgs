@@ -32,7 +32,7 @@ console.log("\ndistribution shape");
   ok("lineup sd is a plausible fraction of the mean",
      r.perLineup[0].sd / r.perLineup[0].mean > 0.15 && r.perLineup[0].sd / r.perLineup[0].mean < 0.45,
      `cv ${(r.perLineup[0].sd / r.perLineup[0].mean).toFixed(3)}`);
-  ok("no correlation matrix failed to factor", r.warn.length === 0, r.warn.join("; "));
+  ok("no correlation matrix failed to factor", !r.warn.some(w=>/matrix failed/.test(w)), r.warn.join("; "));
 }
 
 console.log("\ncorrelation actually lands where the data says");
@@ -105,7 +105,7 @@ console.log("\nfield construction");
   ok("mean absolute ownership error under 3 points after calibration",
      r.meta.fieldOwnershipError != null && r.meta.fieldOwnershipError < 3,
      `${(r.meta.fieldOwnershipError || 0).toFixed(2)}pp`);
-  ok("every lineup has a win rate between 0 and 1", r.perLineup.every(l => l.win >= 0 && l.win <= 1));
+  ok("first place is unavailable for an extrapolated field", r.perLineup.every(l => l.win === null));
   ok("cash rate is at least the win rate for every lineup", r.perLineup.every(l => l.cash >= l.win - 1e-9));
   ok("mean rank is sane (between 1 and field size)", r.perLineup.every(l => l.meanRank >= 1 && l.meanRank <= 20000));
   const lev = r.perPlayer.map(p => p.leverage);
@@ -115,7 +115,7 @@ console.log("\nfield construction");
   ok("win-lineup shares sum to ~900% (9 roster slots)", Math.abs(sumWL - 900) < 1, sumWL.toFixed(1));
 }
 
-console.log("\nchalk should lose to leverage in a top-heavy GPP (the whole argument)");
+console.log("\ncompare a chalk build without assuming ownership determines contest performance");
 {
   // build the most-owned legal lineup and the highest-projected one, compare ROI
   const chalk = D.solveLineups(P.map(p => ({ ...p, proj: p.own })), { site: "dk_classic", count: 1, minSalary: 45000 });
@@ -126,8 +126,8 @@ console.log("\nchalk should lose to leverage in a top-heavy GPP (the whole argum
     payout: { kind: "param", paidFrac: 0.2, alpha: 1.15, rake: 0.15 } });
   const chalkOwn = chalkIds.reduce((t, i) => t + P[i].own, 0);
   const bestOwn = best.ids.reduce((t, i) => t + P[i].own, 0);
-  console.log(`  chalk build: ${chalkOwn.toFixed(0)}% cumulative own, ROI ${(r.perLineup[0].roi * 100).toFixed(1)}%`);
-  console.log(`  solver best: ${bestOwn.toFixed(0)}% cumulative own, ROI ${(r.perLineup[1].roi * 100).toFixed(1)}%`);
+  console.log(`  chalk build: ${chalkOwn.toFixed(0)}% cumulative own, ROI ${r.perLineup[0].roi==null?'unavailable':(r.perLineup[0].roi*100).toFixed(1)}%`);
+  console.log(`  solver best: ${bestOwn.toFixed(0)}% cumulative own, ROI ${r.perLineup[1].roi==null?'unavailable':(r.perLineup[1].roi*100).toFixed(1)}%`);
   ok("the chalk build really is the more-owned one", chalkOwn > bestOwn);
 }
 

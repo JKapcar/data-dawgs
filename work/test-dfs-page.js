@@ -11,3 +11,8 @@ for (const match of html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi)) {
 }
 if (!count) throw new Error('No DFS scripts found');
 console.log(`${count} production DFS scripts compile`);
+
+const assert=require('node:assert/strict');
+const engine=html.split('<script type="text/plain" id="ddfsEngine">')[1].split('</script>')[0].trim();
+assert.equal(engine,fs.readFileSync(path.join(__dirname,'dfs-engine.js'),'utf8').trim());
+console.log('Production worker engine matches tested source');
