@@ -214,8 +214,11 @@ CSS = CSS_BEGIN + r"""
 """ + CSS_END
 
 # The inlined site.css has no newline before its close tag, so anchor on the tag itself.
+# dfs.html gained a SECOND <style> block when main landed the Lineup Lab work, so this
+# deliberately does not assert uniqueness — it targets the FIRST close tag, which is the
+# inlined site.css where this block already lives. `.replace(..., 1)` hits that one.
 CSS_ANCHOR = "</style>"
-once(s, CSS_ANCHOR, "style close")
+assert CSS_ANCHOR in s, "no </style> in dfs.html to anchor the showdown CSS on"
 s = s.replace(CSS_ANCHOR, "\n" + CSS + "\n\n" + CSS_ANCHOR, 1)
 
 # ---------------------------------------------------------------- 6. controller
