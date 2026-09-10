@@ -165,10 +165,11 @@ function rig() {
     between('async function leagueMember(request, env, cors) {', '// POST /league/lock {league}'),
     between('async function leagueJoin(request, env, cors) {', '// POST /league/access'),
     between('async function bozoNext(request, env, cors) {', '/* ================================= util'),
+    between('async function leagueReopen(request, env, cors) {', '/* ============================ the betslip link'),
     between('async function commitBozoLeg(', 'async function bozoPick('),
     between('async function bozoPick(', '/* ---------- the DraftKings SGP rule'),
     'this.api = { memberStatusAt, memberIsActive, activeNames, activeKeys, waitingKeys, memberNames,'
-      + ' leagueMember, leagueJoin, bozoNext, bozoPick, bozoTargetSeat };',
+      + ' leagueMember, leagueJoin, bozoNext, bozoPick, bozoTargetSeat, leagueReopen };',
   ].join('\n'), sandbox);
 
   const api = sandbox.api;
@@ -422,4 +423,87 @@ test('waitingKeys lists active seats without a leg, and nobody else', () => {
   const lg = { members: { u_a: { name: 'A' }, u_b: { name: 'B' }, u_c: { name: 'C', status: 'pending' }, u_d: { name: 'D', status: 'leaving' } } };
   assert.deepEqual(plain(r.api.waitingKeys(lg, { u_a: {} })), ['u_b']);
   assert.deepEqual(plain(r.api.waitingKeys(lg, {})), ['u_a', 'u_b']);
+});
+
+/* ---------------- unlocking a placed week ---------------- */
+
+const FUTURE = '2099-09-13T17:00:00.000Z', PAST = '2000-01-01T00:00:00.000Z';
+const placedBoard = (over = {}) => ({
+  status: 'placed', order: [0, 2, 1, 3], closeTs: 1789054193721,
+  picks: { u_mgr: { who: 'Manny', game: 'CHI @ CAR', startsAt: FUTURE, ts: 1 },
+           u_rog: { who: 'Roger', game: 'MIA @ LV', startsAt: FUTURE, ts: 2 } },
+  members: { u_mgr: { name: 'Manny' }, u_rog: { name: 'Roger' }, u_new: { name: 'Nina', status: 'pending' } },
+  ...over,
+});
+
+test('reopen clears exactly the lock — status, order, closeTs — keeps every leg, promotes pending seats', async () => {
+  const r = rig(); r.seed(placedBoard());
+  const res = await r.call('leagueReopen', MGR, { league: 'main' });
+  assert.equal(res.status, 200, JSON.stringify(res.body));
+  const lg = r.league();
+  assert.equal(lg.status, 'open');
+  assert.equal(lg.order ?? null, null, 'order MUST go, or placeAndDraw never places again');
+  assert.equal(lg.closeTs ?? null, null);
+  assert.deepEqual(plain(Object.keys(lg.picks)).sort(), ['u_mgr', 'u_rog'], 'no leg is touched');
+  assert.equal(lg.picks.u_rog.ts, 2, 'submission clocks survive — Last In is still real');
+  assert.equal(lg.members.u_new.status, 'active', 'the mid-week joiner plays this week');
+  assert.deepEqual(plain(res.body.promoted), ['Nina']);
+  assert.deepEqual(plain(res.body.waitingOn), ['Nina']);
+  assert.equal(res.body.seats, 3);
+  const row = r.audit().at(-1);
+  assert.equal(row.type, 'reopen');
+  assert.deepEqual(plain(row.before), { status: 'placed', order: [0, 2, 1, 3], closeTs: 1789054193721 });
+  assert.deepEqual(plain(r.ctx.tripwires.at(-1)), { route: '/league/reopen', nulled: ['order', 'closeTs'] });
+});
+
+test('after a reopen, the promoted member can submit for real', async () => {
+  const r = rig(); r.seed(placedBoard());
+  assert.equal((await r.call('leagueReopen', MGR, { league: 'main' })).status, 200);
+  const p1 = await r.call('bozoPick', NINA, { league: 'main', captureVersion: 1, pick: LEG });
+  assert.equal(p1.status, 200, JSON.stringify(p1.body));
+  const p2 = await r.call('bozoPick', NINA, { league: 'main', confirm: p1.body.confirm_code });
+  assert.equal(p2.status, 200, JSON.stringify(p2.body));
+  assert.equal(r.league().picks.u_new.who, 'Nina');
+  assert.equal(r.ctx.placed, 1, 'the third leg fills a three-seat board and it locks again');
+});
+
+test('reopen is refused for a member, on an open board, on a graded week, and after kickoff', async () => {
+  { const r = rig(); r.seed(placedBoard());
+    const res = await r.call('leagueReopen', ROGER, { league: 'main' });
+    assert.equal(res.status, 403);
+    assert.equal(r.league().status, 'placed'); }
+  { const r = rig(); r.seed();
+    const res = await r.call('leagueReopen', MGR, { league: 'main' });
+    assert.equal(res.status, 409);
+    assert.match(res.body.error, /already open/); }
+  { const r = rig(); r.seed(placedBoard({ results: { u_mgr: { won: true } } }));
+    const res = await r.call('leagueReopen', MGR, { league: 'main' });
+    assert.equal(res.status, 409);
+    assert.match(res.body.error, /already been graded/); }
+  { const r = rig(); r.seed(placedBoard({ status: 'graded' }));
+    assert.equal((await r.call('leagueReopen', MGR, { league: 'main' })).status, 409); }
+  { const r = rig();
+    const b = placedBoard(); b.picks.u_rog.startsAt = PAST; r.seed(b);
+    const res = await r.call('leagueReopen', MGR, { league: 'main' });
+    assert.equal(res.status, 409);
+    assert.match(res.body.error, /already kicked off: Roger \(MIA @ LV\)/);
+    const lg = r.league();
+    assert.equal(lg.status, 'placed');
+    assert.deepEqual(plain(lg.order), [0, 2, 1, 3], 'a refused reopen writes nothing'); }
+});
+
+test('reopen is refused while a seat is leaving with a leg on the ticket', async () => {
+  const r = rig();
+  const b = placedBoard(); b.members.u_rog.status = 'leaving'; r.seed(b);
+  const res = await r.call('leagueReopen', MGR, { league: 'main' });
+  assert.equal(res.status, 409);
+  assert.match(res.body.error, /Roger is leaving/);
+  assert.equal(r.league().status, 'placed');
+});
+
+test('the page offers the unlock only on a placed, ungraded board', () => {
+  assert.match(page, /id="reopenGo"/);
+  assert.match(page, /wPost\('\/league\/reopen',\{\}\)/);
+  assert.match(page, /\(S\.status\|\|'open'\)==='placed' && !Object\.keys\(S\.results\|\|\{\}\)\.length/);
+  assert.match(worker, /url\.pathname === "\/league\/reopen"\) return leagueReopen\(request, env, cors\);/);
 });

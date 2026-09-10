@@ -1771,6 +1771,7 @@ export default {
     if (url.pathname === "/league/access") return leagueAccess(request, env, cors);
     if (url.pathname === "/league/join-code") return leagueAccessLegacy(request, env, cors);
     if (url.pathname === "/league/lock")   return leagueLock(request, env, cors);
+    if (url.pathname === "/league/reopen") return leagueReopen(request, env, cors);
     if (url.pathname === "/league/slip")   return leagueSlip(request, env, cors);
     if (url.pathname === "/league/config") return bozoConfigSet(request, env, cors);
     if (url.pathname === "/league/settings") return leagueSettings(request, env, cors);
@@ -5490,6 +5491,80 @@ async function leagueLock(request, env, cors) {
   const placed = await placeAndDraw(env, lid, picks, lg);
   return json({ ok: true, placed, legs: n,
                 waitingOn: waitingKeys(lg, picks).map(k => memberNameAt(lg, k)) }, 200, cors);
+}
+
+// POST /league/reopen {league} — the other escape hatch: unlock a placed week so legs can
+// still go in. The in-app lock is not the DraftKings bet. Until the manager actually
+// strikes the parlay, a placed board is a board that stopped waiting too early — the case
+// that prompted this: three people joined after the fifth of five legs landed.
+//
+// ⚠️ The lock wrote `status`, `closeTs`, `order` and the ledger rows. This undoes the three
+// that describe the LOCK, not the legs. Clearing `order` is not optional: placeAndDraw
+// treats an existing order as "already drawn — never redraw" and returns WITHOUT setting
+// status, so a reopen that left it would make a board that can never place again. The
+// lever hierarchy is therefore drawn fresh at the next lock, which is honest — it is a new
+// lock. Legs, their timestamps and their prices stay exactly as they were. The ledger rows
+// are left alone: the next lock re-patches a whole row for every leg then on the board.
+//
+// ⚠️ Refused once any leg's game has kicked off, and once the week has results. After
+// kickoff the ticket either already exists at DK or can no longer be built, and an open
+// board would let a leg be swapped with the score in view.
+async function leagueReopen(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); }
+  catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  const lg = auth.league;
+  const status = lg.status || "open";
+  if (status === "open") return json({ error: "This week's board is already open." }, 409, cors);
+  if (status !== "placed" || (lg.results && Object.keys(lg.results).length))
+    return json({ error: "This week has already been graded — advance to the next week instead." }, 409, cors);
+
+  const picks = lg.picks || {};
+  const now = Date.now();
+  const started = Object.entries(picks)
+    .filter(([, p]) => p && p.startsAt && Date.parse(p.startsAt) <= now)
+    .map(([k, p]) => (p.who || memberNameAt(lg, k)) + " (" + (p.game || "?") + ")");
+  if (started.length)
+    return json({ error: "A game on this ticket has already kicked off: " + started.join(", ") +
+      ". The ticket can't be reopened around a game in progress." }, 409, cors);
+
+  // A leaving seat only exists because its leg was on a placed ticket. Reopening would put
+  // that leg back on an open board that no longer counts the seat, and the board could
+  // then lock a leg short. Refuse rather than guess which way the manager meant it.
+  const leaving = memberKeys(lg).filter(k => memberStatusAt(lg, k) === "leaving");
+  if (leaving.length)
+    return json({ error: leaving.map(k => memberNameAt(lg, k)).join(", ") +
+      " is leaving with a leg on this ticket, so it can't be reopened. Advance the week to settle that seat first." }, 409, cors);
+
+  // Anyone who joined while it was placed plays THIS week now — that is the point of it.
+  const promoted = memberKeys(lg).filter(k => memberStatusAt(lg, k) === "pending");
+  try {
+    await fbPatch(env, LG(lid), {
+      status: "open", order: null, closeTs: null,
+      ...Object.fromEntries(promoted.map(k => ["members/" + k + "/status", "active"])),
+    });
+  } catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+  bozoNullWriteTripwire("/league/reopen", auth, lid, ["order", "closeTs"]);
+  const promotedNames = promoted.map(k => memberNameAt(lg, k));
+  const audit = await bozoAdminAction(env, lid, {
+    type: "reopen", byUid: auth.uid || null, byName: String(auth.name || ""),
+    forUid: null, forName: null, leagueId: lid, week: lg.week || 1,
+    before: { status, order: lg.order ?? null, closeTs: lg.closeTs ?? null },
+    after: { status: "open", promoted: promotedNames },
+    ticketWasPlaced: true,
+  });
+
+  const after = await loadLeague(env, lid);
+  return json({ ok: true, week: lg.week || 1, legs: Object.keys(picks).length,
+    seats: activeNames(after).length, promoted: promotedNames,
+    waitingOn: waitingKeys(after, after.picks || {}).map(k => memberNameAt(after, k)), audit }, 200, cors);
 }
 
 /* ============================ the betslip link ============================
