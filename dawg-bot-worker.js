@@ -1672,9 +1672,22 @@ export default {
       // Independent failure domains: forecast problems never suppress Bozo capture.
       const forecastRun = runForecastLive(env).catch(e => ({ error: String(e.message || e) }));
       if (ctx && ctx.waitUntil) ctx.waitUntil(forecastRun);
+      /* Automatic grading rides the same five-minute tick, in its OWN failure domain.
+         It is the tick that already knows about games starting and finishing, so it is
+         the right one to notice them ending — and a close-capture outage must not stop
+         tickets settling, any more than a grading bug should stop closes being captured.
+         Its own lasterror key, for the same reason. */
+      const gradeRun = runBozoAutoGrade(env, (controller && controller.scheduledTime) || Date.now())
+        .catch(async e => {
+          const kv = cfbMarketKV(env);
+          if (kv) await kv.put("bozo:autograde:lasterror",
+            JSON.stringify({ at: new Date().toISOString(), error: String((e && e.message) || e) }));
+          return { error: String((e && e.message) || e) };
+        });
+      if (ctx && ctx.waitUntil) ctx.waitUntil(gradeRun);
       try {
         const bozo = await runBozoCloseCapture(env, (controller && controller.scheduledTime) || Date.now());
-        return { ...bozo, forecast: await forecastRun };
+        return { ...bozo, forecast: await forecastRun, autograde: await gradeRun };
       } catch (e) {
         const kv = cfbMarketKV(env);
         if (kv) await kv.put("bozo:close:lasterror",
@@ -1829,6 +1842,7 @@ export default {
     if (url.pathname === "/bozo/clv")     return bozoClv(request, url, env, cors);
     if (url.pathname === "/bozo/close")   return bozoCloseFill(request, env, cors);
     if (url.pathname === "/bozo/close-gaps") return bozoCloseGaps(request, url, env, cors);
+    if (url.pathname === "/bozo/admin")   return bozoAdmin(request, url, env, cors);
     if (url.pathname === "/bozo/config")  return bozoConfigSet(request, env, cors);
     if (url.pathname === "/tts")          return handleTts(request, env, cors);
     if (url.pathname === "/tts/models")   return ttsModels(request, env, cors);
@@ -8657,6 +8671,36 @@ async function bozoBuyback(request, env, cors) {
   }, 410, cors);
 }
 
+/* ------------------------- assumed juice -------------------------------------
+   A two-way price can only be de-vigged against its other side, so a leg with one side
+   and no other has always been dropped from the CLV chart entirely. That is the honest
+   default — but it throws away a real number because a second one is missing, and the
+   missing one is the most predictable quantity on the board: the book's hold.
+
+   So when the other side is absent we can SYNTHESISE it from a standard two-way market
+   and de-vig against that instead. -110/-110 implies 110/210 = 0.52381 a side, an
+   overround of 1.047619, and the opposite side is whatever probability is left over.
+
+   ⚠️ AN ASSUMED SIDE IS NOT AN OBSERVED SIDE, and the day the two become
+   indistinguishable every CLV figure built on them becomes unauditable — the same rule
+   closeSource exists to enforce. Every synthesised side is stamped "assumed" and carries
+   the overround it was derived from, so a reader can always tell which of the two kinds
+   of evidence they are looking at, and recompute it if the assumption changes. */
+const BOZO_DEFAULT_OVERROUND = 1.047619;          // -110 / -110
+const bozoAmProb = o => (o < 0 ? (-o) / ((-o) + 100) : 100 / (o + 100));
+const bozoProbAm = pr => (pr >= 0.5 ? Math.round((-100 * pr) / (1 - pr)) : Math.round((100 * (1 - pr)) / pr));
+
+/* The other side of `close`, assuming a standard hold. null when the price is so long
+   that no sane opposite is left — inventing one there would be worse than the gap. */
+function bozoAssumedOpposite(close, overround = BOZO_DEFAULT_OVERROUND) {
+  const price = Math.round(Number(close));
+  if (!Number.isFinite(price) || Math.abs(price) < 100) return null;
+  const left = overround - bozoAmProb(price);
+  if (!(left > 0.02 && left < 0.98)) return null;
+  const other = bozoProbAm(left);
+  return Number.isFinite(other) && Math.abs(other) >= 100 ? other : null;
+}
+
 /* POST /bozo/close {league, row, close, closeOpp} — fill in a closing price by hand, on
    any week, long after that week has rolled over.
 
@@ -8707,12 +8751,24 @@ async function bozoCloseFill(request, env, cors) {
 
   // Clearing is allowed — sending both as null undoes a mistyped entry.
   const clear = body.close == null && body.closeOpp == null;
-  const close = Math.round(Number(body.close)), closeOpp = Math.round(Number(body.closeOpp));
+  const close = Math.round(Number(body.close));
+  let closeOpp = Math.round(Number(body.closeOpp));
+  /* ⚠️ ONE SIDE IS NOW ENOUGH — the other is assumed at a standard hold rather than
+     refused. Refusing it was correct when there was no way to de-vig a lone price, but
+     the effect was that a leg whose other side nobody wrote down simply never counted.
+     An assumed side is weaker evidence than an observed one and is stamped as such;
+     silently dropping the leg was not more honest, only quieter. */
+  let oppAssumed = false;
   if (!clear) {
     if (!Number.isFinite(close) || Math.abs(close) < 100)
       return json({ error: "The closing price has to be a real American price (±100 or wider)." }, 400, cors);
-    if (!Number.isFinite(closeOpp) || Math.abs(closeOpp) < 100)
-      return json({ error: "The other side is required — without it the price can't be de-vigged, and the leg stays off the chart either way." }, 400, cors);
+    if (!Number.isFinite(closeOpp) || Math.abs(closeOpp) < 100) {
+      const assumed = bozoAssumedOpposite(close);
+      if (assumed == null)
+        return json({ error: "That price is too long to assume an other side for — enter the real one." }, 400, cors);
+      closeOpp = assumed;
+      oppAssumed = true;
+    }
   }
 
   /* closeObservedAt is cleared on both paths. Half of a captured pair plus a typed
@@ -8720,9 +8776,14 @@ async function bozoCloseFill(request, env, cors) {
      row and let a hand-read number inherit the authority of a feed observation. */
   const patch = clear
     ? { close: null, closeOpp: null, closeBook: null, closeSource: null,
-        closeObservedAt: null, closeEnteredBy: null, closeEnteredTs: null }
+        closeObservedAt: null, closeOppSource: null, closeOverround: null,
+        closeEnteredBy: null, closeEnteredTs: null }
     : { close, closeOpp, closeBook: "draftkings", closeSource: "manual",
         closeObservedAt: null, closeUnavailableReason: null,
+        // Provenance of the OTHER side travels separately: one of these numbers may be
+        // read off a slip while the other was never observed by anybody.
+        closeOppSource: oppAssumed ? "assumed" : "manual",
+        closeOverround: oppAssumed ? BOZO_DEFAULT_OVERROUND : null,
         closeEnteredBy: auth.name, closeEnteredTs: Date.now() };
 
   try { await fbPatch(env, LG(lid) + "/ledger/" + rowKey, patch); }
@@ -8762,6 +8823,9 @@ async function bozoCloseGaps(request, url, env, cors) {
       game: r.game, price: r.price, priceOpp: r.priceOpp ?? null,
       close: r.close ?? null, closeOpp: r.closeOpp ?? null,
       reason: r.closeUnavailableReason || null,
+      // What the other side would become if the manager saves this one alone.
+      assumedOpp: r.close != null && r.closeOpp == null ? bozoAssumedOpposite(r.close) : null,
+      oppSource: r.closeOppSource || null,
       /* Locked means the fill route will refuse it, so it must use that route's own
          test: a COMPLETE captured pair. A row the cron only half-observed is a gap the
          manager can still close by hand, and marking it locked was what hid the boxes. */
@@ -8883,6 +8947,294 @@ async function requireAdmin(request, env) {
   return auth;
 }
 
+/* The write half of grading, shared by the manager's confirmed grade and the automatic
+   one. It exists as one function because it moves money: it names who wore the week, it
+   resolves the Royale chop, and it spends a re-deploy. Two copies of that — one for the
+   button, one for the cron — would be two places for the league's most consequential
+   write to drift apart, and the drift would only ever be discovered by someone being
+   wrongly eliminated.
+
+   Returns { backfilled, chop } on success, or { conflict } when two people are marked
+   differently on one real-world fact. It never flips status — the caller does that,
+   because only the caller knows whether the week is finished. */
+async function bozoCommitGrade(env, lid, state, body, status) {
+  /* ⚠️ ONE EVENT, ONE OUTCOME. A game's margin and total are read once per eventId, so
+     moneylines, spreads and totals cannot disagree with themselves. Props and `other`
+     are hand-graded per player, and nothing stopped two people on the SAME selection
+     from being marked differently — one wins, one loses, off a single real-world fact.
+     That is not a display glitch: it decides who wears it, and in Bozo Royale who is
+     eliminated. The simulator caught this by grading legs independently and getting
+     eight answers for one Super Bowl.
+
+     Keyed on (eventId, prop) rather than on the leg, exactly as the handoff specifies.
+     Refused rather than auto-reconciled — picking a winner between two hand-entered
+     answers would be inventing the result, and the manager knows which is right. */
+  if (body.results && typeof body.results === "object") {
+    const picks = state.picks || {};
+    const byMarket = new Map();
+    for (const [key, p] of Object.entries(picks)) {
+      if (!p || !bozoIsManualLeg(p)) continue;
+      const r = body.results[key] || body.results[playerName(key)];
+      if (!r) continue;
+      const outcome = r.result || (r.won === true ? "won" : r.won === false ? "lost" : null);
+      if (outcome == null) continue;
+      const mk = [p.eventId, p.mkt, p.prop || "", p.line ?? "", p.side ?? "", bozoPeriodOf(p)].join("|");
+      if (!byMarket.has(mk)) byMarket.set(mk, []);
+      byMarket.get(mk).push({ who: playerName(key), outcome, label: p.label });
+    }
+    for (const [, group] of byMarket) {
+      if (group.length < 2) continue;
+      const distinct = [...new Set(group.map(g => g.outcome))];
+      if (distinct.length > 1)
+        return { conflict:
+          `${group.map(g => g.who + " = " + g.outcome).join(", ")} — but that's the same selection `
+          + `(${group[0].label}) on the same game, so it can only have one outcome. Fix the odd one out and grade again.` };
+    }
+    // ⚠️ Worst Beat's inputs are stamped here, from the stored pick (D21). `beatSd` is
+    // the SD the lever divides by and `beatBasis` says where it came from: "sd" for a
+    // full-game margin market, "scaled-sd" for a period leg (game SD × √fraction, a
+    // documented model pending Phase 4.3 calibration), and the binary legs' basis
+    // (close / entry / entry-raw) as royaleBeatDeficit already reports it.
+    for (const [key, p] of Object.entries(picks)) {
+      const rk = body.results[key] ? key : (body.results[playerName(key)] ? playerName(key) : null);
+      if (!rk || !p) continue;
+      const row = body.results[rk];
+      if (!row || typeof row !== "object") continue;
+      row.beatSd = rSd(p);
+      row.beatBasis = bozoBeatBasis(p, row);
+    }
+    await fbPut(env, LG(lid) + "/results", body.results);
+  }
+  if (body.bozo !== undefined) await fbPut(env, LG(lid) + "/bozo", body.bozo);
+  if (body.bozoWhy !== undefined) await fbPut(env, LG(lid) + "/bozoWhy", String(body.bozoWhy).slice(0, 200));
+
+  // Ledger last, before the status flip: if it fails the manager gets a 502, status is
+  // still "placed", and hitting Decide again replays the whole thing idempotently.
+  const backfilled = await ledgerBackfill(env, lid, state);
+  // Read the ledger once so the grade stage can see which rows already carry a close
+  // the cron captured at kickoff, and leave those alone.
+  let have = {};
+  try { have = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
+  catch (e) { console.log("ledger: grade-stage read failed — " + e.message); }
+  const upd = ledgerGradeUpdate(state.season || SEASON, state.week || 1, body.results, body.bozo, state.picks, have);
+  if (Object.keys(upd).length) {
+    // gradedAt is per row, not per league — a re-grade that only fixes one player's
+    // result should not restamp everyone else's.
+    const pickKeys = Object.keys(state.picks || {});
+    const gradedAt = new Date().toISOString();
+    for (const k of Object.keys(body.results || {})) {
+      const rowKey = pickKeys.includes(k) ? k
+        : pickKeys.includes(encodeURIComponent(k)) ? encodeURIComponent(k)
+        : (pickKeys.find(x => playerName(x) === k) || k);
+      upd[`${ledgerKey(state.season || SEASON, state.week || 1, rowKey)}/gradedAt`] = gradedAt;
+    }
+    await fbPatch(env, LG(lid) + "/ledger", upd);
+  }
+
+  // ⚠️ Bozo Royale resolves the chop HERE, on the server, from the results just
+  // written — not from anything the client sent. See the note above royaleDecideChop.
+  // It runs only on the transition into "graded", so re-grading a week to correct a
+  // typo cannot chop a second person or double-spend a buy-back.
+  let chop = null;
+  if (body.graded && settingsOf(state).format === "royale" && status !== "graded") {
+    const fresh = await loadLeague(env, lid);          // read back the results we just wrote
+    chop = await royaleResolveWeek(env, lid, fresh || state);
+  }
+
+  return { backfilled, chop };
+}
+
+/* ===================== the manager's override ==============================
+   GET  /bozo/admin?league=<id>&path=<p>   read any node under the league
+   POST /bozo/admin {league, path, value}  write it; value null deletes
+   POST /bozo/admin {league, edits:[...]}  several at once
+
+   Every other route in this file is a narrow door with the league's rules built into it,
+   which is right for players and wrong for the person who owns the league: when a real
+   week goes wrong — a misgraded prop, a leg filed on the wrong side, a week that locked
+   early — the rules are exactly what stands between the manager and the truth. This is
+   the door with no rules on it.
+
+   ⚠️ MANAGER OR SITE ADMIN ONLY, and scoped to ONE league's subtree. "Anything" means
+   anything about THIS league; it does not mean anything in the database. A path that
+   climbs out of the league node is refused, because a god of one league is still not a
+   god of somebody else's.
+
+   ⚠️ THE AUDIT LOG IS THE ONE THING THIS CANNOT WRITE. Not to constrain the manager —
+   they can already change every number the log describes — but because a record that can
+   be edited proves nothing, including when it would exonerate them. Real money moves on
+   these rows, so "the ledger says X and here is every hand that touched it" has to stay
+   true. Each entry stores the value it replaced, so any change can be read back and
+   undone by hand.
+
+   ⚠️ NOTHING HERE RE-DERIVES. A result written here is the result; it does not re-run
+   the levers, re-resolve a chop or re-stamp a ledger row. That is deliberate — the whole
+   point is to set a value the machinery got wrong — but it means overriding a result
+   after a week is graded leaves whatever was computed from it untouched. The panel says
+   so, next to the button. */
+const ADMIN_SEG = /^[A-Za-z0-9_%.@+~-]{1,200}$/;
+function adminPath(raw) {
+  const rel = String(raw == null ? "" : raw).replace(/^\/+|\/+$/g, "");
+  if (!rel) return { path: "" };                                  // the league node itself
+  const parts = rel.split("/");
+  if (parts.some(seg => !ADMIN_SEG.test(seg) || seg === "." || seg === ".."))
+    return { err: "Bad path segment. Letters, digits and _ . @ + ~ - % only." };
+  if (parts[0] === "audit")
+    return { err: "The audit log is append-only — it is the record of these edits and cannot be one of them." };
+  return { path: rel };
+}
+
+async function bozoAdmin(request, url, env, cors) {
+  const method = request.method;
+  if (method !== "GET" && method !== "POST") return json({ error: "GET or POST only" }, 405, cors);
+
+  let body = {};
+  if (method === "POST") {
+    try { body = await readBody(request); }
+    catch { return json({ error: "Bad JSON." }, 400, cors); }
+  }
+  const lid = method === "GET"
+    ? (validLeagueId(url.searchParams.get("league") || "") ? url.searchParams.get("league") : null)
+    : leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  if (method === "GET") {
+    const at = adminPath(url.searchParams.get("path") || "");
+    if (at.err) return json({ error: at.err }, 400, cors);
+    try {
+      const node = (await fbGet(env, LG(lid) + (at.path ? "/" + at.path : ""))).data;
+      return json({ ok: true, league: lid, path: at.path, value: node ?? null }, 200, cors);
+    } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  }
+
+  const edits = Array.isArray(body.edits) ? body.edits
+    : [{ path: body.path, value: body.value === undefined ? null : body.value }];
+  if (!edits.length || edits.length > 50)
+    return json({ error: "Between 1 and 50 edits per call." }, 400, cors);
+
+  const done = [];
+  for (const e of edits) {
+    const at = adminPath(e && e.path);
+    if (at.err) return json({ error: at.err, path: e && e.path }, 400, cors);
+    if (!at.path)
+      return json({ error: "Name the field to change — writing the whole league node at once is a replacement, not an edit." }, 400, cors);
+    const full = LG(lid) + "/" + at.path;
+
+    let prior = null;
+    try { prior = (await fbGet(env, full)).data ?? null; }
+    catch (err) { return json({ error: "Database unreachable: " + err.message }, 502, cors); }
+
+    const next = e.value === undefined ? null : e.value;
+    try {
+      if (next === null) await fbDelete(env, full);
+      else await fbPut(env, full, next);
+    } catch (err) { return json({ error: "Database write failed: " + err.message, path: at.path }, 502, cors); }
+
+    /* Written AFTER the change lands, so the log can never claim an edit that did not
+       happen. Keyed by timestamp so it reads back in the order it occurred. */
+    const stamp = Date.now();
+    try {
+      await fbPatch(env, LG(lid) + "/audit", {
+        [`${stamp}-${Math.random().toString(36).slice(2, 8)}`]: {
+          at: new Date(stamp).toISOString(), by: auth.name, path: at.path,
+          from: prior, to: next, week: auth.league.week || 1,
+        },
+      });
+    } catch (err) { /* the value changed; an unlogged edit is bad, losing the edit is worse */ }
+    done.push({ path: at.path, from: prior, to: next });
+  }
+  return json({ ok: true, league: lid, edits: done }, 200, cors);
+}
+
+/* ======================= automatic grading ===============================
+   The ticket used to settle only when a manager opened the grade card and pressed the
+   button. Every leg could be final for two days and the board would still read "open ·
+   ungraded", which is the single most common way this game looks broken.
+
+   ⚠️ IT GRADES WHAT THE SOURCE CAN SETTLE, AND NOTHING ELSE. Every result written here
+   comes from bozoGradeFromScheduleKv — the same scheduled feed the manager's button
+   uses, never a browser and never a guess. Props, `other` legs, period legs and sports
+   with no reachable score source are left exactly as they were, for a human.
+
+   ⚠️ THE STATUS FLIP IS THE CONSEQUENTIAL PART, and it is gated hard. Flipping to
+   "graded" names who wore the week, resolves the Royale chop and spends a re-deploy —
+   so it happens ONLY when every leg on the ticket has a result and the scheduled source
+   reports nothing pending. One unsettled prop and the week stays open for the manager,
+   with every automatic result already banked and visible. A week that is half-finished
+   is never allowed to eliminate anybody.
+
+   ⚠️ RESULTS ARE WRITTEN EVEN WHILE THE WEEK IS PENDING. That is the point: legs settle
+   on the board as the games end, instead of appearing all at once days later. */
+async function bozoAutoGradeOne(env, lid, lg, nowMs) {
+  const week = lg.week || 1;
+  const automatic = await bozoGradeFromScheduleKv(env, lg, lg.results);
+
+  // Only write when something actually changed — this runs every few minutes.
+  const before = JSON.stringify(lg.results || {});
+  if (JSON.stringify(automatic.results) !== before)
+    await fbPut(env, LG(lid) + "/results", automatic.results);
+
+  /* A leg the scheduled source cannot settle is a leg only a person can. Both kinds
+     count against finishing the week: a pending game score AND a hand-graded leg that
+     nobody has graded yet. */
+  const picks = lg.picks || {};
+  const handPending = Object.entries(picks).filter(([k, pk]) => {
+    if (!pk) return false;
+    const r = automatic.results[k] || {};
+    const settled = r.result != null || r.won != null;
+    return !settled;
+  }).map(([k, pk]) => ({ key: k, player: pk.who || playerName(k), reason: "awaiting_manual_grade" }));
+
+  const blocked = [...automatic.pending, ...handPending.filter(h => !automatic.pending.some(p => p.key === h.key))];
+  if (blocked.length || !Object.keys(picks).length)
+    return { league: lid, week, graded: false, wrote: JSON.stringify(automatic.results) !== before,
+             pending: blocked.map(b => b.player + ": " + b.reason) };
+
+  /* Everything is settled. Who wore it is DERIVED, by the same lever machinery the
+     manager's card runs — not chosen here. royaleDecideChop is a pure function of the
+     results just written and the lever order already drawn for this week. */
+  const withResults = { ...lg, results: automatic.results };
+  const decided = royaleDecideChop(withResults, lg.order);
+
+  const committed = await bozoCommitGrade(env, lid, withResults, {
+    results: automatic.results,
+    bozo: decided.ticketCashed ? null : decided.chopped,
+    bozoWhy: decided.ticketCashed
+      ? "Ticket cashed — every leg won."
+      : `Graded automatically from ${[...new Set(Object.values(automatic.sources || {}).map(x => x.source))].join(", ") || "the scheduled source"}. Decided by ${decided.decidedBy}.`,
+    graded: true,
+  }, lg.status);
+
+  if (committed.conflict)
+    return { league: lid, week, graded: false, conflict: committed.conflict };
+
+  await fbPut(env, LG(lid) + "/status", "graded");
+  return { league: lid, week, graded: true, bozo: decided.ticketCashed ? null : decided.chopped,
+           decidedBy: decided.decidedBy, chop: committed.chop || null, at: new Date(nowMs).toISOString() };
+}
+
+async function runBozoAutoGrade(env, nowMs = Date.now()) {
+  let leagues = {};
+  try { leagues = (await fbGet(env, "/bozo/leagues")).data || {}; }
+  catch (e) { throw new Error("league index unreachable: " + e.message); }
+
+  const out = [];
+  for (const [lid, lg] of Object.entries(leagues)) {
+    // Only a placed ticket can settle. "open" has no ticket; "graded" is already done.
+    if (!lg || lg.status !== "placed") continue;
+    if (lg.synthetic === true) continue;            // the simulator's league is not real money
+    try { out.push(await bozoAutoGradeOne(env, lid, lg, nowMs)); }
+    catch (e) {
+      // One league's bad state must never stop the others from settling.
+      out.push({ league: lid, error: String((e && e.message) || e) });
+    }
+  }
+  return { checked: out.length, leagues: out };
+}
+
 async function bozoGrade(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
 
@@ -8940,89 +9292,9 @@ async function bozoGrade(request, env, cors) {
         note: "Nothing was written. Phase two stores these signed values without re-fetching scores." }, 200, cors);
     }
 
-    /* ⚠️ ONE EVENT, ONE OUTCOME. A game's margin and total are read once per eventId, so
-       moneylines, spreads and totals cannot disagree with themselves. Props and `other`
-       are hand-graded per player, and nothing stopped two people on the SAME selection
-       from being marked differently — one wins, one loses, off a single real-world fact.
-       That is not a display glitch: it decides who wears it, and in Bozo Royale who is
-       eliminated. The simulator caught this by grading legs independently and getting
-       eight answers for one Super Bowl.
-
-       Keyed on (eventId, prop) rather than on the leg, exactly as the handoff specifies.
-       Refused rather than auto-reconciled — picking a winner between two hand-entered
-       answers would be inventing the result, and the manager knows which is right. */
-    if (body.results && typeof body.results === "object") {
-      const picks = state.picks || {};
-      const byMarket = new Map();
-      for (const [key, p] of Object.entries(picks)) {
-        if (!p || !bozoIsManualLeg(p)) continue;
-        const r = body.results[key] || body.results[playerName(key)];
-        if (!r) continue;
-        const outcome = r.result || (r.won === true ? "won" : r.won === false ? "lost" : null);
-        if (outcome == null) continue;
-        const mk = [p.eventId, p.mkt, p.prop || "", p.line ?? "", p.side ?? "", bozoPeriodOf(p)].join("|");
-        if (!byMarket.has(mk)) byMarket.set(mk, []);
-        byMarket.get(mk).push({ who: playerName(key), outcome, label: p.label });
-      }
-      for (const [, group] of byMarket) {
-        if (group.length < 2) continue;
-        const distinct = [...new Set(group.map(g => g.outcome))];
-        if (distinct.length > 1)
-          return json({ error:
-            `${group.map(g => g.who + " = " + g.outcome).join(", ")} — but that's the same selection `
-            + `(${group[0].label}) on the same game, so it can only have one outcome. Fix the odd one out and grade again.`
-          }, 409, cors);
-      }
-      // ⚠️ Worst Beat's inputs are stamped here, from the stored pick (D21). `beatSd` is
-      // the SD the lever divides by and `beatBasis` says where it came from: "sd" for a
-      // full-game margin market, "scaled-sd" for a period leg (game SD × √fraction, a
-      // documented model pending Phase 4.3 calibration), and the binary legs' basis
-      // (close / entry / entry-raw) as royaleBeatDeficit already reports it.
-      for (const [key, p] of Object.entries(picks)) {
-        const rk = body.results[key] ? key : (body.results[playerName(key)] ? playerName(key) : null);
-        if (!rk || !p) continue;
-        const row = body.results[rk];
-        if (!row || typeof row !== "object") continue;
-        row.beatSd = rSd(p);
-        row.beatBasis = bozoBeatBasis(p, row);
-      }
-      await fbPut(env, LG(lid) + "/results", body.results);
-    }
-    if (body.bozo !== undefined) await fbPut(env, LG(lid) + "/bozo", body.bozo);
-    if (body.bozoWhy !== undefined) await fbPut(env, LG(lid) + "/bozoWhy", String(body.bozoWhy).slice(0, 200));
-
-    // Ledger last, before the status flip: if it fails the manager gets a 502, status is
-    // still "placed", and hitting Decide again replays the whole thing idempotently.
-    const backfilled = await ledgerBackfill(env, lid, state);
-    // Read the ledger once so the grade stage can see which rows already carry a close
-    // the cron captured at kickoff, and leave those alone.
-    let have = {};
-    try { have = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
-    catch (e) { console.log("ledger: grade-stage read failed — " + e.message); }
-    const upd = ledgerGradeUpdate(state.season || SEASON, state.week || 1, body.results, body.bozo, state.picks, have);
-    if (Object.keys(upd).length) {
-      // gradedAt is per row, not per league — a re-grade that only fixes one player's
-      // result should not restamp everyone else's.
-      const pickKeys = Object.keys(state.picks || {});
-      const gradedAt = new Date().toISOString();
-      for (const k of Object.keys(body.results || {})) {
-        const rowKey = pickKeys.includes(k) ? k
-          : pickKeys.includes(encodeURIComponent(k)) ? encodeURIComponent(k)
-          : (pickKeys.find(x => playerName(x) === k) || k);
-        upd[`${ledgerKey(state.season || SEASON, state.week || 1, rowKey)}/gradedAt`] = gradedAt;
-      }
-      await fbPatch(env, LG(lid) + "/ledger", upd);
-    }
-
-    // ⚠️ Bozo Royale resolves the chop HERE, on the server, from the results just
-    // written — not from anything the client sent. See the note above royaleDecideChop.
-    // It runs only on the transition into "graded", so re-grading a week to correct a
-    // typo cannot chop a second person or double-spend a buy-back.
-    let chop = null;
-    if (body.graded && settingsOf(state).format === "royale" && status !== "graded") {
-      const fresh = await loadLeague(env, lid);          // read back the results we just wrote
-      chop = await royaleResolveWeek(env, lid, fresh || state);
-    }
+    const committed = await bozoCommitGrade(env, lid, state, body, status);
+    if (committed.conflict) return json({ error: committed.conflict }, 409, cors);
+    const { backfilled, chop } = committed;
 
     if (body.graded) await fbPut(env, LG(lid) + "/status", "graded");
     return json({ ok: true, backfilled, chop }, 200, cors);
