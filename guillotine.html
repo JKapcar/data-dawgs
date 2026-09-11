@@ -3070,6 +3070,44 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   /* One projections request per page load, shared by projection mode and Weak Spots.
      A promise, not a result, so two callers racing still make one request. */
   var PROJ_P = {};
+
+  /* ⚠️ THE WEEKLY SOURCE. projRows below is the SEASON endpoint, and dividing a season
+     total by projected games answers "how good is this roster in a typical week", which
+     is the wrong question for "who gets chopped THIS week". A team whose starters are
+     hurt, benched or on a bad matchup in week 1 looks fine on a season average. That is
+     why the survival card disagreed with Sleeper's own weekly ranking.
+
+     /data/guillotine-weekly.json already holds exactly the right numbers: the weekly
+     projections endpoint, refreshed daily by guillotine-refresh.yml, dated and with
+     provenance. It carries raw stat lines rather than pre-scored totals, so scoring
+     happens here against THIS league's own weights — which is what the method note
+     means by "no season-total-to-weekly division". */
+  var WEEK_P = null;
+  function weekRows(){
+    if(!WEEK_P) WEEK_P = fetch("/data/guillotine-weekly.json",{cache:"no-cache",signal:AbortSignal.timeout(20000)})
+      .then(function(r){ if(!r.ok) throw new Error("weekly http "+r.status); return r.json(); })
+      .then(function(j){ return (j&&j.data)||null; })
+      /* ⚠ Do NOT cache the rejection — same reasoning as byeWeeks(). A pinned failure
+         would silently drop the page back to season averages for the whole session
+         with nothing on screen saying so. */
+      .catch(function(e){ WEEK_P=null; throw e; });
+    return WEEK_P;
+  }
+
+  /* Score one weekly stat line with the league's own settings. Sleeper's stat keys and
+     its scoring_settings keys are the same namespace, so this is a dot product and not
+     a mapping table — anything the league does not price is worth zero, which is the
+     correct treatment of a stat it does not score. */
+  function scoreWeekly(stats, scoring){
+    if(!stats) return 0;
+    var t=0;
+    for(var k in stats){
+      var w = scoring && typeof scoring[k]==="number" ? scoring[k] : 0;
+      if(w) t += stats[k]*w;
+    }
+    return t;
+  }
+
   function projRows(season){
     if(!PROJ_P[season]) PROJ_P[season] = fetch("https://api.sleeper.app/projections/nfl/"+season
         +"?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE",{signal:AbortSignal.timeout(25000)})
@@ -3262,16 +3300,33 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   }
 
   async function projectTeams(league, rosters, aliveTeams){
-    var rows = await projRows(league.season);
     var rec = (league.scoring_settings && typeof league.scoring_settings.rec==="number") ? league.scoring_settings.rec : 0.5;
     var key = rec>=1 ? "pts_ppr" : rec>0 ? "pts_half_ppr" : "pts_std";
-    var pg={}, ppos={};
-    (rows||[]).forEach(function(row){
-      var st=row&&row.stats; if(!st||typeof st[key]!=="number")return;
-      var games=(typeof st.gp==="number"&&st.gp>0)?st.gp:17;
-      pg[row.player_id]=st[key]/games;
-      ppos[row.player_id]=(row.player&&row.player.position)||"";
-    });
+    var pg={}, ppos={}, basis="weekly";
+
+    /* Weekly first. A player in the payload with no projection is a real zero for this
+       week — a bye, an inactive, a player with no game — and must stay zero rather than
+       falling through to his season average, which would quietly restore the bug for
+       exactly the players it matters most for. The fallback below is whole-source: it
+       fires only if the file itself is unreachable, never per player. */
+    try{
+      var wk = await weekRows();
+      if(!wk || !wk.players || !wk.players.length) throw new Error("weekly payload empty");
+      wk.players.forEach(function(row){
+        if(!row || row.id==null) return;
+        pg[row.id] = row.has_projection ? scoreWeekly(row.stats, league.scoring_settings) : 0;
+        ppos[row.id] = row.position || (row.positions && row.positions[0]) || "";
+      });
+    }catch(e){
+      basis="season";
+      var rows = await projRows(league.season);
+      (rows||[]).forEach(function(row){
+        var st=row&&row.stats; if(!st||typeof st[key]!=="number")return;
+        var games=(typeof st.gp==="number"&&st.gp>0)?st.gp:17;
+        pg[row.player_id]=st[key]/games;
+        ppos[row.player_id]=(row.player&&row.player.position)||"";
+      });
+    }
     var slots=lineupSlots(league.roster_positions);
     var byR={}; (rosters||[]).forEach(function(row){ byR[row.roster_id]=row.players||[]; });
     var out=[];
@@ -3295,6 +3350,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       // ⚠️ low/last stay null in projection mode — nothing has been observed,
       // and fabricating an "observed low" would be lying with a number.
       t.mean=mean; t.sd=PROJ_SD; t.n=0; t.low=null; t.last=null; t.proj=true;
+      t.projBasis=basis;
       out.push(t);
     });
     return out;
@@ -3462,6 +3518,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     window.__GX = {
       leagueId: id, league: league.name, season: league.season, teamCount: teams.length,
       done: done, mode: MODE, ws: WS, plan: WP, chopHistory: chopHistory, chop: res.chop, chopLo: res.chopLo, chopHi: res.chopHi,
+      /* which projection basis actually loaded — the label and Toto both read this, so a
+         silent fallback to season averages cannot masquerade as the weekly number */
+      projBasis: (live[0] && live[0].projBasis) || null,
       chopped: teams.length - alive.length,
       excluded: alive.length - live.length,
       faab: faab,
@@ -3680,7 +3739,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       if(cut)cut.textContent="Projected cut · median simulated low";
       if(tag)tag.textContent="Every bar is a team. The taller the bar, the likelier the chop.";
       if(flat)flat.innerHTML=(G.mode==="projected"
-        ? "Modeled from Sleeper player projections — assumed ±21 spread, byes and injuries not modeled; observed scoring takes over at two completed weeks."
+        ? ("Modeled from Sleeper " + (G.projBasis==="season" ? "SEASON projections divided by games — the dated weekly file was unreachable, so this is a typical week, not this one" : "weekly player projections, league-scored") + " — assumed ±21 spread; observed scoring takes over at two completed weeks.")
         : "Modeled from "+G.done+" completed week"+(G.done===1?"":"s")+" — a simulation, not live scores.")
         +" Tap a bar to make that team your focus.";
     }else{
