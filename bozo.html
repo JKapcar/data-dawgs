@@ -5728,7 +5728,15 @@ function render(){
   if(v==='league'){ paintLeague();
     // Manager-only, and it reaches every week rather than just this one.
     if(canManage(league()||{})) paintGaps();
-    else { const b=document.getElementById('gapBody'); if(b) b.innerHTML=''; }
+    else {
+      /* ⚠️ Do not just blank it. A card with nothing in it and nothing said reads as a
+         broken feature; the reason it is empty is that filling closes is a manager write. */
+      const b=document.getElementById('gapBody'); if(b) b.innerHTML='';
+      const n=document.getElementById('gapNote');
+      if(n) n.innerHTML = ME
+        ? `Closing prices are filled in by this league&rsquo;s manager, so there is nothing to edit here.`
+        : `<b>Sign in as the league manager</b> to fill in missing closing prices.`;
+    }
   }
 
   paintSlip(players, picks, status, live);
@@ -7882,13 +7890,20 @@ async function paintGaps(){
   try{ j = await wGet('/bozo/close-gaps?league='+encodeURIComponent(LID)); }
   catch(e){ note.textContent = 'Could not load: '+e.message; body.innerHTML=''; return; }
 
-  const fillable = j.rows.filter(r=>!r.locked);
+  const fillable = j.rows.filter(r=>!r.locked), locked = j.rows.length - j.rows.filter(r=>!r.locked).length;
   note.innerHTML = j.gaps === 0
     ? `Every graded leg has both sides of its close. Nothing to fill in.`
     : `<b>${j.gaps} of ${j.total} legs</b> have no usable closing price. A leg needs <b>both sides</b> to be
        de-vigged — with one side only it is dropped from the CLV chart and from <i>n</i>, exactly as if it had
-       none. Read them off the placed ticket. Captured closes are locked and can't be edited.`;
-  if(!fillable.length){ body.innerHTML=''; return; }
+       none. Read them off the placed ticket. Only a <b>complete</b> captured pair is locked; a leg the capture
+       caught one side of is still yours to fill, and typing over it makes the whole pair manual.`
+       + (locked ? ` <span class="tm">${locked} already fully captured, so not editable.</span>` : '');
+  if(!fillable.length){
+    body.innerHTML = j.gaps
+      ? `<p class="tm">Every remaining gap is a fully captured close, which can't be overwritten by hand.</p>`
+      : '';
+    return;
+  }
 
   body.innerHTML = `<div class="tscroll"><table class="bz gaptbl"><tbody>
     <tr><th>Wk</th><th>Who</th><th>Leg</th><th>Took</th><th>Close</th><th>Other side</th><th></th></tr>`

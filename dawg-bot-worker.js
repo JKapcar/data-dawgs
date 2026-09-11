@@ -1690,8 +1690,30 @@ export default {
           JSON.stringify({ at: new Date().toISOString(), error: String((e && e.message) || e) }));
         throw e;
       });
-      const [market, schedules] = await Promise.all([marketRun, runBozoScheduleRefresh(env, scheduledTime)]);
-      return { ...market, schedules };
+      /* ⚠️ Both must SETTLE before either is allowed to throw. These two share a tick
+         and nothing else: the CFB market capture feeds receipts, while the schedule
+         refresh is what /bozo/grade reads to settle legs. Under Promise.all a CFB feed
+         outage rejected the moment it failed — before the schedule refresh had finished
+         its KV write — so a broken CFB source could quietly stop NFL legs from being
+         gradeable, a far worse failure than the one it was reporting.
+
+         allSettled changes only WHEN the throw happens, never whether: a market failure
+         still fails this tick and still reaches the cron log, but it can no longer cut
+         short the write that grading depends on. */
+      const [marketOut, scheduleOut] = await Promise.allSettled([
+        marketRun, runBozoScheduleRefresh(env, scheduledTime),
+      ]);
+      if (scheduleOut.status === "rejected") {
+        const kv = cfbMarketKV(env);
+        if (kv) await kv.put("bozo:schedule:lasterror", JSON.stringify({
+          at: new Date().toISOString(),
+          error: String((scheduleOut.reason && scheduleOut.reason.message) || scheduleOut.reason),
+        }));
+      }
+      // marketRun already wrote its own lasterror in its catch; rethrow to fail the tick.
+      if (marketOut.status === "rejected") throw marketOut.reason;
+      if (scheduleOut.status === "rejected") throw scheduleOut.reason;
+      return { ...marketOut.value, schedules: scheduleOut.value };
     }
     // Missing cron preserves the local test/manual-call contract. Production names
     // the daily trigger explicitly, and an unknown configured cron fails closed.
@@ -7405,9 +7427,15 @@ function ledgerGradeUpdate(season, week, results, bozo, picks, have) {
        reason and no price, and a manager reading it off the placed ticket is the ONLY
        way it will ever have one. A row with a reason and no observation is fillable.
        Filling it clears the reason, because the reason described a gap that no longer
-       exists — and closeSource keeps the two provenances apart forever. */
+       exists — and closeSource keeps the two provenances apart forever.
+
+       ⚠️ NOR IS HALF A CAPTURE A CAPTURE. The cron stamps closeObservedAt the moment it
+       observes a price, so a tick that got one side and not the other left a row that is
+       unusable (one side cannot be de-vigged), listed as a gap, and refused by every
+       route that could have fixed it. Only a COMPLETE captured pair outranks a manager
+       reading both numbers off the placed ticket. */
     const row = (have || {})[k] || {};
-    const capturedAlready = row.closeObservedAt != null;
+    const capturedAlready = row.closeObservedAt != null && row.close != null && row.closeOpp != null;
 
     if (!capturedAlready) {
       if (r.close !== undefined) {
@@ -8667,7 +8695,14 @@ async function bozoCloseFill(request, env, cors) {
   catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
   if (!row) return json({ error: "No such ledger row." }, 404, cors);
 
-  if (row.closeObservedAt != null)
+  /* ⚠️ Immutability protects a USABLE capture, not a half-written one. The cron stamps
+     closeObservedAt as soon as it observes a price, so a tick that got one side and not
+     the other used to leave the row permanently unfillable: listed as a gap, refused
+     here, and dropped from the CLV chart forever with no door back in. A close with one
+     side is not evidence of a close — it is an incomplete write. Only a two-sided
+     captured close outranks what the manager can read off the placed ticket. */
+  const capturedComplete = row.closeObservedAt != null && row.close != null && row.closeOpp != null;
+  if (capturedComplete)
     return json({ error: "That close was captured at kickoff from the book and can't be overwritten." }, 409, cors);
 
   // Clearing is allowed — sending both as null undoes a mistyped entry.
@@ -8680,11 +8715,14 @@ async function bozoCloseFill(request, env, cors) {
       return json({ error: "The other side is required — without it the price can't be de-vigged, and the leg stays off the chart either way." }, 400, cors);
   }
 
+  /* closeObservedAt is cleared on both paths. Half of a captured pair plus a typed
+     other side is not a captured close, and leaving the stamp on would both re-lock the
+     row and let a hand-read number inherit the authority of a feed observation. */
   const patch = clear
     ? { close: null, closeOpp: null, closeBook: null, closeSource: null,
-        closeEnteredBy: null, closeEnteredTs: null }
+        closeObservedAt: null, closeEnteredBy: null, closeEnteredTs: null }
     : { close, closeOpp, closeBook: "draftkings", closeSource: "manual",
-        closeUnavailableReason: null,
+        closeObservedAt: null, closeUnavailableReason: null,
         closeEnteredBy: auth.name, closeEnteredTs: Date.now() };
 
   try { await fbPatch(env, LG(lid) + "/ledger/" + rowKey, patch); }
@@ -8724,9 +8762,10 @@ async function bozoCloseGaps(request, url, env, cors) {
       game: r.game, price: r.price, priceOpp: r.priceOpp ?? null,
       close: r.close ?? null, closeOpp: r.closeOpp ?? null,
       reason: r.closeUnavailableReason || null,
-      // A row the cron observed is not fillable, and the UI needs to know before it
-      // offers a box that would be refused.
-      locked: r.closeObservedAt != null,
+      /* Locked means the fill route will refuse it, so it must use that route's own
+         test: a COMPLETE captured pair. A row the cron only half-observed is a gap the
+         manager can still close by hand, and marking it locked was what hid the boxes. */
+      locked: r.closeObservedAt != null && r.close != null && r.closeOpp != null,
       result: r.result || null,
     }))
     .sort((a, b) => (a.week - b.week) || String(a.player).localeCompare(String(b.player)));
