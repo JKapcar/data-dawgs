@@ -129,5 +129,24 @@ ok(/id="godAudit"/.test(pageCode) && /No overrides recorded/.test(pageCode),
 ok(/does not re-run the levers/.test(page),
    "the panel warns that an override re-derives nothing");
 
+/* ---- a settled leg reads settled ---- */
+
+/* ⚠️ THE BUG THIS PINS. Results now land one game at a time, but every surface decided a
+   leg's mark from the WEEK's status — so a leg whose game finished hours ago still showed
+   as running until every other leg had settled too. Writing the result and never showing
+   it is indistinguishable, to the person looking at the board, from not grading at all. */
+ok(/const outcome = r\.result \|\| \(r\.won===true\?'won':r\.won===false\?'lost':null\);/.test(pageCode),
+   "the ticket takes each leg's outcome from the leg, not from the week");
+ok(/: outcome==='lost' \? 'lost'/.test(pageCode),
+   "a lost leg reads lost while the rest of the week is still running");
+ok(/: graded \? 'void'/.test(pageCode),
+   "an unsettled leg is only void once the week is graded — before that it is still on");
+ok(/const mark = o==='won' \? '✓' : o==='lost' \? '✕'/.test(pageCode),
+   "the season bill marks a settled leg the same way");
+ok(/const outcome = o==='won' \? ' WON' : o==='lost' \? ' LOST'/.test(pageCode),
+   "Toto reports a settled leg as settled instead of calling it still running");
+ok(/settledN\s*\n?\s*\? live\.length \+ ' of ' \+ expected \+ ' in · ' \+ settledN \+ ' settled'/.test(pageCode),
+   "the ticket header counts what has settled, so a live grader is visible");
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -5211,7 +5211,11 @@ function paintHouseTicket(){
       return `<div class="sl-row empty"><span class="n">${i+1}</span>` +
         `<span><span class="who">${esc(teamOf(p))}</span>` +
         `<span class="what">no leg yet</span></span><span class="px">&mdash;</span></div>`;
-    const mark = graded ? (r.won===true?'✓':r.won===false?'✕':'—') : (i+1);
+    /* Same rule as the ticket: the leg's own result decides its mark, so a settled
+       leg reads settled here too rather than waiting on the rest of the slip. */
+    const o = r.result || (r.won===true?'won':r.won===false?'lost':null);
+    const mark = o==='won' ? '✓' : o==='lost' ? '✕'
+      : (o==='push'||o==='void') ? '—' : (graded ? '—' : (i+1));
     return `<div class="sl-row"><span class="n">${mark}</span>` +
       `<span><span class="who">${esc(teamOf(p))} &middot; ${esc(when(x.ts))}</span>` +
       `<span class="what">${esc(x.label||'')}</span></span>` +
@@ -5690,7 +5694,17 @@ function render(){
      which without this read "2 of 1 in". */
   const expected = isRoyale() ? Math.max(live.length, royaleAliveNames().length)
                               : Math.max(live.length, activeNames().length);
-  document.getElementById('fill').textContent = live.length+' of '+expected+' in';
+  /* ⚠️ Results now land one game at a time instead of all at once when a human grades
+     the week, so "in" alone stopped being the interesting number: a ticket nothing has
+     settled on and a ticket the grader has not reached read identically. Count what has
+     actually settled once anything has, which is what tells you the grader is alive. */
+  const settledN = live.filter(x=>{
+    const rr = (S.results || {})[kEnc(x.p)] || {};
+    return rr.result != null || rr.won === true || rr.won === false;
+  }).length;
+  document.getElementById('fill').textContent = settledN
+    ? live.length + ' of ' + expected + ' in · ' + settledN + ' settled'
+    : live.length + ' of ' + expected + ' in';
 
   const open = status==='open';
   const mine = ME ? picks[kEnc(ME.name)] : null;
@@ -6389,8 +6403,21 @@ function paintSlip(players, picks, status, live){
   const html = rows.map((row,i)=>{
     const {p,x,r} = row;
     const inPool = x.price!=null;
+    /* ⚠️ A LEG'S MARK COMES FROM THE LEG, NOT FROM THE WEEK. This used to read the
+       week-level status, so a leg whose game finished hours ago still showed as running
+       until every other leg on the ticket had settled too. That was survivable when a
+       human graded the whole week in one go; it is wrong now that results land one game
+       at a time, and it was the reason a lost bet could sit on screen looking live.
+
+       Unsettled stays 'on' while the week is open and becomes 'void' once the week is
+       graded — a graded week with no result on a leg IS a push or a void, whereas an
+       ungraded one simply has not finished. */
+    const outcome = r.result || (r.won===true?'won':r.won===false?'lost':null);
     let state = !inPool ? 'empty'
-      : graded ? (r.won===true?'won':r.won===false?'lost':'void')
+      : outcome==='won' ? 'won'
+      : outcome==='lost' ? 'lost'
+      : (outcome==='push' || outcome==='void') ? 'void'
+      : graded ? 'void'
       : 'on';
     const cls = [ 'leg', state,
       (ME && p===ME.name) ? 'mine' : '',
@@ -7050,7 +7077,13 @@ function bozoCtx(){
   L.push(`THE TICKET (${live.length} of ${players.length} in, listed in submission order — the LAST one is currently exposed to Last In):`);
   live.slice().sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach((x,i)=>{
     const r=res[kEnc(x.p)]||{};
-    const outcome = status==='graded' ? (r.won===true?' WON':r.won===false?' LOST':' push/void') : '';
+    /* Same rule as the slip: a leg that has settled has settled, whether or not the
+       rest of the week has. Gating this on the week meant Toto would call a finished,
+       lost leg "still running" for as long as one other game was in progress. */
+    const o = r.result || (r.won===true?'won':r.won===false?'lost':null);
+    const outcome = o==='won' ? ' WON' : o==='lost' ? ' LOST'
+      : (o==='push'||o==='void') ? ' push/void'
+      : status==='graded' ? ' push/void' : '';
     L.push(`${i+1}. ${teamOf(x.p)} | ${x.label} | ${x.price} | ${SPORTS[x.sport]?SPORTS[x.sport].n:x.sport} ${x.game}${(x.mkt==='prop'||x.mkt==='other')?` (${x.mkt.toUpperCase()} — soft SD, manual grading)`:''} | in ${when(x.ts)}${outcome}${r.actual!=null?` | finished ${r.actual}`:''}`);
   });
   const missing = players.filter(p=>picks[kEnc(p)]==null);
