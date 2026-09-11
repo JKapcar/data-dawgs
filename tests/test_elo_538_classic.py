@@ -136,12 +136,21 @@ class PublishedClassicTests(unittest.TestCase):
         contract working, not drift. The row is instead tied to its OWN snapshot
         through the forecast_id, which is a stronger claim than matching whatever
         happens to be published today.
+
+        The same reasoning applies to schedule_snapshot_id. Landing a final moves
+        data/nfl-schedule.json forward, so demanding the row carry today's published
+        snapshot would force a receipt rewrite on every result — exactly what the
+        append-only ledger forbids. What is checked is that the pinned snapshot is
+        well formed, that the game it describes still exists on the current
+        schedule, and that inputs and schedule stay distinct contracts.
         """
         sample = next(row for row in self.ledger["data"] if row["model_id"] == "538-classic")
         self.assertRegex(sample["input_snapshot_id"], r"^sha256:[0-9a-f]{64}$")
         prefix = sample["input_snapshot_id"].removeprefix("sha256:")[:12]
         self.assertIn(prefix, sample["forecast_id"])
-        self.assertEqual(sample["schedule_snapshot_id"], self.schedule["integrity"]["snapshot_id"])
+        self.assertRegex(sample["schedule_snapshot_id"], r"^sha256:[0-9a-f]{64}$")
+        published = {game["game_id"] for game in self.schedule["data"]["games"]}
+        self.assertIn(sample["game_id"], published)
         self.assertNotEqual(sample["input_snapshot_id"], sample["schedule_snapshot_id"])
 
     def test_probabilities_are_finite_and_bounded(self):
