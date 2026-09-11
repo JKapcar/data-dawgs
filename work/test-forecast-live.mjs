@@ -6,7 +6,17 @@ import {webcrypto} from 'node:crypto';
 import {BOZO_ESPN_TEAM_SEED} from '../bozo-team-registry.mjs';
 const read=n=>JSON.parse(fs.readFileSync(new URL('../data/'+n+'.json',import.meta.url)));
 const schedule=read('nfl-schedule'),nfelo=read('nfelo'),classic=read('538-classic');
-const game=schedule.data.games[0],gid=game.game_id,kick=Date.parse(game.kickoff_at);
+/* ⚠️ NOT games[0]. This suite simulates an hour BEFORE kickoff, and games[0] is the
+   first game of the season — so the moment Week 1's opener went final the fixture stopped
+   describing an unplayed game, fclCandidates correctly produced nothing for a finished
+   one, and "five model/AI receipts" collapsed to one. The test was pinned to a date that
+   the data kept walking away from, and it would have broken again every season.
+
+   Pick the first game that is still SCHEDULED and that nfelo actually carries a number
+   for — nfelo's horizon is the near slate, and the assertion below reads its hwp back. */
+const game=schedule.data.games.find(g=>g.status==='scheduled'&&nfelo.data.games.some(n=>n.id===g.game_id))
+  ??(()=>{throw new Error('fixture: no scheduled game is covered by data/nfelo.json — the nfelo mirror is stale or the season is over');})(),
+  gid=game.game_id,kick=Date.parse(game.kickoff_at);
 let clock=kick-3600e3,db={},kv=new Map(),failSource=false;
 nfelo.data.meta.captured_at=new Date(clock-1000).toISOString();
 const toto={as_of:'2026-09-09',source:'fixture',data:{entrant:'Toto',model_version:'test-only',forecasts:[{
