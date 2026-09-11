@@ -24,8 +24,19 @@ ok(/async function bozoCloseFill/.test(worker), "the fill route exists");
 ok(/async function bozoCloseGaps/.test(worker), "the gap list exists");
 ok(/"\/bozo\/close"/.test(worker) && /"\/bozo\/close-gaps"/.test(worker), "both are routed");
 
-ok(/The other side is required/.test(worker),
-   "a one-sided close is refused, and the message says why it would be useless");
+/* ⚠️ THIS INVARIANT WAS DELIBERATELY REVERSED. A lone price used to be refused because
+   it cannot be de-vigged — true, but the effect was that a leg whose other side nobody
+   wrote down never counted at all. The other side is now SYNTHESISED at a standard hold
+   and stamped "assumed". What must never happen is the two kinds of evidence becoming
+   indistinguishable, so the stamp is the thing under test, not the refusal. */
+ok(/function bozoAssumedOpposite/.test(worker) && /BOZO_DEFAULT_OVERROUND = 1\.047619/.test(worker),
+   "a missing other side is assumed from a standard -110/-110 two-way market");
+ok(/closeOppSource: oppAssumed \? "assumed" : "manual"/.test(worker),
+   "an assumed other side is stamped apart from one read off the slip");
+ok(/closeOverround: oppAssumed \? BOZO_DEFAULT_OVERROUND : null/.test(worker),
+   "the assumption it was derived from is recorded, so it can be recomputed later");
+ok(/too long to assume an other side for/.test(worker),
+   "a price so long that no sane opposite is left is refused rather than invented");
 ok(/can't be overwritten/.test(worker),
    "a close the cron observed at kickoff cannot be overwritten by hand");
 
@@ -65,15 +76,17 @@ ok(/locked: r\.closeObservedAt != null && r\.close != null && r\.closeOpp != nul
    authority — the exact provenance blur closeSource exists to prevent. */
 ok(/closeObservedAt: null, closeUnavailableReason: null/.test(worker),
    "a hand-filled pair clears the observation stamp rather than inheriting it");
-ok(/closeObservedAt: null, closeEnteredBy: null/.test(worker),
-   "clearing a mistyped entry clears the observation stamp too, so the row stays fillable");
+ok(/closeObservedAt: null, closeOppSource: null, closeOverround: null/.test(worker),
+   "clearing a mistyped entry clears the observation stamp and the assumption with it");
 ok(/upd\[`\$\{k\}\/closeUnavailableReason`\] = null;/.test(worker),
    "filling the gap clears the note describing the gap");
 
 /* ---- the page ---- */
 ok(/data-co=/.test(pageCode), "the grade card takes an opposite side, not just a close");
-ok(/\(close===''\)\s*!==\s*\(opp===''\)/.test(pageCode),
-   "the manager panel refuses one-sided input before it reaches the server");
+ok(/close===''\s*&&\s*opp!==''/.test(pageCode),
+   "the panel refuses an other-side-only entry — the assumption runs from the close outwards");
+ok(/assumedOpp/.test(pageCode),
+   "the panel shows what a blank other side will become before the manager saves it");
 ok(/id="gapBody"/.test(pageCode) && /close-gaps/.test(pageCode),
    "the panel that reaches past weeks exists and reads the ledger");
 ok(/if\(i\.disabled\) return;/.test(pageCode),

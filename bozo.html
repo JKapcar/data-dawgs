@@ -3954,6 +3954,35 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div id="gapBody"></div>
     <div class="err" id="gapErr"></div>
 
+
+    <!-- ⚠️ THE DOOR WITH NO RULES ON IT. Every other control on this page enforces the
+         league's rules, which is right for players and wrong for the person who owns the
+         league: when a real week goes wrong the rules are what stands between the manager
+         and the truth. Nothing here re-derives — see the warning in the panel. -->
+    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">Manager override</h3>
+    <p class="tm" style="margin:0 0 8px">Edit anything in this league, at any time. Every change is recorded below with the value it replaced &mdash; the log is append-only, so a change can always be read back and undone by hand.</p>
+
+    <div id="godResults"></div>
+
+    <div class="row" style="align-items:flex-end;gap:10px;margin-top:12px">
+      <div class="f" style="min-width:260px;flex:1">
+        <label>Field path (inside this league)</label>
+        <input id="godPath" type="text" autocomplete="off" spellcheck="false" placeholder="results/Kap/result">
+      </div>
+      <button class="btn ghost sm" id="godLoad">Load</button>
+    </div>
+    <div class="f" style="margin-top:8px">
+      <label>Value &mdash; JSON. <code>null</code> deletes the field.</label>
+      <textarea id="godValue" rows="5" spellcheck="false"
+        style="width:100%;font:12px ui-monospace,monospace;background:var(--grid);color:var(--ink-1);border:1px solid var(--border);border-radius:8px;padding:9px"></textarea>
+    </div>
+    <div class="row" style="align-items:center;gap:10px;margin-top:8px">
+      <button class="btn ghost sm" id="godSave">Write it</button>
+      <span class="tm">Writes the value exactly as typed. It does not re-run the levers, re-resolve a chop or re-stamp the ledger &mdash; if you change a result after a week is graded, fix what was computed from it too.</span>
+    </div>
+    <div class="err" id="godErr"></div>
+    <div id="godAudit" style="margin-top:12px"></div>
+
     <div id="lockRow" style="display:none;margin-top:18px;border-top:1px solid var(--grid);padding-top:14px">
       <div class="row" style="align-items:center;gap:10px">
         <button class="btn ghost sm" id="forceLock">Place the ticket now</button>
@@ -5727,7 +5756,7 @@ function render(){
   document.getElementById('leagueCard').style.display = v==='league' ? '' : 'none';
   if(v==='league'){ paintLeague();
     // Manager-only, and it reaches every week rather than just this one.
-    if(canManage(league()||{})) paintGaps();
+    if(canManage(league()||{})){ paintGaps(); paintGod(); }
     else {
       /* ⚠️ Do not just blank it. A card with nothing in it and nothing said reads as a
          broken feature; the reason it is empty is that filling closes is a manager write. */
@@ -7879,6 +7908,120 @@ window.onDDAuth = function(){
   renderAuth();
 };
 
+
+/* ---------------- manager override — the god panel ----------------
+   Three things in one card, because they are three views of the same power: the results
+   most likely to need fixing, an editor for every other field, and the record of what has
+   been changed. The record is not decoration — these rows carry real money, and an edit
+   nobody can see afterwards is the thing that makes a ledger stop being a receipt. */
+const godRead = path => wGet('/bozo/admin?league=' + encodeURIComponent(LID)
+  + (path ? '&path=' + encodeURIComponent(path) : ''));
+const godWrite = edits => wPost('/bozo/admin', { league: LID, ...(Array.isArray(edits) ? { edits } : edits) });
+
+function godErr(m, ok){
+  const e = document.getElementById('godErr'); if(!e) return;
+  e.className = 'err' + (ok ? ' ok' : ''); e.textContent = m || '';
+}
+
+/* The current week's legs, each with a one-click outcome. This is what a manager
+   actually reaches for: the prop the source cannot grade, or the one it got wrong. */
+function paintGodResults(){
+  const host = document.getElementById('godResults'); if(!host) return;
+  const picks = (S && S.picks) || {}, res = (S && S.results) || {};
+  const keys = Object.keys(picks);
+  if(!keys.length){ host.innerHTML = '<p class="tm">No legs on the board this week.</p>'; return; }
+  const cell = (k, v, cur) =>
+    `<button class="btn ghost sm godr" data-k="${esc(k)}" data-v="${v}"`
+    + `${cur===v?' style="border-color:var(--accent);color:var(--ink-1)"':''}>${esc(v||'clear')}</button>`;
+  host.innerHTML = `<div class="tscroll"><table class="bz gaptbl"><tbody>
+    <tr><th>Who</th><th>Leg</th><th>Result</th></tr>`
+    + keys.map(k=>{
+        const r = res[k] || {};
+        const cur = r.result || (r.won===true?'won':r.won===false?'lost':'');
+        return `<tr><td>${esc(picks[k].who || k)}</td><td>${esc(picks[k].label || '')}</td>`
+          + `<td>${['won','lost','push',''].map(v=>cell(k,v,cur)).join(' ')}</td></tr>`;
+      }).join('')
+    + `</tbody></table></div>`;
+
+  host.querySelectorAll('.godr').forEach(b=>{
+    b.onclick = async ()=>{
+      const k = b.dataset.k, v = b.dataset.v;
+      godErr('');
+      b.disabled = true;
+      try{
+        /* result and won are written together. They are two spellings of one fact and a
+           surface reads whichever it was written against — setting one alone is how a
+           leg ends up won on the ticket and lost in the ledger. */
+        await godWrite([
+          { path: `results/${encodeURIComponent(k)}/result`, value: v || null },
+          { path: `results/${encodeURIComponent(k)}/won`, value: v==='won' ? true : v==='lost' ? false : null },
+        ]);
+        godErr(v ? `Set to ${v}. Anything already computed from the old value is unchanged.` : 'Cleared.', true);
+        await refresh(); paintGod();
+      }catch(e){ godErr(e.message); }
+      b.disabled = false;
+    };
+  });
+}
+
+async function paintGodAudit(){
+  const host = document.getElementById('godAudit'); if(!host) return;
+  /* ⚠️ Read off the whole-league node, not through the edit path — that path refuses the
+     segment `audit` by name, which is what keeps the record append-only. */
+  let rows = [];
+  try{
+    const all = await godRead('');
+    rows = Object.entries((all && all.value && all.value.audit) || {})
+      .map(([id, r]) => ({ id, ...r }))
+      .sort((a,b)=>String(b.id).localeCompare(String(a.id)))
+      .slice(0, 25);
+  }catch(e){ host.innerHTML = ''; return; }
+  if(!rows.length){ host.innerHTML = '<p class="tm">No overrides recorded for this league.</p>'; return; }
+  const show = v => v === null || v === undefined ? '—'
+    : (typeof v === 'object' ? JSON.stringify(v) : String(v));
+  host.innerHTML = `<p class="tm" style="margin:0 0 6px">Last ${rows.length} override${rows.length===1?'':'s'}</p>`
+    + `<div class="tscroll"><table class="bz gaptbl"><tbody>`
+    + `<tr><th>When</th><th>Who</th><th>Field</th><th>Was</th><th>Now</th></tr>`
+    + rows.map(r=>`<tr><td>${esc(String(r.at||'').slice(0,16).replace('T',' '))}</td>`
+        + `<td>${esc(r.by||'')}</td><td><code>${esc(r.path||'')}</code></td>`
+        + `<td class="px">${esc(show(r.from).slice(0,60))}</td>`
+        + `<td class="px">${esc(show(r.to).slice(0,60))}</td></tr>`).join('')
+    + `</tbody></table></div>`;
+}
+
+function paintGod(){
+  paintGodResults();
+  paintGodAudit();
+}
+
+document.addEventListener('click', async ev=>{
+  const load = ev.target.closest('#godLoad'), save = ev.target.closest('#godSave');
+  if(!load && !save) return;
+  const path = (document.getElementById('godPath')||{}).value?.trim() || '';
+  const box = document.getElementById('godValue');
+  godErr('');
+  if(load){
+    if(!path){ godErr('Name a field, like results/Kap/result.'); return; }
+    try{
+      const j = await godRead(path);
+      box.value = JSON.stringify(j.value === undefined ? null : j.value, null, 2);
+      godErr('Loaded. Edit and write it back.', true);
+    }catch(e){ godErr(e.message); }
+    return;
+  }
+  if(!path){ godErr('Name a field, like results/Kap/result.'); return; }
+  let value;
+  // ⚠️ Parsed, not coerced. "false" and false are different writes and a manager typing
+  // one must never silently get the other.
+  try{ value = JSON.parse(box.value === '' ? 'null' : box.value); }
+  catch(e){ godErr('That is not valid JSON. A bare string needs quotes: "lost", not lost.'); return; }
+  try{
+    await godWrite({ path, value });
+    godErr('Written.', true);
+    await refresh(); paintGod();
+  }catch(e){ godErr(e.message); }
+});
+
 /* ---------------- missing closing prices, across the whole season ----------------
    The grade card can only see the current week — bozoNext clears /results when the week
    advances. This reads the LEDGER, which keeps every row forever, so a gap from any week
@@ -7895,7 +8038,9 @@ async function paintGaps(){
     ? `Every graded leg has both sides of its close. Nothing to fill in.`
     : `<b>${j.gaps} of ${j.total} legs</b> have no usable closing price. A leg needs <b>both sides</b> to be
        de-vigged — with one side only it is dropped from the CLV chart and from <i>n</i>, exactly as if it had
-       none. Read them off the placed ticket. Only a <b>complete</b> captured pair is locked; a leg the capture
+       none — unless you leave the other side <b>blank</b>, in which case it is assumed at standard
+       &minus;110/&minus;110 juice and stamped as assumed, so the leg counts instead of vanishing.
+       Read them off the placed ticket. Only a <b>complete</b> captured pair is locked; a leg the capture
        caught one side of is still yours to fill, and typing over it makes the whole pair manual.`
        + (locked ? ` <span class="tm">${locked} already fully captured, so not editable.</span>` : '');
   if(!fillable.length){
@@ -7915,8 +8060,9 @@ async function paintGaps(){
           class="gc" placeholder="close" value="${r.close ?? ''}"
           ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span></td>
         <td><span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
-          class="go" placeholder="other" value="${r.closeOpp ?? ''}"
-          ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span></td>
+          class="go" placeholder="${r.assumedOpp != null ? 'auto '+fmtPrice(r.assumedOpp) : 'other'}" value="${r.closeOpp ?? ''}"
+          ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
+          ${r.oppSource === 'assumed' ? '<div class="gwhy">assumed at standard juice</div>' : ''}</td>
         <td><button class="btn ghost sm gsave">Save</button></td></tr>`).join('')
     + `</tbody></table></div>`;
 
@@ -7925,16 +8071,23 @@ async function paintGaps(){
       const tr = btn.closest('tr'), e = document.getElementById('gapErr');
       e.className='err'; e.textContent='';
       const close = tr.querySelector('.gc').value.trim(), opp = tr.querySelector('.go').value.trim();
-      // ⚠️ Checked here as well as on the server, because the failure is invisible
-      // otherwise: a one-sided close saves fine and then never appears on the chart.
-      if((close==='') !== (opp==='')){
-        e.textContent = 'Both sides, or neither. One side alone can’t be de-vigged, so the leg stays off the chart.';
+      /* ⚠️ The other side is now OPTIONAL. Leave it blank and the server assumes it at a
+         standard -110/-110 hold and stamps it "assumed", which is weaker evidence than a
+         number read off the slip but far better than the old behaviour: refusing the save
+         and leaving the leg permanently off the chart. Giving only the OTHER side is still
+         refused — the assumption runs from the close outwards, not backwards. */
+      if(close==='' && opp!==''){
+        e.textContent = 'Enter the closing price you took. The other side can be left blank and will be assumed at standard juice.';
         return;
       }
       // ⚠️ The boxes are text, so a typo reaches here as a string. Refuse it out loud —
       // coercing it to null would look identical to clearing the row on purpose.
-      if(close!=='' && !(Number.isFinite(priceNum(close)) && Number.isFinite(priceNum(opp)))){
-        e.textContent = 'Both boxes need a whole American price, like -175 and +150.';
+      if(close!=='' && !Number.isFinite(priceNum(close))){
+        e.textContent = 'The closing price needs a whole American price, like -175.';
+        return;
+      }
+      if(opp!=='' && !Number.isFinite(priceNum(opp))){
+        e.textContent = 'The other side needs a whole American price, like +150 — or leave it blank to assume standard juice.';
         return;
       }
       btn.disabled = true;
@@ -8242,17 +8395,37 @@ const CLV = {
 };
 
 const clvImp = o => o < 0 ? (-o)/((-o)+100) : 100/(o+100);
+const clvAm = pr => pr >= 0.5 ? Math.round(-100*pr/(1-pr)) : Math.round(100*(1-pr)/pr);
+
+/* The other side of a lone price, assumed at a standard -110/-110 two-way market
+   (overround 1.047619). Mirrors bozoAssumedOpposite() in the Worker — if you change the
+   assumption, change it in both or the chart stops agreeing with the ledger. */
+const CLV_OVERROUND = 1.047619;
+function clvAssumedOpp(price){
+  if(price == null) return null;
+  const left = CLV_OVERROUND - clvImp(price);
+  if(!(left > 0.02 && left < 0.98)) return null;
+  const o = clvAm(left);
+  return Number.isFinite(o) && Math.abs(o) >= 100 ? o : null;
+}
+
 /** proportional de-vig against the opposite side of the same two-way market */
 function clvDevig(price, opp){
   if(price == null) return null;
   const a = clvImp(price);
-  // ⚠️ No opposite side means no de-vig is possible. Returning raw implied here would
-  // silently mix two different quantities in one average; the leg is excluded instead
-  // and counted in the header.
-  if(opp == null) return null;
-  const b = clvImp(opp);
+  /* ⚠️ A missing opposite side used to end the calculation here, which dropped the leg
+     from the chart and from n. It is now assumed at standard juice instead. Raw implied
+     is still never returned — that would mix two different quantities in one average.
+     What is returned is a real de-vig against an ASSUMED book, and clvOppAssumed() says
+     when that happened so the surface can mark it rather than pass it off as observed. */
+  const other = opp == null ? clvAssumedOpp(price) : opp;
+  if(other == null) return null;
+  const b = clvImp(other);
   return a/(a+b);
 }
+/** did either side of this leg's CLV rest on an assumed opposite? */
+const clvOppAssumed = l => !!l && ((l.closePrice != null && l.closePriceOpp == null)
+                                || (l.entryPrice != null && l.entryPriceOpp == null));
 const clvGraded = l => (l.result==='win' || l.result==='loss')
   && l.closePrice != null && l.entryPrice != null
   && clvDevig(l.closePrice, l.closePriceOpp) != null

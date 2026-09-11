@@ -41,4 +41,6 @@ jobs:
       - run: node work/test-identity.mjs
       - run: node work/test-mcp.mjs
       - run: node work/test-swoledawg.mjs
+      - run: node work/test-bozo-close-fill.mjs
+      - run: node work/test-bozo-autograde.mjs
       - run: node tools/validate-data.js
