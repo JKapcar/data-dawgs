@@ -1414,6 +1414,14 @@ table.gaptbl input{width:82px}
   flex:1 1 auto;width:auto;min-width:0}
 .bz .pxfix input:focus{outline:none}
 .gr.close .pxin{width:134px}
+/* One row per leg: name on its own line, then the controls wrap, Save always last. A
+   grid with five fixed columns overflowed a phone, which is where grading happens. */
+.gr.leg{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.gr.leg>span:first-child{flex:1 1 100%}
+.gr.leg select{min-width:118px}
+.gr.leg input[data-a]{width:110px}
+.gr.leg .gsv{margin-left:auto;min-width:76px}
+.gr.leg .saved{font:600 11px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
 table.gaptbl .pxin{width:120px}
 table.gaptbl .gwhy{font-size:11px;color:var(--ink-3);margin-top:2px;max-width:46ch;line-height:1.45}
 /* CLV in the diagnostics table. Own names on purpose — see the note at clvText. */
@@ -5211,7 +5219,11 @@ function paintHouseTicket(){
       return `<div class="sl-row empty"><span class="n">${i+1}</span>` +
         `<span><span class="who">${esc(teamOf(p))}</span>` +
         `<span class="what">no leg yet</span></span><span class="px">&mdash;</span></div>`;
-    const mark = graded ? (r.won===true?'✓':r.won===false?'✕':'—') : (i+1);
+    /* Same rule as the ticket: the leg's own result decides its mark, so a settled
+       leg reads settled here too rather than waiting on the rest of the slip. */
+    const o = r.result || (r.won===true?'won':r.won===false?'lost':null);
+    const mark = o==='won' ? '✓' : o==='lost' ? '✕'
+      : (o==='push'||o==='void') ? '—' : (graded ? '—' : (i+1));
     return `<div class="sl-row"><span class="n">${mark}</span>` +
       `<span><span class="who">${esc(teamOf(p))} &middot; ${esc(when(x.ts))}</span>` +
       `<span class="what">${esc(x.label||'')}</span></span>` +
@@ -5690,7 +5702,17 @@ function render(){
      which without this read "2 of 1 in". */
   const expected = isRoyale() ? Math.max(live.length, royaleAliveNames().length)
                               : Math.max(live.length, activeNames().length);
-  document.getElementById('fill').textContent = live.length+' of '+expected+' in';
+  /* ⚠️ Results now land one game at a time instead of all at once when a human grades
+     the week, so "in" alone stopped being the interesting number: a ticket nothing has
+     settled on and a ticket the grader has not reached read identically. Count what has
+     actually settled once anything has, which is what tells you the grader is alive. */
+  const settledN = live.filter(x=>{
+    const rr = (S.results || {})[kEnc(x.p)] || {};
+    return rr.result != null || rr.won === true || rr.won === false;
+  }).length;
+  document.getElementById('fill').textContent = settledN
+    ? live.length + ' of ' + expected + ' in · ' + settledN + ' settled'
+    : live.length + ' of ' + expected + ' in';
 
   const open = status==='open';
   const mine = ME ? picks[kEnc(ME.name)] : null;
@@ -6389,8 +6411,21 @@ function paintSlip(players, picks, status, live){
   const html = rows.map((row,i)=>{
     const {p,x,r} = row;
     const inPool = x.price!=null;
+    /* ⚠️ A LEG'S MARK COMES FROM THE LEG, NOT FROM THE WEEK. This used to read the
+       week-level status, so a leg whose game finished hours ago still showed as running
+       until every other leg on the ticket had settled too. That was survivable when a
+       human graded the whole week in one go; it is wrong now that results land one game
+       at a time, and it was the reason a lost bet could sit on screen looking live.
+
+       Unsettled stays 'on' while the week is open and becomes 'void' once the week is
+       graded — a graded week with no result on a leg IS a push or a void, whereas an
+       ungraded one simply has not finished. */
+    const outcome = r.result || (r.won===true?'won':r.won===false?'lost':null);
     let state = !inPool ? 'empty'
-      : graded ? (r.won===true?'won':r.won===false?'lost':'void')
+      : outcome==='won' ? 'won'
+      : outcome==='lost' ? 'lost'
+      : (outcome==='push' || outcome==='void') ? 'void'
+      : graded ? 'void'
       : 'on';
     const cls = [ 'leg', state,
       (ME && p===ME.name) ? 'mine' : '',
@@ -7050,7 +7085,13 @@ function bozoCtx(){
   L.push(`THE TICKET (${live.length} of ${players.length} in, listed in submission order — the LAST one is currently exposed to Last In):`);
   live.slice().sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach((x,i)=>{
     const r=res[kEnc(x.p)]||{};
-    const outcome = status==='graded' ? (r.won===true?' WON':r.won===false?' LOST':' push/void') : '';
+    /* Same rule as the slip: a leg that has settled has settled, whether or not the
+       rest of the week has. Gating this on the week meant Toto would call a finished,
+       lost leg "still running" for as long as one other game was in progress. */
+    const o = r.result || (r.won===true?'won':r.won===false?'lost':null);
+    const outcome = o==='won' ? ' WON' : o==='lost' ? ' LOST'
+      : (o==='push'||o==='void') ? ' push/void'
+      : status==='graded' ? ' push/void' : '';
     L.push(`${i+1}. ${teamOf(x.p)} | ${x.label} | ${x.price} | ${SPORTS[x.sport]?SPORTS[x.sport].n:x.sport} ${x.game}${(x.mkt==='prop'||x.mkt==='other')?` (${x.mkt.toUpperCase()} — soft SD, manual grading)`:''} | in ${when(x.ts)}${outcome}${r.actual!=null?` | finished ${r.actual}`:''}`);
   });
   const missing = players.filter(p=>picks[kEnc(p)]==null);
@@ -7619,7 +7660,7 @@ async function autoGrade(){
   try{ preview=await wPost('/bozo/grade', {action:'preview'}); }
   catch(err){ e.className='err'; e.textContent=err.message; return; }
   S.results=preview.results||{};
-  const manual=entries.filter(([,x])=>x.mkt==='prop'||x.mkt==='other').map(([p,x])=>p+' ('+x.mkt+')');
+  const manual=entries.filter(([,x])=>x.mkt==='prop'||x.mkt==='other').map(([p,x])=>(x.who||p)+' ('+x.mkt+')');
   const waiting=(preview.pending||[]).map(x=>x.player||x.key);
   const got=entries.filter(([p,x])=>x.mkt!=='prop'&&x.mkt!=='other'&&((S.results[p]||{}).result)).length;
   e.textContent = `Graded ${got} leg${got===1?'':'s'} from the Worker schedule.`
@@ -7629,28 +7670,75 @@ async function autoGrade(){
   render();
 }
 function paintManual(live){
-  // Phase 2.8b: period legs are hand-graded too — no Worker-reachable source has
-  // per-period scores. The actual for a spread or moneyline is the PERIOD margin for the
-  // side taken (BYU minus ARIZ at halftime); for a total it is the period's points.
-  const need = live.filter(isManualLeg);
+  /* ⚠️ ONE ROW PER LEG, AND EVERY ROW SAVES ON ITS OWN. This card used to split into a
+     manual-results list (props, other, period legs) and a closing-prices list, and the
+     only way to commit either was "Name the bozo" at the bottom — the whole-week,
+     two-phase confirm, which refuses while anything on the ticket is still pending. So
+     the manager could pick "Lost" for a prop on Thursday and had nothing to press until
+     Monday night. Every leg now carries its result, its actual, both sides of its close
+     and a Save that writes that leg immediately through /bozo/admin, audited.
+
+     The data-w / data-a / data-c / data-co attributes are unchanged on purpose:
+     decide() still reads them for the final week-level write, so the two paths agree. */
+  const res = S.results || {};
   const hint = x => (x.period && x.period!=='game')
     ? (x.mkt==='total' ? `${PERIOD_LABEL[x.period]} points` : `${PERIOD_LABEL[x.period]} margin, ${esc(x.side)} minus opponent`)
     : 'actual';
+  const rowOf = x => res[kEnc(x.p)] || res[x.p] || {};
+  const rows = live.map(x=>{
+    const r = rowOf(x);
+    const o = r.result || (r.won===true?'won':r.won===false?'lost':null);
+    const sel = o==='won' ? '1' : o==='lost' ? '0' : (o==='push'||o==='void') ? 'p' : '';
+    const manual = isManualLeg(x);
+    const has = r.close != null, missing = has && r.closeOpp == null;
+    const closeState = has
+      ? (missing
+          ? `<span class="cst warn">other side will be assumed on save</span>`
+          : `<span class="cst ok">${r.closeSource==='sgo'?'captured at kickoff':'entered by hand'}${r.closeOppSource==='assumed'?' · other side assumed':''}</span>`)
+      : (r.closeUnavailableReason
+          ? `<span class="cst bad" title="${esc(r.closeUnavailableReason)}">not captured — fill it in</span>`
+          : `<span class="cst">waiting on kickoff</span>`);
+    const resState = o
+      ? `<span class="cst ${o==='lost'?'bad':'ok'}">${esc(o)}${r.resultSource==='manual'?' · set by hand':r.gradeSource?' · from schedule':''}</span>`
+      : '';
+    // ⚠️ Only a COMPLETE captured pair is immutable; a half capture is still yours.
+    const locked = r.closeObservedAt != null && r.close != null && r.closeOpp != null;
+    const autoOpp = has && r.closeOpp == null ? clvAssumedOpp(r.close) : null;
+    return `<div class="gr leg" data-leg="${esc(x.p)}">
+      <span><b>${esc(x.p)}</b> <span class="pk">${esc(x.label)}</span>
+        ${(x.period && x.period!=='game')?' <span class="cst warn" title="No score source carries per-period scores; type the period result">period · manual grade</span>':''}
+        ${resState} ${closeState}
+        ${r.closeUnavailableReason?`<span class="why">${esc(r.closeUnavailableReason)}</span>`:''}
+        <span class="tm" style="display:block;margin-top:2px">took ${x.price} / ${x.entryPriceOpp ?? '—'}</span></span>
+      <select data-w="${esc(x.p)}" aria-label="Result"><option value="">result —</option><option value="1"${sel==='1'?' selected':''}>Won</option><option value="0"${sel==='0'?' selected':''}>Lost</option><option value="p"${sel==='p'?' selected':''}>Push / void</option></select>
+      ${manual ? `<input type="number" step="0.5" data-a="${esc(x.p)}" placeholder="${hint(x)}" value="${r.actual ?? ''}">` : ''}
+      <span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
+        data-c="${esc(x.p)}" placeholder="close" ${locked?'disabled':''} value="${r.close ?? ''}"
+        ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
+      <span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
+        data-co="${esc(x.p)}" placeholder="${autoOpp!=null ? 'auto '+fmtPrice(autoOpp) : 'other side'}" ${locked?'disabled':''} value="${r.closeOpp ?? ''}"
+        ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
+      <button type="button" class="btn sm gsv" data-save="${esc(x.p)}">Save</button></div>`;
+  }).join('');
+
+  const gaps = live.filter(x=>{ const r=rowOf(x); return r.close==null; }).length;
+  const settled = live.filter(x=>{ const r=rowOf(x); return r.result!=null || r.won===true || r.won===false; }).length;
   document.getElementById('manual').innerHTML =
-    (need.length ? `<div class="lil" style="margin-bottom:6px">Manual — props, other markets and period legs</div>` +
-      need.map(x=>`<div class="gr"><span><b>${esc(x.p)}</b> <span class="pk">${esc(x.label)}</span>${(x.period && x.period!=='game')?' <span class="cst warn" title="No score source carries per-period scores; type the period result">period · manual grade</span>':''}</span>
-        <select data-w="${esc(x.p)}"><option value="">—</option><option value="1">Won</option><option value="0">Lost</option><option value="p">Push / void</option></select>
-        <input type="number" step="0.5" data-a="${esc(x.p)}" placeholder="${hint(x)}"></div>`).join('') : '')
-    + paintCloses(live)
-    + `<div class="row" style="margin-top:14px"><button class="btn" id="finish">Name the bozo</button></div>`;
+    `<div class="lil" style="margin-bottom:6px">Legs — result, actual and closing price. Save writes that leg now.</div>`
+    + `<p class="tm" style="margin:0 0 8px">${settled} of ${live.length} settled · ${gaps} without a close.
+        Leave the other side blank and it is assumed at standard &minus;110/&minus;110 juice, stamped as assumed.
+        A result you set by hand sticks: the schedule will not overwrite it.</p>`
+    + rows
+    + `<div class="row" style="margin-top:14px"><button class="btn" id="finish">Name the bozo</button>
+        <span class="tm">Grades the whole week and resolves who wore it. Needs every leg settled.</span></div>`;
   document.getElementById('finish').onclick = decide;
+
+  document.querySelectorAll('#manual .gsv').forEach(b=>{ b.onclick = ()=>saveLeg(b.dataset.save, b); });
 
   /* ⚠️ Two players on the SAME selection share one real-world outcome, so grading them
      apart is not a preference — it is a contradiction. The Worker refuses it outright;
      this mirrors the answer across the group so the contradiction is never typed in the
-     first place. Belt and braces on purpose: the server guard is the one that counts,
-     but being told "no" after filling in eight dropdowns is a worse day than never
-     being able to disagree with yourself. */
+     first place. */
   const sameMarket = {};
   for(const x of live){
     if(!isManualLeg(x)) continue;
@@ -7667,7 +7755,6 @@ function paintManual(live){
       if(act) act.oninput = ()=>group.forEach(o=>{
         const a2=document.querySelector(`[data-a="${CSS.escape(o)}"]`); if(a2) a2.value=act.value; });
     }
-    // Say why the boxes are moving together, or it reads as a bug.
     const first = document.querySelector(`[data-w="${CSS.escape(group[0])}"]`);
     if(first && first.closest('.gr'))
       first.closest('.gr').insertAdjacentHTML('beforebegin',
@@ -7675,47 +7762,51 @@ function paintManual(live){
   }
 }
 
-/* Closing prices, with the capture's own status shown per leg.
-   ⚠️ BOTH SIDES OR NEITHER. A close on its own cannot be de-vigged, and the chart drops
-   an un-de-viggable leg exactly as if nothing had been entered — so a manager who filled
-   in one box would see no change and reasonably conclude the feature was broken. The
-   second box is not optional detail; it is what makes the first box count. */
-function paintCloses(live){
-  const res = S.results || {};
-  const rows = live.map(x=>{
-    const r = res[x.p] || {};
-    const has = r.close != null;
-    const missing = has && r.closeOpp == null;
-    const state = has
-      ? (missing
-          ? `<span class="cst warn">needs the other side</span>`
-          : `<span class="cst ok">${r.closeSource==='sgo'?'captured at kickoff':'entered by hand'}</span>`)
-      : (r.closeUnavailableReason
-          ? `<span class="cst bad" title="${esc(r.closeUnavailableReason)}">not captured — fill it in</span>`
-          : `<span class="cst">waiting on kickoff</span>`);
-    // ⚠️ A captured close is immutable and the Worker will ignore an edit to it. Say so
-    // by disabling the box rather than accepting a change that silently does nothing.
-    const locked = r.closeObservedAt != null;
-    return `<div class="gr close"><span><b>${esc(x.p)}</b> <span class="pk">${esc(x.label)}</span>${state}
-        ${r.closeUnavailableReason?`<span class="why">${esc(r.closeUnavailableReason)}</span>`:''}</span>
-      <span class="tm">took ${x.price} / ${x.entryPriceOpp ?? '—'}</span>
-      <span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
-        data-c="${esc(x.p)}" placeholder="close" ${locked?'disabled':''} value="${r.close ?? ''}"
-        ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
-      <span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
-        data-co="${esc(x.p)}" placeholder="other side" ${locked?'disabled':''} value="${r.closeOpp ?? ''}"
-        ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span></div>`;
-  }).join('');
-
-  const gaps = live.filter(x=>{ const r=res[x.p]||{}; return r.close==null || r.closeOpp==null; }).length;
-  const banner = gaps
-    ? `<div class="warnbox" style="display:block;margin-bottom:10px"><b>${gaps} leg${gaps===1?'':'s'} ${gaps===1?'has':'have'} no usable closing price.</b>
-        A leg needs BOTH sides to be de-vigged — with one side only it is dropped from the CLV chart and from
-        <i>n</i>, exactly as if it had none. Read them off the placed ticket and fill both boxes.</div>`
-    : `<div class="lil" style="margin:14px 0 6px">Closing prices — all present</div>`;
-
-  return `<div class="lil" style="margin:16px 0 6px">Closing prices</div>` + banner + rows;
+/* Write ONE leg, now. result + won travel together (two spellings of one fact), the
+   result is stamped manual so the schedule never overwrites it, and a lone close gets
+   its other side assumed at standard juice and stamped as such. Goes through
+   /bozo/admin, so it is manager-only and every field it touches is in the audit log. */
+async function saveLeg(p, btn){
+  const e=document.getElementById('gerr'); e.className='err'; e.textContent='';
+  const q = a => document.querySelector(`[data-${a}="${CSS.escape(p)}"]`);
+  const key = kEnc(p), sel=q('w'), act=q('a'), c=q('c'), co=q('co');
+  const edits = [];
+  if(sel && sel.value!==''){
+    const result = sel.value==='1' ? 'won' : sel.value==='0' ? 'lost' : 'push';
+    edits.push({ path:`results/${key}/result`, value:result },
+               { path:`results/${key}/won`, value: result==='won' ? true : result==='lost' ? false : null },
+               { path:`results/${key}/resultSource`, value:'manual' });
+  }
+  if(act && act.value!=='') edits.push({ path:`results/${key}/actual`, value:+act.value });
+  if(c && !c.disabled){
+    const cRaw=c.value.trim(), oRaw=(co?co.value:'').trim();
+    if(cRaw==='' && oRaw!==''){ e.textContent=`${p}: enter the closing price you took; the other side can be left blank.`; return; }
+    if(cRaw!==''){
+      const cv=priceNum(cRaw);
+      if(!Number.isFinite(cv)){ e.textContent=`${p}: the close needs a whole American price, like -175.`; return; }
+      let ov=priceNum(oRaw), assumed=false;
+      if(!Number.isFinite(ov)){
+        if(oRaw!==''){ e.textContent=`${p}: the other side needs a whole American price, or leave it blank.`; return; }
+        ov=clvAssumedOpp(cv); assumed=true;
+        if(ov==null){ e.textContent=`${p}: that price is too long to assume an other side for — enter the real one.`; return; }
+      }
+      edits.push({ path:`results/${key}/close`, value:cv },
+                 { path:`results/${key}/closeOpp`, value:ov },
+                 { path:`results/${key}/closeBook`, value:'draftkings' },
+                 { path:`results/${key}/closeSource`, value:'manual' },
+                 { path:`results/${key}/closeOppSource`, value: assumed ? 'assumed' : 'manual' },
+                 { path:`results/${key}/closeUnavailableReason`, value:null });
+    }
+  }
+  if(!edits.length){ e.textContent=`${p}: nothing filled in to save.`; return; }
+  if(btn) btn.disabled=true;
+  try{
+    await godWrite(edits);
+    e.className='err ok'; e.textContent=`${p} saved.`;
+    await refresh();
+  }catch(err){ e.className='err'; e.textContent=`${p}: ${err.message}`; if(btn) btn.disabled=false; }
 }
+
 async function confirmGrade(payload){
   const proposal=await wPost('/bozo/grade',payload);
   if(proposal.status!=='confirm_required'||!proposal.confirm_code)

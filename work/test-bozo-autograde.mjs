@@ -129,5 +129,55 @@ ok(/id="godAudit"/.test(pageCode) && /No overrides recorded/.test(pageCode),
 ok(/does not re-run the levers/.test(page),
    "the panel warns that an override re-derives nothing");
 
+/* ---- a settled leg reads settled ---- */
+
+/* ⚠️ THE BUG THIS PINS. Results now land one game at a time, but every surface decided a
+   leg's mark from the WEEK's status — so a leg whose game finished hours ago still showed
+   as running until every other leg had settled too. Writing the result and never showing
+   it is indistinguishable, to the person looking at the board, from not grading at all. */
+ok(/const outcome = r\.result \|\| \(r\.won===true\?'won':r\.won===false\?'lost':null\);/.test(pageCode),
+   "the ticket takes each leg's outcome from the leg, not from the week");
+ok(/: outcome==='lost' \? 'lost'/.test(pageCode),
+   "a lost leg reads lost while the rest of the week is still running");
+ok(/: graded \? 'void'/.test(pageCode),
+   "an unsettled leg is only void once the week is graded — before that it is still on");
+ok(/const mark = o==='won' \? '✓' : o==='lost' \? '✕'/.test(pageCode),
+   "the season bill marks a settled leg the same way");
+ok(/const outcome = o==='won' \? ' WON' : o==='lost' \? ' LOST'/.test(pageCode),
+   "Toto reports a settled leg as settled instead of calling it still running");
+ok(/settledN\s*\n?\s*\? live\.length \+ ' of ' \+ expected \+ ' in · ' \+ settledN \+ ' settled'/.test(pageCode),
+   "the ticket header counts what has settled, so a live grader is visible");
+
+/* ---- a leg saves on its own, and a hand-set result sticks ---- */
+
+/* ⚠️ THE ASK THIS PINS. The grade card's only commit used to be the whole-week two-phase
+   confirm, which refuses while anything is pending — so a manager could pick "Lost" for a
+   prop on Thursday and had nothing to press until Monday. Every leg now saves itself. */
+ok(/async function saveLeg\(p, btn\)/.test(pageCode) && /data-save=/.test(pageCode),
+   "every leg on the grade card has its own Save");
+ok(/path:`results\/\$\{key\}\/result`, value:result \}/.test(pageCode)
+   && /path:`results\/\$\{key\}\/won`/.test(pageCode),
+   "a per-leg save writes result and won together");
+ok(/path:`results\/\$\{key\}\/resultSource`, value:'manual'/.test(pageCode),
+   "a per-leg save stamps the result as set by hand");
+ok(/ov=clvAssumedOpp\(cv\); assumed=true;/.test(pageCode)
+   && /closeOppSource`, value: assumed \? 'assumed' : 'manual'/.test(pageCode),
+   "a lone close on the grade card gets its other side assumed and stamped as such");
+ok(/await godWrite\(edits\);[\s\S]{0,120}await refresh\(\);/.test(pageCode),
+   "the save goes through the audited override route and repaints");
+ok(/decide\(\)[\s\S]*querySelectorAll\('\[data-w\]'\)/.test(pageCode),
+   "the week-level grade still reads the same row attributes, so the two paths agree");
+
+/* ⚠️ Without this the feed re-graded a hand-set leg on the next tick or the next Pull,
+   and a manager who had just corrected a wrong result watched it flip back. */
+ok(/if \(\(results\[key\] \|\| \{\}\)\.resultSource === "manual"\) continue;/.test(worker),
+   "the schedule grader skips a leg whose result was set by hand");
+{
+  const guard = worker.indexOf('resultSource === "manual") continue;');
+  const strip = worker.indexOf('for (const field of ["actual", "result", "won", "gradeSource", "gradeObservedAt"]) delete row[field];');
+  ok(guard > 0 && strip > guard,
+     "...and skips it BEFORE the pending branch that would strip its result");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
