@@ -19,6 +19,14 @@
 name: Record draft picks
 
 on:
+  # Daily rebuild. The pick inputs are all optional, and a run with no picks is
+  # exactly a recompute: the schedule feed has moved on, so the wins tracker banks
+  # the new finals and the Monte Carlo reruns against them. 12:40 UTC sits after
+  # nfl-data.yml's 10:17 refresh has landed its finals, and before nfelo-refresh
+  # at 14:45. Without this the payload freezes on the last night somebody
+  # recorded a pick — which is how it sat at "no games played" for a month.
+  schedule:
+    - cron: "40 12 * * *"
   workflow_dispatch:
     inputs:
       picks:
@@ -73,11 +81,16 @@ jobs:
           PICKS: ${{ inputs.picks }}
           AS_OF: ${{ inputs.as_of }}
           TRIALS: ${{ inputs.trials }}
+          EVENT: ${{ github.event_name }}
         run: |
           set -euo pipefail
           args=(--trials "${TRIALS:-100000}")
           if [ -n "${AS_OF:-}" ]; then
             args+=(--as-of "$AS_OF")
+          elif [ "$EVENT" = "schedule" ]; then
+            # A daily rebuild that kept the old as_of would bank new finals under a
+            # stale date, and validate-data.js would be right not to care. Stamp it.
+            args+=(--as-of "$(date -u +%F)")
           fi
           # Commas are the natural separator when you are typing on a phone; treat
           # them and spaces the same. The script validates every entry.
@@ -109,25 +122,31 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Commit to main
-        if: ${{ inputs.dry_run == false }}
+        if: ${{ inputs.dry_run != true }}
         run: |
           set -euo pipefail
           if git diff --quiet -- data/draft-2026.json data/index.json; then
-            echo "Nothing changed — no picks to record."
+            echo "Nothing changed — no new picks and no newly settled games."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/draft-2026.json data/index.json
           made=$(python3 -c "import json;d=json.load(open('data/draft-2026.json'))['data'];print(f\"{d['picks_made']}/{d['picks_total']}\")")
-          git commit -m "Draft picks recorded: ${made}" \
+          played=$(python3 -c "import json;b=json.load(open('data/draft-2026.json'))['data']['basis'];print(f\"{b['settled_games']}/{b['total_games']}\")")
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ]; then
+            subject="Daily teamdraft rebuild: ${played} games settled"
+          else
+            subject="Draft picks recorded: ${made}"
+          fi
+          git commit -m "$subject" \
             -m "Rosters, board, diagnostics and the Monte Carlo reference are derived by scripts/team_draft_pool.py. Data only — no HTML changed, so sw.js VERSION is unmoved."
           # Somebody may have pushed while this ran. Rebase rather than clobber:
           # this repo has concurrent writers and a force push here would eat their work.
           git pull --rebase origin main
           node tools/validate-data.js
           git push origin HEAD:main
-          echo "Recorded ${made}. https://datadawgs216.com/teamdraft.html updates in about a minute."
+          echo "Recorded ${made}, ${played} games settled. https://datadawgs216.com/teamdraft.html updates in about a minute."
 
       - name: Dry run — nothing committed
         if: ${{ inputs.dry_run == true }}
