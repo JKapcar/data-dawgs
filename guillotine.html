@@ -2708,7 +2708,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   <div class="honesty" style="margin-bottom:0">
     <h3>What this can't do</h3>
-    <p>Survival odds are a simulation from completed-score history and its variance &mdash; they assume the next week plays like a typical past week. Before two completed weeks exist the page runs in projection mode instead: Sleeper weekly player projections, scored with this league&rsquo;s own settings, build each roster&rsquo;s best projected lineup and every team carries an assumed ±21-point spread (if that dated weekly file is unreachable the page falls back to season projections divided by games and says so on the card) &mdash; byes, injuries and schedule are not modeled there, and nothing in that mode is observed. They cannot see live Sunday scores, an inactive, or a garbage-time spike. Your weekly vote is graded on this device: once a week has been scored the page compares your pick against whoever actually posted the lowest score that week and keeps a running record. It is still LOCAL to the device &mdash; not immutable, not server-persisted, not cross-device, and not scored with Brier history &mdash; so clearing site data clears the record. Universal Data Vault are <span class="gx-planned">Planned</span>. Weak Spots reads injury designations and byes from Sleeper&rsquo;s season projections and the site&rsquo;s own schedule, and measures depth and star reliance off projected lineups &mdash; it cannot see depth-chart roles, snap share or a coach&rsquo;s intent, and none of it is a prediction. The Long Game&rsquo;s season Monte Carlo rolls the weekly model forward with rosters frozen at their current mean and spread &mdash; it cannot see waivers, injuries, byes, or the talent redistribution every chop causes, those omissions compound with every simulated week, and its finishing places cover the simulated teams only. The observed FAAB module encodes a framework about dollar appreciation, not a guarantee. The Waiver Plan sequences targets and prices them as ranges: each step assumes the steps above it were won, so the ordering carries more information than the dollars, and the dollars are modelled and ungraded rather than a bid engine. The FAAB War Plan is a dated editorial framework, not a bid engine.</p>
+    <p>Survival odds are a simulation from completed-score history and its variance &mdash; they assume the next week plays like a typical past week. Before two completed weeks exist the page runs in projection mode instead: Sleeper weekly player projections, scored with this league&rsquo;s own settings, build each roster&rsquo;s best projected lineup and every team carries an assumed ±21-point spread (if that dated weekly file is unreachable the page falls back to season projections divided by games and says so on the card) &mdash; byes, injuries and schedule are not modeled there, and nothing in that mode is observed. Once the week&rsquo;s first game kicks off both modes switch to live scoring: every starter counts the points he has actually banked plus his projection scaled by how much of his game is left, the assumed spread shrinks with the clock, and the board re-polls Sleeper every 90 seconds until the last game is final. The clock itself is approximated &mdash; Sleeper&rsquo;s read-only API exposes no game clock, so a game decays linearly over 190 minutes from kickoff, which is exact before kickoff and after the whistle and roughest mid-game. It still cannot see an inactive before his game starts, or know that a spike was garbage time. Your weekly vote is graded on this device: once a week has been scored the page compares your pick against whoever actually posted the lowest score that week and keeps a running record. It is still LOCAL to the device &mdash; not immutable, not server-persisted, not cross-device, and not scored with Brier history &mdash; so clearing site data clears the record. Universal Data Vault are <span class="gx-planned">Planned</span>. Weak Spots reads injury designations and byes from Sleeper&rsquo;s season projections and the site&rsquo;s own schedule, and measures depth and star reliance off projected lineups &mdash; it cannot see depth-chart roles, snap share or a coach&rsquo;s intent, and none of it is a prediction. The Long Game&rsquo;s season Monte Carlo rolls the weekly model forward with rosters frozen at their current mean and spread &mdash; it cannot see waivers, injuries, byes, or the talent redistribution every chop causes, those omissions compound with every simulated week, and its finishing places cover the simulated teams only. The observed FAAB module encodes a framework about dollar appreciation, not a guarantee. The Waiver Plan sequences targets and prices them as ranges: each step assumes the steps above it were won, so the ordering carries more information than the dollars, and the dollars are modelled and ungraded rather than a bid engine. The FAAB War Plan is a dated editorial framework, not a bid engine.</p>
   </div>
 
     </div>
@@ -3110,6 +3110,90 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     return t;
   }
 
+  /* ------------------------------ live blend --------------------------------
+     A projection answers "what should this roster do this week". Once the ball is
+     kicked that is the wrong question: what decides the chop is what the roster HAS
+     done plus what is left to come. Sleeper's own chopping block blends the two, and
+     until now this page did not, which is why its ordering drifted from Sleeper's
+     every Sunday afternoon.
+
+     Per STARTER (Sleeper's actual starters, not our optimiser's best lineup — the
+     manager's real lineup is what gets scored):
+
+         blended = points_already_scored + projection × fraction_of_game_left
+
+     ⚠️ fraction_of_game_left is a CLOCK-FREE approximation. Sleeper's read-only API
+     exposes no game clock, so this decays linearly over GAME_MS from kickoff. A game
+     is therefore "half done" 95 minutes in whether or not the teams have run half the
+     plays. It is exact at both ends — untouched before kickoff, pure observed points
+     after — and roughest in the middle of a game. Anything better needs a play-by-play
+     feed this page does not have. */
+  var GAME_MS = 190*60*1000;
+  function leftOf(kickoff, now){
+    if(!kickoff) return 1;                       // unknown kickoff — treat as not started
+    var gone = now - kickoff;
+    if(gone <= 0) return 1;
+    if(gone >= GAME_MS) return 0;
+    return 1 - gone/GAME_MS;
+  }
+
+  /* Rewrites each team's mean and spread onto this week's live numbers. Mutates the
+     rows in place because the sim, the wheel, the table and Toto all read the same
+     objects — one basis, one set of numbers, no surface left narrating the old one. */
+  async function applyLive(league, id, week, rows){
+    if(!week || week < 1) return null;
+    var ms = await jget("/league/"+id+"/matchups/"+week);
+    if(!ms || !ms.length) return null;
+    var wk = await weekRows();
+    if(!wk || !wk.players || !wk.players.length) return null;
+
+    var proj={}, kick={};
+    wk.players.forEach(function(pl){
+      if(!pl || pl.id==null) return;
+      proj[pl.id] = pl.has_projection ? scoreWeekly(pl.stats, league.scoring_settings) : 0;
+      kick[pl.id] = pl.kickoff ? Date.parse(pl.kickoff) : null;
+    });
+
+    var now = Date.now(), byRid = {};
+    ms.forEach(function(m){ if(m && m.roster_id!=null) byRid[m.roster_id] = m; });
+
+    /* Has the week actually begun? Before the first kickoff the blend is arithmetically
+       identical to the projection it would replace, so leave the existing basis alone
+       rather than relabel an unchanged number as live. */
+    var started = 0, totalStarters = 0, sumLeft = 0, applied = 0;
+    rows.forEach(function(t){
+      var m = byRid[t.rid]; if(!m) return;
+      var starters = (m.starters||[]).filter(function(x){ return x && x !== "0"; });
+      if(!starters.length) return;
+      var pp = m.players_points || {}, mean = 0, left = 0;
+      starters.forEach(function(pid){
+        var f = leftOf(kick[pid], now);
+        var got = typeof pp[pid] === "number" ? pp[pid] : 0;
+        mean += got + (proj[pid]||0)*f;
+        left += f;
+        totalStarters++; if(f < 1) started++;
+      });
+      t.liveMean = mean;
+      t.liveLeft = left/starters.length;
+      sumLeft += t.liveLeft;
+      applied++;
+    });
+    if(!applied || !started) return null;
+
+    rows.forEach(function(t){
+      if(t.liveMean == null) return;
+      t.mean = t.liveMean;
+      /* Uncertainty is only about what has NOT been played. A finished roster has no
+         spread left, so the sim stops pretending its final score might move. */
+      t.sd = Math.max(0.1, (t.sd || PROJ_SD) * t.liveLeft);
+      t.live = true;
+    });
+
+    var leftAvg = sumLeft/applied;
+    return {week: week, teams: applied, startersPlaying: started, starters: totalStarters,
+            left: leftAvg, complete: leftAvg <= 0.0001};
+  }
+
   function projRows(season){
     if(!PROJ_P[season]) PROJ_P[season] = fetch("https://api.sleeper.app/projections/nfl/"+season
         +"?season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE",{signal:AbortSignal.timeout(25000)})
@@ -3358,8 +3442,12 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     return out;
   }
   var SYNC_ID=0, CURRENT=null, FOCUS_ID=0;
+  /* A live board that only updates on reload is not live. One timer, cleared on every
+     entry to sync() and on Clear, so a re-sync can never leave two of them running. */
+  var LIVE_TIMER=null, LIVE_MS=90*1000;
+  function stopLive(){ if(LIVE_TIMER){ clearTimeout(LIVE_TIMER); LIVE_TIMER=null; } }
   async function sync(id){
-    var request=++SYNC_ID;CURRENT=null;
+    var request=++SYNC_ID;CURRENT=null;stopLive();
     if(window.GW_INTEGRATED){window.__GX=null;window.GX_VALUE_STATUS="Loading roster values…";}
     if(window.GW_INTEGRATED)window.dispatchEvent(new CustomEvent("gx-loading",{detail:{leagueId:id}}));
     if(elDdCard)elDdCard.style.display="none";
@@ -3501,6 +3589,15 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       }
     }
 
+    /* Live overlay. Runs in BOTH modes: whether team strength came from projections or
+       from observed history, the chop that matters is THIS week's, and this week is
+       partly played. Never fatal — a failure here leaves the pre-kickoff basis intact
+       and the card says which one it is showing. */
+    var LIVE = null;
+    var curWeek = (state.season_type||"") === "pre" ? 0 : (state.display_week||0);
+    try{ LIVE = await applyLive(league, id, curWeek, live); }catch(e){ LIVE = null; }
+    if(request!==SYNC_ID)return;
+
     var res = simulate(live);
     live.forEach(function(t,i){ t.surv = res.surv[i]; });
     live.sort(function(a,b){ return a.surv - b.surv; });
@@ -3519,8 +3616,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
        labelled apart in the context builder — do not collapse them here. */
     /* One read of the basis, reused by every label below. A silent fallback to season
        averages must not be able to narrate itself as the weekly number. */
-    var PB = (live[0] && live[0].projBasis) || null;
-    var PBWORD = PB === "season" ? "season projections divided by games" : "weekly player projections, league-scored";
+    var PB = LIVE ? "live" : ((live[0] && live[0].projBasis) || null);
+    var PBWORD = LIVE
+      ? ("LIVE week "+LIVE.week+" scoring — points already banked plus what the clock leaves of each starter's projection ("
+         + Math.round(LIVE.left*100) + "% of the week still to play)")
+      : (PB === "season" ? "season projections divided by games" : "weekly player projections, league-scored");
 
     window.__GX = {
       leagueId: id, league: league.name, season: league.season, teamCount: teams.length,
@@ -3528,6 +3628,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       /* which projection basis actually loaded — the label and Toto both read this, so a
          silent fallback to season averages cannot masquerade as the weekly number */
       projBasis: PB,
+      /* live: null before the week's first kickoff, otherwise this week's blend of
+         points already scored and what the clock leaves. Toto and every label read it,
+         so an in-progress board can never be quoted as a pre-kickoff forecast. */
+      live: LIVE,
       chopped: teams.length - alive.length,
       excluded: alive.length - live.length,
       faab: faab,
@@ -3538,6 +3642,14 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     };
     try{ window.dispatchEvent(new CustomEvent("gx-ready", {detail:window.__GX})); }catch(e){}
 
+    /* Re-poll while the ball is in the air. Stops once every game is final — there is
+       nothing left to move, and a timer that keeps hitting Sleeper all week is rude. */
+    if(LIVE && !LIVE.complete){
+      LIVE_TIMER = setTimeout(function(){
+        if(request===SYNC_ID) sync(id).catch(function(){});
+      }, LIVE_MS);
+    }
+
     // Async on purpose: the waiver board needs a name fetch and must not block the sim.
     renderWaiver(pScores, rosteredNow, done).then(function(wv){
       if(request===SYNC_ID && wv && window.__GX && String(window.__GX.leagueId)===String(id)){ window.__GX.waiver = wv;
@@ -3545,19 +3657,23 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     }).catch(function(){});
 
     elLive.style.display="";
-    elState.textContent = (MODE==="projected" ? "Projected · " : "Modeled week · ") + (me ? "focus selected" : "pick a focus team");
+    elState.textContent = (LIVE ? (LIVE.complete ? "Week "+LIVE.week+" final · " : "LIVE week "+LIVE.week+" · ")
+                                 : (MODE==="projected" ? "Projected · " : "Modeled week · "))
+      + (me ? "focus selected" : "pick a focus team");
     if(me){
       elPct.textContent = Math.round(me.surv*100) + "%";
       elPctL.innerHTML = "chance <b>"+esc(me.name)+"</b> survives week "+(done+1)
         + (MODE==="projected"
           ? " — modeled from Sleeper "+PBWORD+" with an assumed ±"+PROJ_SD+"-point spread. Nothing observed yet."
-          : " — the probability of not being the lowest scorer, from "+done+" weeks of this league's own scoring.");
+          : (LIVE
+              ? " — modeled from "+PBWORD+", with the spread from "+done+" weeks of this league's own scoring shrunk to what is left to play."
+              : " — the probability of not being the lowest scorer, from "+done+" weeks of this league's own scoring."));
       elGauge.innerHTML = gauge(res.chop, me.mean);
       elStats.innerHTML = tile(me.mean.toFixed(1),"Your average")
         + tile(res.chop.toFixed(1),"Projected chop line")
         + tile(res.chopLo.toFixed(0)+"–"+res.chopHi.toFixed(0),"Chop 80% band")
         + tile((me.mean-res.chop>=0?"+":"")+(me.mean-res.chop).toFixed(1),"Margin")
-        + tile(live.length,"Teams simulated") + (MODE==="projected"?tile(PB==="season"?"Sleeper season":"Sleeper weekly","Projection source"):tile(done,"Weeks of history"));
+        + tile(live.length,"Teams simulated") + (MODE==="projected"?tile(LIVE?(LIVE.complete?"Sleeper final":"Sleeper LIVE"):(PB==="season"?"Sleeper season":"Sleeper weekly"),LIVE?"Scoring source":"Projection source"):tile(done,"Weeks of history"));
     } else {
       elPct.innerHTML = "&mdash;";
       elPctL.innerHTML = "Click your team in the table below and this becomes your survival odds. "
@@ -3565,7 +3681,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       elGauge.innerHTML = "";
       elStats.innerHTML = tile(res.chop.toFixed(1),"Projected chop line")
         + tile(res.chopLo.toFixed(0)+"–"+res.chopHi.toFixed(0),"Chop 80% band")
-        + tile(live.length,"Teams simulated") + (MODE==="projected"?tile(PB==="season"?"Sleeper season":"Sleeper weekly","Projection source"):tile(done,"Weeks of history"));
+        + tile(live.length,"Teams simulated") + (MODE==="projected"?tile(LIVE?(LIVE.complete?"Sleeper final":"Sleeper LIVE"):(PB==="season"?"Sleeper season":"Sleeper weekly"),LIVE?"Scoring source":"Projection source"):tile(done,"Weeks of history"));
     }
 
     elTab.innerHTML = "<thead><tr><th>Team</th><th>"+(MODE==="projected"?"Proj avg":"Avg")+"</th><th>"+(MODE==="projected"?"Assumed spread":"Std dev")+"</th><th>Low</th><th>Last</th><th>Survive</th></tr></thead><tbody>"
@@ -3576,7 +3692,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         }).join("") + "</tbody>";
 
     var choppedN = teams.length - alive.length, thinN = alive.length - live.length;
-    elNote.innerHTML = "⚠️ "+SIMS.toLocaleString()+(MODE==="projected"
+    elNote.innerHTML = "⚠️ "+SIMS.toLocaleString()+(LIVE
+      ? (" simulated weeks from "+PBWORD+". Every starter's game is decayed linearly from its kickoff — Sleeper exposes no game clock, so a game reads half-played 95 minutes in regardless of the real pace. Exact before kickoff and after the whistle, roughest mid-game."
+         + (LIVE.complete ? " Every game is done: these are final scores, not a forecast." : ""))
+      : MODE==="projected"
       ? " simulated weeks from Sleeper "+PBWORD+" — best projected lineup per roster, an assumed ±"+PROJ_SD+"-point spread for every team; byes, injuries and schedule are not modeled, and these are PRE-KICKOFF projections, so a team whose starters have already played will not match Sleeper's live in-progress total. Your league's own observed scoring takes over at two completed weeks."
       : " simulated weeks from each team's own mean and spread over "+done+" completed week"+(done===1?"":"s")+".")
       + (choppedN ? " "+choppedN+" chopped team"+(choppedN===1?"":"s")+" (empty roster) sit"+(choppedN===1?"s":"")+" out." : "")
@@ -3608,7 +3727,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   });
   elId.addEventListener("keydown", function(e){ if(e.key==="Enter") elGo.click(); });
   elClear.addEventListener("click", function(){
-    ++SYNC_ID;CURRENT=null;++FOCUS_ID;setCfg({}); elId.value=""; elLive.style.display="none"; elClear.style.display="none";
+    ++SYNC_ID;CURRENT=null;++FOCUS_ID;stopLive();setCfg({}); elId.value=""; elLive.style.display="none"; elClear.style.display="none";
     elFaabCard.style.display="none"; elWvCard.style.display="none"; window.__GX = null; if(window.GW_INTEGRATED)window.dispatchEvent(new CustomEvent("gx-loading",{detail:{leagueId:null}}));
     elGo.textContent="Connect"; elState.textContent="Not connected"; msg("");
   });
@@ -3745,7 +3864,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       }).join("");
       if(cut)cut.textContent="Projected cut · median simulated low";
       if(tag)tag.textContent="Every bar is a team. The taller the bar, the likelier the chop.";
-      if(flat)flat.innerHTML=(G.mode==="projected"
+      if(flat)flat.innerHTML=(G.live
+        ? ("LIVE week "+G.live.week+" — points already scored plus what the clock leaves of each starter's projection, "
+           + Math.round(G.live.left*100) + "% of the week still to play"
+           + (G.live.complete ? ". Every game is final." : ". It moves as games are played."))
+        : G.mode==="projected"
         ? ("Modeled from Sleeper " + (G.projBasis==="season" ? "SEASON projections divided by games — the dated weekly file was unreachable, so this is a typical week, not this one" : "weekly player projections, league-scored") + " — assumed ±21 spread; observed scoring takes over at two completed weeks.")
         : "Modeled from "+G.done+" completed week"+(G.done===1?"":"s")+" — a simulation, not live scores.")
         +" Tap a bar to make that team your focus.";
@@ -4162,7 +4285,9 @@ window.DD_BOTCTX = {
     const L=[];
     if(dl.length){ dl.forEach(x => L.push(x)); L.push(''); }
     L.push(`LEAGUE: ${G.league} (${G.season}). ${G.teamCount} teams, ${G.done} completed week(s) of scoring history. Next week is week ${G.done+1}.`);
-    if(G.mode === "projected")
+    if(G.live)
+      L.push(`⚠️ LIVE WEEK ${G.live.week} — these are NOT pre-kickoff projections. Every team mean below is points already scored plus each starter's projection scaled by how much of his game is left (${Math.round(G.live.left*100)}% of the week still to play, ${G.live.startersPlaying} of ${G.live.starters} starters' games underway or done). ${G.live.complete ? "Every game is finished, so these are final scores and the chop is settled — report it as fact, not as odds." : "It moves as games are played; say it is live and say when."} The clock is approximated linearly from kickoff because Sleeper exposes no game clock, so mid-game numbers are the roughest.`);
+    else if(G.mode === "projected")
       L.push(`⚠️ PROJECTION MODE — no observed scoring yet. Every team mean below is ${G.projBasis === "season" ? "Sleeper SEASON player projections divided by projected games (the dated weekly file was unreachable, so it describes a typical week, not this one)" : "Sleeper WEEKLY player projections scored with this league's own settings"} (best projected lineup per roster); every team carries an ASSUMED ±21-point spread; byes, injuries and schedule are not modeled. These are PRE-KICKOFF projections: they do not blend in points already scored, so they will not match Sleeper's live in-progress total for a team whose starters have played. Quote all of it as projected.`);
     L.push(G.me
       ? `THE USER'S TEAM: ${G.me.name} — simulated ${Math.round(G.me.surv*100)}% to survive week ${G.done+1}. Average ${G.me.mean.toFixed(1)}, margin over the projected chop line ${(G.me.mean-G.chop>=0?'+':'')+(G.me.mean-G.chop).toFixed(1)}.`
