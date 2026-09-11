@@ -45,8 +45,28 @@ ok(/r\.close == null \|\| r\.closeOpp == null/.test(worker),
 
 /* ⚠️ "Unavailable" is not "captured". Conflating them locked out the one case that most
    needs a human — the cron could not match the market, so only a person can supply it. */
-ok(/const capturedAlready = row\.closeObservedAt != null;/.test(worker),
+ok(/const capturedAlready = row\.closeObservedAt != null && row\.close != null && row\.closeOpp != null;/.test(worker),
    "only an OBSERVED close blocks a manual fill — an unavailable one stays fillable");
+
+/* ⚠️ NOR IS HALF A CAPTURE A CAPTURE, and this is the sharpest edge on the whole route.
+   closeObservedAt is stamped the moment the cron sees A price. If it saw one side and
+   not the other, the row is unusable (one side cannot be de-vigged), is listed as a gap,
+   and used to be refused by every route that could have fixed it — a permanent hole in
+   the chart with no door back in. Both write paths must test the PAIR, not the stamp. */
+ok(/row\.closeObservedAt != null && row\.close != null && row\.closeOpp != null/.test(worker),
+   "the grade card treats only a COMPLETE captured pair as immutable");
+ok(/const capturedComplete = row\.closeObservedAt != null && row\.close != null && row\.closeOpp != null;/.test(worker),
+   "the manual fill route treats only a COMPLETE captured pair as immutable");
+ok(/locked: r\.closeObservedAt != null && r\.close != null && r\.closeOpp != null/.test(worker),
+   "the gap list marks locked with the same test the fill route refuses on");
+
+/* Typing over half a capture makes the PAIR manual. Leaving the observation stamp on
+   would re-lock the row AND let a hand-read number inherit a feed observation's
+   authority — the exact provenance blur closeSource exists to prevent. */
+ok(/closeObservedAt: null, closeUnavailableReason: null/.test(worker),
+   "a hand-filled pair clears the observation stamp rather than inheriting it");
+ok(/closeObservedAt: null, closeEnteredBy: null/.test(worker),
+   "clearing a mistyped entry clears the observation stamp too, so the row stays fillable");
 ok(/upd\[`\$\{k\}\/closeUnavailableReason`\] = null;/.test(worker),
    "filling the gap clears the note describing the gap");
 
