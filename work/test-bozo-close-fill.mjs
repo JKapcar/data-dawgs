@@ -91,8 +91,10 @@ ok(/id="gapBody"/.test(pageCode) && /close-gaps/.test(pageCode),
    "the panel that reaches past weeks exists and reads the ledger");
 ok(/if\(i\.disabled\) return;/.test(pageCode),
    "a locked (captured) box is not sent back — it would only be rejected");
-ok(/cst warn/.test(pageCode) && /needs the other side/.test(pageCode),
-   "a half-filled close is flagged amber, not green — it is not a usable close");
+/* Still amber, never green: a lone close is not yet a usable close. What changed is what
+   the amber SAYS — the other side is no longer demanded, it is assumed on save. */
+ok(/cst warn/.test(pageCode) && /other side will be assumed on save/.test(pageCode),
+   "a half-filled close is flagged amber, not green — and says the other side will be assumed");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
