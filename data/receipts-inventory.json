@@ -1,5 +1,5 @@
 {
- "as_of": "2026-08-28",
+ "as_of": "2026-09-11",
  "source": "Derived at build time by tools/build-data.js from the published receipt ledgers in /data/. Counts only; no grading.",
  "tier": "labs",
  "graded": false,
@@ -12,7 +12,7 @@
     "what": "Append-only prospective forecasts, one row per model per game. This is the superset the others are views of.",
     "sheet": "models",
     "machine": "/data/model-receipts.json",
-    "as_of": "2026-08-10",
+    "as_of": "2026-09-11",
     "registered": 1088,
     "settled": 0,
     "pending": 1088,
@@ -36,10 +36,10 @@
     "what": "A deliberately simple Elo benchmark with no QB, injury, weather or market adjustment.",
     "sheet": "classic",
     "machine": "/data/538-classic.json",
-    "as_of": "2026-08-08",
-    "registered": 272,
+    "as_of": "2026-09-11",
+    "registered": 270,
     "settled": 0,
-    "pending": 272,
+    "pending": 270,
     "superset": false
    },
    {
@@ -73,7 +73,7 @@
    "settled": 0,
    "pending": 1088,
    "counted_from": "/data/model-receipts.json",
-   "naive_sum": 1904
+   "naive_sum": 1902
   },
   "audit": {
    "tools": 11,
@@ -85,6 +85,6 @@
   }
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-08-28",
+ "built": "2026-09-11",
  "canonical_url": "https://datadawgs216.com/data/receipts-inventory.json"
 }
