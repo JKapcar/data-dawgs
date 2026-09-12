@@ -8288,6 +8288,36 @@ document.addEventListener('click', async ev=>{
   }catch(e){ godErr(e.message); }
 });
 
+/* ⚠️ A LEDGER ROW'S `player` IS NOT ALWAYS A DISPLAY NAME. The Worker writes it as
+   `x.who || playerName(pickKey)`, and a leg filed without `who` in a uid-keyed league
+   therefore lands with the RAW UID as its player — u_E6WLsRi0flMHptt7KIK00zpd, not
+   "Squatch". That is the same keying seam #109 fixed on the grade card, reaching this
+   screen from the ledger side instead of the picks side.
+
+   Untranslated it breaks this section twice over, and both failures are silent. The
+   member table is built from the roster, which carries display names, so the uid matches
+   nobody: the real member shows up with zero legs and "nothing graded yet", while their
+   actual legs collect under a hex string that is not on the roster — and therefore get
+   swept into the off-roster footnote, off the table entirely. The leg list below prints
+   the same hex string where a name belongs. Somebody looking for a player by name finds
+   them present, empty, and uneditable, with their legs filed under an identifier they
+   have never seen.
+
+   So every ledger player value is resolved through the members map before it is grouped
+   or displayed. A uid resolves to its member's name; a display name passes through; an
+   unknown value is returned as-is rather than dropped, because a leg whose owner cannot
+   be resolved still has to appear somewhere. */
+function ledgerWho(v){
+  if(v == null || v === '') return v;
+  const ms = (S && S.members) || {};
+  // A uid (or any member key) arrives as the key itself.
+  if(Object.prototype.hasOwnProperty.call(ms, v)) return memberLabel(v);
+  // A display name arrives already readable; kEnc maps it back to its key when it is one.
+  const k = kEnc(v);
+  if(Object.prototype.hasOwnProperty.call(ms, k)) return memberLabel(k);
+  return v;
+}
+
 /* ---------------- CLV summary: the whole roster, every week ----------------
    ⚠️ THIS EXISTS BECAUSE A FILTERED LIST CANNOT BE READ. The section below it lists the
    legs still missing a close, which is the right shape for the job of filling them and
@@ -8320,10 +8350,11 @@ async function clvSummaryData(force){
 function clvSummaryRows(legs, roster){
   const seats = new Set((roster||[]).filter(n=>n != null && n !== ''));
   const names = [];
-  for(const n of [...(roster||[]), ...legs.map(l=>l.player)])
+  for(const n of [...(roster||[]), ...legs.map(l=>ledgerWho(l.player))])
     if(n != null && n !== '' && !names.includes(n)) names.push(n);
   return names.map(p=>{
-    const mine    = legs.filter(l=>l.player===p);
+    // Resolved on both sides: a roster name and a uid-keyed ledger row must land together.
+    const mine    = legs.filter(l=>ledgerWho(l.player)===p);
     const graded  = mine.filter(l=>l.result==='win' || l.result==='loss');
     const charted = graded.filter(l=>clvPair(l) != null);
     const pts     = charted.map(l=>clvPair(l).clv*100);
@@ -8333,9 +8364,11 @@ function clvSummaryRows(legs, roster){
       legs: mine.length,
       graded: graded.length,
       charted: charted.length,
-      // A graded leg with no usable CLV is off the chart and out of n. That is the gap
-      // the section below fills, counted per person instead of per leg.
-      missing: graded.length - charted.length,
+      /* ⚠️ Counted over EVERY leg, not only graded ones. Tying it to `graded` made the
+         column read 0 for a member whose legs all lack a close, purely because the week
+         had not been graded yet — a zero in the one column that exists to report a
+         non-zero problem. A leg with no usable close is a gap the moment it is filed. */
+      missing: mine.filter(l=>clvPair(l) == null).length,
       assumed: charted.filter(l=>clvOppAssumed(l)).length,
       manual:  charted.filter(l=>clvPair(l).manual).length,
       wins: graded.filter(l=>l.result==='win').length,
@@ -8397,51 +8430,107 @@ async function paintClvSummary(force){
 async function paintGaps(){
   const body = document.getElementById('gapBody'), note = document.getElementById('gapNote');
   if(!body) return;
-  let j;
+  let j = { rows: [], all: [], total: 0 };
   try{ j = await wGet('/bozo/close-gaps?league='+encodeURIComponent(LID)); }
-  catch(e){ note.textContent = 'Could not load: '+e.message; body.innerHTML=''; return; }
+  catch(e){ note.textContent = 'Could not load the ledger: '+e.message+' — showing this week from the board.'; }
 
-  /* ⚠️ EVERY LEG IS EDITABLE HERE, not only the ones missing a close. The list used to be
-     the gaps, and that made a whole class of leg unreachable: a prop has no two-way market
-     to capture, so no close will EVER arrive for it and the close boxes are useless for it
-     by construction — while the one number it can have, the manager's CLV, was only
-     settable on the grade card, which writes /results and therefore only ever reaches the
-     CURRENT week. A prop from week 1 became uneditable from anywhere the moment week 2
-     opened. This list reaches the ledger, which keeps every row forever. */
-  const rows = (j.all && j.all.length) ? j.all : j.rows;
-  const gaps = rows.filter(r=>r.gap).length;
+  /* ⚠️ THE TICKET IS THE LIST, NOT THE LEDGER. This is the same lesson paintManual
+     learned in #109, arriving here from the other side. A ledger row is written at lock
+     and at grade; a leg whose row was never written — or was written under a key this
+     page cannot line up — simply was not in the response, and a list built only from the
+     response cannot show a leg it never received. That is how the one member who most
+     needed this screen was the one member missing from it: his leg was on the board, in
+     the override panel, and absent here, with nothing on screen admitting the gap.
+
+     So the list is the UNION: every ledger row, plus every leg on this week's ticket that
+     has no ledger row yet, plus every roster member with no leg at all. A pick-backed row
+     saves through results/<pickKey>, which is the path the grade card has always used and
+     the one identifier guaranteed to exist. The union can hide neither a leg nor a
+     member. */
+  const led = (j.all && j.all.length) ? j.all : (j.rows || []);
+  // The season prefix comes off a real row rather than a guess, so the key we build to
+  // look a pick up by is the same shape the Worker writes.
+  const season = (led[0] && String(led[0].row).split('-w')[0])
+    || String((S && S.season) || (CLV.data && CLV.data.legs && CLV.data.legs[0] && CLV.data.legs[0].season) || '');
+  const week = (S && S.week) || 1;
+  const byRow = new Map(led.map(r=>[String(r.row), r]));
+
+  const rows = led.map(r=>({ ...r, src:'ledger', who: ledgerWho(r.player) }));
+  const seen = new Set(rows.map(r=>String(r.row)));
+
+  const picks = (S && S.picks) || {};
+  for(const [key, x] of Object.entries(picks)){
+    if(!x) continue;
+    const rowKey = season ? `${season}-w${week}-${key}` : '';
+    if(rowKey && seen.has(rowKey)) continue;
+    // Already present under a row key we could not reconstruct? Match on who + label so a
+    // leg is never listed twice.
+    const who = ledgerWho(x.who || memberLabel(key) || kDec(key));
+    if(rows.some(r=>r.who===who && r.label===x.label)) continue;
+    const res = ((S && S.results) || {})[key] || {};
+    rows.push({ src:'pick', key, row: rowKey, who, week,
+      label: x.label, price: x.price ?? null, priceOpp: x.entryPriceOpp ?? null,
+      close: res.close ?? null, closeOpp: res.closeOpp ?? null,
+      clvPts: res.clvPts ?? null, clvSource: res.clvSource || null,
+      oppSource: res.closeOppSource || null,
+      reason: rowKey ? 'on this week’s ticket, no ledger row yet' : 'on this week’s ticket',
+      locked: false });
+  }
+
+  // A roster member with no leg anywhere is an absence worth stating, not hiding.
+  const owners = new Set(rows.map(r=>String(r.who)));
+  for(const n of stateMembers())
+    if(!owners.has(String(n))) rows.push({ src:'none', who:n, week:null, label:null });
+
+  rows.sort((a,b)=> (a.week||0)-(b.week||0) || String(a.who).localeCompare(String(b.who)));
+
+  /* ⚠️ `gap` IS COMPUTED HERE, never taken from the payload. An older Worker does not
+     send it, and an absent flag read as false renders a leg with no close at all as
+     "close captured" — a confident lie in the one column this screen exists to be honest
+     about. Derived from the prices themselves it cannot disagree with them. */
+  const isGap = r => r.src !== 'none' && (r.close == null || r.closeOpp == null);
+  const gaps = rows.filter(isGap).length;
+  const legs = rows.filter(r=>r.src !== 'none').length;
+
   note.innerHTML = (gaps === 0
-    ? `Every graded leg has both sides of its close.`
-    : `<b>${gaps} of ${rows.length} legs</b> have no usable closing price. A leg needs <b>both sides</b> to be
-       de-vigged — with one side only it is dropped from the CLV chart and from <i>n</i>, exactly as if it had
-       none — unless you leave the other side <b>blank</b>, in which case it is assumed at standard juice and
-       stamped as assumed, so the leg counts instead of vanishing.`)
+    ? `Every leg has both sides of its close.`
+    : `<b>${gaps} of ${legs} legs</b> have no usable closing price. A leg needs <b>both sides</b> to be
+       de-vigged — with one side only it is dropped from the CLV chart and from <i>n</i> — unless you leave
+       the other side <b>blank</b>, in which case it is assumed at standard juice and stamped as assumed.`)
     + ` Read both sides off a <b>DraftKings screenshot taken at kickoff</b> &mdash; <b>not the placed ticket</b>,
        which carries the price you got at placement, so entering it here measures deadline drift rather than CLV.
        A leg with no capturable market never gets a close: set its <b>CLV in points</b> instead, which is the
        number the chart and the Worst-CLV lever both read.`;
 
-  if(!rows.length){ body.innerHTML = `<p class="tm">No graded legs in the ledger yet.</p>`; return; }
+  if(!rows.length){ body.innerHTML = `<p class="tm">No legs on the board or in the ledger yet.</p>`; return; }
 
-  const fmtClv = v => v == null ? '' : String(v);
   body.innerHTML = `<div class="tscroll"><table class="bz gaptbl"><tbody>
     <tr><th>Wk</th><th>Who</th><th>Leg</th><th>Took</th><th>Close</th><th>Other side</th><th>CLV pts</th><th></th></tr>`
-    + rows.map(r=>`<tr data-row="${esc(r.row)}">
-        <td>${r.week}</td><td>${esc(teamOf(r.player))}</td>
-        <td>${esc(r.label)}<div class="gwhy">${esc(r.reason || (r.gap ? 'no close captured yet' : 'close captured'))}</div></td>
+    + rows.map((r,i)=>{
+      if(r.src === 'none') return `<tr><td>&mdash;</td><td>${esc(teamOf(r.who))}</td>
+        <td colspan="6" class="tm">No leg on the board or in the ledger, so there is nothing to set.</td></tr>`;
+      /* ⚠️ THE CLOSE STATE COMES FIRST AND IS ALWAYS STATED. A provenance note ("no
+         ledger row yet") is useful, but letting it REPLACE the close state meant the one
+         row that most needed to say "no close captured yet" said something else instead,
+         and the reader had to infer the gap from two empty boxes. Both lines, always. */
+      const why = (isGap(r) ? 'no close captured yet' : 'close captured')
+        + (r.reason ? ' \u00b7 ' + r.reason : '');
+      return `<tr data-i="${i}" data-row="${esc(r.row||'')}" data-key="${esc(r.key||'')}" data-src="${r.src}">
+        <td>${r.week ?? '&mdash;'}</td><td>${esc(teamOf(r.who))}</td>
+        <td>${esc(r.label||'')}<div class="gwhy">${esc(why)}</div></td>
         <td class="px">${r.price ?? '—'} / ${r.priceOpp ?? '—'}</td>
         <td><span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
-          class="gc" placeholder="close" value="${r.close ?? ''}" ${r.locked ? 'disabled' : ''}
-          ><button type="button" class="sgn" aria-label="Flip the sign" ${r.locked ? 'disabled' : ''}>±</button></span></td>
+          class="gc" placeholder="close" value="${r.close ?? ''}"
+          ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span></td>
         <td><span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
-          class="go" placeholder="${r.assumedOpp != null ? 'auto '+fmtPrice(r.assumedOpp) : 'other'}" value="${r.closeOpp ?? ''}"
-          ${r.locked ? 'disabled' : ''}
-          ><button type="button" class="sgn" aria-label="Flip the sign" ${r.locked ? 'disabled' : ''}>±</button></span>
-          ${r.oppSource === 'assumed' ? '<div class="gwhy">assumed at standard juice</div>' : ''}
-          ${r.locked ? '<div class="gwhy">captured at kickoff — not editable</div>' : ''}</td>
-        <td><input type="number" step="0.01" class="gclv clvin" placeholder="clv pts" value="${fmtClv(r.clvPts)}">
+          class="go" placeholder="${(r.assumedOpp != null ? r.assumedOpp : (r.close != null ? clvAssumedOpp(r.close) : null)) != null
+            ? 'auto '+fmtPrice(r.assumedOpp != null ? r.assumedOpp : clvAssumedOpp(r.close)) : 'other'}" value="${r.closeOpp ?? ''}"
+          ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
+          ${r.oppSource === 'assumed' ? '<div class="gwhy">assumed at standard juice</div>' : ''}</td>
+        <td><input type="number" step="0.01" class="gclv clvin" placeholder="clv pts" value="${r.clvPts ?? ''}">
           ${r.clvSource === 'manual' ? '<div class="gwhy">set by hand</div>' : ''}</td>
-        <td><button class="btn ghost sm gsave">Save</button><div class="gwhy gst"></div></td></tr>`).join('')
+        <td><button class="btn ghost sm gsave">Save</button><div class="gwhy gst"></div></td></tr>`;
+    }).join('')
     + `</tbody></table></div>`;
 
   body.querySelectorAll('.sgn').forEach(b=>{
@@ -8459,15 +8548,11 @@ async function paintGaps(){
       const tr = btn.closest('tr'), e = document.getElementById('gapErr');
       const st = tr.querySelector('.gst');
       e.className='err'; e.textContent=''; if(st){ st.className='gwhy gst'; st.textContent=''; }
-      const say = msg => { if(st) st.textContent = msg; e.textContent = msg; };
+      const say = m => { if(st) st.textContent = m; e.textContent = m; };
+      const r = rows[Number(tr.dataset.i)];
       const cIn = tr.querySelector('.gc'), oIn = tr.querySelector('.go'), vIn = tr.querySelector('.gclv');
-      const close = cIn.disabled ? '' : cIn.value.trim();
-      const opp   = oIn.disabled ? '' : oIn.value.trim();
-      const clvRaw = vIn.value.trim();
+      const close = cIn.value.trim(), opp = oIn.value.trim(), clvRaw = vIn.value.trim();
 
-      /* ⚠️ An empty CLV box is a CLEAR, not a no-op — it is pre-filled from the stored
-         override, so emptying it says "go back to the close". Same rule the grade card
-         follows; the two boxes must not disagree about what blank means. */
       const had = vIn.defaultValue.trim() !== '';
       const sendClv = clvRaw !== '' || had;
       let clvPts = null;
@@ -8476,21 +8561,48 @@ async function paintGaps(){
         if(!Number.isFinite(clvPts)){ say('CLV needs a number in points, like 0 or -1.75.'); return; }
         if(Math.abs(clvPts) > 100){ say(`A CLV of ${clvPts} points is not a price move — it is a typo.`); return; }
       }
-      if(close==='' && opp!==''){
-        say('Enter the closing price you took. The other side can be left blank and will be assumed at standard juice.');
-        return;
+      if(close==='' && opp!==''){ say('Enter the closing price you took; the other side can be left blank.'); return; }
+      let cv=null, ov=null, assumed=false;
+      if(close!==''){
+        cv = priceNum(close);
+        if(!Number.isFinite(cv)){ say('The closing price needs a whole American price, like -175.'); return; }
+        if(opp!==''){
+          ov = priceNum(opp);
+          if(!Number.isFinite(ov)){ say('The other side needs a whole American price, like +150 — or leave it blank.'); return; }
+        }else{
+          ov = clvAssumedOpp(cv); assumed = true;
+          if(ov==null){ say('That price is too long to assume an other side for — enter the real one.'); return; }
+        }
       }
-      if(close!=='' && !Number.isFinite(priceNum(close))){ say('The closing price needs a whole American price, like -175.'); return; }
-      if(opp!=='' && !Number.isFinite(priceNum(opp))){ say('The other side needs a whole American price, like +150 — or leave it blank.'); return; }
       if(close==='' && !sendClv){ say('Nothing filled in to save.'); return; }
-
-      const payload = { league: LID, row: tr.dataset.row,
-        close: close===''?null:priceNum(close), closeOpp: opp===''?null:priceNum(opp) };
-      if(sendClv) payload.clvPts = clvPts;
 
       btn.disabled = true;
       try{
-        await wPost('/bozo/close', payload);
+        if(r.src === 'ledger'){
+          const payload = { league: LID, row: r.row, close: cv, closeOpp: ov };
+          if(sendClv) payload.clvPts = clvPts;
+          await wPost('/bozo/close', payload);
+        }else{
+          /* ⚠️ A leg with no ledger row still has a pick key, and results/<pickKey> is the
+             path the grade card has always written. Using it here means a leg the ledger
+             never received is still editable today, rather than after somebody works out
+             why its row is missing. */
+          const edits = [];
+          if(close!==''){
+            edits.push({ path:`results/${r.key}/close`, value:cv },
+                       { path:`results/${r.key}/closeOpp`, value:ov },
+                       { path:`results/${r.key}/closeBook`, value:'draftkings' },
+                       { path:`results/${r.key}/closeSource`, value:'manual' },
+                       { path:`results/${r.key}/closeOppSource`, value: assumed ? 'assumed' : 'manual' },
+                       { path:`results/${r.key}/closeUnavailableReason`, value:null });
+          }
+          if(sendClv){
+            edits.push({ path:`results/${r.key}/clvPts`, value: clvPts },
+                       { path:`results/${r.key}/clvSource`, value: clvPts == null ? null : 'manual' });
+          }
+          if(!edits.length){ say('Nothing filled in to save.'); btn.disabled=false; return; }
+          await godWrite(edits);
+        }
         if(st){ st.className='gwhy ok'; st.textContent='Saved.'; }
         CLVSUM.data = null;
         await paintGaps();

@@ -26,15 +26,25 @@ const grab = (a, b) => {
   return page.slice(i, j);
 };
 
+/* S.members is the uid -> member map the real page carries. Squatch is deliberately
+   uid-keyed here, because that is the shape that broke. */
+const SQUATCH_UID = "u_E6WLsRi0flMHptt7KIK00zpd";
 const ctx = vm.createContext({
   console, Object, Array, Number, JSON, Math, String, Boolean,
   esc: s => String(s == null ? "" : s),
   teamOf: n => n,
+  S: { members: { [SQUATCH_UID]: { name: "Squatch" }, Kap: true, JWhite: true, Roger: true,
+                  Tony: true, BUTTS: true, WBeamen: true, ItzBornLegend: true } },
+  memberLabel: k => {
+    const v = ({ [SQUATCH_UID]: { name: "Squatch" } })[k];
+    return v && v.name ? v.name : k;
+  },
+  kEnc: p => (p === "Squatch" ? SQUATCH_UID : p),
 });
 // The chart's own CLV math, verbatim — this table must never derive a leg differently
 // from the chart it summarises.
 vm.runInContext(grab("const clvImp = o =>", "const CLV_SHAPES"), ctx);
-vm.runInContext(grab("function clvSummaryRows(legs, roster){", "async function paintClvSummary(")
+vm.runInContext(grab("function ledgerWho(v){", "async function paintClvSummary(")
   + "\nglobalThis.__rows = clvSummaryRows; globalThis.__html = clvSummaryHtml;", ctx);
 
 let pass = 0, fail = 0;
@@ -82,9 +92,16 @@ ok(by("Roger").graded === 1 && by("Roger").charted === 0 && by("Roger").missing 
 ok(by("Roger").avg === null && by("Tony").avg === null,
    "no CLV is invented for a player with nothing chartable");
 
-/* An ungraded leg is not a gap — it has not had its chance yet. */
-ok(by("BUTTS").legs === 1 && by("BUTTS").graded === 0 && by("BUTTS").missing === 0,
-   "an ungraded leg is not counted as a missing close");
+/* ⚠️ THE COLUMN COUNTS EVERY LEG WITHOUT A USABLE CLOSE, graded or not. It used to be
+   tied to `graded`, and the effect on a real board was that the whole column read 0 for
+   everybody — not because the closes were there, but because the week had not been graded
+   yet. A zero in the one column that exists to report a non-zero problem is worse than no
+   column. A leg with no usable close is a gap the moment it is filed; grading decides
+   whether it reaches the CHART, which is what `charted` reports. */
+ok(by("BUTTS").legs === 1 && by("BUTTS").graded === 0 && by("BUTTS").missing === 1,
+   "an ungraded leg with no close is still counted as missing a close");
+ok(by("Kap").missing === 0,
+   "a leg whose close is usable is not counted as missing, graded or not");
 
 /* ⚠️ A name in the ledger that the roster no longer carries is NOT a member, so it is
    not on the table — listing them as one overstates the league. It is also not deleted:
@@ -130,6 +147,35 @@ ok(/paintClvSummary\(\);\n?\s*\/\/ Manager-only/.test(page.replace(/\r/g, "")) |
 /* It reads the same public feed as the chart, so a non-manager sees the standings even
    though only a manager gets the boxes that write. */
 ok(/'\/bozo\/clv\?league='/.test(page), "it reads the ledger through the public CLV feed");
+
+/* ⚠️ A UID-KEYED LEDGER ROW BELONGS TO ITS MEMBER, NOT TO A HEX STRING.
+ * The Worker writes a ledger row's player as `x.who || playerName(pickKey)`, so a leg
+ * filed without `who` in a uid-keyed league lands with the raw uid. Untranslated, the
+ * roster-built member table matched nobody: the real member showed zero legs and
+ * "nothing graded yet", while their actual legs collected under the uid — which is not
+ * on the roster, so they were swept into the off-roster footnote and off the table.
+ * That is exactly how Squatch's prop became uneditable while appearing to be present.
+ */
+{
+  const uidLegs = [
+    { player: SQUATCH_UID, week: 1, result: "win", entryPrice: -155, entryPriceOpp: 130,
+      closePrice: null, closePriceOpp: null, clvPts: 3.5 },
+  ];
+  const r = ctx.__rows(uidLegs, ROSTER.map(n => (n === "Squatch" ? "Squatch" : n)));
+  const sq = r.find(x => x.player === "Squatch");
+  ok(!!sq, "a uid-keyed ledger row resolves to its member's display name");
+  ok(sq && sq.legs === 1 && sq.graded === 1,
+     "the leg lands on the member's own row rather than a separate hex-string row");
+  ok(!r.some(x => x.player === SQUATCH_UID),
+     "no row is rendered under the raw uid");
+  ok(r.length === 8 && r.every(x => x.onRoster),
+     "the roster stays eight, and nobody is pushed into the off-roster footnote by a uid");
+  const h = ctx.__html(r);
+  ok(h.includes('data-sum="Squatch"') && !h.includes(SQUATCH_UID),
+     "the table names the member, never the uid");
+  ok(!/no longer on the roster/.test(h),
+     "a uid-keyed member is not mistaken for a leaver");
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
