@@ -4689,6 +4689,15 @@ function beatDeficit(mkt, dir, line, margin, total, sd){
   return -legEdge(mkt, dir, line, margin, total) / sd;
 }
 
+/* The beat a binary leg carries when it busts: the mean miss of a margin leg priced the
+   same way, given that it lost. See beatOf for why the threshold was wrong. */
+function binaryBeatOf(p){
+  if(!(p > 0 && p < 1)) return null;
+  const k = invNorm(p);
+  const v = (Math.exp(-k*k/2) / Math.sqrt(2*Math.PI)) / (1 - p);
+  return Number.isFinite(v) ? v : null;
+}
+
 /* ⚠️ ONE WORST-BEAT RULE, because three copies of it disagreed. decide() — the grader —
    floored a zero on a market where zero is possible at 999, defaulted an unscoreable leg
    to `beat = 0`, and compared `r.actual === 0` strictly. leverStandings had the floor but
@@ -4724,13 +4733,26 @@ function beatOf(x, r, sd){
 
      ⚠️ The CLOSE is the bar when there is one; the entry stands in when there is not, and
      raw implied is the last resort. Same order royaleBeatDeficit uses in the Worker, so
-     the page and the server cannot drift. */
+     the page and the server cannot drift.
+
+     ⚠️ THE EXPECTED MISS, NOT THE THRESHOLD. invNorm(p) is where a leg priced at p sits
+     EXACTLY on its line — the boundary between winning and losing. A margin leg that
+     loses is drawn from ABOVE that boundary, so scoring a binary leg at invNorm(p) put it
+     at the very bottom of the range a comparable margin leg occupies: a busted prop read
+     as a milder miss than any lost spread priced the same way, every time. Squatch's leg
+     scored 0.36 SD when the spread it was competing against averaged over 1.
+
+     A binary leg is only ever ranked here because it LOST, so the honest number is the
+     mean of that same distribution conditioned on losing — the inverse Mills ratio,
+     E[beat | beat > k] = φ(k) / (1 − Φ(k)). Φ(k) is p by construction, so no normal CDF
+     is needed: φ(k)/(1 − p). A −145 prop scores 0.90 instead of 0.16, a −400 prop 1.40
+     instead of 0.84, and the ordering Kap asked for survives — chalkier prop, worse beat. */
   const binary = x.mkt === 'prop' || x.mkt === 'other';
   if(binary){
     const p = devigP(r && r.close, r && r.closeOpp)
            ?? devigP(x.price, x.entryPriceOpp)
            ?? imp(x.price);
-    return (p > 0 && p < 1) ? invNorm(p) : null;
+    return (p > 0 && p < 1) ? binaryBeatOf(p) : null;
   }
   if(!r || r.actual == null) return null;
   const a = Number(r.actual);
@@ -6715,7 +6737,7 @@ function simulate(live, levers){
         ? (()=>{ const p = devigP(r.close, r.closeOpp)
                         ?? devigP(x.price, x.entryPriceOpp)
                         ?? imp(x.price);
-                 return (p>0 && p<1) ? invNorm(p) : null; })() : null,
+                 return binaryBeatOf(p); })() : null,
       clv: clvDeltaOf(x, r),
       // 'won' | 'lost' | 'void' | null. A push voids the leg: it cannot be the loss that
       // makes you the bozo, and it does not stop the rest of the ticket cashing.

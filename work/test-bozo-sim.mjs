@@ -33,6 +33,7 @@ function grab(startMarker, endMarker) {
    results row, and stubbing it would let the suite keep passing if that lookup broke —
    which is exactly the failure that put a hand-set CLV on one screen and nowhere else. */
 const src = grab("function beatDeficit(mkt, dir, line, margin, total, sd){", "\n/* The leg exactly as the board")
+  + "\n" + grab("function binaryBeatOf(p){", "\n/* ⚠️ ONE WORST-BEAT RULE")
   + "\n" + grab("function legRow(x){", "/* ⚠️ A HAND-SET CLV OUTRANKS")
   + "\n" + grab("function clvDeltaOf(x, r){", "\nconst amer = d =>")
   + "\n" + grab("function gauss(){", "const devig = px")
@@ -319,6 +320,23 @@ ok(clvDeltaOf({ price: -150, entryPriceOpp: 130 }, { clvPts: 1, close: -200, clo
   ok(r2.bozo[1] === 1,
      "a spread that missed by 30 outranks a mildly-priced prop that busted, as it should");
   ok(r2.bozo[0] === 0, "...and the prop is not floored past it by a sentinel");
+
+  /* ⚠️ THE EXPECTED MISS, NOT THE THRESHOLD. invNorm(p) is where a leg priced at p sits
+     exactly on its line. A margin leg that loses is drawn from ABOVE that, so scoring a
+     binary leg at the threshold parked it at the very bottom of the range a comparable
+     margin leg occupies — a busted prop read as a milder miss than ANY lost spread priced
+     the same way. That is how a player whose leg had already lost sat below one whose
+     game had not kicked off. */
+  const bb = ctx.binaryBeatOf ?? vm.runInContext("binaryBeatOf", ctx);
+  for(const p of [0.524, 0.565, 0.64, 0.80]){
+    const k = ctx.invNorm(p);
+    ok(bb(p) > k, `a binary leg priced at ${p} scores above its threshold, not at it`);
+  }
+  ok(Math.abs(bb(0.64) - 1.039) < 0.01, "-145 de-vigged to .64 scores about 1.04 SD, not 0.36");
+  ok(Math.abs(bb(0.80) - 1.400) < 0.01, "a -400 prop scores about 1.40 SD");
+  ok(bb(0.80) > bb(0.64) && bb(0.64) > bb(0.524),
+     "and the chalkier the prop, the worse the beat — the ordering Kap asked for survives");
+  ok(bb(0) === null && bb(1) === null, "an unpriceable leg is null, never a number");
 
   ctx.S.results = {}; ctx.S.picks = {}; delete ctx.S.order;
 }
