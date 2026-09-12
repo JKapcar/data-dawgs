@@ -1420,6 +1420,7 @@ table.gaptbl input{width:82px}
 .gr.leg>span:first-child{flex:1 1 100%}
 .gr.leg select{min-width:118px}
 .gr.leg input[data-a]{width:110px}
+.gr.leg input.clvin{width:96px}
 .gr.leg .gsv{margin-left:auto;min-width:76px}
 .gr.leg .saved{font:600 11px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
 table.gaptbl .pxin{width:120px}
@@ -4323,6 +4324,16 @@ const imp  = a => a<0 ? Math.abs(a)/(Math.abs(a)+100) : 100/(a+100);
    roughly the whole hold, so a function that "falls back" to raw would let two different
    quantities be compared as if they were one. Callers must handle the null. */
 const devigP = (a,b) => (a==null||b==null) ? null : (imp(a)/(imp(a)+imp(b)));
+/* The CLV a leg carries right now, from this week's results row and its pick: the
+   manager's override if there is one, otherwise the captured close against entry.
+   Mirrors clvPair() for the ledger-shaped chart rows — change the rule in one and it
+   has to change in the other, or the board and the chart stop agreeing. */
+function clvDeltaOf(x, r){
+  r = r || {};
+  if(r.clvPts != null && Number.isFinite(+r.clvPts)) return +r.clvPts/100;
+  const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp);
+  return (pC==null || pE==null) ? null : (pC - pE);
+}
 const amer = d => d>=2 ? '+'+Math.round((d-1)*100) : '-'+Math.round(100/(d-1));
 // Acklam's inverse normal — turns a price into an expected margin.
 function invNorm(p){
@@ -6555,7 +6566,6 @@ function simulate(live, levers){
     const r = res[kEnc(x.p)] || {};
     // Real CLV where the close has been captured, null where it hasn't. See the lever
     // branch below for why the difference matters.
-    const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp);
     /* ⚠️ A SETTLED LEG IS NOT A COIN FLIP. Every leg used to be drawn from its own
        distribution on every one of the 20,000 runs, even after its game had finished and
        its result was written — so a leg that had already LOST still carried its
@@ -6570,7 +6580,7 @@ function simulate(live, levers){
     return {
       sd: sdOf(x), base: x.mkt==='ml' ? 0 : x.line, exp: expected(x),
       under: dirOf(x)==='under', odds: imp(x.price), last: x.ts||0,
-      clv: (pC==null||pE==null) ? null : (pC-pE),
+      clv: clvDeltaOf(x, r),
       // 'won' | 'lost' | 'void' | null. A push voids the leg: it cannot be the loss that
       // makes you the bozo, and it does not stop the rest of the ticket cashing.
       settled: outcome==='won' ? 'won' : outcome==='lost' ? 'lost'
@@ -6665,7 +6675,7 @@ function simulate(live, levers){
 const simKeyFor = (live, levers, status) =>
   live.map(x=>{ const r=(S.results||{})[kEnc(x.p)]||{};
     return `${x.p}:${x.price}:${x.ts}:${x.line}:${x.mkt}:${x.side}:${r.close??''}:${r.closeOpp??''}`
-         + `:${r.result??''}:${r.won===true?1:r.won===false?0:''}:${r.actual??''}`; }).join('|')
+         + `:${r.result??''}:${r.won===true?1:r.won===false?0:''}:${r.actual??''}:${r.clvPts??''}`; }).join('|')
   + '#' + levers.join(',') + '#' + status;
 
 const pct = v => (v*100).toFixed(v>=.1?0:1)+'%';
@@ -6735,9 +6745,10 @@ function dxSummary(rows){
   const graded=rows.filter(l=>l.result==='win'||l.result==='loss');
   const measurable=graded.filter(clvGraded);
   const wins=graded.filter(l=>l.result==='win').length;
-  const expected=measurable.reduce((s,l)=>s+clvDevig(l.closePrice,l.closePriceOpp),0);
-  const clv=measurable.reduce((s,l)=>s+clvDevig(l.closePrice,l.closePriceOpp)-clvDevig(l.entryPrice,l.entryPriceOpp),0);
-  return {picks:rows.length,graded,wins,losses:graded.length-wins,measurable,
+  const expected=measurable.reduce((s,l)=>s+clvPair(l).pC,0);
+  const clv=measurable.reduce((s,l)=>s+clvPair(l).clv,0);
+  const overridden=measurable.filter(l=>clvPair(l).manual).length;
+  return {picks:rows.length,graded,wins,losses:graded.length-wins,measurable,overridden,
     expected,delta:wins-expected,clv:measurable.length?clv/measurable.length:null};
 }
 function paintDiagnosticsExplorer(){
@@ -6750,7 +6761,8 @@ function paintDiagnosticsExplorer(){
     tile('Expected wins',s.measurable.length?s.expected.toFixed(1):'—',`${s.measurable.length} with usable closes`)+
     tile('Over / under expected',s.measurable.length?`${s.delta>=0?'+':''}${s.delta.toFixed(1)}`:'—','wins minus closing-line expectation')+
     tile('Average CLV',s.clv==null?'—':`${s.clv>=0?'+':''}${(s.clv*100).toFixed(2)}pp`,'de-vigged close minus entry')+
-    tile('CLV coverage',s.picks?`${s.measurable.length} / ${s.picks}`:'—','missing data is never filled as zero');
+    tile('CLV coverage',s.picks?`${s.measurable.length} / ${s.picks}`:'—',
+      s.overridden?`${s.overridden} set by the manager`:'missing data is never filled as zero');
   if(!rows.length){ document.getElementById('dxChart').innerHTML='<div class="dash-empty">No picks match these filters.</div>'; document.querySelector('#dxTable tbody').innerHTML=''; return; }
   const group=document.getElementById('dxGroup').value;
   const key=l=>group==='player'?teamOf(l.player):group==='sport'?String(l.sport||'Unknown').toUpperCase():group==='market'?String(l.mkt||'other').toUpperCase():'Week '+l.week;
@@ -6760,7 +6772,7 @@ function paintDiagnosticsExplorer(){
   document.getElementById('dxChart').innerHTML=sums.map(x=>`<div class="dash-bar${x.delta<0?' bad':''}"><span>${esc(x.k)}</span><span class="track"><i style="width:${Math.max(3,Math.abs(x.delta)/maxDelta*100).toFixed(1)}%"></i></span><span class="val">${x.measurable.length?(x.delta>=0?'+':'')+x.delta.toFixed(1):'—'}</span></div>`).join('');
   document.querySelector('#dxTable tbody').innerHTML=`<tr><th>${esc(group)}</th><th>Picks</th><th>W–L</th><th>Expected W</th><th>vs expected</th><th>Avg CLV</th><th>CLV n</th></tr>`+
     sums.map(x=>`<tr><td class="who">${esc(x.k)}</td><td>${x.picks}</td><td>${x.wins}–${x.losses}</td><td>${x.measurable.length?x.expected.toFixed(1):'—'}</td><td class="px">${x.measurable.length?(x.delta>=0?'+':'')+x.delta.toFixed(1):'—'}</td><td class="px ${x.clv==null?'':x.clv>=0?'clvup':'clvdn'}">${x.clv==null?'—':(x.clv>=0?'+':'')+(x.clv*100).toFixed(2)+'pp'}</td><td>${x.measurable.length}</td></tr>`).join('');
-  const losers=rows.filter(l=>l.result==='loss'), badClv=losers.filter(l=>clvGraded(l)&&clvDevig(l.closePrice,l.closePriceOpp)<clvDevig(l.entryPrice,l.entryPriceOpp)).length;
+  const losers=rows.filter(l=>l.result==='loss'), badClv=losers.filter(l=>clvGraded(l)&&clvPair(l).clv<0).length;
   document.getElementById('dxNote').innerHTML=`${losers.length} loss${losers.length===1?'':'es'} in this slice${losers.length?`; ${badClv} also had negative measured CLV`:''}. Positive result delta with flat CLV is more consistent with good luck than proven skill; positive CLV with ordinary results is the stronger price-quality signal. Measured CLV uses captured DraftKings prices at entry and close; self-priced legs are excluded.`;
 }
 
@@ -7751,10 +7763,21 @@ function paintManual(live){
     // ⚠️ Only a COMPLETE captured pair is immutable; a half capture is still yours.
     const locked = r.closeObservedAt != null && r.close != null && r.closeOpp != null;
     const autoOpp = has && r.closeOpp == null ? clvAssumedOpp(r.close) : null;
+    /* What this leg's CLV is right now, so the box shows the derived number as a
+       placeholder and the manager can see what they would be overriding. */
+    const derived = (() => {
+      const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp);
+      return (pC==null||pE==null) ? null : (pC-pE)*100;
+    })();
+    const clvState = r.clvPts != null
+      ? `<span class="cst warn">CLV ${(+r.clvPts>=0?'+':'')+(+r.clvPts).toFixed(2)} pts · set by hand</span>`
+      : derived != null
+        ? `<span class="cst ok">CLV ${(derived>=0?'+':'')+derived.toFixed(2)} pts · from the close</span>`
+        : `<span class="cst bad">no CLV — not on the chart or in n</span>`;
     return `<div class="gr leg" data-leg="${esc(x.p)}">
       <span><b>${esc(x.p)}</b> <span class="pk">${esc(x.label)}</span>
         ${(x.period && x.period!=='game')?' <span class="cst warn" title="No score source carries per-period scores; type the period result">period · manual grade</span>':''}
-        ${resState} ${closeState}
+        ${resState} ${closeState} ${clvState}
         ${r.closeUnavailableReason?`<span class="why">${esc(r.closeUnavailableReason)}</span>`:''}
         <span class="tm" style="display:block;margin-top:2px">took ${x.price} / ${x.entryPriceOpp ?? '—'}</span></span>
       <select data-w="${esc(x.p)}" aria-label="Result"><option value="">result —</option><option value="1"${sel==='1'?' selected':''}>Won</option><option value="0"${sel==='0'?' selected':''}>Lost</option><option value="p"${sel==='p'?' selected':''}>Push / void</option></select>
@@ -7765,16 +7788,22 @@ function paintManual(live){
       <span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
         data-co="${esc(x.p)}" placeholder="${autoOpp!=null ? 'auto '+fmtPrice(autoOpp) : 'other side'}" ${locked?'disabled':''} value="${r.closeOpp ?? ''}"
         ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
+      <input type="number" step="0.01" data-clv="${esc(x.p)}" class="clvin"
+        placeholder="${derived != null ? 'clv '+derived.toFixed(2) : 'clv pts'}" value="${r.clvPts ?? ''}"
+        aria-label="CLV in points, overrides the close">
       <button type="button" class="btn sm gsv" data-save="${esc(x.p)}">Save</button></div>`;
   }).join('');
 
   const gaps = live.filter(x=>{ const r=rowOf(x); return r.close==null; }).length;
   const settled = live.filter(x=>{ const r=rowOf(x); return r.result!=null || r.won===true || r.won===false; }).length;
+  const overridden = live.filter(x=>rowOf(x).clvPts != null).length;
   document.getElementById('manual').innerHTML =
     `<div class="lil" style="margin-bottom:6px">Legs — result, actual and closing price. Save writes that leg now.</div>`
-    + `<p class="tm" style="margin:0 0 8px">${settled} of ${live.length} settled · ${gaps} without a close.
+    + `<p class="tm" style="margin:0 0 8px">${settled} of ${live.length} settled · ${gaps} without a close${overridden?` · ${overridden} CLV set by hand`:''}.
         Leave the other side blank and it is assumed at standard &minus;110/&minus;110 juice, stamped as assumed.
-        A result you set by hand sticks: the schedule will not overwrite it.</p>`
+        A result you set by hand sticks: the schedule will not overwrite it.
+        <b>CLV</b> is in points and overrides whatever the close would have given &mdash; type <code>0</code> for a leg that closed where you took it.
+        Clear the box to go back to the captured close.</p>`
     + rows
     + `<div class="row" style="margin-top:14px"><button class="btn" id="finish">Name the bozo</button>
         <span class="tm">Grades the whole week and resolves who wore it. Needs every leg settled.</span></div>`;
@@ -7814,9 +7843,10 @@ function paintManual(live){
    its other side assumed at standard juice and stamped as such. Goes through
    /bozo/admin, so it is manager-only and every field it touches is in the audit log. */
 async function saveLeg(p, btn){
+  const rowOf = who => (S.results||{})[kEnc(who.p ?? who)] || (S.results||{})[who.p ?? who] || {};
   const e=document.getElementById('gerr'); e.className='err'; e.textContent='';
   const q = a => document.querySelector(`[data-${a}="${CSS.escape(p)}"]`);
-  const key = kEnc(p), sel=q('w'), act=q('a'), c=q('c'), co=q('co');
+  const key = kEnc(p), sel=q('w'), act=q('a'), c=q('c'), co=q('co'), cl=q('clv');
   const edits = [];
   if(sel && sel.value!==''){
     const result = sel.value==='1' ? 'won' : sel.value==='0' ? 'lost' : 'push';
@@ -7843,6 +7873,25 @@ async function saveLeg(p, btn){
                  { path:`results/${key}/closeSource`, value:'manual' },
                  { path:`results/${key}/closeOppSource`, value: assumed ? 'assumed' : 'manual' },
                  { path:`results/${key}/closeUnavailableReason`, value:null });
+    }
+  }
+  /* ⚠️ AN EMPTY CLV BOX IS A CLEAR, NOT A NO-OP. Every other box on this row means
+     "leave it alone" when blank, because blank is how they arrive for a leg nobody has
+     touched. The CLV box is different: it is pre-filled from the stored override, so a
+     manager who empties it is saying "go back to the close", and treating that as
+     nothing would make the override impossible to undo from the card that set it. */
+  if(cl){
+    const raw = cl.value.trim();
+    if(raw === ''){
+      if(rowOf({p}).clvPts != null)
+        edits.push({ path:`results/${key}/clvPts`, value:null },
+                   { path:`results/${key}/clvSource`, value:null });
+    }else{
+      const v = Number(raw);
+      if(!Number.isFinite(v)){ e.textContent=`${p}: CLV needs a number in points, like 0 or -1.75.`; return; }
+      if(Math.abs(v) > 100){ e.textContent=`${p}: a CLV of ${v} points is not a price move — it is a typo.`; return; }
+      edits.push({ path:`results/${key}/clvPts`, value:v },
+                 { path:`results/${key}/clvSource`, value:'manual' });
     }
   }
   if(!edits.length){ e.textContent=`${p}: nothing filled in to save.`; return; }
@@ -7913,8 +7962,7 @@ async function decide(){
        lever passes to the next one. Both sides are required at both ends: without the
        opposite price there is no de-vig, and ranking a de-vigged number against a raw
        implied one is wrong by roughly the whole hold. */
-    const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp);
-    const clv = (pC==null || pE==null) ? null : (pC - pE);
+    const clv = clvDeltaOf(x, r);
     M[p]={odds:imp(x.price), beat, last:x.ts, clv};
   });
   const R={odds:p=>M[p].odds, beat:p=>M[p].beat, last:p=>M[p].last,
@@ -8564,10 +8612,29 @@ function clvDevig(price, opp){
 /** did either side of this leg's CLV rest on an assumed opposite? */
 const clvOppAssumed = l => !!l && ((l.closePrice != null && l.closePriceOpp == null)
                                 || (l.entryPrice != null && l.entryPriceOpp == null));
-const clvGraded = l => (l.result==='win' || l.result==='loss')
-  && l.closePrice != null && l.entryPrice != null
-  && clvDevig(l.closePrice, l.closePriceOpp) != null
-  && clvDevig(l.entryPrice, l.entryPriceOpp) != null;
+/* ⚠️ ONE DEFINITION OF A LEG'S CLV, and the manager's number outranks the derived one.
+   A close is evidence of CLV, not the definition of it: when DraftKings pulls a market,
+   or never had a two-sided price to capture, the leg has a CLV the manager can read off
+   the slip and the machinery had no way to be told it. It was dropped from the chart and
+   from n instead — which is honest about the gap and useless for closing it.
+
+   clvPts is in POINTS, the unit the chart already displays, so what the manager types is
+   what they read back. A CLV of X points means the de-vigged closing probability was X
+   points above entry — so an override implies a closing probability too, and the leg
+   becomes chartable on BOTH axes rather than half-known. That identity is the whole
+   reason this can be stored as one number.
+
+   ⚠️ An override is weaker evidence than a captured pair and every surface says which it
+   is looking at. What must never happen is the two becoming indistinguishable. */
+function clvPair(l){
+  const pE = clvDevig(l && l.entryPrice, l && l.entryPriceOpp);
+  if(pE == null) return null;
+  const ov = (l && l.clvPts != null && Number.isFinite(+l.clvPts)) ? +l.clvPts/100 : null;
+  if(ov != null) return { pE, pC: pE + ov, clv: ov, manual: true };
+  const pC = clvDevig(l.closePrice, l.closePriceOpp);
+  return pC == null ? null : { pE, pC, clv: pC - pE, manual: false };
+}
+const clvGraded = l => (l.result==='win' || l.result==='loss') && clvPair(l) != null;
 
 const CLV_SHAPES = ['circle','square','triUp','triDown','diamond','plus','ex','hex'];
 const clvIdent = {};
@@ -8587,13 +8654,12 @@ function clvBuildSeries(sport){
     let n=0, wins=0, sumExp=0, sumClv=0;
     const pts=[];
     for(const l of legs){
-      const pC = clvDevig(l.closePrice, l.closePriceOpp);
-      const pE = clvDevig(l.entryPrice, l.entryPriceOpp);
-      n++; wins += l.result==='win'?1:0; sumExp += pC; sumClv += (pC-pE);
+      const { pC, clv, manual } = clvPair(l);
+      n++; wins += l.result==='win'?1:0; sumExp += pC; sumClv += clv;
       pts.push({ player:p, week:l.week, n, wins,
         x:(sumClv/n)*100, y:((wins/n)-(sumExp/n))*100,
         expected:(sumExp/n)*100, winPct:(wins/n)*100,
-        legClv:(pC-pE)*100, leg:l });
+        legClv:clv*100, legClvManual:manual, leg:l });
     }
     out[p]=pts;
   }
@@ -8880,7 +8946,7 @@ function clvShowTip(d,px,py){
     + `<div class="t-sep"></div>`
     + `<div class="t-row"><span>${esc(clvShort(d.week))} · ${esc(String(l.sport).toUpperCase())}</span><b>${esc(l.label)}</b></div>`
     + `<div class="t-row"><span>Got / closed</span><b>${l.entryPrice} → ${l.closePrice}</b></div>`
-    + `<div class="t-row"><span>Leg CLV</span><b>${csgn(d.legClv,2)} pts</b></div>`;
+    + `<div class="t-row"><span>Leg CLV</span><b>${csgn(d.legClv,2)} pts${d.legClvManual?' · set by hand':''}</b></div>`;
   const w=200, off=16;
   const bw=document.getElementById('clvSvg').getBoundingClientRect().width;
   tip.style.left = (px+off+w>bw ? px-w-off : px+off)+'px';

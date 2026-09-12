@@ -29,8 +29,11 @@ function grab(startMarker, endMarker) {
   return page.slice(a, b);
 }
 
-const src = grab("function gauss(){", "const devig = px")
-  + "\n" + grab("function simulate(live, levers){", "\n// One definition of");
+const src = grab("function clvDeltaOf(x, r){", "\nconst amer = d =>")
+  + "\n" + grab("function gauss(){", "const devig = px")
+  + "\n" + grab("function simulate(live, levers){", "\n// One definition of")
+  + "\n" + grab("function clvDevig(price, opp){", "/** did either side")
+  + "\n" + grab("function clvPair(l){", "const clvGraded =");
 
 const ctx = vm.createContext({
   SIMS: 20000,
@@ -45,12 +48,15 @@ const ctx = vm.createContext({
     return ia / (ia + ib);
   },
   dirOf: x => ((x && (x.dir || x.side)) === "under" ? "under" : "over"),
+  clvImp: o => (o < 0 ? -o / (-o + 100) : 100 / (o + 100)),
+  clvAm: pr => (pr >= 0.5 ? Math.round((-100 * pr) / (1 - pr)) : Math.round((100 * (1 - pr)) / pr)),
+  CLV_OVERROUND: 1.047619,
   sdOf: () => 13.5,
   expected: x => x.exp,
   S: { results: {} },
 });
-vm.runInContext(src + "\nglobalThis.__sim = simulate;", ctx);
-const simulate = ctx.__sim;
+vm.runInContext(src + "\nglobalThis.__sim = simulate; globalThis.__pair = clvPair; globalThis.__delta = clvDeltaOf;", ctx);
+const simulate = ctx.__sim, clvPair = ctx.__pair, clvDeltaOf = ctx.__delta;
 
 const legs = Array.from({ length: 8 }, (_, i) => ({
   p: "P" + i, price: -150 - i * 10, ts: 1000 + i, line: 0, mkt: "ml",
@@ -114,6 +120,59 @@ ok(/r\.result\?\?''/.test(keySrc.replace(/\s+/g, "")) || /r\.result/.test(keySrc
    "the sim cache key includes the result");
 ok(/r\.actual/.test(keySrc), "...and the actual");
 ok(/r\.won/.test(keySrc), "...and won");
+
+/* ---- the manager's CLV override ---- */
+
+/* ⚠️ WHY AN OVERRIDE EXISTS AT ALL. A close is EVIDENCE of CLV, not the definition of
+   it. When DraftKings pulls a market, or never had a two-sided price to capture, the leg
+   still has a CLV the manager can read off the slip — and the machinery had no way to be
+   told. It was dropped from the chart and from n instead: honest about the gap, useless
+   for closing it. */
+ok(clvDeltaOf({ price: -150, entryPriceOpp: 130 }, { clvPts: 0 }) === 0,
+   "an override of 0 reads as exactly zero CLV, not as missing");
+ok(clvDeltaOf({ price: -150, entryPriceOpp: 130 }, {}) === null,
+   "...and with no override and no close it is still unmeasurable, never zero");
+ok(Math.abs(clvDeltaOf({ price: -150, entryPriceOpp: 130 }, { clvPts: -2.5 }) + 0.025) < 1e-12,
+   "points convert to probability: -2.5 pts is -0.025");
+ok(clvDeltaOf({ price: -150, entryPriceOpp: 130 }, { clvPts: 1, close: -200, closeOpp: 170 }) === 0.01,
+   "the manager's number outranks a captured close when both exist");
+
+/* An override implies a closing probability too — a CLV of X points means the de-vigged
+   close was X points above entry — so the leg becomes chartable on BOTH axes. That
+   identity is the reason this can be stored as one number. */
+{
+  const leg = { result: "win", entryPrice: -150, entryPriceOpp: 130, closePrice: null,
+                closePriceOpp: null, clvPts: 0 };
+  const pair = clvPair(leg);
+  ok(pair != null, "a leg with an override and no close is chartable");
+  ok(pair.clv === 0 && Math.abs(pair.pC - pair.pE) < 1e-12,
+     "...at zero CLV, with a closing probability equal to entry");
+  ok(pair.manual === true, "...and it is flagged as set by hand, never mixed with a capture");
+  ok(clvPair({ result: "win", entryPrice: null, clvPts: 0 }) == null,
+     "an override without an entry price is still unmeasurable — there is nothing to be relative to");
+  const derived = clvPair({ result: "win", entryPrice: -150, entryPriceOpp: 130,
+                            closePrice: -200, closePriceOpp: 170 });
+  ok(derived != null && derived.manual === false,
+     "a leg with a real close still derives, and is not flagged manual");
+}
+
+/* The CLV lever in the sim must see the override, or the number on the diagnostics panel
+   and the number that decides a chop disagree. */
+{
+  const legs2 = Array.from({ length: 3 }, (_, i) => ({
+    p: "Q" + i, price: -150, ts: 1000 + i, line: 0, mkt: "ml",
+    side: "over", sport: "nfl", exp: 3, entryPriceOpp: 130,
+  }));
+  ctx.S.results = {
+    Q0: { result: "lost", won: false, clvPts: -8 },
+    Q1: { result: "lost", won: false, clvPts: 0 },
+    Q2: { result: "lost", won: false, clvPts: +4 },
+  };
+  const R = simulate(legs2, [3]);          // Worst CLV only
+  ok(R.bozo[0] > 0.99,
+     "with only the CLV lever live, the worst overridden CLV wears it every time");
+  ok(R.bozo[2] === 0, "the best CLV never does");
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
