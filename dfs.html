@@ -2880,9 +2880,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   </div>
 
   <div class="card" id="simCard" hidden>
-    <h3>Your lineups, ranked by return <span class="rt" id="simMeta"></span></h3>
+    <h3>Your lineups, ranked by dupe-adjusted EV <span class="rt" id="simMeta"></span></h3>
     <div class="tscroll"><table class="dtab" id="simTab"></table></div>
-    <p class="note">Proj is the sum of your projections. Mean is what the lineup actually averaged across the simulations — it differs from Proj because scoring is skewed. <b>Dupes</b> is the expected number of other entries holding exactly this lineup.</p>
+    <p class="note">Default sort is <b>EV (dupe-adj)</b> with Top-10 tiebreak (I4 / Bible §3.4). <b>Top-10</b> is literal places 1–10 (B5), not a cut of the field. <b>EV (dupe-adj)</b> divides each cashed prize by 1+E[dupes] — prior until ≥3 weeks standings (I5). ROI stays visible but is not the selection key. Proj is the sum of your projections. Mean differs from Proj because scoring is skewed. <b>Dupes</b> (field sample) is the expected number of other entries holding exactly this lineup.</p>
   </div>
 
   <div class="card" id="levCard" hidden>
@@ -4007,9 +4007,10 @@ function simulate(players,lineups,cfg,onProgress){
   if(field.length<sampleN)warn.push('Opponent sample incomplete: '+field.length+' of '+sampleN+'.');
   // Canonical addition order makes exact duplicate scores equal regardless of roster ordering.
   field.forEach(l=>l.sort((a,b)=>a-b));
+  const eDupes=Float64Array.from(lineups,l=>Math.max(0,+(l&&l.eDupes)||0));
   const candidates=lineups.map(l=>({ids:l.ids.slice().sort((a,b)=>a-b),cpt:l.cpt}));
   const candidateKeys=candidates.map(lineupKey),fieldKeys=field.map(lineupKey);
-  const metrics=['pay','cash','profit','win','top1','top10','cutoff','cutoffShare','cutoffShare2','firstShare','rank'];
+  const metrics=['pay','payAdj','cash','profit','win','top1','top10','cutoff','cutoffShare','cutoffShare2','firstShare','rank'];
   const accum=()=>Object.fromEntries(metrics.map(k=>[k,new Float64Array(ourN)]));
   const counts=new Map();
   const contests=specifications.map(c=>{
@@ -4037,12 +4038,16 @@ function simulate(players,lineups,cfg,onProgress){
     for(let o=0;o<ourN;o++){const l=candidates[o];oScore[o]=scoreLineup(l.ids,l.cpt);accScore[o]+=oScore[o];accScore2[o]+=oScore[o]*oScore[o];}
     for(const [m,group] of counts){group.scores.set(fScore.subarray(0,m));group.scores.sort();}
     for(const c of contests){
-      const a=s<split?c.train:c.validation,sorted=counts.get(c.m).scores,top1=Math.max(1,Math.floor(c.fieldSize*.01)),top10=Math.max(1,Math.floor(c.fieldSize*.10));
+      const a=s<split?c.train:c.validation,sorted=counts.get(c.m).scores,top1=Math.max(1,Math.floor(c.fieldSize*.01));
       for(let o=0;o<ourN;o++){
         const t=tieOutcome(sorted,oScore[o],c.fieldSize,c.pay),atTop=t.above===0;
         const share=Math.max(0,Math.min(t.tied+1,c.paid-t.above))/(t.tied+1);
         a.pay[o]+=t.prize;a.cash[o]+=+(t.prize>0);a.profit[o]+=+(t.prize>c.entryFee+1e-9);
-        a.win[o]+=+atTop;a.top1[o]+=+(t.above<top1);a.top10[o]+=+(t.above<top10);a.cutoff[o]+=+(t.above<c.paid);
+        // Bible §3.4: dupe-adjusted prize uses prior E[dupes] on the candidate (I5 until standings).
+        if(t.prize>0)a.payAdj[o]+=t.prize/(1+eDupes[o]);
+        a.win[o]+=+atTop;a.top1[o]+=+(t.above<top1);
+        // B5: Top-10 is literal places 1–10, NOT a proportional cut of the field.
+        a.top10[o]+=+(t.above<10);a.cutoff[o]+=+(t.above<c.paid);
         a.cutoffShare[o]+=share;a.cutoffShare2[o]+=share*share;a.firstShare[o]+=atTop?1/(1+t.tied):0;a.rank[o]+=t.rank;
       }
     }
@@ -4059,8 +4064,12 @@ function simulate(players,lineups,cfg,onProgress){
     out.top1Share=out.top1/(1+c.duplicates[o]);out.ci.top1Share=out.ci.top1.map(v=>v/(1+c.duplicates[o]));
     out.win=c.full?a.win[o]/n:null;out.firstShare=c.full?a.firstShare[o]/n:null;out.ci.win=c.full?wilson(a.win[o],n):null;
     out.meanRank=a.rank[o]/n;out.ev=a.pay[o]/n;out.roi=(out.ev-c.entryFee)/c.entryFee;
+    // Bible §3.4 — dupe-adjusted EV (prior E[dupes] until ≥3 weeks standings / I5)
+    out.eDupes=eDupes[o];out.evAdj=a.payAdj[o]/n;
     // Top-heavy payout tails cannot be resolved by scaling a small opponent sample.
-    out.approxRoi=out.roi;if(!c.full&&(c.payout||{}).kind!=='flat'){out.roi=null;out.ev=null;}
+    out.approxRoi=out.roi;out.approxEv=out.ev;out.approxEvAdj=out.evAdj;
+    if(!c.full&&(c.payout||{}).kind!=='flat'){out.roi=null;out.ev=null;}
+    // Selection key stays numeric even when raw ROI is withheld for top-heavy samples.
     return out;
   }
   const outcomes={};
@@ -4333,6 +4342,8 @@ root.DDFS.payoutFn = payoutFn;
 root.DDFS.tieOutcome=tieOutcome;root.DDFS.wilson=wilson;root.DDFS.lineupKey=lineupKey;
 
 })(typeof module !== "undefined" && module.exports ? module.exports : (typeof self !== "undefined" ? self : this));
+
+
 </script>
 
 <script src="dfs-lab-audit.js?v=20260910-contests"></script>
@@ -6444,7 +6455,10 @@ function renderLineups() {
   card.hidden = false;
   $("luCount").textContent = `${S.lineups.length} built`;
   const P = S.players, CAP = 60;
-  const order = SIM ? SIM.perLineup.slice().sort((a, b) => b.roi - a.roi).map(x => x.i)
+  const order = SIM ? SIM.perLineup.slice().sort((a, b) => {
+                      const d = (b.evAdj || 0) - (a.evAdj || 0);
+                      return d !== 0 ? d : (b.top10 || 0) - (a.top10 || 0);
+                    }).map(x => x.i)
                     : S.lineups.map((_, i) => i);
   let h = "";
   order.slice(0, CAP).forEach((li, n) => {
@@ -6458,7 +6472,7 @@ function renderLineups() {
     }
     h += `<div class="lu"><div class="hd"><span class="r">#${n + 1}</span>
       <span>${fmt(l.proj)} proj</span><span>${fmt(own, 0)}% own</span>${edTag}
-      ${sim ? `<span>${pct(sim.roi,0)} ROI</span><span>${pct(sim.win, 2)} win</span>` : ""}
+      ${sim ? `<span title="Top-10 rate — literal places 1–10 (B5)">${pct(sim.top10, 2)} top-10</span><span title="Dupe-adjusted EV (Bible §3.4); prior E[dupes] until ≥3 weeks standings (I5)">$${fmt(sim.evAdj, 2)} EV≠</span><span>${sim.roi == null ? "—" : pct(sim.roi,0)+" ROI"}</span>` : ""}
       <span class="sp">$${l.sal.toLocaleString()}</span></div><div class="ps">`;
     for (const s of lineupSlots(l)) {
       const p = P[s.i];
@@ -6538,7 +6552,16 @@ function runSim() {
   const t0 = Date.now();
   const simSnapshot = JSON.stringify([S.players, S.lineups, S.site]);
   const players = enginePlayers();
-  const lineups = S.lineups.map(l => ({ ids: l.ids, cpt: l.cpt, proj: l.proj }));
+  const entriesForDupe = S.sim.field || 20000;
+  const showdown = !!E.SITES[S.site].showdown;
+  const lineups = S.lineups.map(l => {
+    let eDupes = 0;
+    if (typeof DDFSDupe !== "undefined") {
+      const ed = DDFSDupe.expectedDupes(l, S.players, { entries: entriesForDupe, showdown });
+      if (ed && ed.eDupes != null && isFinite(ed.eDupes)) eDupes = Math.max(0, ed.eDupes);
+    }
+    return { ids: l.ids, cpt: l.cpt, proj: l.proj, eDupes };
+  });
   const lineupKeys = S.lineups.map(l => labKey(l));
 
   const finish = (r) => {
@@ -6606,18 +6629,23 @@ function renderSim() {
     'Half the score worlds are reserved for evaluating selections made on the first half. Confidence intervals describe simulation noise within this fixed model, not its real-world accuracy. Seed '+m.seed+'.';
 
   // --- lineups ---
-  const rows = SIM.perLineup.slice().sort((a, b) => b.cash - a.cash);
+  const rows = SIM.perLineup.slice().sort((a, b) => {
+    const d = (b.evAdj || 0) - (a.evAdj || 0);
+    return d !== 0 ? d : (b.top10 || 0) - (a.top10 || 0);
+  });
   let h = `<thead><tr><th class="l">#</th><th class="l">Lineup</th><th>Proj</th><th>Own%</th><th>Mean</th><th>SD</th>
-    <th>Cash%</th><th>Top 10%</th><th>Top 1%</th><th>First%</th><th>Dupes</th><th>ROI</th></tr></thead><tbody>`;
+    <th>Cash%</th><th title="Share of sims finishing in literal places 1–10 — not a proportional cut of the field (B5 / Bible I4).">Top-10 %</th><th>Top 1%</th><th>First%</th><th>Dupes</th><th title="Dupe-adjusted EV (Bible §3.4): Σ P(place)·prize(place)/(1+E[copies|cashed]). E[copies] = prior E[dupes] until ≥3 weeks standings (I5). Default sort key; ROI is kept visible but is not the selection objective.">EV (dupe-adj) $</th><th title="Raw simulated ROI before dupe adjustment — visible for calibration, not the default sort (I4).">ROI</th></tr></thead><tbody>`;
   rows.slice(0, 200).forEach((r, n) => {
     const l = S.lineups[r.i];
     const own = l.ids.reduce((t, i) => t + (P[i].own || 0), 0);
     const names = lineupSlots(l).map(s => P[s.i] ? P[s.i].name.split(" ").slice(-1)[0] : "?").join(" · ");
+    const fee = (SIM.meta && SIM.meta.entryFee) || 0;
     h += `<tr><td class="l">${n + 1}</td><td class="l" style="max-width:340px;font-size:11.5px" class="mut">${esc(names)}</td>
       <td>${fmt(l.proj)}</td><td>${fmt(own, 0)}</td><td>${fmt(r.mean)}</td><td>${fmt(r.sd)}</td>
       <td>${pct(r.cash, 1)}</td><td>${pct(r.top10, 2)}</td><td>${pct(r.top1, 2)}</td><td>${pct(r.win, 3)}</td>
       <td>${r.dupes == null ? "—" : r.dupes.toFixed(1)}</td>
-      <td class="${r.roi >= 0 ? "pos" : "neg"}">${pct(r.roi,0)}</td></tr>`;
+      <td class="${(r.evAdj || 0) >= fee ? "pos" : "neg"}">$${fmt(r.evAdj, 2)}</td>
+      <td class="${r.roi == null ? "" : (r.roi >= 0 ? "pos" : "neg")}">${r.roi == null ? "—" : pct(r.roi,0)}</td></tr>`;
   });
   $("simTab").innerHTML = h + "</tbody>";
   renderLev();
@@ -7879,9 +7907,12 @@ ${S.demo ? "- ⚠️ THE LOADED SLATE IS THE DEMO SLATE. Every player name, sala
       if (SIM) {
         L.push(`SIMULATION: ${SIM.meta.sims} runs, field of ${SIM.meta.fieldSize} modelled from a sample of ${SIM.meta.fieldSample}, $${SIM.meta.entryFee} entry.`);
         L.push(`⚠️ FIELD STRENGTH CHECK: median simulated opponent projects ${(SIM.meta.fieldMedianProj || 0).toFixed(1)}; the user's median lineup projects ${(SIM.meta.ourMedianProj || 0).toFixed(1)}. If the second is far above the first, every ROI below is optimistic and you must say so.`);
-        const best = SIM.perLineup.slice().sort((a, b) => b.roi - a.roi).slice(0, 5);
-        L.push("BEST LINEUPS BY SIMULATED ROI: " + best.map(r =>
-          `${pct(r.roi,0)} ROI, ${(r.cash * 100).toFixed(1)}% cash, ${pct(r.win,3)} first place`).join(" | "));
+        const best = SIM.perLineup.slice().sort((a, b) => {
+          const d = (b.evAdj || 0) - (a.evAdj || 0);
+          return d !== 0 ? d : (b.top10 || 0) - (a.top10 || 0);
+        }).slice(0, 5);
+        L.push("BEST LINEUPS BY DUPE-ADJUSTED TOP-10 (prior dupes): " + best.map(r =>
+          `${((r.top10 || 0) * 100).toFixed(2)}% top-10, $${(r.evAdj || 0).toFixed(2)} EV≠, ${r.roi == null ? "—" : (r.roi * 100).toFixed(0)+"% ROI"}, ${(r.cash * 100).toFixed(1)}% cash`).join(" | "));
         const lev = SIM.perPlayer.slice().sort((a, b) => b.leverage - a.leverage).slice(0, 10);
         L.push("HIGHEST LEVERAGE: " + lev.map(r => `${S.players[r.i].name} ${(r.leverage).toFixed(1)}`).join(", "));
       } else L.push("No simulation has been run in this session.");
@@ -7892,7 +7923,8 @@ ${S.demo ? "- ⚠️ THE LOADED SLATE IS THE DEMO SLATE. Every player name, sala
                   : `⚠️ Fewer than five contests logged — there is no confidence band and you must not imply the ROI figure means anything.`);
       } else L.push("Nothing is logged in the bankroll tracker.");
       L.push("LINEUP LAB: Showdown pools are EXACT enumerations of every legal lineup under the Lab's salary floor and max-per-team (classic pools are sampled). The frontier is exact for showdown. A punt captain or a sub-0.5%-owned slot lowers the ownership product 50-100x while the rest of the roster may be exactly what the field plays; treat those frontier dots as flagged, not free. Tap a dot for the roster, slot ownership, E[dupes] (slot-aware analytic prior), validator flags and sim results. X is estimated copies (slot-ownership product times selected contest field size) on a log scale; presets are illustrative. Green/yellow/red background zones describe low/moderate/high duplication, not contest suitability. Simulator results retain their simulation field size; Y is projected points. Product is an independence proxy, not a duplication probability. Showdown uses CPT ownership and total-minus-CPT for FLEX. Gray points have not been simulated. Exposure caps and minimum uniques are not enforced on the exploration pool.");
-      L.push(`VOCABULARY: Proj = sum of the user's projections. Mean = average simulated score. Own% = projected ownership. Win-lineup% = how often a player appears in the highest-scoring sampled opponent; not the exact slate optimum. Leverage = win-lineup% minus ownership. Dupes = expected number of other entries holding the identical lineup. Cash% = share of simulations finishing in the money. Rarity in the Lab uses captain and FLEX slot-ownership product with a 0.25% minimum; expected copies on the axis are that product times the selected entry count, an uncalibrated proxy. Cumulative ownership is only a secondary diagnostic. Contest candidates are chosen on training worlds and evaluated on held-out worlds. No GPP-safe or cash-only designation follows from duplication alone.`);
+      L.push("- ⚠️ Selection key is DUPE-ADJUSTED TOP-10 / EV_adj (Bible §3.4 / I4), not raw ROI. E[dupes] is a PRIOR until ≥3 weeks of standings grade the pair multipliers (I5) — say \"prior\" whenever you quote EV (dupe-adj) or E[dupes]. Top-10 means literal places 1–10 (B5), not a percent of field.");
+      L.push(`VOCABULARY: Proj = sum of the user's projections. Mean = average simulated score. Own% = projected ownership. Win-lineup% = how often a player appears in the highest-scoring sampled opponent; not the exact slate optimum. Leverage = win-lineup% minus ownership. Dupes = expected number of other entries holding the identical lineup. Cash% = share of simulations finishing in the money. Top-10% = share finishing in literal places 1–10 (not a field cut). EV (dupe-adj) = Σ P(place)·prize/(1+E[dupes]) with prior E[dupes] until ≥3 weeks standings. ROI = raw simulated return before dupe adjustment — visible, not the selection key. Rarity in the Lab uses captain and FLEX slot-ownership product with a 0.25% minimum; expected copies on the axis are that product times the selected entry count, an uncalibrated proxy. Cumulative ownership is only a secondary diagnostic. Contest candidates are chosen on training worlds and evaluated on held-out worlds. No GPP-safe or cash-only designation follows from duplication alone.`);
       return L.join("\n");
     }
   };
