@@ -1,10 +1,10 @@
 # DFS Labs Bible
 
-**Repo home:** `docs/DFS_LABS_BIBLE.md` (sits next to `dfs-roadmap.md`; supersedes §1 of the roadmap where they conflict — see §3.3)
+**Repo home:** `docs/DFS_LABS_BIBLE.md` (sequenced by `docs/DFS_PHASE*` checklists; supersedes prior roadmap §1 where they conflict — see §3.3)
 **Status:** v1.0, 2026-09-04. Pre-Week-1. Nothing below is calibrated on 2026 data yet.
 **Scope:** DraftKings NFL Classic + Showdown. All contest types are in scope (Milly Maker, single-entry, 3-max, 20/150-max, cash, Showdown Wildcat / Field General / single-entry).
 
-This document is the source of truth for *why* the hub is built the way it is. Code implements it; `dfs-roadmap.md` sequences it; this file justifies it. When a number here is contradicted by our own receipts (§9), the receipts win and this file gets edited.
+This document is the source of truth for *why* the hub is built the way it is. Code implements it; sequenced by `docs/DFS_PHASE*` checklists; this file justifies it. When a number here is contradicted by our own receipts (§9), the receipts win and this file gets edited.
 
 Confidence tags used throughout: **[S]** settled decision · **[E:public]** independently verified public evidence · **[E:etr]** ETR-published, not independently reproduced · **[P]** prior/assumption to be replaced by fit · **[?]** open question
 
@@ -335,4 +335,4 @@ Thresholds that change the plan:
 - FantasyLabs (via The Fantasy Footballers), showdown bring-back and 5-1/4-2 guidance; Roto Street Journal 2020 Milly Maker winners; DFS Army Milly Maker reviews 2021–25; SaberSim / Stokastic / The Solver documentation; chanzer0/NFL-DFS-Tools
 - DraftKings Network dome vs outdoor production (2025); PFF road-outdoor analysis (2017)
 
-Internal: `docs/DFS_Bible_validation.md` (the independent-validation document this file distills), `dfs-roadmap.md`, `work/dfs-engine.js`.
+Internal: `docs/DFS_Bible_validation.md` (the independent-validation document this file distills), `docs/DFS_PHASE*` checklists, `work/dfs-engine.js`.
