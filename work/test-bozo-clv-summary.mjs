@@ -86,13 +86,25 @@ ok(by("Roger").avg === null && by("Tony").avg === null,
 ok(by("BUTTS").legs === 1 && by("BUTTS").graded === 0 && by("BUTTS").missing === 0,
    "an ungraded leg is not counted as a missing close");
 
-/* A name in the ledger that the roster no longer carries still has to appear: their legs
-   are in the season's numbers, so hiding the person hides where the numbers came from. */
+/* ⚠️ A name in the ledger that the roster no longer carries is NOT a member, so it is
+   not on the table — listing them as one overstates the league. It is also not deleted:
+   their legs are still in the season's averages, and silently dropping them would hide
+   where those numbers came from. Off the table, counted by name underneath. */
 {
   const withLeaver = ctx.__rows(legs.concat(
     [{ player: "Gone", week: 1, result: "win", entryPrice: -120, entryPriceOpp: 100, closePrice: -140, closePriceOpp: 115 }]), ROSTER);
   ok(withLeaver.length === 9 && withLeaver.some(r => r.player === "Gone"),
-     "a former member still in the ledger is appended, not dropped");
+     "a former member still in the ledger is computed, not dropped");
+  ok(withLeaver.find(r => r.player === "Gone").onRoster === false
+     && withLeaver.filter(r => r.onRoster).length === 8,
+     "they are flagged off-roster, and the eight seats stay eight");
+  const h = ctx.__html(withLeaver);
+  ok((h.match(/data-sum=/g) || []).length === 8 && !h.includes('data-sum="Gone"'),
+     "the table is the roster — a former member is not a row on it");
+  ok(/no longer on the roster/.test(h) && /Gone/.test(h),
+     "they are accounted for by name under the table, not silently deleted");
+  ok(ctx.__html([]).includes("Nobody is on this roster yet"),
+     "an empty roster still says so");
 }
 
 /* Ordering: a number beats no number, then best CLV first. Nobody is sorted off. */

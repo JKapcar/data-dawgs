@@ -8313,9 +8313,12 @@ async function clvSummaryData(force){
 }
 
 /* One row per member. `roster` leads so a member with zero legs still gets a row; any
-   ledger name the roster does not carry (someone who has since left) is appended rather
-   than dropped, because their legs are still in the season's numbers. */
+   ledger name the roster does not carry (someone who has since left) is still computed
+   and carries onRoster:false, because their legs are in the season's numbers whether or
+   not they are on the table. The renderer keeps the table to the current roster and
+   accounts for the rest in a footnote — see clvSummaryHtml. */
 function clvSummaryRows(legs, roster){
+  const seats = new Set((roster||[]).filter(n=>n != null && n !== ''));
   const names = [];
   for(const n of [...(roster||[]), ...legs.map(l=>l.player)])
     if(n != null && n !== '' && !names.includes(n)) names.push(n);
@@ -8326,6 +8329,7 @@ function clvSummaryRows(legs, roster){
     const pts     = charted.map(l=>clvPair(l).clv*100);
     return {
       player: p,
+      onRoster: seats.has(p),
       legs: mine.length,
       graded: graded.length,
       charted: charted.length,
@@ -8343,9 +8347,21 @@ function clvSummaryRows(legs, roster){
     || String(a.player).localeCompare(String(b.player)));
 }
 
+/* ⚠️ THE TABLE IS THE ROSTER, AND THE FOOTNOTE IS THE DIFFERENCE. A name in the ledger
+   that the roster no longer carries is not a member, and listing them as one overstates
+   the league — but deleting them outright would hide legs that are still in the season's
+   averages, which is the same dishonesty pointing the other way. So they come off the
+   table and are counted under it, by name. */
 function clvSummaryHtml(rows){
-  if(!rows.length) return `<p class="tm">Nobody is on this roster yet.</p>`;
+  const seated = rows.filter(r=>r.onRoster !== false), gone = rows.filter(r=>r.onRoster === false);
+  const foot = gone.length
+    ? `<p class="tm" style="margin:8px 0 0">${gone.length === 1 ? 'One name is' : gone.length+' names are'}`
+      + ` in the ledger but no longer on the roster &mdash; ${gone.map(r=>esc(teamOf(r.player))).join(', ')}.`
+      + ` Their legs still count toward the season's numbers; they are not members, so they are not on the table.</p>`
+    : '';
+  if(!seated.length) return `<p class="tm">Nobody is on this roster yet.</p>` + foot;
   const pts = n => (n>0?'+':'') + n.toFixed(1);
+  rows = seated;
   return `<div class="tscroll"><table class="bz clvsum"><tbody>
     <tr><th>Who</th><th>Legs</th><th>On the chart</th><th>No usable close</th><th>Avg CLV</th></tr>`
     + rows.map(r=>`<tr data-sum="${esc(r.player)}">
@@ -8362,7 +8378,7 @@ function clvSummaryHtml(rows){
               : (r.charted===0 ? `<div class="gwhy">no leg has a usable close</div>` : ''))
         + `</td>
       </tr>`).join('')
-    + `</tbody></table></div>`;
+    + `</tbody></table></div>` + foot;
 }
 
 async function paintClvSummary(force){
