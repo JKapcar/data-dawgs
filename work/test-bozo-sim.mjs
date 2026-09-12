@@ -223,5 +223,55 @@ ok(clvDeltaOf({ price: -150, entryPriceOpp: 130 }, { clvPts: 1, close: -200, clo
   ctx.S.results = {}; ctx.S.picks = {};
 }
 
+/* ⚠️ AN UNMEASURED LEG IS NOT A SAFE LEG.
+ * Worst CLV drawn first, two legs measurable out of eight, six games not yet kicked off.
+ * The lever used to narrow the pool to the MEASURED legs only, so the worse of the two
+ * wore it in every run — 100% — while six legs that could close worse were ruled out by a
+ * lever that had no opinion about them. Being unmeasurable is not evidence.
+ */
+{
+  const board = [
+    // measured, worse of the two
+    { p: "Squatch", price: -145, ts: 9, mkt: "other", exp: 0, line: 0,
+      res: { result: "lost", clvPts: 0 } },
+    // measured, better — this one the lever CAN rule out, and should
+    { p: "BUTTS", price: -198, entryPriceOpp: 164, ts: 2, mkt: "ml", exp: 0, line: 0,
+      res: { result: "lost", close: -218, closeOpp: 180 } },
+  ];
+  // six unmeasured legs whose games have not been played: no result, no close
+  for (let i = 0; i < 6; i++)
+    board.push({ p: "open" + i, price: -150, entryPriceOpp: 130, ts: 3 + i, mkt: "ml",
+                 exp: 0, line: 0, res: {} });
+
+  ctx.S.results = {}; ctx.S.picks = {};
+  for (const b of board) { ctx.S.results[b.p] = b.res; ctx.S.picks[b.p] = b; }
+  const live = board.map(x => ({ ...x }));
+  ctx.S.order = [3, 0, 1, 2];                       // Worst CLV first
+
+  const r = simulate(live, [0, 1, 2, 3]);
+  ok(r.bozo[0] < 1,
+     "the worst MEASURED CLV is not certain to wear it while six legs are unmeasured");
+  ok(r.bozo.slice(2).some(v => v > 0),
+     "a leg the lever cannot measure keeps a real chance — it is carried forward, not ruled safe");
+  ok(r.bozo[1] === 0,
+     "but a measured leg beaten by another measured leg IS eliminated — that holds whatever the rest do");
+
+  /* ⚠️ The sim and the grader must answer one week one way. decide() has always passed
+     when a lever scores nothing (`if(!scored.length) continue;`); the sim used to pick
+     uniformly at random instead, inventing a verdict out of no information. */
+  ctx.S.results = { a: { result: "lost" }, b: { result: "lost" } };
+  ctx.S.picks = { a: {}, b: {} };
+  const none = [
+    { p: "a", price: -150, ts: 1, mkt: "ml", exp: 0, line: 0 },
+    { p: "b", price: -150, ts: 2, mkt: "ml", exp: 0, line: 0 },
+  ];
+  const r2 = simulate(none.map(x => ({ ...x })), [3]);   // CLV only, nothing measurable
+  ok(r2.bozo[0] + r2.bozo[1] === 1, "with the only lever unmeasurable the week still resolves");
+  ok(r2.by.every(b => b === null),
+     "and no lever claims to have named it — the cascade passed, it did not coin-flip");
+
+  ctx.S.results = {}; ctx.S.picks = {}; delete ctx.S.order;
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

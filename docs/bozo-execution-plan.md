@@ -48,7 +48,28 @@ These apply to every Codex session regardless of job. They are restated here bec
 
 1. **Echo before write.** Any RTDB or KV write is shown to Kap and confirmed before it executes. This includes roster edits, cleanups, migrations, and manual patches. The roster add on 09-03 skipped this; it must not happen again.
 2. **Fixture before parser.** No adapter or matcher code is written against a documented response shape. Capture a real response first, commit it under `tests/fixtures/`, write against that.
-3. **Never assume a hold.** No `−110/−110` default, no `.022`, no "standard juice." A leg without a real `priceOpp` is `clvEligible: false`. Missing beats wrong. (D8, D9, Phase 4.2.)
+3. **Assume standard juice for a missing side.** ⚠️ REVERSED 2026-09-12, by Kap, deliberately. This rule
+   used to read "never assume a hold — no `−110/−110` default, no `.022`, no 'standard juice'. A leg without a
+   real `priceOpp` is `clvEligible: false`. Missing beats wrong."
+
+   It was written for a build that could capture both sides. This one cannot: there is no API access for the
+   opposite side of every market, and the only alternative was the manager typing four prices per leg per week
+   for eight people. The rule's effect in practice was not caution, it was that CLV did not exist — a self-priced
+   prop entered at `-145` with no other side could never produce a CLV no matter what closing price anybody
+   typed, so the lever that decides eliminations ran on two legs out of eight.
+
+   A missing side is now synthesised at a standard two-way overround (1.047619) and **stamped as assumed**
+   wherever it appears. That is a real de-vig against an assumed book, never raw implied, and the stamp is not
+   optional — the whole point is that assumed and captured stay distinguishable.
+
+   Worth knowing before anyone "improves" this: assuming the SAME hold at both ends makes the de-vig a constant
+   divisor, so the CLV is just the raw price move scaled by `1/1.047619`. `-145 → -200` is a 7.48-point raw
+   move and a 7.2-point CLV. The opposite side is not doing arithmetic work here; it is a formality that keeps
+   one code path for assumed and captured markets.
+
+   **What would reverse this again:** real two-sided capture for the markets that need it. Then assumed becomes
+   the fallback rather than the norm, and the stamp is how you find every row that needs recomputing.
+   (Was D8, D9, Phase 4.2.)
 4. **Blank is not zero.** A score that hasn't populated is a retry, never a `0`. A close that wasn't captured is `unmeasured`, never `0.00`. (D8, D19.)
 5. **Foreign ids are attributes.** ESPN, SGO, and Odds API ids hang off the canonical key. None is a join key. (D7.)
 6. **No scraper, no DK endpoints, no slip-link parsing.** (D14, §0.2.)
@@ -169,13 +190,13 @@ If the gate says build: workplan 3.1, 3.2 (Odds API archive at T+3, promotion fr
 | # | Task | Acceptance |
 |---|---|---|
 | J7.1 | Simulator conforms to grader: SD-normalized, all leg types. Remove the raw-margin path at 4370. | One definition in code and in `data/bozo-rules.json`; simulator == grader on fixtures. |
-| J7.2 | Replace `rImp(price) − .022` (6952) with `devigPair(price, priceOpp).fair`; `beatBasis: no-sd` when `priceOpp` absent. | Grep for `.022` returns nothing. |
+| J7.2 | ⚠️ SUPERSEDED 2026-09-12 by standing rule 3. `expected()` de-vigs with `imp(price) − .022`, which is the flat hold this task existed to remove — but standard juice is now the accepted approximation, so removing it in favour of refusing a lone price would delete the win probabilities the simulation runs on. The task that remains is narrower: replace the flat `.022` subtraction with `devigP(price, priceOpp)`, which assumes the same standard overround when the opposite side is absent and uses the real one when it is present. Same approximation, one code path, and the assumption stops being a magic number sitting apart from every other de-vig. | `expected()` calls `devigP`; grep for `.022` returns nothing; simulated leg-win percentages move by less than a point. |
 | J7.3 | SD calibration from prior-season nflverse and cfbfastR results: empirical SD of `(margin − closing spread)` and `(total − closing total)` per sport → `data/bozo-sd.json` with `asOf`. | Table date renders on Docs. |
 | J7.4 | Prop SD table for the top 15 stat types (workplan 4.4). | Props participate in Worst Beat; others `no-sd`. |
 
 **Opener**
 
-> Job J7 of `docs/bozo-execution-plan.md` — Phase 4. Start with the `.022` removal at 6952; it is the one that fabricates a number. Then the simulator at 4370.
+> Job J7 of `docs/bozo-execution-plan.md` — Phase 4. Read standing rule 3 first: the `.022` task changed shape when assumed juice became the accepted approximation. It is now a consolidation onto `devigP`, not a removal. Then the simulator at 4370.
 
 ---
 

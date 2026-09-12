@@ -56,9 +56,17 @@ const ctx = vm.createContext({
   // here; the point is that every surface must agree even when it does not.
   kEnc: p => (p === "Squatch" ? SQUATCH : p),
   imp: o => (o < 0 ? -o / (-o + 100) : 100 / (o + 100)),
+  clvImp: o => (o < 0 ? -o / (-o + 100) : 100 / (o + 100)),
+  clvAm: pr => (pr >= 0.5 ? Math.round((-100 * pr) / (1 - pr)) : Math.round((100 * (1 - pr)) / pr)),
+  CLV_OVERROUND: 1.047619,
 });
+/* ⚠️ devigP and clvAssumedOpp are LIFTED, not stubbed. The stub was the old refuse-a-lone-
+   price version, so this suite kept passing while the real rule changed underneath it —
+   and it would have kept passing if the assumption were removed again. A suite that stubs
+   the function under test tests the stub. */
 vm.runInContext(
-  "const devigP = (a,b) => (a==null||b==null) ? null : (imp(a)/(imp(a)+imp(b)));\n"
+  grab("function clvAssumedOpp(price){", "\n/** proportional de-vig")
+  + grab("const devigP = (a,b) => {", "/* The CLV a leg carries right now")
   + grab("function legRow(x){", "/* ⚠️ A HAND-SET CLV OUTRANKS")
   + grab("const priceSourceBadge = x => {", "\n// Server capture replaced")
   + grab("function clvDeltaOf(x, r){", "const amer =")
@@ -115,6 +123,32 @@ ok(/r\.clvPts != null && Number\.isFinite\(\+r\.clvPts\)/.test(code.split("const
      "no consumer resolves a results row by display name alone");
   ok(/if\(x && x\.key && \(res\[x\.key\] \|\| picks\[x\.key\]\)\) return res\[x\.key\] \|\| \{\};/.test(code),
      "the one lookup tries the pick key first and the display name only after it");
+}
+
+/* ⚠️ WHAT THE STANDARD-JUICE ASSUMPTION ACTUALLY BUYS, pinned so the next person to touch
+ * it sees the consequence before they change it. Assuming the SAME hold at both ends makes
+ * the de-vig a constant divisor, so a CLV computed from two lone prices is just the raw
+ * price move scaled by 1/1.047619. The opposite side does no arithmetic work here — it
+ * keeps ONE code path for assumed and captured markets, which is the real reason to
+ * synthesise it rather than special-case a lone price.
+ *
+ * The consequence that matters: a leg needs an entry price and a close, and nothing else.
+ * Before this, a self-priced prop at -145 could never produce a CLV whatever closing price
+ * anybody typed, and the lever that decides eliminations ran on two legs out of eight.
+ */
+{
+  const clv = (entry, close) => ctx.__delta({ price: entry, entryPriceOpp: null },
+                                            { close, closeOpp: null });
+  const move = clv(-145, -200);
+  ok(move != null, "an entry and a close with no opposite side at either end still yield a CLV");
+  ok(move > 0.06 && move < 0.08,
+     "-145 to -200 is about +7.2 points, the raw 7.48-point move scaled by the assumed overround");
+  ok(clv(-200, -145) < 0, "and the move the other way is negative, by the same arithmetic");
+  ok(Math.abs(clv(-145, -145)) < 1e-9, "a leg that closed where it was taken has a CLV of zero");
+  /* ⚠️ Zero, not null. A leg that did not move is measured and neutral; a leg with no
+     close is unmeasured. Collapsing the two is what made a real 0.00 read as "no CLV". */
+  ok(ctx.__delta({ price: -145, entryPriceOpp: null }, {}) === null,
+     "but a leg with no close at all is still unmeasured, never zero");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
