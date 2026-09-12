@@ -8401,73 +8401,102 @@ async function paintGaps(){
   try{ j = await wGet('/bozo/close-gaps?league='+encodeURIComponent(LID)); }
   catch(e){ note.textContent = 'Could not load: '+e.message; body.innerHTML=''; return; }
 
-  const fillable = j.rows.filter(r=>!r.locked), locked = j.rows.length - j.rows.filter(r=>!r.locked).length;
-  note.innerHTML = j.gaps === 0
-    ? `Every graded leg has both sides of its close. Nothing to fill in.`
-    : `<b>${j.gaps} of ${j.total} legs</b> have no usable closing price. A leg needs <b>both sides</b> to be
+  /* ⚠️ EVERY LEG IS EDITABLE HERE, not only the ones missing a close. The list used to be
+     the gaps, and that made a whole class of leg unreachable: a prop has no two-way market
+     to capture, so no close will EVER arrive for it and the close boxes are useless for it
+     by construction — while the one number it can have, the manager's CLV, was only
+     settable on the grade card, which writes /results and therefore only ever reaches the
+     CURRENT week. A prop from week 1 became uneditable from anywhere the moment week 2
+     opened. This list reaches the ledger, which keeps every row forever. */
+  const rows = (j.all && j.all.length) ? j.all : j.rows;
+  const gaps = rows.filter(r=>r.gap).length;
+  note.innerHTML = (gaps === 0
+    ? `Every graded leg has both sides of its close.`
+    : `<b>${gaps} of ${rows.length} legs</b> have no usable closing price. A leg needs <b>both sides</b> to be
        de-vigged — with one side only it is dropped from the CLV chart and from <i>n</i>, exactly as if it had
-       none — unless you leave the other side <b>blank</b>, in which case it is assumed at standard
-       &minus;110/&minus;110 juice and stamped as assumed, so the leg counts instead of vanishing.
-       Read them off the placed ticket. Only a <b>complete</b> captured pair is locked; a leg the capture
-       caught one side of is still yours to fill, and typing over it makes the whole pair manual.`
-       + (locked ? ` <span class="tm">${locked} already fully captured, so not editable.</span>` : '');
-  if(!fillable.length){
-    body.innerHTML = j.gaps
-      ? `<p class="tm">Every remaining gap is a fully captured close, which can't be overwritten by hand.</p>`
-      : '';
-    return;
-  }
+       none — unless you leave the other side <b>blank</b>, in which case it is assumed at standard juice and
+       stamped as assumed, so the leg counts instead of vanishing.`)
+    + ` Read both sides off a <b>DraftKings screenshot taken at kickoff</b> &mdash; <b>not the placed ticket</b>,
+       which carries the price you got at placement, so entering it here measures deadline drift rather than CLV.
+       A leg with no capturable market never gets a close: set its <b>CLV in points</b> instead, which is the
+       number the chart and the Worst-CLV lever both read.`;
 
+  if(!rows.length){ body.innerHTML = `<p class="tm">No graded legs in the ledger yet.</p>`; return; }
+
+  const fmtClv = v => v == null ? '' : String(v);
   body.innerHTML = `<div class="tscroll"><table class="bz gaptbl"><tbody>
-    <tr><th>Wk</th><th>Who</th><th>Leg</th><th>Took</th><th>Close</th><th>Other side</th><th></th></tr>`
-    + fillable.map(r=>`<tr data-row="${esc(r.row)}">
+    <tr><th>Wk</th><th>Who</th><th>Leg</th><th>Took</th><th>Close</th><th>Other side</th><th>CLV pts</th><th></th></tr>`
+    + rows.map(r=>`<tr data-row="${esc(r.row)}">
         <td>${r.week}</td><td>${esc(teamOf(r.player))}</td>
-        <td>${esc(r.label)}<div class="gwhy">${esc(r.reason||'no close captured yet')}</div></td>
+        <td>${esc(r.label)}<div class="gwhy">${esc(r.reason || (r.gap ? 'no close captured yet' : 'close captured'))}</div></td>
         <td class="px">${r.price ?? '—'} / ${r.priceOpp ?? '—'}</td>
         <td><span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
-          class="gc" placeholder="close" value="${r.close ?? ''}"
-          ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span></td>
+          class="gc" placeholder="close" value="${r.close ?? ''}" ${r.locked ? 'disabled' : ''}
+          ><button type="button" class="sgn" aria-label="Flip the sign" ${r.locked ? 'disabled' : ''}>±</button></span></td>
         <td><span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
           class="go" placeholder="${r.assumedOpp != null ? 'auto '+fmtPrice(r.assumedOpp) : 'other'}" value="${r.closeOpp ?? ''}"
-          ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
-          ${r.oppSource === 'assumed' ? '<div class="gwhy">assumed at standard juice</div>' : ''}</td>
-        <td><button class="btn ghost sm gsave">Save</button></td></tr>`).join('')
+          ${r.locked ? 'disabled' : ''}
+          ><button type="button" class="sgn" aria-label="Flip the sign" ${r.locked ? 'disabled' : ''}>±</button></span>
+          ${r.oppSource === 'assumed' ? '<div class="gwhy">assumed at standard juice</div>' : ''}
+          ${r.locked ? '<div class="gwhy">captured at kickoff — not editable</div>' : ''}</td>
+        <td><input type="number" step="0.01" class="gclv clvin" placeholder="clv pts" value="${fmtClv(r.clvPts)}">
+          ${r.clvSource === 'manual' ? '<div class="gwhy">set by hand</div>' : ''}</td>
+        <td><button class="btn ghost sm gsave">Save</button><div class="gwhy gst"></div></td></tr>`).join('')
     + `</tbody></table></div>`;
+
+  body.querySelectorAll('.sgn').forEach(b=>{
+    b.onclick = ()=>{
+      const i = b.previousElementSibling;
+      if(!i || i.disabled) return;
+      const v = i.value.trim();
+      i.value = v.startsWith('-') ? v.slice(1) : (v ? '-'+v.replace(/^\+/,'') : '-');
+      i.focus();
+    };
+  });
 
   body.querySelectorAll('.gsave').forEach(btn=>{
     btn.onclick = async ()=>{
       const tr = btn.closest('tr'), e = document.getElementById('gapErr');
-      e.className='err'; e.textContent='';
-      const close = tr.querySelector('.gc').value.trim(), opp = tr.querySelector('.go').value.trim();
-      /* ⚠️ The other side is now OPTIONAL. Leave it blank and the server assumes it at a
-         standard -110/-110 hold and stamps it "assumed", which is weaker evidence than a
-         number read off the slip but far better than the old behaviour: refusing the save
-         and leaving the leg permanently off the chart. Giving only the OTHER side is still
-         refused — the assumption runs from the close outwards, not backwards. */
+      const st = tr.querySelector('.gst');
+      e.className='err'; e.textContent=''; if(st){ st.className='gwhy gst'; st.textContent=''; }
+      const say = msg => { if(st) st.textContent = msg; e.textContent = msg; };
+      const cIn = tr.querySelector('.gc'), oIn = tr.querySelector('.go'), vIn = tr.querySelector('.gclv');
+      const close = cIn.disabled ? '' : cIn.value.trim();
+      const opp   = oIn.disabled ? '' : oIn.value.trim();
+      const clvRaw = vIn.value.trim();
+
+      /* ⚠️ An empty CLV box is a CLEAR, not a no-op — it is pre-filled from the stored
+         override, so emptying it says "go back to the close". Same rule the grade card
+         follows; the two boxes must not disagree about what blank means. */
+      const had = vIn.defaultValue.trim() !== '';
+      const sendClv = clvRaw !== '' || had;
+      let clvPts = null;
+      if(clvRaw !== ''){
+        clvPts = Number(clvRaw);
+        if(!Number.isFinite(clvPts)){ say('CLV needs a number in points, like 0 or -1.75.'); return; }
+        if(Math.abs(clvPts) > 100){ say(`A CLV of ${clvPts} points is not a price move — it is a typo.`); return; }
+      }
       if(close==='' && opp!==''){
-        e.textContent = 'Enter the closing price you took. The other side can be left blank and will be assumed at standard juice.';
+        say('Enter the closing price you took. The other side can be left blank and will be assumed at standard juice.');
         return;
       }
-      // ⚠️ The boxes are text, so a typo reaches here as a string. Refuse it out loud —
-      // coercing it to null would look identical to clearing the row on purpose.
-      if(close!=='' && !Number.isFinite(priceNum(close))){
-        e.textContent = 'The closing price needs a whole American price, like -175.';
-        return;
-      }
-      if(opp!=='' && !Number.isFinite(priceNum(opp))){
-        e.textContent = 'The other side needs a whole American price, like +150 — or leave it blank to assume standard juice.';
-        return;
-      }
+      if(close!=='' && !Number.isFinite(priceNum(close))){ say('The closing price needs a whole American price, like -175.'); return; }
+      if(opp!=='' && !Number.isFinite(priceNum(opp))){ say('The other side needs a whole American price, like +150 — or leave it blank.'); return; }
+      if(close==='' && !sendClv){ say('Nothing filled in to save.'); return; }
+
+      const payload = { league: LID, row: tr.dataset.row,
+        close: close===''?null:priceNum(close), closeOpp: opp===''?null:priceNum(opp) };
+      if(sendClv) payload.clvPts = clvPts;
+
       btn.disabled = true;
       try{
-        await wPost('/bozo/close', { league: LID, row: tr.dataset.row,
-          close: close===''?null:priceNum(close), closeOpp: opp===''?null:priceNum(opp) });
+        await wPost('/bozo/close', payload);
+        if(st){ st.className='gwhy ok'; st.textContent='Saved.'; }
+        CLVSUM.data = null;
         await paintGaps();
-        // The number a manager just supplied belongs in the summary immediately — a
-        // stale rollup above a fresh gap list is the same as a wrong one.
         await paintClvSummary(true);
         await refresh();
-      }catch(err){ e.textContent = err.message; btn.disabled = false; }
+      }catch(err){ say(err.message); btn.disabled = false; }
     };
   });
 }
