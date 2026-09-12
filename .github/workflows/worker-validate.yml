@@ -45,4 +45,5 @@ jobs:
       - run: node work/test-bozo-autograde.mjs
       - run: node work/test-bozo-sim.mjs
       - run: node work/test-bozo-gradecard.mjs
+      - run: node work/test-bozo-clv-summary.mjs
       - run: node tools/validate-data.js

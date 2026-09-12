@@ -3974,8 +3974,17 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
     <!-- ⚠️ Reaches the LEDGER, not this week's board. The grade card only ever shows the
          current week, so without this a close the capture missed in week 3 becomes
-         unfillable the moment week 4 opens. -->
-    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">Missing closing prices</h3>
+         unfillable the moment week 4 opens.
+
+         ⚠️ IT NAMES THE WHOLE ROSTER, not only the people with a problem. This section
+         used to be the gap list and nothing else, so a league of eight showed however
+         many members happened to have an unfilled close — and a member who is absent
+         because everything of theirs is captured looks exactly like a member the page
+         lost. Every name is here, every week, whether or not there is anything to fix. -->
+    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">CLV summary</h3>
+    <p class="tm" style="margin:0 0 8px">Where every member of this league stands on closing line value, across the whole season &mdash; and how much of each number rests on a closing price somebody actually captured. Nobody is filtered out: a member with nothing graded yet says so rather than vanishing.</p>
+    <div id="clvSumBody"></div>
+    <h4 style="font:700 11px/1 ui-monospace,monospace;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-3);margin:18px 0 4px">Missing closing prices</h4>
     <p class="note" id="gapNote" style="margin:0 0 8px"></p>
     <div id="gapBody"></div>
     <div class="err" id="gapErr"></div>
@@ -5805,6 +5814,10 @@ function render(){
   document.getElementById('sheetBar').style.display = 'none';
   document.getElementById('leagueCard').style.display = v==='league' ? '' : 'none';
   if(v==='league'){ paintLeague();
+    /* The roster rollup is PUBLIC data in a manager-only card: /bozo/clv is the same
+       feed the season chart runs on. Everyone who can open this page sees where the
+       league stands; only the manager gets the boxes that write. */
+    paintClvSummary();
     // Manager-only, and it reaches every week rather than just this one.
     if(canManage(league()||{})){ paintGaps(); paintGod(); }
     else {
@@ -8255,6 +8268,92 @@ document.addEventListener('click', async ev=>{
   }catch(e){ godErr(e.message); }
 });
 
+/* ---------------- CLV summary: the whole roster, every week ----------------
+   ⚠️ THIS EXISTS BECAUSE A FILTERED LIST CANNOT BE READ. The section below it lists the
+   legs still missing a close, which is the right shape for the job of filling them and
+   the wrong shape for the question a manager actually opens this page with: where does
+   my league stand on CLV? A league of eight that shows three names has not told you the
+   other five are fine — it has told you nothing about them, and "absent" and "broken for
+   him" look identical. So this table starts from the ROSTER, not from the ledger: every
+   member gets a row whether they have legs, gaps, both or neither.
+
+   ⚠️ IT SHOWS WHAT THE NUMBER RESTS ON. A CLV averaged over legs whose other side was
+   assumed at standard juice, or typed in by the manager, is weaker evidence than one
+   averaged over captured two-sided closes, and the two must never read the same. The
+   count of each is on the row.
+
+   Numbers are derived here exactly as the chart derives them — clvPair() is the one
+   definition — so this table and the chart can never disagree about a leg. */
+const CLVSUM = { lid: null, data: null };
+async function clvSummaryData(force){
+  if(!force && CLVSUM.lid === LID && CLVSUM.data) return CLVSUM.data;
+  const j = await wGet('/bozo/clv?league='+encodeURIComponent(LID));
+  CLVSUM.lid = LID; CLVSUM.data = j;
+  return j;
+}
+
+/* One row per member. `roster` leads so a member with zero legs still gets a row; any
+   ledger name the roster does not carry (someone who has since left) is appended rather
+   than dropped, because their legs are still in the season's numbers. */
+function clvSummaryRows(legs, roster){
+  const names = [];
+  for(const n of [...(roster||[]), ...legs.map(l=>l.player)])
+    if(n != null && n !== '' && !names.includes(n)) names.push(n);
+  return names.map(p=>{
+    const mine    = legs.filter(l=>l.player===p);
+    const graded  = mine.filter(l=>l.result==='win' || l.result==='loss');
+    const charted = graded.filter(l=>clvPair(l) != null);
+    const pts     = charted.map(l=>clvPair(l).clv*100);
+    return {
+      player: p,
+      legs: mine.length,
+      graded: graded.length,
+      charted: charted.length,
+      // A graded leg with no usable CLV is off the chart and out of n. That is the gap
+      // the section below fills, counted per person instead of per leg.
+      missing: graded.length - charted.length,
+      assumed: charted.filter(l=>clvOppAssumed(l)).length,
+      manual:  charted.filter(l=>clvPair(l).manual).length,
+      wins: graded.filter(l=>l.result==='win').length,
+      avg: pts.length ? pts.reduce((a,b)=>a+b,0)/pts.length : null,
+    };
+  }).sort((a,b)=>
+    (a.avg==null) - (b.avg==null)                       // anyone with a number first
+    || (b.avg||0) - (a.avg||0)
+    || String(a.player).localeCompare(String(b.player)));
+}
+
+function clvSummaryHtml(rows){
+  if(!rows.length) return `<p class="tm">Nobody is on this roster yet.</p>`;
+  const pts = n => (n>0?'+':'') + n.toFixed(1);
+  return `<div class="tscroll"><table class="bz clvsum"><tbody>
+    <tr><th>Who</th><th>Legs</th><th>On the chart</th><th>No usable close</th><th>Avg CLV</th></tr>`
+    + rows.map(r=>`<tr data-sum="${esc(r.player)}">
+        <td>${esc(teamOf(r.player))}</td>
+        <td class="px">${r.legs}${r.graded !== r.legs ? `<div class="gwhy">${r.graded} graded</div>` : ''}</td>
+        <td class="px">${r.charted}`
+          + (r.assumed ? `<div class="gwhy">${r.assumed} on an assumed other side</div>` : '')
+          + (r.manual  ? `<div class="gwhy">${r.manual} from a manager's CLV</div>` : '')
+        + `</td>
+        <td class="px">${r.missing}</td>
+        <td class="px">${r.avg==null ? '&mdash;' : pts(r.avg)+' pts'}`
+          + (r.graded===0
+              ? `<div class="gwhy">nothing graded yet</div>`
+              : (r.charted===0 ? `<div class="gwhy">no leg has a usable close</div>` : ''))
+        + `</td>
+      </tr>`).join('')
+    + `</tbody></table></div>`;
+}
+
+async function paintClvSummary(force){
+  const body = document.getElementById('clvSumBody');
+  if(!body) return;
+  let j;
+  try{ j = await clvSummaryData(force); }
+  catch(e){ body.innerHTML = `<p class="tm">Could not read the ledger: ${esc(e.message)}</p>`; return; }
+  body.innerHTML = clvSummaryHtml(clvSummaryRows(j.legs||[], stateMembers()));
+}
+
 /* ---------------- missing closing prices, across the whole season ----------------
    The grade card can only see the current week — bozoNext clears /results when the week
    advances. This reads the LEDGER, which keeps every row forever, so a gap from any week
@@ -8328,6 +8427,9 @@ async function paintGaps(){
         await wPost('/bozo/close', { league: LID, row: tr.dataset.row,
           close: close===''?null:priceNum(close), closeOpp: opp===''?null:priceNum(opp) });
         await paintGaps();
+        // The number a manager just supplied belongs in the summary immediately — a
+        // stale rollup above a fresh gap list is the same as a wrong one.
+        await paintClvSummary(true);
         await refresh();
       }catch(err){ e.textContent = err.message; btn.disabled = false; }
     };
