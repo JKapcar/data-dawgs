@@ -4689,6 +4689,58 @@ function beatDeficit(mkt, dir, line, margin, total, sd){
   return -legEdge(mkt, dir, line, margin, total) / sd;
 }
 
+/* ⚠️ ONE WORST-BEAT RULE, because three copies of it disagreed. decide() — the grader —
+   floored a zero on a market where zero is possible at 999, defaulted an unscoreable leg
+   to `beat = 0`, and compared `r.actual === 0` strictly. leverStandings had the floor but
+   the same strict compare. simulate() had NEITHER, so the odds on screen ranked a prop
+   that finished 0 at about half a standard deviation while the grader ranked it the worst
+   possible beat in the pool. The board said 17% and the grader would have said certain.
+
+   Two things are fixed by stating it once:
+
+   ⚠️ AN UNSCOREABLE LEG IS null, NEVER 0. `beat = 0` is the SMALLEST deficit, so a leg
+   with no actual — or a market with no SD — was silently ranked the safest in the pool
+   and eliminated by a lever that could not see it. That is the same bug that made the CLV
+   lever rule six unplayed legs safe, sitting in the beat lever of the code that decides
+   for money, and the carry-forward guard cannot catch it because 0 is a value.
+
+   ⚠️ THE ZERO CHECK COERCES. `r.actual === 0` is false for the string "0", which is what a
+   text box stores, so the floor silently did not apply to the exact leg it was written
+   for. Whether it fires should not depend on which control last wrote the number. */
+function beatOf(x, r, sd){
+  if(!x) return null;
+  /* ⚠️ A BINARY LEG HAS NO MARGIN, AND UNDER STANDARD THE LEVER PASSES. Verbatim from
+     data/bozo-rules.json: "The Worst Beat lever has no margin to work with on a prop or
+     an 'other' leg — they are binary. Under Bozo Royale that would be elimination-dodging,
+     so a binary leg is given a margin from its own de-vigged closing probability. Under
+     Standard the lever simply passes."
+
+     decide() floored such a leg at 999 — the WORST possible beat — which is the opposite
+     of passing and made the prop-holder the automatic bozo any week this lever was
+     reached. */
+  const binary = x.mkt === 'prop' || x.mkt === 'other';
+  if(binary){
+    if(!isRoyale()) return null;
+    const p = devigP(r && r.close, r && r.closeOpp)
+           ?? devigP(x.price, x.entryPriceOpp)
+           ?? imp(x.price);
+    return (p > 0 && p < 1) ? invNorm(p) : null;
+  }
+  if(!r || r.actual == null) return null;
+  const a = Number(r.actual);
+  // ⚠️ Coerced. A text box stores the string "0", and a strict compare silently skipped
+  // this branch for the exact legs it was written for.
+  if(!Number.isFinite(a)) return null;
+  /* ⚠️ FROM ITS OWN NUMBER, NOT FROM THE PRICE-SHIFTED EXPECTATION. The canonical wording
+     is "finished furthest under its number, in standard deviations", and the Worker says
+     why: folding the price in made the same miss score worse for a -400 favourite than a
+     -110, so Worst Beat and Shortest Odds measured overlapping things — and a randomised
+     hierarchy is only interesting while its levers are independent. */
+  return beatDeficit(x.mkt, dirOf(x), x.mkt==='ml' ? 0 : x.line,
+                     x.mkt==='total' ? null : a, x.mkt==='total' ? a : null,
+                     sd == null ? sdOf(x) : sd);
+}
+
 /* The leg exactly as the board will print it. ONE definition, used by the live preview
    and by the submit — if these were two copies, the preview would eventually reassure
    someone about a leg the board then displays differently.
@@ -6644,6 +6696,17 @@ function simulate(live, levers){
     return {
       sd: sdOf(x), base: x.mkt==='ml' ? 0 : x.line, exp: expected(x),
       under: dirOf(x)==='under', odds: imp(x.price), last: x.ts||0,
+      /* ⚠️ The zero floor the grader applies. Without it the odds ranked a prop that
+         finished 0 at about half an SD while decide() ranked it 999 — the worst possible
+         beat — so the board and the verdict disagreed about the same leg by a factor of
+         two thousand. Only a KNOWN zero floors; a drawn actual is continuous and never
+         lands on it. */
+      /* Binary under Standard: the Worst Beat lever passes on it, so it is carried
+         forward by the cascade instead of being ranked at all. */
+      binary: (x.mkt==='prop' || x.mkt==='other') && !isRoyale(),
+      royaleBeat: ((x.mkt==='prop' || x.mkt==='other') && isRoyale())
+        ? (()=>{ const p = devigP(x.price, x.entryPriceOpp) ?? imp(x.price);
+                 return (p>0 && p<1) ? invNorm(p) : null; })() : null,
       clv: clvDeltaOf(x, r),
       // 'won' | 'lost' | 'void' | null. A push voids the leg: it cannot be the loss that
       // makes you the bozo, and it does not stop the rest of the ticket cashing.
@@ -6694,8 +6757,14 @@ function simulate(live, levers){
       }else{
         actual = l.exp + l.sd*gauss();
       }
-      // the Bozo Index, exactly as decide() computes it
-      idx[i] = (l.under ? (actual-l.exp) : (l.exp-actual)) / l.sd;
+      /* The Bozo Index, exactly as beatOf computes it: how far under ITS OWN NUMBER the
+         leg finished, in SDs. This measured the gap to expected(), which folds the price
+         in — so the same miss scored worse for a -400 favourite than a -110, and Worst
+         Beat quietly duplicated Shortest Odds. NaN for a leg the lever passes on; the
+         cascade below carries those forward rather than ranking them safest. */
+      idx[i] = l.binary
+        ? (l.royaleBeat == null ? NaN : l.royaleBeat)
+        : (l.under ? (actual-l.base) : (l.base-actual)) / l.sd;
       // A settled leg's outcome is a fact; only an unsettled one is decided by the draw.
       if(l.settled === 'won' || l.settled === 'void') win[i]++;
       else if(l.settled === 'lost') lost.push(i);
@@ -6744,8 +6813,17 @@ function simulate(live, levers){
         }
       }else{
         const f = k==='odds' ? (i=>L[i].odds) : k==='beat' ? (i=>idx[i]) : (i=>L[i].last);
-        let mx=-Infinity; for(const i of pool){ const v=f(i); if(v>mx) mx=v; }
-        surv=pool.filter(i=>f(i)===mx);
+        /* ⚠️ Same carry-forward rule as CLV, for the same reason. A market with no SD
+           makes the Bozo Index NaN, and NaN loses every comparison silently — the leg is
+           ranked safest and eliminated by a lever that could not score it. */
+        const scored = pool.filter(i=>Number.isFinite(f(i)));
+        const unscored = pool.filter(i=>!Number.isFinite(f(i)));
+        if(scored.length){
+          let mx=-Infinity; for(const i of scored){ const v=f(i); if(v>mx) mx=v; }
+          surv=scored.filter(i=>f(i)===mx).concat(unscored);
+        }else{
+          surv=pool.slice();
+        }
       }
       if(surv.length<pool.length || surv.length===1){ pool=surv; why=li; }
       if(pool.length===1) break;
@@ -7129,15 +7207,7 @@ function leverStandings(live){
   const d = live.map((x,i)=>{
     const r = legRow(x);
     const pE = devigP(x.price, x.entryPriceOpp), pC = devigP(r.close, r.closeOpp);
-    let beat = null;
-    if(r.actual != null){
-      const sd = sdOf(x);
-      // A zero where zero is possible takes the floor rather than pretending a Bernoulli
-      // outcome sits on the same scale as a point margin — same rule decide() applies.
-      if(r.actual===0 && (x.mkt==='prop'||x.mkt==='total'||x.mkt==='other') && dirOf(x)==='over') beat = 999;
-      else beat = beatDeficit(x.mkt, dirOf(x), x.mkt==='ml'?0:x.line,
-                              x.mkt==='total'?null:r.actual, x.mkt==='total'?r.actual:null, sd);
-    }
+    const beat = beatOf(x, r);
     // ⚠️ pE is the ENTRY de-vig, and it exists here only to make CLV — the Shortest odds
     // column ranks and prints the raw price. Do not route it back to that column.
     return { i, raw: imp(x.price), ts: x.ts||0, beat,
@@ -7900,14 +7970,9 @@ async function decide(){
   const M={};
   pool.forEach(p=>{
     const x=picks[p], r=results[p]||{}, sd=sdOf(x);
-    let beat=0;
-    if(r.actual!=null){
-      // A zero on a market where zero is possible takes the floor rather than
-      // pretending a Bernoulli outcome sits on the same scale as a point margin.
-      if(r.actual===0 && (x.mkt==='prop'||x.mkt==='total'||x.mkt==='other') && dirOf(x)==='over') beat=999;
-      else beat = beatDeficit(x.mkt, dirOf(x), x.mkt==='ml'?0:x.line,
-                              x.mkt==='total'?null:r.actual, x.mkt==='total'?r.actual:null, sd) ?? 0;
-    }
+    /* ⚠️ null, not 0. See beatOf: a leg this lever cannot score is carried forward by the
+       cascade below, and `?? 0` made it the safest leg in the pool instead. */
+    const beat = beatOf(x, r, sd);
     /* ⚠️ CLV IS NULL WHEN THERE IS NO CLOSE, AND NULL MEANS UNMEASURABLE.
        This used to read `r.close != null ? r.close : x.price`, which quietly scored every
        leg with no captured close as EXACTLY ZERO movement — a fabricated reading, not a

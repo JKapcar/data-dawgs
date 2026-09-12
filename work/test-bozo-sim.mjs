@@ -32,7 +32,8 @@ function grab(startMarker, endMarker) {
 /* ⚠️ legRow is lifted in rather than stubbed. It is how the simulation finds a leg's
    results row, and stubbing it would let the suite keep passing if that lookup broke —
    which is exactly the failure that put a hand-set CLV on one screen and nowhere else. */
-const src = grab("function legRow(x){", "/* ⚠️ A HAND-SET CLV OUTRANKS")
+const src = grab("function beatDeficit(mkt, dir, line, margin, total, sd){", "\n/* The leg exactly as the board")
+  + "\n" + grab("function legRow(x){", "/* ⚠️ A HAND-SET CLV OUTRANKS")
   + "\n" + grab("function clvDeltaOf(x, r){", "\nconst amer = d =>")
   + "\n" + grab("function gauss(){", "const devig = px")
   + "\n" + grab("function simulate(live, levers){", "\n// One definition of")
@@ -52,10 +53,19 @@ const ctx = vm.createContext({
     return ia / (ia + ib);
   },
   dirOf: x => ((x && (x.dir || x.side)) === "under" ? "under" : "over"),
+  legEdge: () => 0,
   clvImp: o => (o < 0 ? -o / (-o + 100) : 100 / (o + 100)),
   clvAm: pr => (pr >= 0.5 ? Math.round((-100 * pr) / (1 - pr)) : Math.round((100 * (1 - pr)) / pr)),
   CLV_OVERROUND: 1.047619,
   sdOf: () => 13.5,
+  isRoyale: () => false,
+  invNorm: p => { const a=[-39.69683028665376,220.9460984245205,-275.9285104469687,138.357751867269,-30.66479806614716,2.506628277459239],
+    b=[-54.47609879822406,161.5858368580409,-155.6989798598866,66.80131188771972,-13.28068155288572],
+    c=[-0.007784894002430293,-0.3223964580411365,-2.400758277161838,-2.549732539343734,4.374664141464968,2.938163982698783],
+    d=[0.007784695709041462,0.3224671290700398,2.445134137142996,3.754408661907416]; const pl=0.02425; let q,r;
+    if(p<pl){q=Math.sqrt(-2*Math.log(p));return(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+    if(p>1-pl){q=Math.sqrt(-2*Math.log(1-p));return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
+    q=p-0.5;r=q*q;return(((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1); },
   expected: x => x.exp,
   S: { results: {}, picks: {} },
 });
@@ -271,6 +281,67 @@ ok(clvDeltaOf({ price: -150, entryPriceOpp: 130 }, { clvPts: 1, close: -200, clo
      "and no lever claims to have named it — the cascade passed, it did not coin-flip");
 
   ctx.S.results = {}; ctx.S.picks = {}; delete ctx.S.order;
+}
+
+/* ⚠️ THE CANONICAL WORST-BEAT RULE, in the simulation and the grader alike.
+ * data/bozo-rules.json: "The Worst Beat lever has no margin to work with on a prop or an
+ * 'other' leg — they are binary... Under Standard the lever simply passes."
+ *
+ * Three copies disagreed about that sentence. decide() floored such a leg at 999 — the
+ * WORST possible beat, the exact opposite of passing, which made the prop-holder the
+ * automatic bozo any week this lever was reached. simulate() ranked it off a margin it
+ * does not have. Only the Royale path had it right, and only for Royale.
+ */
+{
+  ctx.S.results = { prop: { result: "lost", actual: 0 }, side: { result: "lost", actual: -20 } };
+  ctx.S.picks = { prop: {}, side: {} };
+  const legs2 = [
+    { p: "prop", price: -145, ts: 1, mkt: "other", exp: 0, base: 0.5, line: 0.5 },
+    { p: "side", price: -150, entryPriceOpp: 130, ts: 2, mkt: "ml", exp: 0, line: 0 },
+  ];
+  ctx.S.order = [1, 0, 2, 3];                  // Worst Beat first
+  const r = simulate(legs2.map(x => ({ ...x })), [0, 1, 2, 3]);
+  ok(r.bozo[0] < 1,
+     "a binary leg is not floored at the worst possible beat — the lever passes on it");
+  ok(r.bozo[1] > 0,
+     "the leg the lever CAN rank is ranked, and can wear it");
+
+  ctx.S.results = {}; ctx.S.picks = {}; delete ctx.S.order;
+}
+
+/* ⚠️ AND THE MARGIN IS MEASURED FROM THE LEG'S OWN NUMBER, not from the price-shifted
+ * expectation. Folding the price in made the same miss score worse for a heavy favourite
+ * than for a coin flip, so Worst Beat duplicated Shortest Odds — and a randomised
+ * hierarchy is only interesting while its levers are independent.
+ *
+ * Asserted on the formula rather than on bozo odds, deliberately: a leg's price sets BOTH
+ * how often it loses and (under the old rule) how far under it scores, so any behavioural
+ * comparison entangles the two and can pass while the bug is live. The property is simply
+ * that the index does not read the expectation at all. */
+{
+  const simSrc = page.slice(page.indexOf("function simulate(live, levers){"),
+                            page.indexOf("\n// One definition of"));
+  const idxLine = simSrc.slice(simSrc.indexOf("idx[i] ="), simSrc.indexOf(";", simSrc.indexOf("idx[i] =")));
+  ok(!/l\.exp/.test(idxLine),
+     "the Bozo Index is measured from the leg's own number, never from the price-shifted expectation");
+  ok(/l\.base/.test(idxLine), "...which is l.base — the line the leg was taken at");
+  ok(/l\.binary/.test(idxLine), "and a binary leg is left unscored for the cascade to carry forward");
+}
+
+/* ---- the grader stopped scoring an unmeasurable leg as the safest ---- */
+{
+  const code = page.replace(/\/\*[\s\S]*?\*\//g, "");
+  ok(!/beatDeficit\([^)]*\) \?\? 0/.test(code) && !/let beat=0;/.test(code),
+     "decide() no longer defaults an unscoreable beat to 0, which ranked it safest");
+  ok(!/beat=999/.test(code) && !/return 999;/.test(code),
+     "and nothing floors a binary leg at the worst possible beat any more");
+  ok(/const beat = beatOf\(x, r, sd\);/.test(code),
+     "it reads the one shared rule instead of its own copy");
+  ok((code.match(/function beatOf\(/g) || []).length === 1
+     && (code.match(/=== 'over'\)\n    return 999;|return 999;/g) || []).length <= 2,
+     "there is exactly one definition of the worst-beat rule");
+  ok(/const scored = pool\.filter\(i=>Number\.isFinite\(f\(i\)\)\);/.test(code),
+     "and a leg with no SD is carried forward by the sim rather than losing every comparison as NaN");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
