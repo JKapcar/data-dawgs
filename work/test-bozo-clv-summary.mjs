@@ -92,9 +92,16 @@ ok(by("Roger").graded === 1 && by("Roger").charted === 0 && by("Roger").missing 
 ok(by("Roger").avg === null && by("Tony").avg === null,
    "no CLV is invented for a player with nothing chartable");
 
-/* An ungraded leg is not a gap — it has not had its chance yet. */
-ok(by("BUTTS").legs === 1 && by("BUTTS").graded === 0 && by("BUTTS").missing === 0,
-   "an ungraded leg is not counted as a missing close");
+/* ⚠️ THE COLUMN COUNTS EVERY LEG WITHOUT A USABLE CLOSE, graded or not. It used to be
+   tied to `graded`, and the effect on a real board was that the whole column read 0 for
+   everybody — not because the closes were there, but because the week had not been graded
+   yet. A zero in the one column that exists to report a non-zero problem is worse than no
+   column. A leg with no usable close is a gap the moment it is filed; grading decides
+   whether it reaches the CHART, which is what `charted` reports. */
+ok(by("BUTTS").legs === 1 && by("BUTTS").graded === 0 && by("BUTTS").missing === 1,
+   "an ungraded leg with no close is still counted as missing a close");
+ok(by("Kap").missing === 0,
+   "a leg whose close is usable is not counted as missing, graded or not");
 
 /* ⚠️ A name in the ledger that the roster no longer carries is NOT a member, so it is
    not on the table — listing them as one overstates the league. It is also not deleted:
