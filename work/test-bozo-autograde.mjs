@@ -150,20 +150,24 @@ ok(/settledN\s*\n?\s*\? live\.length \+ ' of ' \+ expected \+ ' in · ' \+ settl
 
 /* ---- a leg saves on its own, and a hand-set result sticks ---- */
 
-/* ⚠️ THE ASK THIS PINS. The grade card's only commit used to be the whole-week two-phase
-   confirm, which refuses while anything is pending — so a manager could pick "Lost" for a
-   prop on Thursday and had nothing to press until Monday. Every leg now saves itself. */
-ok(/async function saveLeg\(p, btn\)/.test(pageCode) && /data-save=/.test(pageCode),
-   "every leg on the grade card has its own Save");
-ok(/path:`results\/\$\{key\}\/result`, value:result \}/.test(pageCode)
-   && /path:`results\/\$\{key\}\/won`/.test(pageCode),
+/* ⚠️ THE ASK THIS PINS, now in Manager Override. The only commit used to be the
+   whole-week two-phase confirm, which refuses while anything is pending — so a manager
+   could pick "Lost" for a prop on Thursday and had nothing to press until Monday. Every
+   leg settles on its own, in the one panel that settles a week. */
+ok(/class="btn ghost sm godr"/.test(pageCode) && /class="btn ghost sm gdsave"/.test(pageCode),
+   "every leg has its own result buttons and its own Save");
+ok(/path: `results\/\$\{encodeURIComponent\(k\)\}\/result`/.test(pageCode)
+   && /path: `results\/\$\{encodeURIComponent\(k\)\}\/won`/.test(pageCode),
    "a per-leg save writes result and won together");
-ok(/path:`results\/\$\{key\}\/resultSource`, value:'manual'/.test(pageCode),
+/* ⚠️ Without the stamp the schedule feed re-grades the leg on the next tick and the
+   manager's correction undoes itself minutes later. The panel that replaced the grade
+   card shipped without it once; this is why it cannot ship without it again. */
+ok(/path: `results\/\$\{encodeURIComponent\(k\)\}\/resultSource`, value: v \? 'manual' : null/.test(pageCode),
    "a per-leg save stamps the result as set by hand");
-ok(/ov=clvAssumedOpp\(cv\); assumed=true;/.test(pageCode)
+ok(/ov = clvAssumedOpp\(cv\); assumed = true;/.test(pageCode)
    && /closeOppSource`, value: assumed \? 'assumed' : 'manual'/.test(pageCode),
-   "a lone close on the grade card gets its other side assumed and stamped as such");
-ok(/await godWrite\(edits\);[\s\S]{0,120}await refresh\(\);/.test(pageCode),
+   "a lone close gets its other side assumed and stamped as such");
+ok(/await godWrite\([\s\S]{0,400}await refresh\(\); paintGod\(\);/.test(pageCode),
    "the save goes through the audited override route and repaints");
 ok(/decide\(\)[\s\S]*querySelectorAll\('\[data-w\]'\)/.test(pageCode),
    "the week-level grade still reads the same row attributes, so the two paths agree");
@@ -208,14 +212,23 @@ ok(/const clv = clvDeltaOf\(x, r\);/.test(pageCode),
 ok(/:\$\{r\.clvPts\?\?''\}/.test(pageCode),
    "the sim cache key notices a CLV override, so the odds re-run when one is set");
 
-/* The box saves with the rest of the row, and an empty box is a CLEAR — otherwise an
-   override could be set from the card and never removed from it. */
-ok(/data-clv=/.test(pageCode) && /path:`results\/\$\{key\}\/clvPts`, value:v/.test(pageCode),
-   "the grade card has a CLV box that saves with the leg");
-ok(/path:`results\/\$\{key\}\/clvPts`, value:null/.test(pageCode),
-   "emptying the box clears the override rather than doing nothing");
-ok(/clvSource`, value:'manual'/.test(pageCode),
-   "a hand-set CLV is stamped apart from one derived from a capture");
+/* ⚠️ THE CLV BOX IS GONE ON PURPOSE, and that is the point of this block now. A typed
+   CLV was a second answer to a question the prices already settle, and keeping both is
+   what let three screens disagree about one leg. The panel types a CLOSE; clvDeltaOf
+   derives the CLV from it, and a missing opposite side is assumed at standard juice so a
+   self-priced prop needs one number rather than a number nobody could supply.
+
+   clvPts itself is NOT removed: rows already carrying one still read correctly
+   everywhere (clvDeltaOf checks it first), and the Worker's write path stays tested
+   above. What is removed is the second place to enter one. */
+ok(!/data-clv=/.test(pageCode) && !/class="gclv/.test(pageCode),
+   "no CLV input survives on the page — the number is derived, not entered");
+ok(/if\(r\.clvPts != null && Number\.isFinite\(\+r\.clvPts\)\) return \+r\.clvPts\/100;/.test(pageCode),
+   "a row that already carries a hand-set CLV still outranks the derived one");
+ok(/const other = b == null \? clvAssumedOpp\(a\) : b;/.test(pageCode),
+   "a missing opposite side is assumed at standard juice, so one close is enough");
+ok(/other side assumed at standard juice/.test(pageCode),
+   "and the panel says so on the row, rather than passing it off as two captured sides");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
