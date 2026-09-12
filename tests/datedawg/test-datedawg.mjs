@@ -172,12 +172,19 @@ t('classify inbound',DD.classify({match:[]}),'inbound');
 t('classify outbound',DD.classify({like:[]}),'outbound');
 
 console.log('\n=== snapshot hygiene ===');
-const snap=JSON.stringify(DD.snapshot(R,M));
+const S0=DD.snapshot(R,M);const snap=JSON.stringify(S0);
 ok('no message bodies',!/synthetic message/.test(snap));
 ok('no comment text',!/synthetic comment/.test(snap));
 ok('no email',!/@/.test(snap));
 ok('snapshot urls are benchmark provenance only',
-   (snap.match(/https?:\/\//g)||[]).length<=1&&/swipestats\.io/.test(snap));
+   (snap.match(/https?:\/\/[^"]+/g)||[]).every(u=>/swipestats\.io/.test(u))&&/swipestats\.io/.test(snap));
+ok('snapshot carries demand with numerator, weeks, band and modelled flag',
+   !!S0.demand&&S0.demand.n>=DD.MIN_N&&S0.demand.weeks>=4&&S0.demand.rank.band.length===2&&S0.demand.rank.modelled===true);
+ok('demand rank monotone in likes per week',DD.demandRank(2,'men').p<DD.demandRank(8,'men').p&&DD.demandRank(8,'men').p<DD.demandRank(16,'men').p);
+ok('demand band brackets the point estimate',(()=>{const r=DD.demandRank(16,'men');return r.band[0]<r.p&&r.p<r.band[1];})());
+ok('demand sigma reproduces the published top-10% share',Math.abs(1-DD.Phi(DD.Phinv(.9)-DD.DEMAND_BENCH.sigma)-.58)<1e-9);
+ok('demand refuses a women rank with a stated reason',DD.demandRank(16,'women').available===false&&/99\+/.test(DD.demandRank(16,'women').reason));
+ok('demand is per calendar week, not per active day',(()=>{const d=DD.demand(R,R.minT,R.maxT,'men');return Math.abs(d.weeks-(R.maxT-R.minT)/(7*864e5))<1e-9;})());
 ok('conversion pipes present for later phase',/conversion_pipes/.test(snap));
 const S=DD.snapshot(R,M,{subject:'subject-a',consent:'supplied for this project',consentAt:'2026-08-30'});
 ok('snapshot v3',S.datedawg_snapshot===3);

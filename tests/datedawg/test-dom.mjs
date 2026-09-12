@@ -78,18 +78,25 @@ const V=w.document.getElementById('verdict');
 const rankTo=Math.max(R.minT,R.maxT-w.DD.RESOLVE_DAYS*864e5);
 const rankFrom=Math.max(R.minT,rankTo-364*864e5);
 const rankM=w.DD.metrics(R,rankFrom);
+const rankD=w.DD.demand(R,R.maxT-364*864e5,R.maxT,'men'); // trailing year through the export date
 ok('verdict renders first',!!V&&out.firstElementChild===V);
 ok('arrival screen is removed once results exist',w.document.body.classList.contains('results-ready')&&w.getComputedStyle(w.document.getElementById('arrival')).display==='none');
 ok('verdict leads with a percentile',/^\s*\d{1,3}/.test(V.querySelector('.vnum').textContent));
-ok('verdict percentile matches its selected ranking window',Math.round((rankM.rankStd.band||rankM.rankStd.all).p)===parseInt(V.querySelector('.vnum').textContent,10));
+ok('verdict headline is the inbound-demand percentile for its ranking window',Math.round(rankD.rank.p)===parseInt(V.querySelector('.vnum').textContent,10));
+ok('verdict names inbound demand and labels it modelled',/INBOUND DEMAND/.test(V.textContent)&&/MODELLED/.test(V.textContent));
+ok('verdict shows the demand band from the 3-5 likes/week mean assumption',new RegExp(Math.round(rankD.rank.band[0])+'(?:st|nd|rd|th)\u2013'+Math.round(rankD.rank.band[1])+'(?:st|nd|rd|th)').test(V.textContent));
+ok('verdict states likes per week with numerator and weeks',new RegExp((Math.round(rankD.perWeek*10)/10).toFixed(1)+' INBOUND LIKES / WEEK \u00b7 '+rankD.n+' OVER').test(V.textContent));
+ok('verdict names the demand fit and its published anchor',/LOGNORMAL \u03c3 1\.48/.test(V.textContent)&&/TOP 10% = 58% OF LIKES/.test(V.textContent));
+const verdictMatchBack=()=>parseInt(V.querySelectorAll('.vmetric')[1].querySelector('b').textContent.replace(/^p/,''),10);
+ok('verdict still carries the outbound match-back rank as the secondary number',verdictMatchBack()===Math.round((rankM.rankStd.band||rankM.rankStd.all).p));
 ok('verdict names the age cohort',/AMONG MEN \d+–\d+/.test(V.textContent));
-ok('verdict states reciprocal acceptance',/RECIPROCAL ACCEPTANCE/.test(V.textContent));
+ok('verdict states reciprocal acceptance',/reciprocal acceptance/i.test(V.textContent));
 const ridgeD=V.querySelector('.vridge path').getAttribute('d');
 ok('ridge is derived from many density points',ridgeD.length>800&&ridgeD.split('L').length>100);
 const pinLeft=parseFloat(V.querySelector('.vpin').style.left);
-const rp=w.DD.ridgePath(rankM.rankStd.anchorsBand,1000,200);
-const pinWant=(Math.log(rankM.rankStd.rate)-rp.lo)/rp.span*100;
-ok('verdict pin uses the actual rate',Math.abs(pinLeft-pinWant)<0.2);
+const rp=w.DD.ridgePath(rankD.rank.anchors,1000,200);
+const pinWant=(Math.log(rankD.perWeek)-rp.lo)/rp.span*100;
+ok('verdict pin uses the actual likes-per-week',Math.abs(pinLeft-pinWant)<0.2);
 ok('verdict axes name published anchors',/MEDIAN ·/.test(V.textContent)&&/p90 ·/.test(V.textContent));
 ok('verdict carries all-men comparison',/ALL MEN/.test(V.textContent));
 ok('verdict carries heavy-day check',/HEAVY-DAY CHECK/.test(V.textContent));
@@ -120,17 +127,18 @@ ok('ranking panel has dashboard plus four independent time windows',out.querySel
 ok('ranking panel defaults to one year',out.querySelector('[data-rank-range="1y"]').classList.contains('on'));
 const shownRank=()=>parseInt(out.querySelector('.rank .big').textContent,10);
 const verdictRank=()=>parseInt(out.querySelector('.verdict .vnum').textContent,10);
-ok('verdict and detailed rank agree on the default window',verdictRank()===shownRank());
+const verdictMB=()=>parseInt(out.querySelectorAll('.verdict .vmetric')[1].querySelector('b').textContent.replace(/^p/,''),10);
+ok('verdict match-back and detailed rank agree on the default window',verdictMB()===shownRank());
 const dashboardRangeBeforeRank=out.querySelector('.range-readout').textContent;
 const oneYearRankDates=out.querySelector('.rankwindow .dates').textContent;
 out.querySelector('[data-rank-range="6m"]').click();
 await new Promise(r=>setTimeout(r,50));
 ok('six-month ranking recomputes its own dates',out.querySelector('[data-rank-range="6m"]').classList.contains('on')&&out.querySelector('.rankwindow .dates').textContent!==oneYearRankDates);
-ok('verdict and detailed rank agree after a period change',verdictRank()===shownRank()&&/PERIOD\s+6 MONTHS/i.test(out.querySelector('.verdict').textContent));
+ok('verdict match-back and detailed rank agree after a period change',verdictMB()===shownRank()&&/PERIOD\s+6 MONTHS/i.test(out.querySelector('.verdict').textContent));
 ok('ranking window does not change dashboard range',out.querySelector('.range-readout').textContent===dashboardRangeBeforeRank);
 out.querySelector('[data-rank-range="all"]').click();
 await new Promise(r=>setTimeout(r,50));
-ok('overall verdict and detailed rank use one answer',verdictRank()===shownRank()&&/PERIOD\s+OVERALL/i.test(out.querySelector('.verdict').textContent));
+ok('overall verdict match-back and detailed rank use one answer',verdictMB()===shownRank()&&/PERIOD\s+OVERALL/i.test(out.querySelector('.verdict').textContent));
 out.querySelector('[data-rank-range="1m"]').click();
 await new Promise(r=>setTimeout(r,50));
 ok('one-month ranking ends on latest scoreable date',out.querySelector('[data-rank-range="1m"]').classList.contains('on')&&/through the latest scoreable date/i.test(out.querySelector('.rankwindow .dates').textContent));
@@ -224,7 +232,8 @@ const selected2025Rank=w.DD.rank(selected2025.rate.p,R.profile.age);
 ok('changing dashboard dates ranks the visible dashboard rate itself',
   out.querySelector('[data-rank-range="selected"]').classList.contains('on')&&
   shownRank()===Math.round((selected2025Rank.band||selected2025Rank.all).p)&&
-  verdictRank()===shownRank()&&
+  verdictMB()===shownRank()&&
+  verdictRank()===Math.round(w.DD.demand(R,Date.UTC(2025,0,1),Date.UTC(2026,0,1)-1,'men').rank.p)&&
   new RegExp(Math.round((selected2025Rank.band||selected2025Rank.all).p)+'(?:st|nd|rd|th) percentile among men 40–44','i').test(out.querySelectorAll('.kpi')[2].textContent));
 out.querySelector('[data-range="year-2024"]').click();
 await new Promise(r=>setTimeout(r,50));
