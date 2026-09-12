@@ -8288,6 +8288,36 @@ document.addEventListener('click', async ev=>{
   }catch(e){ godErr(e.message); }
 });
 
+/* ⚠️ A LEDGER ROW'S `player` IS NOT ALWAYS A DISPLAY NAME. The Worker writes it as
+   `x.who || playerName(pickKey)`, and a leg filed without `who` in a uid-keyed league
+   therefore lands with the RAW UID as its player — u_E6WLsRi0flMHptt7KIK00zpd, not
+   "Squatch". That is the same keying seam #109 fixed on the grade card, reaching this
+   screen from the ledger side instead of the picks side.
+
+   Untranslated it breaks this section twice over, and both failures are silent. The
+   member table is built from the roster, which carries display names, so the uid matches
+   nobody: the real member shows up with zero legs and "nothing graded yet", while their
+   actual legs collect under a hex string that is not on the roster — and therefore get
+   swept into the off-roster footnote, off the table entirely. The leg list below prints
+   the same hex string where a name belongs. Somebody looking for a player by name finds
+   them present, empty, and uneditable, with their legs filed under an identifier they
+   have never seen.
+
+   So every ledger player value is resolved through the members map before it is grouped
+   or displayed. A uid resolves to its member's name; a display name passes through; an
+   unknown value is returned as-is rather than dropped, because a leg whose owner cannot
+   be resolved still has to appear somewhere. */
+function ledgerWho(v){
+  if(v == null || v === '') return v;
+  const ms = (S && S.members) || {};
+  // A uid (or any member key) arrives as the key itself.
+  if(Object.prototype.hasOwnProperty.call(ms, v)) return memberLabel(v);
+  // A display name arrives already readable; kEnc maps it back to its key when it is one.
+  const k = kEnc(v);
+  if(Object.prototype.hasOwnProperty.call(ms, k)) return memberLabel(k);
+  return v;
+}
+
 /* ---------------- CLV summary: the whole roster, every week ----------------
    ⚠️ THIS EXISTS BECAUSE A FILTERED LIST CANNOT BE READ. The section below it lists the
    legs still missing a close, which is the right shape for the job of filling them and
@@ -8320,10 +8350,11 @@ async function clvSummaryData(force){
 function clvSummaryRows(legs, roster){
   const seats = new Set((roster||[]).filter(n=>n != null && n !== ''));
   const names = [];
-  for(const n of [...(roster||[]), ...legs.map(l=>l.player)])
+  for(const n of [...(roster||[]), ...legs.map(l=>ledgerWho(l.player))])
     if(n != null && n !== '' && !names.includes(n)) names.push(n);
   return names.map(p=>{
-    const mine    = legs.filter(l=>l.player===p);
+    // Resolved on both sides: a roster name and a uid-keyed ledger row must land together.
+    const mine    = legs.filter(l=>ledgerWho(l.player)===p);
     const graded  = mine.filter(l=>l.result==='win' || l.result==='loss');
     const charted = graded.filter(l=>clvPair(l) != null);
     const pts     = charted.map(l=>clvPair(l).clv*100);
@@ -8427,7 +8458,7 @@ async function paintGaps(){
   body.innerHTML = `<div class="tscroll"><table class="bz gaptbl"><tbody>
     <tr><th>Wk</th><th>Who</th><th>Leg</th><th>Took</th><th>Close</th><th>Other side</th><th>CLV pts</th><th></th></tr>`
     + rows.map(r=>`<tr data-row="${esc(r.row)}">
-        <td>${r.week}</td><td>${esc(teamOf(r.player))}</td>
+        <td>${r.week}</td><td>${esc(teamOf(ledgerWho(r.player)))}</td>
         <td>${esc(r.label)}<div class="gwhy">${esc(r.reason || (r.gap ? 'no close captured yet' : 'close captured'))}</div></td>
         <td class="px">${r.price ?? '—'} / ${r.priceOpp ?? '—'}</td>
         <td><span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
