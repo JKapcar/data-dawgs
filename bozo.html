@@ -6716,12 +6716,31 @@ function simulate(live, levers){
            started. So: rank on real CLV where it is known, and fall back to uniform over
            whoever is left when it genuinely isn't. Uniform is what "no information"
            actually means; a constant would silently drop a live lever from the draw. */
+        /* ⚠️ A LEG THIS LEVER CANNOT MEASURE IS CARRIED FORWARD, NEVER RULED SAFE.
+           surv used to be built out of the MEASURED legs alone, so a leg with no CLV was
+           dropped from the pool — eliminated from contention by a lever that had no
+           opinion about it. With Worst CLV drawn first and two of eight legs measurable,
+           the worse of those two became the bozo in every single run: 100%, while six
+           games had not kicked off and any of them could close worse.
+
+           What the lever CAN say is that a measured leg beaten by another measured leg is
+           not the worst. That elimination is valid whatever the unmeasured legs turn out
+           to be, so it still happens. The unmeasured ones ride along and the next lever
+           decides among them. That is what "ranks the legs it can and passes when it
+           can't; it never guesses at the others" has to mean — ruling a leg SAFE is as
+           much a guess as ruling it worst. */
         const known = pool.filter(i=>L[i].clv!=null);
+        const unknown = pool.filter(i=>L[i].clv==null);
         if(known.length){
           let mx=-Infinity; for(const i of known){ const v=-L[i].clv; if(v>mx) mx=v; }
-          surv=known.filter(i=>-L[i].clv===mx);
+          surv=known.filter(i=>-L[i].clv===mx).concat(unknown);
         }else{
-          surv=[pool[(Math.random()*pool.length)|0]];
+          /* ⚠️ Nothing measurable: the lever PASSES, leaving the pool for the next one.
+             It used to pick uniformly at random here, which both invented a verdict out
+             of no information and disagreed with decide(), whose `if(!scored.length)
+             continue;` has always passed. The sim and the grader cannot answer the same
+             week two different ways. */
+          surv=pool.slice();
         }
       }else{
         const f = k==='odds' ? (i=>L[i].odds) : k==='beat' ? (i=>idx[i]) : (i=>L[i].last);
@@ -6954,9 +6973,10 @@ function paintDiag(live, players, status){
         It fills in once the snapshot lands.</span></div>`);
     else if(withClv < live.length)
       flags.push(`<div class="flag"><span>⚠</span><span><b>Worst CLV is measured on ${withClv} of ${live.length} legs.</b>
-        The rest have no capturable close, or only one side of one — and a price with no opposite side can't be
-        de-vigged, so it is not a CLV. In the simulation this lever ranks the legs it can and passes when it can't;
-        it never guesses at the others.</span></div>`);
+        The rest have no capturable close, or only one side of one. This lever ranks the legs it can, and a leg it
+        cannot measure is carried forward to the next lever rather than ruled safe — being unmeasurable is not
+        evidence of anything. A measured leg beaten by another measured leg is still eliminated, because that
+        holds whatever the unmeasured ones turn out to be.</span></div>`);
   }
   if(levers.length<4)
     flags.push(`<div class="flag"><span>⚠</span><span><b>Only ${levers.length} of 4 levers are in the draw.</b>
@@ -7909,7 +7929,13 @@ async function decide(){
     const scored = pool.filter(p=>R[k](p)!=null);
     if(!scored.length) continue;
     const mx=Math.max(...scored.map(R[k]));
-    const surv=scored.filter(p=>R[k](p)===mx);
+    /* ⚠️ The unscored ride along. Narrowing to the scored winners alone ELIMINATES every
+       leg this lever could not measure — a leg with no capturable close would be ruled
+       safe by the CLV lever purely because nobody could measure it, which is a verdict
+       the lever has no basis for. Beating a scored leg is still a valid elimination; not
+       being scoreable is not. Same rule as simulate(), or the odds describe a different
+       cascade from the one that names the bozo. */
+    const surv=scored.filter(p=>R[k](p)===mx).concat(pool.filter(p=>R[k](p)==null));
     if(surv.length<pool.length || surv.length===1){ pool=surv; why=LEVERS[li].name; }
     if(pool.length===1) break;
   }
