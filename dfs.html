@@ -670,6 +670,18 @@ button.btn.ghost:hover{border-color:var(--accent);color:var(--accent);filter:non
 button.btn.sm{font-size:12.5px;padding:7px 12px}
 .btnrow{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:4px}
 
+.toto-chip{display:inline-flex;align-items:center;gap:7px;max-width:100%;margin:8px 0 0;
+  border:1px solid var(--border);border-radius:999px;padding:5px 11px;font-size:12px;
+  font-weight:750;color:var(--ink-3);background:var(--page);line-height:1.35}
+.toto-chip .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-3);flex:none}
+.toto-chip.ok{border-color:color-mix(in srgb,var(--good) 55%,var(--border));color:var(--good);
+  background:color-mix(in srgb,var(--good) 10%,transparent)}
+.toto-chip.ok .dot{background:var(--good)}
+.toto-chip.err{border-color:color-mix(in srgb,var(--bad) 55%,var(--border));color:var(--bad);
+  background:color-mix(in srgb,var(--bad) 10%,transparent)}
+.toto-chip.err .dot{background:var(--bad)}
+.toto-chip .toto-chip-txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:min(520px,72vw)}
+
 .note{font-size:12.5px;line-height:1.6;color:var(--ink-3);margin:9px 0 0}
 .note.warn{color:var(--warn)}
 .note.bad{color:var(--bad)}
@@ -2762,6 +2774,12 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="card">
     <h3>2 · The slate <span class="rt" id="slateState"></span></h3>
     <p class="sub">Upload one data sheet or load live DraftKings salaries through <b>toto</b>. Build lineups to create the simulator and exposure results. Player data stays in this browser.</p>
+    <div class="btnrow" style="margin:8px 0 4px">
+      <div class="toto-chip" id="totoHealthChip" title="No /dk/* call yet this session" role="status" aria-live="polite">
+        <i class="dot" aria-hidden="true"></i>
+        <span id="totoHealthTxt">toto · DK proxy — idle</span>
+      </div>
+    </div>
     <details class="gear">
       <summary>Site · DraftKings group · salary paste · projection columns</summary>
       <div class="gear-body">
@@ -4777,7 +4795,8 @@ const DEF = {
          sims: 10000, sample: 2500, stack: 60, fieldSal: 49000 },
   sheet: "week",
   week: 1,
-  season: 2026
+  season: 2026,
+  toto: { lastOk: null, lastErr: null }
 };
 let S = load();
 function load() {
@@ -4787,7 +4806,7 @@ function load() {
     // handing `undefined` to a number input
     const out = JSON.parse(JSON.stringify(DEF));
     for (const k in raw) {
-      if (k === "cfg" || k === "sim" || k === "slate") Object.assign(out[k], raw[k] || {});
+      if (k === "cfg" || k === "sim" || k === "slate" || k === "toto") Object.assign(out[k], raw[k] || {});
       else out[k] = raw[k];
     }
     return out;
@@ -5779,6 +5798,112 @@ function banner(id, kind, html) {
     carryProjections: carryProjections,
     playerMatchKey: playerMatchKey,
     slateMeta: slateMeta
+  };
+});
+
+/* ---- toto health chip (Phase 0.5 T9 — source: work/dfs-toto-health.js) ---- */
+/**
+ * DFS Labs Phase 0.5 T9 — toto · DK proxy health chip.
+ * Pure state updater + chip view. Source for dfs.html (keep in sync).
+ * Persisted as dd-dfs-v1.toto = { lastOk, lastErr }. No ETR (I1 / H5).
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === "object" && module.exports) module.exports = api;
+  if (root) root.DDFSTotoHealth = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  "use strict";
+
+  var LABEL = "toto · DK proxy";
+  var RED_HINT = "— paste a salary file on the Slate sheet.";
+
+  function normalize(prev) {
+    prev = prev || {};
+    return {
+      lastOk: prev.lastOk != null && prev.lastOk !== "" ? String(prev.lastOk) : null,
+      lastErr: prev.lastErr != null && prev.lastErr !== "" ? String(prev.lastErr) : null
+    };
+  }
+
+  /** Success path: clear error, stamp lastOk (ISO or provided). */
+  function recordOk(prev, at) {
+    var when = at != null && at !== "" ? String(at) : new Date().toISOString();
+    return { lastOk: when, lastErr: null };
+  }
+
+  /** Failure path: set lastErr; keep prior lastOk for history. One call flips chip to red. */
+  function recordErr(prev, msg, at) {
+    var cur = normalize(prev);
+    var err = msg == null || msg === "" ? "request failed" : String(msg);
+    // at reserved for future clock injection; lastErr message is what the chip shows
+    void at;
+    return { lastOk: cur.lastOk, lastErr: err };
+  }
+
+  function formatOkTime(iso) {
+    if (!iso) return "";
+    var t = Date.parse(iso);
+    if (!isFinite(t)) return String(iso).slice(0, 19);
+    try {
+      return new Date(t).toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit"
+      });
+    } catch (e) {
+      return String(iso).slice(0, 19);
+    }
+  }
+
+  /**
+   * Chip view from stored toto state.
+   * { ok, label, text, title } — ok=true green, ok=false red, ok=null idle.
+   */
+  function chipView(state) {
+    var s = normalize(state);
+    if (s.lastErr) {
+      var errText = s.lastErr;
+      // Always end with the paste hint (do not duplicate if already present).
+      if (errText.indexOf(RED_HINT) === -1) errText = errText + " " + RED_HINT;
+      return {
+        ok: false,
+        label: LABEL,
+        text: LABEL + " · " + errText,
+        title: errText,
+        lastOk: s.lastOk,
+        lastErr: s.lastErr
+      };
+    }
+    if (s.lastOk) {
+      var when = formatOkTime(s.lastOk);
+      return {
+        ok: true,
+        label: LABEL,
+        text: LABEL + " · ok " + when,
+        title: "Last success " + s.lastOk,
+        lastOk: s.lastOk,
+        lastErr: null
+      };
+    }
+    return {
+      ok: null,
+      label: LABEL,
+      text: LABEL + " · idle",
+      title: "No /dk/* call yet this session",
+      lastOk: null,
+      lastErr: null
+    };
+  }
+
+  return {
+    LABEL: LABEL,
+    RED_HINT: RED_HINT,
+    normalize: normalize,
+    recordOk: recordOk,
+    recordErr: recordErr,
+    formatOkTime: formatOkTime,
+    chipView: chipView
   };
 });
 
@@ -8988,6 +9113,8 @@ function boot() {
   $("dkGroupSel").addEventListener("change", () => {
     $("dkLoadGo").disabled = !$("dkGroupSel").value;
   });
+  // T9: paint persisted toto health before the quiet lobby prefetch
+  try { renderTotoChip(); } catch (e) {}
   if ($("dkSwitchAlt")) {
     $("dkSwitchAlt").addEventListener("click", () => {
       if (_autoloadAlt && _autoloadAlt.draftGroupId) {
@@ -9337,15 +9464,57 @@ async function autoLoadOnOpen() {
   }
 }
 
+/** Persist dd-dfs-v1.toto and paint the health chip (T9). */
+function noteTotoOk() {
+  if (typeof DDFSTotoHealth === "undefined") return;
+  S.toto = DDFSTotoHealth.recordOk(S.toto);
+  save();
+  renderTotoChip();
+}
+function noteTotoErr(msg) {
+  if (typeof DDFSTotoHealth === "undefined") return;
+  S.toto = DDFSTotoHealth.recordErr(S.toto, msg);
+  save();
+  renderTotoChip();
+}
+function renderTotoChip() {
+  const elChip = $("totoHealthChip");
+  if (!elChip || typeof DDFSTotoHealth === "undefined") return;
+  const v = DDFSTotoHealth.chipView(S.toto);
+  elChip.className = "toto-chip" + (v.ok === true ? " ok" : (v.ok === false ? " err" : ""));
+  elChip.title = v.title || "";
+  const txt = elChip.querySelector(".toto-chip-txt");
+  if (txt) txt.textContent = v.text;
+}
+
+/** Any /dk/* call — success clears red; failure flips chip within this fetch. */
+async function dkFetch(pathAndQuery) {
+  let noted = false;
+  try {
+    const r = await fetch(DK_TOTO + pathAndQuery, { method: "GET", cache: "no-store" });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      const msg = j.detail || j.error || ("HTTP " + r.status);
+      noted = true;
+      noteTotoErr(msg);
+      throw new Error(msg);
+    }
+    noteTotoOk();
+    return j;
+  } catch (e) {
+    // Network / parse failures that never reached noteTotoErr above
+    if (!noted) noteTotoErr(e && e.message ? e.message : String(e));
+    throw e;
+  }
+}
+
 async function refreshDkLobby(quiet) {
   const sel = $("dkGroupSel"), note = $("dkLobbyNote"), loadBtn = $("dkLoadGo");
   if (!sel) return;
   sel.disabled = true; loadBtn.disabled = true;
   if (!quiet) note.textContent = "Fetching DraftKings lobby via toto…";
   try {
-    const r = await fetch(DK_TOTO + "/dk/lobby?sport=NFL", { method: "GET", cache: "no-store" });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.detail || j.error || ("HTTP " + r.status));
+    const j = await dkFetch("/dk/lobby?sport=NFL");
     _dkGroups = DDFSDkDraftables.listNflSalaryDraftGroups(j);
     sel.innerHTML = _dkGroups.length
       ? ('<option value="">Pick a draft group…</option>' + _dkGroups.map(g =>
