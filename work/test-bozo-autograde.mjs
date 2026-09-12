@@ -179,5 +179,43 @@ ok(/if \(\(results\[key\] \|\| \{\}\)\.resultSource === "manual"\) continue;/.te
      "...and skips it BEFORE the pending branch that would strip its result");
 }
 
+/* ---- the CLV override ---- */
+
+/* ⚠️ IT HAS TO REACH THE LEDGER. /results is cleared when the week advances; the ledger
+   is the receipt that outlives it. An override that never got carried across would
+   vanish from the chart the moment the next week opened — the same disappearing act the
+   close fill had. */
+ok(/if \(r\.clvPts !== undefined\) upd\[`\$\{k\}\/clvPts`\]/.test(worker),
+   "a hand-set CLV travels to the ledger with the close");
+ok(/clvPts: r\.clvPts \?\? null/.test(worker),
+   "...and is served to the chart");
+ok(/clvOverridden: legs\.filter\(l => l\.clvPts != null\)\.length/.test(worker),
+   "...and counted, so the coverage tile can say how many were set by hand");
+
+/* ⚠️ A lever that decides who is ELIMINATED must use the best number available, not only
+   the automatic one. The override exists precisely where the derived number cannot. */
+ok(/const manual = r\.clvPts != null && Number\.isFinite\(Number\(r\.clvPts\)\)/.test(worker)
+   && /if \(manual != null\) \{ v = -manual; break; \}/.test(worker),
+   "the Royale CLV lever honours a hand-set CLV");
+
+/* On the page: one rule for the live board, one for the chart, and they must agree. */
+ok(/function clvDeltaOf\(x, r\)/.test(pageCode) && /function clvPair\(l\)/.test(pageCode),
+   "the page has one CLV rule for the board and one for the chart");
+ok(/clv: clvDeltaOf\(x, r\)/.test(pageCode),
+   "the simulation reads the override");
+ok(/const clv = clvDeltaOf\(x, r\);/.test(pageCode),
+   "and so does the grader that names the bozo");
+ok(/:\$\{r\.clvPts\?\?''\}/.test(pageCode),
+   "the sim cache key notices a CLV override, so the odds re-run when one is set");
+
+/* The box saves with the rest of the row, and an empty box is a CLEAR — otherwise an
+   override could be set from the card and never removed from it. */
+ok(/data-clv=/.test(pageCode) && /path:`results\/\$\{key\}\/clvPts`, value:v/.test(pageCode),
+   "the grade card has a CLV box that saves with the leg");
+ok(/path:`results\/\$\{key\}\/clvPts`, value:null/.test(pageCode),
+   "emptying the box clears the override rather than doing nothing");
+ok(/clvSource`, value:'manual'/.test(pageCode),
+   "a hand-set CLV is stamped apart from one derived from a capture");
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

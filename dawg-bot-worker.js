@@ -7470,6 +7470,12 @@ function ledgerGradeUpdate(season, week, results, bozo, picks, have) {
       // there is no de-vig, and the chart drops the leg exactly as if nothing had been
       // entered — which looks like the manual fill silently failed.
       if (r.closeOpp !== undefined) upd[`${k}/closeOpp`] = r.closeOpp ?? null;
+      /* ⚠️ The override travels to the ledger with the close. /results is cleared when
+         the week advances; the ledger is the receipt that outlives it. A CLV the manager
+         set that never reached the ledger would vanish from the chart the moment the
+         next week opened, which is the same disappearing act the close fill had. */
+      if (r.clvPts !== undefined) upd[`${k}/clvPts`] = r.clvPts ?? null;
+      if (r.clvSource !== undefined) upd[`${k}/clvSource`] = r.clvSource ?? null;
       if (r.closeBook !== undefined) upd[`${k}/closeBook`] = r.closeBook ?? null;
       if (r.closeObservedAt !== undefined) upd[`${k}/closeObservedAt`] = r.closeObservedAt ?? null;
       if (r.closeUnavailableReason !== undefined)
@@ -8212,6 +8218,12 @@ async function bozoClv(request, url, env, cors) {
       closeSource: r.closeSource || null,
       closeUnavailableReason: r.closeUnavailableReason || null,
 
+      /* The manager's CLV, in points, when they set one. Null means "derive it from the
+         close", which is the ordinary path. Named in points because that is the unit the
+         chart displays — what was typed is what reads back. */
+      clvPts: r.clvPts ?? null,
+      clvSource: r.clvSource || null,
+
       result: RESULT[r.result] || null,
       gradedAt: r.gradedAt || null,
 
@@ -8236,6 +8248,7 @@ async function bozoClv(request, url, env, cors) {
     pushes: legs.filter(l => l.result === "push").length,
     ungraded: legs.filter(l => l.result == null).length,
     noClose: legs.filter(l => l.closePrice == null).length,
+    clvOverridden: legs.filter(l => l.clvPts != null).length,
     noEntryOpp: legs.filter(l => l.entryPriceOpp == null).length,
   };
 
@@ -8468,10 +8481,20 @@ function royaleApplyLever(leverIdx, losers, picks, results) {
       case 1: v = royaleBeatDeficit(x, r).v; break;                // furthest under = worst
       case 2: v = x.ts || null; break;                             // latest in = worst
       case 3: {                                                    // price moved most against = worst
-        // ⚠️ Needs BOTH sides at BOTH ends. Kap's call: a leg with no capturable close
-        // is unmeasurable and falls through to the next lever. It is neither ranked
-        // worst (DraftKings pulling a market is not the player's doing) nor ranked best
-        // (that would make an uncapturable market the optimal thing to bet).
+        /* ⚠️ Needs BOTH sides at BOTH ends, OR a manager's override. Kap's call: a leg
+           with no capturable close is unmeasurable and falls through to the next lever.
+           It is neither ranked worst (DraftKings pulling a market is not the player's
+           doing) nor ranked best (that would make an uncapturable market the optimal
+           thing to bet).
+
+           ⚠️ clvPts, when the manager has set it, IS the CLV — it is read off the placed
+           slip, which is the same evidence the capture would have snapped. It outranks
+           the derived number because it exists in exactly the cases where the derived
+           one cannot. A lever that decides who is eliminated must use the best number
+           available, not only the automatic one. */
+        const manual = r.clvPts != null && Number.isFinite(Number(r.clvPts))
+          ? Number(r.clvPts) / 100 : null;
+        if (manual != null) { v = -manual; break; }
         const pC = rDevig(r.close, r.closeOpp), pE = rDevig(x.price, x.entryPriceOpp);
         v = (pC == null || pE == null) ? null : -(pC - pE);
         break;
