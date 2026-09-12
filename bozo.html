@@ -6973,10 +6973,11 @@ function paintDiag(live, players, status){
         It fills in once the snapshot lands.</span></div>`);
     else if(withClv < live.length)
       flags.push(`<div class="flag"><span>⚠</span><span><b>Worst CLV is measured on ${withClv} of ${live.length} legs.</b>
-        The rest have no capturable close, or only one side of one. This lever ranks the legs it can, and a leg it
-        cannot measure is carried forward to the next lever rather than ruled safe — being unmeasurable is not
-        evidence of anything. A measured leg beaten by another measured leg is still eliminated, because that
-        holds whatever the unmeasured ones turn out to be.</span></div>`);
+        The rest have no closing price yet &mdash; one side is enough, since a missing opposite is assumed at standard
+        juice, so a leg is unmeasured only when nothing has closed or been typed for it. This lever ranks the legs it
+        can, and a leg it cannot measure is carried forward to the next lever rather than ruled safe: being
+        unmeasurable is not evidence of anything. A measured leg beaten by another measured leg is still eliminated,
+        because that holds whatever the unmeasured ones turn out to be.</span></div>`);
   }
   if(levers.length<4)
     flags.push(`<div class="flag"><span>⚠</span><span><b>Only ${levers.length} of 4 levers are in the draw.</b>
