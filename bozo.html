@@ -4709,18 +4709,24 @@ function beatDeficit(mkt, dir, line, margin, total, sd){
    for. Whether it fires should not depend on which control last wrote the number. */
 function beatOf(x, r, sd){
   if(!x) return null;
-  /* ⚠️ A BINARY LEG HAS NO MARGIN, AND UNDER STANDARD THE LEVER PASSES. Verbatim from
-     data/bozo-rules.json: "The Worst Beat lever has no margin to work with on a prop or
-     an 'other' leg — they are binary. Under Bozo Royale that would be elimination-dodging,
-     so a binary leg is given a margin from its own de-vigged closing probability. Under
-     Standard the lever simply passes."
+  /* ⚠️ A BINARY LEG TAKES ITS MARGIN FROM ITS OWN DE-VIGGED PRICE, in BOTH formats.
+     Kap's call, 2026-09-12, and it replaces three rules that disagreed about one leg:
+     decide() floored a binary leg at 999 — the WORST possible beat — simulate() ranked it
+     off a margin it does not have, and only Royale had this. The same leg read "1st
+     999.00 SD" in one league and "2nd 0.49 SD" in another, because the 999 branch tested
+     `r.actual === 0` STRICTLY and a text box stores the string "0". Which rule a player
+     got depended on which control last wrote the number.
 
-     decide() floored such a leg at 999 — the WORST possible beat — which is the opposite
-     of passing and made the prop-holder the automatic bozo any week this lever was
-     reached. */
+     Why this rule and not the floor: it punishes a prop in proportion to how chalky it
+     was. Busting a -400 prop scores 0.84 SD — genuinely one of the worst misses on a
+     ticket. Busting a -145 coin flip scores 0.16 — mild, which is what it is. The floor
+     ranked those two identically, and both worse than a spread that lost by forty.
+
+     ⚠️ The CLOSE is the bar when there is one; the entry stands in when there is not, and
+     raw implied is the last resort. Same order royaleBeatDeficit uses in the Worker, so
+     the page and the server cannot drift. */
   const binary = x.mkt === 'prop' || x.mkt === 'other';
   if(binary){
-    if(!isRoyale()) return null;
     const p = devigP(r && r.close, r && r.closeOpp)
            ?? devigP(x.price, x.entryPriceOpp)
            ?? imp(x.price);
@@ -6701,11 +6707,14 @@ function simulate(live, levers){
          beat — so the board and the verdict disagreed about the same leg by a factor of
          two thousand. Only a KNOWN zero floors; a drawn actual is continuous and never
          lands on it. */
-      /* Binary under Standard: the Worst Beat lever passes on it, so it is carried
-         forward by the cascade instead of being ranked at all. */
-      binary: (x.mkt==='prop' || x.mkt==='other') && !isRoyale(),
-      royaleBeat: ((x.mkt==='prop' || x.mkt==='other') && isRoyale())
-        ? (()=>{ const p = devigP(x.price, x.entryPriceOpp) ?? imp(x.price);
+      /* A binary leg has no margin, so it takes one from its own de-vigged price — the
+         same rule beatOf() applies, in both formats. Computed once here rather than per
+         run: it depends on the prices, which do not change between runs. */
+      binary: x.mkt==='prop' || x.mkt==='other',
+      binaryBeat: (x.mkt==='prop' || x.mkt==='other')
+        ? (()=>{ const p = devigP(r.close, r.closeOpp)
+                        ?? devigP(x.price, x.entryPriceOpp)
+                        ?? imp(x.price);
                  return (p>0 && p<1) ? invNorm(p) : null; })() : null,
       clv: clvDeltaOf(x, r),
       // 'won' | 'lost' | 'void' | null. A push voids the leg: it cannot be the loss that
@@ -6763,7 +6772,7 @@ function simulate(live, levers){
          Beat quietly duplicated Shortest Odds. NaN for a leg the lever passes on; the
          cascade below carries those forward rather than ranking them safest. */
       idx[i] = l.binary
-        ? (l.royaleBeat == null ? NaN : l.royaleBeat)
+        ? (l.binaryBeat == null ? NaN : l.binaryBeat)
         : (l.under ? (actual-l.base) : (l.base-actual)) / l.sd;
       // A settled leg's outcome is a fact; only an unsettled one is decided by the draw.
       if(l.settled === 'won' || l.settled === 'void') win[i]++;

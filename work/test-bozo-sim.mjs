@@ -283,30 +283,54 @@ ok(clvDeltaOf({ price: -150, entryPriceOpp: 130 }, { clvPts: 1, close: -200, clo
   ctx.S.results = {}; ctx.S.picks = {}; delete ctx.S.order;
 }
 
-/* ⚠️ THE CANONICAL WORST-BEAT RULE, in the simulation and the grader alike.
- * data/bozo-rules.json: "The Worst Beat lever has no margin to work with on a prop or an
- * 'other' leg — they are binary... Under Standard the lever simply passes."
+/* ⚠️ A BINARY LEG TAKES ITS MARGIN FROM ITS OWN DE-VIGGED PRICE, IN BOTH FORMATS.
+ * Kap's call, 2026-09-12, replacing three rules that disagreed about one leg: decide()
+ * floored a binary leg at 999 (the worst possible beat), simulate() ranked it off a margin
+ * it does not have, and only Royale did this. The same leg read "1st 999.00 SD" in one
+ * league and "2nd 0.49 SD" in another — because the 999 branch compared `r.actual === 0`
+ * strictly and a text box stores the string "0", so which rule a player got depended on
+ * which control last wrote the number.
  *
- * Three copies disagreed about that sentence. decide() floored such a leg at 999 — the
- * WORST possible beat, the exact opposite of passing, which made the prop-holder the
- * automatic bozo any week this lever was reached. simulate() ranked it off a margin it
- * does not have. Only the Royale path had it right, and only for Royale.
+ * The property that matters: the penalty scales with how chalky the prop was. A near-miss
+ * coin flip and a busted heavy favourite must NOT rank the same, which is exactly what the
+ * floor did.
  */
 {
-  ctx.S.results = { prop: { result: "lost", actual: 0 }, side: { result: "lost", actual: -20 } };
-  ctx.S.picks = { prop: {}, side: {} };
-  const legs2 = [
-    { p: "prop", price: -145, ts: 1, mkt: "other", exp: 0, base: 0.5, line: 0.5 },
-    { p: "side", price: -150, entryPriceOpp: 130, ts: 2, mkt: "ml", exp: 0, line: 0 },
+  ctx.S.results = {}; ctx.S.picks = { chalk: {}, flip: {} };
+  const props = [
+    { p: "chalk", price: -400, entryPriceOpp: 320, ts: 1, mkt: "prop", line: 0.5, exp: 0 },
+    { p: "flip", price: -110, entryPriceOpp: -110, ts: 2, mkt: "prop", line: 0.5, exp: 0 },
   ];
-  ctx.S.order = [1, 0, 2, 3];                  // Worst Beat first
-  const r = simulate(legs2.map(x => ({ ...x })), [0, 1, 2, 3]);
-  ok(r.bozo[0] < 1,
-     "a binary leg is not floored at the worst possible beat — the lever passes on it");
-  ok(r.bozo[1] > 0,
-     "the leg the lever CAN rank is ranked, and can wear it");
+  ctx.S.order = [1, 0, 2, 3];                       // Worst Beat first
+  ctx.S.results = { chalk: { result: "lost" }, flip: { result: "lost" } };
+  const r = simulate(props.map(x => ({ ...x })), [1]);
+  ok(r.bozo[0] === 1 && r.bozo[1] === 0,
+     "a busted -400 prop is a worse beat than a busted coin flip — the penalty scales with the price");
+
+  /* ⚠️ And it is finite and comparable, not a sentinel. A binary leg must be rankable
+     ALONGSIDE margin legs, which is what the 999 floor destroyed. */
+  ctx.S.picks = { prop: {}, side: {} };
+  ctx.S.results = { prop: { result: "lost" }, side: { result: "lost", actual: -30 } };
+  const mixed = [
+    { p: "prop", price: -145, entryPriceOpp: null, ts: 1, mkt: "other", line: 0.5, exp: 0 },
+    { p: "side", price: -110, entryPriceOpp: -110, ts: 2, mkt: "spread", line: 0, exp: 0 },
+  ];
+  const r2 = simulate(mixed.map(x => ({ ...x })), [1]);
+  ok(r2.bozo[1] === 1,
+     "a spread that missed by 30 outranks a mildly-priced prop that busted, as it should");
+  ok(r2.bozo[0] === 0, "...and the prop is not floored past it by a sentinel");
 
   ctx.S.results = {}; ctx.S.picks = {}; delete ctx.S.order;
+}
+
+/* Nothing anywhere may floor a binary leg at a fake standard deviation again. */
+{
+  const code = page.replace(/\/\*[\s\S]*?\*\//g, "");
+  ok(!/999/.test(code.slice(code.indexOf("function beatOf("), code.indexOf("function beatOf(") + 1400)),
+     "beatOf has no sentinel");
+  ok(/const binary = x\.mkt === 'prop' \|\| x\.mkt === 'other';/.test(code)
+     && !/if\(!isRoyale\(\)\) return null;/.test(code),
+     "and the rule is the same in Standard and Royale, not two rules");
 }
 
 /* ⚠️ AND THE MARGIN IS MEASURED FROM THE LEG'S OWN NUMBER, not from the price-shifted
