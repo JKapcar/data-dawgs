@@ -113,8 +113,8 @@ ok(/r\.clvPts != null && Number\.isFinite\(\+r\.clvPts\)/.test(code.split("const
   const bare = code.match(/(?:res|\(S\.results\|\|\{\}\))\[kEnc\(x\.p\)\]\s*\|\|\s*\{\}/g) || [];
   ok(bare.length === 0,
      "no consumer resolves a results row by display name alone");
-  ok(/res\[x\.key\] \|\| res\[kEnc\(x\.p\)\]/.test(code),
-     "the grade card still tries the pick key first and the name only as a fallback");
+  ok(/if\(x && x\.key && \(res\[x\.key\] \|\| picks\[x\.key\]\)\) return res\[x\.key\] \|\| \{\};/.test(code),
+     "the one lookup tries the pick key first and the display name only after it");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

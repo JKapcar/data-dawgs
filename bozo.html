@@ -3972,22 +3972,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <p class="tm" id="lpState" style="margin:8px 0 0">Status checks when you open these controls.</p>
     <div class="err" id="lpErr"></div>
 
-    <!-- ⚠️ Reaches the LEDGER, not this week's board. The grade card only ever shows the
-         current week, so without this a close the capture missed in week 3 becomes
-         unfillable the moment week 4 opens.
-
-         ⚠️ IT NAMES THE WHOLE ROSTER, not only the people with a problem. This section
-         used to be the gap list and nothing else, so a league of eight showed however
-         many members happened to have an unfilled close — and a member who is absent
-         because everything of theirs is captured looks exactly like a member the page
-         lost. Every name is here, every week, whether or not there is anything to fix. -->
-    <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:22px 0 4px">CLV summary</h3>
-    <p class="tm" style="margin:0 0 8px">Where every member of this league stands on closing line value, across the whole season &mdash; and how much of each number rests on a closing price somebody actually captured. Nobody is filtered out: a member with nothing graded yet says so rather than vanishing.</p>
-    <div id="clvSumBody"></div>
-    <h4 style="font:700 11px/1 ui-monospace,monospace;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-3);margin:18px 0 4px">Missing closing prices</h4>
-    <p class="note" id="gapNote" style="margin:0 0 8px"></p>
-    <div id="gapBody"></div>
-    <div class="err" id="gapErr"></div>
+    <!-- ⚠️ The CLV summary and the missing-closing-prices list used to sit here. Both are
+         gone: a leg's result, its closing price and the CLV derived from them are settled
+         in Manager Override below, which is the panel a manager actually opens when a week
+         goes wrong. Three screens holding three opinions about one leg is how a close typed
+         in one place read as "no CLV" in another. -->
 
 
     <!-- ⚠️ THE DOOR WITH NO RULES ON IT. Every other control on this page enforces the
@@ -4170,7 +4159,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="row"><button class="btn" id="autoGrade">Pull results</button>
     <span class="tm">NFL and CFB scores come from the Worker's scheduled cache. Props and closing prices are the only manual bits.</span></div>
   <div class="err" id="gerr"></div>
-  <div id="manual" style="margin-top:14px"></div>
+  <!-- ⚠️ The per-leg editor used to live here. Result, closing price and CLV are settled
+       in Manager Override now — one panel, one place, and the button that names the bozo
+       sits with the controls that settle the legs rather than a screen away. This card
+       keeps only the scheduled-results pull, which is a week-level action. -->
+  <p class="tm" id="gradeToOverride" style="margin:10px 0 0"></p>
 </div>
 
 <div class="verdict" id="verdict" style="display:none">
@@ -4346,10 +4339,31 @@ const dirOf = x => ((x && (x.dir || x.side)) === 'under') ? 'under' : 'over';
 const dec  = a => a<0 ? 1+100/Math.abs(a) : 1+a/100;
 const imp  = a => a<0 ? Math.abs(a)/(Math.abs(a)+100) : 100/(a+100);
 /* Proportional de-vig against the opposite side of the same two-way market.
-   ⚠️ Null when either side is missing, deliberately. Raw implied and de-vigged differ by
-   roughly the whole hold, so a function that "falls back" to raw would let two different
-   quantities be compared as if they were one. Callers must handle the null. */
-const devigP = (a,b) => (a==null||b==null) ? null : (imp(a)/(imp(a)+imp(b)));
+
+   ⚠️ A MISSING OPPOSITE SIDE IS ASSUMED AT STANDARD JUICE, not refused. It used to be
+   refused — null when either side was missing — on the reasoning that raw implied and
+   de-vigged differ by roughly the whole hold, so falling back to raw would compare two
+   different quantities as if they were one. That reasoning is still right, and this is
+   not that: the opposite is SYNTHESISED so a real de-vig can be done against an assumed
+   book, exactly as clvDevig() has always done for the chart.
+
+   The two functions disagreeing was a bug with teeth. A leg entered at -145 with no
+   opposite side — every self-priced prop — de-vigged on the chart and refused on the
+   board, so its CLV existed on one screen and was blank on the other, and no amount of
+   typing a closing price could make the board produce a number. One rule now.
+
+   Still null when the price itself is missing, or when it is so long that no sane
+   opposite is left. Weaker evidence than two captured sides, and every surface that
+   prints it says which it is looking at. */
+const devigP = (a,b) => {
+  if(a == null) return null;
+  const other = b == null ? clvAssumedOpp(a) : b;
+  if(other == null) return null;
+  return imp(a)/(imp(a)+imp(other));
+};
+/** did this leg's CLV rest on an assumed opposite at either end? */
+const devigAssumed = (x, r) => !!x && ((x.price != null && x.entryPriceOpp == null)
+  || (r && r.close != null && r.closeOpp == null));
 /* The CLV a leg carries right now, from this week's results row and its pick: the
    manager's override if there is one, otherwise the captured close against entry.
    Mirrors clvPair() for the ledger-shaped chart rows — change the rule in one and it
@@ -5842,23 +5856,9 @@ function render(){
   document.getElementById('sheetCard').style.display = 'none';
   document.getElementById('sheetBar').style.display = 'none';
   document.getElementById('leagueCard').style.display = v==='league' ? '' : 'none';
-  if(v==='league'){ paintLeague();
-    /* The roster rollup is PUBLIC data in a manager-only card: /bozo/clv is the same
-       feed the season chart runs on. Everyone who can open this page sees where the
-       league stands; only the manager gets the boxes that write. */
-    paintClvSummary();
-    // Manager-only, and it reaches every week rather than just this one.
-    if(canManage(league()||{})){ paintGaps(); paintGod(); }
-    else {
-      /* ⚠️ Do not just blank it. A card with nothing in it and nothing said reads as a
-         broken feature; the reason it is empty is that filling closes is a manager write. */
-      const b=document.getElementById('gapBody'); if(b) b.innerHTML='';
-      const n=document.getElementById('gapNote');
-      if(n) n.innerHTML = ME
-        ? `Closing prices are filled in by this league&rsquo;s manager, so there is nothing to edit here.`
-        : `<b>Sign in as the league manager</b> to fill in missing closing prices.`;
-    }
-  }
+  // Manager Override is the one place a week is settled: result, actual, closing price,
+  // the CLV derived from it, and the button that names the bozo.
+  if(v==='league'){ paintLeague(); if(canManage(league()||{})) paintGod(); }
 
   paintSlip(players, picks, status, live);
   paintAdminActions();
@@ -5900,7 +5900,12 @@ function render(){
 
   // grading — the Worker is the authority; this only decides what to show
   document.getElementById('gradeCard').style.display = (isManager() && status==='placed' && onWeek) ? '' : 'none';
-  if(isManager() && status==='placed' && onWeek) paintManual(live, players);
+  // The per-leg editor moved into Manager Override. This card keeps the scheduled pull.
+  {
+    const n = document.getElementById('gradeToOverride');
+    if(n) n.innerHTML = `Props, closing prices and results are settled in <b>Manager Override</b>, `
+      + `under League settings &mdash; that panel also carries <b>Name the bozo</b>.`;
+  }
   const ar=document.getElementById('adminRow');
   if(ar) ar.style.display = (isManager() && status==='graded') ? '' : 'none';
 
@@ -7830,239 +7835,15 @@ async function autoGrade(){
   if(!waiting.length&&!manual.length) e.className='err ok';
   render();
 }
-function paintManual(live, roster){
-  /* ⚠️ THE TICKET IS THE LIST, NOT THE ROSTER. This card used to be built by walking the
-     roster and looking each member's pick up by name — `players.map(p => picks[kEnc(p)])`.
-     Picks in this league are keyed by the member's uid, kEnc resolves a display name to a
-     uid through S.members, and when that mapping does not line up for ONE member, their
-     leg is on the ticket and nowhere on this card. Every other name works; that one is
-     absent; absence is indistinguishable from "the feature is broken for him".
+/* ⚠️ paintManual() and saveLeg() lived here. They rendered the per-leg editor on the
+   This Week card — result, actual, both sides of the close and a CLV box — and that card
+   is gone. Manager Override carries all of it now, keyed by pick key, with the CLV
+   DERIVED rather than typed.
 
-     A leg on the placed ticket is a leg to grade, whoever it belongs to. Walk the picks,
-     label each row from the pick itself, and key every control by the PICK KEY — the one
-     identifier that is guaranteed to exist and to match what the Worker writes results
-     under. Then add roster members with no pick at all, so nobody is invisible either
-     way. The union of the two can never hide a leg or a member. */
-  const allPicks = (S && S.picks) || {};
-  const byKey = Object.entries(allPicks)
-    .filter(([, x]) => x && x.price != null)
-    .map(([key, x]) => ({ ...x, key, p: x.who || memberLabel(key) || kDec(key) }))
-    .sort((a, b) => (a.ts || 0) - (b.ts || 0));
-  live = byKey.length ? byKey : (live || []).map(x => ({ ...x, key: kEnc(x.p) }));
-
-  /* A roster member with no leg on the ticket, and a leg on the ticket with no price:
-     both are absences worth stating rather than hiding. */
-  const owners = new Set(live.map(x => String(x.p)));
-  const priceless = Object.entries(allPicks).filter(([, x]) => x && x.price == null)
-    .map(([key, x]) => ({ key, p: x.who || memberLabel(key) || kDec(key), noPrice: true }));
-  const ghosts = (roster || [])
-    .filter(n => !owners.has(String(n)) && !priceless.some(g => g.p === n))
-    .map(n => ({ key: kEnc(n), p: n }))
-    .concat(priceless);
-  /* ⚠️ ONE ROW PER LEG, AND EVERY ROW SAVES ON ITS OWN. This card used to split into a
-     manual-results list (props, other, period legs) and a closing-prices list, and the
-     only way to commit either was "Name the bozo" at the bottom — the whole-week,
-     two-phase confirm, which refuses while anything on the ticket is still pending. So
-     the manager could pick "Lost" for a prop on Thursday and had nothing to press until
-     Monday night. Every leg now carries its result, its actual, both sides of its close
-     and a Save that writes that leg immediately through /bozo/admin, audited.
-
-     The data-w / data-a / data-c / data-co attributes are unchanged on purpose:
-     decide() still reads them for the final week-level write, so the two paths agree. */
-  const res = S.results || {};
-  const hint = x => (x.period && x.period!=='game')
-    ? (x.mkt==='total' ? `${PERIOD_LABEL[x.period]} points` : `${PERIOD_LABEL[x.period]} margin, ${esc(x.side)} minus opponent`)
-    : 'actual';
-  const rowOf = x => res[x.key] || res[kEnc(x.p)] || res[x.p] || {};
-  const rows = live.map(x=>{
-    const r = rowOf(x);
-    const o = r.result || (r.won===true?'won':r.won===false?'lost':null);
-    const sel = o==='won' ? '1' : o==='lost' ? '0' : (o==='push'||o==='void') ? 'p' : '';
-    const manual = isManualLeg(x);
-    const has = r.close != null, missing = has && r.closeOpp == null;
-    const closeState = has
-      ? (missing
-          ? `<span class="cst warn">other side will be assumed on save</span>`
-          : `<span class="cst ok">${r.closeSource==='sgo'?'captured at kickoff':'entered by hand'}${r.closeOppSource==='assumed'?' · other side assumed':''}</span>`)
-      : (r.closeUnavailableReason
-          ? `<span class="cst bad" title="${esc(r.closeUnavailableReason)}">not captured — fill it in</span>`
-          : `<span class="cst">waiting on kickoff</span>`);
-    const resState = o
-      ? `<span class="cst ${o==='lost'?'bad':'ok'}">${esc(o)}${r.resultSource==='manual'?' · set by hand':r.gradeSource?' · from schedule':''}</span>`
-      : '';
-    // ⚠️ Only a COMPLETE captured pair is immutable; a half capture is still yours.
-    const locked = r.closeObservedAt != null && r.close != null && r.closeOpp != null;
-    const autoOpp = has && r.closeOpp == null ? clvAssumedOpp(r.close) : null;
-    /* What this leg's CLV is right now, so the box shows the derived number as a
-       placeholder and the manager can see what they would be overriding. */
-    const derived = (() => {
-      const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp);
-      return (pC==null||pE==null) ? null : (pC-pE)*100;
-    })();
-    const clvState = r.clvPts != null
-      ? `<span class="cst warn">CLV ${(+r.clvPts>=0?'+':'')+(+r.clvPts).toFixed(2)} pts · set by hand</span>`
-      : derived != null
-        ? `<span class="cst ok">CLV ${(derived>=0?'+':'')+derived.toFixed(2)} pts · from the close</span>`
-        : `<span class="cst bad">no CLV — not on the chart or in n</span>`;
-    return `<div class="gr leg" data-leg="${esc(x.key)}">
-      <span><b>${esc(x.p)}</b> <span class="pk">${esc(x.label)}</span>
-        ${(x.period && x.period!=='game')?' <span class="cst warn" title="No score source carries per-period scores; type the period result">period · manual grade</span>':''}
-        ${resState} ${closeState} ${clvState}
-        ${r.closeUnavailableReason?`<span class="why">${esc(r.closeUnavailableReason)}</span>`:''}
-        <span class="tm" style="display:block;margin-top:2px">took ${x.price} / ${x.entryPriceOpp ?? '—'}</span></span>
-      <select data-w="${esc(x.key)}" aria-label="Result"><option value="">result —</option><option value="1"${sel==='1'?' selected':''}>Won</option><option value="0"${sel==='0'?' selected':''}>Lost</option><option value="p"${sel==='p'?' selected':''}>Push / void</option></select>
-      ${manual ? `<input type="number" step="0.5" data-a="${esc(x.key)}" placeholder="${hint(x)}" value="${r.actual ?? ''}">` : ''}
-      <span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
-        data-c="${esc(x.key)}" placeholder="close" ${locked?'disabled':''} value="${r.close ?? ''}"
-        ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
-      <span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
-        data-co="${esc(x.key)}" placeholder="${autoOpp!=null ? 'auto '+fmtPrice(autoOpp) : 'other side'}" ${locked?'disabled':''} value="${r.closeOpp ?? ''}"
-        ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
-      <input type="number" step="0.01" data-clv="${esc(x.key)}" class="clvin"
-        placeholder="${derived != null ? 'clv '+derived.toFixed(2) : 'clv pts'}" value="${r.clvPts ?? ''}"
-        aria-label="CLV in points, overrides the close">
-      <button type="button" class="btn sm gsv" data-save="${esc(x.key)}"
-        title="writes results/${esc(x.key)}">Save</button>
-      <span class="legsay" data-say="${esc(x.key)}" role="status"></span></div>`;
-  }).join('');
-
-  const gaps = live.filter(x=>{ const r=rowOf(x); return r.close==null; }).length;
-  const settled = live.filter(x=>{ const r=rowOf(x); return r.result!=null || r.won===true || r.won===false; }).length;
-  const overridden = live.filter(x=>rowOf(x).clvPts != null).length;
-  document.getElementById('manual').innerHTML =
-    `<div class="lil" style="margin-bottom:6px">Legs — result, actual, closing price and CLV. Every leg is here; Save writes that leg now.</div>`
-    + `<div class="leglegend"><span>who &amp; leg</span><span>result</span><span>actual</span><span>close</span><span>other side</span><span>CLV pts</span><span>save</span></div>`
-    + `<p class="tm" style="margin:0 0 8px">${settled} of ${live.length} settled · ${gaps} without a close${overridden?` · ${overridden} CLV set by hand`:''}.
-        Leave the other side blank and it is assumed at standard &minus;110/&minus;110 juice, stamped as assumed.
-        A result you set by hand sticks: the schedule will not overwrite it.
-        <b>CLV</b> is in points and overrides whatever the close would have given &mdash; type <code>0</code> for a leg that closed where you took it.
-        Clear the box to go back to the captured close.</p>`
-    + rows
-    + ghosts.map(g=>{
-        const why = g.noPrice
-          ? `a leg is filed but carries no price, so there is nothing to grade or price here (key <code>${esc(g.key)}</code>)`
-          : `no leg on this ticket — nothing filed (key <code>${esc(g.key)}</code>)`;
-        return `<div class="gr leg" data-ghost="${esc(g.p)}">
-          <span><b>${esc(g.p)}</b> <span class="cst bad">not gradeable</span>
-          <span class="tm" style="display:block;margin-top:2px">${why}</span></span></div>`;
-      }).join('')
-    + `<div class="row" style="margin-top:14px"><button class="btn" id="finish">Name the bozo</button>
-        <span class="tm">Grades the whole week and resolves who wore it. Needs every leg settled.</span></div>`;
-  document.getElementById('finish').onclick = decide;
-
-  document.querySelectorAll('#manual .gsv').forEach(b=>{ b.onclick = ()=>saveLeg(b.dataset.save, b); });
-
-  /* ⚠️ Two players on the SAME selection share one real-world outcome, so grading them
-     apart is not a preference — it is a contradiction. The Worker refuses it outright;
-     this mirrors the answer across the group so the contradiction is never typed in the
-     first place. */
-  const sameMarket = {};
-  for(const x of live){
-    if(!isManualLeg(x)) continue;
-    const k = [x.eventId, x.mkt, x.prop||'', x.line??'', x.side??'', x.period||'game'].join('|');
-    (sameMarket[k] = sameMarket[k] || []).push(x.key);
-  }
-  const twins = Object.values(sameMarket).filter(g=>g.length>1);
-  for(const group of twins){
-    for(const who of group){
-      const sel = document.querySelector(`[data-w="${CSS.escape(who)}"]`);
-      const act = document.querySelector(`[data-a="${CSS.escape(who)}"]`);
-      if(sel) sel.onchange = ()=>group.forEach(o=>{
-        const s2=document.querySelector(`[data-w="${CSS.escape(o)}"]`); if(s2) s2.value=sel.value; });
-      if(act) act.oninput = ()=>group.forEach(o=>{
-        const a2=document.querySelector(`[data-a="${CSS.escape(o)}"]`); if(a2) a2.value=act.value; });
-    }
-    const first = document.querySelector(`[data-w="${CSS.escape(group[0])}"]`);
-    if(first && first.closest('.gr'))
-      first.closest('.gr').insertAdjacentHTML('beforebegin',
-        `<div class="twinnote">${group.map(esc).join(' and ')} are on the same selection — one outcome, graded together.</div>`);
-  }
-}
-
-/* Write ONE leg, now. result + won travel together (two spellings of one fact), the
-   result is stamped manual so the schedule never overwrites it, and a lone close gets
-   its other side assumed at standard juice and stamped as such. Goes through
-   /bozo/admin, so it is manager-only and every field it touches is in the audit log. */
-async function saveLeg(p, btn){
-  /* ⚠️ `p` IS THE PICK KEY, not a display name. The card keys every control by it
-     precisely so this write needs no name-to-key translation — that translation is what
-     silently lost a member whose uid did not map back through the roster. */
-  const rowOf = who => (S.results||{})[who.p ?? who] || {};
-  const top=document.getElementById('gerr');
-  const row=document.querySelector(`[data-say="${CSS.escape(p)}"]`);
-  /* Say it in BOTH places: on the row, where the reader is looking, and at the top,
-     where the card's other messages live. A refusal that only appears off-screen is the
-     same as no refusal at all. */
-  const e={ set className(v){ if(top) top.className=v;
-              if(row) row.className='legsay'+(/\bok\b/.test(v)?' ok':' bad'); },
-            set textContent(v){ if(top) top.textContent=v; if(row) row.textContent=v; } };
-  e.className='err'; e.textContent='';
-  const q = a => document.querySelector(`[data-${a}="${CSS.escape(p)}"]`);
-  const key = p, sel=q('w'), act=q('a'), c=q('c'), co=q('co'), cl=q('clv');
-  const edits = [];
-  if(sel && sel.value!==''){
-    const result = sel.value==='1' ? 'won' : sel.value==='0' ? 'lost' : 'push';
-    edits.push({ path:`results/${key}/result`, value:result },
-               { path:`results/${key}/won`, value: result==='won' ? true : result==='lost' ? false : null },
-               { path:`results/${key}/resultSource`, value:'manual' });
-  }
-  if(act && act.value!=='') edits.push({ path:`results/${key}/actual`, value:+act.value });
-  if(c && !c.disabled){
-    const cRaw=c.value.trim(), oRaw=(co?co.value:'').trim();
-    if(cRaw==='' && oRaw!==''){ e.textContent=`${p}: enter the closing price you took; the other side can be left blank.`; return; }
-    if(cRaw!==''){
-      const cv=priceNum(cRaw);
-      if(!Number.isFinite(cv)){ e.textContent=`${p}: the close needs a whole American price, like -175.`; return; }
-      let ov=priceNum(oRaw), assumed=false;
-      if(!Number.isFinite(ov)){
-        if(oRaw!==''){ e.textContent=`${p}: the other side needs a whole American price, or leave it blank.`; return; }
-        ov=clvAssumedOpp(cv); assumed=true;
-        if(ov==null){ e.textContent=`${p}: that price is too long to assume an other side for — enter the real one.`; return; }
-      }
-      edits.push({ path:`results/${key}/close`, value:cv },
-                 { path:`results/${key}/closeOpp`, value:ov },
-                 { path:`results/${key}/closeBook`, value:'draftkings' },
-                 { path:`results/${key}/closeSource`, value:'manual' },
-                 { path:`results/${key}/closeOppSource`, value: assumed ? 'assumed' : 'manual' },
-                 { path:`results/${key}/closeUnavailableReason`, value:null });
-    }
-  }
-  /* ⚠️ AN EMPTY CLV BOX IS A CLEAR, NOT A NO-OP. Every other box on this row means
-     "leave it alone" when blank, because blank is how they arrive for a leg nobody has
-     touched. The CLV box is different: it is pre-filled from the stored override, so a
-     manager who empties it is saying "go back to the close", and treating that as
-     nothing would make the override impossible to undo from the card that set it. */
-  if(cl){
-    const raw = cl.value.trim();
-    if(raw === ''){
-      if(rowOf({p}).clvPts != null)
-        edits.push({ path:`results/${key}/clvPts`, value:null },
-                   { path:`results/${key}/clvSource`, value:null });
-    }else{
-      const v = Number(raw);
-      if(!Number.isFinite(v)){ e.textContent=`${p}: CLV needs a number in points, like 0 or -1.75.`; return; }
-      if(Math.abs(v) > 100){ e.textContent=`${p}: a CLV of ${v} points is not a price move — it is a typo.`; return; }
-      edits.push({ path:`results/${key}/clvPts`, value:v },
-                 { path:`results/${key}/clvSource`, value:'manual' });
-    }
-  }
-  if(!edits.length){ e.textContent=`${p}: nothing filled in to save.`; return; }
-  if(btn) btn.disabled=true;
-  try{
-    await godWrite(edits);
-    e.className='err ok'; e.textContent=`${p} saved.`;
-    await refresh();
-  }catch(err){ e.className='err'; e.textContent=`${p}: ${err.message}`; if(btn) btn.disabled=false; }
-}
-
-async function confirmGrade(payload){
-  const proposal=await wPost('/bozo/grade',payload);
-  if(proposal.status!=='confirm_required'||!proposal.confirm_code)
-    throw new Error('The Worker did not return a grade confirmation. Nothing was written.');
-  if(!window.confirm(proposal.echo+'\n\nReview the board values, then press OK to write them.'))
-    return null;
-  return wPost('/bozo/grade',{confirm:proposal.confirm_code});
-}
+   decide() used to scrape [data-w]/[data-a]/[data-c]/[data-co] out of this markup to
+   batch unsaved edits at grade time. It still reads them if they are present and simply
+   finds none, falling through to S.results — which the override panel writes on every
+   Save, so the values are already there rather than sitting in an unsaved box. */
 async function decide(){
   const e=document.getElementById('gerr'); e.className='err'; e.textContent='';
   const results = JSON.parse(JSON.stringify(S.results||{}));
@@ -8268,18 +8049,80 @@ function paintGodResults(){
   const picks = (S && S.picks) || {}, res = (S && S.results) || {};
   const keys = Object.keys(picks);
   if(!keys.length){ host.innerHTML = '<p class="tm">No legs on the board this week.</p>'; return; }
-  const cell = (k, v, cur) =>
+
+  /* ⚠️ ONE PLACE TO SETTLE A LEG. Result, closing price and the CLV that falls out of it
+     used to live on three screens — the grade card on This Week, the CLV section in
+     settings, and the result buttons here — and a manager fixing one leg had to visit all
+     three and hope they agreed. They did not: a close typed in one place showed "no CLV"
+     in another, because each screen answered "does this leg have a CLV" its own way.
+
+     The CLV is NOT typed. It is derived from the prices, by clvDeltaOf, the same rule the
+     simulation and the grader read. A missing opposite side is assumed at standard juice
+     rather than refused, so a self-priced prop needs one number — its close — and gets a
+     real CLV out of it. Typed CLV would be a fourth opinion about the same fact. */
+  const clvLine = (x, r) => {
+    const v = clvDeltaOf(x, r);
+    if(v == null) return `<span class="tm">CLV &mdash; enter a closing price</span>`;
+    const pts = v*100, cls = pts>=0 ? 'clvup' : 'clvdn';
+    return `<span class="${cls}">CLV ${pts>0?'+':''}${pts.toFixed(2)} pts</span>`
+      + `<span class="tm"> &middot; ${r.clvPts != null ? 'set by hand'
+          : devigAssumed(x, r) ? 'other side assumed at standard juice' : 'from the close'}</span>`;
+  };
+
+  const btn = (k, v, cur) =>
     `<button class="btn ghost sm godr" data-k="${esc(k)}" data-v="${v}"`
     + `${cur===v?' style="border-color:var(--accent);color:var(--ink-1)"':''}>${esc(v||'clear')}</button>`;
-  host.innerHTML = `<div class="tscroll"><table class="bz gaptbl"><tbody>
-    <tr><th>Who</th><th>Leg</th><th>Result</th></tr>`
-    + keys.map(k=>{
-        const r = res[k] || {};
-        const cur = r.result || (r.won===true?'won':r.won===false?'lost':'');
-        return `<tr><td>${esc(picks[k].who || k)}</td><td>${esc(picks[k].label || '')}</td>`
-          + `<td>${['won','lost','push',''].map(v=>cell(k,v,cur)).join(' ')}</td></tr>`;
-      }).join('')
-    + `</tbody></table></div>`;
+
+  /* Stacked, not tabular. This is read and typed on a phone, and the row that carried
+     result plus two prices plus a CLV clipped its last column off the right edge — the
+     control the manager came for, unreachable. */
+  host.innerHTML = keys.map(k=>{
+    const x = picks[k] || {}, r = res[k] || {};
+    const cur = r.result || (r.won===true?'won':r.won===false?'lost':'');
+    return `<div class="gr leg" data-god="${esc(k)}">
+      <div><b>${esc(x.who || memberLabel(k) || kDec(k))}</b> ${esc(x.label || '')}</div>
+      <div class="tm" style="margin:2px 0 6px">took ${x.price ?? '—'} / ${x.entryPriceOpp ?? '—'}</div>
+      <div class="row" style="gap:6px;flex-wrap:wrap">${['won','lost','push',''].map(v=>btn(k,v,cur)).join('')}</div>
+      ${isManualLeg(x) ? `<div class="row" style="gap:6px;margin-top:8px;align-items:center">
+        <input type="number" step="any" class="gda" placeholder="actual" value="${r.actual ?? ''}"
+          style="max-width:130px">
+        <span class="tm">the number it finished on &mdash; the schedule cannot supply it for this leg</span>
+      </div>` : ''}
+      <div class="row" style="gap:6px;margin-top:8px;align-items:center">
+        <span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
+          class="gdc" placeholder="close" value="${r.close ?? ''}"
+          ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
+        <span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
+          class="gdo" placeholder="${r.close != null && clvAssumedOpp(r.close) != null
+            ? 'auto '+fmtPrice(clvAssumedOpp(r.close)) : 'other side'}" value="${r.closeOpp ?? ''}"
+          ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
+        <button class="btn ghost sm gdsave">Save</button>
+      </div>
+      <div class="tm" style="margin-top:6px">${clvLine(x, r)}</div>
+      <div class="gwhy gdst"></div>
+    </div>`;
+  }).join('')
+  /* ⚠️ The button that resolves the week belongs with the controls that settle the legs.
+     It sat at the bottom of the grade card on This Week, one screen away from the panel
+     the manager actually fixes a week in, so settling a leg and naming the bozo were two
+     journeys. Same decide(), same refusal when a leg is still open. */
+  + `<div class="row" style="margin-top:14px;align-items:center;gap:10px">
+      <button class="btn" id="finish">Name the bozo</button>
+      <span class="tm">Grades the whole week and resolves who wore it. Needs every leg settled.</span>
+    </div>`;
+
+  const fin = document.getElementById('finish');
+  if(fin) fin.onclick = decide;
+
+  host.querySelectorAll('.sgn').forEach(b=>{
+    b.onclick = ()=>{
+      const i = b.previousElementSibling;
+      if(!i) return;
+      const v = i.value.trim();
+      i.value = v.startsWith('-') ? v.slice(1) : (v ? '-'+v.replace(/^\+/,'') : '-');
+      i.focus();
+    };
+  });
 
   host.querySelectorAll('.godr').forEach(b=>{
     b.onclick = async ()=>{
@@ -8293,11 +8136,72 @@ function paintGodResults(){
         await godWrite([
           { path: `results/${encodeURIComponent(k)}/result`, value: v || null },
           { path: `results/${encodeURIComponent(k)}/won`, value: v==='won' ? true : v==='lost' ? false : null },
+          /* ⚠️ STAMPED MANUAL OR THE FEED TAKES IT BACK. bozoGradeFromScheduleKv skips a
+             leg whose resultSource is "manual" and re-grades every other one on the next
+             tick or the next Pull — so a result set here without the stamp flips back to
+             the feed's answer minutes later, and the manager watches their correction
+             undo itself. The card this panel replaced wrote the stamp; the result
+             buttons did not, because nothing had ever graded a whole week from them. */
+          { path: `results/${encodeURIComponent(k)}/resultSource`, value: v ? 'manual' : null },
         ]);
         godErr(v ? `Set to ${v}. Anything already computed from the old value is unchanged.` : 'Cleared.', true);
         await refresh(); paintGod();
       }catch(e){ godErr(e.message); }
       b.disabled = false;
+    };
+  });
+
+  host.querySelectorAll('.gdsave').forEach(b=>{
+    b.onclick = async ()=>{
+      const box = b.closest('[data-god]'), k = box.dataset.god;
+      const st = box.querySelector('.gdst');
+      const say = m => { st.className='gwhy gdst'; st.textContent=m; };
+      const cRaw = box.querySelector('.gdc').value.trim();
+      const oRaw = box.querySelector('.gdo').value.trim();
+      godErr('');
+
+      /* ⚠️ A hand-graded leg's ACTUAL is saved here too. It is the only number the schedule
+         feed cannot supply for a prop or an Other leg, the Worst Beat lever is computed
+         from it, and it used to be typed on the card this panel replaced — dropping it
+         would have made a prop ungradeable from the one screen that grades props. */
+      const aBox = box.querySelector('.gda');
+      const aRaw = aBox ? aBox.value.trim() : '';
+      let av = null;
+      if(aRaw !== ''){
+        av = Number(aRaw);
+        if(!Number.isFinite(av)){ say('The actual needs a number, like 0 or 24.5.'); return; }
+      }
+      if(cRaw === '' && oRaw !== ''){ say('Enter the closing price. The other side can be left blank.'); return; }
+      let cv = null, ov = null, assumed = false;
+      if(cRaw !== ''){
+        cv = priceNum(cRaw);
+        if(!Number.isFinite(cv)){ say('The close needs a whole American price, like -175.'); return; }
+        if(oRaw !== ''){
+          ov = priceNum(oRaw);
+          if(!Number.isFinite(ov)){ say('The other side needs a whole American price, or leave it blank.'); return; }
+        }else{
+          /* ⚠️ Stored, not left blank. The assumption is recorded as a real number with a
+             stamp saying it was assumed, so every surface reads one value and the CLV
+             cannot come out different depending on who recomputed the missing side. */
+          ov = clvAssumedOpp(cv); assumed = true;
+          if(ov == null){ say('That price is too long to assume an other side for — enter the real one.'); return; }
+        }
+      }
+      b.disabled = true;
+      try{
+        const kk = encodeURIComponent(k);
+        const edits = aBox ? [{ path:`results/${kk}/actual`, value: aRaw === '' ? null : av }] : [];
+        await godWrite(edits.concat(cRaw === ''
+          ? [ { path:`results/${kk}/close`, value:null }, { path:`results/${kk}/closeOpp`, value:null },
+              { path:`results/${kk}/closeSource`, value:null }, { path:`results/${kk}/closeOppSource`, value:null } ]
+          : [ { path:`results/${kk}/close`, value:cv }, { path:`results/${kk}/closeOpp`, value:ov },
+              { path:`results/${kk}/closeBook`, value:'draftkings' },
+              { path:`results/${kk}/closeSource`, value:'manual' },
+              { path:`results/${kk}/closeOppSource`, value: assumed ? 'assumed' : 'manual' },
+              { path:`results/${kk}/closeUnavailableReason`, value:null } ]));
+        st.className='gwhy ok'; st.textContent = cRaw === '' ? 'Cleared.' : 'Saved.';
+        await refresh(); paintGod();
+      }catch(e){ say(e.message); b.disabled = false; }
     };
   });
 }
@@ -8388,301 +8292,6 @@ function ledgerWho(v){
   const k = kEnc(v);
   if(Object.prototype.hasOwnProperty.call(ms, k)) return memberLabel(k);
   return v;
-}
-
-/* ---------------- CLV summary: the whole roster, every week ----------------
-   ⚠️ THIS EXISTS BECAUSE A FILTERED LIST CANNOT BE READ. The section below it lists the
-   legs still missing a close, which is the right shape for the job of filling them and
-   the wrong shape for the question a manager actually opens this page with: where does
-   my league stand on CLV? A league of eight that shows three names has not told you the
-   other five are fine — it has told you nothing about them, and "absent" and "broken for
-   him" look identical. So this table starts from the ROSTER, not from the ledger: every
-   member gets a row whether they have legs, gaps, both or neither.
-
-   ⚠️ IT SHOWS WHAT THE NUMBER RESTS ON. A CLV averaged over legs whose other side was
-   assumed at standard juice, or typed in by the manager, is weaker evidence than one
-   averaged over captured two-sided closes, and the two must never read the same. The
-   count of each is on the row.
-
-   Numbers are derived here exactly as the chart derives them — clvPair() is the one
-   definition — so this table and the chart can never disagree about a leg. */
-const CLVSUM = { lid: null, data: null };
-async function clvSummaryData(force){
-  if(!force && CLVSUM.lid === LID && CLVSUM.data) return CLVSUM.data;
-  const j = await wGet('/bozo/clv?league='+encodeURIComponent(LID));
-  CLVSUM.lid = LID; CLVSUM.data = j;
-  return j;
-}
-
-/* One row per member. `roster` leads so a member with zero legs still gets a row; any
-   ledger name the roster does not carry (someone who has since left) is still computed
-   and carries onRoster:false, because their legs are in the season's numbers whether or
-   not they are on the table. The renderer keeps the table to the current roster and
-   accounts for the rest in a footnote — see clvSummaryHtml. */
-function clvSummaryRows(legs, roster){
-  const seats = new Set((roster||[]).filter(n=>n != null && n !== ''));
-  const names = [];
-  for(const n of [...(roster||[]), ...legs.map(l=>ledgerWho(l.player))])
-    if(n != null && n !== '' && !names.includes(n)) names.push(n);
-  return names.map(p=>{
-    // Resolved on both sides: a roster name and a uid-keyed ledger row must land together.
-    const mine    = legs.filter(l=>ledgerWho(l.player)===p);
-    const graded  = mine.filter(l=>l.result==='win' || l.result==='loss');
-    const charted = graded.filter(l=>clvPair(l) != null);
-    const pts     = charted.map(l=>clvPair(l).clv*100);
-    return {
-      player: p,
-      onRoster: seats.has(p),
-      legs: mine.length,
-      graded: graded.length,
-      charted: charted.length,
-      /* ⚠️ Counted over EVERY leg, not only graded ones. Tying it to `graded` made the
-         column read 0 for a member whose legs all lack a close, purely because the week
-         had not been graded yet — a zero in the one column that exists to report a
-         non-zero problem. A leg with no usable close is a gap the moment it is filed. */
-      missing: mine.filter(l=>clvPair(l) == null).length,
-      assumed: charted.filter(l=>clvOppAssumed(l)).length,
-      manual:  charted.filter(l=>clvPair(l).manual).length,
-      wins: graded.filter(l=>l.result==='win').length,
-      avg: pts.length ? pts.reduce((a,b)=>a+b,0)/pts.length : null,
-    };
-  }).sort((a,b)=>
-    (a.avg==null) - (b.avg==null)                       // anyone with a number first
-    || (b.avg||0) - (a.avg||0)
-    || String(a.player).localeCompare(String(b.player)));
-}
-
-/* ⚠️ THE TABLE IS THE ROSTER, AND THE FOOTNOTE IS THE DIFFERENCE. A name in the ledger
-   that the roster no longer carries is not a member, and listing them as one overstates
-   the league — but deleting them outright would hide legs that are still in the season's
-   averages, which is the same dishonesty pointing the other way. So they come off the
-   table and are counted under it, by name. */
-function clvSummaryHtml(rows){
-  const seated = rows.filter(r=>r.onRoster !== false), gone = rows.filter(r=>r.onRoster === false);
-  const foot = gone.length
-    ? `<p class="tm" style="margin:8px 0 0">${gone.length === 1 ? 'One name is' : gone.length+' names are'}`
-      + ` in the ledger but no longer on the roster &mdash; ${gone.map(r=>esc(teamOf(r.player))).join(', ')}.`
-      + ` Their legs still count toward the season's numbers; they are not members, so they are not on the table.</p>`
-    : '';
-  if(!seated.length) return `<p class="tm">Nobody is on this roster yet.</p>` + foot;
-  const pts = n => (n>0?'+':'') + n.toFixed(1);
-  rows = seated;
-  return `<div class="tscroll"><table class="bz clvsum"><tbody>
-    <tr><th>Who</th><th>Legs</th><th>On the chart</th><th>No usable close</th><th>Avg CLV</th></tr>`
-    + rows.map(r=>`<tr data-sum="${esc(r.player)}">
-        <td>${esc(teamOf(r.player))}</td>
-        <td class="px">${r.legs}${r.graded !== r.legs ? `<div class="gwhy">${r.graded} graded</div>` : ''}</td>
-        <td class="px">${r.charted}`
-          + (r.assumed ? `<div class="gwhy">${r.assumed} on an assumed other side</div>` : '')
-          + (r.manual  ? `<div class="gwhy">${r.manual} from a manager's CLV</div>` : '')
-        + `</td>
-        <td class="px">${r.missing}</td>
-        <td class="px">${r.avg==null ? '&mdash;' : pts(r.avg)+' pts'}`
-          + (r.graded===0
-              ? `<div class="gwhy">nothing graded yet</div>`
-              : (r.charted===0 ? `<div class="gwhy">no leg has a usable close</div>` : ''))
-        + `</td>
-      </tr>`).join('')
-    + `</tbody></table></div>` + foot;
-}
-
-async function paintClvSummary(force){
-  const body = document.getElementById('clvSumBody');
-  if(!body) return;
-  let j;
-  try{ j = await clvSummaryData(force); }
-  catch(e){ body.innerHTML = `<p class="tm">Could not read the ledger: ${esc(e.message)}</p>`; return; }
-  body.innerHTML = clvSummaryHtml(clvSummaryRows(j.legs||[], stateMembers()));
-}
-
-/* ---------------- missing closing prices, across the whole season ----------------
-   The grade card can only see the current week — bozoNext clears /results when the week
-   advances. This reads the LEDGER, which keeps every row forever, so a gap from any week
-   is still fillable months later. */
-async function paintGaps(){
-  const body = document.getElementById('gapBody'), note = document.getElementById('gapNote');
-  if(!body) return;
-  let j = { rows: [], all: [], total: 0 };
-  try{ j = await wGet('/bozo/close-gaps?league='+encodeURIComponent(LID)); }
-  catch(e){ note.textContent = 'Could not load the ledger: '+e.message+' — showing this week from the board.'; }
-
-  /* ⚠️ THE TICKET IS THE LIST, NOT THE LEDGER. This is the same lesson paintManual
-     learned in #109, arriving here from the other side. A ledger row is written at lock
-     and at grade; a leg whose row was never written — or was written under a key this
-     page cannot line up — simply was not in the response, and a list built only from the
-     response cannot show a leg it never received. That is how the one member who most
-     needed this screen was the one member missing from it: his leg was on the board, in
-     the override panel, and absent here, with nothing on screen admitting the gap.
-
-     So the list is the UNION: every ledger row, plus every leg on this week's ticket that
-     has no ledger row yet, plus every roster member with no leg at all. A pick-backed row
-     saves through results/<pickKey>, which is the path the grade card has always used and
-     the one identifier guaranteed to exist. The union can hide neither a leg nor a
-     member. */
-  const led = (j.all && j.all.length) ? j.all : (j.rows || []);
-  // The season prefix comes off a real row rather than a guess, so the key we build to
-  // look a pick up by is the same shape the Worker writes.
-  const season = (led[0] && String(led[0].row).split('-w')[0])
-    || String((S && S.season) || (CLV.data && CLV.data.legs && CLV.data.legs[0] && CLV.data.legs[0].season) || '');
-  const week = (S && S.week) || 1;
-  const byRow = new Map(led.map(r=>[String(r.row), r]));
-
-  const rows = led.map(r=>({ ...r, src:'ledger', who: ledgerWho(r.player) }));
-  const seen = new Set(rows.map(r=>String(r.row)));
-
-  const picks = (S && S.picks) || {};
-  for(const [key, x] of Object.entries(picks)){
-    if(!x) continue;
-    const rowKey = season ? `${season}-w${week}-${key}` : '';
-    if(rowKey && seen.has(rowKey)) continue;
-    // Already present under a row key we could not reconstruct? Match on who + label so a
-    // leg is never listed twice.
-    const who = ledgerWho(x.who || memberLabel(key) || kDec(key));
-    if(rows.some(r=>r.who===who && r.label===x.label)) continue;
-    const res = ((S && S.results) || {})[key] || {};
-    rows.push({ src:'pick', key, row: rowKey, who, week,
-      label: x.label, price: x.price ?? null, priceOpp: x.entryPriceOpp ?? null,
-      close: res.close ?? null, closeOpp: res.closeOpp ?? null,
-      clvPts: res.clvPts ?? null, clvSource: res.clvSource || null,
-      oppSource: res.closeOppSource || null,
-      reason: rowKey ? 'on this week’s ticket, no ledger row yet' : 'on this week’s ticket',
-      locked: false });
-  }
-
-  // A roster member with no leg anywhere is an absence worth stating, not hiding.
-  const owners = new Set(rows.map(r=>String(r.who)));
-  for(const n of stateMembers())
-    if(!owners.has(String(n))) rows.push({ src:'none', who:n, week:null, label:null });
-
-  rows.sort((a,b)=> (a.week||0)-(b.week||0) || String(a.who).localeCompare(String(b.who)));
-
-  /* ⚠️ `gap` IS COMPUTED HERE, never taken from the payload. An older Worker does not
-     send it, and an absent flag read as false renders a leg with no close at all as
-     "close captured" — a confident lie in the one column this screen exists to be honest
-     about. Derived from the prices themselves it cannot disagree with them. */
-  const isGap = r => r.src !== 'none' && (r.close == null || r.closeOpp == null);
-  const gaps = rows.filter(isGap).length;
-  const legs = rows.filter(r=>r.src !== 'none').length;
-
-  note.innerHTML = (gaps === 0
-    ? `Every leg has both sides of its close.`
-    : `<b>${gaps} of ${legs} legs</b> have no usable closing price. A leg needs <b>both sides</b> to be
-       de-vigged — with one side only it is dropped from the CLV chart and from <i>n</i> — unless you leave
-       the other side <b>blank</b>, in which case it is assumed at standard juice and stamped as assumed.`)
-    + ` Read both sides off a <b>DraftKings screenshot taken at kickoff</b> &mdash; <b>not the placed ticket</b>,
-       which carries the price you got at placement, so entering it here measures deadline drift rather than CLV.
-       A leg with no capturable market never gets a close: set its <b>CLV in points</b> instead, which is the
-       number the chart and the Worst-CLV lever both read.`;
-
-  if(!rows.length){ body.innerHTML = `<p class="tm">No legs on the board or in the ledger yet.</p>`; return; }
-
-  body.innerHTML = `<div class="tscroll"><table class="bz gaptbl"><tbody>
-    <tr><th>Wk</th><th>Who</th><th>Leg</th><th>Took</th><th>Close</th><th>Other side</th><th>CLV pts</th><th></th></tr>`
-    + rows.map((r,i)=>{
-      if(r.src === 'none') return `<tr><td>&mdash;</td><td>${esc(teamOf(r.who))}</td>
-        <td colspan="6" class="tm">No leg on the board or in the ledger, so there is nothing to set.</td></tr>`;
-      /* ⚠️ THE CLOSE STATE COMES FIRST AND IS ALWAYS STATED. A provenance note ("no
-         ledger row yet") is useful, but letting it REPLACE the close state meant the one
-         row that most needed to say "no close captured yet" said something else instead,
-         and the reader had to infer the gap from two empty boxes. Both lines, always. */
-      const why = (isGap(r) ? 'no close captured yet' : 'close captured')
-        + (r.reason ? ' \u00b7 ' + r.reason : '');
-      return `<tr data-i="${i}" data-row="${esc(r.row||'')}" data-key="${esc(r.key||'')}" data-src="${r.src}">
-        <td>${r.week ?? '&mdash;'}</td><td>${esc(teamOf(r.who))}</td>
-        <td>${esc(r.label||'')}<div class="gwhy">${esc(why)}</div></td>
-        <td class="px">${r.price ?? '—'} / ${r.priceOpp ?? '—'}</td>
-        <td><span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
-          class="gc" placeholder="close" value="${r.close ?? ''}"
-          ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span></td>
-        <td><span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
-          class="go" placeholder="${(r.assumedOpp != null ? r.assumedOpp : (r.close != null ? clvAssumedOpp(r.close) : null)) != null
-            ? 'auto '+fmtPrice(r.assumedOpp != null ? r.assumedOpp : clvAssumedOpp(r.close)) : 'other'}" value="${r.closeOpp ?? ''}"
-          ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
-          ${r.oppSource === 'assumed' ? '<div class="gwhy">assumed at standard juice</div>' : ''}</td>
-        <td><input type="number" step="0.01" class="gclv clvin" placeholder="clv pts" value="${r.clvPts ?? ''}">
-          ${r.clvSource === 'manual' ? '<div class="gwhy">set by hand</div>' : ''}</td>
-        <td><button class="btn ghost sm gsave">Save</button><div class="gwhy gst"></div></td></tr>`;
-    }).join('')
-    + `</tbody></table></div>`;
-
-  body.querySelectorAll('.sgn').forEach(b=>{
-    b.onclick = ()=>{
-      const i = b.previousElementSibling;
-      if(!i || i.disabled) return;
-      const v = i.value.trim();
-      i.value = v.startsWith('-') ? v.slice(1) : (v ? '-'+v.replace(/^\+/,'') : '-');
-      i.focus();
-    };
-  });
-
-  body.querySelectorAll('.gsave').forEach(btn=>{
-    btn.onclick = async ()=>{
-      const tr = btn.closest('tr'), e = document.getElementById('gapErr');
-      const st = tr.querySelector('.gst');
-      e.className='err'; e.textContent=''; if(st){ st.className='gwhy gst'; st.textContent=''; }
-      const say = m => { if(st) st.textContent = m; e.textContent = m; };
-      const r = rows[Number(tr.dataset.i)];
-      const cIn = tr.querySelector('.gc'), oIn = tr.querySelector('.go'), vIn = tr.querySelector('.gclv');
-      const close = cIn.value.trim(), opp = oIn.value.trim(), clvRaw = vIn.value.trim();
-
-      const had = vIn.defaultValue.trim() !== '';
-      const sendClv = clvRaw !== '' || had;
-      let clvPts = null;
-      if(clvRaw !== ''){
-        clvPts = Number(clvRaw);
-        if(!Number.isFinite(clvPts)){ say('CLV needs a number in points, like 0 or -1.75.'); return; }
-        if(Math.abs(clvPts) > 100){ say(`A CLV of ${clvPts} points is not a price move — it is a typo.`); return; }
-      }
-      if(close==='' && opp!==''){ say('Enter the closing price you took; the other side can be left blank.'); return; }
-      let cv=null, ov=null, assumed=false;
-      if(close!==''){
-        cv = priceNum(close);
-        if(!Number.isFinite(cv)){ say('The closing price needs a whole American price, like -175.'); return; }
-        if(opp!==''){
-          ov = priceNum(opp);
-          if(!Number.isFinite(ov)){ say('The other side needs a whole American price, like +150 — or leave it blank.'); return; }
-        }else{
-          ov = clvAssumedOpp(cv); assumed = true;
-          if(ov==null){ say('That price is too long to assume an other side for — enter the real one.'); return; }
-        }
-      }
-      if(close==='' && !sendClv){ say('Nothing filled in to save.'); return; }
-
-      btn.disabled = true;
-      try{
-        if(r.src === 'ledger'){
-          const payload = { league: LID, row: r.row, close: cv, closeOpp: ov };
-          if(sendClv) payload.clvPts = clvPts;
-          await wPost('/bozo/close', payload);
-        }else{
-          /* ⚠️ A leg with no ledger row still has a pick key, and results/<pickKey> is the
-             path the grade card has always written. Using it here means a leg the ledger
-             never received is still editable today, rather than after somebody works out
-             why its row is missing. */
-          const edits = [];
-          if(close!==''){
-            edits.push({ path:`results/${r.key}/close`, value:cv },
-                       { path:`results/${r.key}/closeOpp`, value:ov },
-                       { path:`results/${r.key}/closeBook`, value:'draftkings' },
-                       { path:`results/${r.key}/closeSource`, value:'manual' },
-                       { path:`results/${r.key}/closeOppSource`, value: assumed ? 'assumed' : 'manual' },
-                       { path:`results/${r.key}/closeUnavailableReason`, value:null });
-          }
-          if(sendClv){
-            edits.push({ path:`results/${r.key}/clvPts`, value: clvPts },
-                       { path:`results/${r.key}/clvSource`, value: clvPts == null ? null : 'manual' });
-          }
-          if(!edits.length){ say('Nothing filled in to save.'); btn.disabled=false; return; }
-          await godWrite(edits);
-        }
-        if(st){ st.className='gwhy ok'; st.textContent='Saved.'; }
-        CLVSUM.data = null;
-        await paintGaps();
-        await paintClvSummary(true);
-        await refresh();
-      }catch(err){ say(err.message); btn.disabled = false; }
-    };
-  });
 }
 
 /* ==================== Bozo Royale — survival odds ====================

@@ -81,20 +81,18 @@ ok(/closeObservedAt: null, closeOppSource: null, closeOverround: null/.test(work
 ok(/upd\[`\$\{k\}\/closeUnavailableReason`\] = null;/.test(worker),
    "filling the gap clears the note describing the gap");
 
-/* ---- the page ---- */
-ok(/data-co=/.test(pageCode), "the grade card takes an opposite side, not just a close");
-ok(/close===''\s*&&\s*opp!==''/.test(pageCode),
-   "the panel refuses an other-side-only entry — the assumption runs from the close outwards");
-ok(/assumedOpp/.test(pageCode),
-   "the panel shows what a blank other side will become before the manager saves it");
-ok(/id="gapBody"/.test(pageCode) && /close-gaps/.test(pageCode),
-   "the panel that reaches past weeks exists and reads the ledger");
-ok(/if\(i\.disabled\) return;/.test(pageCode),
-   "a locked (captured) box is not sent back — it would only be rejected");
-/* Still amber, never green: a lone close is not yet a usable close. What changed is what
-   the amber SAYS — the other side is no longer demanded, it is assumed on save. */
-ok(/cst warn/.test(pageCode) && /other side will be assumed on save/.test(pageCode),
-   "a half-filled close is flagged amber, not green — and says the other side will be assumed");
+/* ---- the page ----
+ * ⚠️ These invariants moved rather than went away. The grade card and the settings CLV
+ * panel are deleted; Manager Override is the one place a close is typed. Each assertion
+ * below is the same rule pointed at that panel, and test-bozo-override renders it. */
+ok(/class="gdo"/.test(pageCode),
+   "the override takes an opposite side, not just a close");
+ok(/cRaw === '' && oRaw !== ''/.test(pageCode),
+   "it refuses an other-side-only entry — the assumption runs from the close outwards");
+ok(/'auto '\+fmtPrice\(clvAssumedOpp\(r\.close\)\)/.test(pageCode),
+   "it shows what a blank other side will become before the manager saves it");
+ok(/closeOppSource`, value: assumed \? 'assumed' : 'manual'/.test(pageCode),
+   "and stamps an assumed other side apart from one read off a slip");
 
 /* ---- the CLV override reaches the LEDGER, for any week ----
  * ⚠️ THE BUG THIS PINS. clvPts shipped in #106 with exactly one surface that could set
@@ -125,17 +123,23 @@ ok(/gap: r\.close == null \|\| r\.closeOpp == null/.test(worker),
 ok(/clvPts: r\.clvPts \?\? null/.test(worker),
    "each row carries its CLV, so the box renders what is already stored");
 
-/* ---- the page ---- */
-ok(/class="gclv clvin"/.test(pageCode),
-   "every leg row on the CLV section has a CLV box");
-ok(/payload\.clvPts = clvPts/.test(pageCode),
-   "the page sends the CLV to the ledger route");
-ok(/const had = vIn\.defaultValue\.trim\(\) !== ''/.test(pageCode),
-   "an emptied CLV box CLEARS the override rather than being ignored — same rule as the grade card");
-ok(/not the placed ticket/i.test(pageCode),
-   "the copy no longer tells anyone to read a close off the placed ticket");
+/* ---- the page ----
+ * ⚠️ THE CLV IS NO LONGER TYPED ANYWHERE. It is derived from the prices by clvDeltaOf,
+ * which is what the simulation and the grader read, so the three-way disagreement that a
+ * typed CLV allowed cannot recur. The clvPts write path stays on the Worker for the rows
+ * that already carry one and for any future surface that needs it. */
+ok(!/class="gclv clvin"/.test(pageCode) && !/placeholder="clv pts"/.test(pageCode),
+   "no CLV input survives on the page — the number is derived, not entered");
+ok(/const v = clvDeltaOf\(x, r\);/.test(pageCode),
+   "the override reports the CLV through clvDeltaOf, the one rule");
 ok(!/Read them off the placed ticket/.test(pageCode),
    "the old placed-ticket instruction is gone");
+/* ⚠️ KNOWN GAP, recorded rather than hidden: no surface now calls /bozo/close, so a
+   closing price for a PAST week cannot be fixed from the UI. This week's fixes reach the
+   ledger when the week is graded. The route and its guards stay tested above and remain
+   the way in when a past-week surface is built. */
+ok(!/'\/bozo\/close'/.test(pageCode),
+   "no page surface calls the ledger fill route today — the gap is known, not accidental");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
