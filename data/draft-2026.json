@@ -2,7 +2,7 @@
  "source_page": "/teamdraft.html",
  "tier": "labs",
  "graded": false,
- "as_of": "2026-09-11",
+ "as_of": "2026-09-12",
  "source": "VegasInsider 4-book devigged win totals (2026-08-09) normalized to 272; per-game probabilities refit to those totals over the nflverse 2026 schedule",
  "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. Nothing here is graded — the 2026 season has not started, every wins_tracker row reads zero, and no figure on this surface is a result. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run.",
  "field_notes": {
@@ -24,7 +24,7 @@
   "board[].delta": "Chosen team's expected wins minus the best still available. Descriptive, not a grade."
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-09-11",
+ "built": "2026-09-12",
  "canonical_url": "https://datadawgs216.com/data/draft-2026.json",
  "data": {
   "season": 2026,
@@ -8399,7 +8399,7 @@
    }
   },
   "diagnostics": {
-   "checked_at_as_of": "2026-08-11",
+   "checked_at_as_of": "2026-09-11",
    "hard_failures": [],
    "checks": [
     {
