@@ -55,7 +55,7 @@ const ctx = vm.createContext({
   saveLeg: () => {},
   S: { results: { Kap: { close: -235, closeOpp: 190, result: "lost", won: false } } },
 });
-vm.runInContext(grab("function paintManual(live){", "\n/* Write ONE leg, now.")
+vm.runInContext(grab("function paintManual(live, roster){", "\n/* Write ONE leg, now.")
   + "\nglobalThis.__paint = paintManual;", ctx);
 
 /* Deliberately mixed: a prop and a period leg (the two the old card handled in a
@@ -71,7 +71,8 @@ const live = [
   { p: "BUTTS", label: "GB o47.5", mkt: "total", side: "over", line: 47.5, price: -115, sport: "nfl", ts: 8, eventId: "e8" },
 ];
 
-ctx.__paint(live);
+const roster = live.map(l => l.p);
+ctx.__paint(live, roster);
 const html = nodes["manual"].innerHTML;
 
 let pass = 0, fail = 0;
@@ -104,6 +105,25 @@ ok(!html.includes('data-a="Roger"'),
 ok(/result, actual, closing price and CLV/.test(html),
    "the heading names CLV, so the boxes are findable");
 ok(/leglegend/.test(html), "the controls are labelled");
+
+/* ⚠️ NO SILENT EXCLUSIONS. `live` is the roster filtered to members whose pick resolved
+   AND carries a price, so a member the board cannot match to a pick used to simply not be
+   here: no row, no boxes, no reason. Every other name works and one name is absent, which
+   is indistinguishable from "the feature is broken for him" — the single hardest bug shape
+   to diagnose from a screenshot. A row stating the reason is worth more than no row. */
+{
+  nodes["manual"].innerHTML = "";
+  const short = live.slice(0, 6);                       // two members drop out of `live`
+  ctx.__paint(short, live.map(l => l.p));
+  const h2 = nodes["manual"].innerHTML;
+  ok(/data-ghost="ItzBornLegend"/.test(h2) && /data-ghost="BUTTS"/.test(h2),
+     "a member missing from the live legs still gets a row");
+  ok(/not gradeable/.test(h2), "...marked as not gradeable");
+  ok(/no leg found on this ticket/.test(h2), "...with the reason stated");
+  ok(!/data-save="BUTTS"/.test(h2), "...and no Save, because there is nothing to write");
+  ok((h2.match(/data-leg=/g) || []).length === short.length,
+     "the real legs are unaffected");
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -1434,6 +1434,12 @@ table.gaptbl input{width:82px}
 }
 .gr.leg .gsv{margin-left:auto;min-width:76px}
 .gr.leg .saved{font:600 11px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
+/* ⚠️ Per-row feedback, because #gerr is at the top of the card and a phone shows one row
+   at a time. A save that fails silently reads as a button that does not work. */
+.gr.leg .legsay{flex:1 1 100%;font:600 11.5px system-ui;min-height:0}
+.gr.leg .legsay:empty{display:none}
+.gr.leg .legsay.ok{color:var(--good)}
+.gr.leg .legsay.bad{color:var(--bad)}
 table.gaptbl .pxin{width:120px}
 table.gaptbl .gwhy{font-size:11px;color:var(--ink-3);margin-top:2px;max-width:46ch;line-height:1.45}
 /* CLV in the diagnostics table. Own names on purpose — see the note at clvText. */
@@ -5852,7 +5858,7 @@ function render(){
 
   // grading — the Worker is the authority; this only decides what to show
   document.getElementById('gradeCard').style.display = (isManager() && status==='placed' && onWeek) ? '' : 'none';
-  if(isManager() && status==='placed' && onWeek) paintManual(live);
+  if(isManager() && status==='placed' && onWeek) paintManual(live, players);
   const ar=document.getElementById('adminRow');
   if(ar) ar.style.display = (isManager() && status==='graded') ? '' : 'none';
 
@@ -7739,7 +7745,18 @@ async function autoGrade(){
   if(!waiting.length&&!manual.length) e.className='err ok';
   render();
 }
-function paintManual(live){
+function paintManual(live, roster){
+  /* ⚠️ EVERY MEMBER GETS A ROW, EVEN ONE WHOSE LEG CANNOT BE RESOLVED. `live` is the
+     roster filtered down to members whose pick was found AND carries a price — so a
+     member whose pick is keyed under something this page cannot map back to them, or
+     whose leg has no price, simply WAS NOT HERE. No row, no boxes, no reason given.
+
+     That is the worst shape a bug can take on this card: every other name works, one
+     name is absent, and absence looks identical to "this feature is broken for him".
+     A row that says what is wrong is worth more than a row that is missing, so an
+     unresolvable member now appears with the reason and no controls. */
+  const seen = new Set(live.map(x=>x.p));
+  const ghosts = (roster||[]).filter(n=>!seen.has(n));
   /* ⚠️ ONE ROW PER LEG, AND EVERY ROW SAVES ON ITS OWN. This card used to split into a
      manual-results list (props, other, period legs) and a closing-prices list, and the
      only way to commit either was "Name the bozo" at the bottom — the whole-week,
@@ -7802,7 +7819,9 @@ function paintManual(live){
       <input type="number" step="0.01" data-clv="${esc(x.p)}" class="clvin"
         placeholder="${derived != null ? 'clv '+derived.toFixed(2) : 'clv pts'}" value="${r.clvPts ?? ''}"
         aria-label="CLV in points, overrides the close">
-      <button type="button" class="btn sm gsv" data-save="${esc(x.p)}">Save</button></div>`;
+      <button type="button" class="btn sm gsv" data-save="${esc(x.p)}"
+        title="writes results/${esc(kEnc(x.p))}">Save</button>
+      <span class="legsay" data-say="${esc(x.p)}" role="status"></span></div>`;
   }).join('');
 
   const gaps = live.filter(x=>{ const r=rowOf(x); return r.close==null; }).length;
@@ -7817,6 +7836,14 @@ function paintManual(live){
         <b>CLV</b> is in points and overrides whatever the close would have given &mdash; type <code>0</code> for a leg that closed where you took it.
         Clear the box to go back to the captured close.</p>`
     + rows
+    + ghosts.map(n=>{
+        const k = kEnc(n), pk = ((S&&S.picks)||{})[k];
+        const why = !pk ? `no leg found on this ticket — nothing filed, or it is stored under a key this board cannot match to ${esc(n)} (looked under <code>${esc(k)}</code>)`
+                        : `a leg is filed but carries no price, so it cannot be graded or priced here`;
+        return `<div class="gr leg" data-ghost="${esc(n)}">
+          <span><b>${esc(n)}</b> <span class="cst bad">not gradeable</span>
+          <span class="tm" style="display:block;margin-top:2px">${why}</span></span></div>`;
+      }).join('')
     + `<div class="row" style="margin-top:14px"><button class="btn" id="finish">Name the bozo</button>
         <span class="tm">Grades the whole week and resolves who wore it. Needs every leg settled.</span></div>`;
   document.getElementById('finish').onclick = decide;
@@ -7856,7 +7883,15 @@ function paintManual(live){
    /bozo/admin, so it is manager-only and every field it touches is in the audit log. */
 async function saveLeg(p, btn){
   const rowOf = who => (S.results||{})[kEnc(who.p ?? who)] || (S.results||{})[who.p ?? who] || {};
-  const e=document.getElementById('gerr'); e.className='err'; e.textContent='';
+  const top=document.getElementById('gerr');
+  const row=document.querySelector(`[data-say="${CSS.escape(p)}"]`);
+  /* Say it in BOTH places: on the row, where the reader is looking, and at the top,
+     where the card's other messages live. A refusal that only appears off-screen is the
+     same as no refusal at all. */
+  const e={ set className(v){ if(top) top.className=v;
+              if(row) row.className='legsay'+(/\bok\b/.test(v)?' ok':' bad'); },
+            set textContent(v){ if(top) top.textContent=v; if(row) row.textContent=v; } };
+  e.className='err'; e.textContent='';
   const q = a => document.querySelector(`[data-${a}="${CSS.escape(p)}"]`);
   const key = kEnc(p), sel=q('w'), act=q('a'), c=q('c'), co=q('co'), cl=q('clv');
   const edits = [];
