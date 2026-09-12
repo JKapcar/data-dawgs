@@ -6647,6 +6647,24 @@ function simulate(live, levers){
       actual: Number.isFinite(+r.actual) ? +r.actual : null
     };
   });
+  /* ⚠️ THE HIERARCHY IS A FACT ONCE IT IS DRAWN, and this simulation was still rolling
+     dice over it. The server draws ONE permutation when the board locks and writes it to
+     S.order; decide() — the real grader — walks exactly that order. This function drew a
+     fresh one on every single run, so after the lock the odds on screen described 20,000
+     different weeks, none of which was the week being played.
+
+     The effect is not subtle, and it is why these numbers read wrong: with two losers on
+     the ticket, the loser beaten on the FIRST drawn lever cannot be the bozo at all — the
+     cascade stops there. Randomising the order handed them a share anyway, out of the runs
+     where some other lever happened to come first. A player who is safe read as 26%.
+
+     Same principle as the settled-leg fix one block up: once an outcome is known it is a
+     fact, and a simulation that keeps rolling dice over a fact is not modelling
+     uncertainty, it is discarding information. Before the lock there is no order to know,
+     and a fresh permutation is then exactly right. */
+  const drawn = Array.isArray(S.order) ? S.order.filter(i=>levers.includes(i)) : null;
+  const hierarchy = () => (drawn && drawn.length) ? drawn : shuffled(levers);
+
   const anySettled = L.some(l=>l.settled);
   const win=new Array(n).fill(0), bz=new Array(n).fill(0), solo=new Array(n).fill(0);
   const named=live.map(()=>({}));
@@ -6682,7 +6700,7 @@ function simulate(live, levers){
     if(!lost.length){ cash++; continue; }
     if(lost.length===1) solo[lost[0]]++;
     let pool=lost.slice(), why=null;
-    for(const li of shuffled(levers)){
+    for(const li of hierarchy()){
       const k=LEVERS[li].k;
       let surv;
       if(k==='clv'){
@@ -6735,7 +6753,12 @@ const simKeyFor = (live, levers, status) =>
   live.map(x=>{ const r=legRow(x);
     return `${x.p}:${x.price}:${x.ts}:${x.line}:${x.mkt}:${x.side}:${r.close??''}:${r.closeOpp??''}`
          + `:${r.result??''}:${r.won===true?1:r.won===false?0:''}:${r.actual??''}:${r.clvPts??''}`; }).join('|')
-  + '#' + levers.join(',') + '#' + status;
+  + '#' + levers.join(',') + '#' + status
+  /* ⚠️ The drawn hierarchy is part of what the sim reads, so it is part of what makes a
+     cached run stale. Without it the run computed BEFORE the lock — when every
+     permutation was still in play — stayed on screen after the draw, under a note
+     claiming it walks the cascade the grader walks. */
+  + '#' + (Array.isArray(S.order) ? S.order.join(',') : 'undrawn');
 
 const pct = v => (v*100).toFixed(v>=.1?0:1)+'%';
 function meter(v, risk){
@@ -7012,8 +7035,15 @@ function paintDiag(live, players, status){
     }).join('');
 
   document.getElementById('dgNote').innerHTML =
-    `<b>Bozo odds</b> is the chance you wear it: the week simulated ${R.sims.toLocaleString()} times, each run drawing a fresh
-     hierarchy from the ${levers.length} live lever${levers.length===1?'':'s'} and walking the same cascade the grader walks.
+    `<b>Bozo odds</b> is the chance you wear it: the week simulated ${R.sims.toLocaleString()} times, `
+    + (Array.isArray(S.order)
+      ? `each run walking <b>this week's drawn hierarchy</b>
+         (${S.order.filter(i=>levers.includes(i)).map(i=>esc(LEVERS[i].name)).join(' &rarr; ')}), which is the cascade the
+         grader walks. The order was drawn when the board locked, so it is known rather than guessed &mdash; a leg beaten
+         on the first lever that can rank it cannot be the bozo, and reads 0%.`
+      : `each run drawing a fresh hierarchy from the ${levers.length} live lever${levers.length===1?'':'s'} and walking the
+         same cascade the grader walks. The order is drawn when the board locks; until then every permutation is in play.`)
+    + `
      <b>Killed it alone</b> is the chance your leg is the only loser on the ticket.
      Both are model output, not observation — they inherit whatever the SD table gets wrong.
      <b>Review flags</b> compare the submitted price against where the market closed and mark anything too far

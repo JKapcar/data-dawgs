@@ -178,5 +178,50 @@ ok(clvDeltaOf({ price: -150, entryPriceOpp: 130 }, { clvPts: 1, close: -200, clo
   ok(R.bozo[2] === 0, "the best CLV never does");
 }
 
+/* ⚠️ THE DRAWN HIERARCHY IS A FACT, AND A LOSER BEATEN ON THE FIRST LEVER READS 0%.
+ * The server draws ONE permutation when the board locks and writes it to S.order;
+ * decide(), the real grader, walks exactly that order. This function drew a fresh one on
+ * every run, so after the lock the odds described 20,000 different weeks, none of them
+ * the week being played — and a player who could not possibly wear it was shown a
+ * double-digit chance of wearing it. That is what was reported, with two losers on the
+ * ticket and a 26% next to the safe one.
+ */
+{
+  const both = [
+    // Squatch: lost, CLV 0.00 set by hand — the worst CLV of the two.
+    { p: "Squatch", price: -145, ts: 9, mkt: "other", exp: 0, line: 0,
+      res: { result: "lost", clvPts: 0 } },
+    // BUTTS: lost, CLV +2.06 from a captured close — better on the CLV lever.
+    { p: "BUTTS", price: -198, entryPriceOpp: 164, ts: 2, mkt: "ml", exp: 0, line: 0,
+      res: { result: "lost", close: -218, closeOpp: 180 } },
+  ];
+  ctx.S.results = { Squatch: both[0].res, BUTTS: both[1].res };
+  ctx.S.picks = { Squatch: both[0], BUTTS: both[1] };
+  const live = both.map(x => ({ ...x }));
+
+  // Worst CLV first in the drawn order. Squatch is worse, so he wears it every run.
+  ctx.S.order = [3, 0, 1, 2];
+  const r1 = simulate(live, [0, 1, 2, 3]);
+  const iSq = 0, iBu = 1;
+  ok(r1.bozo[iSq] === 1, "with Worst CLV drawn first, the worse CLV wears it every run");
+  ok(r1.bozo[iBu] === 0,
+     "and the loser beaten on that lever reads 0% — he cannot be the bozo, so he is not shown as able to be");
+
+  /* The order is the fact, not the outcome: draw a different first lever and the answer
+     changes, deterministically, exactly as the grader would. */
+  ctx.S.order = [0, 3, 1, 2];                   // Shortest odds first
+  const r2 = simulate(live, [0, 1, 2, 3]);
+  ok(r2.bozo[iSq] + r2.bozo[iBu] === 1, "a different drawn order still resolves to one certain bozo");
+  ok(r2.bozo[iSq] !== r1.bozo[iSq],
+     "and it resolves to the other player, because Shortest odds ranks them the other way");
+
+  /* ⚠️ Before the lock there is no order to know, and the fresh permutation is right. */
+  delete ctx.S.order;
+  const r3 = simulate(live, [0, 1, 2, 3]);
+  ok(r3.bozo[iSq] > 0 && r3.bozo[iBu] > 0,
+     "with no hierarchy drawn yet, both losers keep a share — every permutation is still in play");
+  ctx.S.results = {}; ctx.S.picks = {};
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
