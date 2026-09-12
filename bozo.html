@@ -4689,6 +4689,40 @@ function beatDeficit(mkt, dir, line, margin, total, sd){
   return -legEdge(mkt, dir, line, margin, total) / sd;
 }
 
+/* ⚠️ A PLAYER'S OWN PAST CLVs, which is what the model draws a future one from.
+   Kap's call: bootstrap each player from their own history rather than fit a curve to the
+   league. Same principle royalePool() already uses for Royale — resampling real legs keeps
+   whatever is true about how a person actually bets, which a fitted distribution throws
+   away, and it invents no parameter nobody can check.
+
+   Past weeks only. A leg from THIS week is the thing being predicted; drawing its own
+   value back out would be circular and would pin the answer to a number the week has not
+   produced yet.
+
+   Names are resolved through ledgerWho: a ledger row's player can be a raw uid, and an
+   unresolved name silently returns an empty history, which reads as "no data" rather than
+   as the lookup failing. */
+function clvHistory(player, week){
+  const legs = (CLV.data && CLV.data.legs) || [];
+  const out = [];
+  for(const l of legs){
+    if(ledgerWho(l.player) !== player) continue;
+    if(week != null && Number(l.week) >= Number(week)) continue;
+    const pair = clvPair(l);
+    if(pair && Number.isFinite(pair.clv)) out.push(pair.clv);
+  }
+  return out;
+}
+
+/* The beat a binary leg carries when it busts: the mean miss of a margin leg priced the
+   same way, given that it lost. See beatOf for why the threshold was wrong. */
+function binaryBeatOf(p){
+  if(!(p > 0 && p < 1)) return null;
+  const k = invNorm(p);
+  const v = (Math.exp(-k*k/2) / Math.sqrt(2*Math.PI)) / (1 - p);
+  return Number.isFinite(v) ? v : null;
+}
+
 /* ⚠️ ONE WORST-BEAT RULE, because three copies of it disagreed. decide() — the grader —
    floored a zero on a market where zero is possible at 999, defaulted an unscoreable leg
    to `beat = 0`, and compared `r.actual === 0` strictly. leverStandings had the floor but
@@ -4724,13 +4758,26 @@ function beatOf(x, r, sd){
 
      ⚠️ The CLOSE is the bar when there is one; the entry stands in when there is not, and
      raw implied is the last resort. Same order royaleBeatDeficit uses in the Worker, so
-     the page and the server cannot drift. */
+     the page and the server cannot drift.
+
+     ⚠️ THE EXPECTED MISS, NOT THE THRESHOLD. invNorm(p) is where a leg priced at p sits
+     EXACTLY on its line — the boundary between winning and losing. A margin leg that
+     loses is drawn from ABOVE that boundary, so scoring a binary leg at invNorm(p) put it
+     at the very bottom of the range a comparable margin leg occupies: a busted prop read
+     as a milder miss than any lost spread priced the same way, every time. Squatch's leg
+     scored 0.36 SD when the spread it was competing against averaged over 1.
+
+     A binary leg is only ever ranked here because it LOST, so the honest number is the
+     mean of that same distribution conditioned on losing — the inverse Mills ratio,
+     E[beat | beat > k] = φ(k) / (1 − Φ(k)). Φ(k) is p by construction, so no normal CDF
+     is needed: φ(k)/(1 − p). A −145 prop scores 0.90 instead of 0.16, a −400 prop 1.40
+     instead of 0.84, and the ordering Kap asked for survives — chalkier prop, worse beat. */
   const binary = x.mkt === 'prop' || x.mkt === 'other';
   if(binary){
     const p = devigP(r && r.close, r && r.closeOpp)
            ?? devigP(x.price, x.entryPriceOpp)
            ?? imp(x.price);
-    return (p > 0 && p < 1) ? invNorm(p) : null;
+    return (p > 0 && p < 1) ? binaryBeatOf(p) : null;
   }
   if(!r || r.actual == null) return null;
   const a = Number(r.actual);
@@ -6715,8 +6762,21 @@ function simulate(live, levers){
         ? (()=>{ const p = devigP(r.close, r.closeOpp)
                         ?? devigP(x.price, x.entryPriceOpp)
                         ?? imp(x.price);
-                 return (p>0 && p<1) ? invNorm(p) : null; })() : null,
+                 return binaryBeatOf(p); })() : null,
       clv: clvDeltaOf(x, r),
+      /* ⚠️ A CLOSE THAT HAS NOT LANDED YET IS NOT A CLOSE THAT NEVER WILL. The lever drawn
+         first this week is Worst CLV, and CLV is continuous — ties are vanishingly rare —
+         so once every leg has a close that lever picks the worst and the cascade stops
+         there. Treating the unplayed legs as permanently unmeasurable made the CLV lever
+         unable to separate them, so the odds fell through to Worst Beat and answered "who
+         has the worst beat" while the graded week will answer "who has the worst CLV".
+
+         So a leg whose market CAN be captured draws a future CLV from its own player's
+         past, or from nothing — exactly even — when that player has no history yet. A
+         prop or "other" leg is left alone: no close will ever arrive for it, so assuming
+         one would be inventing evidence rather than predicting it. */
+      clvPool: (clvDeltaOf(x, r) == null && x.mkt !== 'prop' && x.mkt !== 'other')
+        ? clvHistory(x.p, S.week) : null,
       // 'won' | 'lost' | 'void' | null. A push voids the leg: it cannot be the loss that
       // makes you the bozo, and it does not stop the rest of the ticket cashing.
       settled: outcome==='won' ? 'won' : outcome==='lost' ? 'lost'
@@ -6745,7 +6805,7 @@ function simulate(live, levers){
   const anySettled = L.some(l=>l.settled);
   const win=new Array(n).fill(0), bz=new Array(n).fill(0), solo=new Array(n).fill(0);
   const named=live.map(()=>({}));
-  const idx=new Array(n), lost=[];
+  const idx=new Array(n), clvRun=new Array(n), lost=[];
   let cash=0;
   for(let s=0;s<SIMS;s++){
     lost.length=0;
@@ -6781,6 +6841,14 @@ function simulate(live, levers){
       else lost.push(i);
     }
     if(!lost.length){ cash++; continue; }
+    /* Drawn ONCE per run, not per lever: the same simulated week must not change its mind
+       about a leg's CLV between one lever and the next. */
+    for(let i=0;i<n;i++){
+      const l = L[i];
+      clvRun[i] = l.clv != null ? l.clv
+        : l.clvPool ? (l.clvPool.length ? l.clvPool[(Math.random()*l.clvPool.length)|0] : 0)
+        : null;
+    }
     if(lost.length===1) solo[lost[0]]++;
     let pool=lost.slice(), why=null;
     for(const li of hierarchy()){
@@ -6807,11 +6875,11 @@ function simulate(live, levers){
            decides among them. That is what "ranks the legs it can and passes when it
            can't; it never guesses at the others" has to mean — ruling a leg SAFE is as
            much a guess as ruling it worst. */
-        const known = pool.filter(i=>L[i].clv!=null);
-        const unknown = pool.filter(i=>L[i].clv==null);
+        const known = pool.filter(i=>clvRun[i]!=null);
+        const unknown = pool.filter(i=>clvRun[i]==null);
         if(known.length){
-          let mx=-Infinity; for(const i of known){ const v=-L[i].clv; if(v>mx) mx=v; }
-          surv=known.filter(i=>-L[i].clv===mx).concat(unknown);
+          let mx=-Infinity; for(const i of known){ const v=-clvRun[i]; if(v>mx) mx=v; }
+          surv=known.filter(i=>-clvRun[i]===mx).concat(unknown);
         }else{
           /* ⚠️ Nothing measurable: the lever PASSES, leaving the pool for the next one.
              It used to pick uniformly at random here, which both invented a verdict out
@@ -6837,7 +6905,14 @@ function simulate(live, levers){
       if(surv.length<pool.length || surv.length===1){ pool=surv; why=li; }
       if(pool.length===1) break;
     }
-    const b=pool[0]; bz[b]++;
+    /* ⚠️ AN UNBROKEN TIE IS A COIN FLIP, NOT ARRAY ORDER. When every live lever ranks the
+       survivors equally the cascade ends with more than one leg, and taking pool[0] handed
+       it to whichever leg happened to sit first — submission order, in practice, so the
+       earliest filer wore every unresolvable tie. As a probability that is simply wrong:
+       indifference has to read as equal odds, not as 100/0. decide() carries the matching
+       fix, and already called this case a coin flip in the verdict text. */
+    const b = pool.length === 1 ? pool[0] : pool[(Math.random()*pool.length)|0];
+    bz[b]++;
     if(why!==null) named[b][why]=(named[b][why]||0)+1;
   }
   return {
@@ -6869,7 +6944,12 @@ const simKeyFor = (live, levers, status) =>
      cached run stale. Without it the run computed BEFORE the lock — when every
      permutation was still in play — stayed on screen after the draw, under a note
      claiming it walks the cascade the grader walks. */
-  + '#' + (Array.isArray(S.order) ? S.order.join(',') : 'undrawn');
+  + '#' + (Array.isArray(S.order) ? S.order.join(',') : 'undrawn')
+  /* ⚠️ The model draws each unplayed leg's CLV from its player's own past, so the size of
+     that history is an input. Without it, a week that has just been graded — adding a CLV
+     to everybody's record — leaves the previous run on screen, computed from a season that
+     is one week shorter. */
+  + '#' + ((CLV.data && CLV.data.legs) ? CLV.data.legs.length : 0);
 
 const pct = v => (v*100).toFixed(v>=.1?0:1)+'%';
 function meter(v, risk){
@@ -7060,11 +7140,15 @@ function paintDiag(live, players, status){
         It fills in once the snapshot lands.</span></div>`);
     else if(withClv < live.length)
       flags.push(`<div class="flag"><span>⚠</span><span><b>Worst CLV is measured on ${withClv} of ${live.length} legs.</b>
-        The rest have no closing price yet &mdash; one side is enough, since a missing opposite is assumed at standard
-        juice, so a leg is unmeasured only when nothing has closed or been typed for it. This lever ranks the legs it
-        can, and a leg it cannot measure is carried forward to the next lever rather than ruled safe: being
-        unmeasurable is not evidence of anything. A measured leg beaten by another measured leg is still eliminated,
-        because that holds whatever the unmeasured ones turn out to be.</span></div>`);
+        The rest have no closing price <b>yet</b> &mdash; one side is enough, since a missing opposite is assumed at
+        standard juice, so a leg is unmeasured only when nothing has closed or been typed for it.
+        <b>The simulation does not treat those as unmeasurable forever.</b> A leg whose market can be captured draws a
+        modelled CLV from <b>that player's own past legs</b>, or from exactly even when they have no history yet, because
+        a close that has not landed is not a close that never will &mdash; and with this week's hierarchy drawing Worst
+        CLV first, that lever decides the graded week outright. A prop or &ldquo;other&rdquo; leg is left unmeasured on
+        purpose: no close will ever arrive for it, and assuming one would invent evidence rather than predict it. Such a
+        leg is carried forward to the next lever rather than ruled safe &mdash; being unmeasurable is not evidence of
+        anything &mdash; while a measured leg beaten by another measured leg is still eliminated.</span></div>`);
   }
   if(levers.length<4)
     flags.push(`<div class="flag"><span>⚠</span><span><b>Only ${levers.length} of 4 levers are in the draw.</b>
@@ -8014,7 +8098,13 @@ async function decide(){
     if(surv.length<pool.length || surv.length===1){ pool=surv; why=LEVERS[li].name; }
     if(pool.length===1) break;
   }
-  const bozo=pool[0], b=picks[bozo];
+  /* ⚠️ IT SAID "Coin flip" AND TOOK pool[0]. When no lever separates the survivors the
+     verdict text has always called it a coin flip, while the code took the first key in
+     Object.keys order — insertion order, so in practice the earliest submitter wore every
+     unresolvable tie, every time, and the receipt said chance did it. Either the label or
+     the behaviour had to change; the label was the honest one. */
+  const bozo = pool.length === 1 ? pool[0] : pool[Math.floor(Math.random()*pool.length)];
+  const b=picks[bozo];
   const bozoWhy=`${why||'Coin flip'} · lost ${b.label} at ${b.price} · funds next week`;
   let written;
   try{ written=await confirmGrade({results, bozo, bozoWhy, graded:true}); }

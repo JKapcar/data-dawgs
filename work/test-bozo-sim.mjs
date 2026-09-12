@@ -33,6 +33,8 @@ function grab(startMarker, endMarker) {
    results row, and stubbing it would let the suite keep passing if that lookup broke —
    which is exactly the failure that put a hand-set CLV on one screen and nowhere else. */
 const src = grab("function beatDeficit(mkt, dir, line, margin, total, sd){", "\n/* The leg exactly as the board")
+  + "\n" + grab("function clvHistory(player, week){", "\n/* The beat a binary leg carries")
+  + "\n" + grab("function binaryBeatOf(p){", "\n/* ⚠️ ONE WORST-BEAT RULE")
   + "\n" + grab("function legRow(x){", "/* ⚠️ A HAND-SET CLV OUTRANKS")
   + "\n" + grab("function clvDeltaOf(x, r){", "\nconst amer = d =>")
   + "\n" + grab("function gauss(){", "const devig = px")
@@ -67,7 +69,9 @@ const ctx = vm.createContext({
     if(p>1-pl){q=Math.sqrt(-2*Math.log(1-p));return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);}
     q=p-0.5;r=q*q;return(((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1); },
   expected: x => x.exp,
-  S: { results: {}, picks: {} },
+  S: { results: {}, picks: {}, week: 3 },
+  CLV: { data: null },
+  ledgerWho: v => v,
 });
 vm.runInContext(src + "\nglobalThis.__sim = simulate; globalThis.__pair = clvPair; globalThis.__delta = clvDeltaOf;", ctx);
 const simulate = ctx.__sim, clvPair = ctx.__pair, clvDeltaOf = ctx.__delta;
@@ -320,6 +324,23 @@ ok(clvDeltaOf({ price: -150, entryPriceOpp: 130 }, { clvPts: 1, close: -200, clo
      "a spread that missed by 30 outranks a mildly-priced prop that busted, as it should");
   ok(r2.bozo[0] === 0, "...and the prop is not floored past it by a sentinel");
 
+  /* ⚠️ THE EXPECTED MISS, NOT THE THRESHOLD. invNorm(p) is where a leg priced at p sits
+     exactly on its line. A margin leg that loses is drawn from ABOVE that, so scoring a
+     binary leg at the threshold parked it at the very bottom of the range a comparable
+     margin leg occupies — a busted prop read as a milder miss than ANY lost spread priced
+     the same way. That is how a player whose leg had already lost sat below one whose
+     game had not kicked off. */
+  const bb = ctx.binaryBeatOf ?? vm.runInContext("binaryBeatOf", ctx);
+  for(const p of [0.524, 0.565, 0.64, 0.80]){
+    const k = ctx.invNorm(p);
+    ok(bb(p) > k, `a binary leg priced at ${p} scores above its threshold, not at it`);
+  }
+  ok(Math.abs(bb(0.64) - 1.039) < 0.01, "-145 de-vigged to .64 scores about 1.04 SD, not 0.36");
+  ok(Math.abs(bb(0.80) - 1.400) < 0.01, "a -400 prop scores about 1.40 SD");
+  ok(bb(0.80) > bb(0.64) && bb(0.64) > bb(0.524),
+     "and the chalkier the prop, the worse the beat — the ordering Kap asked for survives");
+  ok(bb(0) === null && bb(1) === null, "an unpriceable leg is null, never a number");
+
   ctx.S.results = {}; ctx.S.picks = {}; delete ctx.S.order;
 }
 
@@ -366,6 +387,72 @@ ok(clvDeltaOf({ price: -150, entryPriceOpp: 130 }, { clvPts: 1, close: -200, clo
      "there is exactly one definition of the worst-beat rule");
   ok(/const scored = pool\.filter\(i=>Number\.isFinite\(f\(i\)\)\);/.test(code),
      "and a leg with no SD is carried forward by the sim rather than losing every comparison as NaN");
+}
+
+/* ⚠️ A CLOSE THAT HAS NOT LANDED IS NOT A CLOSE THAT NEVER WILL.
+ * Worst CLV is continuous, so once every leg has a close it picks the worst and the
+ * cascade stops at lever one. Treating the unplayed legs as permanently unmeasurable made
+ * that lever unable to separate them, so the odds fell through to Worst Beat and answered
+ * "who has the worst beat" while the graded week answers "who has the worst CLV".
+ *
+ * Kap's rule: draw each unplayed leg's CLV from THAT PLAYER'S OWN past legs; exactly even
+ * when they have none. Same bootstrap royalePool() uses, and it invents no parameter.
+ */
+{
+  ctx.CLV.data = { legs: [
+    // Alice has closed badly twice; Bob has closed well twice. Week 3 is being predicted.
+    { player: "Alice", week: 1, entryPrice: -110, entryPriceOpp: -110, closePrice: -105, closePriceOpp: -115 },
+    { player: "Alice", week: 2, entryPrice: -110, entryPriceOpp: -110, closePrice: -100, closePriceOpp: -120 },
+    { player: "Bob", week: 1, entryPrice: -110, entryPriceOpp: -110, closePrice: -140, closePriceOpp: 115 },
+    { player: "Bob", week: 2, entryPrice: -110, entryPriceOpp: -110, closePrice: -150, closePriceOpp: 125 },
+  ] };
+  ctx.S.week = 3;
+  ctx.S.results = { Alice: { result: "lost" }, Bob: { result: "lost" } };
+  ctx.S.picks = { Alice: {}, Bob: {} };
+  const two = [
+    { p: "Alice", price: -110, entryPriceOpp: -110, ts: 1, mkt: "spread", line: 0, exp: 0 },
+    { p: "Bob", price: -110, entryPriceOpp: -110, ts: 2, mkt: "spread", line: 0, exp: 0 },
+  ];
+  ctx.S.order = [3, 1, 2, 0];                       // Worst CLV first
+  const r = simulate(two.map(x => ({ ...x })), [0, 1, 2, 3]);
+  ok(r.bozo[0] > 0.9,
+     "a player whose own past closes went against them is modelled to close badly again");
+  ok(r.bozo[1] < 0.1, "and a player who consistently beats the close is modelled to keep doing it");
+
+  /* ⚠️ No history means exactly even, not "unmeasurable". That is the difference between
+     a leg the lever can rank and one it has to carry forward. */
+  ctx.CLV.data = { legs: [] };
+  const r2 = simulate(two.map(x => ({ ...x })), [3]);      // CLV only
+  ok(Math.abs(r2.bozo[0] - r2.bozo[1]) < 0.06,
+     "with no history for anybody, every leg models to even and the lever ties rather than picking");
+  /* ⚠️ And an unbroken tie is a coin flip, not array order. It used to take pool[0] —
+     submission order in practice — so the earliest filer wore every unresolvable tie while
+     the verdict text called it chance. */
+  ok(r2.bozo[0] > 0.3 && r2.bozo[1] > 0.3,
+     "a tie nothing can separate splits evenly instead of going to whoever filed first");
+
+  /* ⚠️ A PROP IS LEFT ALONE. No close will ever arrive for it, so a modelled one would be
+     invented evidence, not a prediction. */
+  ctx.S.picks = { Alice: {}, prop: {} };
+  ctx.S.results = { Alice: { result: "lost" }, prop: { result: "lost" } };
+  const mixed = [
+    { p: "Alice", price: -110, entryPriceOpp: -110, ts: 1, mkt: "spread", line: 0, exp: 0 },
+    { p: "prop", price: -145, ts: 2, mkt: "prop", line: 0.5, exp: 0 },
+  ];
+  const src2 = page.slice(page.indexOf("clvPool: (clvDeltaOf(x, r) == null"), page.indexOf("clvPool: (clvDeltaOf(x, r) == null") + 200);
+  ok(/x\.mkt !== 'prop' && x\.mkt !== 'other'/.test(src2),
+     "a prop or 'other' leg is excluded from the modelled close");
+
+  /* The history a player draws from is their OWN and from PAST weeks only — drawing this
+     week's value back out would be circular. */
+  {
+    const h = page.slice(page.indexOf("function clvHistory(player, week){"),
+                         page.indexOf("/* The beat a binary leg carries"));
+    ok(/ledgerWho\(l\.player\) !== player/.test(h), "history is matched per player, uid-safe");
+    ok(/Number\(l\.week\) >= Number\(week\)/.test(h), "and only from weeks before the one being predicted");
+  }
+
+  ctx.CLV.data = null; ctx.S.results = {}; ctx.S.picks = {}; delete ctx.S.order;
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

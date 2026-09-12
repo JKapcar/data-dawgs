@@ -141,5 +141,15 @@ ok(!/Read them off the placed ticket/.test(pageCode),
 ok(!/'\/bozo\/close'/.test(pageCode),
    "no page surface calls the ledger fill route today — the gap is known, not accidental");
 
+/* ⚠️ The page and the Worker must score a binary leg the same way, or a Royale chop stops
+   agreeing with the odds that predicted it. Both use the inverse Mills ratio; neither may
+   fall back to the bare threshold. */
+ok(/\(Math\.exp\(-k \* k \/ 2\) \/ Math\.sqrt\(2 \* Math\.PI\)\) \/ \(1 - p\)/.test(worker),
+   "the Worker scores a binary leg at its expected miss given a loss");
+ok(!/return \{ v: rInvNorm\(p\), basis \};/.test(worker),
+   "...and no longer at the threshold, which is the mildest possible miss for that price");
+ok(/\(Math\.exp\(-k\*k\/2\) \/ Math\.sqrt\(2\*Math\.PI\)\) \/ \(1 - p\)/.test(pageCode),
+   "and the page computes the identical number");
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

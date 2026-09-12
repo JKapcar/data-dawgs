@@ -8437,7 +8437,23 @@ function royaleBeatDeficit(x, r) {
     const p = pClose != null ? pClose : (pEntry != null ? pEntry : rImp(x.price));
     const basis = pClose != null ? "close" : (pEntry != null ? "entry" : "entry-raw");
     if (!(p > 0 && p < 1)) return { v: null, basis: "unpriced" };
-    return { v: rInvNorm(p), basis };
+    /* ⚠️ THE EXPECTED MISS, NOT THE THRESHOLD. rInvNorm(p) is where a leg priced at p sits
+       EXACTLY on its line — the boundary between winning and losing. A margin leg that
+       loses is drawn from ABOVE that boundary, so scoring a binary leg at the threshold
+       put it at the very bottom of the range a comparable margin leg occupies: a busted
+       prop ranked as a milder miss than any lost spread priced the same way, every time.
+
+       A binary leg reaches this function only because it LOST, so the honest number is
+       that same distribution conditioned on losing — the inverse Mills ratio,
+       E[beat | beat > k] = φ(k) / (1 − Φ(k)). Φ(k) is p by construction, so no normal CDF
+       is needed. A −145 prop scores 0.90 rather than 0.16; a −400 prop 1.40 rather
+       than 0.84, and the chalkier prop is still the worse beat.
+
+       Mirrors binaryBeatOf() on the page. Change one and change the other, or a Royale
+       chop stops agreeing with the odds that predicted it. */
+    const k = rInvNorm(p);
+    const v = (Math.exp(-k * k / 2) / Math.sqrt(2 * Math.PI)) / (1 - p);
+    return { v: Number.isFinite(v) ? v : null, basis };
   }
   /* Margin markets: how far under ITS OWN NUMBER the leg finished, in SDs.
 
