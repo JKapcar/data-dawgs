@@ -1421,6 +1421,17 @@ table.gaptbl input{width:82px}
 .gr.leg select{min-width:118px}
 .gr.leg input[data-a]{width:110px}
 .gr.leg input.clvin{width:96px}
+.leglegend{display:none}
+@media(min-width:900px){
+  .leglegend{display:flex;gap:8px;align-items:center;padding:2px 0 6px;
+    font:600 10px ui-monospace,monospace;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+  .leglegend span:first-child{flex:1 1 auto}
+  .leglegend span:nth-child(2){width:118px}
+  .leglegend span:nth-child(3){width:110px}
+  .leglegend span:nth-child(4),.leglegend span:nth-child(5){width:134px}
+  .leglegend span:nth-child(6){width:96px}
+  .leglegend span:last-child{width:76px;text-align:right}
+}
 .gr.leg .gsv{margin-left:auto;min-width:76px}
 .gr.leg .saved{font:600 11px ui-monospace,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--good)}
 table.gaptbl .pxin{width:120px}
@@ -7798,7 +7809,8 @@ function paintManual(live){
   const settled = live.filter(x=>{ const r=rowOf(x); return r.result!=null || r.won===true || r.won===false; }).length;
   const overridden = live.filter(x=>rowOf(x).clvPts != null).length;
   document.getElementById('manual').innerHTML =
-    `<div class="lil" style="margin-bottom:6px">Legs — result, actual and closing price. Save writes that leg now.</div>`
+    `<div class="lil" style="margin-bottom:6px">Legs — result, actual, closing price and CLV. Every leg is here; Save writes that leg now.</div>`
+    + `<div class="leglegend"><span>who &amp; leg</span><span>result</span><span>actual</span><span>close</span><span>other side</span><span>CLV pts</span><span>save</span></div>`
     + `<p class="tm" style="margin:0 0 8px">${settled} of ${live.length} settled · ${gaps} without a close${overridden?` · ${overridden} CLV set by hand`:''}.
         Leave the other side blank and it is assumed at standard &minus;110/&minus;110 juice, stamped as assumed.
         A result you set by hand sticks: the schedule will not overwrite it.
