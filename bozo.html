@@ -6556,12 +6556,29 @@ function simulate(live, levers){
     // Real CLV where the close has been captured, null where it hasn't. See the lever
     // branch below for why the difference matters.
     const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp);
+    /* ⚠️ A SETTLED LEG IS NOT A COIN FLIP. Every leg used to be drawn from its own
+       distribution on every one of the 20,000 runs, even after its game had finished and
+       its result was written — so a leg that had already LOST still carried its
+       pre-kickoff win probability, and the player who was certainly going to be in the
+       pool showed the same bozo odds as before the ball was kicked. Once an outcome is
+       known it is a fact, and a simulation that keeps rolling dice over a fact is not
+       modelling uncertainty, it is discarding information.
+
+       Known outcome => forced. Known actual => the Worst Beat index is computed from the
+       real number instead of a draw, exactly as decide() does when it grades for real. */
+    const outcome = r.result || (r.won===true?'won':r.won===false?'lost':null);
     return {
       sd: sdOf(x), base: x.mkt==='ml' ? 0 : x.line, exp: expected(x),
       under: dirOf(x)==='under', odds: imp(x.price), last: x.ts||0,
-      clv: (pC==null||pE==null) ? null : (pC-pE)
+      clv: (pC==null||pE==null) ? null : (pC-pE),
+      // 'won' | 'lost' | 'void' | null. A push voids the leg: it cannot be the loss that
+      // makes you the bozo, and it does not stop the rest of the ticket cashing.
+      settled: outcome==='won' ? 'won' : outcome==='lost' ? 'lost'
+             : (outcome==='push'||outcome==='void') ? 'void' : null,
+      actual: Number.isFinite(+r.actual) ? +r.actual : null
     };
   });
+  const anySettled = L.some(l=>l.settled);
   const win=new Array(n).fill(0), bz=new Array(n).fill(0), solo=new Array(n).fill(0);
   const named=live.map(()=>({}));
   const idx=new Array(n), lost=[];
@@ -6569,10 +6586,29 @@ function simulate(live, levers){
   for(let s=0;s<SIMS;s++){
     lost.length=0;
     for(let i=0;i<n;i++){
-      const l=L[i], actual = l.exp + l.sd*gauss();
+      const l=L[i];
+      let actual;
+      if(l.actual != null){
+        actual = l.actual;                      // graded and the number is known
+      }else if(l.settled === 'lost'){
+        /* The outcome is known, the number is not — a hand-graded prop, say. Draw from
+           the LOSING side so the Worst Beat lever ranks it against something consistent
+           with the fact that it lost. Rejection-sampled with a hard cap: a leg whose
+           line sits far from its expectation can be slow to hit, and an unbounded loop
+           inside 20,000 runs would hang the page rather than be slightly wrong. */
+        let tries = 0;
+        do { actual = l.exp + l.sd*gauss(); tries++; }
+        while(tries < 24 && (l.under ? actual < l.base : actual > l.base));
+      }else{
+        actual = l.exp + l.sd*gauss();
+      }
       // the Bozo Index, exactly as decide() computes it
       idx[i] = (l.under ? (actual-l.exp) : (l.exp-actual)) / l.sd;
-      if(l.under ? actual < l.base : actual > l.base) win[i]++; else lost.push(i);
+      // A settled leg's outcome is a fact; only an unsettled one is decided by the draw.
+      if(l.settled === 'won' || l.settled === 'void') win[i]++;
+      else if(l.settled === 'lost') lost.push(i);
+      else if(l.under ? actual < l.base : actual > l.base) win[i]++;
+      else lost.push(i);
     }
     if(!lost.length){ cash++; continue; }
     if(lost.length===1) solo[lost[0]]++;
@@ -6608,6 +6644,7 @@ function simulate(live, levers){
   }
   return {
     n, sims:SIMS, cash:cash/SIMS,
+    settled: L.filter(l=>l.settled).length, anySettled,
     win: win.map(c=>c/SIMS), bozo: bz.map(c=>c/SIMS), solo: solo.map(c=>c/SIMS),
     by: named.map((m,i)=>{ let best=null,bc=0;
       for(const k in m) if(m[k]>bc){ bc=m[k]; best=+k; }
@@ -6620,9 +6657,15 @@ function simulate(live, levers){
 // ⚠️ The close is part of the key now that CLV feeds the sim. Without it, a close landing
 // at kickoff would leave a cached run that had ranked Worst CLV at random still on screen,
 // looking freshly computed.
+/* ⚠️ THE RESULT IS PART OF THE KEY. It was not, and the close was — so a leg being
+   GRADED left the cached run untouched and the bozo odds on screen were the ones
+   computed before the game was played, under a meta line promising they were "re-run
+   whenever a leg changes". Anything the sim reads has to appear here or the cache
+   outlives the fact that invalidated it. */
 const simKeyFor = (live, levers, status) =>
   live.map(x=>{ const r=(S.results||{})[kEnc(x.p)]||{};
-    return `${x.p}:${x.price}:${x.ts}:${x.line}:${x.mkt}:${x.side}:${r.close??''}:${r.closeOpp??''}`; }).join('|')
+    return `${x.p}:${x.price}:${x.ts}:${x.line}:${x.mkt}:${x.side}:${r.close??''}:${r.closeOpp??''}`
+         + `:${r.result??''}:${r.won===true?1:r.won===false?0:''}:${r.actual??''}`; }).join('|')
   + '#' + levers.join(',') + '#' + status;
 
 const pct = v => (v*100).toFixed(v>=.1?0:1)+'%';
@@ -6749,8 +6792,12 @@ function paintDiag(live, players, status){
 
   const tile=(lil,big,sub,cost)=>`<div><div class="lil">${lil}</div><div class="big${cost?' cost':''}">${big}</div>`
     + (sub?`<div class="tm">${sub}</div>`:'') + `</div>`;
+  /* Say what was simulated and what was not. "Re-run whenever a leg changes" was the
+     only thing on screen claiming freshness, and it was making a promise the cache key
+     did not keep; now it also names how much of the week is fact rather than draw. */
   document.getElementById('dgMeta').textContent =
-    R.sims.toLocaleString()+' simulations · re-run whenever a leg changes';
+    R.sims.toLocaleString()+' simulations · re-run on every grade, price and lever change'
+    + (R.settled ? ` · ${R.settled} of ${R.n} leg${R.settled===1?'':'s'} settled and held fixed` : '');
   document.getElementById('dgTiles').innerHTML =
     tile('Ticket cashes', pct(R.cash), `all ${R.n} legs land`) +
     tile('Parlay price', amer(offDec), 'what you are laying') +
