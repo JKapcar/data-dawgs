@@ -8769,11 +8769,45 @@ async function bozoCloseFill(request, env, cors) {
      side is not evidence of a close — it is an incomplete write. Only a two-sided
      captured close outranks what the manager can read off the placed ticket. */
   const capturedComplete = row.closeObservedAt != null && row.close != null && row.closeOpp != null;
-  if (capturedComplete)
+  /* ⚠️ The lock is on the CLOSE, not on the leg. A captured pair is the book's own number
+     and stays immutable — but it says nothing about whether the manager may set a CLV
+     override on the same row, and refusing a CLV-only save here would relock the one
+     surface that can fix a leg the capture got wrong. Checked after the body is parsed so
+     a CLV-only save passes through. */
+  if (capturedComplete && !(Object.prototype.hasOwnProperty.call(body, "clvPts")
+                            && body.close == null && body.closeOpp == null))
     return json({ error: "That close was captured at kickoff from the book and can't be overwritten." }, 409, cors);
+
+  /* ⚠️ A CLV THE MANAGER READS OFF THE SLIP IS THE ONLY NUMBER SOME LEGS WILL EVER HAVE.
+     A prop has no two-way market to capture, so no close can ever arrive for it and the
+     close boxes on the CLV section are useless for it by construction. clvPts was built
+     for exactly that case in #106 — but the only surface that could set it was the grade
+     card, which writes results/<key>, and /results is cleared the moment the week
+     advances. A prop from week 1 was therefore uneditable from anywhere on the site the
+     instant week 2 opened. This route reaches the LEDGER, which keeps every row forever,
+     so it is the right place for the override to live.
+
+     Sent as a number, it is stored and stamped manual. Sent as null it is CLEARED, which
+     is how an override is undone. Absent (undefined) it is left exactly as it was — a
+     close fill must not silently wipe a CLV somebody set. */
+  const hasClv = Object.prototype.hasOwnProperty.call(body, "clvPts");
+  let clvPts = null;
+  if (hasClv && body.clvPts != null) {
+    clvPts = Number(body.clvPts);
+    if (!Number.isFinite(clvPts))
+      return json({ error: "CLV has to be a number in points, like 0 or -1.75." }, 400, cors);
+    // Same bound the grade card enforces: past this it is a typo, not a price move.
+    if (Math.abs(clvPts) > 100)
+      return json({ error: `A CLV of ${clvPts} points is not a price move — it is a typo.` }, 400, cors);
+  }
 
   // Clearing is allowed — sending both as null undoes a mistyped entry.
   const clear = body.close == null && body.closeOpp == null;
+
+  /* A CLV-only save is legitimate and common: the leg has no capturable market, so there
+     is nothing to type in the close boxes. Skip the price validation entirely rather than
+     refusing the write for a missing close nobody can supply. */
+  const clvOnly = hasClv && clear;
   const close = Math.round(Number(body.close));
   let closeOpp = Math.round(Number(body.closeOpp));
   /* ⚠️ ONE SIDE IS NOW ENOUGH — the other is assumed at a standard hold rather than
@@ -8797,7 +8831,9 @@ async function bozoCloseFill(request, env, cors) {
   /* closeObservedAt is cleared on both paths. Half of a captured pair plus a typed
      other side is not a captured close, and leaving the stamp on would both re-lock the
      row and let a hand-read number inherit the authority of a feed observation. */
-  const patch = clear
+  const patch = clvOnly
+    ? {}
+    : clear
     ? { close: null, closeOpp: null, closeBook: null, closeSource: null,
         closeObservedAt: null, closeOppSource: null, closeOverround: null,
         closeEnteredBy: null, closeEnteredTs: null }
@@ -8809,6 +8845,15 @@ async function bozoCloseFill(request, env, cors) {
         closeOverround: oppAssumed ? BOZO_DEFAULT_OVERROUND : null,
         closeEnteredBy: auth.name, closeEnteredTs: Date.now() };
 
+  if (hasClv) {
+    patch.clvPts = clvPts;
+    patch.clvSource = clvPts == null ? null : "manual";
+    patch.clvEnteredBy = clvPts == null ? null : auth.name;
+    patch.clvEnteredTs = clvPts == null ? null : Date.now();
+  }
+  if (!Object.keys(patch).length)
+    return json({ error: "Nothing to save — fill in a closing price or a CLV." }, 400, cors);
+
   try { await fbPatch(env, LG(lid) + "/ledger/" + rowKey, patch); }
   catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
 
@@ -8818,13 +8863,20 @@ async function bozoCloseFill(request, env, cors) {
   if (parts.length === 2) {
     const [wk, pKey] = parts[1].split("-");
     if (Number(wk) === (state.week || 1) && (state.picks || {})[pKey]) {
-      try { await fbPatch(env, LG(lid) + "/results/" + pKey, clear
+      const mirror = clvOnly ? {}
+        : clear
         ? { close: null, closeOpp: null, closeBook: null, closeSource: null }
-        : { close, closeOpp, closeBook: "draftkings", closeSource: "manual", closeUnavailableReason: null }); }
+        : { close, closeOpp, closeBook: "draftkings", closeSource: "manual", closeUnavailableReason: null };
+      // The grade card reads results/, so without this the box the manager just filled on
+      // one screen would still read empty on the other.
+      if (hasClv) { mirror.clvPts = clvPts; mirror.clvSource = clvPts == null ? null : "manual"; }
+      try { await fbPatch(env, LG(lid) + "/results/" + pKey, mirror); }
       catch (e) { /* the ledger is the receipt; the live mirror is a convenience */ }
     }
   }
-  return json({ ok: true, row: rowKey, close: clear ? null : close, closeOpp: clear ? null : closeOpp }, 200, cors);
+  return json({ ok: true, row: rowKey, close: clvOnly ? (row.close ?? null) : (clear ? null : close),
+    closeOpp: clvOnly ? (row.closeOpp ?? null) : (clear ? null : closeOpp),
+    clvPts: hasClv ? clvPts : (row.clvPts ?? null) }, 200, cors);
 }
 
 /* GET /bozo/close-gaps?league=<id> — every ledger row still missing a usable close.
@@ -8839,9 +8891,13 @@ async function bozoCloseGaps(request, url, env, cors) {
     ledger = (await fbGet(env, LG(lid) + "/ledger")).data || {};
   } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
 
-  const gaps = Object.entries(ledger)
-    .filter(([, r]) => r && (r.close == null || r.closeOpp == null))
-    .map(([row, r]) => ({
+  /* ⚠️ EVERY ROW, NOT ONLY THE GAPS. This list used to be the legs missing a close, which
+     is the right shape for filling closes and the wrong shape for the job it actually has
+     to do: reach a leg's CLV. A prop has no capturable market, so it has no close to fill
+     and never will — and a leg whose close WAS captured still has a CLV the manager may
+     need to correct. Both were unreachable while this returned gaps only. `gap` says which
+     is which; `rows` keeps the gap-only list the older page reads. */
+  const mapRow = ([row, r]) => ({
       row, week: r.week, player: r.player, label: r.label, sport: r.sport,
       game: r.game, price: r.price, priceOpp: r.priceOpp ?? null,
       close: r.close ?? null, closeOpp: r.closeOpp ?? null,
@@ -8854,12 +8910,21 @@ async function bozoCloseGaps(request, url, env, cors) {
          manager can still close by hand, and marking it locked was what hid the boxes. */
       locked: r.closeObservedAt != null && r.close != null && r.closeOpp != null,
       result: r.result || null,
-    }))
+      // The manager's CLV, and whether this row has one. A leg with no capturable market
+      // has nothing else, so it is never filtered out of the list below.
+      clvPts: r.clvPts ?? null,
+      clvSource: r.clvSource || null,
+      clvEnteredBy: r.clvEnteredBy || null,
+      gap: r.close == null || r.closeOpp == null,
+    });
+
+  const every = Object.entries(ledger).filter(([, r]) => r && r.player).map(mapRow)
     .sort((a, b) => (a.week - b.week) || String(a.player).localeCompare(String(b.player)));
+  const gaps = every.filter(r => r.gap);
 
   return json({
     league: lid, synthetic: lg.synthetic === true,
-    total: Object.keys(ledger).length, gaps: gaps.length, rows: gaps,
+    total: Object.keys(ledger).length, gaps: gaps.length, rows: gaps, all: every,
     note: "A leg needs BOTH sides of the closing market to be de-vigged. One side alone is dropped from the CLV chart and from n, exactly as if there were no close at all.",
   }, 200, cors);
 }

@@ -96,5 +96,46 @@ ok(/if\(i\.disabled\) return;/.test(pageCode),
 ok(/cst warn/.test(pageCode) && /other side will be assumed on save/.test(pageCode),
    "a half-filled close is flagged amber, not green — and says the other side will be assumed");
 
+/* ---- the CLV override reaches the LEDGER, for any week ----
+ * ⚠️ THE BUG THIS PINS. clvPts shipped in #106 with exactly one surface that could set
+ * it: the grade card, which writes results/<key>. /results is cleared when the week
+ * advances, so a leg from week 1 became uneditable from anywhere on the site the moment
+ * week 2 opened. That hit props hardest — a prop has no two-way market, so no close can
+ * ever be captured or typed for it, and clvPts is the ONLY number it will ever have.
+ * Squatch's leg was in precisely that state: visible on the chart as missing, with no
+ * control anywhere that could fix it. */
+ok(/hasClv/.test(worker) && /patch\.clvPts = clvPts/.test(worker),
+   "the ledger fill route accepts a CLV override, so a past week is still reachable");
+ok(/clvSource: null : "manual"/.test(worker) || /clvPts == null \? null : "manual"/.test(worker),
+   "a hand-set CLV is stamped apart from a derived one");
+ok(/const clvOnly = hasClv && clear/.test(worker),
+   "a CLV-only save is legitimate — a leg with no capturable market has no close to type");
+ok(/capturedComplete && !\(Object\.prototype\.hasOwnProperty\.call\(body, "clvPts"\)/.test(worker),
+   "the capture lock guards the CLOSE, and does not block a CLV-only save");
+ok(/mirror\.clvPts = clvPts/.test(worker),
+   "the CLV mirrors onto the live week, so both screens agree about the same leg");
+ok(/Nothing to save — fill in a closing price or a CLV/.test(worker),
+   "an empty save is refused out loud rather than writing an empty patch");
+
+/* The list has to REACH every leg or the box cannot exist for the leg that needs it. */
+ok(/const every = Object\.entries\(ledger\)/.test(worker) && /all: every/.test(worker),
+   "the ledger list returns every row, not only the ones missing a close");
+ok(/gap: r\.close == null \|\| r\.closeOpp == null/.test(worker),
+   "each row says whether it is a gap, so the old gaps-only list still works");
+ok(/clvPts: r\.clvPts \?\? null/.test(worker),
+   "each row carries its CLV, so the box renders what is already stored");
+
+/* ---- the page ---- */
+ok(/class="gclv clvin"/.test(pageCode),
+   "every leg row on the CLV section has a CLV box");
+ok(/payload\.clvPts = clvPts/.test(pageCode),
+   "the page sends the CLV to the ledger route");
+ok(/const had = vIn\.defaultValue\.trim\(\) !== ''/.test(pageCode),
+   "an emptied CLV box CLEARS the override rather than being ignored — same rule as the grade card");
+ok(/not the placed ticket/i.test(pageCode),
+   "the copy no longer tells anyone to read a close off the placed ticket");
+ok(!/Read them off the placed ticket/.test(pageCode),
+   "the old placed-ticket instruction is gone");
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
