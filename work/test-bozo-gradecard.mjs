@@ -35,6 +35,12 @@ const el = id => (nodes[id] = nodes[id] || {
   insertAdjacentHTML: () => {}, closest: () => null,
 });
 
+/* The members map the page resolves uids through. Squatch's row is the case that
+   started this: his pick is keyed by uid, and the card used to reach it only by walking
+   the roster and translating a display name — so when that translation missed, his leg
+   was on the ticket and nowhere on the card. */
+const ctxMembers = { u_E6WLsRi0flMHptt7KIK00zpd: "Squatch" };
+
 const ctx = vm.createContext({
   console, Object, Array, Number, JSON, Math, String,
   document: { getElementById: el, querySelectorAll: () => [], querySelector: () => null },
@@ -50,6 +56,8 @@ const ctx = vm.createContext({
     return ia / (ia + ib);
   },
   clvAssumedOpp: c => (c == null ? null : 120),
+  memberLabel: k => (ctxMembers[k] || null),
+  kDec: k => k,
   fmtPrice: n => (n > 0 ? "+" : "") + n,
   decide: () => {},
   saveLeg: () => {},
@@ -60,18 +68,29 @@ vm.runInContext(grab("function paintManual(live, roster){", "\n/* Write ONE leg,
 
 /* Deliberately mixed: a prop and a period leg (the two the old card handled in a
    different list from everyone else) alongside ordinary game markets. */
-const live = [
-  { p: "Squatch", label: "Christian McCaffrey anytime TD o0.5", mkt: "prop", price: -155, sport: "nfl", ts: 1, eventId: "e1" },
-  { p: "WBeamen", label: "UAB ML · 1st half", mkt: "ml", period: "1h", price: -130, sport: "cfb", ts: 2, eventId: "e2" },
-  { p: "Kap", label: "CHI @ CAR u53.5", mkt: "total", side: "under", price: -240, entryPriceOpp: 174, sport: "nfl", ts: 3, eventId: "e3" },
-  { p: "Roger", label: "BUF ML", mkt: "ml", price: -300, sport: "nfl", ts: 4, eventId: "e4" },
-  { p: "JWhite", label: "KC -3.5", mkt: "spread", line: -3.5, price: -110, sport: "nfl", ts: 5, eventId: "e5" },
-  { p: "Tony", label: "SF ML", mkt: "ml", price: -210, sport: "nfl", ts: 6, eventId: "e6" },
-  { p: "ItzBornLegend", label: "DAL -1.5", mkt: "spread", line: -1.5, price: -120, sport: "nfl", ts: 7, eventId: "e7" },
-  { p: "BUTTS", label: "GB o47.5", mkt: "total", side: "over", line: 47.5, price: -115, sport: "nfl", ts: 8, eventId: "e8" },
-];
+/* ⚠️ SQUATCH'S KEY IS A UID AND HIS ROW CARRIES NO `who`. That is the exact shape that
+   broke: nothing on the card could name him except the members map, and the old code
+   reached his pick only by translating a roster name into that uid. Everyone else here is
+   name-keyed, so a bug that hides only him passes every other assertion. */
+const picks = {
+  u_E6WLsRi0flMHptt7KIK00zpd: { label: "Christian McCaffrey anytime TD o0.5", mkt: "prop", price: -155, sport: "nfl", ts: 1, eventId: "e1" },
+  WBeamen: { who: "WBeamen", label: "UAB ML · 1st half", mkt: "ml", period: "1h", price: -130, sport: "cfb", ts: 2, eventId: "e2" },
+  Kap: { who: "Kap", label: "CHI @ CAR u53.5", mkt: "total", side: "under", price: -240, entryPriceOpp: 174, sport: "nfl", ts: 3, eventId: "e3" },
+  Roger: { who: "Roger", label: "BUF ML", mkt: "ml", price: -300, sport: "nfl", ts: 4, eventId: "e4" },
+  JWhite: { who: "JWhite", label: "KC -3.5", mkt: "spread", line: -3.5, price: -110, sport: "nfl", ts: 5, eventId: "e5" },
+  Tony: { who: "Tony", label: "SF ML", mkt: "ml", price: -210, sport: "nfl", ts: 6, eventId: "e6" },
+  ItzBornLegend: { who: "ItzBornLegend", label: "DAL -1.5", mkt: "spread", line: -1.5, price: -120, sport: "nfl", ts: 7, eventId: "e7" },
+  BUTTS: { who: "BUTTS", label: "GB o47.5", mkt: "total", side: "over", line: 47.5, price: -115, sport: "nfl", ts: 8, eventId: "e8" },
+};
+ctx.S.picks = picks;
+const keys = Object.keys(picks);
+const roster = ["Squatch", "WBeamen", "Kap", "Roger", "JWhite", "Tony", "ItzBornLegend", "BUTTS"];
 
-const roster = live.map(l => l.p);
+/* `live` deliberately MISSES Squatch — the roster-walk that produced it is what dropped
+   him. Building the card from the ticket has to put him back. */
+const live = keys.filter(k => k !== "u_E6WLsRi0flMHptt7KIK00zpd")
+  .map(k => ({ ...picks[k], p: picks[k].who }));
+
 ctx.__paint(live, roster);
 const html = nodes["manual"].innerHTML;
 
@@ -82,20 +101,34 @@ const ok = (cond, name) => { if (cond) pass++; else { fail++; console.error("FAI
 ok((html.match(/class="lil"/g) || []).length === 1,
    "the card renders exactly one section, not a manual list and a prices list");
 
-for (const l of live) {
-  ok(html.includes(`data-leg="${l.p}"`), `${l.p} has a row`);
-  ok(html.includes(`data-clv="${l.p}"`), `${l.p} has a CLV box`);
-  ok(html.includes(`data-c="${l.p}"`), `${l.p} has a closing price box`);
-  ok(html.includes(`data-w="${l.p}"`), `${l.p} has a result dropdown`);
-  ok(html.includes(`data-save="${l.p}"`), `${l.p} has its own Save`);
+/* Every control is keyed by the PICK KEY — the one identifier guaranteed to exist and to
+   match what the Worker writes results under. Keying by display name is the translation
+   that lost a member. */
+for (const k of keys) {
+  ok(html.includes(`data-leg="${k}"`), `${k} has a row`);
+  ok(html.includes(`data-clv="${k}"`), `${k} has a CLV box`);
+  ok(html.includes(`data-c="${k}"`), `${k} has a closing price box`);
+  ok(html.includes(`data-w="${k}"`), `${k} has a result dropdown`);
+  ok(html.includes(`data-save="${k}"`), `${k} has its own Save`);
 }
 
-ok((html.match(/data-leg=/g) || []).length === live.length,
-   "every leg on the board is rendered, none dropped");
+ok((html.match(/data-leg=/g) || []).length === keys.length,
+   "every leg on the TICKET is rendered, none dropped");
+
+/* ⚠️ THE REGRESSION. Squatch reached the card only through a name-to-uid translation, and
+   when it missed he vanished while all seven other names worked. */
+ok(html.includes('data-leg="u_E6WLsRi0flMHptt7KIK00zpd"'),
+   "a uid-keyed leg missing from `live` is still rendered, from the ticket");
+ok(html.includes(">Squatch<"),
+   "...and is labelled from the members map, not left as a raw uid");
+ok(html.includes('title="writes results/u_E6WLsRi0flMHptt7KIK00zpd"'),
+   "...and its Save names the uid path the Worker actually keys results under");
+ok(!/data-ghost="Squatch"/.test(html),
+   "...and he is not reported as missing, because he is not");
 
 /* The prop and the period leg additionally get an actual box; a plain game market does
    not need one, because the schedule feed supplies it. */
-ok(html.includes('data-a="Squatch"') && html.includes('data-a="WBeamen"'),
+ok(html.includes('data-a="u_E6WLsRi0flMHptt7KIK00zpd"') && html.includes('data-a="WBeamen"'),
    "hand-graded legs get an actual box");
 ok(!html.includes('data-a="Roger"'),
    "a game market does not — the schedule supplies its actual");
@@ -113,16 +146,16 @@ ok(/leglegend/.test(html), "the controls are labelled");
    to diagnose from a screenshot. A row stating the reason is worth more than no row. */
 {
   nodes["manual"].innerHTML = "";
-  const short = live.slice(0, 6);                       // two members drop out of `live`
-  ctx.__paint(short, live.map(l => l.p));
+  ctx.S.picks = { Kap: picks.Kap, Nobody: { who: "Nobody", label: "no price", mkt: "ml", ts: 9 } };
+  ctx.__paint([], ["Kap", "Nobody", "Absent"]);
   const h2 = nodes["manual"].innerHTML;
-  ok(/data-ghost="ItzBornLegend"/.test(h2) && /data-ghost="BUTTS"/.test(h2),
-     "a member missing from the live legs still gets a row");
-  ok(/not gradeable/.test(h2), "...marked as not gradeable");
-  ok(/no leg found on this ticket/.test(h2), "...with the reason stated");
-  ok(!/data-save="BUTTS"/.test(h2), "...and no Save, because there is nothing to write");
-  ok((h2.match(/data-leg=/g) || []).length === short.length,
-     "the real legs are unaffected");
+  ok(/data-ghost="Absent"/.test(h2), "a roster member with no leg still gets a row");
+  ok(/no leg on this ticket/.test(h2), "...saying nothing was filed");
+  ok(/data-ghost="Nobody"/.test(h2), "a filed leg with no price also gets a row");
+  ok(/carries no price/.test(h2), "...saying that is why it cannot be graded");
+  ok(!/data-save="Absent"/.test(h2), "...and neither gets a Save, there is nothing to write");
+  ok((h2.match(/data-leg="Kap"/g) || []).length === 1, "the real leg is unaffected");
+  ctx.S.picks = picks;
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
