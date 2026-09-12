@@ -4473,9 +4473,38 @@ const fmtPrice = n => (n > 0 ? '+' : '') + n;
 const proxyBadge = x => x && x.commissionerModified === true
   ? `<span class="cst warn" title="Filed by the league manager on this member's behalf. Timestamped at the manager's write, not backdated — the member carries the Last In exposure.">submitted by ${esc(x.submittedByName || 'the manager')}</span>`
   : '';
-const priceSourceBadge = x => x && x.priceSource === 'captured'
-  ? '<span class="cst ok" title="Both sides captured from DraftKings through SGO">DK captured</span>'
-  : '<span class="cst warn" title="Self-priced; no two-sided captured entry, so this leg is excluded from CLV">self · no CLV</span>';
+/* ⚠️ ONE WAY TO FIND A LEG'S RESULTS ROW. Every surface on this board used to do its own
+   `res[kEnc(x.p)]`, which resolves a DISPLAY NAME to a data key through S.members — the
+   same translation #109 removed from the grade card because it silently returns nothing
+   for a leg whose pick is keyed by uid. A missing row does not throw; it reads as an
+   empty object, so the surface renders "no close", "no CLV", or a count that is quietly
+   too low, and nothing anywhere says a lookup failed. That is how a CLV the manager had
+   just typed was on one screen and absent from three others.
+
+   Key first, name second, and the leg itself last. A leg that exists is found. */
+function legRow(x){
+  const picks = (S && S.picks) || {}, res = (S && S.results) || {};
+  if(x && x.key && (res[x.key] || picks[x.key])) return res[x.key] || {};
+  const k = (x && x.p != null) ? kEnc(x.p) : null;
+  if(k && picks[k]) return res[k] || {};
+  if(x && x.label != null)
+    for(const kk in picks){ const q = picks[kk]; if(q && q.label === x.label) return res[kk] || {}; }
+  return (k && res[k]) || {};
+}
+
+/* ⚠️ A HAND-SET CLV OUTRANKS THE ENTRY'S PROVENANCE. This badge read only priceSource, so
+   a self-priced leg was branded "no CLV" forever — including after the manager had
+   supplied one by hand, which is the exact case clvPts exists for. The ticket then
+   contradicted the grade card two screens away, where the same leg says "CLV set by
+   hand". A leg with a manual CLV has a CLV; the badge says which kind it is. */
+const priceSourceBadge = x => {
+  const r = legRow(x);
+  if(r && r.clvPts != null && Number.isFinite(+r.clvPts))
+    return `<span class="cst warn" title="No two-sided captured entry, so the manager set this leg's CLV by hand. Weaker evidence than a captured pair, and counted separately.">self · CLV set by hand</span>`;
+  return x && x.priceSource === 'captured'
+    ? '<span class="cst ok" title="Both sides captured from DraftKings through SGO">DK captured</span>'
+    : '<span class="cst warn" title="Self-priced; no two-sided captured entry, so this leg has no CLV until the manager sets one by hand">self · no CLV</span>';
+};
 
 // Server capture replaced the old browser-side price guesswork. The warning slot stays
 // because old markup and the live prefill call it, but only the server decides whether a
@@ -6593,7 +6622,7 @@ function simulate(live, levers){
   const n = live.length;
   const res = S.results || {};
   const L = live.map(x=>{
-    const r = res[kEnc(x.p)] || {};
+    const r = legRow(x);
     // Real CLV where the close has been captured, null where it hasn't. See the lever
     // branch below for why the difference matters.
     /* ⚠️ A SETTLED LEG IS NOT A COIN FLIP. Every leg used to be drawn from its own
@@ -6703,7 +6732,7 @@ function simulate(live, levers){
    whenever a leg changes". Anything the sim reads has to appear here or the cache
    outlives the fact that invalidated it. */
 const simKeyFor = (live, levers, status) =>
-  live.map(x=>{ const r=(S.results||{})[kEnc(x.p)]||{};
+  live.map(x=>{ const r=legRow(x);
     return `${x.p}:${x.price}:${x.ts}:${x.line}:${x.mkt}:${x.side}:${r.close??''}:${r.closeOpp??''}`
          + `:${r.result??''}:${r.won===true?1:r.won===false?0:''}:${r.actual??''}:${r.clvPts??''}`; }).join('|')
   + '#' + levers.join(',') + '#' + status;
@@ -6883,8 +6912,13 @@ function paintDiag(live, players, status){
      close exists for some legs and not others, and only a leg with BOTH sides at BOTH
      ends can be de-vigged into a CLV at all. Say which, and how many. */
   if(levers.includes(3)){
-    const withClv = live.filter(x=>{ const r=(S.results||{})[kEnc(x.p)]||{};
-      return devigP(r.close, r.closeOpp)!=null && devigP(x.price, x.entryPriceOpp)!=null; }).length;
+    /* ⚠️ COUNTED WITH clvDeltaOf, the same rule the simulation uses one function below.
+       This test was written by hand — captured close AND captured entry — and therefore
+       could not see a CLV the manager had set, which is the one kind that exists
+       precisely when a close cannot be captured. The flag said "measured on 1 of 8" while
+       the lever was ranking on 2, and the sentence under it told the reader the lever had
+       passed on a leg it had not passed on. Two definitions of one fact is one too many. */
+    const withClv = live.filter(x=>clvDeltaOf(x, legRow(x)) != null).length;
     if(withClv === 0)
       flags.push(`<div class="flag"><span>⚠</span><span><b>Worst CLV can't be measured on this board yet.</b>
         The closes are captured at kickoff, so until the games start there is nothing to compare against — in the
@@ -6909,7 +6943,15 @@ function paintDiag(live, players, status){
      de-vigged, and a raw-implied number here would be wrong by roughly the whole hold
      while looking exactly as authoritative as a real one. */
   const clvText = x => {
-    const r = (S.results||{})[kEnc(x.p)] || {};
+    const r = legRow(x);
+    /* ⚠️ The manager's CLV is a CLV, and this column was the last place still computing
+       its own from the close alone — so a leg the lever was ranking on read "awaiting
+       close" in the table that explains the lever. Same rule as clvDeltaOf, stated once. */
+    if(r.clvPts != null && Number.isFinite(+r.clvPts)){
+      const v = +r.clvPts;
+      return `<span class="${v>=0?'clvup':'clvdn'}" title="Set by the manager by hand, not derived from a captured close.">`
+        + `${v>0?'+':''}${v.toFixed(2)} pts · by hand</span>`;
+    }
     const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp);
     if(pC != null && pE != null){
       const v = (pC - pE) * 100;
@@ -7029,7 +7071,7 @@ function rankRows(rows, key){
 function leverStandings(live){
   const res = S.results || {};
   const d = live.map((x,i)=>{
-    const r = res[kEnc(x.p)] || {};
+    const r = legRow(x);
     const pE = devigP(x.price, x.entryPriceOpp), pC = devigP(r.close, r.closeOpp);
     let beat = null;
     if(r.actual != null){
@@ -7173,7 +7215,7 @@ function bozoCtx(){
 
   L.push(`THE TICKET (${live.length} of ${players.length} in, listed in submission order — the LAST one is currently exposed to Last In):`);
   live.slice().sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach((x,i)=>{
-    const r=res[kEnc(x.p)]||{};
+    const r=legRow(x);
     /* Same rule as the slip: a leg that has settled has settled, whether or not the
        rest of the week has. Gating this on the week meant Toto would call a finished,
        lost leg "still running" for as long as one other game was in progress. */

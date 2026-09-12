@@ -76,6 +76,7 @@ jobs:
       - run: node work/test-bozo-gradecard.mjs
       - run: node work/test-bozo-clv-summary.mjs
       - run: node work/test-bozo-clv-edit.mjs
+      - run: node work/test-bozo-clv-pipes.mjs
       - run: node tools/validate-data.js
 
       # Fails closed on a malformed manifest without uploading anything.

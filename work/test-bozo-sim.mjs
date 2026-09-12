@@ -29,7 +29,11 @@ function grab(startMarker, endMarker) {
   return page.slice(a, b);
 }
 
-const src = grab("function clvDeltaOf(x, r){", "\nconst amer = d =>")
+/* ⚠️ legRow is lifted in rather than stubbed. It is how the simulation finds a leg's
+   results row, and stubbing it would let the suite keep passing if that lookup broke —
+   which is exactly the failure that put a hand-set CLV on one screen and nowhere else. */
+const src = grab("function legRow(x){", "/* ⚠️ A HAND-SET CLV OUTRANKS")
+  + "\n" + grab("function clvDeltaOf(x, r){", "\nconst amer = d =>")
   + "\n" + grab("function gauss(){", "const devig = px")
   + "\n" + grab("function simulate(live, levers){", "\n// One definition of")
   + "\n" + grab("function clvDevig(price, opp){", "/** did either side")
@@ -53,7 +57,7 @@ const ctx = vm.createContext({
   CLV_OVERROUND: 1.047619,
   sdOf: () => 13.5,
   expected: x => x.exp,
-  S: { results: {} },
+  S: { results: {}, picks: {} },
 });
 vm.runInContext(src + "\nglobalThis.__sim = simulate; globalThis.__pair = clvPair; globalThis.__delta = clvDeltaOf;", ctx);
 const simulate = ctx.__sim, clvPair = ctx.__pair, clvDeltaOf = ctx.__delta;
