@@ -7746,17 +7746,34 @@ async function autoGrade(){
   render();
 }
 function paintManual(live, roster){
-  /* ⚠️ EVERY MEMBER GETS A ROW, EVEN ONE WHOSE LEG CANNOT BE RESOLVED. `live` is the
-     roster filtered down to members whose pick was found AND carries a price — so a
-     member whose pick is keyed under something this page cannot map back to them, or
-     whose leg has no price, simply WAS NOT HERE. No row, no boxes, no reason given.
+  /* ⚠️ THE TICKET IS THE LIST, NOT THE ROSTER. This card used to be built by walking the
+     roster and looking each member's pick up by name — `players.map(p => picks[kEnc(p)])`.
+     Picks in this league are keyed by the member's uid, kEnc resolves a display name to a
+     uid through S.members, and when that mapping does not line up for ONE member, their
+     leg is on the ticket and nowhere on this card. Every other name works; that one is
+     absent; absence is indistinguishable from "the feature is broken for him".
 
-     That is the worst shape a bug can take on this card: every other name works, one
-     name is absent, and absence looks identical to "this feature is broken for him".
-     A row that says what is wrong is worth more than a row that is missing, so an
-     unresolvable member now appears with the reason and no controls. */
-  const seen = new Set(live.map(x=>x.p));
-  const ghosts = (roster||[]).filter(n=>!seen.has(n));
+     A leg on the placed ticket is a leg to grade, whoever it belongs to. Walk the picks,
+     label each row from the pick itself, and key every control by the PICK KEY — the one
+     identifier that is guaranteed to exist and to match what the Worker writes results
+     under. Then add roster members with no pick at all, so nobody is invisible either
+     way. The union of the two can never hide a leg or a member. */
+  const allPicks = (S && S.picks) || {};
+  const byKey = Object.entries(allPicks)
+    .filter(([, x]) => x && x.price != null)
+    .map(([key, x]) => ({ ...x, key, p: x.who || memberLabel(key) || kDec(key) }))
+    .sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  live = byKey.length ? byKey : (live || []).map(x => ({ ...x, key: kEnc(x.p) }));
+
+  /* A roster member with no leg on the ticket, and a leg on the ticket with no price:
+     both are absences worth stating rather than hiding. */
+  const owners = new Set(live.map(x => String(x.p)));
+  const priceless = Object.entries(allPicks).filter(([, x]) => x && x.price == null)
+    .map(([key, x]) => ({ key, p: x.who || memberLabel(key) || kDec(key), noPrice: true }));
+  const ghosts = (roster || [])
+    .filter(n => !owners.has(String(n)) && !priceless.some(g => g.p === n))
+    .map(n => ({ key: kEnc(n), p: n }))
+    .concat(priceless);
   /* ⚠️ ONE ROW PER LEG, AND EVERY ROW SAVES ON ITS OWN. This card used to split into a
      manual-results list (props, other, period legs) and a closing-prices list, and the
      only way to commit either was "Name the bozo" at the bottom — the whole-week,
@@ -7771,7 +7788,7 @@ function paintManual(live, roster){
   const hint = x => (x.period && x.period!=='game')
     ? (x.mkt==='total' ? `${PERIOD_LABEL[x.period]} points` : `${PERIOD_LABEL[x.period]} margin, ${esc(x.side)} minus opponent`)
     : 'actual';
-  const rowOf = x => res[kEnc(x.p)] || res[x.p] || {};
+  const rowOf = x => res[x.key] || res[kEnc(x.p)] || res[x.p] || {};
   const rows = live.map(x=>{
     const r = rowOf(x);
     const o = r.result || (r.won===true?'won':r.won===false?'lost':null);
@@ -7802,26 +7819,26 @@ function paintManual(live, roster){
       : derived != null
         ? `<span class="cst ok">CLV ${(derived>=0?'+':'')+derived.toFixed(2)} pts · from the close</span>`
         : `<span class="cst bad">no CLV — not on the chart or in n</span>`;
-    return `<div class="gr leg" data-leg="${esc(x.p)}">
+    return `<div class="gr leg" data-leg="${esc(x.key)}">
       <span><b>${esc(x.p)}</b> <span class="pk">${esc(x.label)}</span>
         ${(x.period && x.period!=='game')?' <span class="cst warn" title="No score source carries per-period scores; type the period result">period · manual grade</span>':''}
         ${resState} ${closeState} ${clvState}
         ${r.closeUnavailableReason?`<span class="why">${esc(r.closeUnavailableReason)}</span>`:''}
         <span class="tm" style="display:block;margin-top:2px">took ${x.price} / ${x.entryPriceOpp ?? '—'}</span></span>
-      <select data-w="${esc(x.p)}" aria-label="Result"><option value="">result —</option><option value="1"${sel==='1'?' selected':''}>Won</option><option value="0"${sel==='0'?' selected':''}>Lost</option><option value="p"${sel==='p'?' selected':''}>Push / void</option></select>
-      ${manual ? `<input type="number" step="0.5" data-a="${esc(x.p)}" placeholder="${hint(x)}" value="${r.actual ?? ''}">` : ''}
+      <select data-w="${esc(x.key)}" aria-label="Result"><option value="">result —</option><option value="1"${sel==='1'?' selected':''}>Won</option><option value="0"${sel==='0'?' selected':''}>Lost</option><option value="p"${sel==='p'?' selected':''}>Push / void</option></select>
+      ${manual ? `<input type="number" step="0.5" data-a="${esc(x.key)}" placeholder="${hint(x)}" value="${r.actual ?? ''}">` : ''}
       <span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
-        data-c="${esc(x.p)}" placeholder="close" ${locked?'disabled':''} value="${r.close ?? ''}"
+        data-c="${esc(x.key)}" placeholder="close" ${locked?'disabled':''} value="${r.close ?? ''}"
         ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
       <span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
-        data-co="${esc(x.p)}" placeholder="${autoOpp!=null ? 'auto '+fmtPrice(autoOpp) : 'other side'}" ${locked?'disabled':''} value="${r.closeOpp ?? ''}"
+        data-co="${esc(x.key)}" placeholder="${autoOpp!=null ? 'auto '+fmtPrice(autoOpp) : 'other side'}" ${locked?'disabled':''} value="${r.closeOpp ?? ''}"
         ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
-      <input type="number" step="0.01" data-clv="${esc(x.p)}" class="clvin"
+      <input type="number" step="0.01" data-clv="${esc(x.key)}" class="clvin"
         placeholder="${derived != null ? 'clv '+derived.toFixed(2) : 'clv pts'}" value="${r.clvPts ?? ''}"
         aria-label="CLV in points, overrides the close">
-      <button type="button" class="btn sm gsv" data-save="${esc(x.p)}"
-        title="writes results/${esc(kEnc(x.p))}">Save</button>
-      <span class="legsay" data-say="${esc(x.p)}" role="status"></span></div>`;
+      <button type="button" class="btn sm gsv" data-save="${esc(x.key)}"
+        title="writes results/${esc(x.key)}">Save</button>
+      <span class="legsay" data-say="${esc(x.key)}" role="status"></span></div>`;
   }).join('');
 
   const gaps = live.filter(x=>{ const r=rowOf(x); return r.close==null; }).length;
@@ -7836,12 +7853,12 @@ function paintManual(live, roster){
         <b>CLV</b> is in points and overrides whatever the close would have given &mdash; type <code>0</code> for a leg that closed where you took it.
         Clear the box to go back to the captured close.</p>`
     + rows
-    + ghosts.map(n=>{
-        const k = kEnc(n), pk = ((S&&S.picks)||{})[k];
-        const why = !pk ? `no leg found on this ticket — nothing filed, or it is stored under a key this board cannot match to ${esc(n)} (looked under <code>${esc(k)}</code>)`
-                        : `a leg is filed but carries no price, so it cannot be graded or priced here`;
-        return `<div class="gr leg" data-ghost="${esc(n)}">
-          <span><b>${esc(n)}</b> <span class="cst bad">not gradeable</span>
+    + ghosts.map(g=>{
+        const why = g.noPrice
+          ? `a leg is filed but carries no price, so there is nothing to grade or price here (key <code>${esc(g.key)}</code>)`
+          : `no leg on this ticket — nothing filed (key <code>${esc(g.key)}</code>)`;
+        return `<div class="gr leg" data-ghost="${esc(g.p)}">
+          <span><b>${esc(g.p)}</b> <span class="cst bad">not gradeable</span>
           <span class="tm" style="display:block;margin-top:2px">${why}</span></span></div>`;
       }).join('')
     + `<div class="row" style="margin-top:14px"><button class="btn" id="finish">Name the bozo</button>
@@ -7858,7 +7875,7 @@ function paintManual(live, roster){
   for(const x of live){
     if(!isManualLeg(x)) continue;
     const k = [x.eventId, x.mkt, x.prop||'', x.line??'', x.side??'', x.period||'game'].join('|');
-    (sameMarket[k] = sameMarket[k] || []).push(x.p);
+    (sameMarket[k] = sameMarket[k] || []).push(x.key);
   }
   const twins = Object.values(sameMarket).filter(g=>g.length>1);
   for(const group of twins){
@@ -7882,7 +7899,10 @@ function paintManual(live, roster){
    its other side assumed at standard juice and stamped as such. Goes through
    /bozo/admin, so it is manager-only and every field it touches is in the audit log. */
 async function saveLeg(p, btn){
-  const rowOf = who => (S.results||{})[kEnc(who.p ?? who)] || (S.results||{})[who.p ?? who] || {};
+  /* ⚠️ `p` IS THE PICK KEY, not a display name. The card keys every control by it
+     precisely so this write needs no name-to-key translation — that translation is what
+     silently lost a member whose uid did not map back through the roster. */
+  const rowOf = who => (S.results||{})[who.p ?? who] || {};
   const top=document.getElementById('gerr');
   const row=document.querySelector(`[data-say="${CSS.escape(p)}"]`);
   /* Say it in BOTH places: on the row, where the reader is looking, and at the top,
@@ -7893,7 +7913,7 @@ async function saveLeg(p, btn){
             set textContent(v){ if(top) top.textContent=v; if(row) row.textContent=v; } };
   e.className='err'; e.textContent='';
   const q = a => document.querySelector(`[data-${a}="${CSS.escape(p)}"]`);
-  const key = kEnc(p), sel=q('w'), act=q('a'), c=q('c'), co=q('co'), cl=q('clv');
+  const key = p, sel=q('w'), act=q('a'), c=q('c'), co=q('co'), cl=q('clv');
   const edits = [];
   if(sel && sel.value!==''){
     const result = sel.value==='1' ? 'won' : sel.value==='0' ? 'lost' : 'push';
