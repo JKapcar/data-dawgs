@@ -1,9 +1,9 @@
 {
- "as_of": "2026-09-11",
+ "as_of": "2026-09-12",
  "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
  "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
  "site": "https://datadawgs216.com",
- "built": "2026-09-11",
+ "built": "2026-09-12",
  "data": {
   "files": [
    {
@@ -114,8 +114,8 @@
     "path": "/data/nfl-schedule.json",
     "url": "https://datadawgs216.com/data/nfl-schedule.json",
     "bytes": 114156,
-    "as_of": "2026-09-11",
-    "sha256": "7fe09cbd46302619de21dced91b2d144f2a821085199daf47d6d118a6637eb0b",
+    "as_of": "2026-09-12",
+    "sha256": "32b813f215888c9c5568d643d29b4c2f30b23c67f86598caf3bbcb4b841c3698",
     "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts."
    },
    {
@@ -130,8 +130,8 @@
     "path": "/data/538-classic.json",
     "url": "https://datadawgs216.com/data/538-classic.json",
     "bytes": 92930,
-    "as_of": "2026-09-11",
-    "sha256": "f5eec5ea0c420becc59c2a9037b48fc12de0175aec95bf3e4b0e6a332836c79f",
+    "as_of": "2026-09-12",
+    "sha256": "9c416856bae440f04a9f25de24878e291bc3a5acf7c83872c769f18e0f1ea72a",
     "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority."
    },
    {
@@ -258,8 +258,8 @@
     "path": "/data/receipts-inventory.json",
     "url": "https://datadawgs216.com/data/receipts-inventory.json",
     "bytes": 3415,
-    "as_of": "2026-09-11",
-    "sha256": "e54fc5a41c73baa62fdb50ce2f4bad3058e2246b5e35490d3f19c6dcbccf3729",
+    "as_of": "2026-09-12",
+    "sha256": "5785d5c35cf9bc9e04fb998c0549804f474a18d68f091d0f1328e410e8e3d71c",
     "note": "An INVENTORY, not a scoreboard. There is no honest Brier across domains, so this file counts what has been registered and settled and never scores it. The ledgers OVERLAP: receipts.json and the nfelo half of model-receipts.json are the same forecasts, as are 538-classic.json and its half. aggregate is therefore computed from aggregate.counted_from alone; aggregate.naive_sum is what summing the registered column would wrongly give, published so it can be named and corrected rather than quietly reproduced."
    },
    {
