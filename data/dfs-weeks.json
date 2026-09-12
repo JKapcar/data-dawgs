@@ -1,0 +1,26 @@
+{
+ "as_of": "2026-09-07",
+ "source": "Seeded empty by Phase 0.5 T6 (work/dfs-week.js). Kap publishes locked week objects later; this file is the public envelope only.",
+ "tier": "labs",
+ "graded": false,
+ "note": "EMPTY BY DESIGN. Week objects are locked on-device (dd-dfs-v1.weeks) before kickoff with lockedSha256 over canonical JSON and realized:null. Monday standings ingest fills realized by lineup hash when contest ids match. Published rows are derived aggregates only (I3) — lineup hashes, never player lists, projections, or ownership. PoC C1–C5 already hashed; this enables the week-object path on Receipts.",
+ "field_notes": {
+  "lineups": "salt-less SHA-256 hashes of sorted DK ids + CPT (DDFSReceipts.hashEntries)",
+  "lockedSha256": "SHA-256 of canonical JSON with realized forced null and lockedSha256 omitted",
+  "realized": "null until Monday ingest; null stays null when contest id does not match",
+  "cashBuckets_roiBuckets": "computed only over weeks where realized is non-null"
+ },
+ "counts": {
+  "registered": 0,
+  "with_realized": 0,
+  "pending": 0
+ },
+ "integrity": {
+  "rows": 0,
+  "algorithm": "SHA-256 over canonical week-object JSON (realized:null, lockedSha256 omitted)"
+ },
+ "data": [],
+ "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
+ "built": "2026-09-07",
+ "canonical_url": "https://datadawgs216.com/data/dfs-weeks.json"
+}

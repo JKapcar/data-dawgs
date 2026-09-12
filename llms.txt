@@ -61,6 +61,7 @@ the sources we read and do not republish. Owns no data file either.
 
 - [Pre-registered forecasts](/data/receipts.json): 272 calls locked 2026-08-06; the lock is `integrity.sha256`.
 - [Survivor receipts](/data/survivor-receipts.json): pre-kickoff top pick, graded after.
+- [DFS week objects](/data/dfs-weeks.json): locked week receipts (lineup hashes + expectations; realized:null until Monday ingest). Aggregates only — never player lists/projections/ownership (I3).
 - [Rankings report card](/data/rankings-grades.json): ranking services graded vs actual PPR finishes; pre-registered, derived scores only, ungraded until W1.
 - [Receipt method](/data/receipts-method.md): hypotheses, grading, hash reproduction, tier collar.
 - [Bozo rules](/data/bozo-rules.json) ([prose](/data/bozo-rules.md)): open weekly one-leg parlay.

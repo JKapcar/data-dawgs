@@ -664,10 +664,16 @@
      "tool": "dd_solve_dfs_lineup",
      "status": "live",
      "covers": "bounded exact lineup optimization over caller-supplied slate data; inputs and results are not stored"
+    },
+    {
+     "kind": "json",
+     "url": "/data/dfs-weeks.json",
+     "status": "live",
+     "covers": "empty week-object receipt ledger (lockedSha256 + realized:null); Kap publishes locked weeks later — aggregates only (I3)"
     }
    ],
    "planned": [],
-   "gap": "The exact solver is live over MCP; contest simulation remains browser-only. Projections and ownership are caller-supplied and never hosted.",
+   "gap": "The exact solver is live over MCP; contest simulation remains browser-only. Projections and ownership are caller-supplied and never hosted. Week objects lock on-device before kickoff; the public ledger starts empty.",
    "tier": "labs"
   },
   {

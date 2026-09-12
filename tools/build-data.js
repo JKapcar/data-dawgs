@@ -1448,9 +1448,10 @@ const SURFACES = [
     gap: 'Reads are live over MCP. Write access (submitting a leg) waits on the trust layer, deliberately.' },
   { id: 'dfs', domain: 'arena', name: 'DFS solver + contest simulator', page: '/dfs.html',
     machine: [{ kind: 'mcp', tool: 'dd_dfs_correlations', status: 'live', covers: 'the measured correlation structure' },
-              { kind: 'mcp', tool: 'dd_solve_dfs_lineup', status: 'live', covers: 'bounded exact lineup optimization over caller-supplied slate data; inputs and results are not stored' }],
+              { kind: 'mcp', tool: 'dd_solve_dfs_lineup', status: 'live', covers: 'bounded exact lineup optimization over caller-supplied slate data; inputs and results are not stored' },
+              { kind: 'json', url: '/data/dfs-weeks.json', status: 'live', covers: 'empty week-object receipt ledger (lockedSha256 + realized:null); Kap publishes locked weeks later — aggregates only (I3)' }],
     planned: [],
-    gap: 'The exact solver is live over MCP; contest simulation remains browser-only. Projections and ownership are caller-supplied and never hosted.' },
+    gap: 'The exact solver is live over MCP; contest simulation remains browser-only. Projections and ownership are caller-supplied and never hosted. Week objects lock on-device before kickoff; the public ledger starts empty.' },
   { id: 'guillotine', domain: 'arena', name: 'Last Dawg Standing', page: '/guillotine.html',
     machine: [{ kind: 'json', url: '/data/guillotine-weekly.json', status: 'live', covers: 'daily Sleeper weekly player statistics and descriptive uncertainty; league odds computed privately in browser' },
               { kind: 'json', url: '/data/guillotine-receipts.json', status: 'live', covers: 'prospective pregame forecasts and completed-week grades' },
@@ -1523,6 +1524,29 @@ const SURFACES = [
     tier: 'labs', machine: [], planned: [],
     gap: 'Pre-registration only: the question set, the two arms and the scoring rules are published before any model is run. No forecast has been collected, so there is nothing to serve a machine yet.' },
 ];
+
+/* ---------- dfs-weeks.json — Phase 0.5 T6 empty week-object ledger ----------
+   Seeded empty. Kap publishes locked week objects later. Aggregates only (I3). */
+write('dfs-weeks.json', {
+  as_of: BUILT,
+  source: 'Seeded empty by Phase 0.5 T6 (work/dfs-week.js). Kap publishes locked week objects later; this file is the public envelope only.',
+  tier: tierOf('dfs.html'),
+  graded: false,
+  note:
+    'EMPTY BY DESIGN. Week objects are locked on-device (dd-dfs-v1.weeks) before kickoff with lockedSha256 over canonical JSON and realized:null. Monday standings ingest fills realized by lineup hash when contest ids match. Published rows are derived aggregates only (I3) — lineup hashes, never player lists, projections, or ownership. PoC C1–C5 already hashed; this enables the week-object path on Receipts.',
+  field_notes: {
+    lineups: 'salt-less SHA-256 hashes of sorted DK ids + CPT (DDFSReceipts.hashEntries)',
+    lockedSha256: 'SHA-256 of canonical JSON with realized forced null and lockedSha256 omitted',
+    realized: 'null until Monday ingest; null stays null when contest id does not match',
+    cashBuckets_roiBuckets: 'computed only over weeks where realized is non-null',
+  },
+  counts: { registered: 0, with_realized: 0, pending: 0 },
+  integrity: {
+    rows: 0,
+    algorithm: 'SHA-256 over canonical week-object JSON (realized:null, lockedSha256 omitted)',
+  },
+  data: [],
+});
 
 write('surfaces.json', {
   as_of: BUILT,
