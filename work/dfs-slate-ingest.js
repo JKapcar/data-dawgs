@@ -181,6 +181,8 @@
       var gi = idx.gi >= 0 ? String(row[idx.gi] || "") : "";
       var m = gi.match(/([A-Za-z]{2,4})\s*@\s*([A-Za-z]{2,4})/);
       var away = m ? team(m[1]) : "", home = m ? team(m[2]) : "";
+      var kickM = gi.match(/(\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\s*[AP]M(?:\s*ET)?)/i);
+      var kickoff = kickM ? kickM[1] : null;
       var rp = idx.rp >= 0 ? String(row[idx.rp] || "").trim().toUpperCase() : "";
       var id = idx.id >= 0 ? String(row[idx.id] || "").trim() : (idFromName || "");
       var key = normName(name) + "|" + tm + "|" + pos;
@@ -188,6 +190,8 @@
         name: name, pos: pos, team: tm,
         gid: m ? away + "@" + home : (tm || "?"),
         opp: tm === away ? home : (tm === home ? away : ""),
+        away: away, home: home,
+        kickoff: kickoff, startTime: kickoff,
         sal: 0, dkId: "", cptId: "", cptSal: 0,
         avg: idx.avg >= 0 ? parseFloat(row[idx.avg]) || 0 : 0,
         proj: null, own: null, status: ""
