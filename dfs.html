@@ -2707,8 +2707,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         <div class="btnrow">
           <button class="btn sm" id="dkLobbyGo">Refresh lobby</button>
           <button class="btn sm" id="dkLoadGo" disabled>Load slate</button>
+          <button class="btn ghost sm" id="dkSwitchAlt" type="button" hidden>Switch slate</button>
         </div>
-        <p class="note" id="dkLobbyNote">Uses toto → DraftKings draftables (salaries + OUT/Q). No Export CSV required.</p>
+        <p class="note" id="dkLobbyNote">Uses toto → DraftKings draftables (salaries + OUT/Q). No Export CSV required. Opens on the next-locking Classic/Showdown when online.</p>
+        <p class="note" id="dkAutoloadNote" hidden></p>
         </details>
         <label class="fld"><span>Upload your data sheet</span>
           <input class="fi" type="file" id="salFile" accept=".csv,text/csv,text/plain">
@@ -4419,6 +4421,8 @@ const DEF = {
   bankroll: [],
   screener: [],
   screenerLastPull: null,
+  slate: { loadedAt: null, source: null, draftGroupId: null, stale: false },
+  demo: false,
   cfg: { count: 20, minSal: 49000, maxSal: 50000, uniq: 2, rand: 15, maxExp: 100, team: 4, game: 6,
          time: 60, qbMin: 1, qbPos: "WR,TE", bring: 0, noRbDst: false, noOppDst: false, lobbyTopN: 25 },
   sim: { field: 20000, fee: 20, payout: "gpp", paid: 20, alpha: 1.15, rake: 15, custom: "",
@@ -4433,7 +4437,7 @@ function load() {
     // handing `undefined` to a number input
     const out = JSON.parse(JSON.stringify(DEF));
     for (const k in raw) {
-      if (k === "cfg" || k === "sim") Object.assign(out[k], raw[k] || {});
+      if (k === "cfg" || k === "sim" || k === "slate") Object.assign(out[k], raw[k] || {});
       else out[k] = raw[k];
     }
     return out;
@@ -4970,7 +4974,8 @@ function banner(id, kind, html) {
         draftGroupId: id,
         contestTypeId: ct,
         gameCount: games,
-        startTime: g.StartTime || null,
+        // Live lobby uses StartDate / StartDateEst; older fixtures used StartTime.
+        startTime: g.StartTime || g.StartDate || g.StartDateEst || null,
         draftGroupTag: tag,
         format: fmt,
         label: labelParts.join(" · ")
@@ -5033,6 +5038,7 @@ function banner(id, kind, html) {
           name: name, pos: pos, team: tm,
           gid: g.gid, opp: g.opp,
           sal: 0, dkId: "", cptId: "", cptSal: 0,
+          playerDkId: pid,
           avg: fppgFromDraftable(d),
           proj: null, own: 0, status: st
         });
@@ -5095,6 +5101,7 @@ function banner(id, kind, html) {
         gid: cg.gid, opp: cg.opp,
         sal: csal,
         dkId: c.draftableId != null ? String(c.draftableId) : cpid,
+        playerDkId: cpid,
         cptId: "", cptSal: 0,
         avg: fppgFromDraftable(c),
         proj: null, own: 0, status: cst,
@@ -5142,6 +5149,277 @@ function banner(id, kind, html) {
     detectFormat: detectFormat,
     statusSummary: statusSummary,
     normStatus: normStatus
+  };
+});
+
+/* ---- Autoload picker (Phase 0.5 T2 — source: work/dfs-autoload.js) ---- */
+/**
+ * DFS Labs Phase 0.5 T2 — Auto-load on open.
+ * Pure picker + projection carry helpers. Source for dfs.html (keep in sync).
+ * Never fetches ETR (I1). Never auto-loads demo. Never runs solver/sim.
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === "object" && module.exports) module.exports = api;
+  if (root) root.DDFSAutoload = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  "use strict";
+
+  var CLASSIC_TYPE = 21;
+  var SHOWDOWN_TYPE = 96;
+
+  function parseLockMs(raw) {
+    if (raw == null || raw === "") return null;
+    if (typeof raw === "number" && isFinite(raw)) return raw;
+    var s = String(raw).trim();
+    // ASP.NET /Date(ms)/
+    var m = s.match(/\/Date\((-?\d+)(?:[+-]\d+)?\)\//);
+    if (m) return Number(m[1]);
+    var t = Date.parse(s);
+    return isFinite(t) ? t : null;
+  }
+
+  function groupLockMs(g) {
+    if (!g) return null;
+    if (g.lockMs != null && isFinite(g.lockMs)) return +g.lockMs;
+    return parseLockMs(
+      g.startTime != null ? g.startTime
+        : (g.StartTime != null ? g.StartTime
+          : (g.StartDate != null ? g.StartDate
+            : (g.StartDateEst != null ? g.StartDateEst : null)))
+    );
+  }
+
+  /**
+   * True when lock instant is Sunday 1:00 pm America/New_York (±2 minutes).
+   */
+  function isSundayMainSlotEt(ms) {
+    if (ms == null || !isFinite(ms)) return false;
+    var d = new Date(ms);
+    var parts = {};
+    try {
+      var fmt = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        weekday: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23"
+      });
+      fmt.formatToParts(d).forEach(function (p) {
+        if (p.type !== "literal") parts[p.type] = p.value;
+      });
+    } catch (e) {
+      // Fallback: treat UTC-4 as ET (EDT) — good enough for unit fixtures.
+      var et = new Date(ms - 4 * 3600 * 1000);
+      parts.weekday = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][et.getUTCDay()];
+      parts.hour = String(et.getUTCHours()).padStart(2, "0");
+      parts.minute = String(et.getUTCMinutes()).padStart(2, "0");
+    }
+    if (String(parts.weekday || "").slice(0, 3) !== "Sun") return false;
+    var hour = parseInt(parts.hour, 10);
+    var minute = parseInt(parts.minute, 10);
+    if (!isFinite(hour) || !isFinite(minute)) return false;
+    var mins = hour * 60 + minute;
+    // 1:00 pm ET = 13:00 → tolerate ±2 minutes
+    return Math.abs(mins - (13 * 60)) <= 2;
+  }
+
+  function asGroups(lobbyOrGroups) {
+    if (!lobbyOrGroups) return [];
+    if (Array.isArray(lobbyOrGroups)) return lobbyOrGroups;
+    // Prefer shared ingest when available (Node require or page global).
+    var ingest = null;
+    try {
+      if (typeof module === "object" && module.exports) {
+        ingest = require("./dk-draftables-ingest.js");
+      }
+    } catch (e) { ingest = null; }
+    if (!ingest && typeof globalThis !== "undefined" && globalThis.DDFSDkDraftables) {
+      ingest = globalThis.DDFSDkDraftables;
+    }
+    if (ingest && typeof ingest.listNflSalaryDraftGroups === "function") {
+      return ingest.listNflSalaryDraftGroups(lobbyOrGroups);
+    }
+    // Minimal fallback for fixtures that already look like mapped groups.
+    var raw = lobbyOrGroups.DraftGroups || [];
+    var out = [];
+    for (var i = 0; i < raw.length; i++) {
+      var g = raw[i];
+      var ct = Number(g.ContestTypeId);
+      var fmt = ct === SHOWDOWN_TYPE ? "showdown" : (ct === CLASSIC_TYPE ? "classic" : null);
+      if (!fmt) continue;
+      out.push({
+        draftGroupId: Number(g.DraftGroupId),
+        contestTypeId: ct,
+        gameCount: Number(g.GameCount) || 0,
+        startTime: g.StartTime || g.StartDate || g.StartDateEst || null,
+        draftGroupTag: String(g.DraftGroupTag || ""),
+        format: fmt,
+        label: fmt + " · DG " + g.DraftGroupId
+      });
+    }
+    return out;
+  }
+
+  function nextLockingShowdown(groups, nowMs) {
+    nowMs = nowMs == null ? Date.now() : +nowMs;
+    var cands = (groups || []).filter(function (g) {
+      return g && (g.format === "showdown" || Number(g.contestTypeId) === SHOWDOWN_TYPE);
+    });
+    var future = [], past = [];
+    cands.forEach(function (g) {
+      var ms = groupLockMs(g);
+      if (ms == null) return;
+      var row = Object.assign({}, g, { lockMs: ms });
+      if (ms >= nowMs) future.push(row);
+      else past.push(row);
+    });
+    future.sort(function (a, b) { return a.lockMs - b.lockMs || a.draftGroupId - b.draftGroupId; });
+    if (future.length) return future[0];
+    past.sort(function (a, b) { return b.lockMs - a.lockMs || a.draftGroupId - b.draftGroupId; });
+    return past[0] || null;
+  }
+
+  /**
+   * Classic "main" = among ContestTypeId 21 groups whose lock is the earliest
+   * Sunday 1:00 pm ET slot, the one with the largest GameCount.
+   */
+  function pickClassicMain(groups, nowMs) {
+    nowMs = nowMs == null ? Date.now() : +nowMs;
+    var classics = (groups || []).filter(function (g) {
+      return g && (g.format === "classic" || Number(g.contestTypeId) === CLASSIC_TYPE);
+    }).map(function (g) {
+      return Object.assign({}, g, { lockMs: groupLockMs(g) });
+    }).filter(function (g) {
+      return g.lockMs != null && isSundayMainSlotEt(g.lockMs);
+    });
+    if (!classics.length) return null;
+
+    // Prefer upcoming Sunday mains; else the most recent past Sunday main week.
+    var future = classics.filter(function (g) { return g.lockMs >= nowMs; });
+    var pool = future.length ? future : classics;
+    var earliest = Math.min.apply(null, pool.map(function (g) { return g.lockMs; }));
+    var atSlot = pool.filter(function (g) { return g.lockMs === earliest; });
+    atSlot.sort(function (a, b) {
+      return (b.gameCount || 0) - (a.gameCount || 0) || a.draftGroupId - b.draftGroupId;
+    });
+    return atSlot[0] || null;
+  }
+
+  /**
+   * Pick primary (locks first) + alternate (the other of showdown/classic-main).
+   * Clean hook for T1 dashboard one-tap switch: return.alternate + return.switchTo().
+   */
+  function pickAutoloadTargets(lobbyOrGroups, nowMs) {
+    var groups = asGroups(lobbyOrGroups);
+    var showdown = nextLockingShowdown(groups, nowMs);
+    var classicMain = pickClassicMain(groups, nowMs);
+    var primary = null;
+    var alternate = null;
+    if (showdown && classicMain) {
+      if (showdown.lockMs <= classicMain.lockMs) {
+        primary = showdown; alternate = classicMain;
+      } else {
+        primary = classicMain; alternate = showdown;
+      }
+    } else {
+      primary = showdown || classicMain;
+      alternate = null;
+    }
+    return {
+      groups: groups,
+      showdown: showdown,
+      classicMain: classicMain,
+      primary: primary,
+      alternate: alternate,
+      /** T1 hook: which target to load when the user one-taps the switch. */
+      switchTarget: alternate
+    };
+  }
+
+  function playerMatchKey(p) {
+    if (!p) return "";
+    if (p.playerDkId != null && String(p.playerDkId) !== "") return "pid:" + String(p.playerDkId);
+    if (p.dkId != null && String(p.dkId) !== "") return "dk:" + String(p.dkId);
+    return "";
+  }
+
+  /**
+   * Carry proj/own from previous pool onto a freshly loaded pool.
+   * Same draft group → match by DK player id (playerDkId, else dkId).
+   * Different group → drop projections and return a visible notice.
+   */
+  function carryProjections(prevPlayers, nextPlayers, opts) {
+    opts = opts || {};
+    var sameGroup = !!opts.sameGroup;
+    var next = (nextPlayers || []).map(function (p) {
+      var q = Object.assign({}, p);
+      return q;
+    });
+    if (!sameGroup) {
+      next.forEach(function (p) {
+        p.proj = null;
+        p.own = 0;
+      });
+      return {
+        players: next,
+        carried: 0,
+        dropped: (prevPlayers || []).filter(function (p) {
+          return p && p.proj != null && isFinite(p.proj);
+        }).length,
+        notice: "Projections from the previous draft group were cleared — paste them again for this slate."
+      };
+    }
+    var idx = {};
+    (prevPlayers || []).forEach(function (p) {
+      var k = playerMatchKey(p);
+      if (k) idx[k] = p;
+    });
+    var carried = 0;
+    next.forEach(function (p) {
+      var prev = idx[playerMatchKey(p)];
+      if (!prev) return;
+      if (prev.proj != null && isFinite(prev.proj)) {
+        p.proj = prev.proj;
+        carried++;
+      }
+      if (prev.own != null && isFinite(prev.own) && prev.own > 0) p.own = prev.own;
+      if (prev.lock) p.lock = true;
+      if (prev.excl) p.excl = true;
+      if (prev.maxExp != null) p.maxExp = prev.maxExp;
+    });
+    return {
+      players: next,
+      carried: carried,
+      dropped: 0,
+      notice: carried
+        ? ("Kept " + carried + " projection" + (carried === 1 ? "" : "s") + " from the previous load of this draft group.")
+        : ""
+    };
+  }
+
+  function slateMeta(opts) {
+    opts = opts || {};
+    return {
+      loadedAt: opts.loadedAt != null ? opts.loadedAt : new Date().toISOString(),
+      source: opts.source || null, // "toto" | "csv" | "demo"
+      draftGroupId: opts.draftGroupId != null ? opts.draftGroupId : null,
+      stale: !!opts.stale
+    };
+  }
+
+  return {
+    CLASSIC_TYPE: CLASSIC_TYPE,
+    SHOWDOWN_TYPE: SHOWDOWN_TYPE,
+    parseLockMs: parseLockMs,
+    groupLockMs: groupLockMs,
+    isSundayMainSlotEt: isSundayMainSlotEt,
+    nextLockingShowdown: nextLockingShowdown,
+    pickClassicMain: pickClassicMain,
+    pickAutoloadTargets: pickAutoloadTargets,
+    carryProjections: carryProjections,
+    playerMatchKey: playerMatchKey,
+    slateMeta: slateMeta
   };
 });
 
@@ -6473,6 +6751,8 @@ function renderStrip() {
   if (S.lineups.length) bits.push(`<span class="dot live"></span><span><b>${S.lineups.length}</b> lineup${S.lineups.length === 1 ? "" : "s"} built</span>`);
   if (S.bankroll.length) bits.push(`<span class="dot"></span><span><b>${S.bankroll.length}</b> contests logged</span>`);
   if (S.demo) bits.push(`<span class="dot"></span><span style="color:var(--warn);font-weight:750">demo slate — invented players</span>`);
+  if (S.slate && S.slate.stale && S.players && S.players.length) bits.push(`<span class="dot"></span><span style="color:var(--warn);font-weight:750">slate stale — last-good pool</span>`);
+  if (S.slate && S.slate.source === "toto" && S.slate.draftGroupId && !S.demo) bits.push(`<span class="dot"></span><span class="mut">DG ${esc(String(S.slate.draftGroupId))}</span>`);
   $("fsStrip").innerHTML = bits.join("");
   $("poolCount").textContent = st.total ? `${st.priced} of ${st.total} have a projection` : "";
   // Keep navigation available; explain missing inputs inside each workspace.
@@ -7755,17 +8035,27 @@ function boot() {
   $("salDemo").addEventListener("click", () => {
     S.site = "dk_classic"; $("siteSel").value = "dk_classic";
     S.players = demoSlate(); S.demo = true; S.lineups = []; SIM = null;
+    S.slate = DDFSAutoload.slateMeta({ source: "demo", draftGroupId: null, stale: false });
     save(); renderStrip(); renderPool(); renderLineups(); renderSolveStats(); renderExposure();
     banner("slateWarn", "warn", "<b>Demo slate loaded — every player on it is invented.</b> The names, salaries, projections and ownership are all synthetic. It exists so you can watch the solver and the simulator work end to end; do not read a single number off it as advice.");
     $("matchNote").textContent = "";
+    $("slateState").textContent = "demo";
+    updateAutoloadSwitch(null);
   });
   $("dkLobbyGo").addEventListener("click", () => refreshDkLobby());
   $("dkLoadGo").addEventListener("click", () => loadDkSlate());
   $("dkGroupSel").addEventListener("change", () => {
     $("dkLoadGo").disabled = !$("dkGroupSel").value;
   });
-  // Prefetch lobby once the Slate sheet is in play (non-blocking)
-  setTimeout(() => { try { refreshDkLobby(true); } catch (e) {} }, 400);
+  if ($("dkSwitchAlt")) {
+    $("dkSwitchAlt").addEventListener("click", () => {
+      if (_autoloadAlt && _autoloadAlt.draftGroupId) {
+        loadDkSlateById(_autoloadAlt.draftGroupId, { reason: "switch" });
+      }
+    });
+  }
+  // T2: auto-load next-locking slate when online (never demo; never solver/sim)
+  setTimeout(() => { try { autoLoadOnOpen(); } catch (e) { try { refreshDkLobby(true); } catch (e2) {} } }, 400);
   
   $("cfPreset").addEventListener("change", () => {
     const k = $("cfPreset").value;
@@ -7978,6 +8268,131 @@ $('paretoStop').addEventListener('click', () => { if(frontWorker)frontWorker.ter
 
 const DK_TOTO = "https://toto.jkapcar4.workers.dev";
 let _dkGroups = [];
+/** T1 dashboard hook: the non-primary Classic/Showdown target for one-tap switch. */
+let _autoloadAlt = null;
+let _autoloadPick = null;
+
+function updateAutoloadSwitch(pick) {
+  _autoloadPick = pick || null;
+  _autoloadAlt = (pick && pick.alternate) || null;
+  const btn = $("dkSwitchAlt");
+  const note = $("dkAutoloadNote");
+  if (!btn) return;
+  if (_autoloadAlt && _autoloadAlt.draftGroupId) {
+    const label = _autoloadAlt.format === "showdown" ? "Showdown" : "Classic main";
+    btn.hidden = false;
+    btn.textContent = "Switch to " + label + " (DG " + _autoloadAlt.draftGroupId + ")";
+    btn.dataset.draftGroupId = String(_autoloadAlt.draftGroupId);
+    if (note) {
+      note.hidden = false;
+      const prim = pick && pick.primary;
+      note.textContent = prim
+        ? ("Auto-loaded " + (prim.format === "showdown" ? "Showdown" : "Classic") +
+           " DG " + prim.draftGroupId + " (locks first). One-tap switch keeps the other ready for T1.")
+        : "";
+    }
+  } else {
+    btn.hidden = true;
+    btn.removeAttribute("data-draft-group-id");
+    if (note) { note.hidden = true; note.textContent = ""; }
+  }
+}
+
+function markSlateStale(errMsg) {
+  if (!S.slate) S.slate = DDFSAutoload.slateMeta({});
+  S.slate.stale = true;
+  // Keep loadedAt / source / draftGroupId / players (last-good pool).
+  save();
+  $("slateState").textContent = S.players && S.players.length ? "stale" : "";
+  const extra = errMsg ? (" " + esc(String(errMsg))) : "";
+  if (S.players && S.players.length) {
+    banner("slateWarn", "warn", "<b>Lobby/draftables refresh failed — keeping the last-good pool.</b>" + extra);
+  }
+}
+
+async function loadDkSlateById(id, opts) {
+  opts = opts || {};
+  if (!id) { banner("slateWarn", "err", "<b>Pick a draft group first.</b>"); return false; }
+  const g = _dkGroups.find(x => String(x.draftGroupId) === String(id))
+    || (_autoloadPick && _autoloadPick.groups || []).find(x => String(x.draftGroupId) === String(id));
+  banner("slateWarn", "warn", "<b>Loading draftables…</b> DG " + esc(String(id)));
+  if ($("dkLoadGo")) $("dkLoadGo").disabled = true;
+  try {
+    const r = await fetch(DK_TOTO + "/dk/draftables?draftGroupId=" + encodeURIComponent(id), { method: "GET", cache: "no-store" });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.detail || j.error || ("HTTP " + r.status));
+    const mapped = DDFSDkDraftables.playersFromDraftables(j, { format: g && g.format });
+    if (mapped.error) throw new Error(mapped.error);
+    applyMappedSlate(mapped, { draftGroupId: id, source: "toto" });
+    if ($("dkGroupSel")) {
+      $("dkGroupSel").value = String(id);
+      $("dkLoadGo").disabled = false;
+    }
+    // After a manual/auto load, flip switch target if we loaded the alternate
+    if (_autoloadPick && _autoloadPick.primary && _autoloadPick.alternate) {
+      if (String(id) === String(_autoloadPick.alternate.draftGroupId)) {
+        updateAutoloadSwitch({
+          primary: _autoloadPick.alternate,
+          alternate: _autoloadPick.primary,
+          groups: _autoloadPick.groups,
+          showdown: _autoloadPick.showdown,
+          classicMain: _autoloadPick.classicMain,
+          switchTarget: _autoloadPick.primary
+        });
+      } else if (String(id) === String(_autoloadPick.primary.draftGroupId)) {
+        updateAutoloadSwitch(_autoloadPick);
+      }
+    }
+    return true;
+  } catch (e) {
+    markSlateStale(e.message || e);
+    banner("slateWarn", "err", "<b>Draftables failed.</b> " + esc(String(e.message || e)) +
+      (S.players && S.players.length ? " Last-good pool kept (stale)." : ""));
+    return false;
+  } finally {
+    if ($("dkLoadGo")) $("dkLoadGo").disabled = !$("dkGroupSel") || !$("dkGroupSel").value;
+  }
+}
+
+/**
+ * On page open: if online, fetch lobby, pick next-locking Showdown + Classic main,
+ * load whichever locks first. Never demo. Never solver/sim.
+ */
+async function autoLoadOnOpen() {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    if ($("dkAutoloadNote")) {
+      $("dkAutoloadNote").hidden = false;
+      $("dkAutoloadNote").textContent = "Offline — keeping the last-good pool" + (S.slate && S.slate.stale ? " (marked stale)." : ".");
+    }
+    try { await refreshDkLobby(true); } catch (e) {}
+    return;
+  }
+  try {
+    await refreshDkLobby(true);
+    const pick = DDFSAutoload.pickAutoloadTargets(_dkGroups, Date.now());
+    updateAutoloadSwitch(pick);
+    if (!pick.primary || !pick.primary.draftGroupId) {
+      if ($("dkAutoloadNote")) {
+        $("dkAutoloadNote").hidden = false;
+        $("dkAutoloadNote").textContent = "No Classic/Showdown draft group to auto-load yet — pick one above or use Refresh lobby.";
+      }
+      return;
+    }
+    // If we already have this group loaded and fresh, skip refetch (still expose switch).
+    if (S.slate && !S.slate.stale && String(S.slate.draftGroupId) === String(pick.primary.draftGroupId) && S.players && S.players.length) {
+      if ($("dkGroupSel")) $("dkGroupSel").value = String(pick.primary.draftGroupId);
+      if ($("dkAutoloadNote")) {
+        $("dkAutoloadNote").hidden = false;
+        $("dkAutoloadNote").textContent = "Already on next-locking DG " + pick.primary.draftGroupId + " — pool kept.";
+      }
+      return;
+    }
+    await loadDkSlateById(pick.primary.draftGroupId, { reason: "autoload" });
+  } catch (e) {
+    markSlateStale(e.message || e);
+    try { await refreshDkLobby(true); } catch (e2) {}
+  }
+}
 
 async function refreshDkLobby(quiet) {
   const sel = $("dkGroupSel"), note = $("dkLobbyNote"), loadBtn = $("dkLoadGo");
@@ -8000,32 +8415,24 @@ async function refreshDkLobby(quiet) {
   } catch (e) {
     sel.innerHTML = '<option value="">Lobby unavailable</option>';
     note.textContent = "Could not reach toto/DK lobby: " + (e.message || e);
-    if (!quiet) banner("slateWarn", "err", "<b>Lobby failed.</b> " + esc(String(e.message || e)));
+    if (S.players && S.players.length) markSlateStale(e.message || e);
+    else if (!quiet) banner("slateWarn", "err", "<b>Lobby failed.</b> " + esc(String(e.message || e)));
   }
 }
 
 async function loadDkSlate() {
   const id = $("dkGroupSel").value;
-  if (!id) { banner("slateWarn", "err", "<b>Pick a draft group first.</b>"); return; }
-  const g = _dkGroups.find(x => String(x.draftGroupId) === String(id));
-  banner("slateWarn", "warn", "<b>Loading draftables…</b> DG " + esc(id));
-  $("dkLoadGo").disabled = true;
-  try {
-    const r = await fetch(DK_TOTO + "/dk/draftables?draftGroupId=" + encodeURIComponent(id), { method: "GET", cache: "no-store" });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.detail || j.error || ("HTTP " + r.status));
-    const mapped = DDFSDkDraftables.playersFromDraftables(j, { format: g && g.format });
-    if (mapped.error) throw new Error(mapped.error);
-    applyMappedSlate(mapped);
-  } catch (e) {
-    banner("slateWarn", "err", "<b>Draftables failed.</b> " + esc(String(e.message || e)));
-  } finally {
-    $("dkLoadGo").disabled = !$("dkGroupSel").value;
-  }
+  await loadDkSlateById(id, { reason: "manual" });
 }
 
-function applyMappedSlate(r) {
+function applyMappedSlate(r, opts) {
+  opts = opts || {};
   const wantShowdown = !!r.showdown;
+  const nextGroupId = opts.draftGroupId != null ? opts.draftGroupId : null;
+  const prevGroupId = S.slate && S.slate.draftGroupId != null ? S.slate.draftGroupId : null;
+  const prevPlayers = S.players || [];
+  const sameGroup = nextGroupId != null && prevGroupId != null && String(nextGroupId) === String(prevGroupId);
+
   S.site = wantShowdown ? "dk_showdown" : "dk_classic";
   $("siteSel").value = S.site;
   // Auto-exclude OUT / IR; leave Q in the pool with a badge
@@ -8033,23 +8440,34 @@ function applyMappedSlate(r) {
   r.players.forEach(p => {
     if (p.status === "OUT" || p.status === "IR") { p.excl = true; autoOut++; }
   });
-  // Enrich an uploaded board with official IDs without discarding its estimates.
-  r.players.forEach(p => {
-    const previous = S.players.find(x => normName(x.name) === normName(p.name) && x.team === p.team && x.sal === p.sal);
-    if (previous) ["proj", "own", "cptProj", "cptOwn", "ceil"].forEach(k => { if (previous[k] != null) p[k] = previous[k]; });
+
+  let players = r.players;
+  let carryNotice = "";
+  if (typeof DDFSAutoload !== "undefined" && prevPlayers.length) {
+    const carried = DDFSAutoload.carryProjections(prevPlayers, players, { sameGroup: sameGroup });
+    players = carried.players;
+    if (carried.notice) carryNotice = carried.notice;
+  }
+
+  S.players = players; S.demo = false; S.lineups = []; S.labPins=[];S.labAudit=null;SIM = null; FRONT = null;
+  // Never auto-run solver or sim — wipe lineups/SIM only.
+  S.slate = DDFSAutoload.slateMeta({
+    source: opts.source || "toto",
+    draftGroupId: nextGroupId,
+    stale: false
   });
-  S.players = r.players; S.demo = false; S.lineups = []; S.labPins=[];S.labAudit=null;SIM = null;
-  recordLabSource(text,label||'Pasted CSV',r.projectionInfo);
   save();
   renderStrip(); renderPool(); renderLineups(); renderSolveStats(); renderExposure();
   $("stackCard").hidden = E.SITES[S.site].showdown;
   const st = DDFSDkDraftables.statusSummary(r.statusCounts);
-  banner("slateWarn", "ok", `<b>${r.players.length} players across ${r.games} game${r.games === 1 ? "" : "s"}</b> from DraftKings draftables.` +
+  const kind = carryNotice && !sameGroup ? "warn" : "ok";
+  banner("slateWarn", kind, `<b>${players.length} players across ${r.games} game${r.games === 1 ? "" : "s"}</b> from DraftKings draftables.` +
     (wantShowdown ? " Showdown CPT/FLEX merged. " : " ") +
     (st ? ("Injury flags: " + esc(st) + ". ") : "") +
     (autoOut ? (autoOut + " OUT/IR marked Out (toggle if you disagree). ") : "") +
-    (S.players.some(p => p.proj != null) ? "Your matching uploaded projections were retained." : "Upload your projection sheet above to build lineups."));
-  $("slateState").textContent = "live DK";
+    (carryNotice ? (" <b>" + esc(carryNotice) + "</b> ") : "") +
+    (players.some(p => p.proj != null) ? " Matching uploaded projections were retained where names/teams lined up." : (sameGroup && carryNotice ? "" : " Paste projections next — nothing can be optimised without them.")));
+  $("slateState").textContent = S.slate.stale ? "stale" : "live DK";
   $("matchNote").textContent = "";
 }
 
@@ -8146,16 +8564,18 @@ function doSalaries(text,label) {
   const wantShowdown = r.showdown;
   S.site = wantShowdown ? "dk_showdown" : "dk_classic";
   $("siteSel").value = S.site;
-  S.players = r.players; S.demo = false; S.lineups = []; S.labPins=[];S.labAudit=null;SIM = null;
+  S.players = r.players; S.demo = false; S.lineups = []; S.labPins=[];S.labAudit=null;SIM = null; FRONT = null;
   recordLabSource(text,label||'Pasted CSV',r.projectionInfo);
+  S.slate = DDFSAutoload.slateMeta({ source: "csv", draftGroupId: null, stale: false });
   save();
   renderStrip(); renderPool(); renderLineups(); renderSolveStats(); renderExposure();
   $("stackCard").hidden = E.SITES[S.site].showdown;
   banner("slateWarn", r.projected ? "ok" : "warn", `<b>${r.players.length} players loaded · ${r.projected} projections · ${r.ownership} ownership estimates.</b> ` +
     (wantShowdown ? "Showdown detected. " : "Classic detected. ") +
-    (r.projected ? '<a href="#solver" data-goto="solver">Build lineups</a>, then simulate them and inspect exposure. ' : "") + esc((r.warnings || []).join(" ")));
+    (r.projected ? '<a href="#solver" data-goto="solver">Build lineups</a>, then simulate them and inspect exposure. ' : "Paste projections if needed — nothing can be optimised without them. ") + esc((r.warnings || []).join(" ")));
   $("matchNote").textContent = "";
-  $("slateState").textContent = "";
+  $("slateState").textContent = "csv";
+  updateAutoloadSwitch(null);
 }
 
 function doProjections(map) {
