@@ -2,7 +2,7 @@
  "source_page": "/teamdraft.html",
  "tier": "labs",
  "graded": false,
- "as_of": "2026-09-12",
+ "as_of": "2026-09-13",
  "source": "VegasInsider 4-book devigged win totals (2026-08-09) normalized to 272; per-game probabilities refit to those totals over the nflverse 2026 schedule",
  "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. Nothing here is graded — the 2026 season has not started, every wins_tracker row reads zero, and no figure on this surface is a result. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run.",
  "field_notes": {
@@ -24,7 +24,7 @@
   "board[].delta": "Chosen team's expected wins minus the best still available. Descriptive, not a grade."
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-09-12",
+ "built": "2026-09-13",
  "canonical_url": "https://datadawgs216.com/data/draft-2026.json",
  "data": {
   "season": 2026,
@@ -301,7 +301,7 @@
       "wpf": 0.35701,
       "tier": "model",
       "settled": false,
-      "live": 0.3018
+      "live": 0.2851
      },
      {
       "week": 2,
@@ -465,8 +465,8 @@
      }
     ],
     "banked": 0.0,
-    "remaining": 6.858,
-    "projected": 6.858
+    "remaining": 6.841,
+    "projected": 6.841
    },
    "BAL": {
     "name": "Ravens",
@@ -5426,7 +5426,7 @@
       "wpf": 0.64299,
       "tier": "model",
       "settled": false,
-      "live": 0.6982
+      "live": 0.7149
      },
      {
       "week": 2,
@@ -5590,8 +5590,8 @@
      }
     ],
     "banked": 0.0,
-    "remaining": 8.611,
-    "projected": 8.611
+    "remaining": 8.628,
+    "projected": 8.628
    },
    "SEA": {
     "name": "Seahawks",
@@ -7393,8 +7393,8 @@
      "LV"
     ],
     "total": 0,
-    "projected": 33.564,
-    "remaining": 33.564
+    "projected": 33.581,
+    "remaining": 33.581
    },
    "Tyler": {
     "rounds": [
@@ -7444,8 +7444,8 @@
      "ATL"
     ],
     "total": 0,
-    "projected": 33.383,
-    "remaining": 33.383
+    "projected": 33.366,
+    "remaining": 33.366
    },
    "Alan": {
     "rounds": [
@@ -7530,8 +7530,8 @@
     ],
     "ew": 32.14,
     "banked": 0.0,
-    "remaining": 33.564,
-    "projected": 33.564,
+    "remaining": 33.581,
+    "projected": 33.581,
     "par_delta": -1.86,
     "internal_games": 2,
     "sd_sim": 4.58,
@@ -7584,8 +7584,8 @@
     ],
     "ew": 33.67,
     "banked": 0.0,
-    "remaining": 33.383,
-    "projected": 33.383,
+    "remaining": 33.366,
+    "projected": 33.366,
     "par_delta": -0.33,
     "internal_games": 3,
     "sd_sim": 4.46,
@@ -8033,14 +8033,14 @@
    "trials": 100000,
    "seed": 20260812,
    "method": "game-level Bernoulli over the refitted schedule; one win per game, so every simulated season pays exactly 272",
-   "tie_for_first_rate": 0.13339,
+   "tie_for_first_rate": 0.13303,
    "no_tie_outcome": true,
    "first_place_ties_broken": "at random — the league's real tiebreakers (playoff wins, then point differential) are not in this payload",
    "drafters": {
     "Matt": {
-     "p_first": 0.053,
-     "p_second": 0.09214,
-     "p_top2": 0.14514,
+     "p_first": 0.05301,
+     "p_second": 0.09223,
+     "p_top2": 0.14524,
      "mean": 32.927,
      "sd": 3.741,
      "p10": 28.0,
@@ -8084,9 +8084,9 @@
      }
     },
     "Rob": {
-     "p_first": 0.08814,
-     "p_second": 0.13601,
-     "p_top2": 0.22415,
+     "p_first": 0.08816,
+     "p_second": 0.13594,
+     "p_top2": 0.2241,
      "mean": 34.191,
      "sd": 3.713,
      "p10": 29.0,
@@ -8129,9 +8129,9 @@
      }
     },
     "Kevin": {
-     "p_first": 0.06098,
-     "p_second": 0.10503,
-     "p_top2": 0.16601,
+     "p_first": 0.06101,
+     "p_second": 0.10493,
+     "p_top2": 0.16594,
      "mean": 33.404,
      "sd": 3.65,
      "p10": 29.0,
@@ -8172,10 +8172,10 @@
      }
     },
     "Chris": {
-     "p_first": 0.07259,
-     "p_second": 0.1133,
-     "p_top2": 0.18589,
-     "mean": 33.571,
+     "p_first": 0.07307,
+     "p_second": 0.11395,
+     "p_top2": 0.18702,
+     "mean": 33.589,
      "sd": 3.817,
      "p10": 29.0,
      "p50": 34.0,
@@ -8186,32 +8186,32 @@
       "18": 1e-05,
       "19": 5e-05,
       "20": 0.00022,
-      "21": 0.00052,
-      "22": 0.00096,
-      "23": 0.00219,
-      "24": 0.00458,
-      "25": 0.0086,
-      "26": 0.01471,
-      "27": 0.02389,
-      "28": 0.03602,
-      "29": 0.05101,
-      "30": 0.06612,
-      "31": 0.08424,
-      "32": 0.09585,
-      "33": 0.10359,
-      "34": 0.10346,
-      "35": 0.09723,
-      "36": 0.08622,
-      "37": 0.06886,
-      "38": 0.05423,
-      "39": 0.03773,
-      "40": 0.02538,
+      "21": 0.00051,
+      "22": 0.00093,
+      "23": 0.00213,
+      "24": 0.00454,
+      "25": 0.00854,
+      "26": 0.01459,
+      "27": 0.02368,
+      "28": 0.03581,
+      "29": 0.05073,
+      "30": 0.06591,
+      "31": 0.08381,
+      "32": 0.0956,
+      "33": 0.10376,
+      "34": 0.10348,
+      "35": 0.09757,
+      "36": 0.08615,
+      "37": 0.06927,
+      "38": 0.05446,
+      "39": 0.03805,
+      "40": 0.0256,
       "41": 0.01588,
-      "42": 0.00932,
-      "43": 0.00463,
-      "44": 0.00241,
-      "45": 0.00128,
-      "46": 0.00045,
+      "42": 0.00946,
+      "43": 0.00467,
+      "44": 0.00248,
+      "45": 0.00127,
+      "46": 0.00048,
       "47": 0.00023,
       "48": 8e-05,
       "49": 1e-05,
@@ -8220,9 +8220,9 @@
      }
     },
     "Tyler": {
-     "p_first": 0.22507,
+     "p_first": 0.22512,
      "p_second": 0.20513,
-     "p_top2": 0.4302,
+     "p_top2": 0.43025,
      "mean": 36.323,
      "sd": 3.854,
      "p10": 31.0,
@@ -8267,8 +8267,8 @@
     },
     "Kap": {
      "p_first": 0.42576,
-     "p_second": 0.21962,
-     "p_top2": 0.64538,
+     "p_second": 0.21961,
+     "p_top2": 0.64537,
      "mean": 38.397,
      "sd": 3.728,
      "p10": 34.0,
@@ -8310,11 +8310,11 @@
      }
     },
     "Jared": {
-     "p_first": 0.06566,
-     "p_second": 0.10479,
-     "p_top2": 0.17045,
-     "mean": 33.367,
-     "sd": 3.723,
+     "p_first": 0.06508,
+     "p_second": 0.10421,
+     "p_top2": 0.16929,
+     "mean": 33.349,
+     "sd": 3.722,
      "p10": 29.0,
      "p50": 33.0,
      "p90": 38.0,
@@ -8322,41 +8322,41 @@
       "16": 1e-05,
       "18": 1e-05,
       "19": 5e-05,
-      "20": 0.0001,
-      "21": 0.0004,
-      "22": 0.00131,
-      "23": 0.0021,
-      "24": 0.00446,
-      "25": 0.00839,
-      "26": 0.01458,
-      "27": 0.02528,
-      "28": 0.03869,
-      "29": 0.05428,
-      "30": 0.07042,
-      "31": 0.08901,
-      "32": 0.09918,
-      "33": 0.10588,
-      "34": 0.10416,
-      "35": 0.09884,
-      "36": 0.08309,
-      "37": 0.0673,
-      "38": 0.04928,
-      "39": 0.03308,
-      "40": 0.02231,
-      "41": 0.01347,
-      "42": 0.00759,
-      "43": 0.00396,
+      "20": 0.00011,
+      "21": 0.00041,
+      "22": 0.00133,
+      "23": 0.00211,
+      "24": 0.00451,
+      "25": 0.00848,
+      "26": 0.01468,
+      "27": 0.02551,
+      "28": 0.03884,
+      "29": 0.05459,
+      "30": 0.07072,
+      "31": 0.08946,
+      "32": 0.0992,
+      "33": 0.10605,
+      "34": 0.10408,
+      "35": 0.09878,
+      "36": 0.08261,
+      "37": 0.06695,
+      "38": 0.04912,
+      "39": 0.03278,
+      "40": 0.02207,
+      "41": 0.01348,
+      "42": 0.0074,
+      "43": 0.00392,
       "44": 0.00165,
-      "45": 0.00077,
+      "45": 0.00074,
       "46": 0.00024,
       "47": 8e-05,
       "48": 3e-05
      }
     },
     "Alan": {
-     "p_first": 0.0088,
-     "p_second": 0.02398,
-     "p_top2": 0.03278,
+     "p_first": 0.00879,
+     "p_second": 0.024,
+     "p_top2": 0.03279,
      "mean": 29.821,
      "sd": 3.641,
      "p10": 25.0,
@@ -8399,7 +8399,7 @@
    }
   },
   "diagnostics": {
-   "checked_at_as_of": "2026-09-11",
+   "checked_at_as_of": "2026-09-12",
    "hard_failures": [],
    "checks": [
     {
@@ -8494,8 +8494,8 @@
      "id": "tie_rate",
      "label": "A tie for first is common, and this payload cannot break one",
      "ok": true,
-     "detail": "13.3% of simulated seasons end with two or more rosters level at the top — roughly one in 7. The league breaks that on total playoff wins and then point differential; neither is in this payload, so the simulation breaks it at random and the page reports the rate instead of pretending to a winner. The simulation also has no tie OUTCOME: every game is decided, so no half-wins are produced.",
-     "value": 0.13339,
+     "detail": "13.3% of simulated seasons end with two or more rosters level at the top — roughly one in 8. The league breaks that on total playoff wins and then point differential; neither is in this payload, so the simulation breaks it at random and the page reports the rate instead of pretending to a winner. The simulation also has no tie OUTCOME: every game is decided, so no half-wins are produced.",
+     "value": 0.13303,
      "severity": "info"
     },
     {

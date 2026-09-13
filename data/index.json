@@ -1,9 +1,9 @@
 {
- "as_of": "2026-09-12",
+ "as_of": "2026-09-13",
  "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
  "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
  "site": "https://datadawgs216.com",
- "built": "2026-09-12",
+ "built": "2026-09-13",
  "data": {
   "files": [
    {
@@ -105,9 +105,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 38378,
+    "bytes": 38687,
     "as_of": "2026-09-09",
-    "sha256": "7458b8f04c3fb39f16dfd2e294a256079e8bdad4e384593522194e72a93a4d56",
+    "sha256": "6701092c4f89b913d387f572bd28a537366627340e44fbfdc5219e01b7a19065",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -281,9 +281,9 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 158329,
-    "as_of": "2026-09-12",
-    "sha256": "28427d84eec0875e2cec8ba549a9d6dcaf20d3d23e4e3e8a377b7bdedeb49ed9",
+    "bytes": 158332,
+    "as_of": "2026-09-13",
+    "sha256": "a0322a75272cae0c9fb53fd8fe68fc78c4db81db07a017321c6a2fb36279014e",
     "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. Nothing here is graded — the 2026 season has not started, every wins_tracker row reads zero, and no figure on this surface is a result. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    },
    {
@@ -391,17 +391,19 @@
     "note": "Default season input, not weekly projections. Source publication date absent; as_of is receipt date."
    },
    {
-    "path": "/data/forecast-toto.json",
-    "url": "https://datadawgs216.com/data/forecast-toto.json",
-    "bytes": 10312,
-    "as_of": "2026-09-12",
-    "sha256": "c4c2499ef3f0565dcdb60bf24e4f19fdca81d91398da3c39f5e7e1cc6694f1d5",
-  "path": "/data/dfs-weeks.json",
+    "path": "/data/dfs-weeks.json",
     "url": "https://datadawgs216.com/data/dfs-weeks.json",
     "bytes": 1511,
     "as_of": "2026-09-07",
     "sha256": "bc01d4909045bcbaf065125a695d6a47016d3b3dd31d71405683db95e28a1703",
     "note": "EMPTY BY DESIGN. Week objects are locked on-device (dd-dfs-v1.weeks) before kickoff with lockedSha256 over canonical JSON and realized:null. Monday standings ingest fills realized by lineup hash when contest ids match. Published rows are derived aggregates only (I3) — lineup hashes, never player lists, projections, or ownership. PoC C1–C5 already hashed; this enables the week-object path on Receipts."
+   },
+   {
+    "path": "/data/forecast-toto.json",
+    "url": "https://datadawgs216.com/data/forecast-toto.json",
+    "bytes": 10312,
+    "as_of": "2026-09-12",
+    "sha256": "c4c2499ef3f0565dcdb60bf24e4f19fdca81d91398da3c39f5e7e1cc6694f1d5"
    },
    {
     "path": "/data/leagues/pepperoninipples.json",
