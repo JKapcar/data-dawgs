@@ -2536,10 +2536,11 @@ const MCP_TOOLS = [
       // ⚠️ THE SERVER'S OWN VALIDATOR, not a copy of its rules. A second copy would drift
       // and start passing legs /bozo/pick rejects, which is worse than no check at all.
       const band = bandOf(lg);
-      const err = validatePick(p, who, picks, band, set.format, mkey);
+      const weekGate = await bozoWeekGate(env, lg);
+      const err = validatePick(p, who, picks, band, set.format, mkey, weekGate);
       if (err)
         return toolText({
-          accepted: false, reason: "rejected-by-the-same-validator-the-server-runs",
+          accepted: false, reason: String(err).startsWith("out_of_week") ? "out_of_week" : "rejected-by-the-same-validator-the-server-runs",
           detail: err, band, captured: { line: p.line, price: p.price, priceOpp: p.priceOpp },
           note: "That is the literal string POST /bozo/pick would return. Fix it and ask again.",
         });
@@ -2710,7 +2711,8 @@ const MCP_TOOLS = [
           return toolText({ status: "edits-locked", detail: "This league locks your leg the moment it lands, and yours is already in." });
         if (set.format === "royale" && !royaleAliveKey(lg, mkey))
           return toolText({ status: "chopped", detail: "You're out this season — you fund the ticket, you don't have a leg on it." });
-        const err = validatePick(pend.p, who, picks, bandOf(lg), set.format, mkey);
+        const weekGate = await bozoWeekGate(env, lg);
+        const err = validatePick(pend.p, who, picks, bandOf(lg), set.format, mkey, weekGate);
         if (err) {
           try { await env.RL.put(kvKey, "null", { expirationTtl: 60 }); } catch {}
           return toolText({ status: "rejected", detail: "The board changed since this was proposed and the leg no longer passes: " + err + " Propose again." });
@@ -2792,9 +2794,12 @@ const MCP_TOOLS = [
       const p = captured.p;
       // ⚠️ The server's own validator, same as the site form and dd_draft_bozo_leg.
       const band = bandOf(lg);
-      const err = validatePick(p, who, picks, band, set.format, mkey);
+      const weekGate = await bozoWeekGate(env, lg);
+      const err = validatePick(p, who, picks, band, set.format, mkey, weekGate);
       if (err)
-        return toolText({ status: "rejected", detail: err, band,
+        return toolText({ status: "rejected",
+          reason: String(err).startsWith("out_of_week") ? "out_of_week" : "rejected",
+          detail: err, band,
           captured: { line: p.line, price: p.price, priceOpp: p.priceOpp },
           note: "That is the literal validation failure after capture. Nothing was submitted." });
 

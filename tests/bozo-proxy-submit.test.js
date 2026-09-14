@@ -100,6 +100,9 @@ function rig() {
     settingsOf: lg => ({ format: lg.format || 'standard', allowEdit: lg.allowEdit !== false, lockRule: 'all', levers: [] }),
     bandOf: () => ({ ceil: -100, floor: -500 }),
     validatePick: (...a) => ctx.validate(...a),
+    // Permissive gate so proxy provenance tests stay focused on forUid / audit — week
+    // filtering has its own suite. Window covers the fixture kickoff.
+    bozoWeekGate: async () => ({ week: 2, window: { loDate: '2026-01-01', hiDate: '2026-12-31', week: 2 }, docs: {} }),
     bozoCaptureEntry: async (e, input) => ({ ok: true, p: { ...input, price: -150, priceOpp: 130, priceSource: 'captured' } }),
     royaleAliveKey: (state, key) => !((state.royale && state.royale.dead) || []).includes(key),
     royaleStatus: state => Object.fromEntries(((state.royale && state.royale.dead) || []).map(k => [k, { chopped: [1] }])),
