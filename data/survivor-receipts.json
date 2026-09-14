@@ -1,8 +1,8 @@
 {
  "source_page": "/survivor.html",
  "tier": "labs",
- "graded": false,
- "as_of": "2026-08-28",
+ "graded": true,
+ "as_of": "2026-09-14",
  "source": "Captured by work/survivor-receipt.mjs from survivor.html's own engine, before each week's earliest kickoff.",
  "note": "PROSPECTIVE RECEIPTS. Every row was written before the week it forecasts kicked off — captured_at < kickoff_at is enforced at capture, not flagged afterwards, and a row is never edited once written. What is graded is CALIBRATION of the stated win probabilities (Brier) and whether the pick survived. This is NOT a claim that the tool beats a pool: whether an entry would have won depends on the rest of the field, which is not ours to score. `n` is small and stays small — 18 weeks is at most 18 scored predictions per entry — so read every figure next to its n and do not draw a calibration curve on a season.",
  "field_notes": {
@@ -15,11 +15,11 @@
  },
  "counts": {
   "registered": 1,
-  "resolved": 0,
-  "prospective": 1,
+  "resolved": 1,
+  "prospective": 0,
   "survived": 0,
-  "brier_n": 0,
-  "brier_mean": null
+  "brier_n": 1,
+  "brier_mean": 0.616084
  },
  "integrity": {
   "rows": 1
@@ -74,12 +74,20 @@
    "engine_version": "survivor.html@94a54e9adfc3",
    "captured_at": "2026-08-28T00:12:07.878Z",
    "kickoff_at": "2026-09-13T20:25:00Z",
-   "forecast_status": "prospective",
+   "forecast_status": "resolved",
    "supersedes": null,
-   "resolved": null
+   "resolved": {
+    "resolved_at": "2026-09-14T00:44:03.071Z",
+    "leg_results": [
+     "loss"
+    ],
+    "survived": false,
+    "brier": 0.616084,
+    "result_source": "data/nfl-schedule.json"
+   }
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-08-28",
+ "built": "2026-09-14",
  "canonical_url": "https://datadawgs216.com/data/survivor-receipts.json"
 }
