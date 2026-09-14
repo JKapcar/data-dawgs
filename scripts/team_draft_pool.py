@@ -79,7 +79,7 @@ TIER_MEANING = (
     "Everything starts here."
 )
 
-NOTE = (
+NOTE_PRESEASON = (
     "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season "
     "wins the only criterion. Expected wins are devigged from four books and normalized to "
     "272; they are NOT the posted lines, and `line` carries those separately. Nothing here "
@@ -87,6 +87,25 @@ NOTE = (
     "figure on this surface is a result. `drafters`, `undrafted`, `board` and `diagnostics` "
     "are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
 )
+
+
+def build_note(derived):
+    """Rewrite the envelope note from settled state — never leave a preseason claim up once games bank."""
+    settled = derived["basis"]["settled_games"]
+    total = derived["basis"]["total_games"]
+    if settled <= 0:
+        return NOTE_PRESEASON
+    open_games = total - settled
+    return (
+        "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season "
+        "wins the only criterion. Expected wins are devigged from four books and normalized to "
+        "272; they are NOT the posted lines, and `line` carries those separately. "
+        f"{settled}/{total} regular-season games are settled and banked in wins_tracker; "
+        f"{open_games} remain open (including any in-progress or not-yet-kicked slate). "
+        "Nothing here is graded — banked cells are observed wins only. "
+        "`drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by "
+        "scripts/team_draft_pool.py and are rewritten on every run."
+    )
 
 
 # --------------------------------------------------------------------- helpers ----
@@ -784,13 +803,20 @@ def tracker(d, derived):
 
 def envelope(d, derived, diagnostics, as_of, built):
     """The /data/ contract: as_of and source on the outside, payload under `data`."""
+    settled = derived["basis"]["settled_games"]
+    wins_tracker_note = (
+        "Actual wins, by round, per drafter. Every value is zero — no game has been played."
+        if settled <= 0 else
+        f"Actual wins, by round, per drafter. {settled} of {derived['basis']['total_games']} "
+        "league games are settled and banked; open games stay at zero until final."
+    )
     return {
         "source_page": "/teamdraft.html",
         "tier": "labs",
         "graded": False,
         "as_of": as_of,
         "source": d["source"],
-        "note": NOTE,
+        "note": build_note(derived),
         "field_notes": {
             "line": "Median posted regular-season win total. Half-point lines are the book's.",
             "ew": "Devigged expected wins, normalized so all 32 sum to 272. Not the posted line.",
@@ -806,7 +832,7 @@ def envelope(d, derived, diagnostics, as_of, built):
             "teams[].remaining": "Sum of the live probabilities for games not yet played.",
             "teams[].projected": "banked + remaining. The in-season number. `ew` stays frozen at the draft-day devig beside it.",
             "overlap": "Sparse symmetric head-to-head game counts. 2 = division rival, 1 = other, absent = 0.",
-            "wins_tracker": "Actual wins, by round, per drafter. Every value is zero — no game has been played.",
+            "wins_tracker": wins_tracker_note,
             "board[].delta": "Chosen team's expected wins minus the best still available. Descriptive, not a grade.",
         },
         "tier_meaning": TIER_MEANING,
