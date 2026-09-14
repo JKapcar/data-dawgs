@@ -4528,14 +4528,29 @@ function paintPriceWarn(){
   el.textContent = ''; el.style.display = 'none';
 }
 
-/* ---------------- scores: the page calls ESPN itself ---------------- */
-// ESPN answers 403 to Cloudflare egress and 200 to a browser. The form keeps the
-// direct browser call as its fast path; /scores now falls back to the Worker's compact
-// nflverse/cfbfastR schedule cache rather than retrying ESPN from the blocked network.
+/* ---------------- scores: current Bozo week only ---------------- */
+// Bozo Week N = NFL REG week N. The picker must not offer kickoffs outside that week's
+// Eastern gameday span (Kap: no options for a date outside your week). Prefer the
+// Worker's week-scoped /scores; ESPN remains a fallback and is filtered to the same window.
+let WEEK_WINDOW = null;   // { week, loDate, hiDate } from /scores?week=
+function bozoWeekNum(){ return Number(S.week || 1) || 1; }
 function dateRange(){
   const p=n=>String(n).padStart(2,'0'), f=x=>x.getFullYear()+p(x.getMonth()+1)+p(x.getDate());
+  if(WEEK_WINDOW && WEEK_WINDOW.loDate && WEEK_WINDOW.hiDate){
+    return WEEK_WINDOW.loDate.replace(/-/g,'') + '-' + WEEK_WINDOW.hiDate.replace(/-/g,'');
+  }
   const now=Date.now();
   return f(new Date(now-3*864e5)) + '-' + f(new Date(now+10*864e5));
+}
+function easternDate(iso){
+  const t=Date.parse(iso||'');
+  if(!Number.isFinite(t)) return null;
+  return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(t));
+}
+function inWeekWindow(g){
+  if(!WEEK_WINDOW || !WEEK_WINDOW.loDate || !WEEK_WINDOW.hiDate) return true;
+  const d = easternDate(g.start) || String(g.start||'').slice(0,10);
+  return !!(d && d >= WEEK_WINDOW.loDate && d <= WEEK_WINDOW.hiDate);
 }
 function slim(raw){
   return (raw.events||[]).map(ev=>{
@@ -4551,14 +4566,22 @@ function slim(raw){
   });
 }
 async function fetchScores(sport){
+  const week = bozoWeekNum();
+  // Worker week scope is authoritative — out-of-week events never enter the option list.
+  try{
+    const j = await wGet(`/scores?sport=${sport}&week=${week}`);
+    if(j && j.window) WEEK_WINDOW = j.window;
+    if(j && Array.isArray(j.games)) return j.games.filter(inWeekWindow);
+  }catch(e){ /* fall through to ESPN */ }
   const url = `https://site.api.espn.com/apis/site/v2/sports/${ESPN_PATH[sport]}/scoreboard?dates=${dateRange()}&limit=400`;
   try{
     const r = await fetch(url);
     if(!r.ok) throw new Error('ESPN '+r.status);
-    return slim(await r.json());
+    return slim(await r.json()).filter(inWeekWindow);
   }catch(e){
-    const j = await wGet(`/scores?sport=${sport}&dates=${dateRange()}`);   // fallback
-    return j.games||[];
+    const j = await wGet(`/scores?sport=${sport}&week=${week}&dates=${dateRange()}`);
+    if(j && j.window) WEEK_WINDOW = j.window;
+    return (j.games||[]).filter(inWeekWindow);
   }
 }
 async function loadGames(sport){
@@ -4566,7 +4589,12 @@ async function loadGames(sport){
   sel.innerHTML='<option value="">Loading…</option>';
   try{
     GAMES[sport]=await fetchScores(sport);
-    document.getElementById('srcNote').textContent='';
+    const note=document.getElementById('srcNote');
+    if(note){
+      note.textContent = WEEK_WINDOW && WEEK_WINDOW.loDate
+        ? `Week ${WEEK_WINDOW.week||bozoWeekNum()} slate · ${WEEK_WINDOW.loDate} → ${WEEK_WINDOW.hiDate}`
+        : '';
+    }
   }catch(e){
     GAMES[sport]=[];
     document.getElementById('srcNote').textContent='Scores unreachable — '+e.message+'. Grading falls back to manual entry.';
@@ -4577,10 +4605,10 @@ async function loadGames(sport){
 }
 function paintGames(){
   const sp=document.getElementById('fSport').value, sel=document.getElementById('fGame');
-  const g=GAMES[sp]||[];
+  const g=(GAMES[sp]||[]).filter(inWeekWindow);
   sel.innerHTML = g.length
     ? g.map(x=>`<option value="${x.id}">${esc(x.short)}${x.final?' · final':''}</option>`).join('')
-    : '<option value="">no games in window</option>';
+    : '<option value="">no games in this Bozo week</option>';
   paintSides();
 }
 
@@ -4977,7 +5005,19 @@ function watchState(){
   stateReader?.stop();
   stateReader=DDLiveState.create({
     url:DB + '/bozo/leagues/' + LID + '.json',
-    onData:value=>{ S=value; render(); },
+    onData:value=>{
+      const prevWeek = Number(S && S.week) || null;
+      S=value||{};
+      render();
+      // Advancing the board (or switching leagues) must rebuild the slate for the new
+      // Bozo week — otherwise a cached Week 2 ESPN list can linger on a Week 1 board.
+      const nextWeek = Number(S.week) || 1;
+      if(prevWeek !== nextWeek){
+        WEEK_WINDOW = null; GAMES = {};
+        const sp = document.getElementById('fSport');
+        loadGames(sp && sp.value ? sp.value : 'nfl');
+      }
+    },
     onStatus:paintConnection
   });
   stateReader.start();

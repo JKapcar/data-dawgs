@@ -2178,6 +2178,8 @@ async function handleDkContest(request, url, cors) {
 async function handleScores(url, env, cors) {
   const sport = url.searchParams.get("sport");
   const dates = url.searchParams.get("dates") || "";
+  const weekRaw = url.searchParams.get("week");
+  const week = weekRaw != null && weekRaw !== "" ? Number(weekRaw) : null;
   if (!BOZO_GRADEABLE_SPORTS.has(sport))
     return json({ error: "sport_not_gradeable", sport,
       detail: "NFL and CFB are the only sports with a Worker-reachable schedule adapter." }, 422, cors);
@@ -2185,8 +2187,24 @@ async function handleScores(url, env, cors) {
   try { doc = await bozoScheduleDoc(env, sport, SEASON); }
   catch (e) { return json({ error: "scores unavailable", detail: e.message }, 503, cors); }
   if (!doc) return json({ error: "scores unavailable", detail: `schedule:${sport}:${SEASON} is not populated yet` }, 503, cors);
-  const games = bozoPublicScheduleGames(doc, dates);
-  return new Response(JSON.stringify({ sport, games, via: doc.source, fetched: doc.fetchedAt }), {
+  let window = null;
+  if (Number.isFinite(week) && week > 0) {
+    let nflDoc = sport === "nfl" ? doc : null;
+    if (!nflDoc) {
+      try { nflDoc = await bozoScheduleDoc(env, "nfl", SEASON); } catch { nflDoc = null; }
+    }
+    window = bozoNflWeekWindow(nflDoc, week);
+  }
+  const games = Number.isFinite(week) && week > 0
+    ? (sport === "nfl"
+        ? bozoPublicScheduleGames(doc, dates, { week, matchWeek: true })
+        : bozoPublicScheduleGames(doc, dates, { window }))
+    : bozoPublicScheduleGames(doc, dates);
+  return new Response(JSON.stringify({
+    sport, games, via: doc.source, fetched: doc.fetchedAt,
+    week: Number.isFinite(week) && week > 0 ? week : null,
+    window: window ? { loDate: window.loDate, hiDate: window.hiDate, week: window.week } : null,
+  }), {
     headers: { "Content-Type": "application/json", "Cache-Control": "max-age=60", ...cors },
   });
 }
@@ -7051,7 +7069,8 @@ async function bozoPick(request, env, cors) {
         return json({ error: editLocked }, 409, cors);
       if (set.format === "royale" && !royaleAliveKey(state, mkey))
         return json({ error: proxy ? name + " is out of this Royale league." : "You're out of this Royale league." }, 409, cors);
-      const err = validatePick(pend.p, name, state.picks || {}, bandOf(state), set.format, mkey);
+      const weekGate = await bozoWeekGate(env, state);
+      const err = validatePick(pend.p, name, state.picks || {}, bandOf(state), set.format, mkey, weekGate);
       if (err) return json({ error: "The leg no longer passes validation: " + err }, 409, cors);
       const { pick: written, ...out } = await commitBozoLeg(env, lid, state, name, pend.p, null, mkey, by);
       let audit;
@@ -7073,7 +7092,8 @@ async function bozoPick(request, env, cors) {
     const captured = await bozoCaptureEntry(env, input);
     if (!captured.ok) return json({ error: captured.error }, 400, cors);
     const p = captured.p;
-    const err = validatePick(p, name, state.picks || {}, bandOf(state), set.format, mkey);
+    const weekGate = await bozoWeekGate(env, state);
+    const err = validatePick(p, name, state.picks || {}, bandOf(state), set.format, mkey, weekGate);
     if (err) return json({ error: `Captured DraftKings ${p.price} / ${p.priceOpp ?? "no opposite"} at line ${p.line}. ${err}`,
       captured: { line: p.line, price: p.price, priceOpp: p.priceOpp } }, 400, cors);
 
@@ -7150,7 +7170,7 @@ const marketKeyOf = p => [
 // it catches the obvious ones and says so. `other` must be a game market.
 const FUTURES_WORDS = /\b(to win (the )?(division|conference|championship|title|super ?bowl|pennant|cup|east|west|north|south)|mvp|award|make (the )?playoffs?|season win|regular[- ]season wins|to be drafted|coach of the year|rookie of the year)\b/i;
 
-function validatePick(p, name, existing, band, format, mkey = null) {
+function validatePick(p, name, existing, band, format, mkey = null, weekGate = null) {
   if (!LEAGUE[p.sport]) return "Unknown sport.";
   if (!BOZO_GRADEABLE_SPORTS.has(p.sport)) return "sport_not_gradeable";
   if (!MARKETS.includes(p.mkt)) return "Unknown market.";
@@ -7161,6 +7181,7 @@ function validatePick(p, name, existing, band, format, mkey = null) {
     return "Describe the bet — an \"other\" leg needs to say what it actually is.";
   if (!p.startsAt || isNaN(Date.parse(p.startsAt)))
     return "Kickoff time (startsAt) is required.";
+  if (weekGate) { const weekErr = bozoWeekGateError(p, weekGate); if (weekErr) return weekErr; }
   const price = Number(p.price);
   if (!isFinite(price) || price > band.ceil || price < band.floor)
     return `${p.price} is outside the ${band.ceil} to ${band.floor} band.`;
@@ -7441,16 +7462,118 @@ async function runBozoScheduleRefresh(env, nowMs = Date.now()) {
   return Promise.all(["nfl", "cfb"].map(sport => bozoRefreshOneSchedule(env, sport, SEASON, nowMs)));
 }
 
-function bozoPublicScheduleGames(doc, dates) {
+// Bozo week N is NFL regular-season week N. The date window is the inclusive Eastern
+// gameday span of that week's REG slate (typically Thu–Mon). CFB legs must kick off
+// inside the same window; NFL legs must also be REG and carry that week number.
+function bozoEasternDate(iso) {
+  const t = Date.parse(iso || "");
+  if (!Number.isFinite(t)) return null;
+  // en-CA yields YYYY-MM-DD under America/New_York.
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date(t));
+}
+
+function bozoNflWeekWindow(nflDoc, week) {
+  const wk = Number(week);
+  if (!Number.isFinite(wk) || wk < 1) return null;
+  const games = ((nflDoc && nflDoc.games) || []).filter(g =>
+    Number(g.week) === wk && String(g.seasonType || "").toUpperCase() === "REG");
+  if (!games.length) return null;
+  let loDate = null, hiDate = null, startMs = Infinity, endMs = -Infinity;
+  for (const g of games) {
+    const d = g.localDate || bozoEasternDate(g.startsAt) || (g.startsAt || "").slice(0, 10) || null;
+    if (d && (!loDate || d < loDate)) loDate = d;
+    if (d && (!hiDate || d > hiDate)) hiDate = d;
+    const t = Date.parse(g.startsAt || "");
+    if (Number.isFinite(t)) {
+      if (t < startMs) startMs = t;
+      if (t > endMs) endMs = t;
+    }
+  }
+  if (!loDate || !hiDate) return null;
+  return {
+    week: wk, loDate, hiDate,
+    startMs: Number.isFinite(startMs) ? startMs : null,
+    endMs: Number.isFinite(endMs) ? endMs : null,
+  };
+}
+
+function bozoStartsAtInWeekWindow(startsAt, window) {
+  if (!window || !window.loDate || !window.hiDate) return false;
+  const day = bozoEasternDate(startsAt) || String(startsAt || "").slice(0, 10);
+  return !!(day && day >= window.loDate && day <= window.hiDate);
+}
+
+// Human + machine-readable reject. validatePick returns this string verbatim; MCP wraps it.
+function bozoWeekGateError(p, gate) {
+  if (!gate) return null;
+  const week = gate.week || 1;
+  const window = gate.window;
+  // No REG slate for this week in KV yet — do not freeze the board on a cache miss.
+  // When the window IS known, every submit path below is hard-gated.
+  if (!window) return null;
+  const label = p.game || "That event";
+  const range = window.loDate + " to " + window.hiDate;
+  const docs = gate.docs || {};
+  const doc = docs[p.sport] || null;
+  const game = doc ? bozoScheduleFindGame(doc, p) : null;
+
+  if (p.sport === "nfl") {
+    if (game) {
+      const st = String(game.seasonType || "").toUpperCase();
+      if (st && st !== "REG")
+        return "out_of_week: " + label + " is not a regular-season NFL game. Bozo Week " +
+          week + " only accepts NFL Week " + week + " (" + range + ").";
+      if (Number(game.week) !== Number(week))
+        return "out_of_week: " + label + " is NFL Week " + game.week +
+          ", but this board is Bozo Week " + week + " (" + range + "). Pick a Week " + week + " game.";
+      return null;
+    }
+  }
+
+  if (!bozoStartsAtInWeekWindow(p.startsAt || p.commenceTime, window)) {
+    const day = bozoEasternDate(p.startsAt || p.commenceTime) || "unknown date";
+    return "out_of_week: " + label + " kicks off " + day + ", outside Bozo Week " +
+      week + " (" + range + "). Pick a game from this week's slate.";
+  }
+  return null;
+}
+
+async function bozoWeekGate(env, state) {
+  const week = Number((state && state.week) || 1) || 1;
+  const season = (state && state.season) || SEASON;
+  let nflDoc = null, cfbDoc = null;
+  try { nflDoc = await bozoScheduleDoc(env, "nfl", season); } catch { nflDoc = null; }
+  try { cfbDoc = await bozoScheduleDoc(env, "cfb", season); } catch { cfbDoc = null; }
+  return {
+    week, season,
+    window: bozoNflWeekWindow(nflDoc, week),
+    docs: { nfl: nflDoc, cfb: cfbDoc },
+  };
+}
+
+function bozoPublicScheduleGames(doc, dates, opts = {}) {
   const m = String(dates || "").match(/^(\d{8})(?:-(\d{8}))?$/);
   const compact = s => String(s || "").replace(/-/g, "");
   const lo = m ? m[1] : null, hi = m ? (m[2] || m[1]) : null;
+  const week = opts.week != null && opts.week !== "" ? Number(opts.week) : null;
+  const window = opts.window || null;
   return ((doc && doc.games) || []).filter(g => {
+    if (Number.isFinite(week) && week > 0 && opts.matchWeek === true) {
+      if (Number(g.week) !== week) return false;
+      if (String(g.seasonType || "").toUpperCase() !== "REG") return false;
+    }
+    if (window && window.loDate && window.hiDate) {
+      const d = g.localDate || bozoEasternDate(g.startsAt) || (g.startsAt || "").slice(0, 10);
+      if (!d || d < window.loDate || d > window.hiDate) return false;
+    }
     const d = compact(g.localDate || (g.startsAt || "").slice(0, 10));
     return !lo || (d >= lo && d <= hi);
   }).map(g => ({
     id: String(g.espnEventId), short: `${g.away.abbr} @ ${g.home.abbr}`, start: g.startsAt,
     state: g.completed ? "post" : "pre", final: g.completed === true,
+    week: g.week == null ? null : Number(g.week),
     teams: [
       { abbr: g.away.abbr, name: g.away.name, home: false, score: g.awayScore },
       { abbr: g.home.abbr, name: g.home.name, home: true, score: g.homeScore },
@@ -16893,10 +17016,11 @@ const MCP_TOOLS = [
       // ⚠️ THE SERVER'S OWN VALIDATOR, not a copy of its rules. A second copy would drift
       // and start passing legs /bozo/pick rejects, which is worse than no check at all.
       const band = bandOf(lg);
-      const err = validatePick(p, who, picks, band, set.format, mkey);
+      const weekGate = await bozoWeekGate(env, lg);
+      const err = validatePick(p, who, picks, band, set.format, mkey, weekGate);
       if (err)
         return toolText({
-          accepted: false, reason: "rejected-by-the-same-validator-the-server-runs",
+          accepted: false, reason: String(err).startsWith("out_of_week") ? "out_of_week" : "rejected-by-the-same-validator-the-server-runs",
           detail: err, band, captured: { line: p.line, price: p.price, priceOpp: p.priceOpp },
           note: "That is the literal string POST /bozo/pick would return. Fix it and ask again.",
         });
@@ -17067,7 +17191,8 @@ const MCP_TOOLS = [
           return toolText({ status: "edits-locked", detail: "This league locks your leg the moment it lands, and yours is already in." });
         if (set.format === "royale" && !royaleAliveKey(lg, mkey))
           return toolText({ status: "chopped", detail: "You're out this season — you fund the ticket, you don't have a leg on it." });
-        const err = validatePick(pend.p, who, picks, bandOf(lg), set.format, mkey);
+        const weekGate = await bozoWeekGate(env, lg);
+        const err = validatePick(pend.p, who, picks, bandOf(lg), set.format, mkey, weekGate);
         if (err) {
           try { await env.RL.put(kvKey, "null", { expirationTtl: 60 }); } catch {}
           return toolText({ status: "rejected", detail: "The board changed since this was proposed and the leg no longer passes: " + err + " Propose again." });
@@ -17149,9 +17274,12 @@ const MCP_TOOLS = [
       const p = captured.p;
       // ⚠️ The server's own validator, same as the site form and dd_draft_bozo_leg.
       const band = bandOf(lg);
-      const err = validatePick(p, who, picks, band, set.format, mkey);
+      const weekGate = await bozoWeekGate(env, lg);
+      const err = validatePick(p, who, picks, band, set.format, mkey, weekGate);
       if (err)
-        return toolText({ status: "rejected", detail: err, band,
+        return toolText({ status: "rejected",
+          reason: String(err).startsWith("out_of_week") ? "out_of_week" : "rejected",
+          detail: err, band,
           captured: { line: p.line, price: p.price, priceOpp: p.priceOpp },
           note: "That is the literal validation failure after capture. Nothing was submitted." });
 
