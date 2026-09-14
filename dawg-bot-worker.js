@@ -8032,6 +8032,10 @@ async function bozoCloseTargets(env, nowMs) {
     // ⚠️ Synthetic leagues are skipped outright. Their closes are fabricated by design
     // and must never be overwritten with, or mistaken for, an observed market price.
     if (lg && lg.synthetic === true) continue;
+    // ⚠️ Graded weeks are finished receipts. A mis-pointed future startsAt on a live
+    // pick must not schedule a new close capture that rewrites results/ after the
+    // bozo has already been named — retarget the eventId instead.
+    if (lg && lg.status === "graded") continue;
     const picks = (lg && lg.picks) || {};
     const results = (lg && lg.results) || {};
     for (const [key, p] of Object.entries(picks)) {
@@ -9505,6 +9509,17 @@ async function runBozoAutoGrade(env, nowMs = Date.now()) {
     // Only a placed ticket can settle. "open" has no ticket; "graded" is already done.
     if (!lg || lg.status !== "placed") continue;
     if (lg.synthetic === true) continue;            // the simulator's league is not real money
+    /* ⚠️ ALREADY-NAMED WEEKS STAY NAMED WITHOUT KAP INTENT.
+       Status alone is not enough: Manager Override can flip status back to "placed"
+       while a future-dated eventId still sits on a manual result. When that future
+       game finally ends, auto-grade would otherwise re-enter, re-decide the bozo and
+       chew the ticket. bozoWhy is set for both a named bozo and a cashed ticket; as
+       long as it remains, the feed must not reopen the week. Clearing it is Kap's
+       explicit un-grade path. */
+    if (typeof lg.bozoWhy === "string" && lg.bozoWhy) {
+      out.push({ league: lid, week: lg.week || 1, graded: false, skipped: "already-decided" });
+      continue;
+    }
     try { out.push(await bozoAutoGradeOne(env, lid, lg, nowMs)); }
     catch (e) {
       // One league's bad state must never stop the others from settling.
