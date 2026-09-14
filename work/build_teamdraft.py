@@ -522,9 +522,9 @@ MAIN = r"""
     the only criterion. Every number below is read from
     <a href="/data/draft-2026.json"><code>/data/draft-2026.json</code></a>.</p>
   </header>
-  <div class="p-disclosure"><b>No game has been played.</b> Expected wins are devigged from four books
-  and normalized to 272 — a market snapshot, not a forecast this site has graded. Nothing here says
-  who is winning.</div>
+  <div class="p-disclosure" id="tdDisclosure">Expected wins are the draft-day market snapshot
+  (devigged, normalized to 272) — frozen for the board. Live projections and the Team-sheet win
+  curves update as games bank. Nothing here is graded.</div>
 
   <!-- Tabs and the rail stick together. Separately, scrolling past the tabs left the
        reader with a filter strip and no way back to another sheet without scrolling to
@@ -539,11 +539,10 @@ MAIN = r"""
   <!-- ============================ THE POOL ============================ -->
   <section id="sheetPool">
     <section class="p-section" id="tracker" style="padding-top:0">
-      <header><div><h2>Wins tracker</h2><p class="dek">Each bar is a roster's season against the
+      <header><div><h2>Wins tracker</h2><p class="dek" id="tdTrackDek">Each bar is a roster's season against the
         <b>par rule at 34</b> — 272 wins split eight ways. Solid segments are wins actually banked,
         one per draft round; the hatched extension is the season still to play, ending at that
-        roster's projection. Nothing is banked yet, so right now every bar is entirely projection —
-        and that is the honest shape of it. Scale is fixed at 48 so par never moves.</p></div>
+        roster's projection. Scale is fixed at 48 so par never moves.</p></div>
         <div class="p-meta" id="trackMeta" aria-live="polite"></div></header>
       <div class="td-race" id="tdRace"></div>
       <details class="td-disc" id="tdDisc">
@@ -735,9 +734,11 @@ MAIN = r"""
           the model beats the market; it is that a number frozen on 9 August stops being true the
           moment a starting quarterback tears an ACL, and a live pipeline reprices that in a week
           where a snapshot never does.</li>
-        <li><b>Win distribution</b> — probability mass by final win count. Its mean sits up to 0.36
-          wins from expected wins for the teams at either end, which is what truncation at 0 and 17
-          does. Said once, on the distribution, and nowhere else.</li>
+        <li><b>Win distribution</b> — probability mass by final win count. Preseason it is the
+          upstream curve (mean can sit up to 0.36 wins from draft-day expected wins at the truncated
+          edges). In-season it is rewritten from the <b>same</b> Monte Carlo as the roster sim /
+          tracker — banked floor plus live remaining — so P(final &lt; banked) = 0 and the curve's
+          mean is the projected total, not frozen ew.</li>
         <li><b>Internal games</b> — head-to-head meetings inside one roster, counted off the overlap
           matrix. The only figure here that is purely structural: it does not depend on anybody's
           price being right.</li>
@@ -1007,6 +1008,33 @@ __DDSHEETS__
     $("trackMeta").textContent = anyPlayed
       ? `${D.basis.settled_games} of ${D.basis.total_games} games played`
       : `no games played · bars are projection only`;
+
+    /* Lede / tracker dek follow settled state — never leave a preseason claim up once games bank. */
+    const disc = $("tdDisclosure"), dek = $("tdTrackDek");
+    if(disc){
+      const n = D.basis?.settled_games || 0, tot = D.basis?.total_games || 272;
+      disc.innerHTML = n > 0
+        ? `<b>${n} of ${tot} games are settled and banked.</b> Expected wins stay the draft-day
+           market snapshot (devigged, normalized to 272) — frozen for the board. Live projections
+           and the Team-sheet win curves update off the same Monte Carlo as the tracker. Nothing
+           here is graded.`
+        : `<b>No game has been played.</b> Expected wins are the draft-day market snapshot
+           (devigged, normalized to 272) — a market snapshot, not a forecast this site has graded.
+           Nothing here says who is winning.`;
+    }
+    if(dek){
+      const n = D.basis?.settled_games || 0;
+      dek.innerHTML = n > 0
+        ? `Each bar is a roster's season against the <b>par rule at 34</b> — 272 wins split eight
+           ways. Solid segments are wins actually banked, one per draft round; the hatched extension
+           is the season still to play, ending at that roster's projection. Scale is fixed at 48 so
+           par never moves.`
+        : `Each bar is a roster's season against the <b>par rule at 34</b> — 272 wins split eight
+           ways. Solid segments are wins actually banked, one per draft round; the hatched extension
+           is the season still to play, ending at that roster's projection. Nothing is banked yet,
+           so right now every bar is entirely projection — and that is the honest shape of it.
+           Scale is fixed at 48 so par never moves.`;
+    }
 
     /* the disclosure table — round by round, which the bars deliberately compress */
     const head = `<thead><tr><th>Drafter</th><th>R1</th><th>R2</th><th>R3</th><th>R4</th>

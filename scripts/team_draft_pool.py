@@ -11,9 +11,10 @@ WHAT IS SOURCE AND WHAT IS DERIVED
 Source, and never recomputed here:
 
     teams[].line          median posted win total
-    teams[].ew            devigged expected wins, normalized to 272
-    teams[].sd            season win standard deviation, from the upstream simulation
-    teams[].dist          win-count probability mass, 0-17
+    teams[].ew            draft-day expected wins, normalized to 272 — NEVER recomputed
+    teams[].sd            season win SD (upstream preseason; live MC rewrite in-season)
+    teams[].dist          win-count probability mass (upstream preseason; live MC rewrite
+                          in-season, conditioned on banked so P(final < banked) = 0)
     teams[].schedule      17 games with per-game win probability
     overlap               head-to-head game counts between team pairs
     picks                 the draft log
@@ -260,7 +261,7 @@ def refit_schedule(teams, max_iter=60, tol=1e-6):
 
 
 # --------------------------------------------------------------- monte carlo ----
-def simulate(fitted, rosters, order, trials, seed, banked=None):
+def simulate(fitted, rosters, order, trials, seed, banked=None, team_banked=None):
     """Play `trials` whole seasons, game by game, and count where each roster lands.
 
     Simulating GAMES rather than team win totals is the only version that keeps the
@@ -270,9 +271,14 @@ def simulate(fitted, rosters, order, trials, seed, banked=None):
     on top of it. Sampling each team's win distribution independently would break
     both and quietly inflate the spread of a division-stacked roster.
 
+    When `team_banked` is supplied, the same loop also accumulates each team's final
+    win-count distribution on top of those banked floors — the Team sheet curves read
+    this, not a frozen preseason mass.
+
     Known limits, reported alongside the output rather than buried:
       · no tie outcome. The league counts an NFL tie as half a win; this draws a
-        winner every game, so a season here has no halves in it.
+        winner every game, so a season here has no halves in it (except halves that
+        arrived already banked from a settled tie).
       · a tie for FIRST is broken at random. The real rules break it on playoff wins
         and then point differential, neither of which is in this payload — so the
         honest thing is to report how often it happens, which is often.
@@ -286,8 +292,13 @@ def simulate(fitted, rosters, order, trials, seed, banked=None):
     # Wins already on the board. Preseason this is all zeros and the loop below is the
     # whole season; in-season it is the floor every simulated season starts from.
     base = [float((banked or {}).get(n, 0.0)) for n in names]
-    # Flatten to (owner_index_or_-1, owner_index_or_-1, p) so the hot loop is arithmetic.
-    flat = [(idx.get(owner.get(x), -1), idx.get(owner.get(y), -1), p) for x, y, _w, p in fitted]
+    # Optional per-team floors for the Team-sheet win curves.
+    team_names = list(team_banked.keys()) if team_banked else []
+    t_idx = {t: i for i, t in enumerate(team_names)}
+    t_base = [float(team_banked[t]) for t in team_names] if team_banked else []
+    # Flatten to (owner_a, owner_b, team_a, team_b, p) so the hot loop is arithmetic.
+    flat = [(idx.get(owner.get(x), -1), idx.get(owner.get(y), -1),
+             t_idx.get(x, -1), t_idx.get(y, -1), p) for x, y, _w, p in fitted]
 
     n = len(names)
     first = [0] * n
@@ -296,14 +307,25 @@ def simulate(fitted, rosters, order, trials, seed, banked=None):
     total = [0] * n
     hist = [{} for _ in range(n)]
     tied_first = 0
+    nt = len(team_names)
+    t_total = [0.0] * nt
+    t_hist = [{} for _ in range(nt)]
     random_ = rnd.random
 
     for _ in range(trials):
         s = list(base)
-        for oa, ob, p in flat:
-            w = oa if random_() < p else ob
-            if w >= 0:
-                s[w] += 1
+        ts = list(t_base) if nt else None
+        for oa, ob, ta, tb, p in flat:
+            if random_() < p:
+                if oa >= 0:
+                    s[oa] += 1
+                if ts is not None and ta >= 0:
+                    ts[ta] += 1
+            else:
+                if ob >= 0:
+                    s[ob] += 1
+                if ts is not None and tb >= 0:
+                    ts[tb] += 1
         order_ = sorted(range(n), key=lambda i: (-s[i], random_()))
         best = s[order_[0]]
         if sum(1 for v in s if v == best) > 1:
@@ -317,30 +339,42 @@ def simulate(fitted, rosters, order, trials, seed, banked=None):
             # A tied game banks half a win, so a season total can land on .5. Bucket on
             # the exact value rather than rounding it away — the tracker prints halves.
             hist[i][s[i]] = hist[i].get(s[i], 0) + 1
+        if ts is not None:
+            for i in range(nt):
+                t_total[i] += ts[i]
+                t_hist[i][ts[i]] = t_hist[i].get(ts[i], 0) + 1
 
-    out = {}
-    for i, name in enumerate(names):
-        counts = hist[i]
-        mean = total[i] / trials
+    def summarize(counts, mean):
         var = sum(c * (w - mean) ** 2 for w, c in counts.items()) / trials
-        ordered = sorted(counts)          # numeric sort; keys may carry a .5 from a tie
+        ordered = sorted(counts)
         cum, q = 0, {}
         for w in ordered:
             cum += counts[w]
             for tag, target in (("p10", 0.10), ("p50", 0.50), ("p90", 0.90)):
                 if tag not in q and cum >= trials * target:
                     q[tag] = w
-        out[name] = {
-            "p_first": round(first[i] / trials, 5),
-            "p_second": round(second[i] / trials, 5),
-            "p_top2": round(top2[i] / trials, 5),
+        return {
             "mean": round(mean, 3),
             "sd": round(var ** 0.5, 3),
             "p10": q.get("p10"), "p50": q.get("p50"), "p90": q.get("p90"),
-            # The full mass, so the page can draw the curve without re-simulating.
             "dist": {(str(int(w)) if float(w).is_integer() else str(w)): round(counts[w] / trials, 6)
                      for w in ordered},
         }
+
+    out = {}
+    for i, name in enumerate(names):
+        counts = hist[i]
+        mean = total[i] / trials
+        row = summarize(counts, mean)
+        row.update({
+            "p_first": round(first[i] / trials, 5),
+            "p_second": round(second[i] / trials, 5),
+            "p_top2": round(top2[i] / trials, 5),
+        })
+        out[name] = row
+    team_out = {}
+    for i, abbrev in enumerate(team_names):
+        team_out[abbrev] = summarize(t_hist[i], t_total[i] / trials)
     return {
         "trials": trials,
         "seed": seed,
@@ -351,7 +385,9 @@ def simulate(fitted, rosters, order, trials, seed, banked=None):
         "first_place_ties_broken": "at random — the league's real tiebreakers (playoff "
                                    "wins, then point differential) are not in this payload",
         "drafters": out,
+        "teams": team_out,
     }
+
 
 
 def build_board(picks, teams, order):
@@ -487,7 +523,7 @@ def derive(d, sd_source, trials, seed):
         if owner_of.get(t):
             banked_by_owner[owner_of[t]] += v["banked"]
 
-    return {
+    out = {
         "drafters": drafters,
         "undrafted": undrafted,
         "board": build_board(picks, teams, order),
@@ -519,9 +555,24 @@ def derive(d, sd_source, trials, seed):
         },
         # ⚠️ The simulation plays the UNPLAYED games and adds what is already banked.
         # Re-simulating a settled game would throw away a known result and quietly widen
-        # everybody's range for the rest of the season.
-        "simulation": simulate(sim_games, rosters, order, trials, seed, banked_by_owner),
+        # everybody's range for the rest of the season. Team curves are rewritten from
+        # the same loop in-season so P(final < banked) = 0.
+        "simulation": simulate(
+            sim_games, rosters, order, trials, seed, banked_by_owner,
+            {t: v["banked"] for t, v in teams.items()}),
     }
+    # In-season: Team-sheet dist / p10 / p50 / p90 / sd come from THIS Monte Carlo
+    # (banked + nfelo/market remaining), not the frozen preseason import. `ew` stays
+    # draft-day. Preseason keeps the upstream curves — richer than independent Bernoulli.
+    if in_season:
+        for abbrev, stats in out["simulation"]["teams"].items():
+            v = teams[abbrev]
+            v["dist"] = stats["dist"]
+            v["p10"] = stats["p10"]
+            v["p50"] = stats["p50"]
+            v["p90"] = stats["p90"]
+            v["sd"] = stats["sd"]
+    return out
 
 
 # ----------------------------------------------------------------- diagnostics ----
@@ -607,18 +658,43 @@ def diagnose(d, derived):
         abs(worst[1]), "known")
 
     # --- the drift worth knowing about, #2 ---------------------------------------
+    # In-season dist is the live MC conditioned on banked, so compare to projected.
+    # Preseason keeps the upstream curves, which drift from ew at the truncated edges.
+    live_anchor = "projected" if derived["basis"]["mode"] == "in-season" else "ew"
     dist_drift = sorted(
-        ((k, round(sum(int(w) * p for w, p in t["dist"].items())
-                   / sum(t["dist"].values()) - t["ew"], 3)) for k, t in teams.items()),
+        ((k, round(sum(float(w) * p for w, p in t["dist"].items())
+                   / sum(t["dist"].values()) - t[live_anchor], 3)) for k, t in teams.items()),
         key=lambda kv: -abs(kv[1]))
     dw = dist_drift[0]
-    add("dist_vs_ew", "Win distributions run above expected wins at the bottom of the board",
-        False,
-        f"The mean of the 0-17 distribution sits up to {abs(dw[1]):.2f} wins from expected wins "
-        f"({dw[0]}). The gap is positive for the worst teams and negative for the best, which is "
-        f"what truncation at 0 and 17 does to a distribution built around a mean near the edge. "
-        f"The curves are the shape of a season, not a second estimate of its total.",
-        abs(dw[1]), "known")
+    if derived["basis"]["mode"] == "in-season":
+        add("dist_vs_projected", "Live win distributions land on each team's projected total",
+            abs(dw[1]) < 0.15,
+            f"The mean of the live 0-17 distribution sits within {abs(dw[1]):.2f} wins of "
+            f"projected ({dw[0]}). Same Monte Carlo as the roster sim — banked floor plus "
+            f"unplayed games at live prices — so the curve's mean is the projected total, "
+            f"not the frozen draft-day `ew`.",
+            abs(dw[1]), "hard")
+        below = []
+        for k, t in teams.items():
+            floor = t["banked"]
+            mass = sum(p for w, p in t["dist"].items() if float(w) < floor - 1e-9)
+            if mass > 1e-9:
+                below.append((k, round(mass, 6), floor))
+        add("dist_respects_banked", "No win-curve mass sits below wins already banked",
+            not below,
+            ("Every team's live curve starts at its banked floor."
+             if not below else
+             f"{len(below)} teams still put mass below banked "
+             f"(worst {below[0][0]}: P(final < {below[0][2]}) = {below[0][1]})."),
+            None if not below else below[0][1], "hard")
+    else:
+        add("dist_vs_ew", "Win distributions run above expected wins at the bottom of the board",
+            False,
+            f"The mean of the 0-17 distribution sits up to {abs(dw[1]):.2f} wins from expected wins "
+            f"({dw[0]}). The gap is positive for the worst teams and negative for the best, which is "
+            f"what truncation at 0 and 17 does to a distribution built around a mean near the edge. "
+            f"The curves are the shape of a season, not a second estimate of its total.",
+            abs(dw[1]), "known")
 
     dist_sum = max(abs(sum(t["dist"].values()) - 1) for t in teams.values())
     add("dist_mass", "Each win distribution sums to 1",
@@ -820,8 +896,19 @@ def envelope(d, derived, diagnostics, as_of, built):
         "field_notes": {
             "line": "Median posted regular-season win total. Half-point lines are the book's.",
             "ew": "Devigged expected wins, normalized so all 32 sum to 272. Not the posted line.",
-            "sd": "Season win standard deviation from the upstream simulation.",
-            "dist": "Probability mass by final win count, 0 through 17. Sums to 1 within rounding.",
+            "sd": (
+                "Season win standard deviation from the live Monte Carlo (banked + remaining)."
+                if settled > 0 else
+                "Season win standard deviation from the upstream preseason simulation."
+            ),
+            "dist": (
+                "Live probability mass by final win count, conditioned on banked wins "
+                "(P(final < banked) = 0). Same Monte Carlo as the roster sim / tracker. "
+                "Sums to 1 within rounding."
+                if settled > 0 else
+                "Probability mass by final win count, 0 through 17, from the upstream "
+                "preseason simulation. Sums to 1 within rounding."
+            ),
             "schedule": "17 games: week, opponent, home flag, and this team's win probability.",
             "schedule[].wp": "The payload's original per-game probability. Coherent game by game; does not re-add to `ew`.",
             "schedule[].wpf": "The same game after the schedule was refit onto `ew`. This is what the simulation uses.",
