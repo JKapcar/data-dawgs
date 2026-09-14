@@ -153,6 +153,25 @@ test('grade reads KV and strips a supplied game result while scores are blank', 
   assert.deepEqual(JSON.parse(JSON.stringify(out.results.Kap)), { close: -110 });
 });
 
+test('a manual stamp on a still-pending scheduled game is kept and still pending', async () => {
+  const games = api.bozoNormalizeNflSchedule(nflCsv, 2026);
+  const doc = { source: 'nflverse fixture', fetchedAt: '2026-09-13T00:00:00Z', games };
+  const env = { RL: { async get(key, type) {
+    assert.equal(key, 'schedule:nfl:2026');
+    return type === 'json' ? doc : JSON.stringify(doc);
+  } } };
+  const state = { season: 2026, picks: { JWhite: { who: 'JWhite', sport: 'nfl', eventId: '401872656',
+    espnEventId: '401872656', game: 'NE @ SEA', mkt: 'ml', side: 'SEA', line: null } } };
+  const supplied = { JWhite: { result: 'won', won: true, resultSource: 'manual', close: -185 } };
+  const out = await api.bozoGradeFromScheduleKv(env, state, supplied);
+  assert.equal(out.pending[0].reason, 'scores_pending');
+  assert.equal(out.pending[0].player, 'JWhite');
+  assert.equal(out.results.JWhite.result, 'won');
+  assert.equal(out.results.JWhite.won, true);
+  assert.equal(out.results.JWhite.resultSource, 'manual');
+  assert.equal(out.results.JWhite.close, -185);
+});
+
 test('grade confirmation freezes phase-one values in a signed, stateless token', async () => {
   const env = { BOZO_PEPPER: 'test-only-pepper' };
   const proposal = { v: 1, lid: 'main', week: 1, status: 'placed',

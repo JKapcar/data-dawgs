@@ -8028,8 +8028,33 @@ async function autoGrade(){
    batch unsaved edits at grade time. It still reads them if they are present and simply
    finds none, falling through to S.results — which the override panel writes on every
    Save, so the values are already there rather than sitting in an unsaved box. */
+/* ⚠️ TWO-PHASE CONFIRM, AND THE ERROR HAS TO BE VISIBLE WHERE THE BUTTON IS.
+   decide() always posted through confirmGrade: phase one signs the frozen results,
+   phase two writes them. The function itself went missing when the per-leg editor
+   moved into Manager Override, so Name the bozo threw, the catch wrote to #gerr on
+   the This Week grade card, and that card is hidden once status is not `placed` —
+   the button appeared to do nothing. Restore the Worker confirm, and echo every
+   failure on Manager Override (#godGradeErr + #godErr), not only the hidden card. */
+function gradeErr(m, ok){
+  const msg = m || '';
+  const cls = 'err' + (ok ? ' ok' : '');
+  const gerr = document.getElementById('gerr');
+  if(gerr){ gerr.className=cls; gerr.textContent=msg; }
+  const slot = document.getElementById('godGradeErr');
+  if(slot){ slot.className=cls; slot.textContent=msg; }
+  godErr(msg, ok);
+}
+async function confirmGrade(payload){
+  const proposal=await wPost('/bozo/grade',payload);
+  if(proposal.status!=='confirm_required'||!proposal.confirm_code)
+    throw new Error('The Worker did not return a grade confirmation. Nothing was written.');
+  gradeErr(proposal.echo || 'Confirm to write the grade. Nothing has been written yet.');
+  if(!window.confirm(proposal.echo+'\n\nReview the board values, then press OK to write them.'))
+    return null;
+  return wPost('/bozo/grade',{confirm:proposal.confirm_code});
+}
 async function decide(){
-  const e=document.getElementById('gerr'); e.className='err'; e.textContent='';
+  gradeErr('');
   const results = JSON.parse(JSON.stringify(S.results||{}));
   // ⚠️ Three states. `won` alone cannot express a push, and a push coerced to false
   // is a loss — which under Bozo Royale eliminates someone. result is the truth here;
@@ -8056,8 +8081,8 @@ async function decide(){
   if(!pool.length){
     let written;
     try{ written=await confirmGrade({results, bozo:null, bozoWhy:'Ticket cashed. Nobody wears it.', graded:true}); }
-    catch(err){ e.textContent=err.message; return; }
-    if(!written){ e.textContent='Grade canceled. Nothing was written.'; return; }
+    catch(err){ gradeErr(err.message); return; }
+    if(!written){ gradeErr('Grade canceled. Nothing was written.'); return; }
     return refresh();
   }
   const M={};
@@ -8108,8 +8133,8 @@ async function decide(){
   const bozoWhy=`${why||'Coin flip'} · lost ${b.label} at ${b.price} · funds next week`;
   let written;
   try{ written=await confirmGrade({results, bozo, bozoWhy, graded:true}); }
-  catch(err){ e.textContent=err.message; return; }
-  if(!written){ e.textContent='Grade canceled. Nothing was written.'; return; }
+  catch(err){ gradeErr(err.message); return; }
+  if(!written){ gradeErr('Grade canceled. Nothing was written.'); return; }
   refresh();
 }
 
@@ -8299,8 +8324,9 @@ function paintGodResults(){
      journeys. Same decide(), same refusal when a leg is still open. */
   + `<div class="row" style="margin-top:14px;align-items:center;gap:10px">
       <button class="btn" id="finish">Name the bozo</button>
-      <span class="tm">Grades the whole week and resolves who wore it. Needs every leg settled.</span>
-    </div>`;
+      <span class="tm">Grades the whole week and resolves who wore it. Needs every leg settled. Confirms before it writes.</span>
+    </div>
+    <div class="err" id="godGradeErr"></div>`;
 
   const fin = document.getElementById('finish');
   if(fin) fin.onclick = decide;
@@ -8327,12 +8353,13 @@ function paintGodResults(){
         await godWrite([
           { path: `results/${encodeURIComponent(k)}/result`, value: v || null },
           { path: `results/${encodeURIComponent(k)}/won`, value: v==='won' ? true : v==='lost' ? false : null },
-          /* ⚠️ STAMPED MANUAL OR THE FEED TAKES IT BACK. bozoGradeFromScheduleKv skips a
-             leg whose resultSource is "manual" and re-grades every other one on the next
-             tick or the next Pull — so a result set here without the stamp flips back to
-             the feed's answer minutes later, and the manager watches their correction
-             undo itself. The card this panel replaced wrote the stamp; the result
-             buttons did not, because nothing had ever graded a whole week from them. */
+          /* ⚠️ STAMPED MANUAL OR THE FEED TAKES IT BACK. bozoGradeFromScheduleKv keeps a
+             leg whose resultSource is "manual" instead of overwriting it from the feed —
+             so a result set here without the stamp flips back to the feed's answer
+             minutes later. A stamp is not a score: auto-grade still refuses to close the
+             week while that scheduled game is pending. The card this panel replaced
+             wrote the stamp; the result buttons did not, because nothing had ever
+             graded a whole week from them. */
           { path: `results/${encodeURIComponent(k)}/resultSource`, value: v ? 'manual' : null },
         ]);
         godErr(v ? `Set to ${v}. Anything already computed from the old value is unchanged.` : 'Cleared.', true);

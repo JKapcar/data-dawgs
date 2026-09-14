@@ -9163,18 +9163,27 @@ async function bozoGradeFromScheduleKv(env, state, supplied) {
       pending.push({ key, player: pick.who || playerName(key), reason: "sport_not_gradeable" });
       continue;
     }
-    /* ⚠️ A RESULT THE MANAGER SET BY HAND STICKS. Without this the schedule feed
-       re-graded the leg on the next tick (or the next Pull), and a manager who had just
-       corrected a wrong result watched it flip back five minutes later. The feed is the
-       default; the manager is the override — and a manual result is not "pending", so it
-       must not be stripped by the branch below either. */
-    if ((results[key] || {}).resultSource === "manual") continue;
+    /* ⚠️ A MANUAL STAMP MUST NOT SKIP THE PENDING-GAME GATE.
+       The feed is the default; the manager is the override for a result the feed got
+       wrong. That override used to `continue` before the schedule was even consulted,
+       so a premature stamp on a game still scheduled (PHI ML kicking next Sunday,
+       still `pre`) looked settled to auto-grade, which named a bozo while the ticket
+       still had a live game. Keep the manager's result — do not strip it, and do not
+       let the feed overwrite it — but still report the game as pending so the week
+       cannot close until every scheduled game has scores. */
+    const stampedManual = (results[key] || {}).resultSource === "manual";
     if (!docs.has(pick.sport)) docs.set(pick.sport, await bozoScheduleDoc(env, pick.sport, state.season || SEASON));
     const doc = docs.get(pick.sport);
     if (doc) sources[pick.sport] = { source: doc.source, fetchedAt: doc.fetchedAt, etag: doc.etag || null };
     const eventId = String(pick.espnEventId || pick.eventId || "");
     const game = bozoScheduleFindGame(doc, pick);
     const grade = bozoScheduledOutcome(pick, game);
+    if (stampedManual) {
+      if (grade.pending) {
+        pending.push({ key, player: pick.who || playerName(key), eventId, reason: grade.reason });
+      }
+      continue;
+    }
     if (grade.pending) {
       // A cached page may still send a hand-entered game result. Preserve close fields,
       // but strip every grade field until the Worker-reachable source has both scores.
