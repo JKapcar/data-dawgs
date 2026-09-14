@@ -200,8 +200,8 @@
   }
  },
  "counts": {
-  "surfaces": 23,
-  "with_live_machine_access": 18,
+  "surfaces": 24,
+  "with_live_machine_access": 19,
   "with_no_machine_access": 5,
   "mcp_tools_registered": 46,
   "mcp_tools_live": 46,
@@ -332,6 +332,23 @@
     }
    ],
    "planned": [],
+   "tier": "labs"
+  },
+  {
+   "id": "team-draft-2026",
+   "domain": "arena",
+   "name": "The 32-team draft — an eight-person NFL wins pool",
+   "page": "/teamdraft.html",
+   "machine": [
+    {
+     "kind": "json",
+     "url": "/data/draft-2026.json",
+     "status": "live",
+     "covers": "the whole surface — 32 teams with posted line, draft-day expected wins (frozen), live projected/banked, season SD, the 0-17 win distribution (live Monte Carlo in-season, conditioned on banked) and a 17-game schedule with per-game tier; the sparse head-to-head matrix; the draft log; and the derived rosters, tracker, board, simulation and diagnostics"
+    }
+   ],
+   "planned": [],
+   "gap": "Expected wins stay the draft-day market snapshot and are never recomputed; live projections and Team-sheet win curves update off the same banked+remaining Monte Carlo as the roster sim. Nothing here is graded — banked cells are observed wins only.",
    "tier": "labs"
   },
   {
