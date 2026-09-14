@@ -57,18 +57,40 @@ jobs:
           node tools/build-data.js survivor.json models.json
           node work/test-survivor-nfelo.mjs
 
+      # Keep teamdraft projected totals live off the same nfelo/survivor composite.
+      # draft-day ew stays frozen inside the script; this only rebanks settled + remaining.
+      - name: Rebuild team-draft projected wins off survivor
+        run: |
+          set -euo pipefail
+          python3 scripts/team_draft_pool.py --as-of "$(TZ=America/New_York date +%F)"
+
       - name: Stamp service worker, republish manifest, validate
         run: |
           set -euo pipefail
-          if git diff --quiet -- nfelo.html survivor.html data/nfelo.json data/survivor.json data/models.json; then
-            echo "nfelo unchanged — nothing to commit"
+          NFELO_PATHS=(nfelo.html survivor.html data/nfelo.json data/survivor.json data/models.json)
+          DRAFT_PATHS=(data/draft-2026.json)
+          nfelo_moved=0
+          draft_moved=0
+          git diff --quiet -- "${NFELO_PATHS[@]}" || nfelo_moved=1
+          git diff --quiet -- "${DRAFT_PATHS[@]}" || draft_moved=1
+          if [ "$nfelo_moved" -eq 0 ] && [ "$draft_moved" -eq 0 ]; then
+            echo "nfelo/survivor/draft unchanged — nothing to commit"
             exit 0
           fi
-          python3 work/stamp-sw-version.py
+          # HTML/data mirror moved → stamp sw. Draft-only is data-only (same rule as draft-picks.yml).
+          if [ "$nfelo_moved" -eq 1 ]; then
+            python3 work/stamp-sw-version.py
+          fi
           node tools/data-manifest.js
           node tools/validate-data.js
-          git add nfelo.html survivor.html sw.js data/nfelo.json data/survivor.json data/models.json data/index.json
-          node work/verify-sw.mjs
+          git add data/index.json
+          if [ "$nfelo_moved" -eq 1 ]; then
+            git add "${NFELO_PATHS[@]}" sw.js
+            node work/verify-sw.mjs
+          fi
+          if [ "$draft_moved" -eq 1 ]; then
+            git add data/draft-2026.json
+          fi
 
       - name: Commit if anything moved
         run: |
@@ -76,10 +98,24 @@ jobs:
           if git diff --cached --quiet; then exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "nfelo mirror: $(node -e '
-            const m=require("./data/nfelo.json").data.meta;
-            process.stdout.write(`upstream ${m.sha} @ ${m.upstream_committed_at}`);
-          ')"
+          draft_cached=0
+          nfelo_cached=0
+          git diff --cached --quiet -- data/draft-2026.json || draft_cached=1
+          git diff --cached --quiet -- data/nfelo.json nfelo.html data/survivor.json || nfelo_cached=1
+          if [ "$nfelo_cached" -eq 1 ]; then
+            msg="nfelo mirror: $(node -e '
+              const m=require("./data/nfelo.json").data.meta;
+              process.stdout.write(`upstream ${m.sha} @ ${m.upstream_committed_at}`);
+            ')"
+            if [ "$draft_cached" -eq 1 ]; then
+              played=$(python3 -c "import json;b=json.load(open('data/draft-2026.json'))['data']['basis'];print(f\"{b['settled_games']}/{b['total_games']}\")")
+              msg="$msg (+ teamdraft projected wins, ${played} settled)"
+            fi
+          else
+            played=$(python3 -c "import json;b=json.load(open('data/draft-2026.json'))['data']['basis'];print(f\"{b['settled_games']}/{b['total_games']}\")")
+            msg="teamdraft live projections after nfelo refresh: ${played} settled"
+          fi
+          git commit -m "$msg"
           bash work/publish-survivor-pipeline.sh
 
       - name: Publish through GitHub Pages
