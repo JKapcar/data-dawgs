@@ -172,15 +172,19 @@ ok(/await godWrite\([\s\S]{0,400}await refresh\(\); paintGod\(\);/.test(pageCode
 ok(/decide\(\)[\s\S]*querySelectorAll\('\[data-w\]'\)/.test(pageCode),
    "the week-level grade still reads the same row attributes, so the two paths agree");
 
-/* ⚠️ Without this the feed re-graded a hand-set leg on the next tick or the next Pull,
-   and a manager who had just corrected a wrong result watched it flip back. */
-ok(/if \(\(results\[key\] \|\| \{\}\)\.resultSource === "manual"\) continue;/.test(worker),
-   "the schedule grader skips a leg whose result was set by hand");
+/* ⚠️ Without the stamp the feed re-graded a hand-set leg on the next tick or the next
+   Pull, and a manager who had just corrected a wrong result watched it flip back.
+   Without the pending check a premature stamp on a still-scheduled game looked
+   settled, and auto-grade named a bozo while the ticket still had a live game. */
+ok(/const stampedManual = \(results\[key\] \|\| \{\}\)\.resultSource === "manual"/.test(worker),
+   "the schedule grader notices a leg whose result was set by hand");
+ok(/if \(stampedManual\) \{[\s\S]*?if \(grade\.pending\) \{[\s\S]*?pending\.push/.test(worker),
+   "a manual stamp on a still-pending scheduled game stays pending — it cannot close the week");
 {
-  const guard = worker.indexOf('resultSource === "manual") continue;');
+  const keep = worker.indexOf("A MANUAL STAMP MUST NOT SKIP THE PENDING-GAME GATE");
   const strip = worker.indexOf('for (const field of ["actual", "result", "won", "gradeSource", "gradeObservedAt"]) delete row[field];');
-  ok(guard > 0 && strip > guard,
-     "...and skips it BEFORE the pending branch that would strip its result");
+  ok(keep > 0 && strip > keep,
+     "...and keeps the stamp; the strip branch is only for unstamped pending rows");
 }
 
 /* ---- the CLV override ---- */

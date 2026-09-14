@@ -126,6 +126,14 @@ ok(/from the close/.test(butts), "and says the number came from the close");
 /* Name the bozo moved here, with the controls that settle the legs. */
 ok(/id="finish"/.test(html), "Name the bozo lives in the override panel");
 ok(/Needs every leg settled/.test(html), "and still states what it needs");
+ok(/async function confirmGrade\(payload\)/.test(page)
+   && /return wPost\('\/bozo\/grade',\{confirm:proposal\.confirm_code\}\)/.test(page),
+   "confirmGrade exists and posts the signed phase-two token");
+ok(/id="godGradeErr"/.test(html) && /function gradeErr\(/.test(page)
+   && /godErr\(msg, ok\)/.test(page),
+   "grade errors echo on Manager Override, not only hidden #gerr");
+ok(/catch\(err\)\{ gradeErr\(err\.message\); return; \}/.test(page),
+   "decide() reports confirm failures through gradeErr");
 
 /* ---- the surfaces that were folded in are gone, not hidden ---- */
 ok(!/id="manual"/.test(page), "the This Week per-leg editor is removed");
