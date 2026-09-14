@@ -9115,13 +9115,6 @@ function boot() {
   });
   // T9: paint persisted toto health before the quiet lobby prefetch
   try { renderTotoChip(); } catch (e) {}
-  if ($("dkSwitchAlt")) {
-    $("dkSwitchAlt").addEventListener("click", () => {
-      if (_autoloadAlt && _autoloadAlt.draftGroupId) {
-        loadDkSlateById(_autoloadAlt.draftGroupId, { reason: "switch" });
-      }
-    });
-  }
   // T2: auto-load next-locking slate when online (never demo; never solver/sim)
   setTimeout(() => { try { autoLoadOnOpen(); } catch (e) { try { refreshDkLobby(true); } catch (e2) {} } }, 400);
   
@@ -9760,9 +9753,6 @@ function doBrImport() {
 
 let _survivorCache = null;
 let _weekLockTimer = null;
-/** T2 hook: alternate draft group for one-tap switch (filled when autoload lands). */
-let _autoloadAlt = null;
-let _dfsSwitchTarget = null;
 
 function ensureSlateMeta() {
   if (!S.slate || typeof S.slate !== "object") {
@@ -9770,44 +9760,8 @@ function ensureSlateMeta() {
   }
 }
 
-function updateAutoloadSwitch(pick) {
-  /* Compatible with T2: pick.switchTarget / pick.alternate */
-  const alt = (pick && (pick.switchTarget || pick.alternate)) || null;
-  _autoloadAlt = alt;
-  _dfsSwitchTarget = alt;
-  const btn = $("dkSwitchAlt");
-  if (!btn) return;
-  if (alt && alt.draftGroupId) {
-    const label = alt.format === "showdown" ? "Showdown" : (alt.label || "Classic");
-    btn.hidden = false;
-    btn.textContent = "Switch to " + label + (alt.draftGroupId ? " (DG " + alt.draftGroupId + ")" : "");
-    btn.dataset.draftGroupId = String(alt.draftGroupId);
-  } else {
-    btn.hidden = true;
-    btn.removeAttribute("data-draft-group-id");
-  }
-}
-
-
-async function loadDkSlateById(id, opts) {
-  opts = opts || {};
-  if (!id) return;
-  const sel = $("dkGroupSel");
-  if (sel) {
-    // ensure option exists
-    if (![...sel.options].some(o => String(o.value) === String(id))) {
-      const opt = document.createElement("option");
-      opt.value = String(id);
-      opt.textContent = "DG " + id;
-      sel.appendChild(opt);
-    }
-    sel.value = String(id);
-  }
-  if (typeof loadDkSlate === "function") await loadDkSlate();
-}
-
 function switchToAltSlate() {
-  const alt = _dfsSwitchTarget || _autoloadAlt;
+  const alt = _autoloadAlt;
   const id = (alt && alt.draftGroupId) || ($("dkSwitchAlt") && $("dkSwitchAlt").dataset.draftGroupId);
   if (!id) return;
   if (typeof loadDkSlateById === "function") {
@@ -9971,7 +9925,6 @@ async function renderWeekDash() {
   renderPlayList();
   renderLastWeek();
   await renderWeekSlate();
-  updateAutoloadSwitch({ switchTarget: _dfsSwitchTarget || _autoloadAlt });
   botContext();
 }
 

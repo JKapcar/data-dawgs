@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - "sw.js"
+      - "dfs.html"
+      - "work/dfs-engine.js"
+      - "work/test-dfs-page.js"
+      - "work/test-dfs-autoload-ui.cjs"
       - "guillotine*.js"
       - "guillotine.html"
       - "tools/guillotine-*"
@@ -20,6 +24,10 @@ on:
   pull_request:
     paths:
       - "sw.js"
+      - "dfs.html"
+      - "work/dfs-engine.js"
+      - "work/test-dfs-page.js"
+      - "work/test-dfs-autoload-ui.cjs"
       - "guillotine*.js"
       - "guillotine.html"
       - "tools/guillotine-*"
@@ -44,6 +52,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - run: node work/test-dfs-page.js
+      - run: npm install --prefix /tmp/dd-dfs-test jsdom@30.0.1 --no-audit --no-fund
+      - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-autoload-ui.cjs
       - run: node --check sw.js
       - run: node --check dd-live-state.js
       - run: node --check warroom-weekly.js
