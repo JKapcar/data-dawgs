@@ -20,7 +20,20 @@ const csv='Name,Team,Position,Salary,Projection,Total Own%,CPT Own%\n'+projs.map
 if(process.argv[2])fs.writeFileSync(process.argv[2],csv);
 (async()=>{
  await tick();
- el('salPaste').value=csv;el('salGo').click();await tick();
+ assert.equal(el('salFile').closest('details'), null, 'Upload stays outside collapsed settings');
+ assert.equal(el('salFile').closest('.sheet'), null, 'Upload is available on every tab');
+ const upload = async text => {
+   Object.defineProperty(el('salFile'), 'files', {configurable:true,value:[new w.File([text], 'projections.csv', {type:'text/csv'})]});
+   el('salFile').dispatchEvent(new w.Event('change', {bubbles:true}));
+   await new Promise(r=>setTimeout(r,50));
+ };
+ await upload(csv);
+ assert.match(el('slateWarn').textContent, /12 players loaded/);
+ assert.equal(el('sh-slate').hidden,false,'File upload opens its result');
+ await upload(csv.replace('Synthetic 0','Replacement 0'));
+ assert.match(el('salPaste').value,/Replacement 0/,'Same filename can be uploaded again');
+ await upload(csv);
+
  el('rarityGo').click();await tick();
  assert.match(el('labAuditNote').textContent,/Max-projection check: PASS/);
  assert.match(el('rarityNote').textContent,/Exact frontier over every legal lineup/);

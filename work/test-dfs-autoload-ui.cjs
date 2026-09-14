@@ -36,6 +36,20 @@ for (const s of w.document.querySelectorAll('script')) if (!s.src && !/text\/pla
 const delay = ms => new Promise(r => setTimeout(r, ms));
 const state = () => JSON.parse(w.localStorage.getItem('dd-dfs-v1'));
 (async () => {
+  if (process.argv.includes('--csv')) {
+    const input = w.document.getElementById('salFile');
+    const csv = 'Name,Team,Position,Salary,Projection,Total Own%,CPT Own%\nTest A,AAA,QB,10000,20,70,20\nTest B,BBB,WR,8000,15,50,10';
+    Object.defineProperty(input, 'files', {value:[new w.File([csv], 'new.csv', {type:'text/csv'})]});
+    await delay(10);
+    input.dispatchEvent(new w.Event('change', {bubbles:true}));
+    await delay(800);
+    assert.deepEqual(requests, [], 'Background auto-load leaves CSV alone');
+    assert.equal(state().slate.source, 'csv');
+    assert.equal(state().players[0].name, 'Test A');
+    assert.deepEqual(errors, []);
+    console.log('Production file upload survives scheduled auto-load PASS');
+    return;
+  }
   await delay(800);
   assert.deepEqual(requests, ['90001']);
   assert.equal(state().site, 'dk_showdown');

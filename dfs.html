@@ -2715,6 +2715,12 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   <div class="fsstrip" id="fsStrip"></div>
 
+  <div class="card" id="csvUploadCard">
+    <label class="fld" for="salFile"><span><b>Upload or replace your CSV</b></span></label>
+    <input class="fi" type="file" id="salFile" accept=".csv,.tsv,text/csv,text/tab-separated-values,text/plain,application/vnd.ms-excel">
+    <p class="note">Choose your ETR projections or DraftKings salary file. A complete CSV replaces the current player pool; a projections-only file updates matching players. Your upload stays loaded until you replace it or load another slate.</p>
+  </div>
+
   <div class="fstabs" id="fsTabs">
     <button data-s="week">This week<span class="kbd">1</span></button>
     <button data-s="slate">Slate<span class="kbd">2</span></button>
@@ -2800,10 +2806,6 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
               <p class="note" id="dkLobbyNote">Uses toto → DraftKings draftables (salaries + OUT/Q). No Export CSV required. Opens on the next-locking Classic/Showdown when online.</p>
               <p class="note" id="dkAutoloadNote" hidden></p>
             </details>
-            <label class="fld"><span>Upload your data sheet</span>
-              <input class="fi" type="file" id="salFile" accept=".csv,text/csv,text/plain">
-            </label>
-            <p class="note">One CSV loads salaries, projections and ownership together. Supports ETR Classic / Showdown and DraftKings salary exports.</p>
             <textarea class="fi" id="salPaste" placeholder="Position,Name + ID,Name,ID,Roster Position,Salary,Game Info,TeamAbbrev,AvgPointsPerGame&#10;QB,Josh Allen (39...),Josh Allen,39...,QB,7800,BUF@MIA 09/13/2026 01:00PM ET,BUF,21.8"></textarea>
           </div>
           <div>
@@ -9090,8 +9092,14 @@ function boot() {
   $("salFile").addEventListener("change", e => {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
+    e.target.value = ""; // Allow selecting the same filename again after editing it.
+    show("slate");
+    banner("slateWarn", "warn", "Reading " + esc(f.name) + "…");
     const r = new FileReader();
-    r.onload = () => { $("salPaste").value = String(r.result).slice(0, 2000000); doSalaries(String(r.result),f.name); };
+    r.onload = () => {
+      try { $("salPaste").value = String(r.result).slice(0, 2000000); doSalaries(String(r.result),f.name); }
+      catch (err) { banner("slateWarn", "err", "<b>Upload failed.</b> " + esc(err.message || err)); }
+    };
     r.onerror = () => banner("slateWarn", "err", "<b>Could not read the file.</b> Please choose the CSV again.");
     r.readAsText(f);
   });
@@ -9386,6 +9394,8 @@ async function loadDkSlateById(id, opts) {
     if (!r.ok) throw new Error(j.detail || j.error || ("HTTP " + r.status));
     const mapped = DDFSDkDraftables.playersFromDraftables(j, { format: g && g.format });
     if (mapped.error) throw new Error(mapped.error);
+    // Background draftables must not overwrite a newly uploaded CSV.
+    if (opts.reason === "autoload" && S.slate && S.slate.source === "csv") return false;
     applyMappedSlate(mapped, { draftGroupId: id, source: "toto" });
     if ($("dkGroupSel")) {
       $("dkGroupSel").value = String(id);
@@ -9422,6 +9432,7 @@ async function loadDkSlateById(id, opts) {
  * load whichever locks first. Never demo. Never solver/sim.
  */
 async function autoLoadOnOpen() {
+  if (S.slate && S.slate.source === "csv" && S.players.length) return;
   if (typeof navigator !== "undefined" && navigator.onLine === false) {
     if ($("dkAutoloadNote")) {
       $("dkAutoloadNote").hidden = false;
@@ -9432,6 +9443,8 @@ async function autoLoadOnOpen() {
   }
   try {
     await refreshDkLobby(true);
+    // A file may have been imported while the lobby request was in flight.
+    if (S.slate && S.slate.source === "csv" && S.players.length) return;
     const pick = DDFSAutoload.pickAutoloadTargets(_dkGroups, Date.now());
     updateAutoloadSwitch(pick);
     if (!pick.primary || !pick.primary.draftGroupId) {
