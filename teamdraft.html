@@ -1146,6 +1146,54 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
   .td-rtot{font-size:11.5px;padding-left:6px}
   .td-rword{display:none}
 }
+/* Wins tracker: keep the race encoding; give labels their own space. */
+.td-race{--race-label:104px;--race-gap:12px;padding:22px 24px 18px;border-radius:18px;
+  border-top:4px solid var(--accent);box-shadow:0 12px 32px -22px rgba(0,0,0,.45)}
+.td-race-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:22px}
+.td-race-brand{font-size:11px;font-weight:850;letter-spacing:.1em;color:var(--accent);text-transform:uppercase}
+.td-race-head h3{font-size:25px;letter-spacing:-.035em;line-height:1.1;margin:5px 0 0;color:var(--ink-1)}
+.td-race-date{font-size:11px;font-weight:650;line-height:1.5;color:var(--ink-2);text-align:right}
+.td-scale{margin-left:calc(var(--race-label) + var(--race-gap));height:23px;margin-bottom:5px}
+.td-scale span{font-size:12px;font-weight:750;color:var(--ink-2)}
+.td-scale span:last-child{transform:translateX(-100%)}
+.td-rrow{grid-template-columns:var(--race-label) minmax(0,1fr);gap:var(--race-gap);padding:8px 0 25px}
+.td-rlab{font-size:17px;font-weight:850;gap:8px}
+.td-rlab i{width:11px;height:11px;border-radius:3px}
+.td-rtrack{height:34px;border-radius:7px;background:color-mix(in srgb,var(--ink-3) 9%,transparent)}
+.td-seg:first-of-type{border-radius:7px 0 0 7px}
+.td-ghost{top:2px;bottom:2px;border:1px solid color-mix(in srgb,var(--own) 75%,transparent);
+  border-radius:0 6px 6px 0;background:repeating-linear-gradient(135deg,
+  color-mix(in srgb,var(--own) 40%,transparent) 0 6px,color-mix(in srgb,var(--own) 9%,transparent) 6px 12px)}
+.td-rpar{top:-8px;bottom:-8px;width:3px;opacity:.85}
+.td-rtot{left:auto!important;right:0;top:auto;bottom:-20px;transform:none;padding:0;
+  font-size:14px;line-height:1.15;text-shadow:none;color:var(--ink-1)}
+.td-rtot b{color:var(--own);font-weight:900}
+.td-rproj{font-weight:750;color:var(--ink-2)}
+.td-rfoot{margin:12px 0 0;padding-top:13px;border-top:1px solid var(--grid);gap:6px 18px;
+  font:650 12px/1.5 system-ui,sans-serif;letter-spacing:0;color:var(--ink-2)}
+.td-rfoot b{font-weight:850;color:var(--ink-1)}
+.td-race-actions{display:flex;justify-content:flex-end;margin:0 0 12px}
+.td-shot-btn{border:1px solid var(--accent);border-radius:8px;background:var(--surface-1);color:var(--ink-1);
+  padding:10px 14px;font:750 13px/1.2 system-ui,sans-serif;cursor:pointer}
+.td-shot-btn:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.td-shot{box-sizing:border-box;width:min(960px,100%);max-width:100%;max-height:100dvh;padding:14px;
+  border:0;border-radius:16px;background:var(--page);color:var(--ink-1);overflow:auto}
+.td-shot::backdrop{background:rgba(0,0,0,.82)}
+.td-shot-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;
+  font-size:12px;color:var(--ink-2)}
+.td-shot .td-rrow{cursor:default;opacity:1}
+.td-shot .td-rrow:hover{background:none}
+html:has(.td-shot[open]){overflow:hidden}
+@media(max-width:560px){
+  .td-race{--race-label:62px;--race-gap:9px;padding:16px 14px 14px;border-radius:15px}
+  .td-race-head{margin-bottom:18px;gap:8px}.td-race-head h3{font-size:22px}
+  .td-race-date{font-size:10px}.td-race-brand{font-size:10px}
+  .td-rlab{font-size:15px;gap:5px}.td-rlab i{width:9px;height:9px}
+  .td-rtrack{height:30px}.td-rrow{padding:7px 0 24px}.td-rtot{font-size:13px;bottom:-19px}
+  .td-rword{display:inline}.td-rfoot{font-size:11px;gap:4px 12px}
+  .td-shot{padding:8px;border-radius:0}.td-shot-toolbar{margin:0 2px 8px}
+}
+
 @media (prefers-reduced-motion:reduce){
   .td-lbar{transition:none}
   #tdWheelRot,#tdWheel .td-labrot{transition:none}
@@ -2818,7 +2866,12 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         one per draft round; the hatched extension is the season still to play, ending at that
         roster's projection. Scale is fixed at 48 so par never moves.</p></div>
         <div class="p-meta" id="trackMeta" aria-live="polite"></div></header>
+      <div class="td-race-actions"><button type="button" class="td-shot-btn" id="tdScreenshot">Screenshot view</button></div>
       <div class="td-race" id="tdRace"></div>
+      <dialog class="td-shot" id="tdScreenshotDialog" aria-label="Wins tracker screenshot view">
+        <div class="td-shot-toolbar"><span>Screenshot the chart below</span><button type="button" class="td-shot-btn" id="tdScreenshotClose">Close</button></div>
+        <div id="tdScreenshotContent"></div>
+      </dialog>
       <details class="td-disc" id="tdDisc">
         <summary>Round by round, as a table</summary>
         <div class="p-table-wrap"><table class="td-dtable" id="tdTracker"></table></div>
@@ -3305,7 +3358,7 @@ window.DDSheets = function(cfg){
       const segs = (w.rounds||[]).map((v,i)=>{
         if(!v) return "";
         const L = x(acc), Wd = x(acc+v) - x(acc); acc += v;
-        return `<span class="td-seg" style="left:${L}%;width:${Wd}%;opacity:${(0.45+i*0.18).toFixed(2)}"
+        return `<span class="td-seg" style="left:${L}%;width:${Wd}%;opacity:${(0.65+i*0.11).toFixed(2)}"
           >${n1(v)}</span>`;
       }).join("");
       /* The season still to play. Preseason this IS the bar — eight empty tracks
@@ -3313,9 +3366,7 @@ window.DDSheets = function(cfg){
          the element that opens it. */
       const ghost = proj > total
         ? `<span class="td-ghost" style="left:${x(total)}%;width:${x(proj)-x(total)}%"></span>` : "";
-      /* The word "projected" is dropped below 560px — at 375 it runs past the card
-         edge and gets visually clipped, and the number alone is unambiguous next to a
-         hatched bar. The full phrase stays in the aria-label and the tooltip. */
+      /* Labels sit below the track so the full projection fits on phones. */
       const label = `${total ? `<b>${n1(total)}</b>` : ""}<span class="td-rproj">${
           total ? ` of ${n2(proj)}` : n2(proj)
         }<span class="td-rword"> projected</span></span>`;
@@ -3336,7 +3387,9 @@ window.DDSheets = function(cfg){
       </button>`;
     }).join("");
 
-    $("tdRace").innerHTML = `<div class="td-scale">${ticks}</div>${rows}
+    $("tdRace").innerHTML = `<div class="td-race-head"><div><div class="td-race-brand">Data Dawgs · NFL pool</div><h3>Wins tracker</h3></div>
+      <div class="td-race-date">${esc(DATED.as_of)}<br>${D.basis.settled_games} / ${D.basis.total_games} games played</div></div>
+      <div class="td-scale">${ticks}</div>${rows}
       <div class="td-rfoot">
         <span>&#9650; the vertical rule is <b>par — ${n2(D.par)}</b></span>
         <span>scale fixed 0&ndash;${TRACK_MAX}</span>
@@ -4074,6 +4127,18 @@ window.DDSheets = function(cfg){
     $("tdRail").innerHTML = "";
   }
 
+  // Snapshot the rendered chart without moving the live selection controls.
+  $("tdScreenshot").addEventListener("click", ()=>{
+    const copy = $("tdRace").cloneNode(true);
+    copy.removeAttribute("id");
+    copy.querySelectorAll("[id]").forEach(el=>el.removeAttribute("id"));
+    copy.querySelectorAll("button").forEach(el=>{ el.disabled=true; el.removeAttribute("data-tip"); });
+    $("tdScreenshotContent").replaceChildren(copy);
+    $("tdScreenshotDialog").showModal();
+    $("tdScreenshotDialog").scrollTop=0;
+  });
+  $("tdScreenshotClose").addEventListener("click", ()=>$("tdScreenshotDialog").close());
+
   async function load(){
     let env;
     try{
@@ -4177,7 +4242,8 @@ window.DD_BOTCTX = {
     ['Who has the best roster, and how confident should I be?','Best roster?'],
     ['Why do games between two of my own teams not help me?','Internal games'],
     ['What does the reach number on a pick actually mean?','Reach explained']]},
-  sys: `RIGHT NOW you are on The 32-Team Draft: a private eight-person pool where everyone owns four NFL teams and total regular-season wins is the only criterion. Every number is read from /data/draft-2026.json.
+  sys: `The Wins tracker has a Screenshot view button that opens a dated, clean copy of the current chart. Close or Escape returns to the page. This is a display feature, not a data refresh.
+RIGHT NOW you are on The 32-Team Draft: a private eight-person pool where everyone owns four NFL teams and total regular-season wins is the only criterion. Every number is read from /data/draft-2026.json.
 - ⚠️ NOTHING HERE IS GRADED AND NOBODY IS WINNING. Banked cells are observed wins only. If no game has been played, the tracker reads zero because zero is the true number. Say that before discussing any standing. Team-sheet win curves are live in-season (conditioned on banked); ew stays draft-day frozen.
 - ⚠️ EXPECTED WINS IS A MARKET SNAPSHOT, NOT A FORECAST THIS SITE MADE OR GRADED. It is four books' prices devigged and renormalised so all 32 teams sum to 272, frozen at the draft-day devig and never recomputed — because the board's reach and value are claims about that day. It is NOT the posted line; the line carries the hold and this does not.
 - CONSERVATION IS THE WHOLE TRICK: a game pays exactly one win. Seasons are simulated game by game, not by drawing each team's win total, because independent draws would break that and hand a division-stacked roster a spread it does not have. Internal games — two teams on the same roster meeting — are a win that roster is guaranteed to collect and guaranteed to lose.
