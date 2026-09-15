@@ -9692,6 +9692,20 @@ async function bozoGrade(request, env, cors) {
       if (body.graded && automatic.pending.length)
         return json({ error: "Game scores are still pending from the scheduled source.",
           pending: automatic.pending, retryable: true }, 409, cors);
+      // Royale must name the same person it chops. The browser can have an older
+      // loser set than the refreshed results above; never sign its stale verdict.
+      if (body.graded && state.format === "royale") {
+        const pending = Object.keys(state.picks || {}).filter(k => {
+          const r = body.results[k] || {};
+          return r.result == null && r.won == null;
+        });
+        if (pending.length)
+          return json({ error: "Manual results are still pending.", pending, retryable: true }, 409, cors);
+        const decided = royaleDecideChop({ ...state, results: body.results }, state.order);
+        body.bozo = decided.choppedKey || null;
+        body.bozoWhy = decided.ticketCashed ? "Ticket cashed — every leg won."
+          : `${decided.decidedBy} · lost ${state.picks[body.bozo].label} at ${state.picks[body.bozo].price} · funds next week`;
+      }
       const proposal = { v: 1, lid, week: state.week || 1, status,
         expiresAt: Date.now() + 5 * 60 * 1000,
         body: { results: body.results || {}, bozo: body.bozo ?? null,
