@@ -5140,7 +5140,12 @@ const teamOf = n => (league()?.teams || {})[kEnc(n)] || (S.teams||{})[kEnc(n)] |
    grading — everything after the verdict card in render() stopped running. */
 function playerName(key){
   if(key==null) return '';
+  // Graded verdicts and archived weeks store immutable member IDs. Resolve against
+  // this league's live roster before comparing with display-name standings.
+  const ms = (S && S.members) || {};
+  if(Object.prototype.hasOwnProperty.call(ms, key)) return memberLabel(key);
   let d=key; try{ d=decodeURIComponent(key); }catch(e){}
+  if(Object.prototype.hasOwnProperty.call(ms, d)) return memberLabel(d);
   return names().includes(d) ? d : key;
 }
 
