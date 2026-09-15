@@ -45,6 +45,7 @@ vm.runInContext(sliceBetween('const ROYALE_SD = {', 'function rExpected(')   // 
   + '\n' + worker.slice(hmacStart, hmacEnd)
   + '\n' + worker.slice(timingStart, timingEnd)
   + '\n' + worker.slice(gradeStart, gradeEnd)
+  + '\n' + sliceBetween('async function bozoCommitGrade(', '/* ===================== the manager\'s override')
   + '\n' + worker.slice(gradeRouteStart, gradeRouteEnd)
   + `\nthis.api={bozoCsvTable,bozoEasternKickoff,bozoNormalizeNflSchedule,bozoNormalizeCfbSchedule,
       bozoRefreshOneSchedule,bozoPublicScheduleGames,bozoScheduledOutcome,bozoGradeFromScheduleKv,
