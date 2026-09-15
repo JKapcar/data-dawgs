@@ -2,7 +2,7 @@
  "source_page": "/teamdraft.html",
  "tier": "labs",
  "graded": false,
- "as_of": "2026-09-14",
+ "as_of": "2026-09-15",
  "source": "VegasInsider 4-book devigged win totals (2026-08-09) normalized to 272; per-game probabilities refit to those totals over the nflverse 2026 schedule",
  "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 16/272 regular-season games are settled and banked in wins_tracker; 256 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run.",
  "field_notes": {
@@ -7412,7 +7412,7 @@
     "par_delta": 1.63,
     "internal_games": 3,
     "sd_sim": 4.55,
-    "sd_model": 3.588,
+    "sd_model": 3.589,
     "picks_remaining": 0
    },
    "Kevin": {
@@ -7430,7 +7430,7 @@
     "par_delta": -0.63,
     "internal_games": 4,
     "sd_sim": 4.62,
-    "sd_model": 3.54,
+    "sd_model": 3.547,
     "picks_remaining": 0
    },
    "Chris": {
@@ -7448,7 +7448,7 @@
     "par_delta": -1.86,
     "internal_games": 2,
     "sd_sim": 4.58,
-    "sd_model": 3.702,
+    "sd_model": 3.704,
     "picks_remaining": 0
    },
    "Tyler": {
@@ -7466,7 +7466,7 @@
     "par_delta": 1.59,
     "internal_games": 1,
     "sd_sim": 4.7,
-    "sd_model": 3.753,
+    "sd_model": 3.757,
     "picks_remaining": 0
    },
    "Kap": {
@@ -7484,7 +7484,7 @@
     "par_delta": 2.78,
     "internal_games": 3,
     "sd_sim": 4.76,
-    "sd_model": 3.625,
+    "sd_model": 3.62,
     "picks_remaining": 0
    },
    "Jared": {
@@ -7502,7 +7502,7 @@
     "par_delta": -0.33,
     "internal_games": 3,
     "sd_sim": 4.46,
-    "sd_model": 3.617,
+    "sd_model": 3.595,
     "picks_remaining": 0
    },
    "Alan": {
@@ -7520,7 +7520,7 @@
     "par_delta": -4.15,
     "internal_games": 2,
     "sd_sim": 5.08,
-    "sd_model": 3.59,
+    "sd_model": 3.563,
     "picks_remaining": 0
    }
   },
@@ -9213,8 +9213,8 @@
      "id": "sd_models",
      "label": "Two roster standard deviations, and they disagree",
      "ok": true,
-     "detail": "The upstream simulation and the quadrature-plus-head-to-head calculation sit within 1.49 wins of each other (worst: Alan). They diverge most for rosters with internal games, and the simulation is the smaller of the two — it also draws correlated team strength, which quadrature cannot see. The page shows the simulated figure wherever it exists and says when it is falling back.",
-     "value": 1.49,
+     "detail": "The upstream simulation and the quadrature-plus-head-to-head calculation sit within 1.52 wins of each other (worst: Alan). They diverge most for rosters with internal games, and the simulation is the smaller of the two — it also draws correlated team strength, which quadrature cannot see. The page shows the simulated figure wherever it exists and says when it is falling back.",
+     "value": 1.517,
      "severity": "info"
     }
    ]
