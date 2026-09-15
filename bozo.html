@@ -5131,7 +5131,7 @@ const band = () => ({
 // a receipt, and the same person can be different things in different leagues.
 const teamOf = n => (league()?.teams || {})[kEnc(n)] || (S.teams||{})[kEnc(n)] || n;
 
-/* ⚠️ S.bozo and history[].bozo are PICK KEYS, not roster names. decide() takes the
+/* ⚠️ displayBozoKey() and history[].bozo are PICK KEYS, not roster names. decide() takes the
    bozo out of Object.keys(picks), and the Worker stores those URL-encoded — "The
    Kid" is "The%20Kid". Every other comparison in this file uses the decoded name.
    playerName() was CALLED by the verdict card and defined nowhere, so naming a bozo
@@ -5147,6 +5147,29 @@ function playerName(key){
   let d=key; try{ d=decodeURIComponent(key); }catch(e){}
   if(Object.prototype.hasOwnProperty.call(ms, d)) return memberLabel(d);
   return names().includes(d) ? d : key;
+}
+
+/* The committed Royale chop is the adjudicated result. A stale browser verdict
+   can disagree with it; all badge/count/verdict readers use this same record.
+   This is read-only and never re-runs a chop or spends another re-deploy. */
+function weekBozoKey(week, fallback){
+  const chop = S.format === 'royale' && S.royale?.chops?.['w'+week];
+  if(chop && Number(chop.week)===Number(week)){
+    if(chop.ticketCashed===true) return null;
+    if(chop.chopped) return chop.chopped;
+  }
+  return fallback || null;
+}
+function displayBozoKey(){
+  return weekBozoKey(S.week||1,S.bozo);
+}
+function displayBozoWhy(){
+  const key=displayBozoKey(), chop=S.format==='royale' && S.royale?.chops?.['w'+(S.week||1)];
+  if(chop && key){
+    const pick=S.picks?.[key];
+    return `${chop.decidedBy || 'Recorded chop'}${pick ? ' · lost '+pick.label+' at '+pick.price : ''} · funds next week`;
+  }
+  return S.bozoWhy || '';
 }
 
 /* ---------------- the hub: every league in one place ---------------- */
@@ -6059,16 +6082,16 @@ function render(){
   const ar=document.getElementById('adminRow');
   if(ar) ar.style.display = (isManager() && status==='graded') ? '' : 'none';
 
-  document.getElementById('verdict').style.display = (S.bozo && onWeek) ? '' : 'none';
-  if(S.bozo){
-    document.getElementById('vName').textContent = teamOf(playerName(S.bozo));
-    document.getElementById('vWhy').textContent = S.bozoWhy||'';
+  document.getElementById('verdict').style.display = (displayBozoKey() && onWeek) ? '' : 'none';
+  if(displayBozoKey()){
+    document.getElementById('vName').textContent = teamOf(playerName(displayBozoKey()));
+    document.getElementById('vWhy').textContent = displayBozoWhy()||'';
   }
 
   // season table
   const t={}; players.forEach(p=>t[p]=0);
-  (S.history||[]).forEach(h=>{ const b=h&&h.bozo&&playerName(h.bozo); if(b && t[b]!=null) t[b]++; });
-  const bzNow = S.bozo && playerName(S.bozo);
+  (S.history||[]).forEach(h=>{ const b=h&&h.bozo&&playerName(weekBozoKey(h.week,h.bozo)); if(b && t[b]!=null) t[b]++; });
+  const bzNow = displayBozoKey() && playerName(displayBozoKey());
   if(bzNow && t[bzNow]!=null) t[bzNow]++;
   const mx=Math.max(0,...Object.values(t));
   /* ⚠️ WHO HOLDS THE BELT IS NOT WHO HAS WORN IT MOST. The `.fund` plaque marks the
@@ -6108,8 +6131,8 @@ function paintSheet(player){
   const w  = rows.filter(r=>resOf(r)==='won').length;
   const l  = rows.filter(r=>resOf(r)==='lost').length;
   const pv = rows.filter(r=>['push','void'].includes(resOf(r))).length;
-  const bozos = (S.history||[]).filter(h=>h && playerName(h.bozo)===player).length
-    + (S.bozo && playerName(S.bozo)===player ? 1 : 0);
+  const bozos = (S.history||[]).filter(h=>h && playerName(weekBozoKey(h.week,h.bozo))===player).length
+    + (displayBozoKey() && playerName(displayBozoKey())===player ? 1 : 0);
   const priced = rows.filter(r=>Number.isFinite(r.price));
   const avgPx = priced.length ? Math.round(priced.reduce((a,r)=>a+r.price,0)/priced.length) : null;
   const chalk = rows.filter(r=>r.shortestOdds).length;
@@ -6654,7 +6677,7 @@ function paintSlip(players, picks, status, live){
       : 'on';
     const cls = [ 'leg', state,
       (ME && p===ME.name) ? 'mine' : '',
-      (S.bozo && playerName(S.bozo)===p) ? 'bz' : '' ].filter(Boolean).join(' ');
+      (displayBozoKey() && playerName(displayBozoKey())===p) ? 'bz' : '' ].filter(Boolean).join(' ');
     const mark = state==='won' ? '✓' : state==='lost' ? '✕' : state==='void' ? '—' : (i+1);
     if(!inPool){
       // ⚠️ Bozo Royale: a chopped player is not "waiting to submit", they are OUT — and
@@ -7383,10 +7406,10 @@ function leverStandings(live){
    the second thing. Before this week is graded the holder is last week's — you keep it
    until somebody takes it off you, which is the entire idea of a belt. */
 function beltHolder(){
-  const now = S.bozo && playerName(S.bozo);
+  const now = displayBozoKey() && playerName(displayBozoKey());
   if(now) return now;
   const hist = (S.history||[]).filter(h=>h&&h.bozo);
-  return hist.length ? playerName(hist[hist.length-1].bozo) : null;
+  return hist.length ? playerName(weekBozoKey(hist[hist.length-1].week,hist[hist.length-1].bozo)) : null;
 }
 
 /* ---------------- season, as a split-flap board ---------------- */
@@ -7514,7 +7537,7 @@ function bozoCtx(){
   L.push(ord && ord.length
     ? `HIERARCHY DRAWN for this week: ${ord.map((li,i)=>`${i+1}. ${LEVERS[li].name}`).join(', ')}.`
     : `HIERARCHY NOT DRAWN YET — the order is decided on the server when the last leg lands. Do not guess it.`);
-  if(S.bozo) L.push(`THIS WEEK'S BOZO: ${teamOf(playerName(S.bozo))} — ${S.bozoWhy||''}`);
+  if(displayBozoKey()) L.push(`THIS WEEK'S BOZO: ${teamOf(playerName(displayBozoKey()))} — ${displayBozoWhy()||''}`);
   const fl = flaggedRows();
   L.push(fl.length
     ? `FLAGGED FOR REVIEW (${fl.length}): submitted price far from the close. NOT an accusation — a real steam move can do this. Report it neutrally if asked and never call anyone a cheat:\n`
@@ -7522,8 +7545,8 @@ function bozoCtx(){
     : `FLAGGED FOR REVIEW: none. ⚠️ Note that closing prices are not captured yet, so this check is DORMANT rather than passing — say "nothing is being checked yet", not "everything looks clean".`);
 
   const t={}; players.forEach(p=>t[p]=0);
-  (S.history||[]).forEach(h=>{ const b=h&&h.bozo&&playerName(h.bozo); if(b&&t[b]!=null) t[b]++; });
-  const bzNow=S.bozo&&playerName(S.bozo); if(bzNow&&t[bzNow]!=null) t[bzNow]++;
+  (S.history||[]).forEach(h=>{ const b=h&&h.bozo&&playerName(weekBozoKey(h.week,h.bozo)); if(b&&t[b]!=null) t[b]++; });
+  const bzNow=displayBozoKey()&&playerName(displayBozoKey()); if(bzNow&&t[bzNow]!=null) t[bzNow]++;
   const mx=Math.max(0,...Object.values(t));
   L.push(`SEASON (bozos worn): ` + players.slice().sort((a,b)=>t[b]-t[a]||a.localeCompare(b))
     .map(p=>`${teamOf(p)} ${t[p]}${t[p]===mx&&mx>0?' (funds this week)':''}`).join(', '));
@@ -8795,7 +8818,7 @@ function paintRoyaleLog(){
         ? ` <span class="passed">passed: ` + c.leversPassed.map(x=>
             `${esc(x.lever)} <span class="${x.why==='unmeasurable'?'unmeas':'tie'}">(${esc(x.why)})</span>`).join(', ')
           + `</span>` : '';
-      return `<li>Week ${c.week} — <span class="who">${esc(teamOf(c.chopped))}</span>`
+      return `<li>Week ${c.week} — <span class="who">${esc(teamOf(playerName(c.chopped)))}</span>`
         + ` <span class="by">by ${esc(c.decidedBy||'—')}</span>${passed}`
         // ⚠️ Read both spellings. Chop records written before the rename say `boughtBack`,
         // and they are the same event — a player who came back. Reading only the new name
