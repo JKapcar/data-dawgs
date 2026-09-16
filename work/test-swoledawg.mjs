@@ -32,7 +32,7 @@ fs.writeFileSync(BUNDLE, BUNDLED_SRC +
   "\nexport { MCP_TOOLS, swoleWeekOf, swoleEffortFor, swoleSetsFor, swoleStartSession," +
   " swoleLogSet, swoleFinishSession, swoleLogMeasurement, swoleLogNutrition, swoleNutrition, swoleSummary," +
   " swoleMeasurementHistory, swoleLogRecovery, swoleRecovery," +
-  " swoleGetProgram, swolePutProgram, swoleSession, swoleDayKeyFor };\n");
+  " swoleGetProgram, swolePutProgram, swoleSession, swoleDayKeyFor, swolePlan };\n");
 globalThis.fetch = async () => new Response("null", { status: 404 });
 const W = await import(pathToFileURL(BUNDLE).href);
 
@@ -118,7 +118,13 @@ function makeDb(seed) {
       return { first: t.nutrition.find(x => x.uid === b[0] && x.date === b[1]) || null };
     if (/^SELECT date, kcal, protein_g, note, source FROM nutrition/.test(s))
       return { all: { results: t.nutrition.filter(x => x.uid === b[0]) } };
-    if (/^SELECT \* FROM sessions/.test(s)) return { first: t.sessions.find(x => x.uid === b[0] && x.date === b[1]) || null };
+    if (/^UPDATE sessions SET plan_json/.test(s)) {
+      const row=t.sessions.find(x=>x.uid===b[2]&&x.id===b[3]);
+      if(row){row.plan_json=b[0];row.plan_selected_at=b[1];row.completed_at=null;}return {first:null};
+    }
+    if (/^SELECT \* FROM sessions/.test(s)) return { first: t.sessions.filter(x => x.uid === b[0] && x.date === b[1]
+      && (b[2]===undefined||x.id===b[2]) && (!s.includes('plan_json IS NOT NULL')||(x.plan_json!=null&&!x.completed_at)))
+      .sort((a,b)=>(b.plan_selected_at||b.started_at).localeCompare(a.plan_selected_at||a.started_at))[0] || null };
     if (/^SELECT exercise_id, exercise_name/.test(s))
       return { all: { results: t.sets.filter(x => x.uid === b[0] && x.session_id === b[1]) } };
     return { first: null, all: { results: [] } };
@@ -463,24 +469,52 @@ console.log("\nannotations match what these tools actually do");
 }
 
 
+console.log("\nshared session plans and cross-day logging");
+{
+  const db=seeded(),e=env(db);
+  const invalid=await W.swoleStartSession(e,'kap','2026-09-15',null,'mcp',{select:true,exercise_ids:['mon_1','missing']});
+  ok('unknown ids reject the entire plan without creating a session',invalid.error&&db._t.sessions.length===0);
+  const both=await W.swoleStartSession(e,'kap','2026-09-15','mon','mcp',{select:true,exercise_ids:['mon_1']});
+  ok('day plus exercises is refused',!!both.error);
+  const hybrid=await W.swoleStartSession(e,'kap','2026-09-15',null,'mcp',{select:true,exercise_ids:['mon_5','mon_1']});
+  ok('custom plan starts on a different calendar weekday',hybrid.ok&&hybrid.day_key==='custom');
+  const read=await W.swoleSession(e,'kap','2026-09-15');
+  ok('session reads return parsed plan in exact order',read.session.plan_json.join(',')==='mon_5,mon_1');
+  const logged=await W.swoleLogSet(e,'kap',{date:'2026-09-15',exercise:'mon_1',reps:10,weight_lb:30},'web');
+  ok('logging follows the selected hybrid rather than the weekday',!logged.error&&db._t.sets[0]?.session_id===hybrid.id);
+  const foreign=await W.swoleSession(e,'other','2026-09-15',hybrid.id);
+  ok('session id reads cannot cross uid boundaries',!!foreign.error);
+  const before=read.session.started_at;
+  await W.swoleStartSession(e,'kap','2026-09-15',null,'mcp',{select:true,exercise_ids:['mon_1']});
+  const after=await W.swoleSession(e,'kap','2026-09-15');
+  ok('changing a plan preserves the original session start and sets',after.session.started_at===before&&after.sets.length===1);
+  ok('Sunday has no scheduled workout',W.swolePlan(PROGRAM,'2026-09-20').key===null);
+  ok('Wednesday defaults to ruck',W.swolePlan(PROGRAM,'2026-09-16').key==='ruck');
+  ok('Monday defaults to Push',W.swolePlan(PROGRAM,'2026-09-14').key==='mon');
+  ok('duplicate ids are refused',!!W.swolePlan(PROGRAM,'2026-09-14',null,['mon_1','mon_1']).error);
+}
+
 console.log("\nsession picker persistence, identity and targets");
 {
   const html=fs.readFileSync(resolve(WORK,"..","swoledawg.html"),"utf8");
   const code=html.slice(html.indexOf('const SD_DAYS ='),html.indexOf('/* ---- Training tab, program mode'));
   let stored=null,warning=null,renders=0;
   const ctx=vm.createContext({PROG:{days:[{day:'monday',exercises:[{id:'mon_1',name:'Press'}]},{day:'friday',exercises:[{id:'fri_3',name:'Curl'}]}]},
-    PLAN_DAY:'2026-09-16',DATA:{days:[]},localStorage:{getItem:()=>stored,setItem:(k,v)=>stored=v,removeItem:()=>stored=null},
+    window:{addEventListener:()=>{}},PLAN_DAY:'2026-09-16',DATA:{days:[]},localStorage:{getItem:()=>stored,setItem:(k,v)=>stored=v,removeItem:()=>stored=null},
     sdDayOf:(p,k)=>p.days.find(d=>d.day===k),toast:x=>warning=x,training:()=>renders++});
+  let serverSession;
+  ctx.sdPost=async (path,body)=>{serverSession={id:'kap:date',date:body.date,day_key:body.day_key||'custom',plan_json:body.exercise_ids||['mon_1']};};
+  ctx.sdGet=async ()=>({session:serverSession});
   vm.runInContext(code,ctx);
   const run=x=>vm.runInContext(x,ctx);
   ok('all weekdays are mapped, Sunday is null',run('Object.keys(SD_WEEKDAY_DEFAULT).length===7 && SD_WEEKDAY_DEFAULT[0]===null'));
-  run("sdChoose('custom',['fri_3','mon_1'])");
+  await run("sdChoose('custom',['fri_3','mon_1'])");
   ok('today restores the chosen order',run("sdReadChoice('2026-09-16').exercise_ids.join(',')")==='fri_3,mon_1');
   ok('a stale choice returns the picker',run("sdReadChoice('2026-09-17')")===null);
   stored='{bad';ok('corrupt JSON returns the picker',run("sdReadChoice('2026-09-16')")===null);
-  stored=null;run("sdChoose('custom',[])");ok('empty custom selection is refused',warning&&stored===null);
-  run("sdChoose('custom',['unknown'])");ok('unknown exercise ids are refused',stored===null);
-  run("sdChoose('mon',['mon_1'])");ok('preset retains ledger ids',JSON.parse(stored).exercise_ids[0]==='mon_1');
+  stored=null;await run("sdChoose('custom',[])");ok('empty custom selection is refused',warning&&stored===null);
+  await run("sdChoose('custom',['unknown'])");ok('unknown exercise ids are refused',stored===null);
+  await run("sdChoose('mon',['mon_1'])");ok('preset retains ledger ids',JSON.parse(stored).exercise_ids[0]==='mon_1');
   run('sdChangeDay()');ok('Change day clears the choice without clearing data',stored===null&&run('DATA.days.length')===0);
   ctx.localStorage.getItem=()=>{throw Error('blocked');};
   ok('blocked storage returns the picker',run("sdReadChoice('2026-09-16')")===null);
@@ -491,6 +525,49 @@ console.log("\nsession picker persistence, identity and targets");
   ok('starting targets are 10/10/8/8',target.chest===10&&target.back===10&&target.biceps===8&&target.triceps===8);
   for(const script of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))if(!script[0].includes('application/json'))new vm.Script(script[1]);
   ok('all inline scripts parse',true);
+  ctx.iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  ctx.sdMonday=d=>{const x=new Date(d+'T12:00:00');x.setDate(x.getDate()-(x.getDay()+6)%7);return x;};
+  ctx.DATA.days=[{date:'2026-09-13',training:{weights:{exercises:[{exercise_id:'mon_1',sets:[{},{}]}]}}},{date:'2026-09-15',training:{weights:{exercises:[{exercise_id:'mon_1',sets:[{}]}]}}}];
+  ok('picker counts this ISO week rather than a rolling window',run("sdPickerStats('mon').sets")===1&&run("sdPickerStats('mon').last")==='2026-09-15');
+  run("SD_PICKER_OPEN=false;SD_SERVER_CHOICE=sdServerChoice({date:PLAN_DAY,day_key:'custom',plan_json:['fri_3','mon_1']},PLAN_DAY)");
+  ok('server plan takes precedence over local storage',run('sdChoiceFor(PLAN_DAY).exercise_ids.join(",")')==='fri_3,mon_1');
+  const elements=new Map();
+  ctx.document={getElementById:id=>{if(!elements.has(id))elements.set(id,{style:{},innerHTML:''});return elements.get(id);},querySelectorAll:()=>[]};
+  Object.assign(ctx,{planPicker:()=>{},PROG_V:1,sdWeekOf:()=>1,sdEffort:()=>null,sdSetsFor:()=>1,
+    esc:String,normKey:String,sdArt:()=>'',sdRest:()=>'',XT_EGG:''});
+  vm.runInContext(html.slice(html.indexOf('function trainingProgram(){'),html.indexOf('/* ⚠️ Writes go one set')),ctx);
+  run('trainingProgram()');
+  const rendered=elements.get('planBody').innerHTML;
+  ok('stored custom order is the rendered exercise order',rendered.indexOf('data-exid="fri_3"')>=0&&rendered.indexOf('data-exid="fri_3"')<rendered.indexOf('data-exid="mon_1"'));
+  ok('stored custom plan displays Custom in the header',elements.get('answerBox').innerHTML.includes('Custom'));
+  run("SD_SERVER_CHOICE=sdServerChoice({date:PLAN_DAY,day_key:'monday',plan_json:['mon_1']},PLAN_DAY);trainingProgram()");
+  ok('legacy Monday plan displays Push, not its weekday name',elements.get('answerBox').innerHTML.includes('Push'));
+  const previous=run('SD_SERVER_CHOICE');ctx.sdPost=async()=>{throw Error('offline');};
+  await run("sdChoose('custom',['fri_3'])");
+  ok('failed plan save preserves the previous selected session',run('SD_SERVER_CHOICE')===previous&&warning.includes('offline'));
+
+}
+
+console.log('\nidempotent migration against real SQLite');
+{
+  const {migrateSessionPlan}=await import('./migrate-swoledawg-session-plan.mjs');
+  const {execFileSync}=await import('node:child_process');
+  const dbPath=join(tmpdir(),'swoledawg-migration-'+process.pid+'.sqlite');
+  const query=async sql=>JSON.parse(execFileSync('python3',['-c',`import sqlite3,json,sys
+c=sqlite3.connect(sys.argv[1]);c.row_factory=sqlite3.Row
+r=c.execute(sys.argv[2]);rows=[dict(x) for x in r.fetchall()];c.commit();print(json.dumps(rows))`,dbPath,sql],{encoding:'utf8'}));
+  await query('CREATE TABLE sessions (id TEXT PRIMARY KEY, uid TEXT, day_key TEXT)');
+  await query('CREATE TABLE sets (session_id TEXT, uid TEXT, exercise_id TEXT)');
+  await query("INSERT INTO sessions VALUES ('majority','a','tuesday'),('tie','a','monday'),('empty','b','wednesday')");
+  await query("INSERT INTO sets VALUES ('majority','a','mon_1'),('majority','a','mon_2'),('majority','a','fri_3'),('tie','a','mon_1'),('tie','a','fri_3'),('majority','other','fri_3')");
+  await migrateSessionPlan(query);
+  const first=await query('SELECT * FROM sessions ORDER BY id');
+  ok('backfill uses majority prefix and ignores other uid rows',first.find(x=>x.id==='majority').day_key==='monday');
+  ok('tied prefixes become custom',first.find(x=>x.id==='tie').day_key==='custom');
+  ok('backfilled rows retain null plans',first.every(x=>x.plan_json===null));
+  await migrateSessionPlan(query);
+  ok('migration runs twice without errors or data changes',JSON.stringify(first)===JSON.stringify(await query('SELECT * FROM sessions ORDER BY id')));
+  fs.unlinkSync(dbPath);
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);

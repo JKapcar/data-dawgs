@@ -9954,23 +9954,44 @@ function swoleDayOf(programDoc, dayKey) {
   return ((programDoc && programDoc.days) || []).find(d => d.day === dayKey) || null;
 }
 
-async function swoleStartSession(env, uid, dateISO, dayKey, source) {
+const SWOLE_PRESETS={mon:'monday',tue:'tuesday',thu:'thursday',fri:'friday',ruck:'wednesday'};
+const SWOLE_WEEKDAY_DEFAULT={0:null,1:'mon',2:'tue',3:'ruck',4:'thu',5:'fri',6:'ruck'};
+function swolePlan(doc,dateISO,dayKey,exerciseIds){
+  if(dayKey!=null&&exerciseIds!==undefined)return {error:'day and exercises are mutually exclusive.'};
+  const all=(doc.days||[]).flatMap(d=>d.exercises||[]);
+  if(exerciseIds!==undefined){
+    if(!Array.isArray(exerciseIds)||!exerciseIds.length||exerciseIds.some(id=>typeof id!=='string'||!all.some(e=>e.id===id))||new Set(exerciseIds).size!==exerciseIds.length)
+      return {error:'exercises must be a non-empty array of distinct current program exercise ids; unknown ids are refused.'};
+    return {key:'custom',storageKey:'custom',ids:exerciseIds,day:{name:'Custom',exercises:exerciseIds.map(id=>all.find(e=>e.id===id))}};
+  }
+  const raw=dayKey??SWOLE_WEEKDAY_DEFAULT[new Date(dateISO+'T12:00:00Z').getUTCDay()];
+  if(raw===null)return {key:null,storageKey:'sunday',ids:[],day:{name:'Rest',exercises:[]}};
+  const full=SWOLE_PRESETS[raw]||raw;
+  const key=Object.keys(SWOLE_PRESETS).find(k=>SWOLE_PRESETS[k]===full)||(full==='saturday'?'ruck':full==='sunday'?null:undefined);
+  if(key===undefined)return {error:'Unknown session day.'};
+  const day=swoleDayOf(doc,full)||(key==='ruck'?{name:'Ruck',exercises:[]}:null);
+  if(!day)return {error:"No day '"+full+"' in the program."};
+  return {key,storageKey:full,ids:(day.exercises||[]).map(e=>e.id),day};
+}
+async function swoleStartSession(env, uid, dateISO, dayKey, source, options={}) {
   const db = swoleDb(env); if (!db) return swoleNoDb();
   if (!swoleValidDate(dateISO)) return { error: "Date must be YYYY-MM-DD." };
-  const prog = await swoleGetProgram(env, uid);
-  if (!prog) return { error: "No program is seeded for this account yet. Seed program.json first." };
-  const key = dayKey || swoleDayKeyFor(dateISO);
-  const day = swoleDayOf(prog.doc, key);
-  if (!day) return { error: "No day '" + key + "' in the program." };
-  const id = swoleSessionId(uid, dateISO, key);
-  const week = swoleWeekOf(prog.doc, dateISO);
-  const type = (day.exercises && day.exercises.length) ? "lift" : (day.name || "").toLowerCase().includes("ruck") ? "ruck" : "rest";
-  const existing = await db.prepare("SELECT id, started_at, completed_at FROM sessions WHERE id = ? AND uid = ?").bind(id, uid).first();
-  if (existing) return { ok: true, id, week, day: key, already_open: !existing.completed_at, reopened: false };
-  await db.prepare(
-    "INSERT INTO sessions (id, uid, date, day_key, session_type, block, week, started_at) VALUES (?,?,?,?,?,?,?,?)"
-  ).bind(id, uid, dateISO, key, type, prog.doc.block || 1, week, swoleNow()).run();
-  return { ok: true, id, week, day: key, name: day.name, source };
+  const prog=await swoleGetProgram(env,uid);
+  if(!prog)return {error:'No program is seeded for this account yet.'};
+  const plan=swolePlan(prog.doc,dateISO,dayKey,options.exercise_ids);
+  if(plan.error)return plan;
+  const id=swoleSessionId(uid,dateISO,plan.storageKey),week=swoleWeekOf(prog.doc,dateISO);
+  const existing=await db.prepare('SELECT id, started_at, completed_at FROM sessions WHERE id = ? AND uid = ?').bind(id,uid).first();
+  if(!existing){
+    await db.prepare('INSERT INTO sessions (id, uid, date, day_key, session_type, block, week, started_at) VALUES (?,?,?,?,?,?,?,?)')
+      .bind(id,uid,dateISO,plan.storageKey,plan.ids.length?'lift':plan.key==='ruck'?'ruck':'rest',prog.doc.block||1,week,swoleNow()).run();
+  }
+  // Internal set logging never changes an explicit selection or replaces its ordered plan.
+  if(options.select){
+    await db.prepare('UPDATE sessions SET plan_json = ?, plan_selected_at = ?, completed_at = NULL WHERE uid = ? AND id = ?')
+      .bind(JSON.stringify(plan.ids),swoleNow(),uid,id).run();
+  }
+  return {ok:true,id,week,day:plan.storageKey,day_key:plan.key,plan_json:plan.ids,name:plan.day.name,source,already_open:!!existing&&!existing.completed_at};
 }
 
 // One write path for a set, shared by the browser and by sd_log_set. UPSERT on
@@ -9982,8 +10003,15 @@ async function swoleLogSet(env, uid, a, source) {
   if (!swoleValidDate(dateISO)) return { error: "Date must be YYYY-MM-DD." };
   const prog = await swoleGetProgram(env, uid);
   if (!prog) return { error: "No program is seeded for this account yet." };
-  const dayKey = a.day_key || swoleDayKeyFor(dateISO);
-  const day = swoleDayOf(prog.doc, dayKey);
+  let selected=null;
+  if(!a.day_key)selected=await db.prepare('SELECT * FROM sessions WHERE uid = ? AND date = ? AND plan_json IS NOT NULL AND completed_at IS NULL ORDER BY plan_selected_at DESC LIMIT 1').bind(uid,dateISO).first();
+  let dayKey=a.day_key||swoleDayKeyFor(dateISO),day;
+  if(selected){
+    let ids;try{ids=JSON.parse(selected.plan_json);}catch{return {error:'Stored session plan is invalid.'};}
+    const plan=swolePlan(prog.doc,dateISO,null,ids);
+    if(plan.error)return plan;
+    dayKey=selected.day_key;day=plan.day;
+  }else day=swoleDayOf(prog.doc,SWOLE_PRESETS[dayKey]||dayKey);
   if (!day) return { error: "No day '" + dayKey + "' in the program." };
 
   // id, then exact name, then substring, then every token present — "flat bench" has to
@@ -10014,7 +10042,7 @@ async function swoleLogSet(env, uid, a, source) {
     return { error: "No exercise matching '" + a.exercise + "' on " + dayKey + ".",
              candidates: list.map(e => ({ id: e.id, name: e.name })) };
   }
-  const started = await swoleStartSession(env, uid, dateISO, dayKey, source);
+  const started = selected ? {id:selected.id,week:selected.week} : await swoleStartSession(env, uid, dateISO, dayKey, source);
   if (started.error) return started;
 
   const effort = swoleEffortFor(prog.doc, started.week);
@@ -10071,7 +10099,7 @@ async function swoleLogSet(env, uid, a, source) {
 async function swoleFinishSession(env, uid, dateISO, notes) {
   const db = swoleDb(env); if (!db) return swoleNoDb();
   if (!swoleValidDate(dateISO)) return { error: "Date must be YYYY-MM-DD." };
-  const row = await db.prepare("SELECT id, day_key, week FROM sessions WHERE uid = ? AND date = ? ORDER BY started_at DESC LIMIT 1").bind(uid, dateISO).first();
+  const row = await db.prepare("SELECT id, day_key, week FROM sessions WHERE uid = ? AND date = ? ORDER BY COALESCE(plan_selected_at, started_at) DESC LIMIT 1").bind(uid, dateISO).first();
   if (!row) return { error: "No session on " + dateISO + "." };
   await db.prepare("UPDATE sessions SET completed_at = ?, notes = COALESCE(?, notes) WHERE id = ? AND uid = ?")
     .bind(swoleNow(), notes || null, row.id, uid).run();
@@ -10083,14 +10111,16 @@ async function swoleFinishSession(env, uid, dateISO, notes) {
            volume_lb: (agg && agg.volume) || 0 };
 }
 
-async function swoleSession(env, uid, dateISO) {
-  const db = swoleDb(env); if (!db) return swoleNoDb();
-  const s = await db.prepare("SELECT * FROM sessions WHERE uid = ? AND date = ? ORDER BY started_at DESC LIMIT 1").bind(uid, dateISO).first();
-  if (!s) return { error: "No session on " + dateISO + "." };
-  const rows = await db.prepare(
-    "SELECT exercise_id, exercise_name, set_number, weight_lb, reps, rir, rest_taken_s, source FROM sets WHERE uid = ? AND session_id = ? ORDER BY exercise_id, set_number"
-  ).bind(uid, s.id).all();
-  return { session: s, sets: (rows && rows.results) || [] };
+async function swoleSession(env, uid, dateISO, sessionId) {
+  const db=swoleDb(env);if(!db)return swoleNoDb();
+  const s=sessionId
+    ? await db.prepare('SELECT * FROM sessions WHERE uid = ? AND date = ? AND id = ?').bind(uid,dateISO,sessionId).first()
+    : await db.prepare('SELECT * FROM sessions WHERE uid = ? AND date = ? ORDER BY COALESCE(plan_selected_at, started_at) DESC LIMIT 1').bind(uid,dateISO).first();
+  if(!s)return {error:'No session on '+dateISO+'.'};
+  let plan=null;
+  try{plan=s.plan_json==null?null:JSON.parse(s.plan_json);}catch{return {error:'Stored session plan is invalid.'};}
+  const rows=await db.prepare('SELECT exercise_id, exercise_name, set_number, weight_lb, reps, rir, rest_taken_s, source FROM sets WHERE uid = ? AND session_id = ? ORDER BY exercise_id, set_number').bind(uid,s.id).all();
+  return {session:{...s,plan_json:plan},sets:rows?.results||[]};
 }
 
 async function swoleRecentSessions(env, uid, n) {
@@ -10290,7 +10320,7 @@ async function handleSwole(request, url, env, cors) {
     if (path === "/summary")  return wrap(await swoleSummary(env, uid));
     if (path === "/program")  { const p = await swoleGetProgram(env, uid); return wrap(p ? { version: p.version, program: p.doc } : { error: "No program seeded." }); }
     if (path === "/sessions") return wrap(await swoleRecentSessions(env, uid, q.get("n")));
-    if (path === "/session")  return wrap(await swoleSession(env, uid, q.get("date") || ""));
+    if (path === "/session")  return wrap(await swoleSession(env, uid, q.get("date") || "", q.get("id")));
     if (path === "/measurements") return wrap(await swoleMeasurementHistory(env, uid, q.get("field") || "", q.get("n")));
     if (path === "/nutrition") return wrap(await swoleNutrition(env, uid, { date: q.get("date"), n: q.get("n") }));
     if (path === "/recovery") return wrap(await swoleRecovery(env, uid, { date: q.get("date"), n: q.get("n") }));
@@ -10299,7 +10329,7 @@ async function handleSwole(request, url, env, cors) {
   if (request.method !== "POST") return json({ error: "GET or POST only." }, 405, cors);
 
   if (path === "/program")   return wrap(await swolePutProgram(env, uid, body.program, body.note));
-  if (path === "/session/start")  return wrap(await swoleStartSession(env, uid, body.date, body.day_key, "web"));
+  if (path === "/session/start")  return wrap(await swoleStartSession(env, uid, body.date, body.day_key, "web", {select:true,exercise_ids:body.exercise_ids}));
   if (path === "/session/finish") return wrap(await swoleFinishSession(env, uid, body.date, body.notes));
   if (path === "/set")       return wrap(await swoleLogSet(env, uid, body, "web"));
   if (path === "/nutrition") return wrap(await swoleLogNutrition(env, uid, body, "web"));
@@ -21004,15 +21034,18 @@ const MCP_TOOLS = [
     title: "SwoleDawg — start a session",
     catalog: "core",
     readOnlyHint: false,
-    description: "Open a training session. The day is inferred from the date's weekday unless you name one. Idempotent: starting a session that already exists returns it rather than creating a second. sd_log_set opens the session on its own, so you rarely need this first.",
+    description: "Omit both day and exercises to use the weekday default. Pass exercises to start a hybrid session from existing program exercise ids; new exercises cannot be created here. day and exercises are mutually exclusive. Select or reopen a training session without deleting logged sets. Existing legacy day_key values are accepted for compatibility; do not combine day_key with day or exercises. Subsequent sd_log_set calls without day_key use the selected plan.",
     inputSchema: { type: "object", properties: {
       date: { type: "string", description: "YYYY-MM-DD (default: today)" },
+      day: {type:"string",enum:["mon","tue","thu","fri","ruck"]},
+      exercises: {type:"array",items:{type:"string"},minItems:1,uniqueItems:true},
       day_key: { type: "string", description: "monday|tuesday|… — override the weekday inference" },
     }, additionalProperties: false },
     async run(args, env, caller) {
       if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
       const uid = caller.uid || caller.name;
-      const r = await swoleStartSession(env, uid, args.date || new Date().toISOString().slice(0, 10), args.day_key, "mcp");
+      if(args.day!==undefined&&args.day_key!==undefined)return toolErr("Use day or legacy day_key, not both.");
+      const r = await swoleStartSession(env, uid, args.date || new Date().toISOString().slice(0, 10), args.day??args.day_key, "mcp", {select:true,exercise_ids:args.exercises});
       return r.error ? toolErr(r.error) : toolText(r);
     },
   },

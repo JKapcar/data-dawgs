@@ -8235,6 +8235,7 @@ function sdHeightCm(){
 
 async function sdLoad(){
   PROG = null; PROG_V = null; SUMMARY = null; APIMODE = false; API_NOTE = null;
+  SD_SERVER_CHOICE=null;SD_SERVER_STAMP=null;SD_SERVER_SETS=[];SD_CHOICE=null;SD_CHOICE_LOADED=false;SD_PICKER_OPEN=false;
   try {
     const p = await sdGet('/program');
     if(p && p.program && Array.isArray(p.program.days)){
@@ -8247,6 +8248,7 @@ async function sdLoad(){
     API_NOTE = 'Could not reach the training log: ' + e.message;
     return false;
   }
+  await sdRefreshSessionPlan();
   try { SUMMARY = await sdGet('/summary'); }
   catch(e){ SUMMARY = null; API_NOTE = 'Measurements unavailable: ' + e.message; }
   return true;
@@ -8300,10 +8302,9 @@ async function sdHydrateDays(){
   try { const r = await sdGet('/sessions?n=30'); list = (r && r.sessions) || []; }
   catch(e){ return []; }
   const days = [];
-  // The current API reads by date. Hydrate each date once, avoiding duplicate counts.
-  for(const s of list.filter((s,i,a)=>a.findIndex(x=>x.date===s.date)===i)){
+  for(const s of list){
     let detail = null;
-    try { detail = await sdGet('/session?date=' + encodeURIComponent(s.date)); }
+    try { detail = await sdGet('/session?date=' + encodeURIComponent(s.date)+'&id='+encodeURIComponent(s.id)); }
     catch(e){ continue; }
     const byEx = new Map();
     for(const row of (detail.sets || [])){
@@ -8333,6 +8334,19 @@ async function sdHydrateDays(){
       week: s.week, session_id: s.id, day_key: s.day_key
     });
   }
+  const merged=new Map();
+  for(const d of days){
+    if(!merged.has(d.date)){merged.set(d.date,d);continue;}
+    const existing=merged.get(d.date),w=d.training.weights;
+    if(!w)continue;
+    if(!existing.training.weights){existing.training=d.training;continue;}
+    for(const ex of w.exercises){
+      const prev=existing.training.weights.exercises.find(e=>e.exercise_id===ex.exercise_id);
+      if(prev)prev.sets.push(...ex.sets);else existing.training.weights.exercises.push(ex);
+    }
+    existing.training.weights.total_sets+=w.total_sets;
+  }
+  days.splice(0,days.length,...merged.values());
   await sdMergeMeasurements(days);
   await sdMergeNutrition(days);
   await sdMergeDevice(days);
@@ -8535,6 +8549,8 @@ const SD_DAYS = [
 ];
 const SD_WEEKDAY_DEFAULT = {0:null,1:'mon',2:'tue',3:'ruck',4:'thu',5:'fri',6:'ruck'};
 let SD_CHOICE=null, SD_CHOICE_LOADED=false, SD_CUSTOM=null;
+let SD_SERVER_CHOICE=null, SD_SERVER_STAMP=null, SD_PICKER_OPEN=false, SD_SERVER_SETS=[];
+let SD_PICK_BUSY=false;
 function sdProgramExercises(){return (PROG.days||[]).flatMap(d=>(d.exercises||[]).map(e=>({...e,program_day:d.day})));}
 function sdValidateChoice(c,date){
   if(!c||c.date!==date||!['custom',...SD_DAYS.map(d=>d.key)].includes(c.day_key)||!Array.isArray(c.exercise_ids))return null;
@@ -8549,18 +8565,60 @@ function sdValidateChoice(c,date){
   return c;
 }
 function sdReadChoice(date){try{return sdValidateChoice(JSON.parse(localStorage.getItem('sd.sessionChoice')),date);}catch(e){return null;}}
+function sdServerChoice(session,date){
+  if(!session||session.date!==date||session.completed_at||!Array.isArray(session.plan_json))return null;
+  const key=SD_DAYS.find(d=>d.day===session.day_key||d.key===session.day_key)?.key||(session.day_key==='saturday'?'ruck':session.day_key);
+  const c={date,day_key:key,exercise_ids:session.plan_json};
+  // Validate ids and ordering even if a stored preset no longer matches a newer program.
+  const ids=new Set(sdProgramExercises().map(e=>e.id));
+  if(!['custom',...SD_DAYS.map(d=>d.key)].includes(key)||c.exercise_ids.some(id=>!ids.has(id))||new Set(c.exercise_ids).size!==c.exercise_ids.length)
+    throw new Error('Stored session plan no longer matches the program. Choose a session to continue.');
+  if(key==='custom'&&!c.exercise_ids.length)throw new Error('Stored custom session is empty.');
+  return c;
+}
+async function sdRefreshSessionPlan(){
+  if(!APIMODE||SD_PICK_BUSY)return false;
+  try{
+    const r=await sdGet('/session?date='+iso(new Date()));
+    const c=sdServerChoice(r.session,iso(new Date()));
+    SD_SERVER_SETS=r.sets||[];
+    const stamp=JSON.stringify([r.session?.id,r.session?.plan_selected_at,c]);
+    if(stamp===SD_SERVER_STAMP)return false;
+    SD_SERVER_STAMP=stamp;SD_SERVER_CHOICE=c;SD_PICKER_OPEN=false;
+    return true;
+  }catch(e){
+    if(!/No session on/.test(e.message))toast(e.message);
+    return false;
+  }
+}
+window.addEventListener('focus',async()=>{if(await sdRefreshSessionPlan())training();});
 function sdChoiceFor(date){
+  if(SD_PICKER_OPEN)return null;
+  if(SD_SERVER_CHOICE?.date===date)return SD_SERVER_CHOICE;
   if(!SD_CHOICE_LOADED){SD_CHOICE=sdReadChoice(iso(new Date()));SD_CHOICE_LOADED=true;}
   return sdValidateChoice(SD_CHOICE,date);
 }
-function sdChoose(key,ids){
+async function sdChoose(key,ids){
   const c=sdValidateChoice({date:PLAN_DAY,day_key:key,exercise_ids:ids},PLAN_DAY);
   if(!c){toast('Select at least one valid program exercise.');return;}
+  if(SD_PICK_BUSY)return;
+  SD_PICK_BUSY=true;
+  try{
+    await sdPost('/session/start',key==='custom'?{date:PLAN_DAY,exercise_ids:ids}:{date:PLAN_DAY,day_key:key});
+    const r=await sdGet('/session?date='+encodeURIComponent(PLAN_DAY));
+    const saved=sdServerChoice(r.session,PLAN_DAY);
+    if(!saved||JSON.stringify(saved.exercise_ids)!==JSON.stringify(ids))throw new Error('Session readback differs from the requested plan.');
+    SD_SERVER_SETS=r.sets||[];
+    SD_SERVER_CHOICE=saved;SD_SERVER_STAMP=JSON.stringify([r.session.id,r.session.plan_selected_at,saved]);
+  }catch(e){toast('Session not selected — '+e.message);return;}
+  finally{SD_PICK_BUSY=false;}
+  SD_PICKER_OPEN=false;
   SD_CHOICE=c;SD_CUSTOM=null;SD_CHOICE_LOADED=true;
   try{localStorage.setItem('sd.sessionChoice',JSON.stringify(c));}catch(e){}
   training();
 }
 function sdChangeDay(){
+  SD_PICKER_OPEN=true;
   SD_CHOICE=null;SD_CUSTOM=null;SD_CHOICE_LOADED=true;
   try{localStorage.removeItem('sd.sessionChoice');}catch(e){}
   training();
@@ -8627,8 +8685,13 @@ function trainingProgram(){
 
   const logged = (DATA.days || []).find(x => x.date === PLAN_DAY);
   const doneBy = new Map();
-  if(logged && logged.training && logged.training.weights)
-    for(const e of (logged.training.weights.exercises || [])) doneBy.set(normKey(e.name), e);
+  if(SD_SERVER_CHOICE?.date===PLAN_DAY){
+    for(const row of SD_SERVER_SETS){
+      if(!doneBy.has(row.exercise_id))doneBy.set(row.exercise_id,{sets:[]});
+      doneBy.get(row.exercise_id).sets[row.set_number-1]={reps:row.reps,load_kg:row.weight_lb==null?null:row.weight_lb/2.20462,rir:row.rir};
+    }
+  }else if(logged?.training?.weights)
+    for(const e of logged.training.weights.exercises||[])doneBy.set(e.exercise_id,e);
 
   const exs = (day && day.exercises) || [];
   document.getElementById('answerBox').innerHTML =
@@ -8655,7 +8718,7 @@ function trainingProgram(){
     const nSets = sdSetsFor(ex, effort);
     const effectiveRir = effort && effort.reps_in_reserve != null
       ? effort.reps_in_reserve : ex.rir;
-    const done  = doneBy.get(normKey(ex.name));
+    const done  = doneBy.get(ex.id);
     const nDone = done ? (done.sets || []).length : 0;
     const start = ex.start_weight_lb_per_hand;
     /* ⚠️ An isometric has no reps — it has a hold. The sets table stores reps and the
@@ -8731,7 +8794,7 @@ async function sdSaveSets(btn){
       payloads.push({bad:'Set ' + (si+1) + ' needs both reps and weight.'});
       return;
     }
-    payloads.push({date:PLAN_DAY, day_key:sdProgramExercises().find(e=>e.id===exId)?.program_day, exercise:exId, set_number:si+1,
+    payloads.push({date:PLAN_DAY, exercise:exId, set_number:si+1,
                    weight_lb:load, reps, rir});
   });
   const bad = payloads.find(p=>p.bad);
@@ -8741,12 +8804,19 @@ async function sdSaveSets(btn){
   btn.disabled = true; btn.textContent = 'Saving…';
   const notes = [];
   try {
+    if(SD_SERVER_CHOICE?.date!==PLAN_DAY){
+      const c=sdChoiceFor(PLAN_DAY);
+      if(!c)throw new Error('Choose a session before saving sets.');
+      await sdPost('/session/start',c.day_key==='custom'?{date:PLAN_DAY,exercise_ids:c.exercise_ids}:{date:PLAN_DAY,day_key:c.day_key});
+      await sdRefreshSessionPlan();
+    }
     for(const p of payloads){
       const res = await sdPost('/set', p);
       if(res.below_rep_range && res.note)
         notes.push(`Set ${res.set}: ${res.reps} reps, below the ${res.rep_range[0]}–${res.rep_range[1]} range. ${res.note}`);
     }
     DATA.days = await sdHydrateDays();
+    await sdRefreshSessionPlan();
     renderAll();
     toast(`${payloads.length} set${payloads.length===1?'':'s'} logged`);
   } catch(e){
