@@ -1226,7 +1226,7 @@ const MCP_REGISTRY = (() => {
 // endpoint served 43: the map under-claims and every caller of a retired name keeps
 // working. Deploying first and failing to commit would leave this file claiming two tools
 // are live that answer -32602, which is the one thing it exists to prevent.
-const MCP_STAGED = [];
+const MCP_STAGED = ["dd_dfs_sync", "dd_dfs_compare", "dd_dfs_schema", "dd_dfs_list", "dd_dfs_get", "dd_dfs_create", "dd_dfs_upload", "dd_dfs_players", "dd_dfs_settings", "dd_dfs_solve", "dd_dfs_explore", "dd_dfs_simulate", "dd_dfs_exposure", "dd_dfs_select", "dd_dfs_export", "dd_dfs_delete"];
 const MCP_LIVE = MCP_REGISTRY.map(t => t.name).filter(n => !MCP_STAGED.includes(n));
 for (const n of MCP_STAGED)
   if (!MCP_REGISTRY.some(t => t.name === n)) throw new Error(`${n} is listed as staged but is not in the registry`);
@@ -1450,8 +1450,8 @@ const SURFACES = [
     machine: [{ kind: 'mcp', tool: 'dd_dfs_correlations', status: 'live', covers: 'the measured correlation structure' },
               { kind: 'mcp', tool: 'dd_solve_dfs_lineup', status: 'live', covers: 'bounded exact lineup optimization over caller-supplied slate data; inputs and results are not stored' },
               { kind: 'json', url: '/data/dfs-weeks.json', status: 'live', covers: 'empty week-object receipt ledger (lockedSha256 + realized:null); Kap publishes locked weeks later — aggregates only (I3)' }],
-    planned: [],
-    gap: 'The exact solver is live over MCP; contest simulation remains browser-only. Projections and ownership are caller-supplied and never hosted. Week objects lock on-device before kickoff; the public ledger starts empty.' },
+    planned: MCP_STAGED.filter(n => n.startsWith('dd_dfs_')),
+    gap: 'Private DFS workspaces and compute tools are implemented but staged pending Worker deployment. The exact legacy solver is live over MCP; contest simulation remains browser-only. Projections and ownership are caller-supplied and never hosted. Week objects lock on-device before kickoff; the public ledger starts empty.' },
   { id: 'guillotine', domain: 'arena', name: 'Last Dawg Standing', page: '/guillotine.html',
     machine: [{ kind: 'json', url: '/data/guillotine-weekly.json', status: 'live', covers: 'daily Sleeper weekly player statistics and descriptive uncertainty; league odds computed privately in browser' },
               { kind: 'json', url: '/data/guillotine-receipts.json', status: 'live', covers: 'prospective pregame forecasts and completed-week grades' },
@@ -1570,7 +1570,7 @@ write('surfaces.json', {
     tools_live: MCP_LIVE,
     tools_staged: MCP_STAGED,
     catalogs: {
-      status: 'LIVE since 2026-08-09. Both /mcp/core/<credential> and /mcp/full/<credential> answer, ' +
+      status: 'Catalog arrays describe the current source; tools_staged are not deployed. DFS core promotion is staged. LIVE since 2026-08-09. Both /mcp/core/<credential> and /mcp/full/<credential> answer, ' +
               'and GET /mcp/ advertises them. The bare /mcp/<credential> is unchanged and still full. ' +
               'A leading `core`/`full` is only read as a catalog when a credential follows it, or when ' +
               'the credential arrived in a header — so no passphrase can be stranded by its own name. ' +

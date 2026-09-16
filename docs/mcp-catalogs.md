@@ -172,3 +172,8 @@ that reason.
 Nothing in this repo touches the deployed endpoint. The live tool count, the catalog
 routes and the annotations on the wire are unverified in production until step 4 above
 actually runs against `toto`.
+
+
+## DFS workspace suite — staged 2026-09-16
+
+This branch adds 16 account-scoped `dd_dfs_*` tools to core and promotes the existing transient solver to core. Assembled source: 74 total tools, 43 core. These counts are source verification, not production verification. See [DFS integration](dfs-mcp-workspace.md) for scope, bounds, and release checks.

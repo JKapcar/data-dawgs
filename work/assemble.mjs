@@ -82,6 +82,8 @@ const privateEngine = (file, root) => {
 const dfsEngine = privateEngine("dfs-engine.js", "mcpDdfsRoot");
 const survivorEngine = privateEngine("survivor-path-engine.js", "mcpSurvivorPathRoot");
 const mcp = readFileSync("mcp-block.js", "utf8").replace(/\s+$/, "");
+const D_START = "/* ===== DD-DFS-WORKSPACE START ===== */", D_END = "/* ===== DD-DFS-WORKSPACE END ===== */";
+const dfsModules = "const dfsModules = {};\n" + ["dfs-slate-ingest.js", "dfs-dupe-model.js", "../dfs-lab-audit.js", "../dfs-pareto.js", "../dfs-lab-contests.js"].map(file => "(function(globalThis, self, module, require){\n" + readFileSync(file,"utf8") + "\n})(dfsModules, dfsModules, undefined, undefined);\n").join("\n") + readFileSync("dfs-workspace.js","utf8");
 const block =
   "/* Shared DFS engine — generated verbatim from work/dfs-engine.js except for its private root. */\n" +
   dfsEngine + "\n\n" +
@@ -108,6 +110,9 @@ function transform(input) {
     const legacy = t.indexOf("/* ================================== /mcp ================================== */");
     if (legacy >= 0) t = t.slice(0, legacy);
   }
+
+  const ds=t.indexOf(D_START), de=t.indexOf(D_END);
+  if(ds>=0&&de>ds)t=t.slice(0,ds)+t.slice(de+D_END.length);
 
   /* 2. strip any previously injected rankings block */
   const rs = t.indexOf(R_START), re = t.indexOf(R_END);
@@ -166,6 +171,7 @@ function transform(input) {
     + "\n\n" + R_START + "\n" + rankings + "\n" + R_END
     + "\n\n" + W_START + "\n" + warroom + "\n" + W_END
     + "\n\n" + F_START + "\n" + forecast.trimEnd() + "\n" + F_END
+    + "\n\n" + D_START + "\n" + dfsModules + "\n" + D_END
     + "\n\n" + START + "\n" + block + "\n" + END + "\n";
 }
 

@@ -1,12 +1,11 @@
 # Data Dawgs
 
 > Forecasting, fantasy football, betting markets and EPA with receipts.
-> All paths below are relative to https://datadawgs216.com/
+> Paths relative to https://datadawgs216.com/
 
-Start with [`/data/index.json`](/data/index.json): dates, sizes and SHA-256 for every
-machine file. Cite each payload's `as_of` with every number.
+Start with [`/data/index.json`](/data/index.json): dates and hashes. Cite `as_of` with numbers.
 
-[`/data/surfaces.json`](/data/surfaces.json) maps pages and 46 live MCP tools: 18 core, all 46 full; `planned` is unavailable. Sole write: two-phase `dd_submit_bozo_leg` — your own leg, or another member's if you manage that league (`forUid`; marked `commissionerModified`, never backdated). [Sign in](/signon.html) · [instructions](/data/dawg-project-instructions.md).
+[`/data/surfaces.json`](/data/surfaces.json) maps pages and 46 live MCP tools: 18 core, all 46 full; `planned` is unavailable. Sole write: two-phase `dd_submit_bozo_leg` — own leg or managed-league proxy (`forUid`; `commissionerModified`; never backdated). [Sign in](/signon.html) · [instructions](/data/dawg-project-instructions.md).
 
 Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHouse, stopped.
 
@@ -74,4 +73,8 @@ the sources we read and do not republish. Owns no data file either.
 - `def_epa_play` is EPA allowed: lower is better.
 - Simulation and modelled output are labelled; never present either as observation.
 - Nothing here is betting advice.
-- `/data/` is public, static, CORS-open and cheaper than the self-contained HTML pages.
+- `/data/` is public, static and CORS-open.
+
+- [Staged DFS MCP](/docs/dfs-mcp-workspace.md): scope and release gates.
+
+Staged (unavailable): dd_dfs_sync, dd_dfs_compare, dd_dfs_schema, dd_dfs_list, dd_dfs_get, dd_dfs_create, dd_dfs_upload, dd_dfs_players, dd_dfs_settings, dd_dfs_solve, dd_dfs_explore, dd_dfs_simulate, dd_dfs_exposure, dd_dfs_select, dd_dfs_export, dd_dfs_delete.
