@@ -7103,7 +7103,7 @@ async function bozoPick(request, env, cors) {
     p.submissionId = code;
     const mine = (state.picks || {})[mkey] || null;
     const echo = p.label + " — " + p.game + ", " + (BOZO_PERIOD_LABEL[p.period] ? BOZO_PERIOD_LABEL[p.period] + " " : "") +
-      (p.mkt === "ml" ? "moneyline" : p.mkt + " " + p.line) +
+      bozoMarketPhrase(p) +
       " at " + p.price + " (other side " + (p.priceOpp == null ? "not captured" : p.priceOpp) + "), " +
       (p.priceSource === "captured" ? "captured from DraftKings via SGO" : "self-priced; not CLV-eligible") + "." +
       (proxy ? " Submitted FOR " + name + " by you as league manager; it will be marked as such and stamped with the server time of this submission, not backdated." : "") +
@@ -7186,6 +7186,7 @@ function validatePick(p, name, existing, band, format, mkey = null, weekGate = n
   if (!isFinite(price) || price > band.ceil || price < band.floor)
     return `${p.price} is outside the ${band.ceil} to ${band.floor} band.`;
   if (p.mkt !== "ml" && !isFinite(Number(p.line))) return "Number is required for that market.";
+  { const signErr = bozoSpreadSignError(p); if (signErr) return signErr; }
   const gameMarket = p.mkt === "spread" || p.mkt === "ml" || p.mkt === "total";
   if (gameMarket && p.priceSource !== "captured")
     return "Spread, moneyline and total prices must be captured from DraftKings.";
@@ -7935,6 +7936,68 @@ const bozoLabelWithPeriod = (label, period) => {
   return suffix && !str.toLowerCase().includes(suffix.toLowerCase()) ? str + " · " + suffix : str;
 };
 
+// ⚠️ THE SIGN IS THE WHOLE MEANING ON A SPREAD, and on this API it is easy to get backwards.
+// Bozo stores `line` as points the side GIVES UP — positive lays, negative takes (see
+// bozoDkQuote, legEdge and the grader) — while every DraftKings slip prints the display
+// number ("CLE +8.5"). An AI reading the slip sends line 8.5 for CLE +8.5; the server reads
+// that as CLE -8.5 and prices it at +700, a different market. It happened in a live audit
+// on 2026-09-16 and only the band caught it; on a small spread nothing would have.
+// The form cannot make this mistake because it builds its label FROM the stored line
+// (legLabel in bozo.html). The MCP surface takes both from the caller, so the label is
+// cross-checked here instead. The label is the human truth: it is what the caller read off
+// the slip, and the human confirms it verbatim in the echo. Every write path runs this
+// before it spends a fetch (bozoCaptureEntry) and again in validatePick as the backstop.
+// A missing or non-finite line is left for validatePick's own message; this only judges
+// the sign and the number.
+const BOZO_SPREAD_PK = /\b(pk|pick(?:\s?'?em)?)\b/i;
+const BOZO_SPREAD_RULE =
+  "This API stores `line` as points the side GIVES UP: positive lays, negative takes. " +
+  "Send line -8.5 for CLE +8.5, line 8.5 for TB -8.5, line -1.5 for a runline dog at +1.5. " +
+  "The label must read as the DraftKings slip prints it, sign included.";
+function bozoSpreadSignError(p) {
+  if (!p || p.mkt !== "spread") return null;
+  const line = Number(p.line);
+  if (!Number.isFinite(line)) return null;
+  const label = String(p.label || "");
+  const side = String(p.side || "the side");
+  const mag = Math.abs(line);
+  const canonical = `${side} ${line > 0 ? "-" : "+"}${mag}`;
+  // Every signed number in the label: ASCII + / -, Unicode minus, en dash. A sign glued to
+  // a letter ("TB-8.5") counts; a sign between digits ("10-3") does not.
+  const found = [];
+  const re = /(?<![\d.])([+\-\u2212\u2013])\s?(\d+(?:\.\d+)?)(?![\d.])/g;
+  let m;
+  while ((m = re.exec(label))) found.push({ sign: m[1] === "+" ? 1 : -1, n: Number(m[2]) });
+  if (!found.length && BOZO_SPREAD_PK.test(label)) found.push({ sign: 1, n: 0 });
+  if (!found.length)
+    return `A spread label must carry its sign as it reads on the DraftKings slip (e.g. "${canonical}"); ` +
+      `"${label}" has none, so the side cannot be cross-checked against line ${line}. ${BOZO_SPREAD_RULE} Nothing was submitted.`;
+  const same = found.filter(f => f.n === mag);
+  if (!same.length)
+    return `The label "${label}" says ${found.map(f => (f.sign > 0 ? "+" : "-") + f.n).join(", ")} but line ${line} is ${canonical} — ` +
+      `the number does not match. ${BOZO_SPREAD_RULE} Nothing was submitted.`;
+  if (line === 0) return null;                       // pick'em: +0, -0 and PK all mean the same thing
+  const labelSign = same[0].sign;                    // + on the slip means the side TAKES points
+  if (same.some(f => f.sign !== labelSign))
+    return `The label "${label}" carries ${mag} with both signs. ${BOZO_SPREAD_RULE} Nothing was submitted.`;
+  const slipSignOfLine = line > 0 ? -1 : 1;          // what the stored line prints as on the slip
+  if (labelSign === slipSignOfLine) return null;
+  const labelMeaning = `${side} ${labelSign > 0 ? "takes" : "lays"} ${mag} points`;
+  const lineMeaning = `${side} ${line < 0 ? "takes" : "lays"} ${mag} points`;
+  return `Spread sign conflict: the label reads "${label}" (${labelMeaning}) but line ${line} means ${lineMeaning} — ` +
+    `that is ${canonical}, a different market at a very different price. ${BOZO_SPREAD_RULE} Nothing was submitted.`;
+}
+
+// The market phrase for a phase-one echo. On a spread the stored line reads backwards to a
+// person ("CLE +8.5 … spread -8.5"), so the echo says what the number does instead.
+const bozoMarketPhrase = p => {
+  if (p.mkt === "ml") return "moneyline";
+  if (p.mkt !== "spread") return p.mkt + " " + p.line;
+  const line = Number(p.line);
+  if (line === 0) return "spread — pick'em (stored line 0)";
+  return "spread — " + p.side + (line < 0 ? " takes " : " lays ") + Math.abs(line) + " points (stored line " + p.line + ")";
+};
+
 /* ---------------- player props ----------------
    ⚠️ A PROP IS ALWAYS PRICED. Every Bozo leg goes on a real DraftKings bet slip, so by
    construction DraftKings has a market for it and quotes both sides at kickoff. The
@@ -8284,6 +8347,7 @@ async function bozoCaptureEntry(env, input) {
   p.period = bozoPeriodOf(p);
   const periodErr = bozoPeriodError(p);
   if (periodErr) return { ok: false, reason: "bad_period", error: periodErr };
+  { const signErr = bozoSpreadSignError(p); if (signErr) return { ok: false, reason: "spread_sign_conflict", error: signErr }; }
   if (!BOZO_GRADEABLE_SPORTS.has(p.sport)) return { ok: false, reason: "sport_not_gradeable",
     error: `${p.sport || "That sport"} cannot be submitted until it has a Worker-reachable grading adapter.` };
   let startMs = Date.parse(p.startsAt || "");
@@ -16532,15 +16596,43 @@ const toolErr  = msg => ({ content: [{ type: "text", text: msg }], isError: true
 
 async function handleMcp(request, url, env) {
   if (request.method === "OPTIONS") return new Response(null, { headers: MCP_CORS });
-  if (request.method === "GET")
+  if (request.method === "GET") {
+    // ⚠️ A BROWSER OPENING ITS OWN CONNECTOR URL GETS A VERDICT. When a personal URL dies
+    // (re-minted, revoked, lost in the uid migration) Claude's UI reports an OAuth failure
+    // that points nowhere. This lets a member paste the URL into a browser and read
+    // "valid, you are Kap" or "not recognised, mint a new one" — the check Claude cannot
+    // show them. An MCP client asking for an SSE stream still gets the 405 that means "no
+    // stream here": the Accept header is what tells the two apart. Never cached: the body
+    // names a person and the verdict changes the moment a token is rotated.
+    const accept = request.headers.get("Accept") || "";
+    const supplied = mcpPassOf(request, url);
+    if (supplied && !accept.includes("text/event-stream")) {
+      const noStore = { "Content-Type": "application/json", "Cache-Control": "no-store", ...MCP_CORS };
+      if (!env.BOZO_PEPPER && !env.DAWG_PASS)
+        return new Response(JSON.stringify({ ok: false, valid: null, reason: "worker-misconfigured" }), { status: 500, headers: noStore });
+      const who = await mcpAuth(request, url, env);
+      if (!who)
+        return new Response(JSON.stringify({ ok: false, valid: false, reason: "credential-not-recognised",
+          detail: "This connector URL no longer authenticates. Personal URLs stop working when re-minted or revoked, and pre-migration tokens did not survive the move to uid accounts.",
+          fix: "Sign in at " + SITE + "/connect.html, mint a new URL, then remove this connector in Claude and add the new URL." }),
+          { status: 403, headers: noStore });
+      const { catalog } = mcpRoute(url, request);
+      return new Response(JSON.stringify({ ok: true, valid: true, kind: who.kind,
+        player: who.kind === "user" ? who.name : null, catalog, tools: mcpCatalogTools(catalog).length,
+        note: who.kind === "user"
+          ? "This URL authenticates as " + who.name + "; dd_submit_bozo_leg can write their leg."
+          : "Shared league passphrase: read-only and anonymous. A personal URL from " + SITE + "/connect.html enables writes." }),
+        { status: 200, headers: noStore });
+    }
     return mcpJson({
       name: "data-dawgs", transport: "streamable-http",
       catalogs: {
         core: "/mcp/core/<credential> — the everyday league surface",
         full: "/mcp/full/<credential> — every tool; the bare /mcp/<credential> is also full",
       },
-      hint: "POST JSON-RPC 2.0 here.",
+      hint: "POST JSON-RPC 2.0 here. GET with your credential in the URL (from a browser) reports whether it is still valid.",
     }, 405);
+  }
   if (request.method !== "POST") return mcpJson(rpcErr(null, -32600, "POST only"), 405);
 
   // ⚠️ Either mechanism is enough on its own: BOZO_PEPPER for per-user tokens, DAWG_PASS
@@ -16550,9 +16642,22 @@ async function handleMcp(request, url, env) {
     return mcpJson(rpcErr(null, -32000, "Worker misconfigured: neither BOZO_PEPPER nor DAWG_PASS is set."), 500);
   const { catalog } = mcpRoute(url, request);
   const caller = await mcpAuth(request, url, env);
-  if (!caller)
+  if (!caller) {
+    // ⚠️ A CREDENTIAL THAT FAILS IS 403, NOT 401. The URL is the whole credential and there
+    // is no OAuth server behind this Worker. A 401 with a Bearer challenge tells Claude's
+    // connector client to begin an OAuth flow, which dies at discovery as "Failed to start
+    // MCP authorization" — an opaque message for what is actually a dead token (re-minted,
+    // revoked, or minted before the uid migration). 403 names the cause and the fix. The
+    // 401 challenge stays for a request that carried NO credential at all, the one case a
+    // header could still resolve.
+    if (mcpPassOf(request, url))
+      return mcpJson(rpcErr(null, -32003,
+        "credential not recognised — this connector URL is no longer valid. Personal URLs stop working when re-minted or revoked, " +
+        "and pre-migration tokens did not survive the move to uid accounts. Sign in at " + SITE + "/connect.html, mint a new URL, " +
+        "then remove this connector in Claude and add the new one. Opening the URL in a browser shows whether it is valid."), 403);
     return new Response(JSON.stringify(rpcErr(null, -32001, "unauthorised — get your personal connector URL from " + SITE + "/connect.html")),
       { status: 401, headers: { "Content-Type": "application/json", "WWW-Authenticate": 'Bearer realm="data-dawgs"', ...MCP_CORS } });
+  }
 
   let body;
   try { body = await request.json(); }
@@ -16604,6 +16709,7 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
           "Every tool here is read-only except dd_submit_bozo_leg, which can write exactly one thing — " +
           "the caller's own Bozo leg, in an open week, and only after the human has read back the parsed bet and " +
           "confirmed with the code it returns. Never call its confirm step without showing the human the echo first. " +
+          "On a spread leg `line` is points the side gives up (positive lays, negative takes) while `label` reads as the slip prints it — CLE +8.5 is label \"CLE +8.5\", line -8.5 — and the server rejects a sign conflict rather than pricing the wrong side. " +
           "Everything else is the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
@@ -16951,9 +17057,9 @@ const MCP_TOOLS = [
         game: { type: "string", description: "Human-readable matchup, e.g. \"BUF @ MIA\"" },
         mkt: { type: "string", description: "spread | ml | total | prop | other" },
         side: { type: "string", description: "Team abbreviation, or over / under" },
-        line: { type: "number", description: "The number. Required for everything except ml." },
+        line: { type: "number", description: "The number. Required for everything except ml. ⚠️ For a spread this is the handicap as points the side GIVES UP, not the slip display: positive lays, negative takes. CLE +8.5 on the slip is line -8.5; TB -8.5 is line 8.5; an MLB/NHL dog at +1.5 is line -1.5. The server cross-checks it against the sign in label and rejects a conflict instead of pricing the wrong side. Totals and props take the number as printed." },
         price: { type: "number", description: "Optional typed DraftKings price tripwire. The Worker captures and stores the live quote; this value is never trusted as the entry price." },
-        label: { type: "string", description: "How the leg reads on the ticket, e.g. \"BUF -6.5\"" },
+        label: { type: "string", description: "How the leg reads on the DraftKings slip, sign included, e.g. \"BUF -6.5\" or \"CLE +8.5\". On a spread the sign is required and is checked against line: they describe one bet from two directions (label = slip display, line = points given up)." },
         prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
         startsAt: { type: "string", description: "Kickoff ISO timestamp. Optional when eventId resolves from the Worker schedule cache; otherwise required." },
         period: { type: "string", enum: ["game", "1h", "2h", "1q", "2q", "3q", "4q"], description: "Which part of the game (default game). Spread, moneyline and total only; props and other are full-game. NFL/CFB/NBA take halves and quarters, NCAAB halves." },
@@ -17120,9 +17226,9 @@ const MCP_TOOLS = [
         game: { type: "string", description: "Human-readable matchup, e.g. \"BUF @ MIA\"" },
         mkt: { type: "string", description: "spread | ml | total | prop | other" },
         side: { type: "string", description: "Team abbreviation, or over / under" },
-        line: { type: "number", description: "The number. Required for everything except ml." },
+        line: { type: "number", description: "The number. Required for everything except ml. ⚠️ For a spread this is the handicap as points the side GIVES UP, not the slip display: positive lays, negative takes. CLE +8.5 on the slip is line -8.5; TB -8.5 is line 8.5; an MLB/NHL dog at +1.5 is line -1.5. The server cross-checks it against the sign in label and rejects a conflict instead of pricing the wrong side. Totals and props take the number as printed." },
         price: { type: "number", description: "Optional typed DraftKings price tripwire. The Worker captures and stores the quote; use this only to detect a mismatch. Required only for self-priced other markets or a prop fallback." },
-        label: { type: "string", description: "How the leg reads on the ticket, e.g. \"BUF -6.5\"" },
+        label: { type: "string", description: "How the leg reads on the DraftKings slip, sign included, e.g. \"BUF -6.5\" or \"CLE +8.5\". On a spread the sign is required and is checked against line: they describe one bet from two directions (label = slip display, line = points given up)." },
         prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
         priceOpp: { type: "number", description: "Deprecated input; the Worker captures the opposite DraftKings side itself." },
         startsAt: { type: "string", description: "Kickoff ISO timestamp. Optional when eventId resolves from the Worker schedule cache; phase two needs only confirm." },
@@ -17306,7 +17412,7 @@ const MCP_TOOLS = [
       // plain English before anything can happen. Consequences ride in the same sentence.
       const echo =
         p.label + " — " + p.game + ", " + (BOZO_PERIOD_LABEL[p.period] ? BOZO_PERIOD_LABEL[p.period] + " " : "") +
-        (p.mkt === "ml" ? "moneyline" : p.mkt + " " + p.line) +
+        bozoMarketPhrase(p) +
         " at " + p.price + " (opposite side " + (p.priceOpp == null ? "not captured" : p.priceOpp) + "), for " + who +
         (proxy ? " (submitted by " + name + " as league manager; marked as such and stamped with the server time of the confirm, not backdated)" : "") +
         ", week " + (lg.week || 1) + " in league " + lid + "." +

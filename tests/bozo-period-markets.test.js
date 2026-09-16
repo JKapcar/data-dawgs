@@ -91,7 +91,7 @@ test('validator: allowed (sport, mkt, period) pass; prop+period, unsupported spo
   const v = p => api.validatePick(p, 'Kap', {}, band, 'standard', 'u_kap');
   assert.equal(v(base), null);
   assert.equal(v({ ...base, period: '1h' }), null);
-  assert.equal(v({ ...base, period: '4q', mkt: 'spread', line: 3.5 }), null);
+  assert.equal(v({ ...base, period: '4q', mkt: 'spread', line: 3.5, label: 'NAVY -3.5' }), null);   // a spread label carries its sign; 3.5 stored = NAVY lays 3.5
   assert.equal(v({ ...base, sport: 'nfl', period: '2h', mkt: 'total', line: 24.5, side: 'over' }), null);
   assert.equal(v({ ...base, sport: 'cbb', period: '1h' }), null);
   assert.match(v({ ...base, sport: 'cbb', period: '1q' }), /not supported for cbb/);
@@ -120,7 +120,7 @@ test('dedup: same side and number, different period, are distinct legs; game key
   assert.match(api.validatePick(leg, 'Kap', existing, band, 'standard', 'u_kap'), /already has that exact selection/);
   assert.equal(api.validatePick({ ...leg, period: '1h' }, 'Kap', existing, band, 'standard', 'u_kap'), null);
   // and the opposite side of the SAME period is still blocked, while the other period is not
-  const opp = { ...leg, side: 'DAL', line: -3 };
+  const opp = { ...leg, side: 'DAL', line: -3, label: 'DAL +3' };   // the other side's own slip label; the sign check reads it
   assert.match(api.validatePick(opp, 'Kap', existing, band, 'standard', 'u_kap'), /other side of that same market/);
   assert.equal(api.validatePick({ ...opp, period: '2h' }, 'Kap', existing, band, 'standard', 'u_kap'), null);
 });
