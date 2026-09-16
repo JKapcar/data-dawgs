@@ -1,14 +1,38 @@
 /* Inlined inside dfs.html's state closure. Explicit private save/load, never background upload. */
+const dfsPreviewVersion=new URLSearchParams(location.search).get('dfs_preview');
+const dfsCloudOrigin=dfsPreviewVersion&&/^[a-f0-9]{8}$/.test(dfsPreviewVersion)?'https://'+dfsPreviewVersion+'-toto.jkapcar4.workers.dev':'https://toto.jkapcar4.workers.dev';
 let dfsCloudRevision=null,dfsCloudLoadedId=null,dfsCloudAuth=null;
 async function dfsCloudCall(op,args){
  const token=window.DDAuth&&DDAuth.token();if(!token)throw new Error('Sign in to save a private workspace.');
- const r=await fetch('https://toto.jkapcar4.workers.dev/api/dfs/'+op,{method:'POST',headers:{'Content-Type':'application/json','X-Bozo-Session':token},body:JSON.stringify(args)});
+ const r=await fetch(dfsCloudOrigin+'/api/dfs/'+op,{method:'POST',headers:{'Content-Type':'application/json','X-Bozo-Session':token},body:JSON.stringify(args)});
  let out;try{out=await r.json();}catch{throw new Error('Workspace service is unavailable. Your local slate is unchanged.');}
  if(DDAuth.token()!==token)throw new Error('Account changed during request; load again.');
  if(!r.ok||out.error)throw new Error(out.error||'Workspace request failed');return out;
 }
 function dfsCloudBoot(){
  const note=$('dfsCloudNote');const report=s=>note.textContent=s;
+ if(dfsPreviewVersion&&/^[a-f0-9]{8}$/.test(dfsPreviewVersion)){
+  const box=document.createElement('details'),summary=document.createElement('summary'),button=document.createElement('button'),output=document.createElement('pre');
+  summary.textContent='Release check · preview '+dfsPreviewVersion;button.textContent='Run synthetic workspace check';button.type='button';
+  box.append(summary,button,output);note.after(box);
+  button.onclick=async()=>{button.disabled=true;output.textContent='Checking preview using synthetic data only…';const rows=[],id='release-check-'+Date.now();let revision=null;
+   const check=(yes,message)=>{if(!yes)throw new Error(message);};
+   const call=async(op,args={})=>{const start=performance.now(),r=await dfsCloudCall(op,args);rows.push(op+' OK ('+Math.round(performance.now()-start)+' ms)');output.textContent=rows.join('\n');return r;};
+   const write=async(op,args={})=>{const r=await call(op,{workspace_id:id,expected_revision:revision,...args});if(r.revision)revision=r.revision;return r;};
+   try{
+    await call('schema');let r=await call('create',{workspace_id:id,site:'dk_showdown',source:'Synthetic release check',as_of:new Date().toISOString()});revision=r.revision;
+    const csv='Player,Pos,Team,Salary,Proj,CPT Salary,Total Own,CPT Own\n'+Array.from({length:12},(_,i)=>['Synthetic '+i,i%6===0?'QB':i%6===5?'K':i%2?'WR':'RB',i<6?'AAA':'BBB',5000+i*200,8+i,(5000+i*200)*1.5,50,100/12].join(',')).join('\n');
+    const upload={csv,source:'Synthetic release check',as_of:new Date().toISOString()};await write('upload',{...upload,commit:false});await write('upload',{...upload,commit:true});
+    const w=await call('get',{workspace_id:id});check(w.players.length===12,'CSV row mismatch');
+    await write('players',{players:w.players.map((p,i)=>({...p,dkId:String(1000+i),cptId:String(2000+i)}))});
+    await write('settings',{section:'solver',patch:{count:3}});r=await write('solve');check(r.lineups===3,'Solver lineup mismatch');
+    await write('settings',{section:'simulation',patch:{sims:200,fieldSize:50,fieldSample:49,fieldMinSalary:0,payout:{kind:'flat',paidFrac:.4,alpha:1,rake:.15}}});r=await write('simulate');check(r.simulation.perLineup.length===3,'Simulation candidate mismatch');
+    r=await call('exposure',{workspace_id:id});check(r.players.reduce((sum,p)=>sum+p.total,0)===18,'Exposure mismatch');r=await call('export',{workspace_id:id});check(r.csv.includes('100'),'Export missing IDs');
+    await write('select',{indices:[0,2]});r=await call('get',{workspace_id:id});check(r.lineups.length===2,'Selection mismatch');rows.push('PASS: synthetic CSV → storage → solver → simulation → exposure → export.');
+   }catch(e){rows.push('FAILED: '+e.message);}finally{if(revision)try{await write('delete');rows.push('Synthetic workspace deleted.');}catch(e){rows.push('Cleanup required for '+id+': '+e.message);}output.textContent=rows.join('\n');button.disabled=false;}
+  };
+ }
+
  const current=()=>{const token=DDAuth.token();if(token!==dfsCloudAuth){dfsCloudRevision=null;dfsCloudLoadedId=null;dfsCloudAuth=token;}const id=$('dfsCloudId').value.trim();if(!/^[A-Za-z0-9_-]{1,80}$/.test(id))throw new Error('Enter a workspace name using letters, numbers, underscores or hyphens.');return id;};
  const busy=async fn=>{for(const id of ['dfsCloudSave','dfsCloudLoad','dfsCloudList'])$(id).disabled=true;try{await fn();}catch(e){report(e.message);}finally{for(const id of ['dfsCloudSave','dfsCloudLoad','dfsCloudList'])$(id).disabled=false;}};
  $('dfsCloudList').onclick=()=>busy(async()=>{current();const r=await dfsCloudCall('list',{});$('dfsCloudChoices').replaceChildren(...r.workspaces.map(w=>{const o=document.createElement('option');o.value=w.workspace_id;o.label=w.site+' · '+w.players+' players';return o;}));report(r.workspaces.length? 'Saved workspaces: '+r.workspaces.map(w=>w.workspace_id).join(', '):'No saved workspaces yet.');});
