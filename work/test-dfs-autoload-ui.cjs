@@ -35,6 +35,7 @@ for (const s of w.document.querySelectorAll('script')) if (!s.src && !/text\/pla
 }
 const delay = ms => new Promise(r => setTimeout(r, ms));
 const state = () => JSON.parse(w.localStorage.getItem('dd-dfs-v1'));
+const waitFor = async predicate => { const deadline=Date.now()+5000; while(Date.now()<deadline){if(predicate())return;await delay(25);}assert.ok(predicate(),'Expected browser state did not settle within 5 seconds'); };
 (async () => {
   if (process.argv.includes('--csv')) {
     const input = w.document.getElementById('salFile');
@@ -50,22 +51,22 @@ const state = () => JSON.parse(w.localStorage.getItem('dd-dfs-v1'));
     console.log('Production file upload survives scheduled auto-load PASS');
     return;
   }
-  await delay(800);
+  await waitFor(()=>state()?.site==='dk_showdown'&&state()?.players?.length>0);
   assert.deepEqual(requests, ['90001']);
   assert.equal(state().site, 'dk_showdown');
   assert.ok(state().players.length > 0);
   const button = w.document.getElementById('dkSwitchAlt');
   assert.equal(button.hidden, false);
-  button.click(); await delay(400);
+  button.click(); await waitFor(()=>state()?.site==='dk_classic');
   assert.deepEqual(requests, ['90001', '90010'], 'one click makes one request');
   assert.equal(state().site, 'dk_classic', w.document.getElementById('slateWarn').textContent);
   assert.equal(button.dataset.draftGroupId, '90001');
-  button.click(); await delay(400);
+  button.click(); await waitFor(()=>state()?.site==='dk_showdown');
   assert.deepEqual(requests, ['90001', '90010', '90001']);
   assert.equal(state().site, 'dk_showdown');
   const previous = state().players;
   failDraftables = true;
-  button.click(); await delay(400);
+  button.click(); await waitFor(()=>state()?.slate?.stale===true);
   assert.deepEqual(state().players, previous, 'failed switch retains last-good pool');
   assert.equal(state().slate.stale, true);
   assert.deepEqual(errors, []);
