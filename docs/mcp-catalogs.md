@@ -174,6 +174,6 @@ routes and the annotations on the wire are unverified in production until step 4
 actually runs against `toto`.
 
 
-## DFS workspace suite — staged 2026-09-16
+## DFS workspace suite — deployed 2026-09-16
 
-This branch adds 16 account-scoped `dd_dfs_*` tools to core and promotes the existing transient solver to core. Assembled source: 74 total tools, 43 core. These counts are source verification, not production verification. See [DFS integration](dfs-mcp-workspace.md) for scope, bounds, and release checks.
+This branch adds 16 account-scoped `dd_dfs_*` tools to core and promotes the existing transient solver to core. Assembled source: 74 total tools, 43 core. Worker deployment succeeded at 100% traffic; these counts are source verification, not a refreshed client tools/list result. See [DFS integration](dfs-mcp-workspace.md) for scope, bounds, and release checks.

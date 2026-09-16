@@ -37,7 +37,7 @@ function dfsCloudBoot(){
  const busy=async fn=>{for(const id of ['dfsCloudSave','dfsCloudLoad','dfsCloudList'])$(id).disabled=true;try{await fn();}catch(e){report(e.message);}finally{for(const id of ['dfsCloudSave','dfsCloudLoad','dfsCloudList'])$(id).disabled=false;}};
  $('dfsCloudList').onclick=()=>busy(async()=>{current();const r=await dfsCloudCall('list',{});$('dfsCloudChoices').replaceChildren(...r.workspaces.map(w=>{const o=document.createElement('option');o.value=w.workspace_id;o.label=w.site+' · '+w.players+' players';return o;}));report(r.workspaces.length? 'Saved workspaces: '+r.workspaces.map(w=>w.workspace_id).join(', '):'No saved workspaces yet.');});
  $('dfsCloudSave').onclick=()=>busy(async()=>{
-  const id=current();readCfg();readSim();if(!S.players.length)throw new Error('Load a CSV first.');
+  const id=current();readCfg();readSim();if(!S.players.length)throw new Error('Load a CSV first.');if(S.players.length>220)throw new Error('Remote workspaces support up to 220 players. Reduce the slate before saving.');
   const source=S.slate&&S.slate.source||'User-supplied browser slate';const as_of=S.slate&&S.slate.loadedAt?new Date(S.slate.loadedAt).toISOString():new Date().toISOString();
   if(dfsCloudLoadedId!==id||dfsCloudRevision==null){const r=await dfsCloudCall('create',{workspace_id:id,site:S.site,source,as_of});dfsCloudRevision=r.revision;dfsCloudLoadedId=id;}
   const fields=['id','name','pos','team','opp','gid','sal','proj','own','cptOwn','flexOwn','cptProj','cptSal','ceil','dkId','cptId','kickoff','lock','excl'];

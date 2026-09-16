@@ -1,6 +1,6 @@
 # DFS MCP workspace suite
 
-Status: implemented and locally tested; staged, not deployed. Source date: 2026-09-16.
+Status: deployed 2026-09-16. PR #134 merged; Worker version `4791555e-9667-4455-8414-37c8905d346c` serves 100% of production traffic. [Release run](https://github.com/JKapcar/data-dawgs/actions/runs/35150848946).
 
 The old integration could solve a transient caller-supplied slate but could not upload and save data, run the correlated simulator, or share a slate with the page. The new account-scoped boundary powers both POST `/api/dfs/{operation}` and the core MCP catalog. It uses the existing parser, solver, exploration module, correlation model and simulator rather than a second numerical implementation.
 
@@ -26,7 +26,7 @@ Each account stores workspaces below `/users/{verifiedUid}/dfsWorkspaces/{worksp
 
 The browser duplication prior is shared for EV-adjusted parity; it is not calibrated. This change corrects percentage units below 1% and uses captain/FLEX slot ownership for Showdown. Pair multipliers remain unvalidated priors.
 
-No paid projections are committed to GitHub or exposed through public data files. Direct Firebase rule verification remains a release gate: automatic review blocked a non-authenticated access-rule probe. Local tests prove application-layer account isolation, not deployed database rules. Do not call the integration production-private until the owner-authorized rule review is complete.
+No paid projections are committed to GitHub or exposed through public data files. Owner-authorized anonymous Firebase read and unauthenticated preview REST probes returned HTTP 401. An authenticated synthetic CSV → storage → solver → simulation → exposure → selection → export round-trip passed on the deployed preview and deleted its test workspace. Local tests cover cross-account isolation and conditional-write conflicts. A full deployed Firebase rules audit using a second account and maximum-load CPU/memory profiling remain outstanding; these narrower checks do not establish either.
 
 Source and as_of accompany saved inputs. Computed results record their input revision, elapsed time, settings and seed. Input edits invalidate stale results. Compute results are model-conditional and not promises of profitability.
 
@@ -35,7 +35,7 @@ Source and as_of accompany saved inputs. Computed results record their input rev
 - 220 players; 150 requested solver lineups; 5,000 saved candidates; 2 MB workspace; 500 KB CSV.
 - Five-second maximum optimizer/exploration search. Showdown enumeration stops at 100,000 stored legal candidates and reports incomplete search; its frontier is then partial.
 - Up to 200 simulation candidates, 16,000 worlds and 10,000 sampled opponents, subject to a 32-million work-unit budget. Four-contest comparisons have a stricter combined budget. Requests exceeding limits fail explicitly.
-- Proposes increasing Worker CPU ceiling from 1 to 30 seconds. It requires preview verification and production approval. There are no durable background jobs yet.
+- Worker CPU ceiling is 30 seconds, verified in the uploaded version metadata and promoted with owner approval. There are no durable background jobs yet.
 - Solver exposure caps are sequential heuristics, not guaranteed final portfolio bounds. The exposure report flags final violations. Exploration does not enforce portfolio exposure limits or minimum differences.
 - Missing projections remain missing; simulations require ownership. Showdown requires captain ownership and reconciled CPT scoring. Ownership product is an uncalibrated independence proxy.
 - Sampling cannot resolve exact first-place probability or top-heavy ROI; shared simulator withholds those metrics. Confidence intervals quantify Monte Carlo sampling error, not model error.
@@ -60,3 +60,11 @@ Classic and Showdown must remain separate evaluation populations. Preserve the o
 3. Obtain fresh owner authorization for Pages and Worker production changes, as required by `docs/worker-deploy.md`.
 4. Upload a Worker preview using the complete manifest; verify CPU/memory at limits and authenticated CSV → solve → simulate → exposure → export with synthetic data.
 5. Promote, then verify deployed core discovery and page save/load with the same account. Change staged declarations only after that verification. Reconnect/refresh the client's tool catalog if it caches registrations.
+
+## Release receipt
+
+- Preview `1b7fdcbf-082e-4034-ae01-a58e629c3035`: all release workflow checks passed; authenticated synthetic lifecycle passed (solver 459 ms, small simulation 352 ms wall time, not CPU measurements).
+- Production `4791555e-9667-4455-8414-37c8905d346c`: complete manifest, existing bindings and encrypted secrets preserved; deployment reports 100% traffic.
+- Production browser CSV upload → Save privately → Load saved passed for `release-fixture-20260916` revision 2 (12 invented players). The named fixture remains available for inspection; the initial oversized demo save left an empty `release-demo-20260916` workspace.
+- Source has 74 MCP tools, 43 core; 16 new DFS workspace tools are in core. Client discovery refresh is separate from deployment and was not performed in this chat.
+- For future release smoke checks, open `dfs.html?dfs_preview=<8-hex-version-prefix>` while signed in and expand Release check. Only version hosts on this same toto Worker are accepted. The button uses invented inputs, leaves the browser slate unchanged, and removes its temporary workspace.

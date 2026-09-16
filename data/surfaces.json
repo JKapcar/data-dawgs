@@ -23,6 +23,22 @@
   "identity": "dd_whoami reports the caller. Rows belonging to them are marked `you: true`. An anonymous connection is told so explicitly and instructed to ask rather than assume whose is whose.",
   "writes": "None. Every tool is read-only, asserted by test against the source.",
   "tools_live": [
+   "dd_dfs_sync",
+   "dd_dfs_compare",
+   "dd_dfs_schema",
+   "dd_dfs_list",
+   "dd_dfs_get",
+   "dd_dfs_create",
+   "dd_dfs_upload",
+   "dd_dfs_players",
+   "dd_dfs_settings",
+   "dd_dfs_solve",
+   "dd_dfs_explore",
+   "dd_dfs_simulate",
+   "dd_dfs_exposure",
+   "dd_dfs_select",
+   "dd_dfs_export",
+   "dd_dfs_delete",
    "dd_whoami",
    "dd_league_overview",
    "dd_bozo_clv",
@@ -70,26 +86,9 @@
    "dd_guillotine_odds",
    "dd_site_map"
   ],
-  "tools_staged": [
-   "dd_dfs_sync",
-   "dd_dfs_compare",
-   "dd_dfs_schema",
-   "dd_dfs_list",
-   "dd_dfs_get",
-   "dd_dfs_create",
-   "dd_dfs_upload",
-   "dd_dfs_players",
-   "dd_dfs_settings",
-   "dd_dfs_solve",
-   "dd_dfs_explore",
-   "dd_dfs_simulate",
-   "dd_dfs_exposure",
-   "dd_dfs_select",
-   "dd_dfs_export",
-   "dd_dfs_delete"
-  ],
+  "tools_staged": [],
   "catalogs": {
-   "status": "Catalog arrays describe the current source; tools_staged are not deployed. DFS core promotion is staged. LIVE since 2026-08-09. Both /mcp/core/<credential> and /mcp/full/<credential> answer, and GET /mcp/ advertises them. The bare /mcp/<credential> is unchanged and still full. A leading `core`/`full` is only read as a catalog when a credential follows it, or when the credential arrived in a header — so no passphrase can be stranded by its own name. NOT VERIFIED IN PRODUCTION: the per-catalog tools/list counts, which need a credential.",
+   "status": "Catalog arrays describe the current source; tools_staged are not deployed. DFS core promotion deployed 2026-09-16; client catalog refresh is separate. LIVE since 2026-08-09. Both /mcp/core/<credential> and /mcp/full/<credential> answer, and GET /mcp/ advertises them. The bare /mcp/<credential> is unchanged and still full. A leading `core`/`full` is only read as a catalog when a credential follows it, or when the credential arrived in a header — so no passphrase can be stranded by its own name. NOT VERIFIED IN PRODUCTION: the per-catalog tools/list counts, which need a credential.",
    "why": "Forty-three tool schemas cost 10-25k context tokens in every conversation that connects. core is the everyday league surface; full is everything and stays the default, so the bare /mcp/<credential> URL keeps serving every tool a live connector may already be calling.",
    "paths": {
     "core": "/mcp/core/<credential>",
@@ -270,8 +269,8 @@
   "with_live_machine_access": 18,
   "with_no_machine_access": 5,
   "mcp_tools_registered": 62,
-  "mcp_tools_live": 46,
-  "mcp_tools_staged": 16,
+  "mcp_tools_live": 62,
+  "mcp_tools_staged": 0,
   "mcp_tools_core": 35,
   "mcp_tools_planned": 6
  },
@@ -727,6 +726,102 @@
     },
     {
      "kind": "mcp",
+     "tool": "dd_dfs_sync",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_compare",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_schema",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_list",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_get",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_create",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_upload",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_players",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_settings",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_solve",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_explore",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_simulate",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_exposure",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_select",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_export",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_delete",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
      "tool": "dd_solve_dfs_lineup",
      "status": "live",
      "covers": "bounded exact lineup optimization over caller-supplied slate data; inputs and results are not stored"
@@ -739,24 +834,12 @@
     }
    ],
    "planned": [
-    "dd_dfs_sync",
-    "dd_dfs_compare",
-    "dd_dfs_schema",
-    "dd_dfs_list",
-    "dd_dfs_get",
-    "dd_dfs_create",
-    "dd_dfs_upload",
-    "dd_dfs_players",
-    "dd_dfs_settings",
-    "dd_dfs_solve",
-    "dd_dfs_explore",
-    "dd_dfs_simulate",
-    "dd_dfs_exposure",
-    "dd_dfs_select",
-    "dd_dfs_export",
-    "dd_dfs_delete"
+    "durable compute jobs",
+    "exact portfolio exposures",
+    "late swap",
+    "results calibration"
    ],
-   "gap": "Private DFS workspaces and compute tools are implemented but staged pending Worker deployment. The exact legacy solver is live over MCP; contest simulation remains browser-only. Projections and ownership are caller-supplied and never hosted. Week objects lock on-device before kickoff; the public ledger starts empty.",
+   "gap": "Private DFS workspace tools are deployed in core. Browser Save/Load and MCP share account-scoped inputs. Projections and ownership are caller-supplied and stored privately only when explicitly saved. Compute is bounded; exact portfolio caps and durable jobs remain planned. Week objects lock on-device before kickoff; the public ledger starts empty.",
    "tier": "labs"
   },
   {
