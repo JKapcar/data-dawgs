@@ -145,10 +145,10 @@
    {
     "path": "/data/datadawg-default.json",
     "url": "https://datadawgs216.com/data/datadawg-default.json",
-    "bytes": 63351,
-    "as_of": "2026-09-09",
-    "sha256": "5c1e79f9a3d1c5474c00b4161f75169cafb854f1e0cc1756b362d7f1a977c991",
-    "note": "Default season input, not weekly projections. Source publication date absent; as_of is receipt date."
+    "bytes": 66529,
+    "as_of": "2026-09-16",
+    "sha256": "62492dc62d24c4ed47cede3459e73ab65a8c9341739e124ebac582ad45d7e1c6",
+    "note": "Default season input, not weekly projections. ROS ranks re-order players on the last imported ETR auction dollar curve per format (values are a permutation of that curve); full/std/superflex-full take within-position order only, half and superflex-half take the whole overall order. K and DST unchanged from the auction import. Source publication date absent; as_of is receipt date."
    },
    {
     "path": "/data/datadawg-dollars-method.json",
@@ -185,17 +185,17 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 171631,
-    "as_of": "2026-09-15",
-    "sha256": "e1b7f52c17fe97533928563d2d9b7f6664c7dda4ddb9cbcc54dac05a8acf4b95",
+    "bytes": 171587,
+    "as_of": "2026-09-16",
+    "sha256": "53300bc85792364a61f7f0cd96348c5acc5c203e8e8ba63f57c389cc209f62a7",
     "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 16/272 regular-season games are settled and banked in wins_tracker; 256 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    },
    {
     "path": "/data/dynasty-ranks.json",
     "url": "https://datadawgs216.com/data/dynasty-ranks.json",
-    "bytes": 107691,
-    "as_of": "2026-08-15",
-    "sha256": "6f5578adb4591cd43748eb4992fa8c556eebe756b4cbf2a897cfebe5700001b3",
+    "bytes": 107127,
+    "as_of": "2026-09-16",
+    "sha256": "328f365ada698c9b303a48ffad55ee883c7c0a45b37be5b7b981b1e7a5235862",
     "note": "Dynasty rankings and auction values are analyst estimates, not observed market prices or projections. Tied ranks are preserved from the supplied source."
    },
    {
@@ -217,16 +217,16 @@
    {
     "path": "/data/forecast-toto.json",
     "url": "https://datadawgs216.com/data/forecast-toto.json",
-    "bytes": 20752,
-    "as_of": "2026-09-15",
-    "sha256": "b2697b48c24a5c98da5689eb469383e590053911ea1fda7a8d3929bfde7637d1"
+    "bytes": 18910,
+    "as_of": "2026-09-16",
+    "sha256": "ef4c3f366439b53f14a167f453e5006ea8a515409ad1c8878499de8a519a75a5"
    },
    {
     "path": "/data/guillotine-calibration.json",
     "url": "https://datadawgs216.com/data/guillotine-calibration.json",
     "bytes": 6597,
-    "as_of": "2026-09-15",
-    "sha256": "c8aeb286c326befe98626d7ef2dab7133e8e91fa3f7a98007b0b545cb07286b2",
+    "as_of": "2026-09-16",
+    "sha256": "cb263edba689687e68855997da1a1b0f478298763f3562791fce54620a0f6503",
     "note": "Historical Sleeper projections can be revised after games. These are descriptive uncertainty estimates, not out-of-sample calibration. Correlation between opposing NFL teams and negative teammate correlations are not modeled."
    },
    {
@@ -240,17 +240,17 @@
    {
     "path": "/data/guillotine-receipts.json",
     "url": "https://datadawgs216.com/data/guillotine-receipts.json",
-    "bytes": 11708,
-    "as_of": "2026-09-15",
-    "sha256": "898b1c32a7846f8994ba43d168c2d371f3b7b3588dcccd639c296a8e938bc086",
+    "bytes": 14410,
+    "as_of": "2026-09-16",
+    "sha256": "760dd3c3018f486dc359135bd651032d7831488866fafedb9514d9efc5176906",
     "note": "Prospective pregame forecasts. Roster IDs only; no ownership identities or player rosters. Multiclass Brier is the sum of squared chop-probability errors; lower is better. Repeated full ties await resolution."
    },
    {
     "path": "/data/guillotine-weekly.json",
     "url": "https://datadawgs216.com/data/guillotine-weekly.json",
-    "bytes": 629179,
-    "as_of": "2026-09-15",
-    "sha256": "61d2e3762160b00d4e4474b3a0f55ec8a6e62c5ce45cc1b7ded316a2a9ccd3fa",
+    "bytes": 632401,
+    "as_of": "2026-09-16",
+    "sha256": "9b7f5a81ea594b0e2464adcce68cd1575a22d4bf5ba5e2b151c34bdedc50b314",
     "note": "Daily snapshot. Player timestamps are source update times. Projections are not live scores. Historical uncertainty is descriptive, not prospectively validated."
    },
    {
@@ -289,16 +289,16 @@
     "path": "/data/models.json",
     "url": "https://datadawgs216.com/data/models.json",
     "bytes": 3183,
-    "as_of": "2026-09-15",
-    "sha256": "4a7158816c105e9b97a0d10a8ee0cbcbd61d4d33133a09c9f2aef85fd144b6b8",
+    "as_of": "2026-09-16",
+    "sha256": "bfcbd4f001ba683cf64979b5db004cfe6ace0c3c270ec55d99b6d5cafd310647",
     "note": "Survivor uses nfelo published probabilities or nfelo-season-v1, not the legacy margin model below. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
     "path": "/data/nfelo.json",
     "url": "https://datadawgs216.com/data/nfelo.json",
-    "bytes": 87523,
-    "as_of": "2026-09-15",
-    "sha256": "ea87b15d0afb936bd6c4656831ee675485752da56ec477d0ef910c05e67bd797",
+    "bytes": 87530,
+    "as_of": "2026-09-16",
+    "sha256": "77161024e3edea68530100cc840c93f4f5b64b4accc1596702d960f013dd5117",
     "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp)."
    },
    {
@@ -384,9 +384,9 @@
    {
     "path": "/data/survivor.json",
     "url": "https://datadawgs216.com/data/survivor.json",
-    "bytes": 113697,
-    "as_of": "2026-09-15",
-    "sha256": "e71fd15ffe272d56048f9242a19f4fdcf2912c8adfc513c5b11ba3e0d5bf964a",
+    "bytes": 113698,
+    "as_of": "2026-09-16",
+    "sha256": "2dbfa89eb146059fbe2d4a030e42348a01cbf56975ef9d28a43e1c87c45f98ac",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"nfelo\" = published nfelo forecast without an extra blend; \"nfelo-season\" = nfelo pre-market calculation with current team/QB strength and game-specific HFA. Ownership is modelled, not observed."
    },
    {
