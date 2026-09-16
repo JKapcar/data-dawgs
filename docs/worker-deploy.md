@@ -11,7 +11,7 @@ The file contains secret **names only**. Secret values stay encrypted in Cloudfl
 - Compatibility date: `2026-07-31`.
 - Workers.dev and version preview URLs enabled. Delete disposable, non-deployed preview
   versions after verification; never delete a version referenced by a deployment.
-- Current production CPU ceiling: 1,000 ms. This DFS branch proposes 30,000 ms in the complete manifest; it is not a claim that production has changed. DFS requests also enforce search deadlines, simulation work budgets and storage limits. Verify plan support and CPU use on the preview version before promotion.
+- Current production CPU ceiling: 30,000 ms (DFS release 2026-09-16). Requests also enforce search deadlines, simulation work budgets and storage limits. Maximum-load CPU/memory profiling remains outstanding.
 - Workers Logs enabled.
 - `RL` KV namespace: `ffee9157b0a04cebb796acfa6046880a`.
 - `SWOLE_DB` D1 database `swoledawg`: SwoleDawg training data. **`database_id` in
@@ -116,7 +116,7 @@ authorization.
    in this runbook is a placeholder, and PowerShell rejects `<` outright rather than
    passing it through, which is a useful accident.
 4. Inspect that version with `wrangler versions view <version-id> --name toto --json`.
-   Confirm compatibility date, 1,000 ms CPU, `RL`, plain variables and every secret.
+   Confirm compatibility date, 30,000 ms CPU, `RL`, plain variables and every secret.
 5. Only after explicit approval, move traffic with
    `wrangler versions deploy <version-id>@100% --name toto`.
 6. Verify the deployment, then make read-only production calls:
