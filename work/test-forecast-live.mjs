@@ -54,7 +54,7 @@ const board=async path=>{
 const human=(name,p,touched=true,kind='human')=>({...game,sport:'nfl',entrant:name,entrant_kind:kind,owner:'Kap',touched,
   home_win_probability:p,submitted_at:clock-500,slider_value:p*100,slider_side:'home',idempotency_key:'PRIVATE-ID'});
 for(const [name,p,touched,kind] of [['Kap',.62,true,'human'],['Jeff',.7,true,'human'],['Sam',.6,true,'human'],['Lurker',.5,false,'human'],['Bot One',.9,true,'agent']])
-  put('/forecast/entries/nfl/2026/1/'+name+'/'+gid,human(name,p,touched,kind));
+  put('/forecast/entries/nfl/2026/'+game.week+'/'+name+'/'+gid,human(name,p,touched,kind));
 put('/forecast/bots/EmptyBot',{bot_name:'EmptyBot',owner:'Kap',token_hash:'PRIVATE-TOKEN'});
 await a.runForecastLive(env);
 assert.equal(Object.keys(get(root+'/models/'+gid)).length,5,'five model/AI receipts captured');
@@ -80,7 +80,7 @@ let lock=get(root+'/locks/'+gid);assert.equal(lock.forecasts.length,10,'five mod
 assert.equal(lock.forecasts.find(e=>e.model_id==='dd-crowd-nfl').n_touched,3,'bots/untouched excluded from crowd');
 assert(!lock.forecasts.some(e=>e.entrant==='Lurker'));
 const hash=lock.forecasts_sha256;
-put('/forecast/entries/nfl/2026/1/Kap/'+gid,human('Kap',.01));
+put('/forecast/entries/nfl/2026/'+game.week+'/Kap/'+gid,human('Kap',.01));
 nfelo.data.games.find(g=>g.id===gid).hwp=.01;toto.data.forecasts[0].home_win_probability=.01;
 await a.runForecastLive(env);assert.equal(get(root+'/locks/'+gid).forecasts_sha256,hash,'late updates cannot rewrite locked receipt');
 clock=kick+4*3600e3;
