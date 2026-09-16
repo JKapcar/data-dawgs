@@ -136,19 +136,19 @@ console.log("\nauthentication");
   const shared = await call({ jsonrpc: "2.0", id: 1, method: "tools/list" }, ENV.DAWG_PASS);
   ok("the legacy shared passphrase still works (migration path)", shared.status === 200);
   const stale = await call({ jsonrpc: "2.0", id: 1, method: "tools/list" }, TOK_STALE);
-  ok("a token that was never stored is rejected", stale.status === 401);
+  ok("a token that was never stored is rejected", stale.status === 403);
   const junk = await call({ jsonrpc: "2.0", id: 1, method: "tools/list" }, "u_notatoken");
-  ok("a forged u_ token is rejected", junk.status === 401);
+  ok("a forged u_ token is rejected", junk.status === 403);
   const empty = await call({ jsonrpc: "2.0", id: 1, method: "tools/list" }, "");
   ok("no credential is rejected", empty.status === 401);
-  ok("the 401 points at how to get a real URL",
+  ok("a dead credential's 403 points at how to get a real URL",
      /connect\.html/.test(JSON.stringify((await call({ jsonrpc: "2.0", id: 1, method: "tools/list" }, "u_x")).body)));
 
   // revocation
   const saved = USERS.Jeff.mcpToken;
   USERS.Jeff = { ...USERS.Jeff, mcpToken: null };
   const revoked = await call({ jsonrpc: "2.0", id: 1, method: "tools/list" }, TOK_JEFF);
-  ok("a revoked token stops working on the very next call", revoked.status === 401);
+  ok("a revoked token stops working on the very next call", revoked.status === 403);
   USERS.Jeff.mcpToken = saved;
   ok("and works again once re-minted",
      (await call({ jsonrpc: "2.0", id: 1, method: "tools/list" }, TOK_JEFF)).status === 200);

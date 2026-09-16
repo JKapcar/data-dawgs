@@ -174,7 +174,7 @@ test('proxy edit: the audit row is proxy_edit with before and after', async () =
   const r = rig(); r.seed();
   assert.equal((await r.submit(MGR, { forUid: 'u_rog' })).status, 200);
   await new Promise(res => setTimeout(res, 2));   // distinct Date.now() audit keys
-  const res = await r.submit(MGR, { forUid: 'u_rog' }, { ...PICK, label: 'NAVY -3.5', mkt: 'spread', line: -3.5 });
+  const res = await r.submit(MGR, { forUid: 'u_rog' }, { ...PICK, label: 'NAVY -3.5', mkt: 'spread', line: 3.5 });   // NAVY -3.5 lays 3.5 → stored line +3.5 (points given up)
   assert.equal(res.status, 200, JSON.stringify(res.body));
   const rows = r.audit();
   assert.equal(rows.length, 2);

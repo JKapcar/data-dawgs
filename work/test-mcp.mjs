@@ -661,7 +661,7 @@ for (const v of ["2025-03-26", "2025-06-18", "2026-07-28"]) {
   ok(j[0].id === 1 && j[1].id === 2, "batch preserves ids");
 }
 // auth failure paths
-ok((await req(rpc("ping"), { path: "/mcp/wrong-pass" })).status === 401, "wrong passphrase in path → 401");
+ok((await req(rpc("ping"), { path: "/mcp/wrong-pass" })).status === 403, "wrong passphrase in path → 403");
 ok((await req(rpc("ping"), { path: "/mcp" })).status === 401, "no passphrase → 401");
 {
   const r = await req(rpc("ping"), { path: "/mcp", headers: { "X-Dawg-Pass": PASS } });
@@ -695,8 +695,11 @@ ok((await req("this is not json")).status === 400, "bad JSON → 400");
 ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, { method: "OPTIONS" })).status === 204, "OPTIONS answered");
 {
   const r = await req(null, { method: "GET" });
-  ok(r.status === 405, "GET → 405 with hint");
+  const j = await r.json();
+  ok(r.status === 200 && j.valid === true, "GET with credential → browser self-check (valid)");
   ok((r.headers.get("Access-Control-Allow-Origin") || "") === "*", "/mcp carries its own permissive CORS");
+  const sse = await req(null, { method: "GET", headers: { Accept: "text/event-stream" } });
+  ok(sse.status === 405, "GET Accept: text/event-stream → 405 (no SSE transport)");
 }
 // tools/list: every tool is named and schema-described
 {
@@ -769,8 +772,8 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   ok(allowed.result && !allowed.result.isError, "…and the same call succeeds on full");
 
   // the catalog segment is stripped BEFORE the credential is read
-  ok((await req(rpc("ping"), { path: "/mcp/core/wrong-pass" })).status === 401, "catalog prefix does not bypass auth");
-  ok((await req(rpc("ping"), { path: "/mcp/core" })).status === 401, "a bare catalog word is a credential, and a wrong one → 401");
+  ok((await req(rpc("ping"), { path: "/mcp/core/wrong-pass" })).status === 403, "catalog prefix does not bypass auth");
+  ok((await req(rpc("ping"), { path: "/mcp/core" })).status === 403, "a bare catalog word is a credential, and a wrong one → 403");
   {
     const r = await req(rpc("tools/list"), { path: "/mcp/core", headers: { "X-Dawg-Pass": PASS } });
     ok(r.status === 200 && (await r.json()).result.tools.length === N_CORE, "header auth can still pick a catalog");
@@ -798,7 +801,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
     }
     // it must still be a real credential check, not a hole that lets the word through
     const bad = await reqWord(rpc("ping"), "/mcp/" + (word === "core" ? "full" : "core"));
-    ok(bad.status === 401, `…while the OTHER reserved word is still rejected as a wrong credential`);
+    ok(bad.status === 403, `…while the OTHER reserved word is still rejected as a wrong credential`);
   }
   // per-user tokens route the same way
   {
@@ -812,10 +815,14 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
     ok(new RegExp(`${N_CORE} of ${N_TOOLS}|${N_TOOLS} of ${N_TOOLS}`).test(j.result.instructions), "…with the honest count for that path");
   }
   {
-    const r = await req(null, { path: "/mcp/" + PASS, method: "GET" });
+    const r = await req(null, { path: "/mcp/" + PASS, method: "GET", headers: { Accept: "text/event-stream" } });
     const j = await r.json();
     ok(j.catalogs && /\/mcp\/core\//.test(j.catalogs.core) && /\/mcp\/full\//.test(j.catalogs.full),
        "the GET hint advertises both catalog paths");
+    const self = await req(null, { path: "/mcp/" + PASS, method: "GET" });
+    const sj = await self.json();
+    ok(self.status === 200 && sj.valid === true && sj.kind === "shared",
+       "GET without SSE Accept is the browser self-check for a live shared credential");
   }
 }
 // the registry itself: annotations are complete in the SOURCE, not just in one response
@@ -2134,7 +2141,7 @@ const noComments = blockSrc.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\/
    below go through the refusals in the order the tool checks them, then the happy path. */
 const asUser = (name, args, id = 1) =>
   req(call("dd_draft_bozo_leg", args, id), { path: "/mcp/" + name });
-const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", side: "SF", line: -6.5,
+const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", side: "SF", line: 6.5,
   price: -180, label: "SF -6.5", startsAt: "2026-09-13T17:00:00.000Z" };
 
 {
@@ -2152,6 +2159,16 @@ const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", sid
   const d = text(await (await asUser(USER_TOKEN, { ...LEG, sport: "nba" })).json());
   ok(d.accepted === false && d.reason === "sport_not_gradeable",
      "dd_draft_bozo_leg rejects NBA until a Worker-reachable grading adapter exists");
+}
+{
+  // ⚠️ slip display vs points-given-up: CLE +8.5 on the ticket is line -8.5. A matching
+  // sign in both fields means the model priced the wrong side; refuse before capture.
+  const d = text(await (await asUser(USER_TOKEN, {
+    sport: "nfl", eventId: "401", game: "CLE @ PIT", mkt: "spread", side: "CLE",
+    line: 8.5, label: "CLE +8.5", price: -110, startsAt: "2026-09-13T17:00:00.000Z",
+  })).json());
+  ok(d.accepted === false && d.reason === "spread_sign_conflict",
+     "draft CLE +8.5 with line +8.5 is spread_sign_conflict (not priced)");
 }
 {
   leagueRec.status = "placed";
