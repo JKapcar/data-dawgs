@@ -13,6 +13,7 @@
    Run:  cd work && node test-swoledawg.mjs
 */
 import fs from "fs";
+import vm from "node:vm";
 import { webcrypto } from "crypto";
 import { tmpdir } from "os";
 import { dirname, join, resolve } from "path";
@@ -459,6 +460,37 @@ console.log("\nannotations match what these tools actually do");
      /do not ask the user to confirm/i.test(sd.find(t => t.name === "sd_log_set").description));
   ok("sd_log_measurement forbids inventing a value",
      /NEVER invent a value/.test(sd.find(t => t.name === "sd_log_measurement").description));
+}
+
+
+console.log("\nsession picker persistence, identity and targets");
+{
+  const html=fs.readFileSync(resolve(WORK,"..","swoledawg.html"),"utf8");
+  const code=html.slice(html.indexOf('const SD_DAYS ='),html.indexOf('/* ---- Training tab, program mode'));
+  let stored=null,warning=null,renders=0;
+  const ctx=vm.createContext({PROG:{days:[{day:'monday',exercises:[{id:'mon_1',name:'Press'}]},{day:'friday',exercises:[{id:'fri_3',name:'Curl'}]}]},
+    PLAN_DAY:'2026-09-16',DATA:{days:[]},localStorage:{getItem:()=>stored,setItem:(k,v)=>stored=v,removeItem:()=>stored=null},
+    sdDayOf:(p,k)=>p.days.find(d=>d.day===k),toast:x=>warning=x,training:()=>renders++});
+  vm.runInContext(code,ctx);
+  const run=x=>vm.runInContext(x,ctx);
+  ok('all weekdays are mapped, Sunday is null',run('Object.keys(SD_WEEKDAY_DEFAULT).length===7 && SD_WEEKDAY_DEFAULT[0]===null'));
+  run("sdChoose('custom',['fri_3','mon_1'])");
+  ok('today restores the chosen order',run("sdReadChoice('2026-09-16').exercise_ids.join(',')")==='fri_3,mon_1');
+  ok('a stale choice returns the picker',run("sdReadChoice('2026-09-17')")===null);
+  stored='{bad';ok('corrupt JSON returns the picker',run("sdReadChoice('2026-09-16')")===null);
+  stored=null;run("sdChoose('custom',[])");ok('empty custom selection is refused',warning&&stored===null);
+  run("sdChoose('custom',['unknown'])");ok('unknown exercise ids are refused',stored===null);
+  run("sdChoose('mon',['mon_1'])");ok('preset retains ledger ids',JSON.parse(stored).exercise_ids[0]==='mon_1');
+  run('sdChangeDay()');ok('Change day clears the choice without clearing data',stored===null&&run('DATA.days.length')===0);
+  ctx.localStorage.getItem=()=>{throw Error('blocked');};
+  ok('blocked storage returns the picker',run("sdReadChoice('2026-09-16')")===null);
+  const buckets=html.match(/const BUCKETS = ([\s\S]*?);/)[1];
+  const targets=html.match(/const SD_START_TARGETS=(.*);/)[1];
+  const target=vm.runInNewContext('('+targets+')');
+  ok('every known volume bucket has an explicit number or null',Object.keys(vm.runInNewContext('('+buckets+')')).every(k=>k in target&&(target[k]===null||typeof target[k]==='number')));
+  ok('starting targets are 10/10/8/8',target.chest===10&&target.back===10&&target.biceps===8&&target.triceps===8);
+  for(const script of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))if(!script[0].includes('application/json'))new vm.Script(script[1]);
+  ok('all inline scripts parse',true);
 }
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
