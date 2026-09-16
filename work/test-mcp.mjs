@@ -18,8 +18,8 @@ const makeSlate = require("./mkslate.js");
 // ⚠️ COUNTS, NOT A GUESS — bump these in the same commit that adds or retires a tool.
 // 58 = 26 core + 32 full, including account-scoped fantasy league discovery and the
 // Phase 2.7 dd_bozo_admin_actions audit read (core).
-const N_TOOLS = 58, N_CORE = 26;
-const WRITE_TOOLS = ["dd_submit_bozo_leg", "sd_start_session", "sd_log_set", "sd_log_sets",
+const N_TOOLS = 74, N_CORE = 43;
+const WRITE_TOOLS = ["dd_dfs_sync","dd_dfs_compare","dd_dfs_create","dd_dfs_upload","dd_dfs_players","dd_dfs_settings","dd_dfs_solve","dd_dfs_explore","dd_dfs_simulate","dd_dfs_select","dd_dfs_delete","dd_submit_bozo_leg", "sd_start_session", "sd_log_set", "sd_log_sets",
                      "sd_finish_session", "sd_log_measurement", "sd_log_nutrition"];
 let pass = 0, fail = 0;
 const ok = (cond, name) => { if (cond) pass++; else { fail++; console.error("FAIL:", name); } };
@@ -753,8 +753,8 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   ok([...coreNames].every(n => fullNames.has(n)), "core is a strict subset of full");
   ok(coreNames.has("dd_whoami") && coreNames.has("dd_bozo_week") && coreNames.has("dd_draft_board") && coreNames.has("dd_site_map"),
      "core keeps the league's own state and the site map");
-  ok(!coreNames.has("dd_find_cfb_games") && !coreNames.has("dd_solve_dfs_lineup") && !coreNames.has("dd_model_scoreboard"),
-     "core drops the CFB evidence surfaces, the DFS solver and the model scoreboard");
+  ok(!coreNames.has("dd_find_cfb_games") && coreNames.has("dd_solve_dfs_lineup") && !coreNames.has("dd_model_scoreboard"),
+     "core includes the DFS solver while excluding CFB evidence and the model scoreboard");
 
   // callable, not merely listed
   const okCall = await (await req(call("dd_convert_odds", { american_odds: -110 }), { path: "/mcp/core/" + PASS })).json();
@@ -1997,9 +1997,9 @@ function refNcdf(z) {
 {
   const j = await (await req(call("dd_site_map"))).json();
   const d = text(j);
-  ok(d.notServedHere && /Never hosted or persisted/.test(d.notServedHere.dfs_projections_and_ownership) &&
-     /bounded slate transiently/.test(d.notServedHere.dfs_projections_and_ownership),
-     "notServedHere explains the DFS transient-compute invariant");
+  ok(d.notServedHere && /private account-scoped DFS workspace/.test(d.notServedHere.dfs_projections_and_ownership) &&
+     /remains transient/.test(d.notServedHere.dfs_projections_and_ownership),
+     "notServedHere explains private workspaces and the legacy transient solver");
   ok(d.machine.surfaces.includes("surfaces.json"), "points agents at the surfaces map");
   ok(d.machine.data.includes("/data/model-contracts.json") && d.pages["pound.html"], "site map includes the Pound contracts and workbench");
   ok(d.machine.data.includes("/data/cfb-ratings.json") && d.machine.data.includes("/data/cfb-model-receipts.json") &&

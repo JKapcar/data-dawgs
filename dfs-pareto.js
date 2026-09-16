@@ -15,7 +15,7 @@ function slotOwn(p,isCpt,sd,floor){return audit.ownership(p,isCpt,sd,floor||OWN_
 /* Back-compat: ownership(p,cpt,sd) returns a floored fraction (never null). */
 function ownership(p,cpt,sd){return slotOwn(p,cpt,sd);}
 function point(l,P,sd,i){
- 
+
  var x=0;for(var k=0;k<l.ids.length;k++){var id=l.ids[k];x+=Math.log10(slotOwn(P[id],id===l.cpt,sd));}
  return {i:i,x:x,y:l.proj,l:l};
 }
@@ -76,7 +76,7 @@ function enumerateShowdown(P,c,progress){
    var nteams=0;for(t=0;t<tlist.length;t++){if(tc[t]>0)nteams++;if(tc[t]>maxTeam)return;}
    if(nteams!==2)return;
    for(k=0;k<lockPos.length;k++)if(pick.indexOf(lockPos[k])<0)return;
-   for(k=0;k<6;k++){var tot=s+extra[pick[k]];if(tot>cap||tot<minSal)continue;
+   for(k=0;k<6;k++){if(c.maxStored&&legalN>=c.maxStored){stop=true;return;}var tot=s+extra[pick[k]];if(tot>cap||tot<minSal)continue;
     var ids=[pool[pick[0]],pool[pick[1]],pool[pick[2]],pool[pick[3]],pool[pick[4]],pool[pick[5]]];
     var d=describe(ids,pool[pick[k]],P,true,c.ownershipFloor);
     out.ids.push(d.ids);out.cpt.push(d.cpt);out.sal.push(d.sal);out.proj.push(d.proj);out.x.push(d.x);out.own.push(d.own);out.ceil.push(d.ceil);out.dead.push(d.dead);out.split.push(d.split);legalN++;}

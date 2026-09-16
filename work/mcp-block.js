@@ -2156,7 +2156,7 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
           "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. Compact profiles also expose non-ranked expected-versus-observed Elo diagnostics; these are not luck, team-quality labels, forecasts or grades. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_find_cfb_team_games and dd_find_cfb_team_periods return schedule-derived results only, for one exact team by default or for every team's most recent game or period under scope=latest-per-team; latest means latest within the 2025 FBS-involved surface, not current 2026 form, and FCS records are partial. dd_find_cfb_historical_market returns book-identified prices whose observation time is unknown: never call them closing lines, compute CLV or cite them as prospective inputs. dd_get_cfb_model_card returns generated governance and retrodictive evidence, not a current forecast or leaderboard. dd_get_cfb_rating_system describes registered methods and output availability; registration is not evidence of prospective skill. dd_rank_cfb_teams returns one declared system's dated ranking, not a consensus or current power ranking. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
-          "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot; it models double-pick weeks exactly, as two assignment slots spending two distinct teams. When quoting bozo odds, survivor odds " +
+          "There is no built-in DFS projection or ownership feed. The core dd_dfs_* suite saves private caller-uploaded workspaces and shares engines with the browser. dd_solve_dfs_lineup is a transient legacy solver. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot; it models double-pick weeks exactly, as two assignment slots spending two distinct teams. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
       });
@@ -2206,6 +2206,166 @@ const SWOLE_NEEDS_USER = "SwoleDawg needs to know who you are, and the shared le
 
 const MCP_TOOLS = [
   {
+    name: "dd_dfs_sync",
+    title: "Save browser DFS workspace",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Atomically save player pool, settings and legal lineups from the browser, using the expected revision.",
+    inputSchema: dfsToolSchema("sync"),
+    async run(args, env, caller) { return toolText(await dfsRun("sync", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_compare",
+    title: "Compare DFS contests",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Compare cash, 3\u00d7, 5\u00d7 and GPP using shared held-out contest selection, explicit game plan and a field-quality gate.",
+    inputSchema: dfsToolSchema("compare"),
+    async run(args, env, caller) { return toolText(await dfsRun("compare", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_schema",
+    title: "Describe DFS fields and limits",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "Read all configurable fields, units, defaults, compute limits and workflow.",
+    inputSchema: dfsToolSchema("schema"),
+    async run(args, env, caller) { return toolText(await dfsRun("schema", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_list",
+    title: "List my DFS workspaces",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "Discover private saved DFS slates and their revisions.",
+    inputSchema: dfsToolSchema("list"),
+    async run(args, env, caller) { return toolText(await dfsRun("list", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_get",
+    title: "Read DFS workspace",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "Read player pool, settings, paginated lineups and optional simulation results.",
+    inputSchema: dfsToolSchema("get"),
+    async run(args, env, caller) { return toolText(await dfsRun("get", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_create",
+    title: "Create DFS workspace",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Create a private Classic or Showdown workspace for your account.",
+    inputSchema: dfsToolSchema("create"),
+    async run(args, env, caller) { return toolText(await dfsRun("create", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_upload",
+    title: "Upload DFS CSV",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Parse the same salary/projection CSVs as the page. Preview with commit=false; save with commit=true. Missing values remain missing.",
+    inputSchema: dfsToolSchema("upload"),
+    async run(args, env, caller) { return toolText(await dfsRun("upload", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_players",
+    title: "Write DFS player pool",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Replace the player pool with inspected native fields. Supports projections, ownership, CPT/FLEX IDs, locks, exclusions and exposure caps. Invalidates dependent results.",
+    inputSchema: dfsToolSchema("players"),
+    async run(args, env, caller) { return toolText(await dfsRun("players", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_settings",
+    title: "Write DFS settings",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Patch solver, simulation or lab configuration; read dd_dfs_schema first. Rejects unsupported fields.",
+    inputSchema: dfsToolSchema("settings"),
+    async run(args, env, caller) { return toolText(await dfsRun("settings", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_solve",
+    title: "Run DFS solver",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Run the shared exact search with explicit timeout and infeasibility status; save candidates and report actual exposure.",
+    inputSchema: dfsToolSchema("solve"),
+    async run(args, env, caller) { return toolText(await dfsRun("solve", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_explore",
+    title: "Generate DFS exploration pool",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Run shared Showdown enumeration or Classic sampled exploration. Report whether the search completed. Ownership product is only a duplication proxy.",
+    inputSchema: dfsToolSchema("explore"),
+    async run(args, env, caller) { return toolText(await dfsRun("explore", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_simulate",
+    title: "Run DFS contest simulation",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Run shared seeded correlated worlds against a modelled field. Returns training and held-out metrics, tie-aware payouts, intervals, and field diagnostics. Sampled-field first-place odds are unavailable.",
+    inputSchema: dfsToolSchema("simulate"),
+    async run(args, env, caller) { return toolText(await dfsRun("simulate", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_exposure",
+    title: "Read DFS exposure",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "Inspect player, captain, FLEX, team and game exposure, including final cap violations.",
+    inputSchema: dfsToolSchema("exposure"),
+    async run(args, env, caller) { return toolText(await dfsRun("exposure", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_select",
+    title: "Select DFS lineups",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Keep explicitly chosen lineup indexes as the portfolio. Invalidates previous simulation.",
+    inputSchema: dfsToolSchema("select"),
+    async run(args, env, caller) { return toolText(await dfsRun("select", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_export",
+    title: "Export DraftKings CSV",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "Return a DraftKings roster CSV using verified numeric slot IDs; refuse missing IDs. Does not submit entries.",
+    inputSchema: dfsToolSchema("export"),
+    async run(args, env, caller) { return toolText(await dfsRun("export", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_delete",
+    title: "Delete DFS workspace",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: true,
+    description: "Delete this private workspace only, guarded by expected_revision.",
+    inputSchema: dfsToolSchema("delete"),
+    async run(args, env, caller) { return toolText(await dfsRun("delete", args, env, caller)); },
+  },
+  {
     name: "dd_whoami",
     title: "Who am I",
     catalog: "core",
@@ -2218,7 +2378,7 @@ const MCP_TOOLS = [
           player: caller.name, anonymous: false,
           // Read everything, write one thing: your own Bozo leg, two-phase. Stated here
           // because "read-only" was a published claim and its retirement should be too.
-          access: "read-only, except a Bozo leg via dd_submit_bozo_leg (two-phase confirm): your own, or another member's if you manage that league",
+          access: "Account-scoped DFS workspace and SwoleDawg writes; Bozo leg via dd_submit_bozo_leg (two-phase confirm): your own, or another member's if you manage that league",
           // This caller's own subscription state, from their own record. Everything on the
           // site is free today: plan is "free" for every account and NOTHING is gated on
           // it, so never tell a user a tool is being withheld from them on this basis.
@@ -4903,7 +5063,7 @@ const MCP_TOOLS = [
   {
     name: "dd_solve_dfs_lineup",
     title: "DFS lineup solver",
-    catalog: "full",
+    catalog: "core",
     readOnlyHint: true,
     description: "Build one to twenty DraftKings Classic or Showdown lineups with the exact branch-and-bound solver used by dfs.html. Every salary, projection and ownership value must be supplied in this call; Data Dawgs has no projection feed, stores nothing, and returns the applied constraints plus explicit infeasibility or timeout state.",
     inputSchema: {
@@ -5139,7 +5299,7 @@ const MCP_TOOLS = [
           "pound.html": "The Pound model workbench, deterministic calculators, contracts and honest tool-status inventory.",
         },
         notServedHere: {
-          dfs_projections_and_ownership: "Never hosted or persisted, by design. The browser slate stays in that user's localStorage. dd_solve_dfs_lineup accepts a bounded slate transiently in one authenticated call, computes, returns, and stores neither inputs nor results.",
+          dfs_projections_and_ownership: "User-supplied data stays local unless explicitly saved to a private account-scoped DFS workspace. dd_dfs_* reads and writes those workspaces. dd_solve_dfs_lineup remains transient.",
           epa_stats: "The 2.1MB dataset is embedded in stats.html; parsing it per call is a poor fit for a Worker. Browse the page directly.",
         },
       });

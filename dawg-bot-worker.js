@@ -1764,6 +1764,7 @@ export default {
     if (url.pathname === "/survivor-picks") return handleSurvivorPicks(request, url, env, cors);
     if (url.pathname === "/cfb/market-snapshots") return handleCfbMarketSnapshots(request, url, env, cors);
     if (url.pathname === "/sleeper/players-slim") return handleSleeperPlayersSlim(request, env, cors);
+    if (url.pathname.startsWith("/api/dfs/")) return handleDfsWorkspace(request, url, env, cors);
     if (url.pathname.startsWith("/api/swoledawg")) return handleSwole(request, url, env, cors);
     // DD-RANKINGS-ROUTE — The Dog Track capture half; see the DD-RANKINGS-BLOCK below.
     if (url.pathname.startsWith("/rankings/")) return handleRankings(request, url, env, cors);
@@ -13116,6 +13117,1060 @@ async function forecastLiveRoute(request,url,env,cors) {
 }
 /* ===== DD-FORECAST-LIVE END ===== */
 
+/* ===== DD-DFS-WORKSPACE START ===== */
+const dfsModules = {};
+(function(globalThis, self, module, require){
+/**
+ * DFS slate ingest — DK salary CSV + ETR-shaped projection paste.
+ * Source of truth for parsers used by dfs.html (keep page copy in sync via
+ * work/patch-dfs-slate-ingest.py). Never fetch or commit paid ETR content (I1).
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === "object" && module.exports) module.exports = api;
+  if (root) root.DDFSIngest = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  "use strict";
+
+  var CLASSIC_POS = { QB: 1, RB: 1, WR: 1, TE: 1, DST: 1 };
+  var SHOWDOWN_POS = { QB: 1, RB: 1, WR: 1, TE: 1, DST: 1, K: 1 };
+
+  function parseCSV(text) {
+    text = String(text || "").replace(/^\uFEFF/, "");
+    var rows = [], row = [], cell = "", i = 0, q = false;
+    while (i < text.length) {
+      var ch = text[i];
+      if (q) {
+        if (ch === '"') {
+          if (text[i + 1] === '"') { cell += '"'; i += 2; continue; }
+          q = false; i++; continue;
+        }
+        cell += ch; i++; continue;
+      }
+      if (ch === '"') { q = true; i++; continue; }
+      if (ch === ",") { row.push(cell); cell = ""; i++; continue; }
+      if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && text[i + 1] === "\n") i++;
+        row.push(cell); rows.push(row); row = []; cell = ""; i++; continue;
+      }
+      cell += ch; i++;
+    }
+    if (cell.length || row.length) { row.push(cell); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (c) { return String(c).trim() !== ""; }); });
+  }
+
+  function team(raw) {
+    return String(raw || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+  }
+
+  function normName(name) {
+    return String(name || "").toLowerCase().replace(/\./g, "").replace(/'/g, "")
+      .replace(/\s+(jr|sr|ii|iii|iv)$/i, "").replace(/\s+/g, " ").trim();
+  }
+
+  function nameKeys(name, tm) {
+    var n = normName(name);
+    var parts = n.split(" ");
+    var first = parts[0] || "", last = parts[parts.length - 1] || "";
+    var keys = [n];
+    if (tm) keys.unshift(n + "|" + tm);
+    if (parts.length > 1) keys.push(first.slice(0, 1) + " " + last + (tm ? "|" + tm : ""));
+    return keys;
+  }
+
+  function findCol(cells, names) {
+    var i, j, c;
+    for (i = 0; i < names.length; i++) {
+      j = cells.indexOf(names[i]);
+      if (j >= 0) return j;
+    }
+    for (i = 0; i < names.length; i++) {
+      for (j = 0; j < cells.length; j++) {
+        c = cells[j];
+        if (c === names[i] || c.indexOf(names[i]) >= 0) return j;
+      }
+    }
+    return -1;
+  }
+
+  function parseMoney(raw) {
+    var n = parseFloat(String(raw || "").replace(/[^0-9.\-]/g, ""));
+    return isFinite(n) ? Math.round(n) : 0;
+  }
+
+  function parseOwn(raw) {
+    var s = String(raw || "").trim();
+    if (!s) return null;
+    var pct = /%$/.test(s);
+    var n = parseFloat(s.replace(/[^0-9.\-]/g, ""));
+    if (!isFinite(n)) return null;
+    if (pct) return n;
+    if (n > 0 && n <= 1) return n * 100;
+    return n;
+  }
+
+  function classifyHeader(cells) {
+    var low = cells.map(function (c) { return String(c).trim().toLowerCase(); });
+    var hasCptSal = findCol(low, ["cpt salary", "captain salary"]) >= 0;
+    var hasCptOwn = findCol(low, ["cpt own", "captain own", "cpt ownership"]) >= 0;
+    var hasRp = findCol(low, ["roster position"]) >= 0;
+    var hasDkSal = findCol(low, ["dk salary"]) >= 0;
+    var hasSal = findCol(low, ["salary", "dk salary"]) >= 0;
+    var hasPos = findCol(low, ["position", "dk pos", "pos"]) >= 0;
+    var hasName = findCol(low, ["name", "player", "name + id", "player name"]) >= 0;
+    var hasProj = findCol(low, ["dk proj", "projection", "proj", "fpts", "points"]) >= 0;
+    var hasFieldOwn = findCol(low, ["small field", "large field", "total own", "own", "ownership"]) >= 0;
+    var hasGi = findCol(low, ["game info", "gameinfo"]) >= 0;
+
+    if (hasRp && hasSal && hasPos && hasName) return "dk-salary";
+    if (hasCptSal || hasCptOwn) return "etr-showdown";
+    if (hasDkSal && hasProj) return "etr-classic";
+    if (hasSal && hasPos && hasName && hasProj && !hasGi) return hasFieldOwn ? "etr-classic" : "etr-or-proj";
+    if (hasSal && hasPos && hasName && hasGi) return "dk-salary";
+    if (hasSal && hasPos && hasName) return "dk-salary-loose";
+    if (hasProj && hasName) return "proj-paste";
+    return "unknown";
+  }
+
+  function readSalaries(text, opts) {
+    opts = opts || {};
+    var rows = parseCSV(text);
+    if (!rows.length) return { error: "That file was empty." };
+
+    var hdr = -1, idx = null, headerKind = "unknown";
+    for (var i = 0; i < Math.min(rows.length, 16); i++) {
+      var cells = rows[i].map(function (c) { return String(c).trim().toLowerCase(); });
+      var cSal = findCol(cells, ["salary", "dk salary"]);
+      var cPos = findCol(cells, ["position", "dk pos", "pos"]);
+      var cName = findCol(cells, ["name", "player", "name + id", "player name"]);
+      if (cSal < 0 || cPos < 0 || cName < 0) continue;
+      hdr = i;
+      headerKind = classifyHeader(cells);
+      idx = {
+        pos: cPos, name: cName, sal: cSal,
+        id: findCol(cells, ["id"]),
+        rp: findCol(cells, ["roster position"]),
+        gi: findCol(cells, ["game info", "gameinfo"]),
+        tm: findCol(cells, ["teamabbrev", "team"]),
+        avg: findCol(cells, ["avgpointspergame"]),
+        cptSal: findCol(cells, ["cpt salary", "captain salary"])
+      };
+      break;
+    }
+    if (hdr < 0) {
+      return { error: "This does not look like a DraftKings salary export — no row with Position/Name/Salary (or DK Pos/Player/DK Salary) was found." };
+    }
+    if (!opts.combined && (headerKind === "etr-showdown" || (idx.cptSal >= 0 && idx.rp < 0))) {
+      return {
+        error: "This looks like an ETR Showdown projection board (CPT Salary / CPT Own columns), not a DraftKings salary export. Paste it into the projections box, or export DKSalaries.csv from the contest lineup page (desktop).",
+        format: "etr-showdown",
+        hint: "proj-paste"
+      };
+    }
+
+    var warnings = [];
+    if (headerKind === "etr-classic") {
+      warnings.push("File looks like an ETR classic board. Salaries may load, but prefer DK Export to CSV for official IDs; paste projections separately.");
+    }
+
+    // Scan for showdown signal first (any CPT roster position)
+    var anyCpt = !!(opts.combined && (idx.cptSal >= 0 || headerKind === "etr-showdown"));
+    if (idx.rp >= 0) {
+      for (var s = hdr + 1; s < rows.length; s++) {
+        var rp0 = String(rows[s][idx.rp] || "").trim().toUpperCase();
+        if (rp0 === "CPT" || rp0 === "CAPTAIN") { anyCpt = true; break; }
+      }
+    }
+    var allowPos = anyCpt ? SHOWDOWN_POS : CLASSIC_POS;
+    var bySlot = {};
+    var dropped = {};
+
+    for (var r = hdr + 1; r < rows.length; r++) {
+      var row = rows[r];
+      var name = String(row[idx.name] || "").trim();
+      var idFromName = "";
+      var mId = name.match(/^(.*)\s*\((\d+)\)\s*$/);
+      if (mId) { name = mId[1].trim(); idFromName = mId[2]; }
+      var sal = parseMoney(row[idx.sal]);
+      if (!name || sal <= 0) continue;
+      var pos = String(row[idx.pos] || "").trim().toUpperCase();
+      if (pos === "D" || pos === "DEF" || pos === "D/ST") pos = "DST";
+      if (!allowPos[pos]) {
+        dropped[pos || "(blank)"] = (dropped[pos || "(blank)"] || 0) + 1;
+        continue;
+      }
+      var tm = team(idx.tm >= 0 ? row[idx.tm] : "");
+      var gi = idx.gi >= 0 ? String(row[idx.gi] || "") : "";
+      var m = gi.match(/([A-Za-z]{2,4})\s*@\s*([A-Za-z]{2,4})/);
+      var away = m ? team(m[1]) : "", home = m ? team(m[2]) : "";
+      var kickM = gi.match(/(\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\s*[AP]M(?:\s*ET)?)/i);
+      var kickoff = kickM ? kickM[1] : null;
+      var rp = idx.rp >= 0 ? String(row[idx.rp] || "").trim().toUpperCase() : "";
+      var id = idx.id >= 0 ? String(row[idx.id] || "").trim() : (idFromName || "");
+      var key = normName(name) + "|" + tm + "|" + pos;
+      var rec = bySlot[key] || (bySlot[key] = {
+        name: name, pos: pos, team: tm,
+        gid: m ? away + "@" + home : (tm || "?"),
+        opp: tm === away ? home : (tm === home ? away : ""),
+        away: away, home: home,
+        kickoff: kickoff, startTime: kickoff,
+        sal: 0, dkId: "", cptId: "", cptSal: 0,
+        avg: idx.avg >= 0 ? parseFloat(row[idx.avg]) || 0 : 0,
+        proj: null, own: null, status: ""
+      });
+      if (rp === "CPT" || rp === "CAPTAIN") { rec.cptId = id; rec.cptSal = sal; }
+      else { rec.sal = sal; rec.dkId = id; if (idx.cptSal >= 0) rec.cptSal = parseMoney(row[idx.cptSal]); }
+      if (!rec.sal && sal) {
+        rec.sal = (rp === "CPT" || rp === "CAPTAIN") ? Math.round(sal / 1.5 / 100) * 100 : sal;
+        rec.dkId = rec.dkId || id;
+      }
+    }
+
+    var players = Object.keys(bySlot).map(function (k) { return bySlot[k]; }).filter(function (p) { return p.sal > 0; });
+    if (!players.length) return { error: "Found the header but no player rows underneath it.", dropped: dropped };
+    var showdown = anyCpt || players.some(function (p) { return p.cptId; });
+    var games = {};
+    players.forEach(function (p) { games[p.gid] = 1; });
+    return {
+      players: players,
+      showdown: showdown,
+      games: Object.keys(games).length,
+      format: showdown ? "dk-showdown" : "dk-classic",
+      warnings: warnings,
+      dropped: dropped
+    };
+  }
+
+  /**
+   * Apply projection/ownership paste onto an existing player pool.
+   * opts.ownTier: "large" | "small" | "auto" (default auto: Large Field > Total Own > Small Field > own)
+   */
+  function applyProjections(text, players, map, opts) {
+    opts = opts || {};
+    var rows = parseCSV(text);
+    if (rows.length < 2) return { error: "Paste a header row and at least one player." };
+    var head = rows[0].map(function (c) { return String(c).trim(); });
+    var low = head.map(function (h) { return h.toLowerCase(); });
+
+    function guess(cands, exclude) {
+      var c, j;
+      for (c = 0; c < cands.length; c++) {
+        j = low.indexOf(cands[c]);
+        if (j >= 0 && j !== exclude) return j;
+      }
+      for (c = 0; c < cands.length; c++) {
+        for (j = 0; j < low.length; j++) {
+          if (j !== exclude && low[j].indexOf(cands[c]) >= 0) return j;
+        }
+      }
+      return -1;
+    }
+
+    var iName = map && map.name >= 0 ? map.name : guess(["player", "name", "playername", "player name"]);
+    var iProj = map && map.proj >= 0 ? map.proj : guess(["dk proj", "proj", "projection", "fpts", "points", "median", "dk points", "proj points"]);
+    var iTeam = map && map.team >= -1 ? map.team : guess(["team", "tm", "teamabbrev"]);
+    var iOwn = -1;
+    if (map && map.own >= 0) iOwn = map.own;
+    else {
+      var tier = opts.ownTier || "auto";
+      if (tier === "large") iOwn = guess(["large field", "own", "ownership", "total own", "own%", "proj own", "roster%", "pown"]);
+      else if (tier === "small") iOwn = guess(["small field", "own", "ownership", "total own", "own%", "proj own", "roster%", "pown"]);
+      else {
+        iOwn = guess(["large field"]);
+        if (iOwn < 0) iOwn = guess(["total own"]);
+        if (iOwn < 0) iOwn = guess(["small field"]);
+        if (iOwn < 0) iOwn = guess(["own", "ownership", "own%", "proj own", "roster%", "pown"]);
+      }
+    }
+    var iCptOwn = guess(["cpt own", "captain own", "cpt ownership"]);
+    var iCptProj = guess(["cpt projection", "captain projection", "cpt proj"]);
+    var iCeil = guess(["ceiling", "ceil", "90th", "p90", "upside"]);
+    var iId = guess(["id"]);
+
+    if (iName < 0 || iProj < 0) {
+      return { error: "Could not tell which column is the player name and which is the projection. Pick them below.", head: head };
+    }
+
+    var index = {};
+    players.forEach(function (p, i) {
+      nameKeys(p.name, p.team).forEach(function (k) {
+        if (!(k in index)) index[k] = i;
+      });
+      if (p.dkId) index["id:" + p.dkId] = i;
+    });
+
+    // Units belong to a column, not an individual cell. In a percent column,
+    // 0.5 is half a percent even when it appears without a percent sign.
+    function ownershipColumn(col) {
+      if (col < 0) return function () { return null; };
+      var values = rows.slice(1).map(function (r) { return parseFloat(String(r[col] || "").replace(/[%,$]/g, "")); }).filter(Number.isFinite);
+      var percent = /%/.test(head[col]) ||
+        rows.slice(1).some(function (r) { return /%/.test(r[col] || ""); }) || values.some(function (v) { return v > 1; });
+      return function (raw) {
+        if (raw == null || String(raw).trim() === "") return null;
+        var n = parseFloat(String(raw).replace(/[%,$]/g, ""));
+        if (!isFinite(n)) return null;
+        n *= percent ? 1 : 100;
+        return n >= 0 && n <= 100 ? n : null;
+      };
+    }
+    var readOwn = ownershipColumn(iOwn), readCptOwn = ownershipColumn(iCptOwn);
+    var matched = 0, missed = [], seen = {};
+    for (var r = 1; r < rows.length; r++) {
+      var row = rows[r];
+      var nm = String(row[iName] || "").trim();
+      if (!nm) continue;
+      var pv = parseFloat(String(row[iProj]).replace(/[^0-9.\-]/g, ""));
+      if (!isFinite(pv)) continue;
+      var tm = iTeam >= 0 ? team(row[iTeam]) : "";
+      var hit = -1;
+      if (iId >= 0) {
+        var rid = String(row[iId] || "").trim();
+        if (rid && ("id:" + rid) in index) hit = index["id:" + rid];
+      }
+      if (hit < 0) {
+        nameKeys(nm, tm).forEach(function (k) {
+          if (hit < 0 && k in index) hit = index[k];
+        });
+      }
+      if (hit < 0) { missed.push(nm); continue; }
+      if (seen[hit]) continue;
+      seen[hit] = 1;
+      players[hit].proj = pv;
+      if (iOwn >= 0) {
+        var ov = readOwn(row[iOwn]);
+        players[hit].own = ov;
+      }
+      if (iCptOwn >= 0) {
+        var cov = readCptOwn(row[iCptOwn]);
+        players[hit].cptOwn = cov;
+      }
+      // An older CPT projection must not survive a new base-only projection.
+      if (iCptProj < 0) delete players[hit].cptProj;
+      if (iCeil < 0) delete players[hit].ceil;
+      if (iCptProj >= 0) {
+        var cpv = parseFloat(String(row[iCptProj]).replace(/[^0-9.\-]/g, ""));
+        if (isFinite(cpv)) players[hit].cptProj = cpv; else delete players[hit].cptProj;
+      }
+      if (iCeil >= 0) {
+        var cev = parseFloat(String(row[iCeil]).replace(/[^0-9.\-]/g, ""));
+        if (isFinite(cev)) players[hit].ceil = cev; else delete players[hit].ceil;
+      }
+      matched++;
+    }
+    return {
+      matched: matched, updatedIds:Object.keys(seen).map(Number),
+      missed: missed,
+      head: head,
+      cols: { name: iName, proj: iProj, own: iOwn, team: iTeam, cptOwn: iCptOwn, cptProj: iCptProj, ceil: iCeil, id: iId },
+      format: classifyHeader(low)
+    };
+  }
+
+
+  // One upload accepts either a complete projection board, DK salaries, or a
+  // projection-only update. Work on copies so a rejected file cannot erase data.
+  function readUpload(text, existing) {
+    var rows = parseCSV(text), det = detectFormat(text);
+    if (!rows.length) return { error: "That file was empty." };
+    var start = det.headerRow || 0, low = rows[start].map(function (x) { return x.trim().toLowerCase(); });
+    var hasSalary = low.some(function (x) { return x === "salary" || x === "dk salary"; });
+    var normalized = rows.slice(start).map(function (r) { return r.map(function (v) { return '"' + v.replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
+    var result;
+    if (hasSalary) {
+      result = readSalaries(normalized, { combined: true });
+      if (result.error) return result;
+    } else {
+      if (!existing || !existing.length) return { error: "This file has projections but no salaries. Upload a sheet containing Player, Pos, Team, Salary and Proj, or load DraftKings salaries first." };
+      result = { players: existing.map(function (p) { return Object.assign({}, p); }), showdown: existing.some(function (p) { return p.cptSal || p.cptId; }), warnings: [] };
+    }
+    var proj = applyProjections(normalized, result.players);
+    if (!hasSalary && (proj.error || !proj.matched)) return { error: proj.error || "No players matched your current slate. Your loaded data has been kept." };
+    result.projectionInfo = proj.error ? null : proj;
+    // Complete boards are authoritative. Keep official IDs only when name, team
+    // and salary match, and never carry projections from a different upload.
+    if (hasSalary) result.players.forEach(function (p) {
+      var old = (existing || []).find(function (x) { return normName(x.name) === normName(p.name) && x.team === p.team && x.sal === p.sal; });
+      if (old) { if (proj.error) ["proj", "own", "cptProj", "cptOwn", "ceil"].forEach(function (k) { if (old[k] != null) p[k] = old[k]; }); p.dkId = p.dkId || old.dkId || ""; p.cptId = p.cptId || (old.cptSal === p.cptSal ? old.cptId : "") || ""; p.gid = old.gid; p.opp = old.opp; }
+    });
+    var teams = Array.from(new Set(result.players.map(function (p) { return p.team; }).filter(Boolean))).sort();
+    if (result.showdown && teams.length === 2) result.players.forEach(function (p) { p.opp = teams.find(function (t) { return t !== p.team; }); p.gid = teams.join("-"); });
+    result.games = new Set(result.players.map(function (p) { return p.gid; })).size;
+    result.projected = result.players.filter(function (p) { return p.proj != null; }).length;
+    result.ownership = result.players.filter(function (p) { return p.own > 0; }).length;
+    result.warnings = [];
+    if (!result.projected) result.warnings.push("Salaries loaded. Upload your projection sheet here next to build lineups.");
+    else if (!result.ownership) result.warnings.push("No ownership found. You can build lineups; simulation needs ownership estimates.");
+    if (result.players.some(function (p) { return !p.dkId || (result.showdown && !p.cptId); })) result.warnings.push("DraftKings entry export needs official player IDs; analysis can run without them.");
+    return result;
+  }
+
+  function detectFormat(text) {
+    var rows = parseCSV(text);
+    if (!rows.length) return { format: "empty" };
+    for (var i = 0; i < Math.min(rows.length, 16); i++) {
+      var cells = rows[i].map(function (c) { return String(c).trim().toLowerCase(); });
+      var cSal = findCol(cells, ["salary", "dk salary"]);
+      var cPos = findCol(cells, ["position", "dk pos", "pos"]);
+      var cName = findCol(cells, ["name", "player", "name + id"]);
+      if (cSal >= 0 && cPos >= 0 && cName >= 0) {
+        return { format: classifyHeader(cells), headerRow: i };
+      }
+      if (findCol(cells, ["dk proj", "projection", "proj"]) >= 0 && cName >= 0) {
+        return { format: classifyHeader(cells), headerRow: i };
+      }
+    }
+    return { format: "unknown" };
+  }
+
+  return {
+    parseCSV: parseCSV,
+    team: team,
+    normName: normName,
+    nameKeys: nameKeys,
+    parseOwn: parseOwn,
+    detectFormat: detectFormat,
+    readSalaries: readSalaries,
+    readUpload: readUpload,
+    applyProjections: applyProjections,
+    CLASSIC_POS: CLASSIC_POS,
+    SHOWDOWN_POS: SHOWDOWN_POS
+  };
+});
+
+})(dfsModules, dfsModules, undefined, undefined);
+
+(function(globalThis, self, module, require){
+/**
+ * Dupe estimator — Bible §3.1–3.2.
+ * E[dupes](L) = entries × Π own_i × Π c_jk
+ * All c_jk are PRIORS until ≥3 weeks standings (I5) — every result carries prior:true.
+ */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module === "object" && module.exports) module.exports = api;
+  if (root) root.DDFSDupe = api;
+})(typeof globalThis !== "undefined" ? globalThis : this, function () {
+  "use strict";
+
+  var PAIR_PRIORS = [
+    { id: "cpt_wr_qb", label: "CPT WR + same-team QB (showdown)", c: 1.98 },
+    { id: "two_rb_same", label: "Two same-team RBs", c: 1.29 },
+    { id: "qb_opp_dst", label: "QB + opposing D/ST", c: 0.36 },
+    { id: "qb_same_wrte", label: "QB + same-team WR1/TE1 (classic)", c: 1.5 },
+    { id: "rb_same_dst", label: "RB + same-team D/ST", c: 1.2 }
+  ];
+
+  function ownFrac(p) {
+    var o = +((p && p.own) || 0);
+    if (!isFinite(o) || o <= 0) return 0.001; // floor so log/product defined
+    o = o / 100; // All canonical ownership inputs are percentage points, including 0.5%.
+    if (o > 1) o = 1;
+    if (o < 0.001) o = 0.001;
+    return o;
+  }
+
+  function isPassCatcher(pos) {
+    return pos === "WR" || pos === "TE";
+  }
+
+  /**
+   * Classify pair (a,b) player objects → prior multiplier.
+   * opts.showdown + cptIndex into lineup ids handled by caller via flags on players:
+   *   p._isCpt boolean when showdown captain.
+   */
+  function pairMultiplier(a, b) {
+    var pa = a.pos, pb = b.pos;
+    var ta = a.team, tb = b.team;
+    var ca = !!a._isCpt, cb = !!b._isCpt;
+
+    // CPT WR + same-team QB
+    if (ca || cb) {
+      var cpt = ca ? a : b, oth = ca ? b : a;
+      if (cpt.pos === "WR" && oth.pos === "QB" && cpt.team === oth.team) return { c: 1.98, id: "cpt_wr_qb" };
+      if (cpt.pos === "QB" && oth.pos === "WR" && cpt.team === oth.team) return { c: 1.98, id: "cpt_wr_qb" };
+    }
+
+    if (pa === "RB" && pb === "RB" && ta && ta === tb) return { c: 1.29, id: "two_rb_same" };
+
+    if ((pa === "QB" && pb === "DST" && a.opp && a.opp === tb) ||
+        (pb === "QB" && pa === "DST" && b.opp && b.opp === ta)) {
+      return { c: 0.36, id: "qb_opp_dst" };
+    }
+
+    if ((pa === "QB" && isPassCatcher(pb) && ta && ta === tb) ||
+        (pb === "QB" && isPassCatcher(pa) && ta && ta === tb)) {
+      return { c: 1.5, id: "qb_same_wrte" };
+    }
+
+    if ((pa === "RB" && pb === "DST" && ta && ta === tb) ||
+        (pb === "RB" && pa === "DST" && ta && ta === tb)) {
+      return { c: 1.2, id: "rb_same_dst" };
+    }
+
+    return { c: 1.0, id: "indep" };
+  }
+
+  /**
+   * @param {object} lineup { ids: number[], cpt?: number }
+   * @param {object[]} players
+   * @param {object} opts { entries, showdown }
+   */
+  function expectedDupes(lineup, players, opts) {
+    opts = opts || {};
+    var entries = Math.max(1, +opts.entries || 1);
+    var ids = (lineup && lineup.ids) || [];
+    if (!ids.length) {
+      return { error: "empty lineup", prior: true, label: "prior (I5)" };
+    }
+
+    var plist = ids.map(function (i) {
+      var p = players[i] || {};
+      var copy = {
+        name: p.name, pos: p.pos, team: p.team, opp: p.opp,
+        own: opts.showdown ? (i === lineup.cpt ? p.cptOwn : (Number.isFinite(p.flexOwn) ? p.flexOwn : (Number.isFinite(p.own) && Number.isFinite(p.cptOwn) ? p.own - p.cptOwn : null))) : p.own,
+        _isCpt: opts.showdown && lineup.cpt != null && i === lineup.cpt
+      };
+      return copy;
+    });
+
+    var productOwn = 1;
+    for (var i = 0; i < plist.length; i++) productOwn *= ownFrac(plist[i]);
+
+    var pairProd = 1;
+    var drivers = [];
+    for (var a = 0; a < plist.length; a++) {
+      for (var b = a + 1; b < plist.length; b++) {
+        var m = pairMultiplier(plist[a], plist[b]);
+        pairProd *= m.c;
+        if (m.c !== 1) {
+          drivers.push({
+            a: plist[a].name, b: plist[b].name,
+            id: m.id, c: m.c
+          });
+        }
+      }
+    }
+    drivers.sort(function (x, y) { return Math.abs(Math.log(y.c)) - Math.abs(Math.log(x.c)); });
+
+    var J = productOwn * pairProd;
+    var eDupes = entries * J;
+    var rarity = 0;
+    for (var r = 0; r < plist.length; r++) rarity += -Math.log(ownFrac(plist[r]));
+
+    return {
+      entries: entries,
+      productOwn: productOwn,
+      pairProduct: pairProd,
+      J: J,
+      eDupes: eDupes,
+      rarity: rarity,
+      drivers: drivers.slice(0, 5),
+      prior: true,
+      label: "prior (I5) — §3.2 seeds until ≥3 weeks standings"
+    };
+  }
+
+  function thresholdForContest(entries, opts) {
+    opts = opts || {};
+    entries = +entries || 0;
+    if (opts.smallField || entries > 0 && entries < 1000) return 3;
+    if (entries >= 1000) return entries / 10000;
+    return 3;
+  }
+
+  return {
+    PAIR_PRIORS: PAIR_PRIORS,
+    ownFrac: ownFrac,
+    pairMultiplier: pairMultiplier,
+    expectedDupes: expectedDupes,
+    thresholdForContest: thresholdForContest
+  };
+});
+
+})(dfsModules, dfsModules, undefined, undefined);
+
+(function(globalThis, self, module, require){
+/* Lineup Lab input checks. Pure functions; separate search from dfs-pareto's
+   six-player-set enumeration. A PASS concerns this loaded snapshot and rules,
+   never an unavailable CSV or the provider's latest projections. */
+(function(root){
+'use strict';
+const config={ownershipFloor:0.0025,coreDropN:1,logDominanceCap:0.50,stalenessHours:6};
+function rawOwn(p,captain,showdown){
+ if(!p)return null;
+ if(!showdown)return Number.isFinite(p.own)?p.own/100:null;
+ if(captain)return Number.isFinite(p.cptOwn)?p.cptOwn/100:null;
+ if(Number.isFinite(p.flexOwn))return p.flexOwn/100;
+ return Number.isFinite(p.own)&&Number.isFinite(p.cptOwn)?(p.own-p.cptOwn)/100:null;
+}
+function ownership(p,captain,showdown,floor=config.ownershipFloor){
+ const raw=rawOwn(p,captain,showdown);return Math.max(floor,raw==null?0:Math.min(1,raw));
+}
+function evidence(lineup,players,showdown,floor=config.ownershipFloor){
+ const slots=lineup.ids.map(id=>({id,raw:rawOwn(players[id],id===lineup.cpt,showdown),used:ownership(players[id],id===lineup.cpt,showdown,floor)}));
+ const log=slots.reduce((s,p)=>s+Math.log10(p.used),0);
+ slots.forEach(p=>{p.logShare=log<0?Math.log10(p.used)/log:0;p.floored=p.raw!=null&&p.raw<floor;});
+ const sorted=slots.slice().sort((a,b)=>b.used-a.used);
+ return {slots,product:Math.pow(10,log),log,coreProduct:sorted.slice(0,Math.max(1,slots.length-config.coreDropN)).reduce((s,p)=>s*p.used,1),maxLogShare:Math.max(...slots.map(p=>p.logShare))};
+}
+function inspect(players,showdown){
+ const active=players.map((p,id)=>({p,id})).filter(({p})=>!p.excl&&p.proj>0&&p.sal>0);
+ const errors=[],floored=[];
+ active.forEach(({p,id})=>{
+  for(const captain of showdown?[false,true]:[false]){
+   const v=rawOwn(p,captain,showdown),slot=captain?'CPT':'FLEX';
+   if(v==null||v<0||v>1)errors.push({id,slot,reason:v==null?'missing ownership':'invalid ownership'});
+   else if(v<config.ownershipFloor)floored.push({id,slot,raw:v});
+  }
+  if(!p.team)errors.push({id,reason:'missing team'});
+ });
+ return {playerCount:players.length,active:active.length,errors,floored,pass:errors.length===0};
+}
+function optimum(players,cfg){
+ if(cfg.site!=='dk_showdown')return {status:'UNAVAILABLE',reason:'Independent maximum check currently supports Showdown.'};
+ const cap=Math.min(50000,cfg.maxSalary||50000),floor=cfg.minSalary||0,maxTeam=cfg.maxPerTeam||5;
+ const locks=players.map((p,i)=>p.lock?i:-1).filter(i=>i>=0);
+ const pool=players.map((p,i)=>i).filter(i=>!players[i].excl&&players[i].proj>0&&players[i].sal>0);
+ if(locks.some(i=>!pool.includes(i))||locks.length>6)return {status:'INFEASIBLE'};
+ const deadline=Date.now()+(cfg.auditTimeLimitMs||10000);let best=null,nodes=0,aborted=false;
+ for(const cpt of pool){
+  if(Date.now()>deadline){aborted=true;break;}
+  const p=players[cpt],cSal=Number.isFinite(p.cptSal)&&p.cptSal>0?p.cptSal:Math.round(p.sal*1.5),cProj=Number.isFinite(p.cptProj)?p.cptProj:p.proj*1.5;
+  const flex=pool.filter(i=>i!==cpt).sort((a,b)=>players[b].proj-players[a].proj),picked=[cpt],teams=new Map([[p.team,1]]);
+  function visit(from,need,salary,projection){
+   if(aborted)return;
+   if((++nodes&1023)===0&&Date.now()>deadline){aborted=true;return;}
+   if(salary>cap||flex.length-from<need)return;
+   if(!need){
+    if(salary<floor||teams.size!==2||locks.some(i=>!picked.includes(i)))return;
+    if(!best||projection>best.proj)best={ids:picked.slice(),cpt,sal:salary,proj:projection};
+    return;
+   }
+   let upper=projection;for(let j=0;j<need;j++)upper+=players[flex[from+j]].proj;
+   if(best&&upper<=best.proj+1e-10)return;
+   for(let j=from;j<=flex.length-need;j++){
+    const id=flex[j],q=players[id],ct=teams.get(q.team)||0;
+    if(ct>=maxTeam||(!ct&&teams.size===2))continue;
+    picked.push(id);teams.set(q.team,ct+1);visit(j+1,need-1,salary+q.sal,projection+q.proj);
+    picked.pop();if(ct)teams.set(q.team,ct);else teams.delete(q.team);
+   }
+  }
+  visit(0,5,cSal,cProj);if(aborted)break;
+ }
+ return {status:aborted?'INCOMPLETE':best?'COMPLETE':'INFEASIBLE',lineup:best,nodes};
+}
+function reconcile(players,cfg,result){
+ const input=inspect(players,cfg.site==='dk_showdown'),proof=optimum(players,cfg);
+ const displayed=result.lineups.length?Math.max(...result.lineups.map(l=>l.proj)):null;
+ const maxPass=proof.status==='COMPLETE'&&Math.abs(proof.lineup.proj-displayed)<=0.0100001;
+ const checks=result.lineups.length?[0,Math.floor(result.lineups.length/2),result.lineups.length-1].map(i=>{
+  const l=result.lineups[i],e=evidence(l,players,cfg.site==='dk_showdown',cfg.ownershipFloor||config.ownershipFloor);
+  return {i,pass:Math.abs(e.log-l.x)<1e-9&&e.slots.every(s=>s.used>0)};
+ }):[];
+ return {input,proof,displayed,maxStatus:proof.status==='COMPLETE'?(maxPass?'PASS':'FAIL'):proof.status,productPass:checks.length>0&&checks.every(c=>c.pass),checks,pass:input.pass&&maxPass&&checks.length>0&&checks.every(c=>c.pass)};
+}
+const api={config,rawOwn,ownership,evidence,inspect,optimum,reconcile};
+if(typeof module!=='undefined')module.exports=api;root.DDLabAudit=api;
+})(typeof self!=='undefined'?self:globalThis);
+
+})(dfsModules, dfsModules, undefined, undefined);
+
+(function(globalThis, self, module, require){
+/* Lineup Lab worker — projection vs ownership-product exploration.
+   Showdown: EXACT enumeration of every legal (6 players × captain) lineup with salary
+   pruning, then the exact Pareto frontier, a frontier band, and a stratified cloud
+   sample. Classic: importance-weighted sampling (enumeration is infeasible).
+   Ownership product is an independence proxy for duplication, not a probability:
+   CPT slot uses captain ownership, FLEX uses total-minus-captain, both floored at
+   OWN_FLOOR. Missing ownership is separately flagged by the input audit. */
+(function(root){
+'use strict';
+var audit=typeof module!=='undefined'?require('./dfs-lab-audit.js'):root.DDLabAudit;
+if(!audit&&typeof importScripts==='function'){importScripts('dfs-lab-audit.js?v=20260910-contests');audit=root.DDLabAudit;}
+var OWN_FLOOR=audit.config.ownershipFloor;
+var DEAD_PROJ=1.5; // diagnostic only; low positive projections stay eligible
+function slotOwn(p,isCpt,sd,floor){return audit.ownership(p,isCpt,sd,floor||OWN_FLOOR);}
+/* Back-compat: ownership(p,cpt,sd) returns a floored fraction (never null). */
+function ownership(p,cpt,sd){return slotOwn(p,cpt,sd);}
+function point(l,P,sd,i){
+
+ var x=0;for(var k=0;k<l.ids.length;k++){var id=l.ids[k];x+=Math.log10(slotOwn(P[id],id===l.cpt,sd));}
+ return {i:i,x:x,y:l.proj,l:l};
+}
+function frontier(points){var best=-Infinity;return points.slice().sort(function(a,b){return a.x-b.x||b.y-a.y;}).filter(function(p){if(p.y>best+1e-9){best=p.y;return true;}return false;});}
+function cptSalOf(p){return p.cptSal||Math.round(p.sal*1.5);}
+function cptProjOf(p){return Number.isFinite(p.cptProj)?p.cptProj:p.proj*1.5;}
+function legal(ids,cpt,P,c){
+ var sd=c.site==='dk_showdown';if(ids.length!==(sd?6:9)||new Set(ids).size!==ids.length)return false;
+ if(P.some(function(p,i){return p.lock&&ids.indexOf(i)<0;}))return false;
+ if(ids.some(function(i){return P[i].excl||!(P[i].proj>0);}))return false;
+ var sal=ids.reduce(function(s,i){return s+(i===cpt?cptSalOf(P[i]):P[i].sal);},0);
+ if(sal<(c.minSalary||0)||sal>Math.min(c.maxSalary||50000,50000))return false;
+ var teams={},games={},pos={};for(var k=0;k<ids.length;k++){var p=P[ids[k]];teams[p.team]=(teams[p.team]||0)+1;games[p.gid]=(games[p.gid]||0)+1;pos[p.pos]=(pos[p.pos]||0)+1;}
+ var tv=Object.keys(teams).map(function(t){return teams[t];});
+ if(Object.keys(teams).length<2||tv.some(function(n){return n>(c.maxPerTeam||99);}))return false;
+ if(sd)return ids.indexOf(cpt)>=0&&Object.keys(teams).length===2;
+ if(Object.keys(games).length<2||Object.keys(games).some(function(g){return games[g]>(c.maxPerGame||99);}))return false;
+ if(pos.QB!==1||pos.DST!==1||!(pos.RB>=2&&pos.WR>=3&&pos.TE>=1)||((pos.RB||0)+(pos.WR||0)+(pos.TE||0)!==7))return false;
+ var q=ids.filter(function(i){return P[i].pos==='QB';})[0],st=c.stack||{};
+ if(ids.filter(function(i){return i!==q&&P[i].team===P[q].team&&(st.qbPos||['WR','TE']).indexOf(P[i].pos)>=0;}).length<(st.qbMin||0))return false;
+ if(ids.filter(function(i){return P[i].team===P[q].opp&&P[i].pos!=='DST';}).length<(st.bringBack||0))return false;
+ var dst=ids.filter(function(i){return P[i].pos==='DST';})[0];
+ if(st.noRbVsDst&&ids.some(function(i){return P[i].pos==='RB'&&P[i].opp===P[dst].team;}))return false;
+ if(st.noOppDst&&ids.some(function(i){return i!==dst&&P[i].opp===P[dst].team;}))return false;
+ return true;
+}
+function describe(ids,cpt,P,sd,floor){
+ var sal=0,proj=0,ceil=0,own=0,x=0,dead=0,teams={},k;
+ for(k=0;k<ids.length;k++){var i=ids[k],p=P[i],isC=(i===cpt);
+  sal+=isC?cptSalOf(p):p.sal;proj+=isC?cptProjOf(p):p.proj;
+  var ce=Number.isFinite(p.ceil)?p.ceil:(p.proj*1.6);ceil+=isC?ce*1.5:ce;
+  var o=slotOwn(p,isC,sd,floor);own+=o*100;x+=Math.log10(o);
+  if(p.proj<DEAD_PROJ)dead++;teams[p.team]=(teams[p.team]||0)+1;}
+ var tk=Object.keys(teams),split=tk.length===2?(teams[tk[0]]+'-'+teams[tk[1]]):tk.map(function(t){return teams[t];}).join('-');
+ return {ids:ids.slice(),cpt:cpt,sal:sal,proj:+proj.toFixed(2),ceil:+ceil.toFixed(1),own:+own.toFixed(1),x:x,dead:dead,split:split};
+}
+/* ---------- exact showdown enumeration ---------- */
+function enumerateShowdown(P,c,progress){
+ var cap=Math.min(c.maxSalary||50000,50000),minSal=c.minSalary||0,maxTeam=c.maxPerTeam||99,deadline=Date.now()+(c.timeLimitMs||45000);
+ var pool=[];for(var i=0;i<P.length;i++)if(!P[i].excl&&P[i].proj>0&&P[i].sal>0)pool.push(i);
+ if(P.some(function(p){return p.lock&&(p.excl||!(p.proj>0)||!(p.sal>0));}))return {out:{proj:[]},combos:0,legalN:0,capped:false,pool:pool.length};
+ var lockPos=[];pool.forEach(function(id,j){if(P[id].lock)lockPos.push(j);});
+ pool.sort(function(a,b){return P[a].sal-P[b].sal;});
+ lockPos=pool.map(function(id,j){return P[id].lock?j:-1;}).filter(function(j){return j>=0;});
+ var n=pool.length,sal=pool.map(function(i){return P[i].sal;}),extra=pool.map(function(i){return cptSalOf(P[i])-P[i].sal;});
+ var team=pool.map(function(i){return P[i].team;}),tlist=[];team.forEach(function(t){if(tlist.indexOf(t)<0)tlist.push(t);});
+ var tcode=team.map(function(t){return tlist.indexOf(t);});
+ var minExtra=extra.length?Math.min.apply(null,extra):0;
+ var out={ids:[],cpt:[],sal:[],proj:[],x:[],own:[],ceil:[],dead:[],split:[]};
+ var combos=0,legalN=0,stop=false,pick=new Array(6),tc=new Array(tlist.length);
+ function rec(depth,from,s){
+  if(stop)return;
+  if(depth===6){
+   combos++;
+   if(combos%50000===0){if(Date.now()>deadline){stop=true;return;}if(progress)progress(legalN,combos);}
+   var t,k;for(t=0;t<tlist.length;t++)tc[t]=0;
+   for(k=0;k<6;k++)tc[tcode[pick[k]]]++;
+   var nteams=0;for(t=0;t<tlist.length;t++){if(tc[t]>0)nteams++;if(tc[t]>maxTeam)return;}
+   if(nteams!==2)return;
+   for(k=0;k<lockPos.length;k++)if(pick.indexOf(lockPos[k])<0)return;
+   for(k=0;k<6;k++){if(c.maxStored&&legalN>=c.maxStored){stop=true;return;}var tot=s+extra[pick[k]];if(tot>cap||tot<minSal)continue;
+    var ids=[pool[pick[0]],pool[pick[1]],pool[pick[2]],pool[pick[3]],pool[pick[4]],pool[pick[5]]];
+    var d=describe(ids,pool[pick[k]],P,true,c.ownershipFloor);
+    out.ids.push(d.ids);out.cpt.push(d.cpt);out.sal.push(d.sal);out.proj.push(d.proj);out.x.push(d.x);out.own.push(d.own);out.ceil.push(d.ceil);out.dead.push(d.dead);out.split.push(d.split);legalN++;}
+   return;}
+  for(var j=from;j<n-(5-depth);j++){
+   var ns=s+sal[j],need=5-depth,cheapest=0;for(var q=1;q<=need;q++)cheapest+=sal[j+q];
+   if(ns+cheapest+minExtra>cap)break;      // sorted ascending → nothing further fits
+   pick[depth]=j;rec(depth+1,j+1,ns);if(stop)return;}
+ }
+ rec(0,0,0);
+ return {out:out,combos:combos,legalN:legalN,capped:stop,pool:pool.length};
+}
+function packFrontier(out,c){
+ var n=out.proj.length,i,order=Array.from({length:n},function(_,i){return i;});
+ // Compare actual values: packed numeric keys lose index precision and round ownership.
+ order.sort(function(a,b){return out.x[a]-out.x[b]||out.proj[b]-out.proj[a];});
+ var band=Math.max(0,c.bandPts==null?3:+c.bandPts),front=[],inBand=[],best=-Infinity;
+ for(i=0;i<n;i++){var idx=order[i],y=out.proj[idx];
+  if(y>best+1e-9){best=y;front.push(idx);}
+  if(y>=best-band)inBand.push(idx);}
+ return {front:front,band:inBand};
+}
+function generateShowdown(P,c,progress){
+ var e=enumerateShowdown(P,c,progress),out=e.out,n=out.proj.length;
+ if(!n)return {lineups:[],trials:e.combos,capped:e.capped,stats:{legal:0,pool:e.pool,combos:e.combos,frontier:0,band:0,exact:!e.capped}};
+ var f=packFrontier(out,c),maxBand=Math.max(50,c.maxBand||1500),cloudN=Math.max(0,c.cloud==null?3000:c.cloud),band=f.band;
+ var fset={};f.front.forEach(function(i){fset[i]=1;});
+ if(band.length>maxBand)band=band.filter(function(i){return !fset[i];}).sort(function(a,b){return out.proj[b]-out.proj[a];}).slice(0,Math.max(0,maxBand-f.front.length)).concat(f.front);
+ var chosen={},list=[];function add(i,tag){if(chosen[i])return;chosen[i]=1;list.push(i);}
+ f.front.forEach(function(i){add(i);});band.forEach(function(i){add(i);});
+ var seed=c.seed||216;var rand=function(){seed=(Math.imul(seed,1664525)+1013904223)|0;return (seed>>>0)/4294967296;};
+ if(cloudN>0){var res=[];for(var i=0;i<n;i++){if(res.length<cloudN)res.push(i);else{var j=Math.floor(rand()*(i+1));if(j<cloudN)res[j]=i;}}res.forEach(function(i){add(i);});}
+ var bset={};f.band.forEach(function(i){bset[i]=1;});
+ var lineups=list.map(function(i){return {ids:out.ids[i],cpt:out.cpt[i],sal:out.sal[i],proj:out.proj[i],x:out.x[i],own:out.own[i],ceil:out.ceil[i],dead:out.dead[i],split:out.split[i],onFrontier:!!fset[i],inBand:!!bset[i]};});
+ lineups.sort(function(a,b){return b.proj-a.proj;});
+ return {lineups:lineups,trials:e.combos,capped:e.capped,stats:{legal:n,pool:e.pool,combos:e.combos,frontier:f.front.length,band:f.band.length,bandKept:band.length,cloud:cloudN,exact:!e.capped,ownFloor:OWN_FLOOR*100,deadProj:DEAD_PROJ}};
+}
+/* ---------- classic: importance-weighted sampling (floored ownership) ---------- */
+function generateClassic(P,c,progress){
+ var target=Math.min(25000,Math.max(1,c.count||5000)),deadline=Date.now()+(c.timeLimitMs||20000);
+ var seed=c.seed||216;var rand=function(){seed=(Math.imul(seed,1664525)+1013904223)|0;return (seed>>>0)/4294967296;};
+ var pool=P.map(function(p,i){return i;}).filter(function(i){return !P[i].excl&&P[i].proj>0&&P[i].sal>0&&P[i].pos!=='K';});
+ var result=[],seen={},trials=0;
+ var add=function(ids){if(!legal(ids,undefined,P,c))return;var key=ids.slice().sort(function(a,b){return a-b;}).join(',');if(seen[key])return;seen[key]=1;result.push(describe(ids,undefined,P,false,c.ownershipFloor));};
+ while(result.length<target&&trials<2000000&&Date.now()<deadline){trials++;var ids=[],mode=trials%4;
+  var select=function(allowed){var a=pool.filter(function(i){return ids.indexOf(i)<0&&allowed(P[i]);});if(!a.length)return -1;var weights=a.map(function(i){return mode===0?1:mode===1?Math.pow(P[i].proj,2):mode===2?1/Math.sqrt(Math.max(0.1,P[i].own||0.1)):Math.pow(P[i].proj/P[i].sal*1000,2);});var tot=0;for(var w=0;w<weights.length;w++)tot+=weights[w];var r=rand()*tot;for(var j=0;j<a.length;j++){r-=weights[j];if(r<=0)return a[j];}return a[a.length-1];};
+  pool.forEach(function(i){if(P[i].lock)ids.push(i);});
+  [['QB',1],['RB',2],['WR',3],['TE',1],['DST',1]].forEach(function(pr){while(ids.filter(function(i){return P[i].pos===pr[0];}).length<pr[1]){var i=select(function(p){return p.pos===pr[0];});if(i<0)break;ids.push(i);}});
+  if(ids.length===8){var fi=select(function(p){return ['RB','WR','TE'].indexOf(p.pos)>=0;});if(fi>=0)ids.push(fi);}
+  add(ids);if(trials%10000===0&&progress)progress(result.length,target);}
+ var pts=result.map(function(l,i){return point(l,P,false,i);}),fr=frontier(pts),fs={};fr.forEach(function(p){fs[p.i]=1;});
+ result.forEach(function(l,i){l.onFrontier=!!fs[i];l.inBand=false;});
+ return {lineups:result,trials:trials,capped:result.length<target,stats:{legal:result.length,frontier:fr.length,exact:false,ownFloor:OWN_FLOOR*100,deadProj:DEAD_PROJ}};
+}
+function generate(P,c,progress){return c.site==='dk_showdown'?generateShowdown(P,c,progress):generateClassic(P,c,progress);}
+var api={ownership:ownership,slotOwn:slotOwn,point:point,frontier:frontier,legal:legal,generate:generate,describe:describe,OWN_FLOOR:OWN_FLOOR,DEAD_PROJ:DEAD_PROJ};
+if(typeof module!=='undefined')module.exports=api;root.DDPareto=api;
+if(typeof document==='undefined'&&typeof postMessage==='function')root.onmessage=function(e){try{var result=generate(e.data.players,e.data.cfg,function(n,t){postMessage({type:'progress',n:n,t:t});});result.audit=audit.reconcile(e.data.players,e.data.cfg,result);postMessage({type:'done',result:result});}catch(err){postMessage({type:'error',message:err.message});}};
+})(typeof self!=='undefined'?self:globalThis);
+
+})(dfsModules, dfsModules, undefined, undefined);
+
+(function(globalThis, self, module, require){
+/* Contest comparison: choose on training worlds, report held-out worlds.
+   These are model candidates, not a calibrated betting recommendation. */
+(function(root){
+'use strict';
+const config={maxOwnershipError:5};
+const defaults=[
+ {key:'cash',label:'Cash / double-up',short:'C',fieldSize:50,paidPlaces:22,multiplier:2,metric:'cutoffShare',metricLabel:'tie-adjusted cash rate'},
+ {key:'three',label:'3× multiplier',short:'3',fieldSize:250,paidPlaces:75,multiplier:3,metric:'cutoffShare',metricLabel:'paid-slot share'},
+ {key:'five',label:'5× multiplier',short:'5',fieldSize:250,paidPlaces:45,multiplier:5,metric:'cutoffShare',metricLabel:'paid-slot share'},
+ {key:'milly',label:'Milly / GPP',short:'M',fieldSize:132000,paidPlaces:26400,multiplier:null,metric:'top1Share',metricLabel:'conservative top-1% share'}
+];
+function profiles(saved={}){
+ return defaults.map(d=>{const v=saved[d.key]||{};const fieldSize=Math.max(2,Math.min(10000000,Math.round(v.fieldSize||d.fieldSize)));
+  const paidPlaces=Math.max(1,Math.min(fieldSize,Math.round(v.paidPlaces||d.paidPlaces)));
+  return {...d,label:d.key==='milly'&&fieldSize<100000?'GPP':d.label,fieldSize,paidPlaces,entryFee:1,payout:d.multiplier?{kind:'table',rows:[{from:1,to:paidPlaces,prize:d.multiplier}]}:{kind:'param',paidFrac:paidPlaces/fieldSize,alpha:1.15,rake:.15}};
+ });
+}
+function traits(l,P){
+ const c=P[l.cpt],ids=l.ids,pass=p=>p.pos==='WR'||p.pos==='TE';if(!c)return {};
+ const ownQB=ids.find(i=>P[i].team===c.team&&P[i].pos==='QB'&&i!==l.cpt);
+ const catchers=ids.filter(i=>i!==l.cpt&&P[i].team===c.team&&pass(P[i]));
+ const bringBack=ids.some(i=>P[i].team!==c.team&&['QB','RB','WR','TE'].includes(P[i].pos));
+ const passStack=(c.pos==='QB'&&catchers.length>0)||(pass(c)&&ownQB!=null);
+ const rbDst=ids.some(i=>P[i].pos==='RB'&&ids.some(j=>P[j].team===P[i].team&&P[j].pos==='DST'));
+ const againstDST=ids.some(i=>P[i].pos==='QB'&&ids.some(j=>P[j].pos==='DST'&&P[j].team!==P[i].team));
+ return {c,ownQB,catchers,bringBack,passStack,rbDst,againstDST};
+}
+function matches(l,P,script){const t=traits(l,P);return !script||script==='any'||script==='pass'&&t.passStack||script==='back'&&t.passStack&&t.bringBack||script==='run'&&t.rbDst;}
+function story(l,P){
+ const t=traits(l,P);if(!t.c)return 'Inspect the roster and its simulated outcomes.';
+ let text=t.c.pos==='QB'?'Needs '+t.c.name+' to drive the scoring through the passing game.':
+  ['WR','TE'].includes(t.c.pos)?'Needs '+t.c.name+' to capture a large share of receiving production.':
+  t.c.pos==='RB'?'Needs '+t.c.name+' to turn touches and scoring opportunities into a big game.':
+  t.c.pos==='DST'?'Needs sacks, turnovers or a defensive score from '+t.c.name+'.':
+  'Needs repeated scoring opportunities for '+t.c.name+'.';
+ if(t.passStack)text+=' The captain-side QB/receiver stack can score together.';
+ if(t.bringBack)text+=' Opposing skill players give this build a path in a competitive game.';
+ if(t.rbDst)text+=' The same-team RB/DST pairing fits a lead with rushing volume and defensive pressure.';
+ if(t.againstDST)text+=' A QB faces the opposing DST in this roster; those outcomes usually pull in different directions.';
+ return text;
+}
+// Rank a partial-field GPP with the upper duplicate estimate, so an unseen
+// lineup does not get a free uniqueness bonus. This is a conservative score,
+// not a probability or a joint confidence interval for score and field error.
+function view(result,c){
+ if(!result||c.metric!=='top1Share')return result;
+ return {...result,perLineup:result.perLineup.map(r=>{
+  const upper=r.dupeCI&&r.dupeCI[1];
+  const duplicatePenalty=result.meta.fullField?r.dupes:Number.isFinite(upper)?Math.max(r.dupes,upper):null;
+  const adjust=v=>{if(!v)return v;const valid=Number.isFinite(duplicatePenalty)&&duplicatePenalty>=0&&Number.isFinite(v.top1);
+   return {...v,top1Share:valid?v.top1/(1+duplicatePenalty):null,ci:{...v.ci,top1Share:valid&&v.ci&&v.ci.top1?v.ci.top1.map(x=>x/(1+duplicatePenalty)):null}};
+  };
+  return {...adjust(r),duplicatePenalty,train:adjust(r.train),validation:adjust(r.validation)};
+ })};
+}
+function select(sim,lineups,P,script,configs=profiles()){
+ return configs.map(c=>{
+  const result=view(sim&&sim.contests&&sim.contests[c.key],c);
+  if(!result)return {...c,unavailable:'Run the contest comparison.'};
+  if(c.key==='milly'&&!result.meta.top1Resolved)return {...c,unavailable:'Increase the opponent sample to resolve the top 1%.'};
+  const rows=result.perLineup.filter(r=>lineups[r.i]&&matches(lineups[r.i],P,script)&&Number.isFinite(r.train&&r.train[c.metric]));
+  rows.sort((a,b)=>b.train[c.metric]-a.train[c.metric]||lineups[b.i].proj-lineups[a.i].proj||a.i-b.i);
+  if(!rows.length)return {...c,unavailable:'No candidate matches this game plan.'};
+  const best=rows[0],next=rows[1],v=best.validation,ci=v.ci[c.metric],nci=next&&next.validation.ci[c.metric];
+  return {...c,i:best.i,training:best.train[c.metric],value:v[c.metric],ci,validation:v,dupes:best.dupes,dupeCI:best.dupeCI,runnerUp:next&&next.i,overlap:!!(ci&&nci&&ci[0]<=nci[1]&&nci[0]<=ci[1]),meta:result.meta};
+ });
+}
+const api={config,defaults,profiles,traits,matches,story,view,select};if(typeof module!=='undefined')module.exports=api;root.DDLabContests=api;
+})(typeof self!=='undefined'?self:globalThis);
+
+})(dfsModules, dfsModules, undefined, undefined);
+/* Private DFS workspaces. Browser and MCP share this boundary and the existing engines.
+   No paid inputs are public. ETag + revision makes every mutation compare-and-swap. */
+const DFS_LIMITS = {players:220, lineups:5000, solveMs:5000, worlds:16000, sample:10000, work:32000000, bytes:2000000};
+const DFS_PLAYER_FIELDS = ['id','name','pos','team','opp','gid','sal','proj','own','cptOwn','flexOwn','cptProj','cptSal','ceil','dkId','cptId','kickoff','lock','excl','maxExp'];
+const DFS_SOLVER_DEFAULT = {count:20,minSalary:0,maxSalary:50000,uniques:1,randomness:0,seed:216,maxPerTeam:5,maxPerGame:9,timeLimitMs:3000,stack:{qbMin:0,qbPos:['WR','TE'],bringBack:0,noRbVsDst:false,noOppDst:false},groups:[]};
+const DFS_SIM_DEFAULT = {sims:1600,fieldSize:5300,entryFee:1,fieldSample:2000,seed:216,fieldMinSalary:48000,fieldStackRate:.6,ownershipFloor:.0025,payout:{kind:'param',paidFrac:.2,alpha:1.15,rake:.15}};
+const DFS_LAB_DEFAULT = {minSalary:44000,maxSalary:50000,maxPerTeam:5,ownershipFloor:.0025,count:5000,cloud:1000,maxBand:500,bandPts:3,seed:216,timeLimitMs:3000};
+function dfsAssert(ok,message){if(!ok)throw new Error(message);}
+function dfsObj(v,keys,label){mcpDfsKnown(v,keys,label);return v;}
+function dfsNum(v,lo,hi,label,integer=false){mcpDfsNumber(v,label,lo,hi);if(integer)dfsAssert(Number.isInteger(v),label+' must be an integer');return v;}
+function dfsKey(v,label='workspace_id'){dfsAssert(typeof v==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(v),label+' must contain 1–80 letters, numbers, underscores or hyphens');return v;}
+function dfsUid(caller){dfsAssert(caller&&caller.kind==='user'&&caller.uid,'Use your personal Data Dawgs connector; a verified account UID is required.');return dfsKey(caller.uid,'account UID');}
+function dfsPath(caller,id){return '/users/'+dfsUid(caller)+'/dfsWorkspaces/'+dfsKey(id);}
+function dfsClone(v){return JSON.parse(JSON.stringify(v));}
+function dfsPlayers(input,site){
+ dfsAssert(Array.isArray(input)&&input.length>0&&input.length<=DFS_LIMITS.players,'Supply 1–220 players');
+ if(site==='dk_showdown'){dfsAssert(new Set(input.map(p=>p.team)).size===2&&new Set(input.map(p=>p.gid)).size===1,'Showdown requires one game and exactly two teams');}
+ const ids=new Set();return input.map((raw,i)=>{
+  dfsObj(raw,DFS_PLAYER_FIELDS,'player '+i);const p={...raw};
+  for(const k of ['name','team','opp','gid'])p[k]=mcpDfsString(p[k],'player '+i+'.'+k,100);
+  p.id=p.id||p.dkId||p.team+':'+p.name;p.id=mcpDfsString(p.id,'player id',150);
+  dfsAssert(!ids.has(p.id),'Duplicate player id: '+p.id);ids.add(p.id);
+  dfsAssert((site==='dk_showdown'?['QB','RB','WR','TE','DST','K']:['QB','RB','WR','TE','DST']).includes(p.pos),'Invalid position for '+site);
+  dfsNum(p.sal,100,50000,'salary',true);dfsAssert(p.sal%100===0,'FLEX salary must be a multiple of 100');
+  for(const k of ['proj','cptProj','ceil'])if(p[k]!=null)dfsNum(p[k],0,200,k);
+  for(const k of ['own','cptOwn','flexOwn'])if(p[k]!=null)dfsNum(p[k],0,100,k);
+  if(p.cptSal===0)p.cptSal=null;
+  if(p.cptSal!=null)dfsNum(p.cptSal,100,75000,'cptSal',true);
+  if(p.maxExp!=null)dfsNum(p.maxExp,0,1,'maxExp');
+  for(const k of ['lock','excl'])if(p[k]!=null)dfsAssert(typeof p[k]==='boolean',k+' must be boolean');
+  dfsAssert(!(p.lock&&(p.excl||p.maxExp===0)),'Locked player cannot be excluded');
+  if(p.maxExp===0)p.excl=true;
+  for(const k of ['dkId','cptId'])if(p[k])dfsAssert(/^\d{1,30}$/.test(String(p[k])),k+' must be an official numeric DraftKings ID');
+  return p;
+ });
+}
+function dfsSettings(w,section,patch){
+ const defs={solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT};
+ dfsAssert(defs[section],'section must be solver, simulation or lab');dfsObj(patch,Object.keys(defs[section]),section);
+ const c={...defs[section],...w.settings[section],...patch};
+ if(section==='solver'){
+  for(const [k,lo,hi] of [['count',1,150],['minSalary',0,50000],['maxSalary',100,50000],['uniques',0,w.site==='dk_showdown'?6:9],['seed',1,2147483647],['maxPerTeam',1,9],['maxPerGame',1,9],['timeLimitMs',100,DFS_LIMITS.solveMs]])dfsNum(c[k],lo,hi,k,true);
+  dfsAssert(c.minSalary<=c.maxSalary&&c.minSalary%100===0&&c.maxSalary%100===0,'Invalid salary range');dfsNum(c.randomness,0,.6,'randomness');
+  dfsObj(c.stack,Object.keys(DFS_SOLVER_DEFAULT.stack),'stack');c.stack={...DFS_SOLVER_DEFAULT.stack,...c.stack};
+  dfsNum(c.stack.qbMin,0,3,'qbMin',true);dfsNum(c.stack.bringBack,0,3,'bringBack',true);
+  dfsAssert(Array.isArray(c.stack.qbPos)&&c.stack.qbPos.length&&c.stack.qbPos.every(x=>['RB','WR','TE'].includes(x)),'Invalid qbPos');
+  for(const k of ['noRbVsDst','noOppDst'])dfsAssert(typeof c.stack[k]==='boolean',k+' must be boolean');
+  dfsAssert(Array.isArray(c.groups)&&c.groups.length<=20,'At most 20 player groups');
+  for(const g of c.groups){dfsObj(g,['mode','n','ids'],'group');dfsAssert(['atMost','atLeast','exactly'].includes(g.mode),'Invalid group mode');dfsNum(g.n,0,9,'group n',true);dfsAssert(Array.isArray(g.ids)&&g.ids.length<=220&&new Set(g.ids).size===g.ids.length&&g.ids.every(id=>w.players.some(p=>p.id===id)),'Group IDs must be unique player IDs');}
+  if(w.site==='dk_showdown')dfsAssert(!c.groups.length&&!c.stack.qbMin&&!c.stack.bringBack&&!c.stack.noRbVsDst&&!c.stack.noOppDst,'Showdown solver does not implement Classic stacks/groups');
+ }else if(section==='simulation'){
+  for(const [k,lo,hi] of [['sims',200,DFS_LIMITS.worlds],['fieldSize',2,1000000],['fieldSample',1,DFS_LIMITS.sample],['seed',1,2147483647],['fieldMinSalary',0,50000]])dfsNum(c[k],lo,hi,k,true);
+  dfsNum(c.entryFee,.01,100000,'entryFee');dfsNum(c.fieldStackRate,0,1,'fieldStackRate');dfsNum(c.ownershipFloor,.00001,.1,'ownershipFloor');
+  dfsObj(c.payout,['kind','paidFrac','alpha','rake','rows'],'payout');dfsAssert(['param','flat','table'].includes(c.payout.kind),'Invalid payout kind');
+  if(c.payout.kind==='table'){dfsAssert(Array.isArray(c.payout.rows)&&c.payout.rows.length>0&&c.payout.rows.length<=1000,'Supply 1–1000 payout tiers');for(const r of c.payout.rows)dfsObj(r,['from','to','prize'],'payout row');}
+  else {dfsNum(c.payout.paidFrac,.000001,1,'paidFrac');dfsNum(c.payout.alpha,0,5,'alpha');dfsNum(c.payout.rake,0,.99,'rake');}
+  mcpDdfsRoot.DDFS.payoutFn(c.payout,c.fieldSize,c.entryFee);
+ }else {dfsNum(c.ownershipFloor,.00001,.1,'ownershipFloor');dfsAssert(c.minSalary<=c.maxSalary&&c.minSalary%100===0&&c.maxSalary%100===0,'Invalid lab salary range');for(const [k,lo,hi] of [['minSalary',0,50000],['maxSalary',100,50000],['maxPerTeam',1,6],['count',1,5000],['cloud',0,3000],['maxBand',50,1500],['bandPts',0,20],['seed',1,2147483647],['timeLimitMs',100,DFS_LIMITS.solveMs]])dfsNum(c[k],lo,hi,k,k!=='bandPts');}
+ return c;
+}
+function dfsAudit(w){
+ const warnings=[],active=w.players.filter(p=>!p.excl);
+ const missing=active.filter(p=>p.proj==null).map(p=>p.id);
+ if(missing.length)warnings.push('Missing projections are excluded from compute; they are not zero projections.');
+ if(active.some(p=>p.own==null))warnings.push('Missing ownership: simulations are unavailable until supplied.');
+ if(w.site==='dk_showdown'&&active.some(p=>p.cptOwn==null))warnings.push('Missing captain ownership: Showdown simulations are unavailable until supplied.');
+ if(Date.now()-Date.parse(w.as_of)>6*3600000)warnings.push('Source timestamp is more than six hours old; verify slate freshness.');
+ if(w.site==='dk_showdown'&&active.some(p=>p.cptProj!=null&&Math.abs(p.cptProj-1.5*p.proj)>.15))warnings.push('Captain projections disagree with 1.5× FLEX scoring.');
+ return {players:w.players.length,missing_projections:missing,warnings,source:w.source,as_of:w.as_of,revision:w.revision};
+}
+function dfsEngineInput(w){const players=w.players.map(p=>({...p,excl:p.excl||p.proj==null||p.maxExp===0}));const cfg={...w.settings.solver,site:w.site,groups:(w.settings.solver.groups||[]).map(g=>({...g,ids:g.ids.map(id=>players.findIndex(p=>p.id===id))}))};return {players,cfg};}
+function dfsValidateLineups(w,ls){
+ dfsAssert(Array.isArray(ls)&&ls.length<=DFS_LIMITS.lineups,'At most 5000 lineups');
+ const {players,cfg}=dfsEngineInput(w);const seen=new Set();return ls.map(l=>{
+  dfsAssert(l&&Array.isArray(l.ids)&&l.ids.every(i=>Number.isInteger(i)&&i>=0&&i<players.length),'Invalid lineup player index');
+  dfsAssert(dfsModules.DDPareto.legal(l.ids,l.cpt,players,cfg),'Illegal lineup or violated constraints');
+  for(const g of cfg.groups){const n=l.ids.filter(i=>g.ids.includes(i)).length;dfsAssert(g.mode==='atMost'?n<=g.n:g.mode==='atLeast'?n>=g.n:n===g.n,'Lineup violates player group');}
+  const key=mcpDdfsRoot.DDFS.lineupKey(l);dfsAssert(!seen.has(key),'Duplicate lineup');seen.add(key);
+  return {...l,sal:l.ids.reduce((s,i)=>s+(i===l.cpt?(players[i].cptSal||Math.round(players[i].sal*1.5)):players[i].sal),0),proj:l.ids.reduce((s,i)=>s+players[i].proj*(i===l.cpt?1.5:1),0)};
+ });
+}
+function dfsExposure(w){
+ const n=w.lineups.length,players=w.players.map(p=>({id:p.id,name:p.name,total:0,captain:0,flex:0,max:p.maxExp??null})),teams={},games={};
+ for(const l of w.lineups){for(const i of l.ids){players[i].total++;players[i][i===l.cpt?'captain':'flex']++;}for(const t of new Set(l.ids.map(i=>w.players[i].team)))teams[t]=(teams[t]||0)+1;for(const g of new Set(l.ids.map(i=>w.players[i].gid)))games[g]=(games[g]||0)+1;}
+ return {lineups:n,players:players.map(p=>({...p,rate:n?p.total/n:0,captain_rate:n?p.captain/n:0,violates_max:n>0&&p.max!=null&&p.total/n>p.max+1e-9})),teams,games,note:'Team/game counts are lineups containing that team/game. Rates are fractions. Solver exposure caps are sequential heuristics; inspect final violations.'};
+}
+async function dfsLoad(env,caller,id){const path=dfsPath(caller,id),r=await fbGet(env,path,true);dfsAssert(r.data,'Workspace not found');return {path,...r};}
+async function dfsCommit(env,r,w,revision){
+ dfsNum(revision,0,2147483647,'expected_revision',true);dfsAssert((r.data?.revision||0)===revision,'Revision conflict. Read workspace and retry with the current revision.');
+ w.revision=revision+1;w.updated_at=new Date().toISOString();const clean=dfsClone(w);dfsAssert(JSON.stringify(clean).length<=DFS_LIMITS.bytes,'Workspace exceeds 2 MB; reduce candidate count');
+ dfsAssert(r.etag,'Storage did not return an ETag; refusing an unsafe write');dfsAssert(await fbPut(env,r.path,clean,r.etag),'Revision conflict. No changes saved.');return {workspace_id:w.id,revision:w.revision,updated_at:w.updated_at,audit:dfsAudit(w)};
+}
+async function dfsRun(op,a,env,caller){
+ dfsUid(caller);
+ const allowed={compare:['workspace_id','expected_revision','indices','profiles','script'],sync:['workspace_id','expected_revision','players','lineups','settings','source','as_of'],list:[],get:['workspace_id','offset','limit','include_results'],create:['workspace_id','site','source','as_of'],upload:['workspace_id','expected_revision','csv','source','as_of','commit'],players:['workspace_id','expected_revision','players'],settings:['workspace_id','expected_revision','section','patch'],solve:['workspace_id','expected_revision'],explore:['workspace_id','expected_revision'],simulate:['workspace_id','expected_revision','indices'],exposure:['workspace_id'],select:['workspace_id','expected_revision','indices'],export:['workspace_id'],delete:['workspace_id','expected_revision'],schema:[]};
+ dfsAssert(allowed[op],'Unknown DFS operation');dfsObj(a,allowed[op],'arguments');
+ if(op==='schema')return {version:1,limits:DFS_LIMITS,player_fields:DFS_PLAYER_FIELDS,required_player_fields:['name','pos','team','opp','gid','sal'],field_notes:{proj:'Nullable FLEX points; missing projections are excluded.',own:'Total player ownership percent; Classic position or Showdown total across slots.',cptOwn:'Showdown captain ownership percent; must not exceed total.',maxExp:'Sequential solver cap fraction; final violations are reported.',dkId:'Official FLEX ID required for entry CSV.',cptId:'Official captain ID required for Showdown entry CSV.',gid:'Shared stable game identifier; never guess missing games.'},defaults:{solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT},units:{own:'percent 0–100',cptOwn:'percent 0–100',flexOwn:'percent 0–100',maxExp:'fraction 0–1',randomness:'fraction 0–0.6'},workflow:['create','upload (commit=false to preview)','upload (commit=true)','players/settings','solve or explore','simulate','exposure','select','export'],notes:['Every write requires expected_revision.','Read get with include_results=true for simulations.','Use player IDs in groups; lineup ids are indexes into the saved players array.','Results are model-conditional; no guarantee of profitability.']};
+ if(op==='list'){const r=await fbGet(env,'/users/'+dfsUid(caller)+'/dfsWorkspaces');return {workspaces:Object.values(r.data||{}).map(w=>({workspace_id:w.id,site:w.site,source:w.source,as_of:w.as_of,revision:w.revision,players:(w.players||[]).length,lineups:(w.lineups||[]).length,updated_at:w.updated_at}))};}
+ if(op==='create'){
+  const path=dfsPath(caller,a.workspace_id),r={...await fbGet(env,path,true),path};dfsAssert(!r.data,'Workspace already exists');dfsAssert(['dk_classic','dk_showdown'].includes(a.site),'Choose dk_classic or dk_showdown');
+  const w={id:a.workspace_id,site:a.site,source:mcpDfsString(a.source,'source',200),as_of:dfsDate(a.as_of),players:[],lineups:[],settings:dfsClone({solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT}),revision:0};return dfsCommit(env,r,w,0);
+ }
+ const r=await dfsLoad(env,caller,a.workspace_id),w=dfsClone(r.data);w.lineups=w.lineups||[];w.players=w.players||[];w.settings={solver:{...dfsClone(DFS_SOLVER_DEFAULT),...w.settings.solver},simulation:{...dfsClone(DFS_SIM_DEFAULT),...w.settings.simulation},lab:{...dfsClone(DFS_LAB_DEFAULT),...w.settings.lab}};
+ if(op==='get'){const offset=a.offset??0,limit=a.limit??100;dfsNum(offset,0,5000,'offset',true);dfsNum(limit,1,500,'limit',true);if(a.include_results!=null)dfsAssert(typeof a.include_results==='boolean','include_results must be boolean');const {lineups,simulation,...rest}=w;return {...rest,lineups:lineups.slice(offset,offset+limit),total_lineups:lineups.length,simulation:a.include_results?simulation||null:undefined,audit:dfsAudit(w)};}
+ if(op==='exposure')return dfsExposure(w);
+ if(op==='export')return dfsExport(w);
+ dfsNum(a.expected_revision,1,2147483647,'expected_revision',true);dfsAssert(a.expected_revision===w.revision,'Revision conflict. Read workspace first.');
+ if(op==='delete'){dfsAssert(r.etag,'Missing ETag');dfsAssert(await fbDelete(env,r.path,r.etag),'Revision conflict');return {deleted:w.id};}
+ let result={};
+ if(op==='upload'){
+  dfsAssert(typeof a.csv==='string'&&a.csv.length>0&&a.csv.length<=500000,'CSV must be 1–500000 characters');dfsAssert(typeof a.commit==='boolean','Set commit=false to preview or true to save');
+  const parsed=dfsModules.DDFSIngest.readUpload(a.csv,w.players);dfsAssert(!parsed.error,parsed.error);
+  // Parser may retain metadata fields irrelevant to the shared engine. Normalize explicitly.
+  w.players=dfsPlayers(parsed.players.map(p=>Object.fromEntries(DFS_PLAYER_FIELDS.filter(k=>p[k]!==undefined).map(k=>[k,p[k]]))),w.site);
+  w.source=mcpDfsString(a.source,'source',200);w.as_of=dfsDate(a.as_of);result={warnings:parsed.warnings,projectionInfo:parsed.projectionInfo||null,dropped:parsed.dropped||{},audit:dfsAudit(w)};
+  if(!a.commit)return {preview:true,...result,players:w.players};w.lineups=[];delete w.simulation;delete w.comparison;delete w.compute;
+ }else if(op==='sync'){
+  w.players=dfsPlayers(a.players,w.site);dfsObj(a.settings,['solver','simulation','lab'],'settings');
+  for(const section of Object.keys(a.settings))w.settings[section]=dfsSettings(w,section,a.settings[section]);
+  w.lineups=dfsValidateLineups(w,a.lineups);w.lineup_rules=w.settings.solver;w.source=mcpDfsString(a.source,'source',200);w.as_of=dfsDate(a.as_of);delete w.simulation;delete w.comparison;delete w.compute;
+ }else if(op==='players'){
+  w.players=dfsPlayers(a.players,w.site);w.lineups=[];delete w.simulation;delete w.comparison;delete w.compute;
+ }else if(op==='settings'){
+  w.settings[a.section]=dfsSettings(w,a.section,a.patch);delete w.simulation;delete w.comparison;
+  if(a.section==='solver'){w.lineups=[];delete w.compute;}
+ }else if(op==='solve'||op==='explore'){
+  dfsAssert(w.players.length,'Upload a slate first');const {players,cfg}=dfsEngineInput(w);
+  dfsAssert(players.some(p=>!p.excl&&p.proj>0),'Supply usable projections');
+  if(w.site==='dk_showdown')for(const p of players)dfsAssert(p.cptSal==null||p.cptSal===Math.round(p.sal*1.5),'Reconcile captain salary with 1.5× FLEX before computing');
+  if(op==='explore')dfsAssert(!cfg.groups.length,'Exploration does not support player groups; clear groups or use solve');
+  const started=Date.now(),out=op==='solve'?mcpDdfsRoot.DDFS.solveLineups(players,cfg):dfsModules.DDPareto.generate(players,{...cfg,...w.settings.lab,maxStored:100000});
+  dfsAssert(out.lineups.length<=DFS_LIMITS.lineups,'Generated pool exceeds 5000; reduce cloud/band size');
+  const validationWorkspace=op==='explore'?{...w,settings:{...w.settings,solver:{...w.settings.solver,...w.settings.lab}}}:w;
+  w.lineups=dfsValidateLineups(validationWorkspace,out.lineups);w.lineup_rules=validationWorkspace.settings.solver;delete w.simulation;delete w.comparison;
+  w.compute={operation:op,input_revision:a.expected_revision,elapsed_ms:Date.now()-started,timed_out:!!(out.timedOut||out.capped),infeasible:out.infeasible||null,stats:out.stats||null};result={compute:w.compute,lineups:w.lineups.length,exposure:dfsExposure(w)};
+ }else if(op==='simulate'||op==='compare'){
+  dfsAssert(w.lineups.length,'Generate lineups first');const indices=dfsIndices(a.indices,w.lineups.length),ls=indices.map(i=>w.lineups[i]);const {players}=dfsEngineInput(w),c={...w.settings.simulation,site:w.site};
+  dfsAssert(ls.length<=200,'Simulate at most 200 candidates per run; pass indices');
+  dfsAssert(c.sims*(Math.min(c.fieldSample,c.fieldSize-1)+ls.length)<=DFS_LIMITS.work,'Compute budget exceeded; reduce worlds, opponent sample or candidate count');
+  let profiles=null;
+  if(op==='compare'){
+   dfsAssert(['any','pass','back','run'].includes(a.script||'any'),'Invalid game plan');
+   dfsObj(a.profiles||{},['cash','three','five','milly'],'profiles');
+   for(const v of Object.values(a.profiles||{})){dfsObj(v,['fieldSize','paidPlaces'],'profile');dfsNum(v.fieldSize,2,1000000,'fieldSize',true);dfsNum(v.paidPlaces,1,v.fieldSize,'paidPlaces',true);}
+   profiles=dfsModules.DDLabContests.profiles(a.profiles||{});c.contestProfiles=profiles;
+   dfsAssert(c.sims*(Math.min(c.fieldSample,Math.max(c.fieldSize,...profiles.map(p=>p.fieldSize))-1)+ls.length)*5<=DFS_LIMITS.work,'Comparison budget exceeded; reduce worlds or sample');
+  }
+  const active=players.filter(p=>!p.excl&&p.proj>0);dfsAssert(active.every(p=>Number.isFinite(p.own)),'Supply ownership for every active player');
+  if(w.site==='dk_showdown')dfsAssert(active.every(p=>Number.isFinite(p.cptOwn)&&p.cptOwn<=p.own&&(p.cptProj==null||Math.abs(p.cptProj-1.5*p.proj)<=.15)),'Supply valid captain ownership and reconcile captain projections');
+  const dupePriors=ls.map(l=>dfsModules.DDFSDupe.expectedDupes(l,w.players,{entries:c.fieldSize,showdown:w.site==='dk_showdown'}));
+  const simulationLineups=ls.map((l,i)=>({...l,eDupes:Math.max(0,dupePriors[i]?.eDupes||0)}));
+  const started=Date.now();w.simulation=dfsClone(mcpDdfsRoot.DDFS.simulate(players,simulationLineups,c));w.simulation.dupe_prior=true;w.simulation.workspace_indices=indices;w.simulation.input_revision=a.expected_revision;w.simulation.elapsed_ms=Date.now()-started;result={simulation:w.simulation};
+  if(profiles){const m=w.simulation.meta;const gate=Number.isFinite(m.fieldOwnershipError)&&m.fieldOwnershipError<=5&&!m.correlationFailed&&!m.captainProjectionMismatch;
+   result.comparison={model_gate_pass:gate,selections:gate?dfsModules.DDLabContests.select(w.simulation,ls,players,a.script||'any',profiles).map(r=>({...r,workspace_index:r.i==null?null:indices[r.i]})):[],note:'Model candidates selected on training worlds and reported on held-out worlds. Uncalibrated estimates, not proven returns.'};w.comparison=result.comparison;
+  }
+ }else if(op==='select'){
+  const indices=dfsIndices(a.indices,w.lineups.length);w.lineups=indices.map(i=>w.lineups[i]);delete w.simulation;delete w.comparison;result={exposure:dfsExposure(w)};
+ }
+ return {...await dfsCommit(env,r,w,a.expected_revision),...result};
+}
+function dfsDate(s){dfsAssert(typeof s==='string'&&Number.isFinite(Date.parse(s)),'as_of must be a source timestamp');return new Date(s).toISOString();}
+function dfsIndices(v,n){const ids=v===undefined?Array.from({length:n},(_,i)=>i):v;dfsAssert(Array.isArray(ids)&&ids.length>0&&new Set(ids).size===ids.length&&ids.every(i=>Number.isInteger(i)&&i>=0&&i<n),'indices must be unique in-range lineup indexes');return ids;}
+function dfsExport(w){
+ dfsAssert(w.lineups.length,'No lineups to export');const ls=dfsValidateLineups({...w,settings:{...w.settings,solver:w.lineup_rules||w.settings.solver}},w.lineups);const rows=[w.site==='dk_showdown'?['CPT','FLEX','FLEX','FLEX','FLEX','FLEX']:['QB','RB','RB','WR','WR','WR','TE','FLEX','DST']];
+ for(const l of ls){const slots=mcpDfsSlots(l,w.players,w.site);rows.push(slots.map(({slot,i})=>{const p=w.players[i],id=slot==='CPT'?p.cptId:p.dkId;dfsAssert(id&&/^\d+$/.test(String(id)),'Missing official '+slot+' ID for '+p.name);return String(id);}));}
+ return {filename:w.id+'-draftkings.csv',csv:rows.map(r=>r.join(',')).join('\r\n')+'\r\n',lineups:ls.length,revision:w.revision,note:'Export only. No contest entries were submitted.'};
+}
+async function handleDfsWorkspace(request,url,env,cors){
+ const auth=await sessionAuth(request,env);if(auth.err)return json({error:auth.err},auth.code||401,cors);
+ if(request.method!=='POST')return json({error:'POST only'},405,cors);
+ try{const body=await readCappedJson(request,600000);dfsAssert(!body.tooLarge&&!body.malformed,'Invalid or oversized JSON body');return json(await dfsRun(url.pathname.split('/').pop(),body.value,env,{kind:'user',uid:auth.uid}),200,cors);}catch(e){return json({error:e.message},400,cors);}
+}
+function dfsToolSchema(op){
+ const s={type:'string'},num={type:'integer'},id={type:'string',pattern:'^[A-Za-z0-9_-]{1,80}$'},obj={type:'object'};
+ const common={workspace_id:id,expected_revision:{type:'integer',minimum:1}};
+ const props={compare:{...common,indices:{type:'array',items:num,maxItems:200},profiles:obj,script:{type:'string',enum:['any','pass','back','run']}},sync:{...common,players:{type:'array',items:obj},lineups:{type:'array',items:obj},settings:obj,source:s,as_of:s},schema:{},list:{},get:{workspace_id:id,offset:num,limit:num,include_results:{type:'boolean'}},create:{workspace_id:id,site:{enum:['dk_classic','dk_showdown'],type:'string'},source:s,as_of:s},upload:{...common,csv:{type:'string',maxLength:500000},source:s,as_of:s,commit:{type:'boolean'}},players:{...common,players:{type:'array',items:obj,minItems:1,maxItems:220}},settings:{...common,section:{type:'string',enum:['solver','simulation','lab']},patch:obj},solve:common,explore:common,simulate:{...common,indices:{type:'array',items:num,maxItems:200}},select:{...common,indices:{type:'array',items:num}},exposure:{workspace_id:id},export:{workspace_id:id},delete:common};
+ const optional={get:['offset','limit','include_results'],simulate:['indices'],compare:['indices','profiles','script']};return {type:'object',properties:props[op],required:Object.keys(props[op]).filter(k=>!(optional[op]||[]).includes(k)),additionalProperties:false};
+}
+
+/* ===== DD-DFS-WORKSPACE END ===== */
+
 /* ===== DD-MCP-BLOCK START — generated from work/mcp-block.js; edit THERE ===== */
 /* Shared DFS engine — generated verbatim from work/dfs-engine.js except for its private root. */
 const mcpDdfsRoot = {};
@@ -16714,7 +17769,7 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
           "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. Compact profiles also expose non-ranked expected-versus-observed Elo diagnostics; these are not luck, team-quality labels, forecasts or grades. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_find_cfb_team_games and dd_find_cfb_team_periods return schedule-derived results only, for one exact team by default or for every team's most recent game or period under scope=latest-per-team; latest means latest within the 2025 FBS-involved surface, not current 2026 form, and FCS records are partial. dd_find_cfb_historical_market returns book-identified prices whose observation time is unknown: never call them closing lines, compute CLV or cite them as prospective inputs. dd_get_cfb_model_card returns generated governance and retrodictive evidence, not a current forecast or leaderboard. dd_get_cfb_rating_system describes registered methods and output availability; registration is not evidence of prospective skill. dd_rank_cfb_teams returns one declared system's dated ranking, not a consensus or current power ranking. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
-          "There is no built-in DFS projection or ownership feed: dd_solve_dfs_lineup requires the caller to supply every value per call, and stores none of them. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot; it models double-pick weeks exactly, as two assignment slots spending two distinct teams. When quoting bozo odds, survivor odds " +
+          "There is no built-in DFS projection or ownership feed. The core dd_dfs_* suite saves private caller-uploaded workspaces and shares engines with the browser. dd_solve_dfs_lineup is a transient legacy solver. dd_optimize_survivor_path is an ungraded ceiling over a dated snapshot; it models double-pick weeks exactly, as two assignment slots spending two distinct teams. When quoting bozo odds, survivor odds " +
           "or the correlation matrix, say it is model output or a measured historical average, never a forecast " +
           "of a specific game. Team names, weeks and league ids come from dd_league_overview — do not guess them.",
       });
@@ -16764,6 +17819,166 @@ const SWOLE_NEEDS_USER = "SwoleDawg needs to know who you are, and the shared le
 
 const MCP_TOOLS = [
   {
+    name: "dd_dfs_sync",
+    title: "Save browser DFS workspace",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Atomically save player pool, settings and legal lineups from the browser, using the expected revision.",
+    inputSchema: dfsToolSchema("sync"),
+    async run(args, env, caller) { return toolText(await dfsRun("sync", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_compare",
+    title: "Compare DFS contests",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Compare cash, 3\u00d7, 5\u00d7 and GPP using shared held-out contest selection, explicit game plan and a field-quality gate.",
+    inputSchema: dfsToolSchema("compare"),
+    async run(args, env, caller) { return toolText(await dfsRun("compare", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_schema",
+    title: "Describe DFS fields and limits",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "Read all configurable fields, units, defaults, compute limits and workflow.",
+    inputSchema: dfsToolSchema("schema"),
+    async run(args, env, caller) { return toolText(await dfsRun("schema", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_list",
+    title: "List my DFS workspaces",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "Discover private saved DFS slates and their revisions.",
+    inputSchema: dfsToolSchema("list"),
+    async run(args, env, caller) { return toolText(await dfsRun("list", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_get",
+    title: "Read DFS workspace",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "Read player pool, settings, paginated lineups and optional simulation results.",
+    inputSchema: dfsToolSchema("get"),
+    async run(args, env, caller) { return toolText(await dfsRun("get", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_create",
+    title: "Create DFS workspace",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Create a private Classic or Showdown workspace for your account.",
+    inputSchema: dfsToolSchema("create"),
+    async run(args, env, caller) { return toolText(await dfsRun("create", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_upload",
+    title: "Upload DFS CSV",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Parse the same salary/projection CSVs as the page. Preview with commit=false; save with commit=true. Missing values remain missing.",
+    inputSchema: dfsToolSchema("upload"),
+    async run(args, env, caller) { return toolText(await dfsRun("upload", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_players",
+    title: "Write DFS player pool",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Replace the player pool with inspected native fields. Supports projections, ownership, CPT/FLEX IDs, locks, exclusions and exposure caps. Invalidates dependent results.",
+    inputSchema: dfsToolSchema("players"),
+    async run(args, env, caller) { return toolText(await dfsRun("players", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_settings",
+    title: "Write DFS settings",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Patch solver, simulation or lab configuration; read dd_dfs_schema first. Rejects unsupported fields.",
+    inputSchema: dfsToolSchema("settings"),
+    async run(args, env, caller) { return toolText(await dfsRun("settings", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_solve",
+    title: "Run DFS solver",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Run the shared exact search with explicit timeout and infeasibility status; save candidates and report actual exposure.",
+    inputSchema: dfsToolSchema("solve"),
+    async run(args, env, caller) { return toolText(await dfsRun("solve", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_explore",
+    title: "Generate DFS exploration pool",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Run shared Showdown enumeration or Classic sampled exploration. Report whether the search completed. Ownership product is only a duplication proxy.",
+    inputSchema: dfsToolSchema("explore"),
+    async run(args, env, caller) { return toolText(await dfsRun("explore", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_simulate",
+    title: "Run DFS contest simulation",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Run shared seeded correlated worlds against a modelled field. Returns training and held-out metrics, tie-aware payouts, intervals, and field diagnostics. Sampled-field first-place odds are unavailable.",
+    inputSchema: dfsToolSchema("simulate"),
+    async run(args, env, caller) { return toolText(await dfsRun("simulate", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_exposure",
+    title: "Read DFS exposure",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "Inspect player, captain, FLEX, team and game exposure, including final cap violations.",
+    inputSchema: dfsToolSchema("exposure"),
+    async run(args, env, caller) { return toolText(await dfsRun("exposure", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_select",
+    title: "Select DFS lineups",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Keep explicitly chosen lineup indexes as the portfolio. Invalidates previous simulation.",
+    inputSchema: dfsToolSchema("select"),
+    async run(args, env, caller) { return toolText(await dfsRun("select", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_export",
+    title: "Export DraftKings CSV",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "Return a DraftKings roster CSV using verified numeric slot IDs; refuse missing IDs. Does not submit entries.",
+    inputSchema: dfsToolSchema("export"),
+    async run(args, env, caller) { return toolText(await dfsRun("export", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_delete",
+    title: "Delete DFS workspace",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: true,
+    description: "Delete this private workspace only, guarded by expected_revision.",
+    inputSchema: dfsToolSchema("delete"),
+    async run(args, env, caller) { return toolText(await dfsRun("delete", args, env, caller)); },
+  },
+  {
     name: "dd_whoami",
     title: "Who am I",
     catalog: "core",
@@ -16776,7 +17991,7 @@ const MCP_TOOLS = [
           player: caller.name, anonymous: false,
           // Read everything, write one thing: your own Bozo leg, two-phase. Stated here
           // because "read-only" was a published claim and its retirement should be too.
-          access: "read-only, except a Bozo leg via dd_submit_bozo_leg (two-phase confirm): your own, or another member's if you manage that league",
+          access: "Account-scoped DFS workspace and SwoleDawg writes; Bozo leg via dd_submit_bozo_leg (two-phase confirm): your own, or another member's if you manage that league",
           // This caller's own subscription state, from their own record. Everything on the
           // site is free today: plan is "free" for every account and NOTHING is gated on
           // it, so never tell a user a tool is being withheld from them on this basis.
@@ -19461,7 +20676,7 @@ const MCP_TOOLS = [
   {
     name: "dd_solve_dfs_lineup",
     title: "DFS lineup solver",
-    catalog: "full",
+    catalog: "core",
     readOnlyHint: true,
     description: "Build one to twenty DraftKings Classic or Showdown lineups with the exact branch-and-bound solver used by dfs.html. Every salary, projection and ownership value must be supplied in this call; Data Dawgs has no projection feed, stores nothing, and returns the applied constraints plus explicit infeasibility or timeout state.",
     inputSchema: {
@@ -19697,7 +20912,7 @@ const MCP_TOOLS = [
           "pound.html": "The Pound model workbench, deterministic calculators, contracts and honest tool-status inventory.",
         },
         notServedHere: {
-          dfs_projections_and_ownership: "Never hosted or persisted, by design. The browser slate stays in that user's localStorage. dd_solve_dfs_lineup accepts a bounded slate transiently in one authenticated call, computes, returns, and stores neither inputs nor results.",
+          dfs_projections_and_ownership: "User-supplied data stays local unless explicitly saved to a private account-scoped DFS workspace. dd_dfs_* reads and writes those workspaces. dd_solve_dfs_lineup remains transient.",
           epa_stats: "The 2.1MB dataset is embedded in stats.html; parsing it per call is a poor fit for a Worker. Browse the page directly.",
         },
       });

@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-09",
+ "as_of": "2026-09-16",
  "source": "Generated from the site itself. Tier is read from each page's live chip.",
  "tier": "labs",
  "graded": false,
@@ -70,15 +70,48 @@
    "dd_guillotine_odds",
    "dd_site_map"
   ],
-  "tools_staged": [],
+  "tools_staged": [
+   "dd_dfs_sync",
+   "dd_dfs_compare",
+   "dd_dfs_schema",
+   "dd_dfs_list",
+   "dd_dfs_get",
+   "dd_dfs_create",
+   "dd_dfs_upload",
+   "dd_dfs_players",
+   "dd_dfs_settings",
+   "dd_dfs_solve",
+   "dd_dfs_explore",
+   "dd_dfs_simulate",
+   "dd_dfs_exposure",
+   "dd_dfs_select",
+   "dd_dfs_export",
+   "dd_dfs_delete"
+  ],
   "catalogs": {
-   "status": "LIVE since 2026-08-09. Both /mcp/core/<credential> and /mcp/full/<credential> answer, and GET /mcp/ advertises them. The bare /mcp/<credential> is unchanged and still full. A leading `core`/`full` is only read as a catalog when a credential follows it, or when the credential arrived in a header — so no passphrase can be stranded by its own name. NOT VERIFIED IN PRODUCTION: the per-catalog tools/list counts, which need a credential.",
+   "status": "Catalog arrays describe the current source; tools_staged are not deployed. DFS core promotion is staged. LIVE since 2026-08-09. Both /mcp/core/<credential> and /mcp/full/<credential> answer, and GET /mcp/ advertises them. The bare /mcp/<credential> is unchanged and still full. A leading `core`/`full` is only read as a catalog when a credential follows it, or when the credential arrived in a header — so no passphrase can be stranded by its own name. NOT VERIFIED IN PRODUCTION: the per-catalog tools/list counts, which need a credential.",
    "why": "Forty-three tool schemas cost 10-25k context tokens in every conversation that connects. core is the everyday league surface; full is everything and stays the default, so the bare /mcp/<credential> URL keeps serving every tool a live connector may already be calling.",
    "paths": {
     "core": "/mcp/core/<credential>",
     "full": "/mcp/full/<credential>"
    },
    "core": [
+    "dd_dfs_sync",
+    "dd_dfs_compare",
+    "dd_dfs_schema",
+    "dd_dfs_list",
+    "dd_dfs_get",
+    "dd_dfs_create",
+    "dd_dfs_upload",
+    "dd_dfs_players",
+    "dd_dfs_settings",
+    "dd_dfs_solve",
+    "dd_dfs_explore",
+    "dd_dfs_simulate",
+    "dd_dfs_exposure",
+    "dd_dfs_select",
+    "dd_dfs_export",
+    "dd_dfs_delete",
     "dd_whoami",
     "dd_league_overview",
     "dd_bozo_week",
@@ -95,10 +128,27 @@
     "dd_price_parlay",
     "dd_calculate_bet_ev",
     "dd_scores",
+    "dd_solve_dfs_lineup",
     "dd_guillotine_odds",
     "dd_site_map"
    ],
    "full": [
+    "dd_dfs_sync",
+    "dd_dfs_compare",
+    "dd_dfs_schema",
+    "dd_dfs_list",
+    "dd_dfs_get",
+    "dd_dfs_create",
+    "dd_dfs_upload",
+    "dd_dfs_players",
+    "dd_dfs_settings",
+    "dd_dfs_solve",
+    "dd_dfs_explore",
+    "dd_dfs_simulate",
+    "dd_dfs_exposure",
+    "dd_dfs_select",
+    "dd_dfs_export",
+    "dd_dfs_delete",
     "dd_whoami",
     "dd_league_overview",
     "dd_bozo_clv",
@@ -150,6 +200,22 @@
   "annotations": {
    "status": "LIVE with the catalogs since 2026-08-09, present in the deployed source. Every registered tool carries a display title and readOnlyHint:true on tools/list. destructiveHint, idempotentHint and openWorldHint are deliberately absent rather than guessed. NOT VERIFIED ON THE WIRE: reading them back needs a credential.",
    "titles": {
+    "dd_dfs_sync": "Save browser DFS workspace",
+    "dd_dfs_compare": "Compare DFS contests",
+    "dd_dfs_schema": "Describe DFS fields and limits",
+    "dd_dfs_list": "List my DFS workspaces",
+    "dd_dfs_get": "Read DFS workspace",
+    "dd_dfs_create": "Create DFS workspace",
+    "dd_dfs_upload": "Upload DFS CSV",
+    "dd_dfs_players": "Write DFS player pool",
+    "dd_dfs_settings": "Write DFS settings",
+    "dd_dfs_solve": "Run DFS solver",
+    "dd_dfs_explore": "Generate DFS exploration pool",
+    "dd_dfs_simulate": "Run DFS contest simulation",
+    "dd_dfs_exposure": "Read DFS exposure",
+    "dd_dfs_select": "Select DFS lineups",
+    "dd_dfs_export": "Export DraftKings CSV",
+    "dd_dfs_delete": "Delete DFS workspace",
     "dd_whoami": "Who am I",
     "dd_league_overview": "League overview",
     "dd_bozo_clv": "Bozo closing line value",
@@ -200,13 +266,13 @@
   }
  },
  "counts": {
-  "surfaces": 24,
-  "with_live_machine_access": 19,
+  "surfaces": 23,
+  "with_live_machine_access": 18,
   "with_no_machine_access": 5,
-  "mcp_tools_registered": 46,
+  "mcp_tools_registered": 62,
   "mcp_tools_live": 46,
-  "mcp_tools_staged": 0,
-  "mcp_tools_core": 18,
+  "mcp_tools_staged": 16,
+  "mcp_tools_core": 35,
   "mcp_tools_planned": 6
  },
  "data": [
@@ -332,23 +398,6 @@
     }
    ],
    "planned": [],
-   "tier": "labs"
-  },
-  {
-   "id": "team-draft-2026",
-   "domain": "arena",
-   "name": "The 32-team draft — an eight-person NFL wins pool",
-   "page": "/teamdraft.html",
-   "machine": [
-    {
-     "kind": "json",
-     "url": "/data/draft-2026.json",
-     "status": "live",
-     "covers": "the whole surface — 32 teams with posted line, draft-day expected wins (frozen), live projected/banked, season SD, the 0-17 win distribution (live Monte Carlo in-season, conditioned on banked) and a 17-game schedule with per-game tier; the sparse head-to-head matrix; the draft log; and the derived rosters, tracker, board, simulation and diagnostics"
-    }
-   ],
-   "planned": [],
-   "gap": "Expected wins stay the draft-day market snapshot and are never recomputed; live projections and Team-sheet win curves update off the same banked+remaining Monte Carlo as the roster sim. Nothing here is graded — banked cells are observed wins only.",
    "tier": "labs"
   },
   {
@@ -689,8 +738,25 @@
      "covers": "empty week-object receipt ledger (lockedSha256 + realized:null); Kap publishes locked weeks later — aggregates only (I3)"
     }
    ],
-   "planned": [],
-   "gap": "The exact solver is live over MCP; contest simulation remains browser-only. Projections and ownership are caller-supplied and never hosted. Week objects lock on-device before kickoff; the public ledger starts empty.",
+   "planned": [
+    "dd_dfs_sync",
+    "dd_dfs_compare",
+    "dd_dfs_schema",
+    "dd_dfs_list",
+    "dd_dfs_get",
+    "dd_dfs_create",
+    "dd_dfs_upload",
+    "dd_dfs_players",
+    "dd_dfs_settings",
+    "dd_dfs_solve",
+    "dd_dfs_explore",
+    "dd_dfs_simulate",
+    "dd_dfs_exposure",
+    "dd_dfs_select",
+    "dd_dfs_export",
+    "dd_dfs_delete"
+   ],
+   "gap": "Private DFS workspaces and compute tools are implemented but staged pending Worker deployment. The exact legacy solver is live over MCP; contest simulation remains browser-only. Projections and ownership are caller-supplied and never hosted. Week objects lock on-device before kickoff; the public ledger starts empty.",
    "tier": "labs"
   },
   {
@@ -1087,6 +1153,6 @@
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-09-09",
+ "built": "2026-09-16",
  "canonical_url": "https://datadawgs216.com/data/surfaces.json"
 }

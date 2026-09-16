@@ -11,7 +11,7 @@ The file contains secret **names only**. Secret values stay encrypted in Cloudfl
 - Compatibility date: `2026-07-31`.
 - Workers.dev and version preview URLs enabled. Delete disposable, non-deployed preview
   versions after verification; never delete a version referenced by a deployment.
-- Standard usage model CPU ceiling: 1,000 ms.
+- Current production CPU ceiling: 1,000 ms. This DFS branch proposes 30,000 ms in the complete manifest; it is not a claim that production has changed. DFS requests also enforce search deadlines, simulation work budgets and storage limits. Verify plan support and CPU use on the preview version before promotion.
 - Workers Logs enabled.
 - `RL` KV namespace: `ffee9157b0a04cebb796acfa6046880a`.
 - `SWOLE_DB` D1 database `swoledawg`: SwoleDawg training data. **`database_id` in

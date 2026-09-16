@@ -656,7 +656,7 @@ console.log('\nWorker deployment contract');
       if (!w.keep_vars || w.preview_urls !== true) fail('wrangler.jsonc: keep_vars/preview_urls safety settings missing');
       if (!w.observability || w.observability.enabled !== true || !w.observability.logs || w.observability.logs.enabled !== true)
         fail('wrangler.jsonc: Workers Logs must stay enabled');
-      if (!w.limits || w.limits.cpu_ms !== 1000) fail('wrangler.jsonc: production CPU ceiling must stay 1000 ms');
+      if (!w.limits || w.limits.cpu_ms !== 30000) fail('wrangler.jsonc: DFS compute CPU ceiling must stay 30000 ms');
       if (!rl || rl.id !== 'ffee9157b0a04cebb796acfa6046880a') fail('wrangler.jsonc: RL KV binding missing or changed');
       if (JSON.stringify(required) !== JSON.stringify(expectedSecrets.sort())) fail('wrangler.jsonc: required secret-name set drifted');
       // ⚠️ Three jobs share this Worker and the dispatcher in scheduled() fails closed on

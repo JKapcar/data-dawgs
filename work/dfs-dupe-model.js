@@ -21,7 +21,7 @@
   function ownFrac(p) {
     var o = +((p && p.own) || 0);
     if (!isFinite(o) || o <= 0) return 0.001; // floor so log/product defined
-    if (o > 1) o = o / 100;
+    o = o / 100; // All canonical ownership inputs are percentage points, including 0.5%.
     if (o > 1) o = 1;
     if (o < 0.001) o = 0.001;
     return o;
@@ -84,7 +84,8 @@
     var plist = ids.map(function (i) {
       var p = players[i] || {};
       var copy = {
-        name: p.name, pos: p.pos, team: p.team, opp: p.opp, own: p.own,
+        name: p.name, pos: p.pos, team: p.team, opp: p.opp,
+        own: opts.showdown ? (i === lineup.cpt ? p.cptOwn : (Number.isFinite(p.flexOwn) ? p.flexOwn : (Number.isFinite(p.own) && Number.isFinite(p.cptOwn) ? p.own - p.cptOwn : null))) : p.own,
         _isCpt: opts.showdown && lineup.cpt != null && i === lineup.cpt
       };
       return copy;
