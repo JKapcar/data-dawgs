@@ -5391,15 +5391,18 @@ const MCP_TOOLS = [
     title: "SwoleDawg — start a session",
     catalog: "core",
     readOnlyHint: false,
-    description: "Open a training session. The day is inferred from the date's weekday unless you name one. Idempotent: starting a session that already exists returns it rather than creating a second. sd_log_set opens the session on its own, so you rarely need this first.",
+    description: "Omit both day and exercises to use the weekday default. Pass exercises to start a hybrid session from existing program exercise ids; new exercises cannot be created here. day and exercises are mutually exclusive. Select or reopen a training session without deleting logged sets. Existing legacy day_key values are accepted for compatibility; do not combine day_key with day or exercises. Subsequent sd_log_set calls without day_key use the selected plan.",
     inputSchema: { type: "object", properties: {
       date: { type: "string", description: "YYYY-MM-DD (default: today)" },
+      day: {type:"string",enum:["mon","tue","thu","fri","ruck"]},
+      exercises: {type:"array",items:{type:"string"},minItems:1,uniqueItems:true},
       day_key: { type: "string", description: "monday|tuesday|… — override the weekday inference" },
     }, additionalProperties: false },
     async run(args, env, caller) {
       if (!caller || caller.kind !== "user") return toolErr(SWOLE_NEEDS_USER);
       const uid = caller.uid || caller.name;
-      const r = await swoleStartSession(env, uid, args.date || new Date().toISOString().slice(0, 10), args.day_key, "mcp");
+      if(args.day!==undefined&&args.day_key!==undefined)return toolErr("Use day or legacy day_key, not both.");
+      const r = await swoleStartSession(env, uid, args.date || new Date().toISOString().slice(0, 10), args.day??args.day_key, "mcp", {select:true,exercise_ids:args.exercises});
       return r.error ? toolErr(r.error) : toolText(r);
     },
   },

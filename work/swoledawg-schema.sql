@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   uid           TEXT NOT NULL,
   date          TEXT NOT NULL,             -- ISO date, the day it was PERFORMED
   day_key       TEXT NOT NULL,             -- monday|tuesday|…|sunday
+  plan_json TEXT,                         -- ordered current-program exercise ids
+  plan_selected_at TEXT,                  -- selection order, independent of workout start
   session_type  TEXT NOT NULL,             -- lift|ruck|rest
   block         INTEGER NOT NULL DEFAULT 1,
   -- ⚠️ Derived at write time from block_start_date, then FROZEN. Never recompute it on

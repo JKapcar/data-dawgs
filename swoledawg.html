@@ -7377,7 +7377,7 @@ function maintenance(){
 function targets(){
   const m=RULES.modes[MODE],maint=maintenance(),w=latestWeight();
   const base=(DATA.targets||{}).weekly_volume_targets_sets||{},vol={};
-  Object.keys(base).forEach(k=>vol[k]=Math.round(base[k]*m.vol));
+  Object.keys(base).forEach(k=>vol[k]=base[k]===null?null:Math.round(base[k]*(APIMODE?1:m.vol)));
   const kcal=maint==null?null:Math.round(maint+m.kcal);
   const ppk=(DATA.targets||{}).protein_g_per_kg_override??m.ppk;
   const fatPerLb=(DATA.targets||{}).fat_g_per_lb??0.36;
@@ -7926,14 +7926,16 @@ function overview(){
      One shared scale so bar lengths compare across rows; with no targets set the
      bars are honest counts against the biggest bucket and no tick is drawn. */
   const vmax=Math.max(1,...volKeys.map(k=>Math.max(v.b[k]||0,t.vol[k]||0)))*1.12;
-  document.getElementById('priBars').innerHTML='<div class="vol">'+volKeys.map(k=>{
+  const volumeRow=k=>{
     const done=v.b[k]||0,tg=t.vol[k]||0,low=tg>0&&done<tg;
     return `<div class="vrow${low?' low':''}">
       <span class="n">${esc(BUCKETS[k]||k)}${pri[k]?'<span class="pri-dot"></span>':''}</span>
       <div class="vch"><div class="vfill" data-w="${(done/vmax*100).toFixed(1)}" style="width:0%"></div>
         ${tg?`<span class="vtick" style="left:${(tg/vmax*100).toFixed(1)}%"></span>`:''}</div>
       <span class="val">${r1(done)}${tg?`<small>/${tg}</small>`:''}${low?`<span class="flag">${r1(done-tg)}</span>`:''}</span>
-    </div>`;}).join('')+'</div>'+
+    </div>`;};
+  document.getElementById('priBars').innerHTML='<div class="vol">'+volKeys.filter(k=>t.vol[k]!==null).map(volumeRow).join('')+'</div>'+
+    (volKeys.some(k=>t.vol[k]===null)?'<details><summary>Not tracked this block</summary><div class="vol">'+volKeys.filter(k=>t.vol[k]===null).map(volumeRow).join('')+'</div></details>':'')+
     (Object.keys(t.vol).length?`<div class="vleg">
       <span class="li"><span class="sw molten"></span>Sets this week</span>
       <span class="li"><span class="sw tick"></span>Target</span>
@@ -8233,6 +8235,7 @@ function sdHeightCm(){
 
 async function sdLoad(){
   PROG = null; PROG_V = null; SUMMARY = null; APIMODE = false; API_NOTE = null;
+  SD_SERVER_CHOICE=null;SD_SERVER_STAMP=null;SD_SERVER_SETS=[];SD_CHOICE=null;SD_CHOICE_LOADED=false;SD_PICKER_OPEN=false;
   try {
     const p = await sdGet('/program');
     if(p && p.program && Array.isArray(p.program.days)){
@@ -8245,6 +8248,7 @@ async function sdLoad(){
     API_NOTE = 'Could not reach the training log: ' + e.message;
     return false;
   }
+  await sdRefreshSessionPlan();
   try { SUMMARY = await sdGet('/summary'); }
   catch(e){ SUMMARY = null; API_NOTE = 'Measurements unavailable: ' + e.message; }
   return true;
@@ -8265,6 +8269,7 @@ async function sdLoad(){
    delivers rather than a target to hit. Guessing that mapping would put invented targets
    under real logged sets, so the bars stay honest about having none until someone says
    what the targets are. */
+const SD_START_TARGETS={chest:10,back:10,biceps:8,triceps:8,side_delts:null,front_delts:null,rear_delts:null,quads:null,hamstrings_glutes:null,core:null,calves:null};
 function sdTargetsFrom(prog){
   const n=(prog&&prog.nutrition)||{};
   const out={maintenance_mode:'computed',activity_factor:1.45,fat_g_per_lb:0.36};
@@ -8278,7 +8283,8 @@ function sdTargetsFrom(prog){
      through — the mapping from the program's own audit buckets was made once, when the
      targets were written, rather than guessed here on every render. */
   const vt=(prog&&prog.weekly_volume_targets_sets)||null;
-  if(vt&&typeof vt==='object') out.weekly_volume_targets_sets=vt;
+  out.weekly_volume_targets_sets=prog?.session_picker_targets_configured
+    ? {...SD_START_TARGETS,...vt} : {...SD_START_TARGETS};
   if(n.kcal_target!=null) out.kcal_target=n.kcal_target;
   if(n.kcal_band!=null) out.kcal_band=Number(n.kcal_band);
   if(n.mode!=null) out.nutrition_mode=n.mode;
@@ -8298,7 +8304,7 @@ async function sdHydrateDays(){
   const days = [];
   for(const s of list){
     let detail = null;
-    try { detail = await sdGet('/session?date=' + encodeURIComponent(s.date)); }
+    try { detail = await sdGet('/session?date=' + encodeURIComponent(s.date)+'&id='+encodeURIComponent(s.id)); }
     catch(e){ continue; }
     const byEx = new Map();
     for(const row of (detail.sets || [])){
@@ -8328,6 +8334,19 @@ async function sdHydrateDays(){
       week: s.week, session_id: s.id, day_key: s.day_key
     });
   }
+  const merged=new Map();
+  for(const d of days){
+    if(!merged.has(d.date)){merged.set(d.date,d);continue;}
+    const existing=merged.get(d.date),w=d.training.weights;
+    if(!w)continue;
+    if(!existing.training.weights){existing.training=d.training;continue;}
+    for(const ex of w.exercises){
+      const prev=existing.training.weights.exercises.find(e=>e.exercise_id===ex.exercise_id);
+      if(prev)prev.sets.push(...ex.sets);else existing.training.weights.exercises.push(ex);
+    }
+    existing.training.weights.total_sets+=w.total_sets;
+  }
+  days.splice(0,days.length,...merged.values());
   await sdMergeMeasurements(days);
   await sdMergeNutrition(days);
   await sdMergeDevice(days);
@@ -8520,6 +8539,123 @@ async function sdMergeMeasurements(days){
   return days;
 }
 
+/* Session choices use ledger prefixes; the program retains full weekday names. */
+const SD_DAYS = [
+  {key:'mon',label:'Push',focus:['chest','triceps','front delts'],day:'monday'},
+  {key:'tue',label:'Lower / Core',focus:['quads','hams','glutes','core'],day:'tuesday'},
+  {key:'thu',label:'Pull',focus:['back','rear delts','biceps'],day:'thursday'},
+  {key:'fri',label:'Arms / Delts',focus:['biceps','triceps','side delts'],day:'friday'},
+  {key:'ruck',label:'Ruck',focus:['conditioning'],day:'wednesday'}
+];
+const SD_WEEKDAY_DEFAULT = {0:null,1:'mon',2:'tue',3:'ruck',4:'thu',5:'fri',6:'ruck'};
+let SD_CHOICE=null, SD_CHOICE_LOADED=false, SD_CUSTOM=null;
+let SD_SERVER_CHOICE=null, SD_SERVER_STAMP=null, SD_PICKER_OPEN=false, SD_SERVER_SETS=[];
+let SD_PICK_BUSY=false;
+function sdProgramExercises(){return (PROG.days||[]).flatMap(d=>(d.exercises||[]).map(e=>({...e,program_day:d.day})));}
+function sdValidateChoice(c,date){
+  if(!c||c.date!==date||!['custom',...SD_DAYS.map(d=>d.key)].includes(c.day_key)||!Array.isArray(c.exercise_ids))return null;
+  const ids=new Set(sdProgramExercises().map(e=>e.id));
+  if(c.exercise_ids.some(id=>!ids.has(id))||new Set(c.exercise_ids).size!==c.exercise_ids.length)return null;
+  if(c.day_key==='custom'&&!c.exercise_ids.length)return null;
+  if(c.day_key!=='custom'){
+    const preset=SD_DAYS.find(d=>d.key===c.day_key);
+    const expected=(sdDayOf(PROG,preset.day)?.exercises||[]).map(e=>e.id);
+    if(JSON.stringify(expected)!==JSON.stringify(c.exercise_ids))return null;
+  }
+  return c;
+}
+function sdReadChoice(date){try{return sdValidateChoice(JSON.parse(localStorage.getItem('sd.sessionChoice')),date);}catch(e){return null;}}
+function sdServerChoice(session,date){
+  if(!session||session.date!==date||session.completed_at||!Array.isArray(session.plan_json))return null;
+  const key=SD_DAYS.find(d=>d.day===session.day_key||d.key===session.day_key)?.key||(session.day_key==='saturday'?'ruck':session.day_key);
+  const c={date,day_key:key,exercise_ids:session.plan_json};
+  // Validate ids and ordering even if a stored preset no longer matches a newer program.
+  const ids=new Set(sdProgramExercises().map(e=>e.id));
+  if(!['custom',...SD_DAYS.map(d=>d.key)].includes(key)||c.exercise_ids.some(id=>!ids.has(id))||new Set(c.exercise_ids).size!==c.exercise_ids.length)
+    throw new Error('Stored session plan no longer matches the program. Choose a session to continue.');
+  if(key==='custom'&&!c.exercise_ids.length)throw new Error('Stored custom session is empty.');
+  return c;
+}
+async function sdRefreshSessionPlan(){
+  if(!APIMODE||SD_PICK_BUSY)return false;
+  try{
+    const r=await sdGet('/session?date='+iso(new Date()));
+    const c=sdServerChoice(r.session,iso(new Date()));
+    SD_SERVER_SETS=r.sets||[];
+    const stamp=JSON.stringify([r.session?.id,r.session?.plan_selected_at,c]);
+    if(stamp===SD_SERVER_STAMP)return false;
+    SD_SERVER_STAMP=stamp;SD_SERVER_CHOICE=c;SD_PICKER_OPEN=false;
+    return true;
+  }catch(e){
+    if(!/No session on/.test(e.message))toast(e.message);
+    return false;
+  }
+}
+window.addEventListener('focus',async()=>{if(await sdRefreshSessionPlan())training();});
+function sdChoiceFor(date){
+  if(SD_PICKER_OPEN)return null;
+  if(SD_SERVER_CHOICE?.date===date)return SD_SERVER_CHOICE;
+  if(!SD_CHOICE_LOADED){SD_CHOICE=sdReadChoice(iso(new Date()));SD_CHOICE_LOADED=true;}
+  return sdValidateChoice(SD_CHOICE,date);
+}
+async function sdChoose(key,ids){
+  const c=sdValidateChoice({date:PLAN_DAY,day_key:key,exercise_ids:ids},PLAN_DAY);
+  if(!c){toast('Select at least one valid program exercise.');return;}
+  if(SD_PICK_BUSY)return;
+  SD_PICK_BUSY=true;
+  try{
+    await sdPost('/session/start',key==='custom'?{date:PLAN_DAY,exercise_ids:ids}:{date:PLAN_DAY,day_key:key});
+    const r=await sdGet('/session?date='+encodeURIComponent(PLAN_DAY));
+    const saved=sdServerChoice(r.session,PLAN_DAY);
+    if(!saved||JSON.stringify(saved.exercise_ids)!==JSON.stringify(ids))throw new Error('Session readback differs from the requested plan.');
+    SD_SERVER_SETS=r.sets||[];
+    SD_SERVER_CHOICE=saved;SD_SERVER_STAMP=JSON.stringify([r.session.id,r.session.plan_selected_at,saved]);
+  }catch(e){toast('Session not selected — '+e.message);return;}
+  finally{SD_PICK_BUSY=false;}
+  SD_PICKER_OPEN=false;
+  SD_CHOICE=c;SD_CUSTOM=null;SD_CHOICE_LOADED=true;
+  try{localStorage.setItem('sd.sessionChoice',JSON.stringify(c));}catch(e){}
+  training();
+}
+function sdChangeDay(){
+  SD_PICKER_OPEN=true;
+  SD_CHOICE=null;SD_CUSTOM=null;SD_CHOICE_LOADED=true;
+  try{localStorage.removeItem('sd.sessionChoice');}catch(e){}
+  training();
+}
+function sdPickerStats(key){
+  const start=iso(sdMonday(PLAN_DAY));const end=new Date(sdMonday(PLAN_DAY));end.setDate(end.getDate()+7);
+  const stop=iso(end);let last=null,sets=0;
+  for(const d of (DATA.days||[])){
+    if(d.sample)continue;
+    const n=(d.training?.weights?.exercises||[]).filter(e=>e.exercise_id?.startsWith(key+'_')).reduce((n,e)=>n+(e.sets||[]).length,0);
+    if(n&&(!last||d.date>last))last=d.date;
+    if(d.date>=start&&d.date<stop)sets+=n;
+  }
+  return {last,sets};
+}
+function sdRenderPicker(){
+  document.getElementById('answerBox').innerHTML='<div class="q">Your training menu</div><div class="a">Choose a session</div><div class="why">Train any day. Your logged sets stay with their exercises.</div>';
+  document.getElementById('planNote').textContent='Last done and weekly counts reflect loaded history (up to 30 recent sessions). Rucks do not produce lifting sets.';
+  const body=document.getElementById('planBody');
+  if(SD_CUSTOM){
+    const all=sdProgramExercises();
+    body.innerHTML='<div class="card"><h3>Build a custom session</h3>'+SD_DAYS.filter(d=>d.key!=='ruck').map(d=>'<fieldset><legend>'+esc(d.label)+'</legend>'+all.filter(e=>e.program_day===d.day).map(e=>`<label style="display:block;padding:10px"><input type="checkbox" data-sdcheck="${esc(e.id)}" ${SD_CUSTOM.includes(e.id)?'checked':''}> ${esc(e.name)}</label>`).join('')+'</fieldset>').join('')+
+      '<h3>Session order</h3>'+SD_CUSTOM.map((id,i)=>`<div style="padding:8px">${i+1}. ${esc(all.find(e=>e.id===id).name)} <button class="btn sm" data-move="${i}" data-step="-1" ${i===0?'disabled':''} aria-label="Move up">↑</button> <button class="btn sm" data-move="${i}" data-step="1" ${i===SD_CUSTOM.length-1?'disabled':''} aria-label="Move down">↓</button></div>`).join('')+
+      '<div class="btn-row"><button class="btn primary" id="sdCustomStart">Start session</button><button class="btn" id="sdCustomBack">Back</button></div></div>';
+    body.querySelectorAll('[data-sdcheck]').forEach(el=>el.onchange=()=>{SD_CUSTOM=el.checked?[...SD_CUSTOM,el.dataset.sdcheck]:SD_CUSTOM.filter(id=>id!==el.dataset.sdcheck);sdRenderPicker();});
+    body.querySelectorAll('[data-move]').forEach(el=>el.onclick=()=>{const i=Number(el.dataset.move),j=i+Number(el.dataset.step);[SD_CUSTOM[i],SD_CUSTOM[j]]=[SD_CUSTOM[j],SD_CUSTOM[i]];sdRenderPicker();});
+    document.getElementById('sdCustomStart').onclick=()=>sdChoose('custom',SD_CUSTOM.slice());
+    document.getElementById('sdCustomBack').onclick=()=>{SD_CUSTOM=null;sdRenderPicker();};return;
+  }
+  body.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px">'+SD_DAYS.map(d=>{
+    const stats=sdPickerStats(d.key),scheduled=SD_WEEKDAY_DEFAULT[new Date(PLAN_DAY+'T12:00:00').getDay()]===d.key;
+    return `<button type="button" class="card" data-sdpreset="${d.key}" style="text-align:left;cursor:pointer;color:inherit"><h3>${esc(d.label)} ${scheduled?'<span class="pill">Scheduled</span>':''}</h3><div>${d.focus.map(f=>'<span class="pill">'+esc(f)+'</span>').join(' ')}</div><p>Last done: ${stats.last||'—'}</p><b>This week: ${stats.sets} sets</b></button>`;
+  }).join('')+'<button class="card" id="sdCustom" style="text-align:left;cursor:pointer;color:inherit"><h3>Custom</h3><p>Combine and reorder your program exercises.</p></button></div>';
+  body.querySelectorAll('[data-sdpreset]').forEach(el=>el.onclick=()=>{const d=SD_DAYS.find(d=>d.key===el.dataset.sdpreset);sdChoose(d.key,(sdDayOf(PROG,d.day)?.exercises||[]).map(e=>e.id));});
+  document.getElementById('sdCustom').onclick=()=>{SD_CUSTOM=[];sdRenderPicker();};
+}
+
 /* ---- Training tab, program mode ------------------------------------------ */
 function trainingProgram(){
   planPicker('trDays', PLAN_DAY, d=>{ PLAN_DAY=d; training(); });
@@ -8538,27 +8674,37 @@ function trainingProgram(){
 
   const week   = sdWeekOf(PROG, PLAN_DAY);
   const effort = sdEffort(PROG, week);
-  const dayKey = sdDayKey(PLAN_DAY);
-  const day    = sdDayOf(PROG, dayKey);
+  const choice=sdChoiceFor(PLAN_DAY);
+  if(!choice){sdRenderPicker();return;}
+  const preset=SD_DAYS.find(d=>d.key===choice.day_key);
+  const dayKey=choice.day_key;
+  const byId=new Map(sdProgramExercises().map(e=>[e.id,e]));
+  const day={name:preset?preset.label:'Custom',exercises:choice.exercise_ids.map(id=>byId.get(id))};
   const date   = new Date(PLAN_DAY + 'T12:00:00');
   const rirTxt = effort && effort.reps_in_reserve != null ? effort.reps_in_reserve + ' RIR' : 'exercise-specific RIR';
 
   const logged = (DATA.days || []).find(x => x.date === PLAN_DAY);
   const doneBy = new Map();
-  if(logged && logged.training && logged.training.weights)
-    for(const e of (logged.training.weights.exercises || [])) doneBy.set(normKey(e.name), e);
+  if(SD_SERVER_CHOICE?.date===PLAN_DAY){
+    for(const row of SD_SERVER_SETS){
+      if(!doneBy.has(row.exercise_id))doneBy.set(row.exercise_id,{sets:[]});
+      doneBy.get(row.exercise_id).sets[row.set_number-1]={reps:row.reps,load_kg:row.weight_lb==null?null:row.weight_lb/2.20462,rir:row.rir};
+    }
+  }else if(logged?.training?.weights)
+    for(const e of logged.training.weights.exercises||[])doneBy.set(e.exercise_id,e);
 
   const exs = (day && day.exercises) || [];
   document.getElementById('answerBox').innerHTML =
     `<div class="q">${esc(date.toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric'}))}
        · week ${week}</div>
-     <div class="a"><span class="${exs.length?'yes':'no'}">${esc(day ? day.name : 'Not in the program')}</span></div>
+     <div class="a"><span class="${exs.length?'yes':'no'}">${esc(day ? day.name : 'Not in the program')}</span></div><button class="btn sm" id="sdChangeDay">Change day</button>
      <div class="why">${exs.length
         ? `${exs.length} exercises · ${rirTxt}${effort && effort.sets_override != null
             ? ` · <b>${effort.sets_override} working sets</b> this week, overriding the ${exs[0].sets ?? 3} in the table`
             : ''}${effort && effort.note ? ' · ' + esc(effort.note) : ''}`
         : (day ? esc(day.name) + ' — nothing to lift.' : 'No day matching ' + esc(dayKey) + ' in the program.')}</div>`;
 
+  document.getElementById('sdChangeDay').onclick=sdChangeDay;
   if(!exs.length){
     document.getElementById('planBody').innerHTML =
       `<div class="card"><div class="empty">${esc(day ? day.name : 'No prescribed day.')}</div></div>`;
@@ -8572,7 +8718,7 @@ function trainingProgram(){
     const nSets = sdSetsFor(ex, effort);
     const effectiveRir = effort && effort.reps_in_reserve != null
       ? effort.reps_in_reserve : ex.rir;
-    const done  = doneBy.get(normKey(ex.name));
+    const done  = doneBy.get(ex.id);
     const nDone = done ? (done.sets || []).length : 0;
     const start = ex.start_weight_lb_per_hand;
     /* ⚠️ An isometric has no reps — it has a hold. The sets table stores reps and the
@@ -8658,12 +8804,19 @@ async function sdSaveSets(btn){
   btn.disabled = true; btn.textContent = 'Saving…';
   const notes = [];
   try {
+    if(SD_SERVER_CHOICE?.date!==PLAN_DAY){
+      const c=sdChoiceFor(PLAN_DAY);
+      if(!c)throw new Error('Choose a session before saving sets.');
+      await sdPost('/session/start',c.day_key==='custom'?{date:PLAN_DAY,exercise_ids:c.exercise_ids}:{date:PLAN_DAY,day_key:c.day_key});
+      await sdRefreshSessionPlan();
+    }
     for(const p of payloads){
       const res = await sdPost('/set', p);
       if(res.below_rep_range && res.note)
         notes.push(`Set ${res.set}: ${res.reps} reps, below the ${res.rep_range[0]}–${res.rep_range[1]} range. ${res.note}`);
     }
     DATA.days = await sdHydrateDays();
+    await sdRefreshSessionPlan();
     renderAll();
     toast(`${payloads.length} set${payloads.length===1?'':'s'} logged`);
   } catch(e){
@@ -9127,7 +9280,8 @@ async function sdSaveVolumeTargets(btn){
   const label=btn?btn.textContent:''; if(btn){btn.disabled=true;btn.textContent='Saving…';}
   try{
     const doc=JSON.parse(JSON.stringify(PROG));
-    doc.weekly_volume_targets_sets=out;
+    doc.weekly_volume_targets_sets={...SD_START_TARGETS,...out};
+    doc.session_picker_targets_configured=true;
     const res=await sdPost('/program',{program:doc,
       note:'Weekly volume targets set from the Settings sheet.'});
     const back=await sdGet('/program');          // read back — the POST is not the proof
