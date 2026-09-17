@@ -11,7 +11,7 @@
 .sv-season-controls select{font-size:14px}.sv-season-key{display:flex;align-items:center;gap:8px;margin-left:auto}
 .sv-season-key i{width:26px;height:4px;background:var(--chart-orange);border-radius:2px}
 .sv-season-scroll{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding-bottom:8px}
-#svSeasonChart svg{display:block;width:100%;min-width:1380px;height:auto;font-family:inherit}
+#svSeasonChart svg{display:block;width:100%;min-width:1120px;height:auto;font-family:inherit}
 .sv-season-point{cursor:pointer;outline:none}.sv-season-point:focus .sv-season-hit,.sv-season-point:hover .sv-season-hit{stroke:var(--chart-ink);stroke-width:2}
 .sv-season-detail{font-size:15px;line-height:1.5;min-height:24px;margin:12px 0;color:var(--chart-ink)}
 .sv-season-note{font-size:13px;line-height:1.6;color:var(--chart-muted);margin:0}.sv-season-note a{color:inherit;text-decoration:underline}
@@ -21,3 +21,5 @@
 .sv-season-card .sv-season-eyebrow{color:var(--chart-orange);margin:0 0 8px}
 .sv-season-card .sv-season-detail{color:var(--chart-ink);margin:12px 0}
 .sv-season-card .sv-season-note{color:var(--chart-muted);margin:0}
+
+@media(max-width:900px){#svSeasonChart svg{min-width:1380px}}
