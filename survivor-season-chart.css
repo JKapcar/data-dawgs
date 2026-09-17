@@ -1,0 +1,23 @@
+/* Circa probability chart, scoped so the existing Survivor surfaces stay intact. */
+.sv-season-card{--chart-bg:#f8fafc;--chart-ink:#172336;--chart-muted:#536276;--chart-grid:#e1e7ef;--chart-orange:#c84c00;background:var(--chart-bg);color:var(--chart-ink);padding:24px;overflow:hidden}
+:root[data-theme="dark"] .sv-season-card{--chart-bg:#171d26;--chart-ink:#f1f5f9;--chart-muted:#b4c0d0;--chart-grid:#303b4c;--chart-orange:#ff873e}
+.sv-season-head{display:flex;justify-content:space-between;gap:20px;align-items:center}
+.sv-season-eyebrow{font-size:13px;letter-spacing:.12em;font-weight:800;color:var(--chart-orange);margin:0 0 8px}
+.sv-season-card h2{color:var(--chart-ink);font-size:clamp(22px,2.4vw,32px);line-height:1.15;margin:0 0 10px}
+.sv-season-card .muted{color:var(--chart-muted);font-size:14px;margin:0}
+.sv-season-stat{text-align:right;flex-shrink:0}.sv-season-stat b{display:block;font-size:30px;color:var(--chart-orange);font-variant-numeric:tabular-nums}
+.sv-season-stat span{font-size:13px;color:var(--chart-muted)}
+.sv-season-controls{margin:20px 0 4px;font-size:14px;gap:20px;color:var(--chart-ink)}
+.sv-season-controls select{font-size:14px}.sv-season-key{display:flex;align-items:center;gap:8px;margin-left:auto}
+.sv-season-key i{width:26px;height:4px;background:var(--chart-orange);border-radius:2px}
+.sv-season-scroll{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding-bottom:8px}
+#svSeasonChart svg{display:block;width:100%;min-width:1380px;height:auto;font-family:inherit}
+.sv-season-point{cursor:pointer;outline:none}.sv-season-point:focus .sv-season-hit,.sv-season-point:hover .sv-season-hit{stroke:var(--chart-ink);stroke-width:2}
+.sv-season-detail{font-size:15px;line-height:1.5;min-height:24px;margin:12px 0;color:var(--chart-ink)}
+.sv-season-note{font-size:13px;line-height:1.6;color:var(--chart-muted);margin:0}.sv-season-note a{color:inherit;text-decoration:underline}
+.sv-season-table{margin-top:14px;font-size:14px}.sv-season-table summary{cursor:pointer;font-weight:700}.sv-season-table table{width:100%;margin-top:12px;border-collapse:collapse}.sv-season-table th,.sv-season-table td{padding:8px 14px;text-align:left;border-bottom:1px solid var(--chart-grid)}
+@media(max-width:600px){.sv-season-card{padding:16px}.sv-season-head{display:block}.sv-season-stat{text-align:left;margin-top:14px}.sv-season-stat b{display:inline;margin-right:10px;font-size:25px}.sv-season-controls{gap:14px}.sv-season-key{margin-left:0}.sv-season-scroll{margin-right:-16px}}
+@media(min-width:1200px){.sv-season-card{width:min(1640px,calc(100vw - 48px));margin-left:calc((100% - min(1640px,calc(100vw - 48px)))/2);box-sizing:border-box}}
+.sv-season-card .sv-season-eyebrow{color:var(--chart-orange);margin:0 0 8px}
+.sv-season-card .sv-season-detail{color:var(--chart-ink);margin:12px 0}
+.sv-season-card .sv-season-note{color:var(--chart-muted);margin:0}

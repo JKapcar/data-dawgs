@@ -803,6 +803,7 @@ tr.sv-used td{opacity:.42}
   .sheet-hint{display:none}
 }
 .nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}.grpmenu a[class*="kennel-"]{font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;font-weight:800;letter-spacing:.01em}.grpmenu a.kennel-scoreboard{color:#8ed6ff}.grpmenu a.kennel-nfeloml{color:#c9b3ff}.grpmenu a.kennel-qb{color:#ffc06a}.grpmenu a.kennel-wepa{color:#7ce7b0}.grpmenu a.kennel-srs{color:#ff9bb4}.grpmenu a.kennel-hfa{color:#ffe082}.grpmenu a.kennel-units{color:#8ee8e3}.grpmenu a.kennel-receipts{color:#f2c4ff}.grpmenu a.kennel-regimes{color:#a8d88c}</style>
+<link rel="stylesheet" href="survivor-season-chart.css">
 </head>
 <body>
 <div class="wrap">
@@ -2450,6 +2451,25 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <div id="sheetBoard">
 <div class="sv-bar" id="svBar"></div>
 
+<section class="card sv-season-card" id="svSeasonCard" aria-labelledby="svSeasonTitle">
+  <div class="sv-season-head">
+    <div><p class="sv-season-eyebrow">CIRCA SURVIVOR · 2026</p>
+      <h2 id="svSeasonTitle">Weekly win probability options</h2>
+      <p id="svSeasonSubtitle" class="muted"></p></div>
+    <div class="sv-season-stat"><b id="svSeasonOdds">—</b><span>Run-the-table probability</span></div>
+  </div>
+  <div class="sv-row sv-season-controls">
+    <label class="sv-inline">Start at <select id="svSeasonStart" aria-label="First contest leg"></select></label>
+    <label class="sv-inline sv-chk2"><input type="checkbox" id="svSeasonLine" checked> Optimized season path</label>
+    <label class="sv-inline sv-chk2"><input type="checkbox" id="svSeasonOnly"> Path only</label>
+    <span class="sv-season-key"><i></i> Selected helmet</span>
+  </div>
+  <div class="sv-season-scroll" tabindex="0" role="region" aria-label="Weekly helmet probability chart; scroll horizontally to see all contest legs"><div id="svSeasonChart"></div></div>
+  <p id="svSeasonDetail" class="sv-season-detail" aria-live="polite">Tap or focus a helmet for its matchup and exact probability.</p>
+  <p id="svSeasonNote" class="sv-season-note"></p>
+  <details class="sv-season-table"><summary>View optimized picks as a table</summary><div class="nf-scroll"><table id="svSeasonTable"></table></div></details>
+</section>
+
 <div class="card">
   <h2>Season heatmap</h2>
   <p class="muted" style="margin-top:0">Every team, every remaining week, shaded by win
@@ -3682,6 +3702,7 @@ return { LS, DEFAULTS, load, save, reset, ncdf, nppf, gameProb, weekTable,
 })();
 
 </script>
+<script src="survivor-season-chart.js"></script>
 <script>
 (function(){
 const S=window.DDSurvivor, D=window.SV;
@@ -3848,6 +3869,7 @@ function heat(){
   const sel = activeCand ? candCards.find(c=>c.team===activeCand) : null;
   const shown = sel ? {path:sel.path, survival:sel.survival, covered:sel.covered} : op;
   shownPath = shown.path;
+  if(window.DDSurvivorSeasonChart) window.DDSurvivorSeasonChart.update(cfg);
   const tabs={}; weeks.forEach(w=>tabs[w]=S.weekTable(w,cfg,D));
   const slots=S.slotsFor(cfg, from, 18);
   const onlyPath=$("svOnlyPath").checked, hideUsed=$("svHideUsed").checked;
@@ -4273,6 +4295,7 @@ window.DD_BOTCTX = {
     ['What is this board wrong about?','What it gets wrong']]},
   sys: `RIGHT NOW you are on the Survivor page: a weekly board ranked on closed-form equity, a season heatmap, an optimal-path solve and a Monte Carlo season simulation. The state below is the page as drawn, including the model settings this reader has set.
 - ⚠️ THIS IS A DAILY MIRROR, NOT A LIVE FEED. Ratings move only after games are played; lines can move after meta.market_observed_at. Injuries, holdouts, weather and coaching changes are not explicit model inputs. Volunteer that before any answer that leans on current form.
+- CIRCA CHART: The helmet chart uses separate holiday legs and one non-repeating team per leg. It maximizes run-the-table probability, not pool equity; do not confuse it with the generic weekly path or backup cards. Its plotted options have a 65% display threshold; the solver does not.
 - PROBABILITY POLICY (2026-09-09): Use published nfelo home win probabilities directly, no extra market blend. Games without a published forecast use an nfelo-based season projection using the upstream logistic formula and game-specific HFA, not the official game forecast. Distinguish these sources; do not attribute the old blend backtest to this policy.
 - 2026 OWNERSHIP POLICY: Week 1 uses a dated equal-weight ETR/Splash + ESPN cross-pool blend, with missing ETR teams handled explicitly. Other weeks use chalk-model shares. The blend is not calibrated to Circa, Splash or this reader’s pool. Public default and new public receipts use these modelled pick shares; no weekly posting is required. These are not observed league submissions and cannot establish a measured ownership edge. Optional supplied picks affect the reader's board only; do not claim they change the public receipt or are independently verified. See /data/method.md for the approved automation rule.
 - EQUITY IS NOT WIN PROBABILITY. Equity divides win probability by how crowded the pool stays if that team wins, so a 70% team nobody owns can outrank a 78% team half the field is on. Explain a recommendation in those terms; never restate equity as "more likely to win".
@@ -4280,6 +4303,7 @@ window.DD_BOTCTX = {
 - Games are simulated as INDEPENDENT and the field is a surviving COUNT, not tracked entries. Both simplifications point the same way: real upsets cluster and the real field corners itself late, so the board understates both.
 - ⚠️ NO RECEIPTS. Nothing here has been graded against a real season; it is Pup tier and stays there until it has been run forward and scored against a benchmark declared in advance. If a double-pick week is set, the engine still models one pick per week and every survival number after that week is too optimistic — say it.`,
   ctx: () => `THE SURVIVOR PAGE. 2026 schedule from nflverse/nfldata. Published game forecasts and team ratings mirrored daily from nfelo (greerreNFL/nfelo, commit ${SV.meta.nfelo_sha}). Snapshot ${SV.meta.captured}; market observed ${SV.meta.market_observed_at || 'unknown'}. Tier: Pup — live, unvalidated, no receipts.
+CIRCA CHART: The helmet scatterplot separately solves the 2026 Circa calendar with Thanksgiving Eve/Day/Black Friday and Christmas Eve/Day legs; no team reuse, spent teams excluded. Its path maximizes the product of nfelo win probabilities, not pool equity. It is independent of the generic weekly heatmap and backup cards; generic double-pick/reuse/open-week settings do not apply to it. The 65% display cutoff never constrains the solve.
 WHAT THE PARTS ARE: "This week's board" ranks on closed-form equity, not on the simulation. The heatmap shades every team in every remaining week and marks the optimal path and the teams already spent. The optimal path is a Hungarian assignment over log win probability. The season simulation is Monte Carlo with the field modelled as a surviving count, every candidate scored against the same drawn outcomes so the comparison is paired; the weekly ranking is closed-form and carries no sampling error at all.
 THE SETTINGS BELOW ARE THIS READER'S OWN, and they change the maths rather than the display: pool entries, lives, strikes taken, current week, whether teams may be reused, buyback rules, double-pick week, field chalk exponent, draw count, and which teams are already spent.
 

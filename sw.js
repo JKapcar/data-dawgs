@@ -5,7 +5,7 @@
 // meant a JS-only fix never invalidated a phone's cache.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "bfc2dc4a7d";
+const VERSION = "d5785e753e";
 // A policy revision also invalidates old caches when only this file changes.
 const CACHE = "dd-" + VERSION + "-public-v2";
 
@@ -14,7 +14,7 @@ const CORE = [
   "/", "/index.html", "/draft-leagues.html", "/draft-league.js", "/draft-personal-sync.js", "/draft-providers.js", "/draft-live-sync.js", "/dashboard.html", "/board.html", "/auction.html",
   "/bigboard.html", "/dataviz.html", "/report.html", "/master.html", "/strategy.html",
   // Lab landing pages — small, static, and the nav now points at them
-  "/dfs.html", "/signon.html", "/connect.html", "/guillotine.html", "/receipts.html", "/nfelo.html", "/survivor.html", "/survivor-settings.html", "/pound.html", "/dawghouse.html",
+  "/dfs.html", "/signon.html", "/connect.html", "/guillotine.html", "/receipts.html", "/nfelo.html", "/survivor.html", "/survivor-season-chart.js", "/survivor-season-chart.css", "/survivor-settings.html", "/pound.html", "/dawghouse.html",
   "/cfb.html", "/cfb-power.html", "/calculators.html", "/arena.html", "/fantasy-warroom.html", "/warroom-weekly.js", "/teamdraft.html", "/data.html", "/nfl.html",
   "/dawgs.html", "/swoledawg.html", "/datedawg.html",
   // The challenge board is worth having offline: the schedule and the model lines still
