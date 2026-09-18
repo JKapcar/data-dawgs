@@ -1,7 +1,7 @@
 {
-  "as_of": "2026-09-17",
+  "as_of": "2026-09-18",
   "source": "ChatGPT/Codex-authored NFL probabilities using Data Dawgs public nfelo, 538 Classic and canonical schedule snapshots; no private user forecasts",
-  "built": "2026-09-17T16:22:36.020Z",
+  "built": "2026-09-18T16:08:08.496Z",
   "tier": "labs",
   "graded": false,
   "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
@@ -13,13 +13,13 @@
     "method": "Data-only probabilistic judgment anchored to current published nfelo and Classic Elo, with attributable republished market context where available. Inputs are correlated: this is NOT an independent model or a validated edge. Directional disagreements lead to moderate forecasts, generally leaning toward current nfelo. For an upcoming game without a published nfelo probability, use the public nfelo-season-v1 inputs to calculate an explicitly labelled fixed-strength season projection, not a market price or official nfelo game forecast. No independent injury, lineup or news adjustment is claimed. Preserve receipts where inputs and judgment are not materially changed. The on-page chat assistant is a separate service.",
     "inputs": {
       "packet_url": "https://toto.jkapcar4.workers.dev/forecast/packet?season=2026",
-      "snapshot_sha256": "f4881c71911cca9df35cd0d827577bc212c4600e2b6e9fe3d6d0b5176ae50c4d",
+      "snapshot_sha256": "250ace598900214b26cc4314c85600aa5e101290574e6c96378d536e46d61b01",
       "hash_method": "Exact packet input_snapshot_id: Worker SHA-256 of JSON.stringify({schedule: schedule.integrity, nfelo: nfelo.data.meta, classic: classic.integrity, models: modelRows}); not a concatenated-file hash.",
-      "repository_commit": "6f16b9b964917f87d7eda3d4455d5ae0139f1a5e",
-      "nfelo_upstream_commit": "723c86f07822defa1baf1544e4f88a0b745297ed",
-      "nfelo_captured_at": "2026-09-16T18:24:53.286Z",
-      "classic_generated_at": "2026-09-15T03:29:19.612674Z",
-      "schedule_captured_at": "2026-09-15T03:29:17.954568Z",
+      "repository_commit": "cbe13b1dfc22f55f1a347a85e35670e5bd0e8984",
+      "nfelo_upstream_commit": "66d379a84ec2fc642fb45b5f77efe355699d8e13",
+      "nfelo_captured_at": "2026-09-17T18:31:32.193Z",
+      "classic_generated_at": "2026-09-18T14:31:12.790080Z",
+      "schedule_captured_at": "2026-09-18T14:31:11.775075Z",
       "note": "This metadata describes the latest authored rows. Retained rows retain their own original timestamps and input_snapshot_id."
     },
     "forecasts": [
@@ -52,7 +52,7 @@
       {"game_id":"2026_02_LV_LAC","home_team":"LAC","away_team":"LV","home_win_probability":0.72,"captured_at":"2026-09-14T16:56:45.831Z","input_snapshot_id":"58b8d7d0732474c53d38a64cbe3354efbd6f0943a9c8b20e40927b784bec6dcd","rationale":"No published nfelo game probability or market price is available. Public nfelo-season-v1 fixed-strength inputs give LAC 71.32%; current live Classic Elo has fallen to 72.71% after Week 1 results. I lower P(home) from 74% to 72%, leaning two-thirds toward the nfelo season projection and one-third toward Classic, then rounding to a whole percentage point. This is not an official nfelo game forecast or an independent news adjustment."},
       {"game_id":"2026_02_MIA_SF","home_team":"SF","away_team":"MIA","home_win_probability":0.84,"captured_at":"2026-09-16T16:17:23.885Z","input_snapshot_id":"f5b77449183929c35505a4d18c3c56262994cb751ef9b1fe5c35e6e4a9cc33fd","rationale":"Published Week 2 nfelo gives SF 86.54%, its republished market 88.80%, and current live Classic Elo 79.30%. I raise P(home) from 80% to 84%, leaning toward current nfelo while staying below its full confidence. The agreement is not treated as independent evidence."},
       {"game_id":"2026_02_SEA_ARI","home_team":"ARI","away_team":"SEA","home_win_probability":0.29,"captured_at":"2026-09-16T16:17:23.885Z","input_snapshot_id":"f5b77449183929c35505a4d18c3c56262994cb751ef9b1fe5c35e6e4a9cc33fd","rationale":"Published Week 2 nfelo gives ARI 28.38%, its republished market 33.40%, and current live Classic Elo 26.07%. I raise P(home) from 22% to 29%, centered near nfelo while acknowledging the public range. This is not an independent model or news adjustment."},
-      {"game_id":"2026_02_WAS_DAL","home_team":"DAL","away_team":"WAS","home_win_probability":0.61,"captured_at":"2026-09-16T16:17:23.885Z","input_snapshot_id":"f5b77449183929c35505a4d18c3c56262994cb751ef9b1fe5c35e6e4a9cc33fd","rationale":"Published Week 2 nfelo and its republished market both give DAL 63.11%; current live Classic Elo gives 56.82%. I lower P(home) from 63% to 61%, remaining closer to current nfelo while allowing modest weight for Classic. These are correlated inputs."},
+      {"game_id":"2026_02_WAS_DAL","home_team":"DAL","away_team":"WAS","home_win_probability":0.63,"captured_at":"2026-09-18T16:08:08.496Z","input_snapshot_id":"250ace598900214b26cc4314c85600aa5e101290574e6c96378d536e46d61b01","rationale":"Published Week 2 nfelo and its republished market probability now give DAL 66.60%, up from the 63.11% basis of the prior receipt; current live Classic Elo gives 56.82%. I raise P(home) from 61% to 63%, leaning toward the refreshed nfelo input while retaining uncertainty for the Classic disagreement. These inputs are correlated and do not establish an independent edge."},
       {"game_id":"2026_02_IND_KC","home_team":"KC","away_team":"IND","home_win_probability":0.71,"captured_at":"2026-09-15T16:31:59.841Z","input_snapshot_id":"40e439f389a7909e402b60452d3e3d61b28a9d1f1b5756232208180257a6cda4","rationale":"No published nfelo Week 2 game probability or market price is available. Public nfelo-season-v1 fixed-strength inputs give KC 71.04%; current live Classic Elo rose to 70.42% after Week 1 completed. I raise P(home) from 68% to 71%, leaning two-thirds toward the nfelo season projection and one-third toward Classic, then rounding to a whole percentage point. This is not an official nfelo game forecast or an independent news adjustment."},
       {"game_id":"2026_02_NYG_LAR","home_team":"LAR","away_team":"NYG","home_win_probability":0.76,"captured_at":"2026-09-16T16:17:23.885Z","input_snapshot_id":"f5b77449183929c35505a4d18c3c56262994cb751ef9b1fe5c35e6e4a9cc33fd","rationale":"Published Week 2 nfelo and its republished market both give LAR 75.96%; current live Classic Elo gives 75.48%. I lower P(home) from 80% to 76%, replacing the earlier fixed-strength projection with the closely aligned current game inputs. No independent news adjustment is claimed."},
       {"game_id":"2026_03_ATL_GB","home_team":"GB","away_team":"ATL","home_win_probability":0.73,"captured_at":"2026-09-17T16:22:36.020Z","input_snapshot_id":"f4881c71911cca9df35cd0d827577bc212c4600e2b6e9fe3d6d0b5176ae50c4d","rationale":"No published nfelo Week 3 game probability or market price is available. Public nfelo-season-v1 fixed-strength inputs give GB 76.42% using current base ratings, recorded QB adjustments and game-specific HFA; current live Classic Elo gives 65.62%. I choose 73%, leaning two-thirds toward the nfelo season projection and one-third toward Classic, then rounding to a whole percentage point. This is not an official nfelo game forecast or an independent news adjustment."}
