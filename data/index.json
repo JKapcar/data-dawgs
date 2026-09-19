@@ -10,8 +10,8 @@
     "path": "/data/538-classic.json",
     "url": "https://datadawgs216.com/data/538-classic.json",
     "bytes": 88174,
-    "as_of": "2026-09-18",
-    "sha256": "aed595bec254023718389a8cf64e03ea39954231044b6f2856831173bf4e4cdc",
+    "as_of": "2026-09-19",
+    "sha256": "1664bd2b3f686a5b96e055926d7e45db58a7d03cd2ff9f27cca0c6accb0197ff",
     "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority."
    },
    {
@@ -305,8 +305,8 @@
     "path": "/data/nfl-schedule.json",
     "url": "https://datadawgs216.com/data/nfl-schedule.json",
     "bytes": 114036,
-    "as_of": "2026-09-18",
-    "sha256": "8068124db2bbbedf7f3566259aca44bf0e6f78ab1296573fa08342fc9e7fc1bd",
+    "as_of": "2026-09-19",
+    "sha256": "325254ac9d465b793889d5bfc728171e37c8d4779b863c8e5a13bda4a9b79687",
     "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts."
    },
    {
@@ -345,8 +345,8 @@
     "path": "/data/receipts-inventory.json",
     "url": "https://datadawgs216.com/data/receipts-inventory.json",
     "bytes": 3415,
-    "as_of": "2026-09-18",
-    "sha256": "6664e7ee1868d65d2c4626da25d5ee6873beb900ef6aed3f492bf5c3556513c5",
+    "as_of": "2026-09-19",
+    "sha256": "bc7c0403db581ff28f0a67024f7b810f3a2407e0b53f98d2e2383f2fec0615c1",
     "note": "An INVENTORY, not a scoreboard. There is no honest Brier across domains, so this file counts what has been registered and settled and never scores it. The ledgers OVERLAP: receipts.json and the nfelo half of model-receipts.json are the same forecasts, as are 538-classic.json and its half. aggregate is therefore computed from aggregate.counted_from alone; aggregate.naive_sum is what summing the registered column would wrongly give, published so it can be named and corrected rather than quietly reproduced."
    },
    {
