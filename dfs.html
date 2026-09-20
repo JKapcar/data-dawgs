@@ -8118,7 +8118,7 @@ function exportCsv() {
   S.exportedAt = new Date().toISOString(); save(); if (S.sheet === "week") renderPipelineChips();
   // Week-object path: export also locks expectations when DDFSWeek is present.
   if (typeof DDFSWeek !== "undefined") {
-    try { lockWeek({ quiet: true }); } catch (e) { /* lock is best-effort on export */ }
+    try { Promise.resolve(lockWeek({ quiet: true })).catch(() => {}); } catch (e) { /* lock is best-effort on export */ }
   }
 }
 
