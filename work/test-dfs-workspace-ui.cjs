@@ -31,7 +31,8 @@ const tick=()=>new Promise(r=>setTimeout(r,30)),el=id=>w.document.getElementById
  const csv='Name,Team,Position,Salary,Projection,CPT Salary,Total Own%,CPT Own%\n'+Array.from({length:12},(_,i)=>`Synthetic ${i},${i<6?'AAA':'BBB'},${['QB','RB','WR','TE','K','DST'][i%6]},6000,${10+i},9000,50,8`).join('\n');
  Object.defineProperty(el('salFile'),'files',{value:[new w.File([csv],'fixture.csv',{type:'text/csv'})],configurable:true});el('salFile').dispatchEvent(new w.Event('change',{bubbles:true}));await tick();await tick();
  el('dfsCloudSave').click();await tick();await tick();
- assert.equal(calls[0].op,'create');assert.equal(calls[1].op,'sync');assert.equal(calls[1].a.players.length,12);assert.equal(calls[1].a.settings.solver.timeLimitMs,5000);assert.equal(calls[1].headers['X-Bozo-Session'],'test-session');assert.match(el('dfsCloudNote').textContent,/Saved privately/);
+ assert.ok(calls.length,JSON.stringify({errors:errors.map(String),note:el('dfsCloudNote').textContent}));
+ assert.equal(calls.shift().op,'list');assert.equal(calls[0].op,'create');assert.equal(calls[1].op,'sync');assert.equal(calls[1].a.players.length,12);assert.equal(calls[1].a.settings.solver.timeLimitMs,5000);assert.equal(calls[1].headers['X-Bozo-Session'],'test-session');assert.match(el('dfsCloudNote').textContent,/Saved privately/);
  remote.players[0].proj=99;el('dfsCloudLoad').click();await tick();await tick();assert.match(el('dfsCloudNote').textContent,/Loaded/);await new Promise(r=>setTimeout(r,300));
  const state=JSON.parse(w.localStorage.getItem('dd-dfs-v1'));assert.equal(state.players[0].proj,99);assert.ok(w.localStorage.getItem('dd-dfs-before-cloud-load'));
  assert.equal(errors.length,0,errors.map(String).join('\n'));console.log('DFS browser private save/load, auth header, revision and local backup: PASS');w.close();

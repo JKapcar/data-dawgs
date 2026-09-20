@@ -164,6 +164,12 @@ function maxPlusConv(A, C, B) {
 }
 
 function solveClassic(players, cfg, site, onProgress) {
+  if (cfg.acoCap != null && (!Number.isFinite(cfg.acoCap) || cfg.acoCap < 0)) throw new Error("ACO cap must be a nonnegative number or blank.");
+  if (cfg.objective && !['proj','ceil','own'].every(k => Number.isFinite(cfg.objective[k]))) throw new Error("Supply all three objective weights.");
+  for (const p of players.filter(p => !p.excl && p.proj > 0)) {
+    if ((cfg.objective || cfg.acoCap != null) && (!Number.isFinite(p.own) || p.own < 0 || p.own > 100)) throw new Error("Missing or invalid ownership: " + p.name);
+    if (cfg.objective && !(Number.isFinite(p.ceil) && p.ceil > 0)) throw new Error("Missing ceiling: " + p.name);
+  }
   const N = players.length;
   const count = Math.max(1, cfg.count | 0);
   const cap = Math.min(cfg.maxSalary || site.cap, site.cap);
@@ -191,7 +197,8 @@ function solveClassic(players, cfg, site, onProgress) {
     // pool into a portfolio instead of N near-copies of one opinion.
     const proj = new Float64Array(N);
     for (let i = 0; i < N; i++) {
-      const base = players[i].proj || 0;
+      const p = players[i], w = cfg.objective;
+      const base = w ? w.proj * p.proj + w.ceil * p.ceil + w.own * p.own : (p.proj || 0);
       proj[i] = noise > 0 ? Math.max(0, base * (1 + noise * gauss(rand))) : base;
     }
     const pool = activePool(players, cfg, expCount, n);
@@ -226,7 +233,7 @@ function bestClassic(players, proj, pool, cfg, site, cap, floor,
   }
   for (const p of POS) byPos[p].sort((a, b) => proj[b] - proj[a]);
 
-  let best = null, bestVal = -1;
+  let best = null, bestVal = -Infinity;
   const nAcc = acceptedSets.length;
   const overlap = new Int32Array(nAcc);
   let nodes = 0;
@@ -323,8 +330,9 @@ function bestClassic(players, proj, pool, cfg, site, cap, floor,
     const qbMin = stack.qbMin || 0, bringMin = stack.bringBack || 0;
     let hasRb = 0, hasDstOpp = null;
 
-    function rec(gi, si, from, curProj, curSal) {
+    function rec(gi, si, from, curProj, curSal, curOwn) {
       if (aborted) return;
+      if (cfg.acoCap != null && curOwn > cfg.acoCap + 1e-9) return;
       if ((++nodes & 1023) === 0 && Date.now() > deadline) { aborted = true; return; }
       if (gi === G) {
         if (curSal < floor) return;
@@ -368,10 +376,14 @@ function bestClassic(players, proj, pool, cfg, site, cap, floor,
         if (curSal + sal + MINS[gi][j + 1][left - 1] + sufMinAll[gi + 1] > cap) continue;
 
         const isDst = p.pos === "DST";
-        const tc = (teamCt[p.team] || 0) + (isDst ? 0 : 1);
+        const tc = (teamCt[p.team] || 0) + 1;
         if (cfg.maxPerTeam && tc > cfg.maxPerTeam) continue;
         const gc = (gameCt[p.gid] || 0) + 1;
         if (cfg.maxPerGame && gc > cfg.maxPerGame) continue;
+        if (stack.noQbVsDst) {
+          if (isDst && picked.some(x => players[x].pos === "QB" && players[x].team === p.opp)) continue;
+          if (p.pos === "QB" && hasDstOpp === p.team) continue;
+        }
         if (stack.noRbVsDst) {
           if (isDst && hasRb && picked.some(x => players[x].pos === "RB" && players[x].team === p.opp)) continue;
           if (p.pos === "RB" && hasDstOpp === p.team) continue;
@@ -408,11 +420,11 @@ function bestClassic(players, proj, pool, cfg, site, cap, floor,
         if (p.pos === "RB") hasRb++;
         const prevDstOpp = hasDstOpp; if (isDst) hasDstOpp = p.opp;
 
-        if (si + 1 < k) rec(gi, si + 1, j + 1, curProj + proj[id], curSal + sal);
-        else rec(gi + 1, 0, 0, curProj + proj[id], curSal + sal);
+        if (si + 1 < k) rec(gi, si + 1, j + 1, curProj + proj[id], curSal + sal, curOwn + (p.own || 0));
+        else rec(gi + 1, 0, 0, curProj + proj[id], curSal + sal, curOwn + (p.own || 0));
 
         picked.pop();
-        teamCt[p.team] = tc - (isDst ? 0 : 1); gameCt[p.gid] = gc - 1;
+        teamCt[p.team] = tc - 1; gameCt[p.gid] = gc - 1;
         if (p.pos === "RB") hasRb--;
         hasDstOpp = prevDstOpp;
         if (dQb) { qbTeam = null; qbOpp = null; }
@@ -420,7 +432,7 @@ function bestClassic(players, proj, pool, cfg, site, cap, floor,
         for (let z = 0; z < inL.length; z++) overlap[inL[z]]--;
       }
     }
-    rec(0, 0, 0, 0, 0);
+    rec(0, 0, 0, 0, 0, 0);
     if (aborted) break;
   }
   if (best) { best.nodes = nodes; best.aborted = aborted; }
@@ -549,7 +561,52 @@ function bestShowdown(players, proj, pool, cfg, site, cap, floor,
 
 /* ------------------------------------------------------------------ export */
 
-root.DDFS = { SITES, POS, solveLineups, rng, gauss };
+// Week 2 score model. Loadings are hypotheses, not empirical DFS Bible findings.
+function tailLoadings(pos) {
+  return pos === 'DST' ? [-.35,-.20] : pos === 'RB' ? [.30,.25] : [.35,.45];
+}
+function simulateTail(players, lineups, cfg = {}) {
+  if (cfg.site && cfg.site !== 'dk_classic') throw new Error('Score-tail model requires DK Classic.');
+  const worlds = cfg.sims ?? 30000, seed = cfg.seed ?? 216;
+  if (!Number.isInteger(worlds) || worlds < 200 || worlds > 30000) throw new Error('Use 200–30000 score worlds.');
+  if (!lineups.length || lineups.length > 200) throw new Error('Simulate 1–200 lineups.');
+  const used = [...new Set(lineups.flatMap(l => l.ids))].sort((a,b)=>a-b);
+  for (const l of lineups) if (l.ids.length !== 9 || new Set(l.ids).size !== 9) throw new Error('Expected nine distinct Classic players.');
+  for (const i of used) {
+    const p = players[i];
+    if (!p || !(p.proj > 0) || !Number.isFinite(p.proj) || !(p.ceil > 0) || !Number.isFinite(p.ceil) || !Number.isFinite(p.own) || p.own < 0 || p.own > 100 || !p.gid || !p.team || !p.opp) throw new Error('Supply projection, ceiling, ownership and game for every selected player.');
+  }
+  const rand = rng(seed), games = [...new Set(used.map(i=>players[i].gid))].sort();
+  const teams = [...new Set(used.flatMap(i=>[players[i].team,players[i].opp]))].sort();
+  const scores = lineups.map(()=>new Float64Array(worlds)), values = new Float64Array(players.length);
+  const pars = used.map(i => { const p=players[i], [g,t]=tailLoadings(p.pos), sigma=Math.max(.25,Math.log(p.ceil/p.proj)/1.28); return {i,g,t,sigma,mu:Math.log(p.proj)-sigma*sigma/2,res:Math.sqrt(1-g*g-t*t)}; });
+  for (let n=0;n<worlds;n++) {
+    const G={},T={};for(const g of games) G[g]=gauss(rand);for(const t of teams) T[t]=gauss(rand);
+    for(const a of pars) { const p=players[a.i];const z=a.g*G[p.gid]+a.t*T[p.pos==='DST'?p.opp:p.team]+a.res*gauss(rand); values[a.i]=Math.exp(a.mu+a.sigma*z); }
+    lineups.forEach((l,j)=>{scores[j][n]=l.ids.reduce((v,i)=>v+values[i],0);});
+  }
+  const q=(a,p)=>{const k=(a.length-1)*p,i=Math.floor(k);return a[i]+(a[Math.ceil(k)]-a[i])*(k-i);};
+  const perLineup=scores.map((a,j)=>{let hits230=0,hits250=0;for(const v of a){if(v>=230)hits230++;if(v>=250)hits250++;}a.sort();const ps=lineups[j].ids.map(i=>players[i]);const zero=ps.some(p=>p.own===0);return {median:q(a,.5),p90:q(a,.9),p99:q(a,.99),p999:q(a,.999),p230:hits230/worlds,p250:hits250/worlds,hits230,hits250,aco:ps.reduce((v,p)=>v+p.own,0),logOwn:zero?null:ps.reduce((v,p)=>v+Math.log(p.own),0),zeroOwnership:zero};});
+  return {mode:'score_tail',perLineup,meta:{sims:worlds,seed,meanConvention:'proj is arithmetic mean; mu = ln(proj) - sigma²/2',qbLoadings:[.35,.45],ownershipUnits:'percent, 0–100; logOwn is sum ln(percent); null represents negative infinity at zero',note:'Uncalibrated score simulation, not win probability or payout EV. QB loadings are an explicit assumption. Rare tails have Monte Carlo uncertainty.'}};
+}
+function classicExport(players,lineups) {
+  if (!lineups.length) throw new Error('No lineups to export.');
+  const rows=['QB,RB,RB,WR,WR,WR,TE,FLEX,DST'];
+  for(const l of lineups) {
+    if(l.ids.length!==9 || new Set(l.ids).size!==9)throw new Error('Invalid Classic lineup.');
+    const rest=l.ids.slice(),cells=[];
+    for(const slot of ['QB','RB','RB','WR','WR','WR','TE','FLEX','DST']) {
+      const j=rest.findIndex(i=>players[i] && (slot==='FLEX'?['RB','WR','TE'].includes(players[i].pos):players[i].pos===slot));
+      if(j<0)throw new Error('Missing '+slot+' slot.');
+      const p=players[rest.splice(j,1)[0]],id=String(p.dkId ?? '');
+      if(!/^\d+$/.test(id))throw new Error('Missing official numeric DK ID: '+p.name);
+      cells.push(id);
+    }
+    rows.push(cells.join(','));
+  }
+  return rows.join('\r\n')+'\r\n';
+}
+root.DDFS = { SITES, POS, solveLineups, rng, gauss, simulateTail, tailLoadings, classicExport };
 /* ===== DD-FRONTIER START — generated from work/patch-dfs-frontier.py ===== */
 /* ============================================================================
    PROJECTION vs RARITY — the exact convex frontier

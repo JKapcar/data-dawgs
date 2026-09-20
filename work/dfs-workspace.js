@@ -2,8 +2,8 @@
    No paid inputs are public. ETag + revision makes every mutation compare-and-swap. */
 const DFS_LIMITS = {players:220, lineups:5000, solveMs:5000, worlds:16000, sample:10000, work:32000000, bytes:2000000};
 const DFS_PLAYER_FIELDS = ['id','name','pos','team','opp','gid','sal','proj','own','cptOwn','flexOwn','cptProj','cptSal','ceil','dkId','cptId','kickoff','lock','excl','maxExp'];
-const DFS_SOLVER_DEFAULT = {count:20,minSalary:0,maxSalary:50000,uniques:1,randomness:0,seed:216,maxPerTeam:5,maxPerGame:9,timeLimitMs:3000,stack:{qbMin:0,qbPos:['WR','TE'],bringBack:0,noRbVsDst:false,noOppDst:false},groups:[]};
-const DFS_SIM_DEFAULT = {sims:1600,fieldSize:5300,entryFee:1,fieldSample:2000,seed:216,fieldMinSalary:48000,fieldStackRate:.6,ownershipFloor:.0025,payout:{kind:'param',paidFrac:.2,alpha:1.15,rake:.15}};
+const DFS_SOLVER_DEFAULT = {count:20,minSalary:0,maxSalary:50000,uniques:1,randomness:0,seed:216,maxPerTeam:5,maxPerGame:9,timeLimitMs:3000,acoCap:null,objective:null,stack:{qbMin:0,qbPos:['WR','TE'],bringBack:0,noRbVsDst:false,noOppDst:false,noQbVsDst:false},groups:[]};
+const DFS_SIM_DEFAULT = {mode:'contest',sims:1600,fieldSize:5300,entryFee:1,fieldSample:2000,seed:216,fieldMinSalary:48000,fieldStackRate:.6,ownershipFloor:.0025,payout:{kind:'param',paidFrac:.2,alpha:1.15,rake:.15}};
 const DFS_LAB_DEFAULT = {minSalary:44000,maxSalary:50000,maxPerTeam:5,ownershipFloor:.0025,count:5000,cloud:1000,maxBand:500,bandPts:3,seed:216,timeLimitMs:3000};
 function dfsAssert(ok,message){if(!ok)throw new Error(message);}
 function dfsObj(v,keys,label){mcpDfsKnown(v,keys,label);return v;}
@@ -41,15 +41,21 @@ function dfsSettings(w,section,patch){
  if(section==='solver'){
   for(const [k,lo,hi] of [['count',1,150],['minSalary',0,50000],['maxSalary',100,50000],['uniques',0,w.site==='dk_showdown'?6:9],['seed',1,2147483647],['maxPerTeam',1,9],['maxPerGame',1,9],['timeLimitMs',100,DFS_LIMITS.solveMs]])dfsNum(c[k],lo,hi,k,true);
   dfsAssert(c.minSalary<=c.maxSalary&&c.minSalary%100===0&&c.maxSalary%100===0,'Invalid salary range');dfsNum(c.randomness,0,.6,'randomness');
+  if(w.site==='dk_classic')dfsAssert(c.maxPerTeam<=5,'Classic maxPerTeam cannot exceed 5; default is 4');
+  if(c.acoCap!=null)dfsNum(c.acoCap,0,900,'acoCap');
+  if(c.objective!=null){dfsObj(c.objective,['proj','ceil','own'],'objective');for(const k of ['proj','ceil','own'])dfsNum(c.objective[k],-100,100,'objective.'+k);}
+  if(w.site==='dk_showdown')dfsAssert(c.acoCap==null&&c.objective==null,'ACO/weighted objective requires Classic');
   dfsObj(c.stack,Object.keys(DFS_SOLVER_DEFAULT.stack),'stack');c.stack={...DFS_SOLVER_DEFAULT.stack,...c.stack};
   dfsNum(c.stack.qbMin,0,3,'qbMin',true);dfsNum(c.stack.bringBack,0,3,'bringBack',true);
   dfsAssert(Array.isArray(c.stack.qbPos)&&c.stack.qbPos.length&&c.stack.qbPos.every(x=>['RB','WR','TE'].includes(x)),'Invalid qbPos');
-  for(const k of ['noRbVsDst','noOppDst'])dfsAssert(typeof c.stack[k]==='boolean',k+' must be boolean');
+  for(const k of ['noRbVsDst','noOppDst','noQbVsDst'])dfsAssert(typeof c.stack[k]==='boolean',k+' must be boolean');
   dfsAssert(Array.isArray(c.groups)&&c.groups.length<=20,'At most 20 player groups');
   for(const g of c.groups){dfsObj(g,['mode','n','ids'],'group');dfsAssert(['atMost','atLeast','exactly'].includes(g.mode),'Invalid group mode');dfsNum(g.n,0,9,'group n',true);dfsAssert(Array.isArray(g.ids)&&g.ids.length<=220&&new Set(g.ids).size===g.ids.length&&g.ids.every(id=>w.players.some(p=>p.id===id)),'Group IDs must be unique player IDs');}
   if(w.site==='dk_showdown')dfsAssert(!c.groups.length&&!c.stack.qbMin&&!c.stack.bringBack&&!c.stack.noRbVsDst&&!c.stack.noOppDst,'Showdown solver does not implement Classic stacks/groups');
  }else if(section==='simulation'){
-  for(const [k,lo,hi] of [['sims',200,DFS_LIMITS.worlds],['fieldSize',2,1000000],['fieldSample',1,DFS_LIMITS.sample],['seed',1,2147483647],['fieldMinSalary',0,50000]])dfsNum(c[k],lo,hi,k,true);
+  dfsAssert(['contest','score_tail'].includes(c.mode),'Invalid simulation mode');
+  dfsAssert(c.mode!=='score_tail'||w.site==='dk_classic','Score tails require Classic');
+  for(const [k,lo,hi] of [['sims',200,c.mode==='score_tail'?30000:DFS_LIMITS.worlds],['fieldSize',2,1000000],['fieldSample',1,DFS_LIMITS.sample],['seed',1,2147483647],['fieldMinSalary',0,50000]])dfsNum(c[k],lo,hi,k,true);
   dfsNum(c.entryFee,.01,100000,'entryFee');dfsNum(c.fieldStackRate,0,1,'fieldStackRate');dfsNum(c.ownershipFloor,.00001,.1,'ownershipFloor');
   dfsObj(c.payout,['kind','paidFrac','alpha','rake','rows'],'payout');dfsAssert(['param','flat','table'].includes(c.payout.kind),'Invalid payout kind');
   if(c.payout.kind==='table'){dfsAssert(Array.isArray(c.payout.rows)&&c.payout.rows.length>0&&c.payout.rows.length<=1000,'Supply 1–1000 payout tiers');for(const r of c.payout.rows)dfsObj(r,['from','to','prize'],'payout row');}
@@ -98,7 +104,7 @@ async function dfsRun(op,a,env,caller){
  if(op==='list'){const r=await fbGet(env,'/users/'+dfsUid(caller)+'/dfsWorkspaces');return {workspaces:Object.values(r.data||{}).map(w=>({workspace_id:w.id,site:w.site,source:w.source,as_of:w.as_of,revision:w.revision,players:(w.players||[]).length,lineups:(w.lineups||[]).length,updated_at:w.updated_at}))};}
  if(op==='create'){
   const path=dfsPath(caller,a.workspace_id),r={...await fbGet(env,path,true),path};dfsAssert(!r.data,'Workspace already exists');dfsAssert(['dk_classic','dk_showdown'].includes(a.site),'Choose dk_classic or dk_showdown');
-  const w={id:a.workspace_id,site:a.site,source:mcpDfsString(a.source,'source',200),as_of:dfsDate(a.as_of),players:[],lineups:[],settings:dfsClone({solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT}),revision:0};return dfsCommit(env,r,w,0);
+  const w={id:a.workspace_id,site:a.site,source:mcpDfsString(a.source,'source',200),as_of:dfsDate(a.as_of),players:[],lineups:[],settings:dfsClone({solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT}),revision:0};if(a.site==='dk_classic')Object.assign(w.settings.solver,{minSalary:48500,uniques:3,maxPerTeam:4,objective:{proj:.3,ceil:.7,own:-.05},stack:{qbMin:2,qbPos:['WR','TE'],bringBack:1,noRbVsDst:true,noOppDst:false,noQbVsDst:true}});return dfsCommit(env,r,w,0);
  }
  const r=await dfsLoad(env,caller,a.workspace_id),w=dfsClone(r.data);w.lineups=w.lineups||[];w.players=w.players||[];w.settings={solver:{...dfsClone(DFS_SOLVER_DEFAULT),...w.settings.solver},simulation:{...dfsClone(DFS_SIM_DEFAULT),...w.settings.simulation},lab:{...dfsClone(DFS_LAB_DEFAULT),...w.settings.lab}};
  if(op==='get'){const offset=a.offset??0,limit=a.limit??100;dfsNum(offset,0,5000,'offset',true);dfsNum(limit,1,500,'limit',true);if(a.include_results!=null)dfsAssert(typeof a.include_results==='boolean','include_results must be boolean');const {lineups,simulation,...rest}=w;return {...rest,lineups:lineups.slice(offset,offset+limit),total_lineups:lineups.length,simulation:a.include_results?simulation||null:undefined,audit:dfsAudit(w)};}
@@ -136,9 +142,10 @@ async function dfsRun(op,a,env,caller){
  }else if(op==='simulate'||op==='compare'){
   dfsAssert(w.lineups.length,'Generate lineups first');const indices=dfsIndices(a.indices,w.lineups.length),ls=indices.map(i=>w.lineups[i]);const {players}=dfsEngineInput(w),c={...w.settings.simulation,site:w.site};
   dfsAssert(ls.length<=200,'Simulate at most 200 candidates per run; pass indices');
-  dfsAssert(c.sims*(Math.min(c.fieldSample,c.fieldSize-1)+ls.length)<=DFS_LIMITS.work,'Compute budget exceeded; reduce worlds, opponent sample or candidate count');
+  dfsAssert(c.sims*(c.mode==='score_tail'?players.length+ls.length:Math.min(c.fieldSample,c.fieldSize-1)+ls.length)<=DFS_LIMITS.work,'Compute budget exceeded; reduce worlds, opponent sample or candidate count');
   let profiles=null;
   if(op==='compare'){
+   dfsAssert(c.mode!=='score_tail','Score tails do not estimate contest placement; use contest mode for compare');
    dfsAssert(['any','pass','back','run'].includes(a.script||'any'),'Invalid game plan');
    dfsObj(a.profiles||{},['cash','three','five','milly'],'profiles');
    for(const v of Object.values(a.profiles||{})){dfsObj(v,['fieldSize','paidPlaces'],'profile');dfsNum(v.fieldSize,2,1000000,'fieldSize',true);dfsNum(v.paidPlaces,1,v.fieldSize,'paidPlaces',true);}
@@ -149,7 +156,7 @@ async function dfsRun(op,a,env,caller){
   if(w.site==='dk_showdown')dfsAssert(active.every(p=>Number.isFinite(p.cptOwn)&&p.cptOwn<=p.own&&(p.cptProj==null||Math.abs(p.cptProj-1.5*p.proj)<=.15)),'Supply valid captain ownership and reconcile captain projections');
   const dupePriors=ls.map(l=>dfsModules.DDFSDupe.expectedDupes(l,w.players,{entries:c.fieldSize,showdown:w.site==='dk_showdown'}));
   const simulationLineups=ls.map((l,i)=>({...l,eDupes:Math.max(0,dupePriors[i]?.eDupes||0)}));
-  const started=Date.now();w.simulation=dfsClone(mcpDdfsRoot.DDFS.simulate(players,simulationLineups,c));w.simulation.dupe_prior=true;w.simulation.workspace_indices=indices;w.simulation.input_revision=a.expected_revision;w.simulation.elapsed_ms=Date.now()-started;result={simulation:w.simulation};
+  const started=Date.now();w.simulation=dfsClone(c.mode==='score_tail'?mcpDdfsRoot.DDFS.simulateTail(players,ls,c):mcpDdfsRoot.DDFS.simulate(players,simulationLineups,c));w.simulation.dupe_prior=true;w.simulation.workspace_indices=indices;w.simulation.input_revision=a.expected_revision;w.simulation.elapsed_ms=Date.now()-started;result={simulation:w.simulation};
   if(profiles){const m=w.simulation.meta;const gate=Number.isFinite(m.fieldOwnershipError)&&m.fieldOwnershipError<=5&&!m.correlationFailed&&!m.captainProjectionMismatch;
    result.comparison={model_gate_pass:gate,selections:gate?dfsModules.DDLabContests.select(w.simulation,ls,players,a.script||'any',profiles).map(r=>({...r,workspace_index:r.i==null?null:indices[r.i]})):[],note:'Model candidates selected on training worlds and reported on held-out worlds. Uncalibrated estimates, not proven returns.'};w.comparison=result.comparison;
   }
