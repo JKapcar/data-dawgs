@@ -1,6 +1,6 @@
 {
  "as_of": "2026-09-20",
- "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit c1ce54d88530ce9de673d95d65202ee6996effc9.",
+ "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 98df51a5cc5ab96628e12a3ece56ec57c99ab505.",
  "tier": "labs",
  "graded": false,
  "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts.",
@@ -10,13 +10,13 @@
   "loader_license": "MIT",
   "source_repository": "nflverse/nfldata",
   "source_url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-  "source_commit": "c1ce54d88530ce9de673d95d65202ee6996effc9",
-  "source_committed_at": "2026-09-20T20:01:22Z",
+  "source_commit": "98df51a5cc5ab96628e12a3ece56ec57c99ab505",
+  "source_committed_at": "2026-09-20T20:12:21Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-09-20T20:03:06.669778Z"
+  "captured_at": "2026-09-20T20:15:01.579638Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:38856bc219ae569376060a5232879f33b86ff7198964e7dc33615c043ab75e41",
+  "snapshot_id": "sha256:0029467d9df006887a11ecd801e02af73dcbaf0c0401794f910ad34b3e36cb31",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -326,9 +326,9 @@
     "divisional": true,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 34,
+    "home_score": 3
    },
    {
     "game_id": "2026_02_CIN_HOU",
@@ -394,9 +394,9 @@
     "divisional": true,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 9,
+    "home_score": 3
    },
    {
     "game_id": "2026_02_NO_BAL",
@@ -428,9 +428,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 24,
+    "home_score": 20
    },
    {
     "game_id": "2026_02_PIT_NE",
