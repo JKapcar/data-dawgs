@@ -130,6 +130,7 @@
         rp: findCol(cells, ["roster position"]),
         gi: findCol(cells, ["game info", "gameinfo"]),
         tm: findCol(cells, ["teamabbrev", "team"]),
+        opp: findCol(cells, ["opp", "opponent"]),
         avg: findCol(cells, ["avgpointspergame"]),
         cptSal: findCol(cells, ["cpt salary", "captain salary"])
       };
@@ -181,6 +182,7 @@
       var gi = idx.gi >= 0 ? String(row[idx.gi] || "") : "";
       var m = gi.match(/([A-Za-z]{2,4})\s*@\s*([A-Za-z]{2,4})/);
       var away = m ? team(m[1]) : "", home = m ? team(m[2]) : "";
+      var opponent = idx.opp >= 0 ? team(String(row[idx.opp] || "").replace(/^@/, "")) : "";
       var kickM = gi.match(/(\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\s*[AP]M(?:\s*ET)?)/i);
       var kickoff = kickM ? kickM[1] : null;
       var rp = idx.rp >= 0 ? String(row[idx.rp] || "").trim().toUpperCase() : "";
@@ -188,8 +190,9 @@
       var key = normName(name) + "|" + tm + "|" + pos;
       var rec = bySlot[key] || (bySlot[key] = {
         name: name, pos: pos, team: tm,
-        gid: m ? away + "@" + home : (tm || "?"),
-        opp: tm === away ? home : (tm === home ? away : ""),
+        id: id || undefined,
+        gid: m ? away + "@" + home : (opponent ? [tm, opponent].sort().join("@") : (tm || "?")),
+        opp: tm === away ? home : (tm === home ? away : opponent),
         away: away, home: home,
         kickoff: kickoff, startTime: kickoff,
         sal: 0, dkId: "", cptId: "", cptSal: 0,
@@ -262,7 +265,7 @@
     }
     var iCptOwn = guess(["cpt own", "captain own", "cpt ownership"]);
     var iCptProj = guess(["cpt projection", "captain projection", "cpt proj"]);
-    var iCeil = guess(["ceiling", "ceil", "90th", "p90", "upside"]);
+    var iCeil = guess(["dk ceiling", "ceiling", "ceil", "90th", "p90", "upside"]);
     var iId = guess(["id"]);
 
     if (iName < 0 || iProj < 0) {

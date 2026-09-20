@@ -336,3 +336,7 @@ Thresholds that change the plan:
 - DraftKings Network dome vs outdoor production (2025); PFF road-outdoor analysis (2017)
 
 Internal: `docs/DFS_Bible_validation.md` (the independent-validation document this file distills), `docs/DFS_PHASE*` checklists, `work/dfs-engine.js`.
+
+## Week log additions
+
+- [2026 Week 2 main slate entry log](dfs-week-2026-02.md): owner-reported A1 and Baker entries, stated contest-placement rationale, source reconciliation, explicit construction exceptions and simulation provenance. The optional hard ACO constraint implements an owner choice; it does not supersede the evidence/confidence labels in this Bible.

@@ -36,3 +36,17 @@ http=await context.api.route(new Request(url,{method:'POST',headers:{'X-Bozo-Ses
 const row=env.rows['/users/userA/dfsWorkspaces/'+workspace_id];delete row.settings.solver.groups;delete row.lineups;
 assert.equal((await run('get',{workspace_id})).lineups.length,0);checks++;
 console.log('PASS',checks,'DFS checks;',context.api.tools.length,'tools;',context.api.tools.filter(t=>t.catalog==='core').length,'core');
+// Classic settings and 30k score-tail mode persist through the authenticated boundary.
+const classicId='test-classic';await run('create',{workspace_id:classicId,site:'dk_classic',source:'Synthetic tests',as_of:'2026-09-20'});
+let cw=await run('get',{workspace_id:classicId});assert.equal(cw.settings.solver.maxPerTeam,4);assert.equal(cw.settings.solver.uniques,3);assert.equal(cw.settings.solver.stack.qbMin,2);
+const cp=[['QB','A','B'],['RB','A','B'],['RB','C','D'],['WR','A','B'],['WR','A','B'],['WR','B','A'],['TE','C','D'],['RB','B','A'],['DST','C','D']].map(([pos,team,opp],i)=>({id:String(100+i),dkId:String(100+i),name:'Synthetic Classic '+i,pos,team,opp,gid:[team,opp].sort().join('@'),sal:5500,proj:15,ceil:25,own:10}));
+let cr=await run('players',{workspace_id:classicId,expected_revision:1,players:cp});assert.equal(cr.audit.missing_projections.length,0);
+cr=await run('settings',{workspace_id:classicId,expected_revision:cr.revision,section:'solver',patch:{count:1,acoCap:90}});
+cr=await run('solve',{workspace_id:classicId,expected_revision:cr.revision});assert.equal(cr.lineups,1);
+cr=await run('settings',{workspace_id:classicId,expected_revision:cr.revision,section:'simulation',patch:{mode:'score_tail',sims:30000,seed:216}});
+cr=await run('simulate',{workspace_id:classicId,expected_revision:cr.revision});assert.equal(cr.simulation.meta.sims,30000);assert.equal(cr.simulation.perLineup[0].aco,90);
+await reject('compare',{workspace_id:classicId,expected_revision:cr.revision},/Score tails/);
+const ce=await run('export',{workspace_id:classicId});assert.match(ce.csv.split('\r\n')[1],/^\d+(,\d+){8}$/);
+cr=await run('settings',{workspace_id:classicId,expected_revision:cr.revision,section:'solver',patch:{acoCap:89}});
+cr=await run('solve',{workspace_id:classicId,expected_revision:cr.revision});assert.equal(cr.lineups,0);assert.ok(cr.compute.infeasible);
+console.log('PASS Classic workspace revision/audit, weighted solve, hard ACO, score-tail settings/compute and numeric export.');

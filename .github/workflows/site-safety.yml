@@ -53,6 +53,7 @@ jobs:
         with:
           node-version: "22"
       - run: node work/test-dfs-page.js
+      - run: node work/test-dfs-main-slate.cjs
       - run: npm install --prefix /tmp/dd-dfs-test jsdom@30.0.1 --no-audit --no-fund
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-autoload-ui.cjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-workspace-ui.cjs

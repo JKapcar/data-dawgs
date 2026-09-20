@@ -2872,7 +2872,16 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="banner warn" id="solverNext" role="status" hidden></div>
   <div class="card">
     <h3>Solver settings <span class="rt" id="presetState"></span></h3>
-    <p class="sub">Contest-aware presets (Bible §4.1) set lineups / uniques / randomness / stacks. An exact integer solve returns <b>the</b> highest-projected roster under those constraints. There is no lineup-count paywall.</p>
+    <p class="sub">Contest-aware presets (Bible §4.1) set lineups / uniques / randomness / stacks. An integer search maximizes the selected objective under hard constraints. A time-limited result is not proof of optimality. There is no lineup-count paywall.</p>
+    <div class="grid3">
+      <label class="fld"><span>Classic objective</span><select class="fi" id="cfObjective"><option value="gpp">GPP weighted ceiling</option><option value="projection">Projection only</option></select></label>
+      <label class="fld"><span>Hard ACO cap % (blank = none)</span><input class="fi" type="number" min="0" max="900" step="0.1" id="cfAco"></label>
+      <button class="btn ghost" id="wk2Defaults">Apply main-slate defaults</button>
+      <label class="fld"><span>Projection weight</span><input class="fi" type="number" step="0.05" id="cfWProj" value="0.3"></label>
+      <label class="fld"><span>Ceiling weight</span><input class="fi" type="number" step="0.05" id="cfWCeil" value="0.7"></label>
+      <label class="fld"><span>Ownership weight</span><input class="fi" type="number" step="0.01" id="cfWOwn" value="-0.05"></label>
+    </div>
+    <p class="note">Classic GPP objective = projection × weight + ceiling × weight + Large Field ownership × weight. ACO is summed ownership in percentage points. Caps are never relaxed. Max per team includes DST; choose 5 explicitly for a full game stack. Showdown keeps its existing objective.</p>
     <details class="gear"><summary>Preset · field · salary window · uniques · exposure · time</summary><div class="gear-body">
     <div class="grid3">
       <label class="fld"><span>Contest preset</span>
@@ -2895,7 +2904,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <label class="fld"><span>Uniques <span class="hint">players differing between any two lineups</span></span><input class="fi" type="number" id="cfUniq" min="0" max="6" value="2"></label>
       <label class="fld"><span>Randomness <span class="hint">% projection jitter per lineup</span></span><input class="fi" type="number" id="cfRand" min="0" max="60" value="15"></label>
       <label class="fld"><span>Default max exposure %</span><input class="fi" type="number" id="cfMaxExp" min="1" max="100" value="100"></label>
-      <label class="fld"><span>Max players per team</span><input class="fi" type="number" id="cfTeam" min="1" max="9" value="4"></label>
+      <label class="fld"><span>Max players per team</span><input class="fi" type="number" id="cfTeam" min="1" max="5" value="4"></label>
       <label class="fld"><span>Max players per game</span><input class="fi" type="number" id="cfGame" min="1" max="9" value="6"></label>
       <label class="fld"><span>Time limit <span class="hint">seconds</span></span><input class="fi" type="number" id="cfTime" min="5" max="600" value="60"></label>
     </div>
@@ -2912,6 +2921,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         <select class="fi" id="cfQbPos"><option value="WR,TE">WR or TE</option><option value="WR">WR only</option><option value="WR,TE,RB">WR, TE or RB</option></select></label>
       <label class="fld"><span>Bring-back from the opponent</span><input class="fi" type="number" id="cfBring" min="0" max="3" value="0"></label>
     </div>
+    <div class="chkrow"><input type="checkbox" id="cfNoQbDst" checked><label for="cfNoQbDst">Never roster a quarterback facing my defence</label></div>
     <div class="chkrow"><input type="checkbox" id="cfNoRbDst"><label for="cfNoRbDst">Never roster a running back playing against my defence</label></div>
     <div class="chkrow"><input type="checkbox" id="cfNoOppDst"><label for="cfNoOppDst">Never roster any player facing my defence</label></div>
     </div></details>
@@ -2923,6 +2933,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <button class="btn" id="solveGo">Build lineups</button>
       <button class="btn ghost sm" id="solveStop" hidden>Stop</button>
       <button class="btn ghost sm" id="validateGo">Validate set</button>
+      <button class="btn ghost sm" id="tailGo">Simulate 30,000 score worlds</button>
       <button class="btn ghost sm" id="exportCsv">Export DraftKings CSV</button>
       <button class="btn ghost sm" id="lockWeek">Lock week</button>
       <button class="btn ghost sm" id="downloadWeekReceipt" hidden>Download week receipt (.json)</button>
@@ -2932,6 +2943,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="banner" id="solveWarn" hidden></div>
     <div class="banner" id="fitWarn" hidden></div>
     <div class="statrow" id="solveStats" hidden></div>
+    <div id="tailResults" role="status"></div>
   </div>
 
   <div class="card" id="luCard" hidden>
@@ -3424,6 +3436,12 @@ function maxPlusConv(A, C, B) {
 }
 
 function solveClassic(players, cfg, site, onProgress) {
+  if (cfg.acoCap != null && (!Number.isFinite(cfg.acoCap) || cfg.acoCap < 0)) throw new Error("ACO cap must be a nonnegative number or blank.");
+  if (cfg.objective && !['proj','ceil','own'].every(k => Number.isFinite(cfg.objective[k]))) throw new Error("Supply all three objective weights.");
+  for (const p of players.filter(p => !p.excl && p.proj > 0)) {
+    if ((cfg.objective || cfg.acoCap != null) && (!Number.isFinite(p.own) || p.own < 0 || p.own > 100)) throw new Error("Missing or invalid ownership: " + p.name);
+    if (cfg.objective && !(Number.isFinite(p.ceil) && p.ceil > 0)) throw new Error("Missing ceiling: " + p.name);
+  }
   const N = players.length;
   const count = Math.max(1, cfg.count | 0);
   const cap = Math.min(cfg.maxSalary || site.cap, site.cap);
@@ -3451,7 +3469,8 @@ function solveClassic(players, cfg, site, onProgress) {
     // pool into a portfolio instead of N near-copies of one opinion.
     const proj = new Float64Array(N);
     for (let i = 0; i < N; i++) {
-      const base = players[i].proj || 0;
+      const p = players[i], w = cfg.objective;
+      const base = w ? w.proj * p.proj + w.ceil * p.ceil + w.own * p.own : (p.proj || 0);
       proj[i] = noise > 0 ? Math.max(0, base * (1 + noise * gauss(rand))) : base;
     }
     const pool = activePool(players, cfg, expCount, n);
@@ -3486,7 +3505,7 @@ function bestClassic(players, proj, pool, cfg, site, cap, floor,
   }
   for (const p of POS) byPos[p].sort((a, b) => proj[b] - proj[a]);
 
-  let best = null, bestVal = -1;
+  let best = null, bestVal = -Infinity;
   const nAcc = acceptedSets.length;
   const overlap = new Int32Array(nAcc);
   let nodes = 0;
@@ -3583,8 +3602,9 @@ function bestClassic(players, proj, pool, cfg, site, cap, floor,
     const qbMin = stack.qbMin || 0, bringMin = stack.bringBack || 0;
     let hasRb = 0, hasDstOpp = null;
 
-    function rec(gi, si, from, curProj, curSal) {
+    function rec(gi, si, from, curProj, curSal, curOwn) {
       if (aborted) return;
+      if (cfg.acoCap != null && curOwn > cfg.acoCap + 1e-9) return;
       if ((++nodes & 1023) === 0 && Date.now() > deadline) { aborted = true; return; }
       if (gi === G) {
         if (curSal < floor) return;
@@ -3628,10 +3648,14 @@ function bestClassic(players, proj, pool, cfg, site, cap, floor,
         if (curSal + sal + MINS[gi][j + 1][left - 1] + sufMinAll[gi + 1] > cap) continue;
 
         const isDst = p.pos === "DST";
-        const tc = (teamCt[p.team] || 0) + (isDst ? 0 : 1);
+        const tc = (teamCt[p.team] || 0) + 1;
         if (cfg.maxPerTeam && tc > cfg.maxPerTeam) continue;
         const gc = (gameCt[p.gid] || 0) + 1;
         if (cfg.maxPerGame && gc > cfg.maxPerGame) continue;
+        if (stack.noQbVsDst) {
+          if (isDst && picked.some(x => players[x].pos === "QB" && players[x].team === p.opp)) continue;
+          if (p.pos === "QB" && hasDstOpp === p.team) continue;
+        }
         if (stack.noRbVsDst) {
           if (isDst && hasRb && picked.some(x => players[x].pos === "RB" && players[x].team === p.opp)) continue;
           if (p.pos === "RB" && hasDstOpp === p.team) continue;
@@ -3668,11 +3692,11 @@ function bestClassic(players, proj, pool, cfg, site, cap, floor,
         if (p.pos === "RB") hasRb++;
         const prevDstOpp = hasDstOpp; if (isDst) hasDstOpp = p.opp;
 
-        if (si + 1 < k) rec(gi, si + 1, j + 1, curProj + proj[id], curSal + sal);
-        else rec(gi + 1, 0, 0, curProj + proj[id], curSal + sal);
+        if (si + 1 < k) rec(gi, si + 1, j + 1, curProj + proj[id], curSal + sal, curOwn + (p.own || 0));
+        else rec(gi + 1, 0, 0, curProj + proj[id], curSal + sal, curOwn + (p.own || 0));
 
         picked.pop();
-        teamCt[p.team] = tc - (isDst ? 0 : 1); gameCt[p.gid] = gc - 1;
+        teamCt[p.team] = tc - 1; gameCt[p.gid] = gc - 1;
         if (p.pos === "RB") hasRb--;
         hasDstOpp = prevDstOpp;
         if (dQb) { qbTeam = null; qbOpp = null; }
@@ -3680,7 +3704,7 @@ function bestClassic(players, proj, pool, cfg, site, cap, floor,
         for (let z = 0; z < inL.length; z++) overlap[inL[z]]--;
       }
     }
-    rec(0, 0, 0, 0, 0);
+    rec(0, 0, 0, 0, 0, 0);
     if (aborted) break;
   }
   if (best) { best.nodes = nodes; best.aborted = aborted; }
@@ -3809,7 +3833,52 @@ function bestShowdown(players, proj, pool, cfg, site, cap, floor,
 
 /* ------------------------------------------------------------------ export */
 
-root.DDFS = { SITES, POS, solveLineups, rng, gauss };
+// Week 2 score model. Loadings are hypotheses, not empirical DFS Bible findings.
+function tailLoadings(pos) {
+  return pos === 'DST' ? [-.35,-.20] : pos === 'RB' ? [.30,.25] : [.35,.45];
+}
+function simulateTail(players, lineups, cfg = {}) {
+  if (cfg.site && cfg.site !== 'dk_classic') throw new Error('Score-tail model requires DK Classic.');
+  const worlds = cfg.sims ?? 30000, seed = cfg.seed ?? 216;
+  if (!Number.isInteger(worlds) || worlds < 200 || worlds > 30000) throw new Error('Use 200–30000 score worlds.');
+  if (!lineups.length || lineups.length > 200) throw new Error('Simulate 1–200 lineups.');
+  const used = [...new Set(lineups.flatMap(l => l.ids))].sort((a,b)=>a-b);
+  for (const l of lineups) if (l.ids.length !== 9 || new Set(l.ids).size !== 9) throw new Error('Expected nine distinct Classic players.');
+  for (const i of used) {
+    const p = players[i];
+    if (!p || !(p.proj > 0) || !Number.isFinite(p.proj) || !(p.ceil > 0) || !Number.isFinite(p.ceil) || !Number.isFinite(p.own) || p.own < 0 || p.own > 100 || !p.gid || !p.team || !p.opp) throw new Error('Supply projection, ceiling, ownership and game for every selected player.');
+  }
+  const rand = rng(seed), games = [...new Set(used.map(i=>players[i].gid))].sort();
+  const teams = [...new Set(used.flatMap(i=>[players[i].team,players[i].opp]))].sort();
+  const scores = lineups.map(()=>new Float64Array(worlds)), values = new Float64Array(players.length);
+  const pars = used.map(i => { const p=players[i], [g,t]=tailLoadings(p.pos), sigma=Math.max(.25,Math.log(p.ceil/p.proj)/1.28); return {i,g,t,sigma,mu:Math.log(p.proj)-sigma*sigma/2,res:Math.sqrt(1-g*g-t*t)}; });
+  for (let n=0;n<worlds;n++) {
+    const G={},T={};for(const g of games) G[g]=gauss(rand);for(const t of teams) T[t]=gauss(rand);
+    for(const a of pars) { const p=players[a.i];const z=a.g*G[p.gid]+a.t*T[p.pos==='DST'?p.opp:p.team]+a.res*gauss(rand); values[a.i]=Math.exp(a.mu+a.sigma*z); }
+    lineups.forEach((l,j)=>{scores[j][n]=l.ids.reduce((v,i)=>v+values[i],0);});
+  }
+  const q=(a,p)=>{const k=(a.length-1)*p,i=Math.floor(k);return a[i]+(a[Math.ceil(k)]-a[i])*(k-i);};
+  const perLineup=scores.map((a,j)=>{let hits230=0,hits250=0;for(const v of a){if(v>=230)hits230++;if(v>=250)hits250++;}a.sort();const ps=lineups[j].ids.map(i=>players[i]);const zero=ps.some(p=>p.own===0);return {median:q(a,.5),p90:q(a,.9),p99:q(a,.99),p999:q(a,.999),p230:hits230/worlds,p250:hits250/worlds,hits230,hits250,aco:ps.reduce((v,p)=>v+p.own,0),logOwn:zero?null:ps.reduce((v,p)=>v+Math.log(p.own),0),zeroOwnership:zero};});
+  return {mode:'score_tail',perLineup,meta:{sims:worlds,seed,meanConvention:'proj is arithmetic mean; mu = ln(proj) - sigma²/2',qbLoadings:[.35,.45],ownershipUnits:'percent, 0–100; logOwn is sum ln(percent); null represents negative infinity at zero',note:'Uncalibrated score simulation, not win probability or payout EV. QB loadings are an explicit assumption. Rare tails have Monte Carlo uncertainty.'}};
+}
+function classicExport(players,lineups) {
+  if (!lineups.length) throw new Error('No lineups to export.');
+  const rows=['QB,RB,RB,WR,WR,WR,TE,FLEX,DST'];
+  for(const l of lineups) {
+    if(l.ids.length!==9 || new Set(l.ids).size!==9)throw new Error('Invalid Classic lineup.');
+    const rest=l.ids.slice(),cells=[];
+    for(const slot of ['QB','RB','RB','WR','WR','WR','TE','FLEX','DST']) {
+      const j=rest.findIndex(i=>players[i] && (slot==='FLEX'?['RB','WR','TE'].includes(players[i].pos):players[i].pos===slot));
+      if(j<0)throw new Error('Missing '+slot+' slot.');
+      const p=players[rest.splice(j,1)[0]],id=String(p.dkId ?? '');
+      if(!/^\d+$/.test(id))throw new Error('Missing official numeric DK ID: '+p.name);
+      cells.push(id);
+    }
+    rows.push(cells.join(','));
+  }
+  return rows.join('\r\n')+'\r\n';
+}
+root.DDFS = { SITES, POS, solveLineups, rng, gauss, simulateTail, tailLoadings, classicExport };
 /* ===== DD-FRONTIER START — generated from work/patch-dfs-frontier.py ===== */
 /* ============================================================================
    PROJECTION vs RARITY — the exact convex frontier
@@ -4770,6 +4839,8 @@ self.onmessage = function (e) {
     if (d.op === "solve") {
       var r = R.solveLineups(d.players, d.cfg, function (n, t) { self.postMessage({ type: "progress", n: n, t: t }); });
       self.postMessage({ type: "done", result: r });
+    } else if (d.op === "tail") {
+      self.postMessage({type:"done", result:R.simulateTail(d.players,d.lineups,d.cfg)});
     } else if (d.op === "frontier") {
       var f = R.frontier(d.players, d.cfg, function (n, t) { self.postMessage({ type: "progress", n: n, t: t }); });
       self.postMessage({ type: "done", result: f });
@@ -4797,8 +4868,8 @@ const DEF = {
   exportedAt: null,
   slate: { loadedAt: null, source: null, draftGroupId: null, stale: false, label: null, startTime: null },
   demo: false,
-  cfg: { count: 20, minSal: 49000, maxSal: 50000, uniq: 2, rand: 15, maxExp: 100, team: 4, game: 6,
-         time: 60, qbMin: 1, qbPos: "WR,TE", bring: 0, noRbDst: false, noOppDst: false, lobbyTopN: 25 },
+  cfg: { count: 20, minSal: 48500, maxSal: 50000, uniq: 3, rand: 0, maxExp: 100, team: 4, game: 6,
+         time: 60, qbMin: 2, qbPos: "WR,TE", bring: 1, noRbDst: true, noOppDst: false, noQbDst: true, objectiveMode: "gpp", wProj: .3, wCeil: .7, wOwn: -.05, acoCap: null, lobbyTopN: 25 },
   sim: { field: 20000, fee: 20, payout: "gpp", paid: 20, alpha: 1.15, rake: 15, custom: "",
          sims: 10000, sample: 2500, stack: 60, fieldSal: 49000 },
   sheet: "week",
@@ -4978,6 +5049,7 @@ function banner(id, kind, html) {
         rp: findCol(cells, ["roster position"]),
         gi: findCol(cells, ["game info", "gameinfo"]),
         tm: findCol(cells, ["teamabbrev", "team"]),
+        opp: findCol(cells, ["opp", "opponent"]),
         avg: findCol(cells, ["avgpointspergame"]),
         cptSal: findCol(cells, ["cpt salary", "captain salary"])
       };
@@ -5029,6 +5101,7 @@ function banner(id, kind, html) {
       var gi = idx.gi >= 0 ? String(row[idx.gi] || "") : "";
       var m = gi.match(/([A-Za-z]{2,4})\s*@\s*([A-Za-z]{2,4})/);
       var away = m ? team(m[1]) : "", home = m ? team(m[2]) : "";
+      var opponent = idx.opp >= 0 ? team(String(row[idx.opp] || "").replace(/^@/, "")) : "";
       var kickM = gi.match(/(\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\s*[AP]M(?:\s*ET)?)/i);
       var kickoff = kickM ? kickM[1] : null;
       var rp = idx.rp >= 0 ? String(row[idx.rp] || "").trim().toUpperCase() : "";
@@ -5036,8 +5109,9 @@ function banner(id, kind, html) {
       var key = normName(name) + "|" + tm + "|" + pos;
       var rec = bySlot[key] || (bySlot[key] = {
         name: name, pos: pos, team: tm,
-        gid: m ? away + "@" + home : (tm || "?"),
-        opp: tm === away ? home : (tm === home ? away : ""),
+        id: id || undefined,
+        gid: m ? away + "@" + home : (opponent ? [tm, opponent].sort().join("@") : (tm || "?")),
+        opp: tm === away ? home : (tm === home ? away : opponent),
         away: away, home: home,
         kickoff: kickoff, startTime: kickoff,
         sal: 0, dkId: "", cptId: "", cptSal: 0,
@@ -5110,7 +5184,7 @@ function banner(id, kind, html) {
     }
     var iCptOwn = guess(["cpt own", "captain own", "cpt ownership"]);
     var iCptProj = guess(["cpt projection", "captain projection", "cpt proj"]);
-    var iCeil = guess(["ceiling", "ceil", "90th", "p90", "upside"]);
+    var iCeil = guess(["dk ceiling", "ceiling", "ceil", "90th", "p90", "upside"]);
     var iId = guess(["id"]);
 
     if (iName < 0 || iProj < 0) {
@@ -7773,7 +7847,7 @@ function enginePlayers() {
   const maxExpDef = (S.cfg.maxExp || 100) / 100;
   return S.players.map(p => ({
     name:p.name, pos: p.pos, team: p.team, opp: p.opp, gid: p.gid, sal: p.sal, cptSal:p.cptSal, cptProj:p.cptProj, cptOwn:p.cptOwn, flexOwn:p.flexOwn,
-    proj: p.proj == null ? 0 : p.proj, own: p.own || 0,
+    proj: p.proj, ceil: p.ceil, own: p.own,
     lock: !!p.lock, excl: !!p.excl,
     maxExp: p.maxExp != null ? p.maxExp / 100 : (maxExpDef < 1 ? maxExpDef : null)
   }));
@@ -7860,12 +7934,15 @@ function runSolve() {
   const st = poolStats();
   if (!st.priced) { banner("solveWarn", "err", "<b>No projections.</b> Nothing can be optimised until at least one player has a projection."); return; }
   readCfg();
+  if(S.site==='dk_classic' && (!Number.isInteger(S.cfg.team) || S.cfg.team<1 || S.cfg.team>5)){banner("solveWarn","err","Classic supports at most 4 per team; set 5 explicitly for a full game stack.");return;}
   const cfg = {
     site: S.site, count: S.cfg.count, minSalary: S.cfg.minSal, maxSalary: S.cfg.maxSal,
-    uniques: S.cfg.uniq, randomness: S.cfg.rand / 100, seed: (Date.now() % 100000) | 0,
+    uniques: S.cfg.uniq, randomness: S.cfg.rand / 100, seed: 216,
+    acoCap: S.site === "dk_classic" ? S.cfg.acoCap : null,
+    objective: S.site === "dk_classic" && S.cfg.objectiveMode === "gpp" ? {proj:S.cfg.wProj,ceil:S.cfg.wCeil,own:S.cfg.wOwn} : null,
     maxPerTeam: S.cfg.team, maxPerGame: S.cfg.game, timeLimitMs: S.cfg.time * 1000,
     stack: { qbMin: S.cfg.qbMin, qbPos: S.cfg.qbPos.split(","), bringBack: S.cfg.bring,
-             noRbVsDst: S.cfg.noRbDst, noOppDst: S.cfg.noOppDst }
+             noRbVsDst: S.cfg.noRbDst, noOppDst: S.cfg.noOppDst, noQbVsDst: S.cfg.noQbDst }
   };
   banner("solveWarn", null, null);
   $("solveProg").hidden = false; $("solveProg").firstElementChild.style.width = "3%";
@@ -7879,7 +7956,7 @@ function runSolve() {
     const ms = Date.now() - t0;
     S.lineups = r.lineups.map(l => ({ ids: l.ids, cpt: l.cpt, proj: l.proj, sal: l.sal }));
     S.lineupsMeta = { ms, asked: cfg.count, site: S.site, stamp: Date.now() };
-    SIM = null; FRONT = null;
+    SIM = null; FRONT = null; $("tailResults").replaceChildren();
     save();
     $("solveState").textContent = `${r.lineups.length} in ${(ms / 1000).toFixed(1)}s`;
     const msgs = [];
@@ -7893,7 +7970,7 @@ function runSolve() {
       // always means the constraints are impossible, not that the machine is slow.
       msgs.push(`<b>Nothing found in ${S.cfg.time}s.</b> When a constraint set has no answer the search has nothing to prune against, so it runs to the limit. Check that the salary window is reachable — DraftKings salaries move in $100 steps — and that the stack rule can be satisfied by the players still in the pool.`);
     else if (r.timedOut)
-      msgs.push(`<b>Hit the ${S.cfg.time}s time limit at ${r.lineups.length} of ${cfg.count}.</b> Every lineup you have is exact; the run just did not finish the whole request. Raise the limit, or cut the uniques and randomness settings.`);
+      msgs.push(`<b>Hit the ${S.cfg.time}s time limit at ${r.lineups.length} of ${cfg.count}.</b> Returned lineups satisfy the constraints, but optimality is unproven for an interrupted search. Raise the limit, or cut the uniques and randomness settings.`);
     banner("solveWarn", r.lineups.length ? "warn" : "err", msgs.join(" "));
     renderSolveStats(); renderLineups(); renderStrip(); renderExposure();
   };
@@ -7999,7 +8076,7 @@ function renderLineups() {
 }
 
 function exportCsv() {
-  if (S.players.some(p => !p.dkId || (E.SITES[S.site].showdown && !p.cptId))) {
+  if (S.players.some(p => !/^\d+$/.test(String(p.dkId ?? "")) || (E.SITES[S.site].showdown && !/^\d+$/.test(String(p.cptId ?? ""))))) {
     banner("solveWarn", "err", "<b>Official DraftKings IDs are needed for entry export.</b> Your uploaded projections work for analysis. Add the matching DraftKings salary file with IDs before exporting."); return;
   }
 
@@ -8021,13 +8098,16 @@ function exportCsv() {
     const cells = lineupSlots(l).map(s => {
       const p = P[s.i];
       if (!p) { missing++; return ""; }
-      const id = s.slot === "CPT" ? (p.cptId || p.dkId) : p.dkId;
-      if (!id) { missing++; return p.name; }
+      const id = s.slot === "CPT" ? p.cptId : p.dkId;
+      if (!/^\d+$/.test(String(id ?? ""))) { missing++; return ""; }
       return id;
     });
     lines.push(cells.join(","));
   }
-  const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+  if (missing) { banner("solveWarn", "err", "Export refused: every slot requires an official numeric DK ID."); return; }
+  let csv;
+  try { csv = sd ? lines.join("\r\n") : E.classicExport(P,S.lineups); } catch(e) { banner("solveWarn","err",esc(e.message)); return; }
+  const blob = new Blob([csv], { type: "text/csv" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "dd-lineups-" + new Date().toISOString().slice(0, 10) + ".csv";
@@ -8035,7 +8115,6 @@ function exportCsv() {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   S.exportedAt = new Date().toISOString();
   save();
-  if (missing) banner("solveWarn", "warn", `<b>${missing} slot${missing === 1 ? "" : "s"} had no DraftKings player ID</b> and were written as names instead. That happens with the demo slate or a hand-built pool; a real salary export always carries IDs.`);
   S.exportedAt = new Date().toISOString(); save(); if (S.sheet === "week") renderPipelineChips();
   // Week-object path: export also locks expectations when DDFSWeek is present.
   if (typeof DDFSWeek !== "undefined") {
@@ -8784,12 +8863,15 @@ function renderMethod() {
 /* ---------------------------------------------------------------- config i/o */
 
 const CFG_MAP = { cfCount: "count", cfMinSal: "minSal", cfMaxSal: "maxSal", cfUniq: "uniq", cfRand: "rand",
-  cfMaxExp: "maxExp", cfTeam: "team", cfGame: "game", cfTime: "time", cfQbMin: "qbMin", cfBring: "bring" };
+  cfWProj: "wProj", cfWCeil: "wCeil", cfWOwn: "wOwn", cfMaxExp: "maxExp", cfTeam: "team", cfGame: "game", cfTime: "time", cfQbMin: "qbMin", cfBring: "bring" };
 const SIM_MAP = { siField: "field", siFee: "fee", siPaid: "paid", siAlpha: "alpha", siRake: "rake",
   siSims: "sims", siSample: "sample", siStack: "stack", siFieldSal: "fieldSal" };
 
 function writeCfg() {
   for (const id in CFG_MAP) if ($(id)) $(id).value = S.cfg[CFG_MAP[id]];
+  $("cfObjective").value = S.cfg.objectiveMode || "projection";
+  $("cfAco").value = S.cfg.acoCap ?? "";
+  $("cfNoQbDst").checked = !!S.cfg.noQbDst;
   $("cfQbPos").value = S.cfg.qbPos;
   $("cfNoRbDst").checked = !!S.cfg.noRbDst;
   $("cfNoOppDst").checked = !!S.cfg.noOppDst;
@@ -8802,6 +8884,9 @@ function writeCfg() {
 }
 function readCfg() {
   for (const id in CFG_MAP) if ($(id)) { const v = parseFloat($(id).value); if (isFinite(v)) S.cfg[CFG_MAP[id]] = v; }
+  S.cfg.objectiveMode = $("cfObjective").value;
+  S.cfg.acoCap = $("cfAco").value.trim() === "" ? null : Number($("cfAco").value);
+  S.cfg.noQbDst = $("cfNoQbDst").checked;
   S.cfg.qbPos = $("cfQbPos").value;
   S.cfg.noRbDst = $("cfNoRbDst").checked;
   S.cfg.noOppDst = $("cfNoOppDst").checked;
@@ -9175,6 +9260,16 @@ function boot() {
   // ---- solver ----
   Object.keys(CFG_MAP).forEach(id => $(id) && $(id).addEventListener("change", readCfg));
   ["cfQbPos", "cfNoRbDst", "cfNoOppDst"].forEach(id => $(id).addEventListener("change", readCfg));
+  $("wk2Defaults").onclick=()=>{if(S.site!=="dk_classic"){banner("solveWarn","err","Choose DraftKings Classic first.");return;}Object.assign(S.cfg,{minSal:48500,maxSal:50000,uniq:3,rand:0,team:4,game:9,qbMin:2,qbPos:"WR,TE",bring:1,noRbDst:true,noQbDst:true,noOppDst:false,objectiveMode:"gpp",wProj:.3,wCeil:.7,wOwn:-.05});save();writeCfg();};
+  for(const id of ["cfObjective","cfAco","cfNoQbDst"])$(id).addEventListener("change",readCfg);
+  $("tailGo").onclick=()=>{
+    const box=$("tailResults");if(S.site!=="dk_classic"||!S.lineups.length){box.textContent="Build Classic lineups first.";return;}
+    if(!WORKER_URL){box.textContent="Background workers are required for score simulation.";return;}
+    const worker=new Worker(WORKER_URL),stamp=JSON.stringify([S.players,S.lineups]);$("tailGo").disabled=true;box.textContent="Simulating 30,000 correlated worlds, seed 216…";
+    worker.onmessage=e=>{worker.terminate();$("tailGo").disabled=false;if(stamp!==JSON.stringify([S.players,S.lineups])){box.textContent="Inputs changed; run simulation again.";return;}if(e.data.type==='error'){box.textContent=e.data.message;return;}const r=e.data.result;
+      box.innerHTML='<p class="note">Score simulation · 30,000 worlds · seed 216 · '+esc(new Date().toISOString())+'. Model assumptions, not contest win probabilities. Projection is the arithmetic mean. QB uses 0.35 game / 0.45 team loadings; rare tails are noisy.</p><div style="overflow:auto"><table><thead><tr>'+['Lineup','Median','p90','p99','p99.9','P ≥230','P ≥250','ACO','Σ ln(own %)'].map(v=>'<th>'+v+'</th>').join('')+'</tr></thead><tbody>'+r.perLineup.map((v,i)=>'<tr>'+[i+1,...[v.median,v.p90,v.p99,v.p999].map(n=>n.toFixed(1)),(100*v.p230).toFixed(3)+'% ('+v.hits230+')',(100*v.p250).toFixed(3)+'% ('+v.hits250+')',v.aco.toFixed(1),v.zeroOwnership?'−∞':v.logOwn.toFixed(3)].map(v=>'<td>'+v+'</td>').join('')+'</tr>').join('')+'</tbody></table></div><p class="note">Parentheses show threshold hits out of 30,000. Σ ln(own %) is an independence duplication proxy, not expected copies. Zero ownership stays zero.</p>';
+    };worker.onerror=()=>{worker.terminate();$("tailGo").disabled=false;box.textContent="Simulation failed; rerun after checking the inputs.";};worker.postMessage({op:'tail',players:enginePlayers(),lineups:S.lineups,cfg:{site:S.site,sims:30000,seed:216}});
+  };
   $("solveGo").addEventListener("click", runSolve);
   $("solveStop").addEventListener("click", () => {
     if (solveWorker) { solveWorker.terminate(); solveWorker = null; }
@@ -10009,7 +10104,8 @@ function botContext() {
       ["Why is the highest-projected lineup often a bad tournament entry?", "Why is chalk bad?"],
       ["What is leverage, and how should I read the win-lineup column?", "What is leverage?"],
       ["Are my results good enough to say I have an edge?", "Do I have an edge?"]] },
-    sys: `Use the chart source stamp and selected-lineup explanation. Projection sacrifice is measured against the best projection in the generated pool. A low-ownership player can drive apparent rarity; the 0.5% and 1% floors are sensitivity assumptions, not corrected ownership estimates. Do not call low-projection players impossible winners. Old saved data must be reimported through the corrected ownership reader before trusting it.
+    sys: `Classic hard ACO caps are constraints: never silently relax one. Score-tail simulations are uncalibrated lognormal assumptions, separate from the empirical contest simulator. QB score-tail loadings are assumed 0.35 game / 0.45 team. Threshold probabilities are not win probabilities or payout EV. A timeout proves neither infeasibility nor optimality.
+Use the chart source stamp and selected-lineup explanation. Projection sacrifice is measured against the best projection in the generated pool. A low-ownership player can drive apparent rarity; the 0.5% and 1% floors are sensitivity assumptions, not corrected ownership estimates. Do not call low-projection players impossible winners. Old saved data must be reimported through the corrected ownership reader before trusting it.
 LINEUP LAB: Chart copies are slot-ownership product times the selected illustrative contest size, an independence proxy, not calibrated duplicates. Background zones mean low (<1), moderate (1–5), high (5+) duplication; NEVER call them GPP-safe or cash-only. The chart selector does not rerun or reconfigure the simulator. Tap selects a blue-highlighted dot and roster; hover/hold previews names, projection, estimated copies and raw product.
 RIGHT NOW you are on the DFS Solver & Contest Simulator. It is BUILT and it computes — the solver, the contest simulator, the exposure view and the bankroll tracker all run in the browser.
 - ⚠️ The PROJECTIONS ARE THE USER'S OWN. This tool has no player opinions and generates no projections. Never present a projection as the site's view, and never rate a player yourself as if the page had done so.
@@ -10067,7 +10163,7 @@ ${S.demo ? "- ⚠️ THE LOADED SLATE IS THE DEMO SLATE. Every player name, sala
       } else L.push("PROJECTION-VS-RARITY / FRONT: superseded; not used for selection. No hull has been traced in this session.");
       L.push("LINEUP LAB: Showdown pools are EXACT enumerations of every legal lineup under the Lab's salary floor and max-per-team (classic pools are sampled). The frontier is exact for showdown. A punt captain or a sub-0.5%-owned slot lowers the ownership product 50-100x while the rest of the roster may be exactly what the field plays; treat those frontier dots as flagged, not free. Tap a dot for the roster, slot ownership, E[dupes] (slot-aware analytic prior), validator flags and sim results. X is estimated copies (slot-ownership product times selected contest field size) on a log scale; presets are illustrative. Green/yellow/red background zones describe low/moderate/high duplication, not contest suitability. Simulator results retain their simulation field size; Y is projected points. Product is an independence proxy, not a duplication probability. Showdown uses CPT ownership and total-minus-CPT for FLEX. Gray points have not been simulated. Exposure caps and minimum uniques are not enforced on the exploration pool.");
       L.push("- ⚠️ Selection key is DUPE-ADJUSTED TOP-10 / EV_adj (Bible §3.4 / I4), not raw ROI. E[dupes] is a PRIOR until ≥3 weeks of standings grade the pair multipliers (I5) — say \"prior\" whenever you quote EV (dupe-adj) or E[dupes]. Top-10 means literal places 1–10 (B5), not a percent of field.");
-      L.push(`VOCABULARY: Proj = sum of the user's projections. Mean = average simulated score. Own% = projected ownership. Win-lineup% = how often a player appears in the highest-scoring sampled opponent; not the exact slate optimum. Leverage = win-lineup% minus ownership. Dupes = expected number of other entries holding the identical lineup. Cash% = share of simulations finishing in the money. Top-10% = share finishing in literal places 1–10 (not a field cut). EV (dupe-adj) = Σ P(place)·prize/(1+E[dupes]) with prior E[dupes] until ≥3 weeks standings. ROI = raw simulated return before dupe adjustment — visible, not the selection key. Rarity in the Lab uses captain and FLEX slot-ownership product with a 0.25% minimum; expected copies on the axis are that product times the selected entry count, an uncalibrated proxy. Cumulative ownership is only a secondary diagnostic. Contest candidates are chosen on training worlds and evaluated on held-out worlds. No GPP-safe or cash-only designation follows from duplication alone.`);
+      L.push(`VOCABULARY: Proj = sum of the user's projections. Mean = average simulated score. Own% = projected ownership. Win-lineup% = how often a player appears in the highest-scoring sampled opponent; not the exact slate optimum. Leverage = win-lineup% minus ownership. Dupes = expected number of other entries holding the identical lineup. Cash% = share of simulations finishing in the money. Top-10% = share finishing in literal places 1–10 (not a field cut). EV (dupe-adj) = Σ P(place)·prize/(1+E[dupes]) with prior E[dupes] until ≥3 weeks standings. ROI = raw simulated return before dupe adjustment — visible, not the selection key. Rarity in the Lab uses captain and FLEX slot-ownership product with a 0.25% minimum; expected copies on the axis are that product times the selected entry count, an uncalibrated proxy. Cumulative ownership is a hard constraint whenever the user sets the ACO cap. Never relax it or call a timeout infeasible. The Classic score-tail model uses lognormal arithmetic means, assumed QB loadings 0.35/0.45, 30000 worlds and seed 216; its score thresholds are not contest win probabilities or payout EV. Contest candidates are chosen on training worlds and evaluated on held-out worlds. No GPP-safe or cash-only designation follows from duplication alone.`);
       return L.join("\n");
     }
   };
@@ -10115,13 +10211,13 @@ function dfsCloudBoot(){
  $('dfsCloudSave').onclick=()=>busy(async()=>{
   const id=current();readCfg();readSim();if(!S.players.length)throw new Error('Load a CSV first.');if(S.players.length>220)throw new Error('Remote workspaces support up to 220 players. Reduce the slate before saving.');
   const source=S.slate&&S.slate.source||'User-supplied browser slate';const as_of=S.slate&&S.slate.loadedAt?new Date(S.slate.loadedAt).toISOString():new Date().toISOString();
-  if(dfsCloudLoadedId!==id||dfsCloudRevision==null){const r=await dfsCloudCall('create',{workspace_id:id,site:S.site,source,as_of});dfsCloudRevision=r.revision;dfsCloudLoadedId=id;}
+  if(dfsCloudLoadedId!==id||dfsCloudRevision==null){const found=await dfsCloudCall('list',{});const existing=found.workspaces.find(w=>w.workspace_id===id);if(existing&&existing.site!==S.site)throw new Error('Workspace format differs; load it first or choose another name.');const r=existing||await dfsCloudCall('create',{workspace_id:id,site:S.site,source,as_of});dfsCloudRevision=r.revision;dfsCloudLoadedId=id;}
   const fields=['id','name','pos','team','opp','gid','sal','proj','own','cptOwn','flexOwn','cptProj','cptSal','ceil','dkId','cptId','kickoff','lock','excl'];
   const players=S.players.map(p=>({...Object.fromEntries(fields.filter(k=>p[k]!==undefined).map(k=>[k,p[k]])),maxExp:p.maxExp!=null?p.maxExp/100:(S.cfg.maxExp??100)/100}));
-  const solver={count:S.cfg.count,minSalary:S.cfg.minSal,maxSalary:S.cfg.maxSal,uniques:S.cfg.uniq,randomness:S.cfg.rand/100,seed:216,maxPerTeam:S.cfg.team,maxPerGame:S.cfg.game,timeLimitMs:Math.min(5000,S.cfg.time*1000),stack:{qbMin:S.cfg.qbMin,qbPos:S.cfg.qbPos.split(','),bringBack:S.cfg.bring,noRbVsDst:!!S.cfg.noRbDst,noOppDst:!!S.cfg.noOppDst},groups:[]};
+  const solver={count:S.cfg.count,minSalary:S.cfg.minSal,maxSalary:S.cfg.maxSal,uniques:S.cfg.uniq,randomness:S.cfg.rand/100,seed:216,maxPerTeam:S.cfg.team,maxPerGame:S.cfg.game,timeLimitMs:Math.min(5000,S.cfg.time*1000),acoCap:S.site==='dk_classic'?S.cfg.acoCap:null,objective:S.site==='dk_classic'&&S.cfg.objectiveMode==='gpp'?{proj:S.cfg.wProj,ceil:S.cfg.wCeil,own:S.cfg.wOwn}:null,stack:{qbMin:S.cfg.qbMin,qbPos:S.cfg.qbPos.split(','),bringBack:S.cfg.bring,noRbVsDst:!!S.cfg.noRbDst,noOppDst:!!S.cfg.noOppDst,noQbVsDst:!!S.cfg.noQbDst},groups:[]};
   if(S.site==='dk_showdown')solver.stack={qbMin:0,qbPos:['WR','TE'],bringBack:0,noRbVsDst:false,noOppDst:false};
   const payout=S.sim.payout==='custom'?{kind:'table',rows:parsePayoutTable(S.sim.custom)}:{kind:['cash','gppflat'].includes(S.sim.payout)?'flat':'param',paidFrac:S.sim.paid/100,alpha:S.sim.alpha,rake:S.sim.rake/100};
-  const simulation={sims:S.sim.sims,fieldSize:S.sim.field,fieldSample:S.sim.sample,entryFee:S.sim.fee,fieldStackRate:S.sim.stack/100,fieldMinSalary:S.sim.fieldSal,seed:216,ownershipFloor:.0025,payout};
+  const simulation={mode:'contest',sims:S.sim.sims,fieldSize:S.sim.field,fieldSample:S.sim.sample,entryFee:S.sim.fee,fieldStackRate:S.sim.stack/100,fieldMinSalary:S.sim.fieldSal,seed:216,ownershipFloor:.0025,payout};
   const lab={minSalary:+$('labMinSal').value,maxSalary:50000,maxPerTeam:+$('labMaxTeam').value,ownershipFloor:+$('labOwnFloor').value/100,count:+$('paretoCount').value,cloud:+$('labCloud').value,maxBand:500,bandPts:+$('labBand').value,seed:216,timeLimitMs:3000};
   const r=await dfsCloudCall('sync',{workspace_id:id,expected_revision:dfsCloudRevision,players,lineups:S.lineups,settings:{solver,simulation,lab},source,as_of});dfsCloudRevision=r.revision;
   report('Saved privately: '+id+' · revision '+r.revision+'. Available to your Data Dawgs MCP connection. Remote search has a 5-second limit.');
@@ -10132,16 +10228,18 @@ function dfsCloudBoot(){
   // Preserve the previous local state for recovery before replacing it.
   try{localStorage.setItem('dd-dfs-before-cloud-load',JSON.stringify(S));}catch{throw new Error('Could not back up this device’s current slate; load cancelled.');}
   S.site=w.site;S.players=w.players.map(p=>({...p,maxExp:p.maxExp==null?null:p.maxExp*100}));S.lineups=all;S.demo=false;S.labPins=[];S.lab=null;S.lineupsMeta={stamp:Date.now(),site:S.site,asked:all.length,cloud:true};
-  const c=w.settings.solver,t=w.settings.simulation;Object.assign(S.cfg,{count:c.count,minSal:c.minSalary,maxSal:c.maxSalary,uniq:c.uniques,rand:c.randomness*100,maxExp:100,team:c.maxPerTeam,game:c.maxPerGame,time:c.timeLimitMs/1000,qbMin:c.stack.qbMin,qbPos:c.stack.qbPos.join(','),bring:c.stack.bringBack,noRbDst:c.stack.noRbVsDst,noOppDst:c.stack.noOppDst});
+  const c=w.settings.solver,t=w.settings.simulation;Object.assign(S.cfg,{count:c.count,minSal:c.minSalary,maxSal:c.maxSalary,uniq:c.uniques,rand:c.randomness*100,maxExp:100,team:c.maxPerTeam,game:c.maxPerGame,time:c.timeLimitMs/1000,qbMin:c.stack.qbMin,qbPos:c.stack.qbPos.join(','),bring:c.stack.bringBack,noRbDst:c.stack.noRbVsDst,noOppDst:c.stack.noOppDst,noQbDst:!!c.stack.noQbVsDst,acoCap:c.acoCap??null,objectiveMode:c.objective?"gpp":"projection",wProj:c.objective?.proj??.3,wCeil:c.objective?.ceil??.7,wOwn:c.objective?.own??-.05});
   Object.assign(S.sim,{field:t.fieldSize,fee:t.entryFee,sims:t.sims,sample:t.fieldSample,stack:t.fieldStackRate*100,fieldSal:t.fieldMinSalary,payout:t.payout.kind==='table'?'custom':t.payout.kind==='flat'?'cash':'gpp',paid:(t.payout.paidFrac||.2)*100,alpha:t.payout.alpha??1.15,rake:(t.payout.rake??.15)*100,custom:(t.payout.rows||[]).map(r=>[r.from,r.to,r.prize].join(',')).join('\n')});
   const lab=w.settings.lab;for(const [id,value] of Object.entries({labMinSal:lab.minSalary,labMaxTeam:lab.maxPerTeam,labOwnFloor:lab.ownershipFloor*100,labCloud:lab.cloud,paretoCount:lab.count,labBand:lab.bandPts})){const el=$(id);if(el.tagName==='SELECT'&&![...el.options].some(o=>o.value===String(value))){const option=document.createElement('option');option.value=String(value);option.textContent=String(value);el.appendChild(option);}el.value=value;}
   S.slate={...S.slate,source:w.source,loadedAt:Date.parse(w.as_of),stale:false};SIM=null;
-  if(w.simulation&&w.simulation.workspace_indices.length===all.length&&w.simulation.workspace_indices.every((v,i)=>v===i)){SIM=w.simulation;SIM.ms=SIM.elapsed_ms;}
-  dfsCloudLoadedId=id;dfsCloudRevision=w.revision;save();writeCfg();renderStrip();renderPool();renderLineups();renderSolveStats();renderExposure();renderSim();report('Loaded '+id+' · revision '+w.revision+'. Previous local slate is backed up on this device.');
+  if(w.simulation&&w.simulation.mode!=='score_tail'&&w.simulation.workspace_indices.length===all.length&&w.simulation.workspace_indices.every((v,i)=>v===i)){SIM=w.simulation;SIM.ms=SIM.elapsed_ms;}
+  dfsCloudLoadedId=id;dfsCloudRevision=w.revision;save();writeCfg();renderStrip();renderPool();renderLineups();renderSolveStats();renderExposure();renderSim();$('tailResults').replaceChildren();report('Loaded '+id+' · revision '+w.revision+'. Previous local slate is backed up on this device.');
  });
  window.addEventListener('dd-auth',()=>{dfsCloudRevision=null;dfsCloudLoadedId=null;report('Account changed. Load or create a workspace for this account.');});
 }
+
 if(document.readyState === "loading") document.addEventListener("DOMContentLoaded",dfsCloudBoot);else dfsCloudBoot();
+
 /* DFS WORKSPACE UI END */
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
 else boot();

@@ -13252,6 +13252,7 @@ const dfsModules = {};
         rp: findCol(cells, ["roster position"]),
         gi: findCol(cells, ["game info", "gameinfo"]),
         tm: findCol(cells, ["teamabbrev", "team"]),
+        opp: findCol(cells, ["opp", "opponent"]),
         avg: findCol(cells, ["avgpointspergame"]),
         cptSal: findCol(cells, ["cpt salary", "captain salary"])
       };
@@ -13303,6 +13304,7 @@ const dfsModules = {};
       var gi = idx.gi >= 0 ? String(row[idx.gi] || "") : "";
       var m = gi.match(/([A-Za-z]{2,4})\s*@\s*([A-Za-z]{2,4})/);
       var away = m ? team(m[1]) : "", home = m ? team(m[2]) : "";
+      var opponent = idx.opp >= 0 ? team(String(row[idx.opp] || "").replace(/^@/, "")) : "";
       var kickM = gi.match(/(\d{1,2}\/\d{1,2}\/\d{2,4}\s+\d{1,2}:\d{2}\s*[AP]M(?:\s*ET)?)/i);
       var kickoff = kickM ? kickM[1] : null;
       var rp = idx.rp >= 0 ? String(row[idx.rp] || "").trim().toUpperCase() : "";
@@ -13310,8 +13312,9 @@ const dfsModules = {};
       var key = normName(name) + "|" + tm + "|" + pos;
       var rec = bySlot[key] || (bySlot[key] = {
         name: name, pos: pos, team: tm,
-        gid: m ? away + "@" + home : (tm || "?"),
-        opp: tm === away ? home : (tm === home ? away : ""),
+        id: id || undefined,
+        gid: m ? away + "@" + home : (opponent ? [tm, opponent].sort().join("@") : (tm || "?")),
+        opp: tm === away ? home : (tm === home ? away : opponent),
         away: away, home: home,
         kickoff: kickoff, startTime: kickoff,
         sal: 0, dkId: "", cptId: "", cptSal: 0,
@@ -13384,7 +13387,7 @@ const dfsModules = {};
     }
     var iCptOwn = guess(["cpt own", "captain own", "cpt ownership"]);
     var iCptProj = guess(["cpt projection", "captain projection", "cpt proj"]);
-    var iCeil = guess(["ceiling", "ceil", "90th", "p90", "upside"]);
+    var iCeil = guess(["dk ceiling", "ceiling", "ceil", "90th", "p90", "upside"]);
     var iId = guess(["id"]);
 
     if (iName < 0 || iProj < 0) {
@@ -13813,10 +13816,12 @@ function legal(ids,cpt,P,c){
  if(sd)return ids.indexOf(cpt)>=0&&Object.keys(teams).length===2;
  if(Object.keys(games).length<2||Object.keys(games).some(function(g){return games[g]>(c.maxPerGame||99);}))return false;
  if(pos.QB!==1||pos.DST!==1||!(pos.RB>=2&&pos.WR>=3&&pos.TE>=1)||((pos.RB||0)+(pos.WR||0)+(pos.TE||0)!==7))return false;
+ if(c.acoCap!=null && (ids.some(i=>!Number.isFinite(P[i].own)) || ids.reduce((s,i)=>s+P[i].own,0)>c.acoCap+1e-9))return false;
  var q=ids.filter(function(i){return P[i].pos==='QB';})[0],st=c.stack||{};
  if(ids.filter(function(i){return i!==q&&P[i].team===P[q].team&&(st.qbPos||['WR','TE']).indexOf(P[i].pos)>=0;}).length<(st.qbMin||0))return false;
  if(ids.filter(function(i){return P[i].team===P[q].opp&&P[i].pos!=='DST';}).length<(st.bringBack||0))return false;
  var dst=ids.filter(function(i){return P[i].pos==='DST';})[0];
+ if(st.noQbVsDst&&P[q].opp===P[dst].team)return false;
  if(st.noRbVsDst&&ids.some(function(i){return P[i].pos==='RB'&&P[i].opp===P[dst].team;}))return false;
  if(st.noOppDst&&ids.some(function(i){return i!==dst&&P[i].opp===P[dst].team;}))return false;
  return true;
@@ -13994,8 +13999,8 @@ const api={config,defaults,profiles,traits,matches,story,view,select};if(typeof 
    No paid inputs are public. ETag + revision makes every mutation compare-and-swap. */
 const DFS_LIMITS = {players:220, lineups:5000, solveMs:5000, worlds:16000, sample:10000, work:32000000, bytes:2000000};
 const DFS_PLAYER_FIELDS = ['id','name','pos','team','opp','gid','sal','proj','own','cptOwn','flexOwn','cptProj','cptSal','ceil','dkId','cptId','kickoff','lock','excl','maxExp'];
-const DFS_SOLVER_DEFAULT = {count:20,minSalary:0,maxSalary:50000,uniques:1,randomness:0,seed:216,maxPerTeam:5,maxPerGame:9,timeLimitMs:3000,stack:{qbMin:0,qbPos:['WR','TE'],bringBack:0,noRbVsDst:false,noOppDst:false},groups:[]};
-const DFS_SIM_DEFAULT = {sims:1600,fieldSize:5300,entryFee:1,fieldSample:2000,seed:216,fieldMinSalary:48000,fieldStackRate:.6,ownershipFloor:.0025,payout:{kind:'param',paidFrac:.2,alpha:1.15,rake:.15}};
+const DFS_SOLVER_DEFAULT = {count:20,minSalary:0,maxSalary:50000,uniques:1,randomness:0,seed:216,maxPerTeam:5,maxPerGame:9,timeLimitMs:3000,acoCap:null,objective:null,stack:{qbMin:0,qbPos:['WR','TE'],bringBack:0,noRbVsDst:false,noOppDst:false,noQbVsDst:false},groups:[]};
+const DFS_SIM_DEFAULT = {mode:'contest',sims:1600,fieldSize:5300,entryFee:1,fieldSample:2000,seed:216,fieldMinSalary:48000,fieldStackRate:.6,ownershipFloor:.0025,payout:{kind:'param',paidFrac:.2,alpha:1.15,rake:.15}};
 const DFS_LAB_DEFAULT = {minSalary:44000,maxSalary:50000,maxPerTeam:5,ownershipFloor:.0025,count:5000,cloud:1000,maxBand:500,bandPts:3,seed:216,timeLimitMs:3000};
 function dfsAssert(ok,message){if(!ok)throw new Error(message);}
 function dfsObj(v,keys,label){mcpDfsKnown(v,keys,label);return v;}
@@ -14033,15 +14038,21 @@ function dfsSettings(w,section,patch){
  if(section==='solver'){
   for(const [k,lo,hi] of [['count',1,150],['minSalary',0,50000],['maxSalary',100,50000],['uniques',0,w.site==='dk_showdown'?6:9],['seed',1,2147483647],['maxPerTeam',1,9],['maxPerGame',1,9],['timeLimitMs',100,DFS_LIMITS.solveMs]])dfsNum(c[k],lo,hi,k,true);
   dfsAssert(c.minSalary<=c.maxSalary&&c.minSalary%100===0&&c.maxSalary%100===0,'Invalid salary range');dfsNum(c.randomness,0,.6,'randomness');
+  if(w.site==='dk_classic')dfsAssert(c.maxPerTeam<=5,'Classic maxPerTeam cannot exceed 5; default is 4');
+  if(c.acoCap!=null)dfsNum(c.acoCap,0,900,'acoCap');
+  if(c.objective!=null){dfsObj(c.objective,['proj','ceil','own'],'objective');for(const k of ['proj','ceil','own'])dfsNum(c.objective[k],-100,100,'objective.'+k);}
+  if(w.site==='dk_showdown')dfsAssert(c.acoCap==null&&c.objective==null,'ACO/weighted objective requires Classic');
   dfsObj(c.stack,Object.keys(DFS_SOLVER_DEFAULT.stack),'stack');c.stack={...DFS_SOLVER_DEFAULT.stack,...c.stack};
   dfsNum(c.stack.qbMin,0,3,'qbMin',true);dfsNum(c.stack.bringBack,0,3,'bringBack',true);
   dfsAssert(Array.isArray(c.stack.qbPos)&&c.stack.qbPos.length&&c.stack.qbPos.every(x=>['RB','WR','TE'].includes(x)),'Invalid qbPos');
-  for(const k of ['noRbVsDst','noOppDst'])dfsAssert(typeof c.stack[k]==='boolean',k+' must be boolean');
+  for(const k of ['noRbVsDst','noOppDst','noQbVsDst'])dfsAssert(typeof c.stack[k]==='boolean',k+' must be boolean');
   dfsAssert(Array.isArray(c.groups)&&c.groups.length<=20,'At most 20 player groups');
   for(const g of c.groups){dfsObj(g,['mode','n','ids'],'group');dfsAssert(['atMost','atLeast','exactly'].includes(g.mode),'Invalid group mode');dfsNum(g.n,0,9,'group n',true);dfsAssert(Array.isArray(g.ids)&&g.ids.length<=220&&new Set(g.ids).size===g.ids.length&&g.ids.every(id=>w.players.some(p=>p.id===id)),'Group IDs must be unique player IDs');}
   if(w.site==='dk_showdown')dfsAssert(!c.groups.length&&!c.stack.qbMin&&!c.stack.bringBack&&!c.stack.noRbVsDst&&!c.stack.noOppDst,'Showdown solver does not implement Classic stacks/groups');
  }else if(section==='simulation'){
-  for(const [k,lo,hi] of [['sims',200,DFS_LIMITS.worlds],['fieldSize',2,1000000],['fieldSample',1,DFS_LIMITS.sample],['seed',1,2147483647],['fieldMinSalary',0,50000]])dfsNum(c[k],lo,hi,k,true);
+  dfsAssert(['contest','score_tail'].includes(c.mode),'Invalid simulation mode');
+  dfsAssert(c.mode!=='score_tail'||w.site==='dk_classic','Score tails require Classic');
+  for(const [k,lo,hi] of [['sims',200,c.mode==='score_tail'?30000:DFS_LIMITS.worlds],['fieldSize',2,1000000],['fieldSample',1,DFS_LIMITS.sample],['seed',1,2147483647],['fieldMinSalary',0,50000]])dfsNum(c[k],lo,hi,k,true);
   dfsNum(c.entryFee,.01,100000,'entryFee');dfsNum(c.fieldStackRate,0,1,'fieldStackRate');dfsNum(c.ownershipFloor,.00001,.1,'ownershipFloor');
   dfsObj(c.payout,['kind','paidFrac','alpha','rake','rows'],'payout');dfsAssert(['param','flat','table'].includes(c.payout.kind),'Invalid payout kind');
   if(c.payout.kind==='table'){dfsAssert(Array.isArray(c.payout.rows)&&c.payout.rows.length>0&&c.payout.rows.length<=1000,'Supply 1–1000 payout tiers');for(const r of c.payout.rows)dfsObj(r,['from','to','prize'],'payout row');}
@@ -14090,7 +14101,7 @@ async function dfsRun(op,a,env,caller){
  if(op==='list'){const r=await fbGet(env,'/users/'+dfsUid(caller)+'/dfsWorkspaces');return {workspaces:Object.values(r.data||{}).map(w=>({workspace_id:w.id,site:w.site,source:w.source,as_of:w.as_of,revision:w.revision,players:(w.players||[]).length,lineups:(w.lineups||[]).length,updated_at:w.updated_at}))};}
  if(op==='create'){
   const path=dfsPath(caller,a.workspace_id),r={...await fbGet(env,path,true),path};dfsAssert(!r.data,'Workspace already exists');dfsAssert(['dk_classic','dk_showdown'].includes(a.site),'Choose dk_classic or dk_showdown');
-  const w={id:a.workspace_id,site:a.site,source:mcpDfsString(a.source,'source',200),as_of:dfsDate(a.as_of),players:[],lineups:[],settings:dfsClone({solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT}),revision:0};return dfsCommit(env,r,w,0);
+  const w={id:a.workspace_id,site:a.site,source:mcpDfsString(a.source,'source',200),as_of:dfsDate(a.as_of),players:[],lineups:[],settings:dfsClone({solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT}),revision:0};if(a.site==='dk_classic')Object.assign(w.settings.solver,{minSalary:48500,uniques:3,maxPerTeam:4,objective:{proj:.3,ceil:.7,own:-.05},stack:{qbMin:2,qbPos:['WR','TE'],bringBack:1,noRbVsDst:true,noOppDst:false,noQbVsDst:true}});return dfsCommit(env,r,w,0);
  }
  const r=await dfsLoad(env,caller,a.workspace_id),w=dfsClone(r.data);w.lineups=w.lineups||[];w.players=w.players||[];w.settings={solver:{...dfsClone(DFS_SOLVER_DEFAULT),...w.settings.solver},simulation:{...dfsClone(DFS_SIM_DEFAULT),...w.settings.simulation},lab:{...dfsClone(DFS_LAB_DEFAULT),...w.settings.lab}};
  if(op==='get'){const offset=a.offset??0,limit=a.limit??100;dfsNum(offset,0,5000,'offset',true);dfsNum(limit,1,500,'limit',true);if(a.include_results!=null)dfsAssert(typeof a.include_results==='boolean','include_results must be boolean');const {lineups,simulation,...rest}=w;return {...rest,lineups:lineups.slice(offset,offset+limit),total_lineups:lineups.length,simulation:a.include_results?simulation||null:undefined,audit:dfsAudit(w)};}
@@ -14128,9 +14139,10 @@ async function dfsRun(op,a,env,caller){
  }else if(op==='simulate'||op==='compare'){
   dfsAssert(w.lineups.length,'Generate lineups first');const indices=dfsIndices(a.indices,w.lineups.length),ls=indices.map(i=>w.lineups[i]);const {players}=dfsEngineInput(w),c={...w.settings.simulation,site:w.site};
   dfsAssert(ls.length<=200,'Simulate at most 200 candidates per run; pass indices');
-  dfsAssert(c.sims*(Math.min(c.fieldSample,c.fieldSize-1)+ls.length)<=DFS_LIMITS.work,'Compute budget exceeded; reduce worlds, opponent sample or candidate count');
+  dfsAssert(c.sims*(c.mode==='score_tail'?players.length+ls.length:Math.min(c.fieldSample,c.fieldSize-1)+ls.length)<=DFS_LIMITS.work,'Compute budget exceeded; reduce worlds, opponent sample or candidate count');
   let profiles=null;
   if(op==='compare'){
+   dfsAssert(c.mode!=='score_tail','Score tails do not estimate contest placement; use contest mode for compare');
    dfsAssert(['any','pass','back','run'].includes(a.script||'any'),'Invalid game plan');
    dfsObj(a.profiles||{},['cash','three','five','milly'],'profiles');
    for(const v of Object.values(a.profiles||{})){dfsObj(v,['fieldSize','paidPlaces'],'profile');dfsNum(v.fieldSize,2,1000000,'fieldSize',true);dfsNum(v.paidPlaces,1,v.fieldSize,'paidPlaces',true);}
@@ -14141,7 +14153,7 @@ async function dfsRun(op,a,env,caller){
   if(w.site==='dk_showdown')dfsAssert(active.every(p=>Number.isFinite(p.cptOwn)&&p.cptOwn<=p.own&&(p.cptProj==null||Math.abs(p.cptProj-1.5*p.proj)<=.15)),'Supply valid captain ownership and reconcile captain projections');
   const dupePriors=ls.map(l=>dfsModules.DDFSDupe.expectedDupes(l,w.players,{entries:c.fieldSize,showdown:w.site==='dk_showdown'}));
   const simulationLineups=ls.map((l,i)=>({...l,eDupes:Math.max(0,dupePriors[i]?.eDupes||0)}));
-  const started=Date.now();w.simulation=dfsClone(mcpDdfsRoot.DDFS.simulate(players,simulationLineups,c));w.simulation.dupe_prior=true;w.simulation.workspace_indices=indices;w.simulation.input_revision=a.expected_revision;w.simulation.elapsed_ms=Date.now()-started;result={simulation:w.simulation};
+  const started=Date.now();w.simulation=dfsClone(c.mode==='score_tail'?mcpDdfsRoot.DDFS.simulateTail(players,ls,c):mcpDdfsRoot.DDFS.simulate(players,simulationLineups,c));w.simulation.dupe_prior=true;w.simulation.workspace_indices=indices;w.simulation.input_revision=a.expected_revision;w.simulation.elapsed_ms=Date.now()-started;result={simulation:w.simulation};
   if(profiles){const m=w.simulation.meta;const gate=Number.isFinite(m.fieldOwnershipError)&&m.fieldOwnershipError<=5&&!m.correlationFailed&&!m.captainProjectionMismatch;
    result.comparison={model_gate_pass:gate,selections:gate?dfsModules.DDLabContests.select(w.simulation,ls,players,a.script||'any',profiles).map(r=>({...r,workspace_index:r.i==null?null:indices[r.i]})):[],note:'Model candidates selected on training worlds and reported on held-out worlds. Uncalibrated estimates, not proven returns.'};w.comparison=result.comparison;
   }
@@ -14340,6 +14352,12 @@ function maxPlusConv(A, C, B) {
 }
 
 function solveClassic(players, cfg, site, onProgress) {
+  if (cfg.acoCap != null && (!Number.isFinite(cfg.acoCap) || cfg.acoCap < 0)) throw new Error("ACO cap must be a nonnegative number or blank.");
+  if (cfg.objective && !['proj','ceil','own'].every(k => Number.isFinite(cfg.objective[k]))) throw new Error("Supply all three objective weights.");
+  for (const p of players.filter(p => !p.excl && p.proj > 0)) {
+    if ((cfg.objective || cfg.acoCap != null) && (!Number.isFinite(p.own) || p.own < 0 || p.own > 100)) throw new Error("Missing or invalid ownership: " + p.name);
+    if (cfg.objective && !(Number.isFinite(p.ceil) && p.ceil > 0)) throw new Error("Missing ceiling: " + p.name);
+  }
   const N = players.length;
   const count = Math.max(1, cfg.count | 0);
   const cap = Math.min(cfg.maxSalary || site.cap, site.cap);
@@ -14367,7 +14385,8 @@ function solveClassic(players, cfg, site, onProgress) {
     // pool into a portfolio instead of N near-copies of one opinion.
     const proj = new Float64Array(N);
     for (let i = 0; i < N; i++) {
-      const base = players[i].proj || 0;
+      const p = players[i], w = cfg.objective;
+      const base = w ? w.proj * p.proj + w.ceil * p.ceil + w.own * p.own : (p.proj || 0);
       proj[i] = noise > 0 ? Math.max(0, base * (1 + noise * gauss(rand))) : base;
     }
     const pool = activePool(players, cfg, expCount, n);
@@ -14402,7 +14421,7 @@ function bestClassic(players, proj, pool, cfg, site, cap, floor,
   }
   for (const p of POS) byPos[p].sort((a, b) => proj[b] - proj[a]);
 
-  let best = null, bestVal = -1;
+  let best = null, bestVal = -Infinity;
   const nAcc = acceptedSets.length;
   const overlap = new Int32Array(nAcc);
   let nodes = 0;
@@ -14499,8 +14518,9 @@ function bestClassic(players, proj, pool, cfg, site, cap, floor,
     const qbMin = stack.qbMin || 0, bringMin = stack.bringBack || 0;
     let hasRb = 0, hasDstOpp = null;
 
-    function rec(gi, si, from, curProj, curSal) {
+    function rec(gi, si, from, curProj, curSal, curOwn) {
       if (aborted) return;
+      if (cfg.acoCap != null && curOwn > cfg.acoCap + 1e-9) return;
       if ((++nodes & 1023) === 0 && Date.now() > deadline) { aborted = true; return; }
       if (gi === G) {
         if (curSal < floor) return;
@@ -14544,10 +14564,14 @@ function bestClassic(players, proj, pool, cfg, site, cap, floor,
         if (curSal + sal + MINS[gi][j + 1][left - 1] + sufMinAll[gi + 1] > cap) continue;
 
         const isDst = p.pos === "DST";
-        const tc = (teamCt[p.team] || 0) + (isDst ? 0 : 1);
+        const tc = (teamCt[p.team] || 0) + 1;
         if (cfg.maxPerTeam && tc > cfg.maxPerTeam) continue;
         const gc = (gameCt[p.gid] || 0) + 1;
         if (cfg.maxPerGame && gc > cfg.maxPerGame) continue;
+        if (stack.noQbVsDst) {
+          if (isDst && picked.some(x => players[x].pos === "QB" && players[x].team === p.opp)) continue;
+          if (p.pos === "QB" && hasDstOpp === p.team) continue;
+        }
         if (stack.noRbVsDst) {
           if (isDst && hasRb && picked.some(x => players[x].pos === "RB" && players[x].team === p.opp)) continue;
           if (p.pos === "RB" && hasDstOpp === p.team) continue;
@@ -14584,11 +14608,11 @@ function bestClassic(players, proj, pool, cfg, site, cap, floor,
         if (p.pos === "RB") hasRb++;
         const prevDstOpp = hasDstOpp; if (isDst) hasDstOpp = p.opp;
 
-        if (si + 1 < k) rec(gi, si + 1, j + 1, curProj + proj[id], curSal + sal);
-        else rec(gi + 1, 0, 0, curProj + proj[id], curSal + sal);
+        if (si + 1 < k) rec(gi, si + 1, j + 1, curProj + proj[id], curSal + sal, curOwn + (p.own || 0));
+        else rec(gi + 1, 0, 0, curProj + proj[id], curSal + sal, curOwn + (p.own || 0));
 
         picked.pop();
-        teamCt[p.team] = tc - (isDst ? 0 : 1); gameCt[p.gid] = gc - 1;
+        teamCt[p.team] = tc - 1; gameCt[p.gid] = gc - 1;
         if (p.pos === "RB") hasRb--;
         hasDstOpp = prevDstOpp;
         if (dQb) { qbTeam = null; qbOpp = null; }
@@ -14596,7 +14620,7 @@ function bestClassic(players, proj, pool, cfg, site, cap, floor,
         for (let z = 0; z < inL.length; z++) overlap[inL[z]]--;
       }
     }
-    rec(0, 0, 0, 0, 0);
+    rec(0, 0, 0, 0, 0, 0);
     if (aborted) break;
   }
   if (best) { best.nodes = nodes; best.aborted = aborted; }
@@ -14725,7 +14749,52 @@ function bestShowdown(players, proj, pool, cfg, site, cap, floor,
 
 /* ------------------------------------------------------------------ export */
 
-root.DDFS = { SITES, POS, solveLineups, rng, gauss };
+// Week 2 score model. Loadings are hypotheses, not empirical DFS Bible findings.
+function tailLoadings(pos) {
+  return pos === 'DST' ? [-.35,-.20] : pos === 'RB' ? [.30,.25] : [.35,.45];
+}
+function simulateTail(players, lineups, cfg = {}) {
+  if (cfg.site && cfg.site !== 'dk_classic') throw new Error('Score-tail model requires DK Classic.');
+  const worlds = cfg.sims ?? 30000, seed = cfg.seed ?? 216;
+  if (!Number.isInteger(worlds) || worlds < 200 || worlds > 30000) throw new Error('Use 200–30000 score worlds.');
+  if (!lineups.length || lineups.length > 200) throw new Error('Simulate 1–200 lineups.');
+  const used = [...new Set(lineups.flatMap(l => l.ids))].sort((a,b)=>a-b);
+  for (const l of lineups) if (l.ids.length !== 9 || new Set(l.ids).size !== 9) throw new Error('Expected nine distinct Classic players.');
+  for (const i of used) {
+    const p = players[i];
+    if (!p || !(p.proj > 0) || !Number.isFinite(p.proj) || !(p.ceil > 0) || !Number.isFinite(p.ceil) || !Number.isFinite(p.own) || p.own < 0 || p.own > 100 || !p.gid || !p.team || !p.opp) throw new Error('Supply projection, ceiling, ownership and game for every selected player.');
+  }
+  const rand = rng(seed), games = [...new Set(used.map(i=>players[i].gid))].sort();
+  const teams = [...new Set(used.flatMap(i=>[players[i].team,players[i].opp]))].sort();
+  const scores = lineups.map(()=>new Float64Array(worlds)), values = new Float64Array(players.length);
+  const pars = used.map(i => { const p=players[i], [g,t]=tailLoadings(p.pos), sigma=Math.max(.25,Math.log(p.ceil/p.proj)/1.28); return {i,g,t,sigma,mu:Math.log(p.proj)-sigma*sigma/2,res:Math.sqrt(1-g*g-t*t)}; });
+  for (let n=0;n<worlds;n++) {
+    const G={},T={};for(const g of games) G[g]=gauss(rand);for(const t of teams) T[t]=gauss(rand);
+    for(const a of pars) { const p=players[a.i];const z=a.g*G[p.gid]+a.t*T[p.pos==='DST'?p.opp:p.team]+a.res*gauss(rand); values[a.i]=Math.exp(a.mu+a.sigma*z); }
+    lineups.forEach((l,j)=>{scores[j][n]=l.ids.reduce((v,i)=>v+values[i],0);});
+  }
+  const q=(a,p)=>{const k=(a.length-1)*p,i=Math.floor(k);return a[i]+(a[Math.ceil(k)]-a[i])*(k-i);};
+  const perLineup=scores.map((a,j)=>{let hits230=0,hits250=0;for(const v of a){if(v>=230)hits230++;if(v>=250)hits250++;}a.sort();const ps=lineups[j].ids.map(i=>players[i]);const zero=ps.some(p=>p.own===0);return {median:q(a,.5),p90:q(a,.9),p99:q(a,.99),p999:q(a,.999),p230:hits230/worlds,p250:hits250/worlds,hits230,hits250,aco:ps.reduce((v,p)=>v+p.own,0),logOwn:zero?null:ps.reduce((v,p)=>v+Math.log(p.own),0),zeroOwnership:zero};});
+  return {mode:'score_tail',perLineup,meta:{sims:worlds,seed,meanConvention:'proj is arithmetic mean; mu = ln(proj) - sigma²/2',qbLoadings:[.35,.45],ownershipUnits:'percent, 0–100; logOwn is sum ln(percent); null represents negative infinity at zero',note:'Uncalibrated score simulation, not win probability or payout EV. QB loadings are an explicit assumption. Rare tails have Monte Carlo uncertainty.'}};
+}
+function classicExport(players,lineups) {
+  if (!lineups.length) throw new Error('No lineups to export.');
+  const rows=['QB,RB,RB,WR,WR,WR,TE,FLEX,DST'];
+  for(const l of lineups) {
+    if(l.ids.length!==9 || new Set(l.ids).size!==9)throw new Error('Invalid Classic lineup.');
+    const rest=l.ids.slice(),cells=[];
+    for(const slot of ['QB','RB','RB','WR','WR','WR','TE','FLEX','DST']) {
+      const j=rest.findIndex(i=>players[i] && (slot==='FLEX'?['RB','WR','TE'].includes(players[i].pos):players[i].pos===slot));
+      if(j<0)throw new Error('Missing '+slot+' slot.');
+      const p=players[rest.splice(j,1)[0]],id=String(p.dkId ?? '');
+      if(!/^\d+$/.test(id))throw new Error('Missing official numeric DK ID: '+p.name);
+      cells.push(id);
+    }
+    rows.push(cells.join(','));
+  }
+  return rows.join('\r\n')+'\r\n';
+}
+root.DDFS = { SITES, POS, solveLineups, rng, gauss, simulateTail, tailLoadings, classicExport };
 /* ===== DD-FRONTIER START — generated from work/patch-dfs-frontier.py ===== */
 /* ============================================================================
    PROJECTION vs RARITY — the exact convex frontier
