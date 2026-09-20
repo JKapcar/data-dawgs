@@ -1,6 +1,6 @@
 {
  "as_of": "2026-09-20",
- "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit f1cbe565261a1bb0c6553a8811643de0663a6443.",
+ "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 0a90aa1cb335621e182a00aef89ef2e6ffe1c01a.",
  "tier": "labs",
  "graded": false,
  "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts.",
@@ -10,13 +10,13 @@
   "loader_license": "MIT",
   "source_repository": "nflverse/nfldata",
   "source_url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-  "source_commit": "f1cbe565261a1bb0c6553a8811643de0663a6443",
-  "source_committed_at": "2026-09-20T22:22:22Z",
+  "source_commit": "0a90aa1cb335621e182a00aef89ef2e6ffe1c01a",
+  "source_committed_at": "2026-09-20T23:04:20Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-09-20T22:29:08.290776Z"
+  "captured_at": "2026-09-20T23:06:16.637819Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:57e65737f6e0a4666d9d6d0eb43d7947ec9e45f5fc839a4d63b298954215060a",
+  "snapshot_id": "sha256:f6a70199b75124a6c51cf382d819960320d29c6f8afb5df043fb9698a8326873",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -462,9 +462,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 6,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 13,
+    "home_score": 20
    },
    {
     "game_id": "2026_02_LV_LAC",
