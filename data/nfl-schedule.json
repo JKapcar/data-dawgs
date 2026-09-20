@@ -1,6 +1,6 @@
 {
  "as_of": "2026-09-20",
- "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 0a90aa1cb335621e182a00aef89ef2e6ffe1c01a.",
+ "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 7330112168c74845c7b293f7efd872a4ea6d55b1.",
  "tier": "labs",
  "graded": false,
  "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts.",
@@ -10,13 +10,13 @@
   "loader_license": "MIT",
   "source_repository": "nflverse/nfldata",
   "source_url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-  "source_commit": "0a90aa1cb335621e182a00aef89ef2e6ffe1c01a",
-  "source_committed_at": "2026-09-20T23:04:20Z",
+  "source_commit": "7330112168c74845c7b293f7efd872a4ea6d55b1",
+  "source_committed_at": "2026-09-20T23:17:19Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-09-20T23:06:16.637819Z"
+  "captured_at": "2026-09-20T23:22:26.405837Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:f6a70199b75124a6c51cf382d819960320d29c6f8afb5df043fb9698a8326873",
+  "snapshot_id": "sha256:3efe2c6de4cca02faa92b1171871145440401f9fa18a9aaac6a60a4c359df8ae",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -479,9 +479,9 @@
     "divisional": true,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 26,
+    "home_score": 14
    },
    {
     "game_id": "2026_02_MIA_SF",
@@ -496,9 +496,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 10,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 13,
+    "home_score": 35
    },
    {
     "game_id": "2026_02_SEA_ARI",
