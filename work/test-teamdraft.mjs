@@ -407,7 +407,7 @@ const clearSel = p => p.evaluate(() => {
     gameRows: document.querySelectorAll("#tdGameTable tbody tr").length,
     bases: [...new Set([...document.querySelectorAll("#tdGameTable .td-tierchip")].map(e => e.textContent.trim()))],
   }));
-  const topTeam = Object.keys(D.teams).sort((a, x) => D.teams[x].ew - D.teams[a].ew)[0];
+  const topTeam = Object.keys(D.teams).sort((a, x) => D.teams[x].projected - D.teams[a].projected)[0];
   ok("clicking a ladder bar opens the Team sheet", jumped.sheet === "team", jumped.sheet);
   ok("the Team sheet lands on the team that was clicked",
     jumped.hero === D.teams[topTeam].name, jumped.hero);

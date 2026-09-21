@@ -2851,9 +2851,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     the only criterion. Every number below is read from
     <a href="/data/draft-2026.json"><code>/data/draft-2026.json</code></a>.</p>
   </header>
-  <div class="p-disclosure" id="tdDisclosure">Expected wins are the draft-day market snapshot
-  (devigged, normalized to 272) — frozen for the board. Live projections and the Team-sheet win
-  curves update as games bank. Nothing here is graded.</div>
+  <div class="p-disclosure" id="tdDisclosure">Loading current expected wins — banked wins plus the remaining-game projection.</div>
 
   <div class="td-sticky">
     <div id="sheets"></div>
@@ -2930,9 +2928,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     </section>
 
     <section class="p-section" id="ladder">
-      <header><div><h2>Expected wins, all 32</h2><p class="dek">Bars are devigged expected wins,
-        anchored at zero. The vertical tick on each bar is the <b>posted line</b> — the gap between
-        tick and bar end is the vig coming out, which is why none of these land on a round number.
+      <header><div><h2>Expected wins, all 32</h2><p class="dek">Bars show <b>current expected wins</b>: banked wins plus expected wins from remaining games,
+        anchored at zero. The vertical tick is the <b>draft-day posted line</b> for comparison.
         The rule at 8.5 is par per team. Colour is the owner and the owner is also written out;
         undrafted teams are hatched.</p></div>
         <div class="p-meta" id="ladderMeta" aria-live="polite"></div></header>
@@ -2970,8 +2967,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     </section>
 
     <section class="p-section" id="rosters">
-      <header><div><h2>The eight rosters</h2><p class="dek">Sorted by expected wins, which is a market
-        snapshot and not a standing. &ldquo;Internal&rdquo; is games the roster plays against
+      <header><div><h2>The eight rosters</h2><p class="dek">Sorted by current expected wins: banked wins plus the remaining-game projection. &ldquo;Internal&rdquo; is games the roster plays against
         itself — the wins that cannot help. Every card is a button.</p></div>
         <div class="p-meta" id="standMeta" aria-live="polite"></div></header>
       <div class="td-cards" id="tdCards"></div>
@@ -2992,16 +2988,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
     <section class="p-section" id="curve">
       <header><div><h2>How a season lands</h2><p class="dek">Probability mass over final win counts,
-        0 through 17, straight from the payload. Season standard deviations sit within a few tenths of
-        2.7 across the whole league, so no team here is meaningfully more of a lottery ticket than
-        another — they are the same shape slid left and right.</p></div>
+        0 through 17, from the current simulation. Settled results are banked; uncertainty comes
+        from the games still to play.</p></div>
         <div class="p-meta" id="curveMeta" aria-live="polite"></div></header>
       <div class="td-plot" id="tdCurves"></div>
       <div class="td-q" id="tdQuant"></div>
-      <p class="td-note">These curves are the <em>shape</em> of a season, not a second estimate of its
-      total — their means run a little above expected wins for the worst teams and a little below for
-      the best, up to 0.36 wins, which is what truncating at 0 and 17 does to a distribution built
-      around a mean near the edge.</p>
+      <p class="td-note">In-season curves use the same remaining-game probabilities as expected wins. Their means
+      may differ slightly because the curves are estimated by simulation.</p>
     </section>
 
     <section class="p-section" id="gametable">
@@ -3026,7 +3019,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
     <section class="p-section" id="perteam">
       <header><div><h2>Every team, every figure</h2><p class="dek">The table view of the same numbers
-        the charts draw. <b>Line</b> is what was posted, <b>EW</b> is the devigged expectation,
+        the charts draw. <b>Line</b> is what was posted, <b>EW</b> is the historical draft-day devigged expectation,
         <b>&Delta;vig</b> is the difference. <b>&Sigma;p</b> sums the 17 game probabilities.
         <b>&mu;dist</b> is the mean of the win distribution.</p></div>
         <div class="p-meta" id="ptMeta"></div></header>
@@ -3049,11 +3042,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <div class="machine-box"><ul>
         <li><b>Posted line</b> — the median regular-season win total on the board. Half-points are the
           book's, not a rounding convenience.</li>
-        <li><b>Expected wins</b> — the four-book prices devigged and renormalized so all 32 sum to 272.
-          This is <b>not</b> the posted line, and calling it one would be wrong in the direction that
-          flatters it: the line carries the hold and this does not. It is frozen at the draft-day
-          devig and is never recomputed, because the board's reach and value are claims about that
-          day.</li>
+        <li><b>Expected wins</b> — banked wins plus the sum of remaining-game win probabilities.
+          These current projections update with the data feed. Draft-day expected wins remain
+          available on the historical draft board and in Diagnostics, labelled separately.</li>
         <li><b>Where each game's number comes from</b> — resolved per game, in order: a
           <b>settled</b> result if it has been played; a <b>market</b> price if one exists for an
           unplayed game; the <b>model</b> beyond the market's horizon; and, before the season starts,
@@ -3408,14 +3399,11 @@ window.DDSheets = function(cfg){
     const disc = $("tdDisclosure"), dek = $("tdTrackDek");
     if(disc){
       const n = D.basis?.settled_games || 0, tot = D.basis?.total_games || 272;
-      disc.innerHTML = n > 0
-        ? `<b>${n} of ${tot} games are settled and banked.</b> Expected wins stay the draft-day
-           market snapshot (devigged, normalized to 272) — frozen for the board. Live projections
-           and the Team-sheet win curves update off the same Monte Carlo as the tracker. Nothing
-           here is graded.`
-        : `<b>No game has been played.</b> Expected wins are the draft-day market snapshot
-           (devigged, normalized to 272) — a market snapshot, not a forecast this site has graded.
-           Nothing here says who is winning.`;
+      disc.innerHTML = `<b>${n} of ${tot} games are settled and banked.</b>
+        Expected wins update with banked results and the latest remaining-game probabilities.
+        Projections refresh with the daily data feed; this page checks for updates every minute.
+        Draft-day values are retained only for historical comparisons. Nothing here is graded.
+        <br><small>Data updated: ${esc(DATED.built || DATED.as_of)} · <span id="tdRefreshState">Checking automatically</span></small>`;
     }
     if(dek){
       const n = D.basis?.settled_games || 0;
@@ -3448,20 +3436,20 @@ window.DDSheets = function(cfg){
 
   /* ====================== 2 · roster cards ============================== */
   function cards(){
-    const names = [...D.draft_order].sort((a,b)=>D.drafters[b].ew - D.drafters[a].ew);
+    const names = [...D.draft_order].sort((a,b)=>D.drafters[b].projected - D.drafters[a].projected);
     $("tdCards").innerHTML = names.map(name=>{
       const v = D.drafters[name];
       const sd = v.sd_sim!=null ? v.sd_sim : v.sd_model;
       const open = Array.from({length:v.picks_remaining},
         ()=>`<span class="td-tteam open">open</span>`).join("");
       const roster = v.roster.map(t=>
-        `<span class="td-tteam">${esc(t)} <s>${n2(D.teams[t].ew)}</s></span>`).join("") + open;
+        `<span class="td-tteam">${esc(t)} <s>${n2(D.teams[t].projected)}</s></span>`).join("") + open;
       const on = sel.d.has(name) || selOwners().has(name);
       return `<button type="button" class="td-card ${oc(name)}" data-sel="drafter:${esc(name)}"
           aria-pressed="${on}">
         <h3>${esc(name)}<em>slot ${v.slot}</em></h3>
-        <div class="td-big"><b>${n2(v.ew)}</b><span>expected wins</span>
-          <span class="td-delta ${v.par_delta>=0?"up":"dn"}">${sgn(v.par_delta)} vs par</span></div>
+        <div class="td-big"><b>${n2(v.projected)}</b><span>expected wins</span>
+          <span class="td-delta ${(v.projected-D.par)>=0?"up":"dn"}">${sgn((v.projected-D.par))} vs par</span></div>
         <div class="td-roster">${roster}</div>
         <div class="td-mini"><span>internal <b>${v.internal_games}</b></span>
           <span>SD <b>${n2(sd)}</b>${v.sd_sim==null?" <b>derived</b>":""}</span>
@@ -3593,7 +3581,7 @@ window.DDSheets = function(cfg){
      means a roster is likelier to place than to win. */
   function ratio(){
     const ref = REF();
-    const rows = NAMES.map(n=>({n, ...ref[n], ew:D.drafters[n].ew}))
+    const rows = NAMES.map(n=>({n, ...ref[n], ew:D.drafters[n].projected}))
       .sort((a,b)=>(b.p_first||0)-(a.p_first||0));
     const top = Math.max(...rows.map(r=>r.p_first||0), 0.0001);
     $("tdRatio").innerHTML =
@@ -3765,8 +3753,8 @@ window.DDSheets = function(cfg){
 
   /* ====================== 5 · the ladder ================================ */
   function ladder(){
-    const rows = Object.keys(D.teams).sort((a,b)=>D.teams[b].ew - D.teams[a].ew);
-    const top  = Math.max(...rows.map(t=>Math.max(D.teams[t].ew, D.teams[t].line)));
+    const rows = Object.keys(D.teams).sort((a,b)=>D.teams[b].projected - D.teams[a].projected);
+    const top  = Math.max(...rows.map(t=>Math.max(D.teams[t].projected, D.teams[t].line)));
     const MAX  = Math.ceil(top) + 1;
     const x    = v => (v / MAX * 100).toFixed(2) + "%";
     const on   = new Set(selTeams());
@@ -3778,18 +3766,18 @@ window.DDSheets = function(cfg){
     $("tdLadder").innerHTML = rows.map((t,i)=>{
       const T = D.teams[t], own = ownerOf(t);
       const cls = [oc(own), on.has(t)?"on":"", own?"":"und"].filter(Boolean).join(" ");
-      const txt = `<b>${esc(T.name)}</b><br>expected wins ${n2(T.ew)} · posted line ${n2(T.line)}`
+      const txt = `<b>${esc(T.name)}</b><br>expected wins ${n2(T.projected)} · draft-day line ${n2(T.line)}`
         + `<br>${own?`drafted by ${esc(own)}`:"still on the board"}`;
       return `<button type="button" class="td-row ${cls}" data-sel="team:${esc(t)}" data-jump
           data-tip="${txt.replace(/"/g,"&quot;")}"
-          aria-label="${esc(T.name)}, ${n2(T.ew)} expected wins, ${own?"drafted by "+esc(own):"undrafted"}">
+          aria-label="${esc(T.name)}, ${n2(T.projected)} expected wins, ${own?"drafted by "+esc(own):"undrafted"}">
         <span class="td-rank">${i+1}</span>
         <span class="td-abbr">${esc(t)}</span>
         <span class="td-track">
-          <span class="td-lbar" style="width:${x(T.ew)}"></span>
+          <span class="td-lbar" style="width:${x(T.projected)}"></span>
           <span class="td-tick" style="left:${x(T.line)}"></span>
         </span>
-        <span class="td-ew">${n2(T.ew)}</span>
+        <span class="td-ew">${n2(T.projected)}</span>
         <span class="td-own">${own?esc(own):"—"}</span>
       </button>`;
     }).join("");
@@ -3929,31 +3917,31 @@ window.DDSheets = function(cfg){
       const t0 = [...sel.t][0], T = D.teams[t0];
       $("tdHero").innerHTML = `<h2>${esc(T.name)}</h2>
         <p class="sub">${esc(T.division)} · ${own?`drafted by ${esc(own)}`:"still on the board"}</p>
-        <div class="td-hstats">${stat(n2(T.ew),"expected wins")}${stat(n2(T.line),"posted line")}
-          ${stat(sgn(T.ew-T.line),"vig")}${stat(n2(T.sd),"season SD")}
-          ${stat(`${T.p10}–${T.p90}`,"p10 to p90")}${stat(n2(T.projected),"projected")}</div>`;
+        <div class="td-hstats">${stat(n2(T.projected),"expected wins")}${stat(n2(T.line),"draft-day line")}
+          ${stat(sgn(T.projected-T.line),"vs draft-day line")}${stat(n2(T.sd),"season SD")}
+          ${stat(`${T.p10}–${T.p90}`,"p10 to p90")}${stat(n2(T.ew),"draft-day expected wins")}</div>`;
     } else if(sel.d.size === 1 && sel.t.size === 0){
       const name = [...sel.d][0], v = D.drafters[name];
       $("tdHero").innerHTML = `<h2>${esc(name)}</h2>
         <p class="sub">${v.roster.map(esc).join(" · ") || "no picks yet"}${
           v.picks_remaining?` · ${v.picks_remaining} pick${v.picks_remaining>1?"s":""} left`:""}</p>
-        <div class="td-hstats">${stat(n2(v.ew),"expected wins")}${stat(sgn(v.par_delta),"vs par")}
+        <div class="td-hstats">${stat(n2(v.projected),"expected wins")}${stat(sgn((v.projected-D.par)),"vs par")}
           ${stat(v.internal_games,"internal games")}
           ${stat(n2(v.sd_sim!=null?v.sd_sim:v.sd_model),"roster SD")}
-          ${stat(n1(v.banked),"banked")}${stat(n2(v.projected),"projected")}</div>`;
+          ${stat(n1(v.banked),"banked")}${stat(n2(v.ew),"draft-day expected wins")}</div>`;
     } else {
       /* A comparison. The combined expected wins is a real number but a meaningless
          one — these rosters are not a team — so it is labelled as a sum and nothing
          is said about who is ahead. */
       const list = selTeams();
-      const ew = list.reduce((a,t)=>a+D.teams[t].ew, 0);
+      const ew = list.reduce((a,t)=>a+D.teams[t].projected, 0);
       const names = [...sel.d];
       const covered = new Set(names.flatMap(teamsOf));
       const loose = [...sel.t].filter(t=>!covered.has(t));
       const title = [...names, ...loose];
       $("tdHero").innerHTML = `<h2>${(title.length ? title : list).map(esc).join(" vs ")}</h2>
         <p class="sub">${list.length} teams overlaid${names.length
-          ? ` · ${names.map(n=>`${esc(n)} ${D.teams ? n2(D.drafters[n].ew) : ""}`).join(" · ")}` : ""}</p>
+          ? ` · ${names.map(n=>`${esc(n)} ${D.teams ? n2(D.drafters[n].projected) : ""}`).join(" · ")}` : ""}</p>
         <div class="td-hstats">${stat(list.length,"teams in view")}
           ${stat(names.length || "—","drafters")}
           ${stat(n2(ew),"expected wins, summed")}</div>`;
@@ -4143,10 +4131,39 @@ window.DDSheets = function(cfg){
   });
   $("tdScreenshotClose").addEventListener("click", ()=>$("tdScreenshotDialog").close());
 
+  let refreshing = false;
+  async function refreshData(){
+    if(refreshing || document.hidden || spinning || mcRun) return;
+    refreshing = true;
+    try{
+      const r = await fetch("/data/draft-2026.json", {cache:"no-store"});
+      if(!r.ok) throw new Error("HTTP " + r.status);
+      const env = await r.json();
+      if(!env?.data?.teams || !env.data.drafters || !env.data.basis ||
+         !Object.values(env.data.teams).every(t=>Number.isFinite(t.projected)))
+        throw new Error("Incomplete projections");
+      if(env.built !== DATED.built || JSON.stringify(env.data) !== JSON.stringify(D)){
+        D = env.data;
+        DATED = {as_of:env.as_of, source:env.source, built:env.built};
+        LAST_MC = null;
+        spins = 0; tieSpins = 0; tally = {};
+        buildGames(); layout(); renderAll(); diagnostics(); rules();
+        ["tdMc", "tdMcPlot", "mcMeta"].forEach(id=>$(id).replaceChildren());
+        $("tdMcNote").textContent = "Data updated — run a new simulation with the current projections.";
+        $("tdResult").textContent = "Data updated — spin to simulate the current season.";
+      }
+      const status = $("tdRefreshState");
+      if(status) status.textContent = "Last checked " + new Date().toLocaleTimeString();
+    }catch(err){
+      const status = $("tdRefreshState");
+      if(status) status.textContent = "Update unavailable — showing last loaded data; retrying automatically";
+    }finally{ refreshing = false; }
+  }
+
   async function load(){
     let env;
     try{
-      const r = await fetch("/data/draft-2026.json");
+      const r = await fetch("/data/draft-2026.json", {cache:"no-store"});
       if(!r.ok) throw new Error("the file returned HTTP " + r.status);
       env = await r.json();
       if(!env || !env.data || !env.data.teams || !env.data.draft_order)
@@ -4228,6 +4245,8 @@ window.DDSheets = function(cfg){
         renderAll();      // the rail differs per sheet: no "All 32" lever on Team
       }});
 
+    setInterval(refreshData, 60000);
+    document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) refreshData(); });
     let rz; addEventListener("resize", ()=>{ clearTimeout(rz); rz = setTimeout(ladder, 140); });
   }
   load();
@@ -4248,8 +4267,8 @@ window.DD_BOTCTX = {
     ['What does the reach number on a pick actually mean?','Reach explained']]},
   sys: `The Wins tracker has a Screenshot view button that opens a dated, clean copy of the current chart. Close or Escape returns to the page. This is a display feature, not a data refresh.
 RIGHT NOW you are on The 32-Team Draft: a private eight-person pool where everyone owns four NFL teams and total regular-season wins is the only criterion. Every number is read from /data/draft-2026.json.
-- ⚠️ NOTHING HERE IS GRADED AND NOBODY IS WINNING. Banked cells are observed wins only. If no game has been played, the tracker reads zero because zero is the true number. Say that before discussing any standing. Team-sheet win curves are live in-season (conditioned on banked); ew stays draft-day frozen.
-- ⚠️ EXPECTED WINS IS A MARKET SNAPSHOT, NOT A FORECAST THIS SITE MADE OR GRADED. It is four books' prices devigged and renormalised so all 32 teams sum to 272, frozen at the draft-day devig and never recomputed — because the board's reach and value are claims about that day. It is NOT the posted line; the line carries the hold and this does not.
+- ⚠️ NOTHING HERE IS GRADED AND NOBODY IS WINNING. Banked cells are observed wins only. If no game has been played, the tracker reads zero because zero is the true number. Say that before discussing any standing. Team-sheet win curves and expected-wins displays use live projections conditioned on banked results. The raw ew field is retained for historical comparisons only.
+- EXPECTED WINS on live displays = projected = banked wins plus remaining-game probabilities. Data updates daily, not play by play; the open page checks every minute. Draft-day ew and posted lines are historical comparisons, and only the draft board uses them to describe pick value.
 - CONSERVATION IS THE WHOLE TRICK: a game pays exactly one win. Seasons are simulated game by game, not by drawing each team's win total, because independent draws would break that and hand a division-stacked roster a spread it does not have. Internal games — two teams on the same roster meeting — are a win that roster is guaranteed to collect and guaranteed to lose.
 - THE REACH FIGURE ON A PICK IS A DESCRIPTION OF THE BOARD, NOT A GRADE OF THE PICK, and it is a statement about draft day computed against the numbers as they stood then.
 - FINISHING PROBABILITIES ARE MONTE CARLO OVER THE SCHEDULE, not a forecast. No tie outcome is modelled, so the league's half-win-for-a-tie rule does not appear, and a tie for first is broken at random because the real tiebreakers are not in the payload.
@@ -4293,7 +4312,7 @@ RIGHT NOW you are on The 32-Team Draft: a private eight-person pool where everyo
     return L.join('\n');
   }
   const spine = `THE 32-TEAM DRAFT PAGE. Everything is read from /data/draft-2026.json, built by scripts/team_draft_pool.py; the results and price feeds it composes are /data/nfl-schedule.json and /data/survivor.json. Tier: Pup. Nothing on the page is graded.
-WHAT EACH FIGURE IS: Posted line = the median regular-season win total on the board, half-points included. Expected wins = the four-book prices devigged and renormalised to 272, frozen at the draft-day devig. Δvig = the gap between the two. Σp = the 17 game probabilities summed. μdist = the mean of the win distribution. Internal = head-to-head meetings inside one roster, the only purely structural figure here. Par is 34 wins per roster (272 split eight ways) and 8.5 per team.
+WHAT EACH FIGURE IS: Posted line = the median regular-season win total on the board, half-points included. Expected wins on live displays = projected = banked plus remaining-game probabilities. Raw ew is the historical draft-day devig, used only for draft comparisons and diagnostics. Δvig = the gap between the two. Σp = the 17 game probabilities summed. μdist = the mean of the win distribution. Internal = head-to-head meetings inside one roster, the only purely structural figure here. Par is 34 wins per roster (272 split eight ways) and 8.5 per team.
 WHERE A GAME'S NUMBER COMES FROM, resolved per game in order: a settled result if it has been played, a market price for an unplayed game, the model beyond the market's horizon, and before the season the frozen preseason devig. The switch is data-driven — one settled game anywhere flips the whole payload — so no date is hardcoded.
 THE SECTIONS: wins tracker against par · a spin wheel whose slices are finishing probability from the payload · Monte Carlo over all 272 games · expected wins for all 32 with the posted line marked · the 32x32 head-to-head grid · the snake board with reach · eight roster cards · week-by-week probabilities with same-owner collisions outlined · win distributions · every game as a table · a diagnostics panel that reports drift rather than only printing OK.
 
