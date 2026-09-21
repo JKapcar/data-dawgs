@@ -9,9 +9,9 @@
    {
     "path": "/data/538-classic.json",
     "url": "https://datadawgs216.com/data/538-classic.json",
-    "bytes": 84054,
-    "as_of": "2026-09-20",
-    "sha256": "f969c2c6452c5f560abeed96d8e4a39ff3b10e2b94183272aac4a5a4a4569071",
+    "bytes": 83739,
+    "as_of": "2026-09-21",
+    "sha256": "62bf68da2dc40dc8658f332597e60067715371c391b503e98ed13d8e07d27798",
     "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority."
    },
    {
@@ -304,9 +304,9 @@
    {
     "path": "/data/nfl-schedule.json",
     "url": "https://datadawgs216.com/data/nfl-schedule.json",
-    "bytes": 113926,
-    "as_of": "2026-09-20",
-    "sha256": "87cd56a2f2035a5658d7f3af717930e615ffe7d6a01a9fd9e87b618343d5bb94",
+    "bytes": 113918,
+    "as_of": "2026-09-21",
+    "sha256": "fd1fd33ee38cd8fcfec59b93c1edbcd9d0a8537edbb8d41a1109f665cec1b971",
     "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts."
    },
    {
@@ -345,8 +345,8 @@
     "path": "/data/receipts-inventory.json",
     "url": "https://datadawgs216.com/data/receipts-inventory.json",
     "bytes": 3415,
-    "as_of": "2026-09-20",
-    "sha256": "82931713dec739dc32d8eb06a2837f7990b16490b6b176f24985c7572d191dd3",
+    "as_of": "2026-09-21",
+    "sha256": "0f4c5cb17a9f58171afc18dc61fe6eca91c1b28ef280e883076351214ee2d76e",
     "note": "An INVENTORY, not a scoreboard. There is no honest Brier across domains, so this file counts what has been registered and settled and never scores it. The ledgers OVERLAP: receipts.json and the nfelo half of model-receipts.json are the same forecasts, as are 538-classic.json and its half. aggregate is therefore computed from aggregate.counted_from alone; aggregate.naive_sum is what summing the registered column would wrongly give, published so it can be named and corrected rather than quietly reproduced."
    },
    {
