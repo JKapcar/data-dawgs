@@ -2,7 +2,7 @@
  "source_page": "/survivor.html",
  "tier": "labs",
  "graded": false,
- "as_of": "2026-09-21",
+ "as_of": "2026-09-22",
  "source": "nfelo published forecasts and nfelo-season-v1 parameters; legacy margin diagnostics retained for provenance.",
  "note": "Survivor uses nfelo published probabilities or nfelo-season-v1, not the legacy margin model below. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point.",
  "data": {
@@ -54,8 +54,8 @@
    "season_projection": {
     "z": 401.62,
     "qb_weight": 1,
-    "hfa_sha": "ba16d3add075f17522c3b0a26f9d4bd871629c84",
-    "hfa_committed_at": "2026-09-15T08:00:54Z",
+    "hfa_sha": "e2f9871f8a650148ee8b3041f3714bd0aa3ccce7",
+    "hfa_committed_at": "2026-09-22T08:01:02Z",
     "assumption": "Current base team strength and QB adjustments held fixed for future games; game-specific HFA from nfelohfa. No extra market regression."
    },
    "defaults": {
@@ -77,11 +77,11 @@
   },
   "nfelo_reference": {
    "version": "4.3.1",
-   "commit": "8b53cc28",
+   "commit": "90163f4e",
    "repo": "greerreNFL/nfelo"
   }
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-09-21",
+ "built": "2026-09-22",
  "canonical_url": "https://datadawgs216.com/data/models.json"
 }
