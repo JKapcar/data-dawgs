@@ -56,7 +56,7 @@ jobs:
           counts = collections.Counter()
           for r in records:
               d = str(r.get("detail","")).lower()
-              interval = "month" if re.search(r"monthly|per.month",d) else "minute" if re.search(r"per.minute|perminute",d) else "hour" if re.search(r"per.hour",d) else "day" if re.search(r"per.day",d) else "unspecified"
+              interval = "month" if re.search(r"monthly|per.month|\bmonth\b",d) else "minute" if re.search(r"per.minute|perminute|\bminute\b",d) else "hour" if re.search(r"per.hour",d) else "day" if re.search(r"per.day",d) else "unspecified"
               kind = "objects" if re.search(r"object|entit",d) else "requests" if "request" in d else "unspecified"
               caller = r.get("caller")
               if caller not in ("submit","draft","close","cfb-market"): caller="unknown"
@@ -66,3 +66,13 @@ jobs:
           for (status,caller,interval,kind),count in counts.items():
               print(json.dumps({"status":status,"caller":caller,"provider_limit_interval":interval,"provider_limit_kind":kind,"count":count}))
           
+
+          for r in records[:30]:
+              detail = str(r.get("detail",""))
+              words = set(re.findall(r"[a-z]+",detail.lower()))
+              allowed = {"rate","limit","limits","exceeded","quota","month","monthly","minute","minutes","hour","day","object","objects","entity","entities","request","requests","retry","too","many","billing","plan","subscription","html","doctype","cloudflare","error","success","denied","exhausted","maximum"}
+              headers = {}
+              for key,value in (r.get("headers") or {}).items():
+                  if re.fullmatch(r"retry-after|x-ratelimit-[a-z-]+",key) and re.fullmatch(r"[0-9.]+",str(value)):
+                      headers[key] = value
+              print(json.dumps({"recognized_provider_words":sorted(words & allowed),"detail_is_html":bool(re.search(r"<!doctype|<html",detail,re.I)),"detail_length":len(detail),"numeric_rate_headers":headers,"at":r.get("at") if re.fullmatch(r"[0-9TZ:.+-]+",str(r.get("at",""))) else None}))
