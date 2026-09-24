@@ -2,7 +2,7 @@
  "source_page": "/teamdraft.html",
  "tier": "labs",
  "graded": false,
- "as_of": "2026-09-23",
+ "as_of": "2026-09-24",
  "source": "VegasInsider 4-book devigged win totals (2026-08-09) normalized to 272; per-game probabilities refit to those totals over the nflverse 2026 schedule",
  "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 32/272 regular-season games are settled and banked in wins_tracker; 240 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run.",
  "field_notes": {
@@ -24,7 +24,7 @@
   "board[].delta": "Chosen team's expected wins minus the best still available. Descriptive, not a grade."
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-09-23",
+ "built": "2026-09-24",
  "canonical_url": "https://datadawgs216.com/data/draft-2026.json",
  "data": {
   "season": 2026,
@@ -7368,7 +7368,7 @@
     "par_delta": 0.98,
     "internal_games": 2,
     "sd_sim": 4.71,
-    "sd_model": 3.554,
+    "sd_model": 3.553,
     "picks_remaining": 0
    },
    "Rob": {
@@ -7404,7 +7404,7 @@
     "par_delta": -0.63,
     "internal_games": 4,
     "sd_sim": 4.62,
-    "sd_model": 3.339,
+    "sd_model": 3.343,
     "picks_remaining": 0
    },
    "Chris": {
@@ -7422,7 +7422,7 @@
     "par_delta": -1.86,
     "internal_games": 2,
     "sd_sim": 4.58,
-    "sd_model": 3.599,
+    "sd_model": 3.598,
     "picks_remaining": 0
    },
    "Tyler": {
@@ -7440,7 +7440,7 @@
     "par_delta": 1.59,
     "internal_games": 1,
     "sd_sim": 4.7,
-    "sd_model": 3.632,
+    "sd_model": 3.633,
     "picks_remaining": 0
    },
    "Kap": {
@@ -7458,7 +7458,7 @@
     "par_delta": 2.78,
     "internal_games": 3,
     "sd_sim": 4.76,
-    "sd_model": 3.432,
+    "sd_model": 3.435,
     "picks_remaining": 0
    },
    "Jared": {
@@ -7476,7 +7476,7 @@
     "par_delta": -0.33,
     "internal_games": 3,
     "sd_sim": 4.46,
-    "sd_model": 3.444,
+    "sd_model": 3.445,
     "picks_remaining": 0
    },
    "Alan": {
