@@ -668,6 +668,7 @@ async function cfbFetchMarketEvents(env, window) {
     } catch (e) {
       throw new Error("SportsGameOdds network failure: " + e.message);
     }
+    if (!response.ok) throw await bozoSgoFailure(response, env, {sport: "cfb", needProps: false, caller: "cfb-market"});
     const text = await response.text();
     let payload;
     try { payload = JSON.parse(text); }
@@ -8252,7 +8253,32 @@ async function bozoCloseTargets(env, nowMs) {
 }
 
 // `periods` is every period the bucket's legs need, so the oddID filter asks for them all.
-async function bozoFetchEvents(env, sport, startMs, needProps, periods = ["game"]) {
+// Safe SGO diagnostics shared by submit/draft, close and the separate CFB collector.
+async function bozoSgoFailure(response, env, context, suppliedText) {
+  let detail = suppliedText;
+  if (detail === undefined) {
+    try { detail = await response.text(); } catch { detail = "[response body unavailable]"; }
+  }
+  const redact = value => {
+    let text = String(value == null ? "" : value);
+    if (env.SGO_KEY) text = text.split(String(env.SGO_KEY)).join("[redacted]");
+    return text.replace(/(apiKey|x-api-key|authorization)([\s"':=]+)[^\s"'&,<>}]+/gi, "$1$2[redacted]");
+  };
+  const headers = {};
+  response.headers.forEach((value, name) => {
+    if (name.toLowerCase() === "retry-after" || /^x-ratelimit-/i.test(name))
+      headers[name.toLowerCase()] = redact(value).slice(0, 256);
+  });
+  const record = { event: "bozo-sgo-error", status: response.status,
+    detail: redact(detail).slice(0, 240), headers, sport: context.sport,
+    needProps: !!context.needProps, caller: context.caller, at: new Date().toISOString() };
+  console.log(JSON.stringify(record));
+  const error = new Error("SGO " + response.status);
+  Object.assign(error, record);
+  return error;
+}
+
+async function bozoFetchEvents(env, sport, startMs, needProps, periods = ["game"], options = {}) {
   if (!env.SGO_KEY) throw new Error("Worker misconfigured: SGO_KEY secret not set");
   const leagueID = BOZO_SGO_LEAGUE[sport];
   if (!leagueID) return [];
@@ -8280,7 +8306,7 @@ async function bozoFetchEvents(env, sport, startMs, needProps, periods = ["game"
   url.searchParams.set("limit", needProps ? "25" : "100");
   const res = await fetch(url, { headers: { "x-api-key": env.SGO_KEY },
     ...(typeof AbortSignal !== "undefined" && AbortSignal.timeout ? { signal: AbortSignal.timeout(8000) } : {}) });
-  if (!res.ok) throw new Error("SGO " + res.status);
+  if (!res.ok) throw await bozoSgoFailure(res, env, {sport, needProps, caller: options.caller || "submit"});
   const body = await res.json();
   return (body && body.data) || [];
 }
@@ -8356,7 +8382,7 @@ function bozoSelfPricedEntry(p, reason) {
 // Resolve and freeze the submit-time quote. This function never writes RTDB. Callers may
 // stage its returned object in short-lived KV, but phase two must commit this exact object
 // without fetching SGO again.
-async function bozoCaptureEntry(env, input) {
+async function bozoCaptureEntry(env, input, options = {}) {
   const p = { ...input };
   // These are server-authored, never assertions accepted from a submitter.
   for (const key of ["verificationStatus", "entryVerification", "captureFailureReason", "clvEligible",
@@ -8386,7 +8412,7 @@ async function bozoCaptureEntry(env, input) {
   let events, registry;
   try {
     [events, registry] = await Promise.all([
-      bozoFetchEvents(env, p.sport, startMs, p.mkt === "prop", [p.period]),
+      bozoFetchEvents(env, p.sport, startMs, p.mkt === "prop", [p.period], {caller: options.caller || "submit"}),
       bozoTeamRegistry(env, p.sport),
     ]);
   } catch (e) {
@@ -8478,7 +8504,7 @@ async function runBozoCloseCapture(env, nowMs) {
     let fetchErr = null;
     const needProps = bucket.legs.some(t => t.pick.mkt === "prop");
     const periods = [...new Set(bucket.legs.map(t => bozoPeriodOf(t.pick)))];
-    try { events = await bozoFetchEvents(env, bucket.sport, bucket.startMs, needProps, periods); }
+    try { events = await bozoFetchEvents(env, bucket.sport, bucket.startMs, needProps, periods, {caller: "close"}); }
     catch (e) { fetchErr = String((e && e.message) || e); }
     const registry = await bozoTeamRegistry(env, bucket.sport);
 
@@ -18495,7 +18521,7 @@ const MCP_TOOLS = [
         period: args.period ? String(args.period).toLowerCase() : "game",
         startsAt: typeof args.startsAt === "string" ? args.startsAt : null,
       };
-      const captured = await bozoCaptureEntry(env, input);
+      const captured = await bozoCaptureEntry(env, input, {caller: "draft"});
       if (!captured.ok)
         return toolText({ accepted: false, reason: captured.reason || "capture-failed", detail: captured.error });
       const p = captured.p;

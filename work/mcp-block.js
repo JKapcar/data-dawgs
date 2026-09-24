@@ -2733,7 +2733,7 @@ const MCP_TOOLS = [
         period: args.period ? String(args.period).toLowerCase() : "game",
         startsAt: typeof args.startsAt === "string" ? args.startsAt : null,
       };
-      const captured = await bozoCaptureEntry(env, input);
+      const captured = await bozoCaptureEntry(env, input, {caller: "draft"});
       if (!captured.ok)
         return toolText({ accepted: false, reason: captured.reason || "capture-failed", detail: captured.error });
       const p = captured.p;
