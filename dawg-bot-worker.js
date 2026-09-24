@@ -7117,7 +7117,7 @@ async function bozoPick(request, env, cors) {
     const echo = p.label + " — " + p.game + ", " + (BOZO_PERIOD_LABEL[p.period] ? BOZO_PERIOD_LABEL[p.period] + " " : "") +
       bozoMarketPhrase(p) +
       " at " + p.price + " (other side " + (p.priceOpp == null ? "not captured" : p.priceOpp) + "), " +
-      (p.priceSource === "captured" ? "captured from DraftKings via SGO" : "UNVERIFIED — manually entered odds; manager confirmation needed for CLV") + "." +
+      (p.priceSource === "captured" ? "captured from DraftKings" : "UNVERIFIED — manually entered odds; manager confirmation needed for CLV") + "." +
       (proxy ? " Submitted FOR " + name + " by you as league manager; it will be marked as such and stamped with the server time of this submission, not backdated." : "") +
       (mine ? " This replaces " + whose + " current leg and resets " + (proxy ? "their" : "your") + " submission clock." : "");
     await env.RL.put(kvKey, JSON.stringify({ code, lid, week: state.week || 1, forKey: mkey, p, echo, clientBuild: body.clientBuild, ts: Date.now() }), { expirationTtl: 300 });
@@ -7206,7 +7206,7 @@ function validatePick(p, name, existing, band, format, mkey = null, weekGate = n
     return "Game prices need a captured quote or an unverified manual fallback.";
   if (gameMarket && !unverified && bzAmerican(p.priceOpp) === null)
     return "The captured opposite-side DraftKings price is required for that market.";
-  if (p.priceSource === "captured" && (!p.entrySnapshotAt || !p.providerEventIds?.sgo))
+  if (p.priceSource === "captured" && (!p.entrySnapshotAt || !(p.providerEventIds?.sgo || p.providerEventIds?.odds_api)))
     return "The captured quote is missing its source receipt.";
   if (p.priceSource === "captured" && assertQuote({ price: p.price, opp: p.priceOpp, line: p.line }, p))
     return "The captured quote is incomplete or does not match the selected number.";
@@ -7658,6 +7658,10 @@ function ledgerEntries(lid, season, week, picks, order) {
       // hold. A null here is a flagged gap, never a silent raw-implied substitution.
       priceOpp: x.entryPriceOpp ?? null,
       entryBook: x.entryBook || null,
+      entryProvider: x.entryProvider || null,
+      entrySnapshotAt: x.entrySnapshotAt || null,
+      providerEventIds: x.providerEventIds || {},
+      canonicalKey: x.canonicalKey || null,
       selectionKey: x.selectionKey || null,
       startsAt: x.startsAt || null,             // what schedules the close capture
       dkSgpEligible: x.dkSgpEligible || null,   // "asserted" — see bozoPick
@@ -8445,6 +8449,107 @@ function bozoCanonicalKey(sport, event, registry) {
     ? [sport, teams.join("~"), startsAt.slice(0, 10)].join("|") : null;
 }
 
+// The already-configured paid account supplies exact DraftKings game markets. SGO
+// remains the fallback for missing quotes and unsupported markets (props/periods).
+const BOZO_ODDS_API_SPORT = {nfl:"americanfootball_nfl", cfb:"americanfootball_ncaaf"};
+function bozoOddsApiMarkets(p) {
+  if (!BOZO_ODDS_API_SPORT[p.sport] || bozoPeriodOf(p) !== "game") return null;
+  return ({ml:["h2h"], spread:["spreads","alternate_spreads"], total:["totals","alternate_totals"]})[p.mkt] || null;
+}
+function bozoOddsApiEvent(ev) {
+  return {eventID:ev.id, status:{startsAt:ev.commence_time},
+    teams:{home:{names:{long:ev.home_team}},away:{names:{long:ev.away_team}}}};
+}
+function bozoOddsApiQuote(ev, p, registry) {
+  const wantedMarkets = bozoOddsApiMarkets(p);
+  if (!wantedMarkets) return {reason:"unsupported market",code:"unsupported_market"};
+  const book = ev.bookmakers?.find(b=>b.key === "draftkings");
+  if (!book) return {reason:"DraftKings market missing",code:"book_missing"};
+  const side = bozoTeamNorm(p.side, registry);
+  const home = bozoTeamNorm(ev.home_team, registry), away = bozoTeamNorm(ev.away_team, registry);
+  if (p.mkt !== "total" && side !== home && side !== away)
+    return {reason:"selection team did not match",code:"event_not_found"};
+  const wanted = p.mkt === "spread" ? -Number(p.line) : Number(p.line);
+  const over = (p.dir || p.side) === "over";
+  if (p.mkt === "total" && !["over","under"].includes(p.dir || p.side))
+    return {reason:"total direction missing",code:"invalid_quote"};
+  for (const key of wantedMarkets) {
+    const market = book.markets?.find(m=>m.key === key);
+    if (!market || !Array.isArray(market.outcomes)) continue;
+    if (p.mkt === "ml" && market.outcomes.length !== 2) continue;
+    const isSide = (o, mine) => p.mkt === "total"
+      ? o.name === ((mine === over) ? "Over" : "Under")
+      : bozoTeamNorm(o.name, registry) === (mine ? side : side === home ? away : home);
+    const atLine = (o, mine) => p.mkt === "ml" || (typeof o.point === "number" &&
+      Math.abs(o.point - (p.mkt === "spread" && !mine ? -wanted : wanted)) < 0.001);
+    const mine = market.outcomes.filter(o=>isSide(o,true) && atLine(o,true));
+    const theirs = market.outcomes.filter(o=>isSide(o,false) && atLine(o,false));
+    if (mine.length !== 1 || theirs.length !== 1) continue;
+    const quote = {price:mine[0].price,opp:theirs[0].price,line:p.line,
+      snapshotAt:market.last_update || book.last_update,provider:"odds_api",providerEventId:ev.id};
+    if (!assertQuote(quote,p) && Number.isFinite(Date.parse(quote.snapshotAt))) return quote;
+  }
+  return {reason:"exact two-sided DraftKings line missing",code:"market_missing"};
+}
+async function bozoOddsApiRequest(env, path, params, options = {}) {
+  const fault = (code,message)=>Object.assign(new Error(message),{code});
+  const url = new URL("https://api.the-odds-api.com/v4/" + path);
+  for (const [k,v] of Object.entries(params)) url.searchParams.set(k,String(v));
+  // Cache keys never contain the credential. Keep provider timestamps on cache hits.
+  const cache = typeof caches !== "undefined" ? caches.default : null;
+  const cacheKey = new Request(url.toString());
+  if (cache) { try { const hit=await cache.match(cacheKey); if(hit) return await hit.json(); } catch {} }
+  url.searchParams.set("apiKey",env.ODDS_API_KEY);
+  const controller = new AbortController();
+  const remaining = Math.min(4000, (options.deadline || Date.now()+4000)-Date.now());
+  if (remaining <= 0) throw fault("timeout","Odds API capture timed out");
+  let timer;
+  try {
+    const result = await Promise.race([(async()=>{
+      const response = await fetch(url,{signal:controller.signal});
+      // Only status and numeric quota headers: no credential-bearing URLs or bodies.
+      const quota={};
+      for (const name of ["x-requests-remaining","x-requests-used","x-requests-last"]) {
+        const v=response.headers.get(name); if(v !== null && /^\d+$/.test(v)) quota[name]=Number(v);
+      }
+      console.log("bozo-odds-api",JSON.stringify({status:response.status,...quota}));
+      if (!response.ok) throw fault(response.status===429?"rate_limited":"provider_error","Odds API HTTP "+response.status);
+      return {data:await response.json(),fetchedAt:new Date().toISOString()};
+    })(),new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(fault("timeout","Odds API capture timed out"));},remaining);})]);
+    if(cache) { try { await cache.put(cacheKey,new Response(JSON.stringify(result),{headers:{"content-type":"application/json","cache-control":"public, max-age="+(options.ttl || 30)}})); } catch {} }
+    return result;
+  } catch(e) { throw e.code ? e : fault("provider_error","Odds API request failed"); }
+  finally { clearTimeout(timer); }
+}
+async function bozoOddsApiCapture(env,p,registry,options = {}) {
+  const markets = bozoOddsApiMarkets(p);
+  if (!env.ODDS_API_KEY || !markets) return null;
+  const sport = BOZO_ODDS_API_SPORT[p.sport];
+  const start = Date.parse(p.startsAt || p.commenceTime || "");
+  const now = options.nowMs ?? Date.now();
+  const historical = options.caller === "close" && now >= start;
+  const date = historical ? new Date(start-1000).toISOString() : null;
+  const prefix = historical ? "historical/" : "";
+  const base = `${prefix}sports/${sport}/events`;
+  const listed = await bozoOddsApiRequest(env,base,date?{date}:{},{...options,ttl:300});
+  const events = historical ? listed.data.data : listed.data;
+  if (!Array.isArray(events)) throw Object.assign(new Error("Odds API events missing"),{code:"invalid_response"});
+  const event = bozoMatchEvent(events.map(bozoOddsApiEvent),p,registry);
+  if (!event) return null;
+  const response = await bozoOddsApiRequest(env,`${base}/${encodeURIComponent(event.eventID)}/odds`,
+    {bookmakers:"draftkings",markets:markets.join(","),oddsFormat:"american",...(date?{date}:{})},options);
+  const raw = historical ? response.data.data : response.data;
+  if (!raw || raw.id !== event.eventID || !bozoMatchEvent([bozoOddsApiEvent(raw)],p,registry)) return null;
+  const quote = bozoOddsApiQuote(raw,p,registry);
+  if (assertQuote(quote,p)) return null;
+  const stamp = Date.parse(quote.snapshotAt);
+  // Never label in-play odds as the pregame close, or accept a stale/future quote.
+  if (stamp > now+60000 || now-stamp > (historical?30:15)*60000) return null;
+  if (options.caller === "close" && (stamp >= start || start-stamp > 15*60000)) return null;
+  if (historical && (!Number.isFinite(Date.parse(response.data.timestamp)) || Date.parse(response.data.timestamp)>=start)) return null;
+  return {event:bozoOddsApiEvent(raw),quote,fetchedAt:response.fetchedAt};
+}
+
 function bozoSelfPricedEntry(p, reason, code = "market_missing") {
   const typed = bzAmerican(p.typedPrice ?? p.price);
   if (typed === null) return { ok: false, reason: "manual_price_required",
@@ -8490,7 +8595,15 @@ async function bozoCaptureEntry(env, input, options = {}) {
 
   let events, registry, timer;
   const deadline = Date.now() + 7000;
-  try {
+  let backup = null;
+  if (env.ODDS_API_KEY && bozoOddsApiMarkets(p)) {
+    try {
+      registry = await bozoTeamRegistry(env,p.sport);
+      backup = await bozoOddsApiCapture(env,p,registry,{deadline:Math.min(deadline,Date.now()+5000),caller:"submit"});
+      if (backup) events = [backup.event];
+    } catch { /* the independent SGO source remains available */ }
+  }
+  if (!backup) try {
     [events, registry] = await Promise.race([
       Promise.all([
         bozoFetchEvents(env, p.sport, startMs, p.mkt === "prop", [p.period], {caller: options.caller || "submit", deadline}),
@@ -8505,7 +8618,7 @@ async function bozoCaptureEntry(env, input, options = {}) {
   if (!event) {
     return bozoSelfPricedEntry(p, "The game could not be matched at the odds source.", "event_not_found");
   }
-  const quote = bozoDkQuote(event, p, registry);
+  const quote = backup?.quote || bozoDkQuote(event, p, registry);
   const quoteError = assertQuote(quote, p);
   if (quoteError) {
     return bozoSelfPricedEntry(p, "DraftKings capture failed: " + quoteError + ".", quote?.code || "invalid_quote");
@@ -8522,12 +8635,12 @@ async function bozoCaptureEntry(env, input, options = {}) {
   return { ok: true, p: { ...p,
     period: p.period, label: bozoLabelWithPeriod(p.label, p.period),
     line: quote.line, price: quote.price, priceOpp: quote.opp,
-    priceSource: "captured", verificationStatus: "verified", entryBook: BOZO_CLOSE_BOOK, entryProvider: "sgo",
+    priceSource: "captured", verificationStatus: "verified", entryBook: BOZO_CLOSE_BOOK, entryProvider: backup ? "odds_api" : "sgo",
     entrySnapshotAt: quote.snapshotAt || events.fetchedAt || new Date().toISOString(),
     fairEntry: facts.fair, entryHold: facts.hold, clvEligible: true,
     canonicalKey: bozoCanonicalKey(p.sport, event, registry), commenceTime,
     startsAt: commenceTime, espnEventId: String(p.eventId),
-    providerEventIds: { sgo: String(event.eventID) }, closeState: "pending",
+    providerEventIds: { [backup ? "odds_api" : "sgo"]: String(event.eventID) }, closeState: "pending",
   }, agreement };
 }
 
@@ -8547,8 +8660,8 @@ function bozoCloseMutation(t, quote, reason, observedAt) {
     both("close", quote.price);
     both("closeOpp", quote.opp);
     both("closeBook", BOZO_CLOSE_BOOK);
-    both("closeSource", "sgo");
-    both("closeObservedAt", observedAt);
+    both("closeSource", quote.provider || "sgo");
+    both("closeObservedAt", quote.snapshotAt || observedAt);
     both("closeUnavailableReason", null);
   } else {
     both("close", null);
@@ -8587,19 +8700,30 @@ async function runBozoCloseCapture(env, nowMs) {
     let fetchErr = null;
     const needProps = bucket.legs.some(t => t.pick.mkt === "prop");
     const periods = [...new Set(bucket.legs.map(t => bozoPeriodOf(t.pick)))];
-    try { events = await bozoFetchEvents(env, bucket.sport, bucket.startMs, needProps, periods, {caller: "close"}); }
-    catch (e) { fetchErr = String((e && e.message) || e); }
+    let sgoLoaded = false;
     const registry = await bozoTeamRegistry(env, bucket.sport);
 
     for (const t of bucket.legs) {
-      if (fetchErr) { skipped++; continue; }                  // no reason written — retry next tick
-
       let reason = null, quote = null;
+      if (env.ODDS_API_KEY && bozoOddsApiMarkets(t.pick)) {
+        try { quote = (await bozoOddsApiCapture(env,t.pick,registry,{caller:"close",nowMs,deadline:Date.now()+7000}))?.quote || null; }
+        catch { /* retry or use the independent pregame source */ }
+      }
+      // After kickoff only historical pregame snapshots qualify; never request live SGO.
+      if (!quote && nowMs >= t.startMs) { skipped++; continue; }
+      if (!quote && !sgoLoaded) {
+        sgoLoaded = true;
+        try { events = await bozoFetchEvents(env,bucket.sport,bucket.startMs,needProps,periods,{caller:"close"}); }
+        catch (e) { fetchErr = String((e && e.message) || e); }
+      }
+      if (!quote && fetchErr) { skipped++; continue; } // retry next tick
+
       // ⚠️ `other` is the one market type with no principled way in. It is free text
       // describing an arbitrary game market ("favourite to lead at halftime", "no
       // overtime"), with no player, no stat and no number to join on — unlike a prop,
       // which has all three. It stays a null with a reason.
-      if (t.pick.mkt === "other") {
+      if (quote) { /* exact independent-provider quote already resolved */ }
+      else if (t.pick.mkt === "other") {
         reason = "No closing price captured: an “other” leg describes an arbitrary game market in free text, "
                + "with no stat, player or number to match on at the odds source.";
       } else {
@@ -8615,6 +8739,8 @@ async function runBozoCloseCapture(env, nowMs) {
       // ⚠️ Written in TWO places, on purpose. `results/<key>` is this week's live board
       // and gets cleared by bozoNext; the ledger row is the permanent receipt. Refuse
       // an incomplete/stale target before adding EITHER path to the shared patch.
+      // A missing market may reopen before kickoff. Keep it retryable.
+      if (!quote && t.pick.mkt !== "other") { skipped++; continue; }
       const mutation = bozoCloseMutation(t, quote, reason, observedAt);
       if (!mutation) { skipped++; continue; }
       for (const [path, value] of Object.entries(mutation)) add(t.lid, path, value);
@@ -8633,7 +8759,7 @@ async function runBozoCloseCapture(env, nowMs) {
     try {
       await kv.put("bozo:close:last-run", JSON.stringify({
         at: observedAt, checked: targets.length, captured, skipped,
-        book: BOZO_CLOSE_BOOK, via: "sportsgameodds",
+        book: BOZO_CLOSE_BOOK, via: env.ODDS_API_KEY ? "odds_api+sgo" : "sportsgameodds",
       }));
     } catch { /* the capture already landed; the summary is a convenience */ }
   }
@@ -18478,7 +18604,7 @@ const MCP_TOOLS = [
           // unmeasured for a leg that does not; never average across the two.
           "CLV is computable only where closeObservedAt is set AND both priceOpp and closeOpp are present — de-vig proportionally, and report probability points, not cents.",
           "A leg with closeUnavailableReason has NO CLV. Do not substitute the entry price for a missing close: that fabricates a zero and drags any average toward it.",
-          "priceSource=captured means both entry sides came from DraftKings through SGO. Failed captures can be submitted with typed odds, marked verificationStatus=unverified. A manager can verify the original entry pair without changing the submission time; priceSource=manual then permits CLV with a real closing pair. Keep unverified prices out of measured CLV. Existing explicit manual CLV overrides remain supported.",
+          "priceSource=captured means both entry sides came from DraftKings through the odds feeds. Failed captures can be submitted with typed odds, marked verificationStatus=unverified. A manager can verify the original entry pair without changing the submission time; priceSource=manual then permits CLV with a real closing pair. Keep unverified prices out of measured CLV. Existing explicit manual CLV overrides remain supported.",
           "Every leg goes on a real DraftKings bet slip, so every market — props included — exists and closes. A missing close means the capture could not resolve the typed description onto the right market, and closeUnavailableReason says which of stat, player or number failed. \"Other\" legs are the exception: free text for an arbitrary market, with nothing to match on. Either way it is a matching gap, never evidence about a player.",
           "If two legs share an eventId the ticket is a same-game parlay and the displayed parlay price is INDICATIVE — DraftKings reprices correlated legs, so the product of the leg prices is an upper bound, not the payout.",
         ],
@@ -18685,7 +18811,7 @@ const MCP_TOOLS = [
           : undefined,
         caveats: [
           "Nothing was submitted. This tool cannot submit — it reads the board and runs the validator.",
-          p.priceSource === "captured" ? "Both prices were captured from DraftKings through SGO." : "UNVERIFIED: manually entered odds, awaiting manager verification of the original quote for CLV.",
+          p.priceSource === "captured" ? "Both prices were captured from DraftKings through the odds feeds." : "UNVERIFIED: manually entered odds, awaiting manager verification of the original quote for CLV.",
           "A pass here is a pass at this instant. Someone else can take your exact leg, or fill the board, before you press submit.",
         ],
       });

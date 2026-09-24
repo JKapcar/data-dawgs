@@ -21,7 +21,7 @@ The file contains secret **names only**. Secret values stay encrypted in Cloudfl
   extension: `tools/validate-data.js` parses it with strict `JSON.parse`.
 - Plain variables: `BOZO_ADMIN`, `ELEVEN_VOICE`, `MAIL_FROM`, `MODEL`.
 - Required encrypted secrets: `BOZO_PEPPER`, `BOZO_TOKENS`, `DAWG_PASS`,
-  `DDCC_IMPORT_TOKEN`, `ELEVEN_KEY`, `FB_SECRET`, `RESEND_KEY`, `SGO_KEY`, `XAI_KEY`.
+  `DDCC_IMPORT_TOKEN`, `ELEVEN_KEY`, `FB_SECRET`, `RESEND_KEY`, `ODDS_API_KEY`, `SGO_KEY`, `XAI_KEY`.
 - Daily `0 9 * * *` trigger: private Firebase disaster-recovery backup.
 - Hourly `9 * * * *` trigger: prospective CFB 24-hour market receipts.
 - Five-minute `*/5 * * * *` trigger: Bozo close-price capture.

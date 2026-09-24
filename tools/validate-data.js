@@ -644,7 +644,7 @@ console.log('\nWorker deployment contract');
          not required now that /users is the roster of record. A required-secret list that
          outlives the requirement turns this check into noise, which is worse than not
          having it — a red build nobody believes is a red build nobody reads. */
-      const expectedSecrets = ['BOZO_PEPPER', 'DAWG_PASS', 'DDCC_IMPORT_TOKEN', 'ELEVEN_KEY', 'FB_SECRET', 'RESEND_KEY', 'SGO_KEY', 'XAI_KEY'];
+      const expectedSecrets = ['BOZO_PEPPER', 'DAWG_PASS', 'DDCC_IMPORT_TOKEN', 'ELEVEN_KEY', 'FB_SECRET', 'RESEND_KEY', 'ODDS_API_KEY', 'SGO_KEY', 'XAI_KEY'];
       const required = [...((w.secrets && w.secrets.required) || [])].sort();
       const crons = [...((w.triggers && w.triggers.crons) || [])].sort();
       const rl = (w.kv_namespaces || []).find(x => x.binding === 'RL');
