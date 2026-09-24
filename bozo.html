@@ -3790,7 +3790,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
        because a caveat that lives only in page prose is one he gets talked past. -->
   <div class="pb-fine">
     <p><b>Game-market prices are checked automatically when available.</b> At submit, the Worker reads both sides from
-      DraftKings through SGO and freezes that quote for confirmation. If the checker fails, manually entered odds are accepted as Unverified. The manager can verify the original entry prices afterward for CLV.</p>
+      DraftKings through the odds feeds and freezes that quote for confirmation. If the checker fails, manually entered odds are accepted as Unverified. The manager can verify the original entry prices afterward for CLV.</p>
     <p><b>Bozo odds are simulation.</b> Anywhere this site quotes a chance of wearing it, that is
       Monte Carlo output, not an observation, and the simulation draws every leg independently.
       Two legs on the same game are not independent, so a ticket carrying a stack is wrong in a
@@ -4524,7 +4524,7 @@ const priceSourceBadge = x => {
   if(r && r.clvPts != null && Number.isFinite(+r.clvPts))
     return `<span class="cst warn" title="No two-sided captured entry, so the manager set this leg's CLV by hand. Weaker evidence than a captured pair, and counted separately.">self · CLV set by hand</span>`;
   return x && x.priceSource === 'captured'
-    ? '<span class="cst ok" title="Both sides captured from DraftKings through SGO">DK captured</span>'
+    ? '<span class="cst ok" title="Both sides captured from DraftKings through the odds feeds">DK captured</span>'
     : '<span class="cst warn" title="Self-priced; no two-sided captured entry, so this leg has no CLV until the manager sets one by hand">self · no CLV</span>';
 };
 
@@ -5565,7 +5565,7 @@ function paintHouseTicket(){
     `<p class="sl-note">Favorites only, inside the band. No exact duplicate legs. ` +
     `<b>The ticket locks the moment the last leg lands</b> &mdash; that instant is the close, ` +
     `and there are no edits after it. Prices are checked against ` +
-    `<b>DraftKings through SGO</b>. Unverified entries can be reviewed by the manager for CLV.</p>`;
+    `<b>DraftKings through the odds feeds</b>. Unverified entries can be reviewed by the manager for CLV.</p>`;
 
   paintBozoTonight(players, picks, status, res);
 
@@ -7549,7 +7549,7 @@ HOW TO TALK ABOUT THE NUMBERS:
 - Prop legs use a placeholder standard deviation (line x 0.55) that is openly a guess. Flag a prop before leaning on its Worst Beat exposure.
 - Period legs (1h, 2h, quarters) use the game SD scaled by the square root of the fraction played (beatBasis "scaled-sd"), a documented model pending calibration. They are hand-graded: no Worker-reachable score source carries per-period scores.
 - Worst CLV is measured only when both sides of the DraftKings entry and both sides of the kickoff close were captured. A missing side is unmeasured, never zero, and the lever passes it.
-- priceSource=captured means both entry prices came from SGO. When the checker fails, entered odds are accepted as Unverified (verificationStatus=unverified); manager review is pending. priceSource=manual and verificationStatus=verified means a manager confirmed the original two-sided entry prices without changing the submission time. Those picks can count toward CLV once both closing prices exist. Existing manual CLV overrides remain supported. Never describe unverified prices as verified.
+- priceSource=captured means both entry prices came from DraftKings through an odds feed. When the checker fails, entered odds are accepted as Unverified (verificationStatus=unverified); manager review is pending. priceSource=manual and verificationStatus=verified means a manager confirmed the original two-sided entry prices without changing the submission time. Those picks can count toward CLV once both closing prices exist. Existing manual CLV overrides remain supported. Never describe unverified prices as verified.
 - The "As it stands / If every leg lost" panel is a read-only hypothetical over currently filed legs. It assumes every filed leg loses, does not know results, and never names a bozo. Before the card locks there is no running order at all. Never present the panel as a prediction, a probability, or a graded outcome.
 - You may NOT place, edit or remove anyone's leg, and you must never tell someone their bet is guaranteed. Prices and probabilities, never certainties.`;
 
