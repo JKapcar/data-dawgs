@@ -33,7 +33,7 @@ test('the Price box wears its minus — the sign is never typed', () => {
   assert.match(field, /<span class="sgnfix" aria-hidden="true">−<\/span>/, 'the minus is painted on');
   assert.match(field, /id="fPrice"/);
   assert.match(field, /pattern="\[0-9\]\*"/, 'no sign is accepted in the value');
-  assert.match(field, /aria-label="Optional DraftKings price check/, 'the input is announced as an optional check');
+  assert.match(field, /aria-label="DraftKings odds/, 'the input explains the manual fallback');
   // and something has to keep it that way as characters arrive
   assert.match(bozo, /el\.value\.replace\(\/\[\^0-9\]\/g, ''\)/, 'input is stripped to digits');
   assert.doesNotMatch(bozo, /placeholder="-175"/, 'the placeholder no longer shows a sign to copy');

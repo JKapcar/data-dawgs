@@ -126,12 +126,14 @@ test('submit-time capture freezes the real two-sided DK alternate and receipt', 
   assert.equal(out.agreement.needsConfirmation, false);
 });
 
-test('strict game markets reject capture failure while prop fallback is visibly ineligible', async () => {
+test('missing odds accept unverified manual entries pending manager review', async () => {
   const base = { sport: 'cfb', eventId: 'x', game: 'UNT @ IU', side: 'IU', line: 39.25,
-    label: 'test', startsAt: '2026-09-05T16:00:00.000Z', typedPrice: -130 };
+    label: 'IU -39.25', startsAt: '2026-09-05T16:00:00.000Z', typedPrice: -130 };
   const spread = await bozoCaptureEntry({}, { ...base, mkt: 'spread' });
-  assert.equal(spread.ok, false);
-  assert.match(spread.error, /Nothing was submitted/);
+  assert.equal(spread.ok, true);
+  assert.equal(spread.p.verificationStatus, 'unverified');
+  assert.equal(spread.p.price, -130);
+  assert.equal(spread.p.priceOpp, null);
   const prop = await bozoCaptureEntry({}, { ...base, mkt: 'prop', side: 'over', prop: 'Nobody receiving yards' });
   assert.equal(prop.ok, true);
   assert.equal(prop.p.priceSource, 'self');
@@ -164,7 +166,7 @@ test('assertQuote rejects a one-sided quote instead of assuming hold', () => {
 
 test('every write path is pinned to kickoff and a captured opposite side', () => {
   assert.match(worker, /if \(!p\.startsAt \|\| isNaN\(Date\.parse\(p\.startsAt\)\)\)/);
-  assert.match(worker, /if \(gameMarket && bzAmerican\(p\.priceOpp\) === null\)/);
+  assert.match(worker, /if \(gameMarket && !unverified && bzAmerican\(p\.priceOpp\) === null\)/);
   assert.match(worker, /priceOpp: entryPriceOpp,\s*entryPriceOpp,/);
   assert.match(worker, /startsAt: \{ type: "string", description: "Kickoff ISO timestamp\. Optional when eventId resolves from the Worker schedule cache/);
   assert.doesNotMatch(worker, /\{ required: \["sport", "eventId", "game", "mkt", "side", "label", "startsAt"\] \}/);
