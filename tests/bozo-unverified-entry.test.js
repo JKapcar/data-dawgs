@@ -13,10 +13,11 @@ function rig(){
   ledger:{'2026-w4-pat':{player:'Pat',price:-150,priceOpp:null,ts:base.ts,close:-170,closeOpp:145}}};
  let writes=0,deny=false,conflict=false,requests=0,fail='429';
  const kv=new Map(); const env={RL:{get:async k=>kv.get(k),put:async(k,v)=>kv.set(k,v)}};
- const ctx={crypto,console,Date,Request,Response,SEASON:2026,BOZO_CLOSE_BOOK:'draftkings',
+ const ctx={crypto,console,Date,Request,Response,setTimeout,clearTimeout,SEASON:2026,BOZO_CLOSE_BOOK:'draftkings',
   BOZO_GRADEABLE_SPORTS:new Set(['nfl','cfb']),LEAGUE:{nfl:'NFL',cfb:'CFB'},MARKETS:['ml','spread','total','prop','other'],
   json:(body,status)=>({body,status}),readBody:async r=>r.body,leagueOf:b=>b.league||'main',
-  requireManager:async()=>deny?{err:'Forbidden',code:403}:{uid:'kap',name:'Kap'},LG:l=>'/bozo/leagues/'+l,
+  sessionAuth:async()=>deny?{err:'Forbidden',code:403}:{uid:'kap',name:'Kap'},LG:l=>'/bozo/leagues/'+l,
+  canActFor:()=>!deny,memberKeyOfRef:(s,r)=>r==='pat'?'pat':null,memberKeys:()=>['pat'],memberNameAt:()=> 'Pat',
   fbGet:async()=>({data:structuredClone(state),etag:'v1'}),
   fbPut:async(e,p,v,etag)=>{assert.equal(etag,'v1');if(conflict)return false;state=structuredClone(v);writes++;return true;},
   bozoFetchEvents:async()=>{requests++;if(fail)throw new Error('SGO '+fail);return[];},
@@ -35,7 +36,7 @@ function rig(){
   'this.api={bozoCaptureEntry,validatePick,bozoVerifyEntry};'
  ].join('\n'),ctx);
  return{api:ctx.api,env,state:()=>state,writes:()=>writes,requests:()=>requests,
-  deny:()=>deny=true,conflict:()=>conflict=true,change:fn=>fn(state),
+  expire:()=>kv.clear(), deny:()=>deny=true,conflict:()=>conflict=true,change:fn=>fn(state),
   post:b=>ctx.api.bozoVerifyEntry({method:'POST',body:b},env,{}),
   capture:p=>ctx.api.bozoCaptureEntry(env,{...base,...p})};
 }
@@ -66,7 +67,7 @@ test('two-phase verification updates pick, ledger and audit atomically, preserve
  assert.equal(pick.entryPriceOpp,130);assert.equal(pick.clvEligible,true);assert.equal(pick.verificationStatus,'verified');
  assert.equal(row.priceOpp,130);assert.equal(row.ts,base.ts);assert.equal(row.close,-170);
  assert.equal(pick.entryVerification.byName,'Kap');assert.equal(Object.keys(s.audit).length,1);
- assert.equal((await r.post(req)).body.replayed,true);assert.equal(r.writes(),1);
+ assert.equal((await r.post(req)).body.verificationStatus,'verified');assert.equal(r.writes(),1);
 });
 test('changed pick/week and concurrent writes cannot verify the wrong entry',async()=>{
  for(const mutation of [s=>s.week++,s=>s.picks.pat.ts++]){
@@ -84,4 +85,32 @@ test('unverified entries do not gain automatic CLV; manual verification enables 
  assert.equal(ctx.delta(p,{clvPts:0}),0);
  p.priceSource='manual';p.verificationStatus='verified';assert.ok(ctx.delta(p,{close:-170,closeOpp:145})>0);
  assert.equal(ctx.delta(p,{close:-170}),null);
+});
+
+test('durable receipt replays identically after KV expiry and week rollover; authorization is rechecked',async()=>{
+ const r=rig();const p=await r.post({forUid:'pat',price:-150,priceOpp:130,evidence:'original slip'});
+ const req={forUid:'pat',confirm:p.body.confirm_code};const first=await r.post(req);
+ assert.equal(first.status,200);assert.equal(r.state().admin.actions[req.confirm].type,'verify_entry');
+ assert.equal(r.state().ledger['2026-w4-pat'].fairEntry,r.state().picks.pat.fairEntry);
+ assert.equal(r.state().picks.pat.entryVerification.evidence,'original slip');
+ r.expire();r.change(s=>{s.week++;s.picks={};});assert.equal(JSON.stringify(await r.post(req)),JSON.stringify(first));assert.equal(r.writes(),1);
+ r.deny();assert.equal((await r.post(req)).status,403);
+});
+test('verification refuses implausible hold and long evidence, while exact real pair stays precise',async()=>{
+ const r=rig();for(const priceOpp of [1000,-150])assert.equal((await r.post({forUid:'pat',price:-150,priceOpp})).status,400);
+ assert.equal((await r.post({forUid:'pat',price:-150,priceOpp:130,evidence:'x'.repeat(201)})).status,400);
+ r.change(s=>{s.picks.pat.price=-263;});const p=await r.post({forUid:'pat',price:-263,priceOpp:189});
+ assert.equal(p.status,200);const done=await r.post({forUid:'pat',confirm:p.body.confirm_code});
+ assert.ok(Math.abs(done.body.fairEntry-.6767788294585378)<1e-12);
+});
+
+test('MCP verification rejects shared callers and forwards personal identity to the same core',async()=>{
+ const m=fs.readFileSync('work/mcp-block.js','utf8');let calls=0;
+ const ctx={SITE:'https://example.test',toolErr:error=>({error}),toolText:body=>body,
+ bozoVerifyEntryCore:async(env,auth,args,via)=>{calls++;assert.equal(auth.uid,'delegate');assert.equal(via,'mcp');return{status:200,body:{status:'confirm_required',echo:'original quote'}};}};
+ vm.createContext(ctx);const start=m.indexOf('    name: "dd_verify_bozo_entry"'),end=m.indexOf('\n  },',start);
+ vm.runInContext('this.tool={'+m.slice(start,end)+'};',ctx);
+ assert.ok((await ctx.tool.run({forUid:'pat'},{},{kind:'shared'})).error);assert.equal(calls,0);
+ const p=await ctx.tool.run({forUid:'pat',price:-150,priceOpp:130},{},{kind:'user',name:'Delegate',uid:'delegate'});
+ assert.equal(p.status,'confirm_required');assert.equal(calls,1);
 });

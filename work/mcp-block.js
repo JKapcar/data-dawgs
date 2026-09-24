@@ -2779,7 +2779,7 @@ const MCP_TOOLS = [
           ts: "set by the server when you actually submit, not now",
         },
         captured: { line: p.line, price: p.price, priceOpp: p.priceOpp,
-          priceSource: p.priceSource, clvEligible: p.clvEligible,
+          priceSource: p.priceSource, clvEligible: p.clvEligible, captureFailureCode: p.captureFailureCode || null,
           entrySnapshotAt: p.entrySnapshotAt, providerEventIds: p.providerEventIds,
           startsAt: p.startsAt, espnEventId: p.espnEventId, canonicalKey: p.canonicalKey },
         agreement: captured.agreement || null,
@@ -3051,7 +3051,7 @@ const MCP_TOOLS = [
         editingAnExistingLeg: !!mine,
         wouldLockTheBoard: wouldLock,
         captured: { line: p.line, price: p.price, priceOpp: p.priceOpp,
-          priceSource: p.priceSource, clvEligible: p.clvEligible,
+          priceSource: p.priceSource, clvEligible: p.clvEligible, captureFailureCode: p.captureFailureCode || null,
           entrySnapshotAt: p.entrySnapshotAt, providerEventIds: p.providerEventIds,
           startsAt: p.startsAt, espnEventId: p.espnEventId, canonicalKey: p.canonicalKey },
         agreement: captured.agreement || null,
@@ -3061,11 +3061,32 @@ const MCP_TOOLS = [
     },
   },
   {
+    name: "dd_verify_bozo_entry",
+    title: "Verify original Bozo entry prices (two-phase)",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Manager, delegate or site admin: verify an unverified current pick using BOTH original DraftKings prices for its exact line and period at submission. Never substitute current odds. Phase one returns an echo and confirm_code; SHOW the human the echo and obtain their approval before phase two. Preserves the submission clock and any graded verdict. Records an atomic commissioner audit receipt. Requires a personal connector.",
+    inputSchema: { type: "object", properties: {
+      league: { type: "string", description: "League id, default main" },
+      forUid: { type: "string", description: "Member key or unique display name" },
+      price: { type: "number", description: "Original submitted American price, signed" },
+      priceOpp: { type: "number", description: "Original opposite price for the same line and period, signed" },
+      evidence: { type: "string", maxLength: 200, description: "Optional source note for the original quote" },
+      confirm: { type: "string", description: "Phase two: approved confirm_code; include league and forUid" }
+    }, required: ["forUid"], anyOf: [{required:["confirm"]},{required:["price","priceOpp"]}], additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr("Verification needs a personal connector. Sign in at " + SITE + "/connect.html.");
+      const out = await bozoVerifyEntryCore(env, caller, args, "mcp");
+      return out.status === 200 ? toolText(out.body) : toolErr(out.body.error);
+    },
+  },
+  {
     name: "dd_bozo_admin_actions",
     title: "Commissioner actions this week",
     catalog: "core",
     readOnlyHint: true,
-    description: "Every leg the league manager (or site admin) submitted, edited or removed ON BEHALF of another member this week — the audit trail behind any leg marked commissionerModified. Display names only. Empty means nobody has acted for anyone. Proxy legs carry the server time of the manager's write, never a backdated one.",
+    description: "Every leg submitted, edited, removed or manually verified by the league manager, a delegate or site admin this week — the audit trail behind any leg marked commissionerModified. Display names only. Empty means nobody has acted for anyone. Proxy legs carry the server time of the manager's write, never a backdated one.",
     inputSchema: { type: "object", properties: {
       league: { type: "string", description: "League id (default: main)" },
       week: { type: "integer", description: "Week to read (default: the league's current week)" },
@@ -3076,7 +3097,7 @@ const MCP_TOOLS = [
       const lg = await loadLeague(env, lid);
       if (!lg) return toolErr("No such league: " + lid);
       const week = Number.isInteger(args.week) && args.week > 0 ? args.week : (lg.week || 1);
-      const brief = x => x ? { label: x.label, line: x.line ?? null, price: x.price ?? null, ts: x.ts || null } : null;
+      const brief = x => x ? { label: x.label, line: x.line ?? null, price: x.price ?? null, priceOpp: x.entryPriceOpp ?? x.priceOpp ?? null, verificationStatus: x.verificationStatus || null, fairEntry: x.fairEntry ?? null, ts: x.ts || null } : null;
       const actions = Object.entries((lg.admin && lg.admin.actions) || {})
         .map(([key, r]) => ({ ts: (r && Number(r.ts)) || parseInt(key, 10) || 0, r }))
         .filter(({ r }) => r && (r.week || 1) === week)
@@ -3084,7 +3105,7 @@ const MCP_TOOLS = [
         .map(({ ts, r }) => ({
           at: ts ? new Date(ts).toISOString() : null, type: r.type,
           by: r.byName || null, for: r.forName || null, week: r.week || 1,
-          via: r.via || "site", before: brief(r.before), after: brief(r.after),
+          via: r.via || "site", evidence: r.evidence || null, before: brief(r.before), after: brief(r.after),
         }));
       return toolText({ league: lid, week, actions,
         note: actions.length ? undefined : "No commissioner actions this week.",

@@ -21,7 +21,7 @@ function fixture() {
     SPORTS:{nfl:{n:'NFL'}}, esc:s=>String(s ?? ''), kEnc:s=>s, playerName:s=>s, teamOf:s=>s,
     isRoyale:()=>false, activeNames:()=>['Will','Other'], paintPriceWarn:()=>{},
     favPrice:s=>-Math.abs(Number(s)), fmtPrice:String, proxyTarget:()=>null,
-    resetAsSelect:()=>{}, refresh:async()=>{},
+    resetAsSelect:()=>{}, refresh:async()=>{}, wGet:async()=>({build:'bozo-20260924-02'}),
     wPost:async (url, body)=> {
       calls.push({url,body});
       return body.pick ? { echo:body.pick.label, confirm_code:'fixture-only' } : {leg:{priceSource:'captured'}};
@@ -30,7 +30,7 @@ function fixture() {
   w.confirm = s => { echoes.push(s); return true; };
   w.eval(between('const PERIOD_LABEL =', '/* ---------------- live state ---------------- */')
     + between('let formTouched = false, prefilledFor = null;', '/* Grade one leg')
-    + between('async function submitLeg(){', '/* ---------------- Phase 2.7: commissioner actions')
+    + between('// The server also checks both phases,', '/* ---------------- Phase 2.7: commissioner actions').replace('\ncheckBozoBuild();\n','\n')
     + between("document.getElementById('fMkt').onchange", '/* Signing in from the banner'));
   d.getElementById('fSport').innerHTML='<option value="nfl">NFL</option>';
   d.getElementById('fGame').innerHTML='<option value="test-ten">TEN @ TEST</option>';
@@ -154,3 +154,14 @@ test('invalid or unfinished numbers never reach the submission API', async () =>
   }
   dom.window.close();
 });
+
+ test('outdated/offline pages cannot submit; rechecking retains typed fields and both phases carry the build',async()=>{
+  const {dom,w,el,type,calls}=fixture();type('+7.5');
+  w.wGet=async()=>({build:'newer'});await w.submitLeg();
+  assert.equal(calls.length,0);assert.equal(el('save').disabled,true);assert.equal(el('fLine').value,'+7.5');
+  assert.match(el('buildStatus').textContent,/out of date/);
+  w.wGet=async()=>{throw Error('offline');};await w.submitLeg();assert.equal(calls.length,0);
+  assert.match(el('buildStatus').textContent,/Reconnect/);
+  w.wGet=async()=>({build:'bozo-20260924-02'});await w.submitLeg();assert.equal(calls.length,2);
+  assert.ok(calls.every(c=>c.body.clientBuild==='bozo-20260924-02'));dom.window.close();
+ });

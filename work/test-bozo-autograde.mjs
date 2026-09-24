@@ -168,9 +168,7 @@ ok(/path: `results\/\$\{encodeURIComponent\(k\)\}\/result`/.test(pageCode)
    card shipped without it once; this is why it cannot ship without it again. */
 ok(/path: `results\/\$\{encodeURIComponent\(k\)\}\/resultSource`, value: v \? 'manual' : null/.test(pageCode),
    "a per-leg save stamps the result as set by hand");
-ok(/ov = clvAssumedOpp\(cv\); assumed = true;/.test(pageCode)
-   && /closeOppSource`, value: assumed \? 'assumed' : 'manual'/.test(pageCode),
-   "a lone close gets its other side assumed and stamped as such");
+ok(/Both sides are required/.test(pageCode), "a lone close needs its actual opposite price");
 ok(/await godWrite\([\s\S]{0,400}await refresh\(\); paintGod\(\);/.test(pageCode),
    "the save goes through the audited override route and repaints");
 ok(/decide\(\)[\s\S]*querySelectorAll\('\[data-w\]'\)/.test(pageCode),
@@ -233,10 +231,8 @@ ok(!/data-clv=/.test(pageCode) && !/class="gclv/.test(pageCode),
    "no CLV input survives on the page — the number is derived, not entered");
 ok(/if\(r\.clvPts != null && Number\.isFinite\(\+r\.clvPts\)\) return \+r\.clvPts\/100;/.test(pageCode),
    "a row that already carries a hand-set CLV still outranks the derived one");
-ok(/const other = b == null \? clvAssumedOpp\(a\) : b;/.test(pageCode),
-   "a missing opposite side is assumed at standard juice, so one close is enough");
-ok(/other side assumed at standard juice/.test(pageCode),
-   "and the panel says so on the row, rather than passing it off as two captured sides");
+ok(/if\(a == null \|\| b == null/.test(pageCode), "missing opposite side remains unmeasured");
+ok(/no juice is assumed/.test(pageCode), "the panel explains missing evidence");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

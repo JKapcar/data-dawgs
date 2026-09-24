@@ -37,7 +37,7 @@ const src = grab("function beatDeficit(mkt, dir, line, margin, total, sd){", "\n
   + "\n" + grab("function binaryBeatOf(p){", "\n/* ⚠️ ONE WORST-BEAT RULE")
   + "\n" + grab("function legRow(x){", "/* ⚠️ A HAND-SET CLV OUTRANKS")
   + "\n" + grab("function clvDeltaOf(x, r){", "\nconst amer = d =>")
-  + "\n" + grab("function gauss(){", "const devig = px")
+  + "\n" + grab("function gauss(){", "const devig = x")
   + "\n" + grab("function simulate(live, levers){", "\n// One definition of")
   + "\n" + grab("function clvDevig(price, opp){", "/** did either side")
   + "\n" + grab("function clvPair(l){", "const clvGraded =");

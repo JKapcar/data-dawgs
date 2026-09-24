@@ -1803,6 +1803,7 @@ export default {
     if (url.pathname === "/auth/guillotine-state") return authGuillotineState(request, env, cors);
     if (url.pathname === "/league/mine")   return universalLeagueMine(request, env, cors);
     if (url.pathname === "/league/gate")   return universalLeagueGate(request, env, cors);
+    if (url.pathname === "/bozo/build") return json({ build: "bozo-20260924-02" }, 200, cors);
     if (url.pathname === "/league/list")   return leagueList(request, env, cors);
     if (url.pathname === "/league/search") return leagueSearch(request, env, cors);
     if (url.pathname === "/league/create") return leagueCreateDispatch(request, env, cors);
@@ -5084,6 +5085,7 @@ async function leagueImportFinalise(env, id, lg) {
         actual: r.actual ?? null,
         close: r.close ?? null, closeOpp: r.closeOpp ?? null,
         closeBook: r.closeBook || null, closeSource: r.closeSource || null,
+        closeOppSource: r.closeOppSource || null,
         closeObservedAt: r.closeObservedAt || null,
         closeUnavailableReason: r.closeUnavailableReason || null,
       };
@@ -6898,7 +6900,7 @@ async function commitBozoLeg(env, lid, state, name, p, via = null, mkey = null, 
     // stay unverified until a manager verifies the original entry quote.
     priceSource: p.priceSource === "captured" ? "captured" : "self",
     verificationStatus: p.priceSource === "captured" ? "verified" : "unverified",
-    captureFailureReason: p.captureFailureReason || null,
+    captureFailureReason: p.captureFailureReason || null, captureFailureCode: p.captureFailureCode || null,
     // ⚠️ Stored so the uniqueness and contradiction checks never have to re-derive a
     // key from a row written under an older version of the rules. A key that drifts
     // between write time and read time silently stops catching collisions.
@@ -6985,6 +6987,11 @@ async function bozoPick(request, env, cors) {
   let body;
   try { body = await readBody(request); }
   catch { return json({ error: "Bad JSON." }, 400, cors); }
+
+  // Checked on BOTH phases, before capture or writes. Old tabs have no guard JS.
+  if (body.action !== "remove" && body.clientBuild !== "bozo-20260924-02")
+    return json({ error: "This page is out of date. Reload before submitting; nothing was submitted.",
+      code: "page_out_of_date", expectedBuild: "bozo-20260924-02" }, 409, cors);
 
   const lid = leagueOf(body);
   if (!lid) return json({ error: "Bad league id." }, 400, cors);
@@ -7113,10 +7120,10 @@ async function bozoPick(request, env, cors) {
       (p.priceSource === "captured" ? "captured from DraftKings via SGO" : "UNVERIFIED — manually entered odds; manager confirmation needed for CLV") + "." +
       (proxy ? " Submitted FOR " + name + " by you as league manager; it will be marked as such and stamped with the server time of this submission, not backdated." : "") +
       (mine ? " This replaces " + whose + " current leg and resets " + (proxy ? "their" : "your") + " submission clock." : "");
-    await env.RL.put(kvKey, JSON.stringify({ code, lid, week: state.week || 1, forKey: mkey, p, echo, ts: Date.now() }), { expirationTtl: 300 });
+    await env.RL.put(kvKey, JSON.stringify({ code, lid, week: state.week || 1, forKey: mkey, p, echo, clientBuild: body.clientBuild, ts: Date.now() }), { expirationTtl: 300 });
     return json({ status: "confirm_required", echo, confirm_code: code, expires_in: 300,
       captured: { line: p.line, price: p.price, priceOpp: p.priceOpp, priceSource: p.priceSource,
-        clvEligible: p.clvEligible, entrySnapshotAt: p.entrySnapshotAt },
+        clvEligible: p.clvEligible, captureFailureCode: p.captureFailureCode || null, entrySnapshotAt: p.entrySnapshotAt },
       agreement: captured.agreement || null, warning: captured.captureWarning || null,
       ...(proxy ? { forName: name } : {}) }, 200, cors);
   } catch (e) {
@@ -7641,7 +7648,7 @@ function ledgerEntries(lid, season, week, picks, order) {
       verificationStatus: x.verificationStatus || null,
       entryVerification: x.entryVerification || null,
       clvEligible: x.clvEligible === true,
-      captureFailureReason: x.captureFailureReason || null,
+      captureFailureReason: x.captureFailureReason || null, captureFailureCode: x.captureFailureCode || null,
       line: x.line == null ? null : x.line,     // numeric, and separate from the label,
       label: x.label,                           // or the Bozo Index can't be computed
       prop: x.prop || null,
@@ -8095,10 +8102,10 @@ function bozoDkOutcome(odd, field, wanted) {
 function bozoDkQuote(event, pick, registry) {
   if (pick.mkt === "prop") return bozoDkPropQuote(event, pick);
   const ids = bozoOddIds(pick.mkt, bozoPeriodOf(pick));
-  if (!ids) return { reason: "market-not-matchable" };
+  if (!ids) return { code: "market_missing", reason: "market-not-matchable" };
   const odds = (event && event.odds) || {};
   const a = odds[ids[0]], b = odds[ids[1]];
-  if (!a || !b) return { reason: "market-absent-at-source" };
+  if (!a || !b) return { code: a || b ? "one_sided_market" : "market_missing", reason: "market-absent-at-source" };
 
   // Orient to the side the player actually took. For a total that is over/under; for a
   // moneyline or spread it is home/away, and the pick stores a team abbreviation.
@@ -8116,25 +8123,27 @@ function bozoDkQuote(event, pick, registry) {
     const side = bozoTeamNorm(pick.side, registry);
     if (side && home.includes(side))      { mineOdd = a; theirOdd = b; }
     else if (side && away.includes(side)) { mineOdd = b; theirOdd = a; }
-    else return { reason: "could not tell which side of the market the leg was on" };
+    else return { code: "market_missing", reason: "could not tell which side of the market the leg was on" };
   }
 
   const field = pick.mkt === "spread" ? "spread" : pick.mkt === "total" ? "overUnder" : null;
   const storedLine = Number(pick.line);
-  if (field && !Number.isFinite(storedLine)) return { reason: "the leg has no number to price" };
+  if (field && !Number.isFinite(storedLine)) return { code: "market_missing", reason: "the leg has no number to price" };
   // Bozo stores the handicap as points this side GIVES UP: +39.5 renders Indiana -39.5.
   // SGO stores the sportsbook display number, so spreads cross this boundary inverted.
   const wanted = pick.mkt === "spread" ? -storedLine : storedLine;
+  if (!mineOdd.byBookmaker?.[BOZO_CLOSE_BOOK] || !theirOdd.byBookmaker?.[BOZO_CLOSE_BOOK])
+    return { code:"book_missing", reason:"DraftKings was not pricing both sides" };
   const mine = bozoDkOutcome(mineOdd, field, wanted);
   const opposingNumber = pick.mkt === "spread" ? -wanted : wanted;
   const theirs = bozoDkOutcome(theirOdd, field, opposingNumber);
   if (!mine || !theirs)
-    return { reason: `DraftKings had no two-sided ${pick.mkt} market at ${wanted}` };
+    return { code: mine || theirs ? "one_sided_market" : "line_missing", reason: `DraftKings had no two-sided ${pick.mkt} market at ${wanted}` };
   const minePrice = bzAmerican(mine.odds), theirPrice = bzAmerican(theirs.odds);
 
   // ⚠️ Both sides or nothing. Without the opposite side there is no de-vig, and the
   // chart's expected-win baseline is off by the entire hold.
-  if (minePrice === null || theirPrice === null) return { reason: "only one side of the market was priced" };
+  if (minePrice === null || theirPrice === null) return { code: "one_sided_market", reason: "only one side of the market was priced" };
   const observed = [mine.lastUpdatedAt, theirs.lastUpdatedAt].filter(x => !isNaN(Date.parse(x || ""))).sort();
   return { price: minePrice, opp: theirPrice, line: pick.mkt === "ml" ? 0 : storedLine,
            bookLine: pick.mkt === "ml" ? 0 : wanted,
@@ -8157,10 +8166,10 @@ function bozoDkPropQuote(event, pick) {
   const over = (pick.dir || pick.side) !== "under";
 
   if (!wantStats.length)
-    return { reason: 'couldn\'t work out which stat "' + String(pick.prop || "").slice(0, 40) + '" refers to' };
+    return { code: "market_missing", reason: 'couldn\'t work out which stat "' + String(pick.prop || "").slice(0, 40) + '" refers to' };
   if (!wantName.length)
-    return { reason: 'couldn\'t work out which player "' + String(pick.prop || "").slice(0, 40) + '" refers to' };
-  if (!Number.isFinite(wantLine)) return { reason: "the leg has no number to match a prop market on" };
+    return { code: "market_missing", reason: 'couldn\'t work out which player "' + String(pick.prop || "").slice(0, 40) + '" refers to' };
+  if (!Number.isFinite(wantLine)) return { code: "market_missing", reason: "the leg has no number to match a prop market on" };
 
   let sawStat = false, sawPlayer = false, sawLine = false, best = null;
   for (const [oddID, o] of Object.entries(odds)) {
@@ -8202,10 +8211,10 @@ function bozoDkPropQuote(event, pick) {
   // ⚠️ Say which of the three joins failed. "The stat resolved but the player didn't"
   // and "DraftKings pulled the market" need different fixes, and one shared message
   // would hide both behind whichever someone guessed at first.
-  if (!sawStat)   return { reason: "the odds source had no " + wantStats[0].replace(/_/g, " ") + " market on this game" };
-  if (!sawPlayer) return { reason: 'no market for "' + wantName.join(" ") + '" on this game — check the spelling against the bet slip' };
-  if (!sawLine)   return { reason: "DraftKings had that player and stat but not the number " + wantLine + " at kickoff" };
-  return { reason: "DraftKings wasn't pricing that selection at kickoff" };
+  if (!sawStat)   return { code: "market_missing", reason: "the odds source had no " + wantStats[0].replace(/_/g, " ") + " market on this game" };
+  if (!sawPlayer) return { code: "market_missing", reason: 'no market for "' + wantName.join(" ") + '" on this game — check the spelling against the bet slip' };
+  if (!sawLine)   return { code: "line_missing", reason: "DraftKings had that player and stat but not the number " + wantLine + " at kickoff" };
+  return { code: "book_missing", reason: "DraftKings wasn't pricing that selection at kickoff" };
 }
 
 // Every leg across every league that is still waiting on a close and whose game is
@@ -8278,8 +8287,82 @@ async function bozoSgoFailure(response, env, context, suppliedText) {
   return error;
 }
 
+// Submit/draft only. Cloudflare Cache API is local to a datacenter; closes bypass it.
+async function bozoSgoRequest(env, url, context, options = {}) {
+  const submit = context.caller === "submit" || context.caller === "draft";
+  const deadline = options.deadline || Date.now() + (submit ? 7000 : 8000);
+  const fault = (code, message) => Object.assign(new Error(message), {code});
+  let cache = null, key = null;
+  if (submit && typeof caches !== "undefined") {
+    try {
+      cache = caches.default;
+      // The API key is a header, never in the cache key or stored response.
+      const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(url.toString()));
+      key = new Request("https://bozo-entry-cache.invalid/v1/" + [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,"0")).join(""));
+      const hit = await cache.match(key);
+      if (hit) {
+        const saved = await hit.json(), age = Date.now() - Date.parse(saved.fetchedAt);
+        if (age >= 0 && age < 60000 && Array.isArray(saved.events)) {
+          Object.defineProperty(saved.events, "fetchedAt", {value:saved.fetchedAt});
+          return saved.events;
+        }
+      }
+    } catch { cache = null; }
+  }
+  let last;
+  for (let attempt = 0; attempt < (submit ? 3 : 1); attempt++) {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw last || fault("timeout", "SGO capture deadline reached");
+    const controller = new AbortController();
+    let timer;
+    try {
+      const work = async () => {
+        const res = await fetch(url, {headers:{"x-api-key":env.SGO_KEY}, signal:controller.signal});
+        if (!res.ok) {
+          const err = await bozoSgoFailure(res, env, context);
+          const quota = res.status === 429 && /monthly|quota|object.{0,30}(limit|exhaust)|billing.{0,20}limit/i.test(err.detail);
+          err.code = quota ? "quota_exceeded" : res.status === 429 ? "rate_limited" : res.status >= 500 ? "provider_error" : "provider_rejected";
+          throw err;
+        }
+        let body;
+        try { body = await res.json(); } catch (e) {
+          if (controller.signal.aborted) throw fault("timeout", "SGO response timed out");
+          throw fault("invalid_response", "SGO returned invalid JSON");
+        }
+        if (!body || !Array.isArray(body.data)) throw fault("invalid_response", "SGO response has no events array");
+        const fetchedAt = new Date().toISOString();
+        return {events:body.data, fetchedAt};
+      };
+      const saved = await Promise.race([work(), new Promise((_,reject)=>{
+        timer = setTimeout(()=>{ controller.abort(); reject(fault("timeout", "SGO request timed out")); }, Math.min(submit ? 3000 : 8000, remaining));
+      })]);
+      clearTimeout(timer);
+      // Never reset the observation time when a cached quote is reused.
+      if (cache && key) {
+        try { await cache.put(key, new Response(JSON.stringify(saved), {headers:{"content-type":"application/json","cache-control":"public, max-age=60"}})); } catch {}
+      }
+      Object.defineProperty(saved.events, "fetchedAt", {value:saved.fetchedAt});
+      return saved.events;
+    } catch (e) {
+      last = e.code ? e : fault(controller.signal.aborted ? "timeout" : "provider_error", "SGO network request failed");
+    } finally { clearTimeout(timer); }
+    if (!submit || attempt === 2 || !["timeout","provider_error","rate_limited"].includes(last.code)) throw last;
+    let delay = attempt === 0 ? 1500 : 3000;
+    const retry = last.headers?.["retry-after"];
+    if (retry !== undefined) {
+      const seconds = Number(retry);
+      const parsed = String(retry).trim() !== "" && Number.isFinite(seconds) ? seconds * 1000 : Date.parse(retry) - Date.now();
+      if (Number.isFinite(parsed)) delay = Math.max(0, parsed);
+    }
+    // A long Retry-After is a refusal for this mobile request, not permission to retry early.
+    if (delay > 4000 || delay + 50 >= deadline - Date.now()) throw last;
+    await new Promise(resolve=>setTimeout(resolve,delay));
+  }
+  throw last;
+}
+
 async function bozoFetchEvents(env, sport, startMs, needProps, periods = ["game"], options = {}) {
-  if (!env.SGO_KEY) throw new Error("Worker misconfigured: SGO_KEY secret not set");
+  if (!env.SGO_KEY) throw Object.assign(new Error("Odds capture is not configured"), {code:"capture_unconfigured"});
   const leagueID = BOZO_SGO_LEAGUE[sport];
   if (!leagueID) return [];
   const url = new URL(BOZO_CLOSE_API);
@@ -8294,7 +8377,7 @@ async function bozoFetchEvents(env, sport, startMs, needProps, periods = ["game"
   // pulling every prop on a full NFL Sunday for no reason is wasteful.
   if (!needProps) {
     const ids = new Set();
-    for (const pd of (periods && periods.length ? periods : ["game"]))
+    for (const pd of [...new Set(periods && periods.length ? periods : ["game"])].sort())
       for (const m of ["ml", "spread", "total"]) for (const id of bozoOddIds(m, pd)) ids.add(id);
     url.searchParams.set("oddID", [...ids].join(","));
   }
@@ -8304,11 +8387,7 @@ async function bozoFetchEvents(env, sport, startMs, needProps, periods = ["game"
   // line — and a close snapped off the main line would be a different market's price.
   url.searchParams.set("includeAltLines", "true");
   url.searchParams.set("limit", needProps ? "25" : "100");
-  const res = await fetch(url, { headers: { "x-api-key": env.SGO_KEY },
-    ...(typeof AbortSignal !== "undefined" && AbortSignal.timeout ? { signal: AbortSignal.timeout(8000) } : {}) });
-  if (!res.ok) throw await bozoSgoFailure(res, env, {sport, needProps, caller: options.caller || "submit"});
-  const body = await res.json();
-  return (body && body.data) || [];
+  return bozoSgoRequest(env, url, {sport, needProps, caller: options.caller || "submit"}, options);
 }
 
 // Join an ESPN-sourced pick to an aggregator event. The pick's `game` is "AWAY VS HOME"
@@ -8366,14 +8445,14 @@ function bozoCanonicalKey(sport, event, registry) {
     ? [sport, teams.join("~"), startsAt.slice(0, 10)].join("|") : null;
 }
 
-function bozoSelfPricedEntry(p, reason) {
+function bozoSelfPricedEntry(p, reason, code = "market_missing") {
   const typed = bzAmerican(p.typedPrice ?? p.price);
   if (typed === null) return { ok: false, reason: "manual_price_required",
     error: "The odds checker could not verify this pick. Enter the DraftKings odds in the price box and submit again; your pick will be marked UNVERIFIED for manager review." };
   return { ok: true, p: { ...p, price: typed, priceOpp: null, priceSource: "self",
     entryBook: BOZO_CLOSE_BOOK, entryProvider: null, entrySnapshotAt: null,
     fairEntry: null, entryHold: null, clvEligible: false,
-    verificationStatus: "unverified", captureFailureReason: String(reason).slice(0, 300),
+    verificationStatus: "unverified", captureFailureCode: code, captureFailureReason: String(reason).slice(0, 300),
     entryVerification: null, providerEventIds: {}, canonicalKey: p.canonicalKey || null,
     closeState: p.mkt === "other" ? "unmatched" : "pending" },
     captureWarning: reason };
@@ -8385,7 +8464,7 @@ function bozoSelfPricedEntry(p, reason) {
 async function bozoCaptureEntry(env, input, options = {}) {
   const p = { ...input };
   // These are server-authored, never assertions accepted from a submitter.
-  for (const key of ["verificationStatus", "entryVerification", "captureFailureReason", "clvEligible",
+  for (const key of ["verificationStatus", "entryVerification", "captureFailureReason", "captureFailureCode", "clvEligible",
     "priceSource", "entrySnapshotAt", "entryProvider", "providerEventIds", "canonicalKey", "fairEntry", "entryHold"]) delete p[key];
   p.period = bozoPeriodOf(p);
   const periodErr = bozoPeriodError(p);
@@ -8407,25 +8486,29 @@ async function bozoCaptureEntry(env, input, options = {}) {
   }
   if (!Number.isFinite(startMs)) return { ok: false, reason: "starts_at_unresolved",
     error: "Kickoff time (startsAt) could not be resolved from the schedule cache." };
-  if (p.mkt === "other") return bozoSelfPricedEntry(p, "Other markets are always self-priced and not CLV-eligible.");
+  if (p.mkt === "other") return bozoSelfPricedEntry(p, "Other markets require manual verification of the original quote for CLV.", "unsupported_market");
 
-  let events, registry;
+  let events, registry, timer;
+  const deadline = Date.now() + 7000;
   try {
-    [events, registry] = await Promise.all([
-      bozoFetchEvents(env, p.sport, startMs, p.mkt === "prop", [p.period], {caller: options.caller || "submit"}),
-      bozoTeamRegistry(env, p.sport),
+    [events, registry] = await Promise.race([
+      Promise.all([
+        bozoFetchEvents(env, p.sport, startMs, p.mkt === "prop", [p.period], {caller: options.caller || "submit", deadline}),
+        bozoTeamRegistry(env, p.sport),
+      ]),
+      new Promise((_, reject) => { timer = setTimeout(() => reject(Object.assign(new Error("Capture timed out"), {code:"timeout"})), 7000); }),
     ]);
   } catch (e) {
-    return bozoSelfPricedEntry(p, "DraftKings capture failed: " + e.message + ".");
-  }
+    return bozoSelfPricedEntry(p, "DraftKings capture failed: " + e.message + ".", e.code || "provider_error");
+  } finally { clearTimeout(timer); }
   const event = bozoMatchEvent(events, p, registry);
   if (!event) {
-    return bozoSelfPricedEntry(p, "The game could not be matched at the odds source.");
+    return bozoSelfPricedEntry(p, "The game could not be matched at the odds source.", "event_not_found");
   }
   const quote = bozoDkQuote(event, p, registry);
   const quoteError = assertQuote(quote, p);
   if (quoteError) {
-    return bozoSelfPricedEntry(p, "DraftKings capture failed: " + quoteError + ".");
+    return bozoSelfPricedEntry(p, "DraftKings capture failed: " + quoteError + ".", quote?.code || "invalid_quote");
   }
   const facts = bozoDevigPair(quote.price, quote.opp);
   const commenceTime = event.status?.startsAt || p.startsAt;
@@ -8440,7 +8523,7 @@ async function bozoCaptureEntry(env, input, options = {}) {
     period: p.period, label: bozoLabelWithPeriod(p.label, p.period),
     line: quote.line, price: quote.price, priceOpp: quote.opp,
     priceSource: "captured", verificationStatus: "verified", entryBook: BOZO_CLOSE_BOOK, entryProvider: "sgo",
-    entrySnapshotAt: quote.snapshotAt || new Date().toISOString(),
+    entrySnapshotAt: quote.snapshotAt || events.fetchedAt || new Date().toISOString(),
     fairEntry: facts.fair, entryHold: facts.hold, clvEligible: true,
     canonicalKey: bozoCanonicalKey(p.sport, event, registry), commenceTime,
     startsAt: commenceTime, espnEventId: String(p.eventId),
@@ -8601,6 +8684,7 @@ async function bozoClv(request, url, env, cors) {
       entryPriceOpp: r.priceOpp ?? null,
       priceSource: r.priceSource || null,
       verificationStatus: r.verificationStatus || null,
+      clvEligible: r.clvEligible ?? null, captureFailureCode: r.captureFailureCode || null,
       entryVerification: r.entryVerification || null,
       entryBook: r.entryBook || null,
       entrySubmittedAt: r.ts ? new Date(r.ts).toISOString() : null,
@@ -8610,6 +8694,7 @@ async function bozoClv(request, url, env, cors) {
       closeBook: r.closeBook || null,
       closeObservedAt: r.closeObservedAt || null,
       closeSource: r.closeSource || null,
+      closeOppSource: r.closeOppSource || null,
       closeUnavailableReason: r.closeUnavailableReason || null,
 
       /* The manager's CLV, in points, when they set one. Null means "derive it from the
@@ -8798,7 +8883,9 @@ function rSd(x) {
   return base * Math.sqrt(BOZO_PERIOD_FRACTION[period] ?? 1);
 }
 function rExpected(x) {
-  const sd = rSd(x), p = Math.min(.98, Math.max(.02, rImp(x.price) - .022));
+  const sd = rSd(x), fair = rDevig(x.price, x.entryPriceOpp ?? x.priceOpp);
+  if (fair == null || x.verificationStatus === "unverified") return null;
+  const p = Math.min(.98, Math.max(.02, fair));
   const shift = sd * rInvNorm(p), base = x.mkt === "ml" ? 0 : (Number(x.line) || 0);
   return rDir(x) === "under" ? base - shift : base + shift;
 }
@@ -8826,7 +8913,7 @@ function rExpected(x) {
    zero movement, which is a fabricated number, not a missing one. */
 function royaleBeatDeficit(x, r) {
   if (x.mkt === "prop" || x.mkt === "other") {
-    const pClose = rDevig(r && r.close, r && r.closeOpp);
+    const pClose = r?.closeOppSource === "assumed" ? null : rDevig(r && r.close, r && r.closeOpp);
     const pEntry = rDevig(x.price, x.entryPriceOpp);
     const p = pClose != null ? pClose : (pEntry != null ? pEntry : rImp(x.price));
     const basis = pClose != null ? "close" : (pEntry != null ? "entry" : "entry-raw");
@@ -8905,8 +8992,8 @@ function royaleApplyLever(leverIdx, losers, picks, results) {
         const manual = r.clvPts != null && Number.isFinite(Number(r.clvPts))
           ? Number(r.clvPts) / 100 : null;
         if (manual != null) { v = -manual; break; }
-        if (x.verificationStatus === "unverified" ||
-            (x.priceSource === "manual" && (x.entryPriceOpp == null || r.closeOpp == null))) break;
+        if (x.verificationStatus === "unverified" || x.clvEligible === false ||
+            r.closeOppSource === "assumed" || x.entryOppSource === "assumed") break;
         const pC = rDevig(r.close, r.closeOpp), pE = rDevig(x.price, x.entryPriceOpp);
         v = (pC == null || pE == null) ? null : -(pC - pE);
         break;
@@ -9127,14 +9214,7 @@ const bozoProbAm = pr => (pr >= 0.5 ? Math.round((-100 * pr) / (1 - pr)) : Math.
 
 /* The other side of `close`, assuming a standard hold. null when the price is so long
    that no sane opposite is left — inventing one there would be worse than the gap. */
-function bozoAssumedOpposite(close, overround = BOZO_DEFAULT_OVERROUND) {
-  const price = Math.round(Number(close));
-  if (!Number.isFinite(price) || Math.abs(price) < 100) return null;
-  const left = overround - bozoAmProb(price);
-  if (!(left > 0.02 && left < 0.98)) return null;
-  const other = bozoProbAm(left);
-  return Number.isFinite(other) && Math.abs(other) >= 100 ? other : null;
-}
+function bozoAssumedOpposite(close) { return null; }
 
 /* POST /bozo/close {league, row, close, closeOpp} — fill in a closing price by hand, on
    any week, long after that week has rolled over.
@@ -9222,21 +9302,12 @@ async function bozoCloseFill(request, env, cors) {
   const clvOnly = hasClv && clear;
   const close = Math.round(Number(body.close));
   let closeOpp = Math.round(Number(body.closeOpp));
-  /* ⚠️ ONE SIDE IS NOW ENOUGH — the other is assumed at a standard hold rather than
-     refused. Refusing it was correct when there was no way to de-vig a lone price, but
-     the effect was that a leg whose other side nobody wrote down simply never counted.
-     An assumed side is weaker evidence than an observed one and is stamped as such;
-     silently dropping the leg was not more honest, only quieter. */
-  let oppAssumed = false;
+  // A manually supplied close must contain both actual prices.
   if (!clear) {
     if (!Number.isFinite(close) || Math.abs(close) < 100)
       return json({ error: "The closing price has to be a real American price (±100 or wider)." }, 400, cors);
     if (!Number.isFinite(closeOpp) || Math.abs(closeOpp) < 100) {
-      const assumed = bozoAssumedOpposite(close);
-      if (assumed == null)
-        return json({ error: "That price is too long to assume an other side for — enter the real one." }, 400, cors);
-      closeOpp = assumed;
-      oppAssumed = true;
+      return json({ error: "Enter the actual opposite closing price. Both sides are required; no juice is assumed." }, 400, cors);
     }
   }
 
@@ -9253,8 +9324,8 @@ async function bozoCloseFill(request, env, cors) {
         closeObservedAt: null, closeUnavailableReason: null,
         // Provenance of the OTHER side travels separately: one of these numbers may be
         // read off a slip while the other was never observed by anybody.
-        closeOppSource: oppAssumed ? "assumed" : "manual",
-        closeOverround: oppAssumed ? BOZO_DEFAULT_OVERROUND : null,
+        closeOppSource: "manual",
+        closeOverround: null,
         closeEnteredBy: auth.name, closeEnteredTs: Date.now() };
 
   if (hasClv) {
@@ -9315,7 +9386,7 @@ async function bozoCloseGaps(request, url, env, cors) {
       close: r.close ?? null, closeOpp: r.closeOpp ?? null,
       reason: r.closeUnavailableReason || null,
       // What the other side would become if the manager saves this one alone.
-      assumedOpp: r.close != null && r.closeOpp == null ? bozoAssumedOpposite(r.close) : null,
+      assumedOpp: null,
       oppSource: r.closeOppSource || null,
       /* Locked means the fill route will refuse it, so it must use that route's own
          test: a COMPLETE captured pair. A row the cron only half-observed is a gap the
@@ -9606,59 +9677,91 @@ async function bozoVerifyEntry(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   let body;
   try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
-  const lid = leagueOf(body);
-  if (!lid) return json({ error: "Bad league id." }, 400, cors);
-  const auth = await requireManager(request, env, lid);
+  const auth = await sessionAuth(request, env);
   if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
-  if (!env.RL) return json({ error: "Confirmation store unavailable." }, 503, cors);
-  const key = String(body.forUid || "");
-  if (!/^[A-Za-z0-9_%@+~-]{1,200}$/.test(key)) return json({ error: "Bad member key." }, 400, cors);
+  const out = await bozoVerifyEntryCore(env, auth, body, "site");
+  return json(out.body, out.status, cors);
+}
+
+// One authorization, validation, conditional write and durable receipt for HTTP and MCP.
+async function bozoVerifyEntryCore(env, auth, body, via = "site") {
+  const result = (body, status = 200) => ({ body, status });
+  const fail = (error, status) => result({ error }, status);
+  const lid = leagueOf(body);
+  if (!lid) return fail("Bad league id.", 400);
+  if (!auth || auth.err || !auth.name) return fail("Sign in to verify an entry.", 403);
+  const actor = auth.uid || auth.name;
   try {
     const { data: state, etag } = await fbGet(env, LG(lid), true);
-    const pick = state?.picks?.[key];
-    if (!pick) return json({ error: "No current pick for this member." }, 404, cors);
-    if (pick.priceSource === "captured") return json({ error: "This entry already has a captured quote." }, 409, cors);
-    const kvKey = "bozoverify:" + (auth.uid || auth.name) + ":" + lid + ":" + key;
-    if (body.confirm === undefined) {
-      if (Number(body.week) !== Number(state.week || 1) || Number(body.ts) !== Number(pick.ts))
-        return json({ error: "The pick or week changed. Refresh before verifying." }, 409, cors);
+    if (!state) return fail("No such league.", 404);
+    if (!canActFor(state, auth, env)) return fail("Only this league's manager, delegates or site admin may verify an entry.", 403);
+    const code = body.confirm === undefined ? null : String(body.confirm);
+    const receipt = code && state.audit?.[code];
+    if (receipt?.type === "verify_entry" && receipt.actor === actor && receipt.leagueId === lid)
+      return result(receipt.result);
+    const ref = String(body.forUid || "");
+    const key = memberKeyOfRef(state, ref);
+    if (!key) return fail("No such member. Supply their member key or display name.", 404);
+    // A name shared by two seats is not an identity; exact member keys remain usable.
+    if (!Object.prototype.hasOwnProperty.call(state.members || {}, ref) &&
+        memberKeys(state).filter(k => memberNameAt(state, k) === ref).length > 1)
+      return fail("That display name is ambiguous. Supply the member key.", 400);
+    const pick = state.picks?.[key];
+    if (!pick) return fail("No current pick for this member.", 404);
+    if (pick.priceSource === "captured") return fail("This entry already has a captured quote.", 409);
+    if (!env.RL) return fail("Confirmation store unavailable.", 503);
+    const kvKey = "bozoverify:" + actor + ":" + lid + ":" + key;
+    if (code === null) {
+      if ((body.week !== undefined && Number(body.week) !== Number(state.week || 1)) ||
+          (body.ts !== undefined && Number(body.ts) !== Number(pick.ts)))
+        return fail("The pick or week changed. Refresh before verifying.", 409);
       const price = bzAmerican(body.price), opposite = bzAmerican(body.priceOpp);
-      if (price === null || opposite === null || !bozoDevigPair(price, opposite))
-        return json({ error: "Enter both original DraftKings entry prices, including their signs." }, 400, cors);
-      if (price !== Number(pick.price))
-        return json({ error: "The entry price differs from the submitted pick. Correct the pick explicitly before verifying it." }, 400, cors);
-      const code = crypto.randomUUID();
+      const facts = bozoDevigPair(price, opposite);
+      if (price === null || opposite === null || !facts || facts.hold < -1e-9 || facts.hold > .15 + 1e-9)
+        return fail("Enter both original DraftKings entry prices with signs; the two-sided hold must be between 0% and 15%.", 400);
+      if (price !== Number(pick.price)) return fail("The entry price differs from the submitted pick. Correct the pick explicitly before verifying it.", 400);
+      if (body.evidence !== undefined && (typeof body.evidence !== "string" || body.evidence.length > 200))
+        return fail("Evidence must be text of at most 200 characters.", 400);
+      const confirmation = crypto.randomUUID(), evidence = body.evidence || null;
       const echo = `${pick.who || key}: ${pick.label} (${pick.game}), original entry ${price} / ${opposite}. Confirm these were the DraftKings prices for this exact line and period at submission, not today's prices. The submission time will stay unchanged.`;
-      await env.RL.put(kvKey, JSON.stringify({ code, week: state.week || 1, before: pick, opposite, echo }), { expirationTtl: 300 });
-      return json({ status: "confirm_required", confirm_code: code, echo }, 200, cors);
+      await env.RL.put(kvKey, JSON.stringify({ code: confirmation, week: state.week || 1, before: pick, opposite, evidence, via, echo }), { expirationTtl: 300 });
+      return result({ status: "confirm_required", confirm_code: confirmation, echo, league: lid, forUid: key });
     }
     const pending = JSON.parse(await env.RL.get(kvKey) || "null");
-    if (!pending || pending.code !== String(body.confirm))
-      return json({ error: "Verification expired or confirmation does not match." }, 409, cors);
-    if (pick.entryVerification?.confirmationId === pending.code) return json({ ok: true, replayed: true }, 200, cors);
+    if (!pending || pending.code !== code) return fail("Verification expired or confirmation does not match.", 409);
     if (pending.week !== (state.week || 1) || JSON.stringify(pending.before) !== JSON.stringify(pick))
-      return json({ error: "The pick or week changed. Review it again." }, 409, cors);
+      return fail("The pick or week changed. Review it again.", 409);
     const at = new Date().toISOString(), facts = bozoDevigPair(pick.price, pending.opposite);
-    const verification = { byUid: auth.uid || null, byName: auth.name, at, confirmationId: pending.code,
+    const verification = { byUid: auth.uid || null, byName: auth.name, at, confirmationId: code,
+      verifiedVia: pending.via, evidence: pending.evidence,
       originalSubmittedAt: new Date(pick.ts).toISOString(), price: pick.price, priceOpp: pending.opposite };
-    const next = { ...pick, priceOpp: pending.opposite, entryPriceOpp: pending.opposite,
+    const fields = { priceOpp: pending.opposite, entryPriceOpp: pending.opposite,
       priceSource: "manual", verificationStatus: "verified", clvEligible: true,
       entryProvider: "manual", entryVerification: verification, fairEntry: facts.fair, entryHold: facts.hold };
+    const next = { ...pick, ...fields };
+    const out = { ok: true, verificationStatus: "verified", league: lid, forUid: key, ts: next.ts,
+      price: next.price, priceOpp: next.entryPriceOpp, fairEntry: facts.fair,
+      warning: state.status === "graded" ? "Prices verified; an already graded verdict is unchanged." : null };
     state.picks[key] = next;
     const rowKey = ledgerKey(state.season || SEASON, state.week || 1, key);
-    if (state.ledger?.[rowKey]) Object.assign(state.ledger[rowKey], {
-      priceOpp: pending.opposite, priceSource: "manual", verificationStatus: "verified",
-      clvEligible: true, entryVerification: verification,
-    });
+    if (state.ledger?.[rowKey]) Object.assign(state.ledger[rowKey], fields);
     state.audit = state.audit || {};
-    state.audit[pending.code] = { at, by: auth.name, byUid: auth.uid || null,
-      type: "verify_entry", path: "picks/" + key, from: pick, to: next, week: state.week || 1 };
+    state.audit[code] = { at, by: auth.name, byUid: auth.uid || null, actor, leagueId: lid,
+      type: "verify_entry", path: "picks/" + key, from: pick, to: next, week: state.week || 1, result: out };
+    state.admin = state.admin || {}; state.admin.actions = state.admin.actions || {};
+    state.admin.actions[code] = { ts: Date.parse(at), type: "verify_entry", byUid: auth.uid || null,
+      byName: auth.name, forUid: key, forName: memberNameAt(state, key), leagueId: lid,
+      week: state.week || 1, via: pending.via, evidence: pending.evidence, before: pick, after: next };
     if (!etag) throw new Error("Database did not supply a concurrency token.");
-    if (!await fbPut(env, LG(lid), state, etag))
-      return json({ error: "The league changed during verification. Review it again." }, 409, cors);
-    return json({ ok: true, verificationStatus: "verified", ts: next.ts,
-      warning: state.status === "graded" ? "Prices verified; an already graded verdict is unchanged." : null }, 200, cors);
-  } catch (e) { return json({ error: "Verification failed: " + e.message }, 502, cors); }
+    if (!await fbPut(env, LG(lid), state, etag)) {
+      const fresh = (await fbGet(env, LG(lid))).data;
+      if (!canActFor(fresh, auth, env)) return fail("Verification access changed.", 403);
+      const won = fresh?.audit?.[code];
+      if (won?.type === "verify_entry" && won.actor === actor && won.leagueId === lid) return result(won.result);
+      return fail("The league changed during verification. Review it again.", 409);
+    }
+    return result(out);
+  } catch (e) { return fail("Verification failed: " + e.message, 502); }
 }
 
 async function bozoAdmin(request, url, env, cors) {
@@ -18567,7 +18670,7 @@ const MCP_TOOLS = [
           ts: "set by the server when you actually submit, not now",
         },
         captured: { line: p.line, price: p.price, priceOpp: p.priceOpp,
-          priceSource: p.priceSource, clvEligible: p.clvEligible,
+          priceSource: p.priceSource, clvEligible: p.clvEligible, captureFailureCode: p.captureFailureCode || null,
           entrySnapshotAt: p.entrySnapshotAt, providerEventIds: p.providerEventIds,
           startsAt: p.startsAt, espnEventId: p.espnEventId, canonicalKey: p.canonicalKey },
         agreement: captured.agreement || null,
@@ -18839,7 +18942,7 @@ const MCP_TOOLS = [
         editingAnExistingLeg: !!mine,
         wouldLockTheBoard: wouldLock,
         captured: { line: p.line, price: p.price, priceOpp: p.priceOpp,
-          priceSource: p.priceSource, clvEligible: p.clvEligible,
+          priceSource: p.priceSource, clvEligible: p.clvEligible, captureFailureCode: p.captureFailureCode || null,
           entrySnapshotAt: p.entrySnapshotAt, providerEventIds: p.providerEventIds,
           startsAt: p.startsAt, espnEventId: p.espnEventId, canonicalKey: p.canonicalKey },
         agreement: captured.agreement || null,
@@ -18849,11 +18952,32 @@ const MCP_TOOLS = [
     },
   },
   {
+    name: "dd_verify_bozo_entry",
+    title: "Verify original Bozo entry prices (two-phase)",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Manager, delegate or site admin: verify an unverified current pick using BOTH original DraftKings prices for its exact line and period at submission. Never substitute current odds. Phase one returns an echo and confirm_code; SHOW the human the echo and obtain their approval before phase two. Preserves the submission clock and any graded verdict. Records an atomic commissioner audit receipt. Requires a personal connector.",
+    inputSchema: { type: "object", properties: {
+      league: { type: "string", description: "League id, default main" },
+      forUid: { type: "string", description: "Member key or unique display name" },
+      price: { type: "number", description: "Original submitted American price, signed" },
+      priceOpp: { type: "number", description: "Original opposite price for the same line and period, signed" },
+      evidence: { type: "string", maxLength: 200, description: "Optional source note for the original quote" },
+      confirm: { type: "string", description: "Phase two: approved confirm_code; include league and forUid" }
+    }, required: ["forUid"], anyOf: [{required:["confirm"]},{required:["price","priceOpp"]}], additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user") return toolErr("Verification needs a personal connector. Sign in at " + SITE + "/connect.html.");
+      const out = await bozoVerifyEntryCore(env, caller, args, "mcp");
+      return out.status === 200 ? toolText(out.body) : toolErr(out.body.error);
+    },
+  },
+  {
     name: "dd_bozo_admin_actions",
     title: "Commissioner actions this week",
     catalog: "core",
     readOnlyHint: true,
-    description: "Every leg the league manager (or site admin) submitted, edited or removed ON BEHALF of another member this week — the audit trail behind any leg marked commissionerModified. Display names only. Empty means nobody has acted for anyone. Proxy legs carry the server time of the manager's write, never a backdated one.",
+    description: "Every leg submitted, edited, removed or manually verified by the league manager, a delegate or site admin this week — the audit trail behind any leg marked commissionerModified. Display names only. Empty means nobody has acted for anyone. Proxy legs carry the server time of the manager's write, never a backdated one.",
     inputSchema: { type: "object", properties: {
       league: { type: "string", description: "League id (default: main)" },
       week: { type: "integer", description: "Week to read (default: the league's current week)" },
@@ -18864,7 +18988,7 @@ const MCP_TOOLS = [
       const lg = await loadLeague(env, lid);
       if (!lg) return toolErr("No such league: " + lid);
       const week = Number.isInteger(args.week) && args.week > 0 ? args.week : (lg.week || 1);
-      const brief = x => x ? { label: x.label, line: x.line ?? null, price: x.price ?? null, ts: x.ts || null } : null;
+      const brief = x => x ? { label: x.label, line: x.line ?? null, price: x.price ?? null, priceOpp: x.entryPriceOpp ?? x.priceOpp ?? null, verificationStatus: x.verificationStatus || null, fairEntry: x.fairEntry ?? null, ts: x.ts || null } : null;
       const actions = Object.entries((lg.admin && lg.admin.actions) || {})
         .map(([key, r]) => ({ ts: (r && Number(r.ts)) || parseInt(key, 10) || 0, r }))
         .filter(({ r }) => r && (r.week || 1) === week)
@@ -18872,7 +18996,7 @@ const MCP_TOOLS = [
         .map(({ ts, r }) => ({
           at: ts ? new Date(ts).toISOString() : null, type: r.type,
           by: r.byName || null, for: r.forName || null, week: r.week || 1,
-          via: r.via || "site", before: brief(r.before), after: brief(r.after),
+          via: r.via || "site", evidence: r.evidence || null, before: brief(r.before), after: brief(r.after),
         }));
       return toolText({ league: lid, week, actions,
         note: actions.length ? undefined : "No commissioner actions this week.",

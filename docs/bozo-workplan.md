@@ -1,5 +1,23 @@
 # Bozo — Workplan for Implementation
 
+## Current policy — 2026-09-24
+
+This amendment supersedes earlier capture-or-reject and assumed-juice instructions below.
+
+- **D10:** A valid leg still counts when odds capture fails. Accept the entered American odds inside the league band, mark the entry `unverified`, and preserve the capture failure code. It counts toward filling/locking the ticket, Last In, Shortest Odds and grading. Capture failure alone never disqualifies it.
+- A manager, delegate or site admin can verify **both original DraftKings entry prices**, for the exact line and period at submission. Verification preserves the submission timestamp, atomically updates the existing ledger row and commissioner audit, and restores automatic CLV eligibility. CLV still requires a real two-sided closing quote. Already graded verdicts are unchanged. Explicit manual CLV overrides remain distinct and available.
+- **D8 / no assumed juice:** Do not synthesize an opposite price, subtract a fixed `.022`, or treat a missing pair as zero CLV. Historical assumed opposite prices are not observed evidence. Fair-price and simulation calculations that need a pair remain unavailable until that evidence exists.
+- **Spread notation:** The form, preview and echo use slip signs: Titans **+7.5 gets 7.5 points**, Titans **−7.5 gives 7.5**. The existing stored/API convention is the inverse (positive gives points); conversion happens at the form boundary. Totals and props retain their unsigned numbers. No stored picks are reinterpreted.
+- **Worst Beat:** For spreads and totals it is the miss relative to the selected number, normalized by the sport/period SD. Price does not change that miss. Binary markets retain their separately labelled price-based fallback.
+- `dd_verify_bozo_entry` uses personal authentication and two phases. Show the original-quote attestation to the human before confirming. Verify permission on both phases; log `verify_entry` in `dd_bozo_admin_actions`. Durable replay returns the original result even after temporary confirmation expiry or rollover.
+- Browser submissions carry build `bozo-20260924-02` on both phases. The Worker rejects missing/stale builds before capture or writes. The page checks `/bozo/build` on load, focus, visibility return and submit, offers an explicit refresh, and leaves typed fields intact if connectivity fails. Old tabs without this JavaScript are protected by the server check.
+- Submit/draft SGO capture has a **seven-second total budget**, at most three attempts, and honors `Retry-After`. A delay over four seconds or outside the remaining budget falls back; monthly-quota and terminal 4xx responses are not retried. Closing capture keeps its own uncached path.
+- Successful submit/draft responses may be reused for **60 seconds**, preserving the original fetch/quote time. The full canonical request distinguishes sport, window, market filters, periods and alt lines; secrets are never cache keys. Cloudflare's cache is datacenter-local, not a global single-fetch guarantee. Errors are never cached.
+- SGO failure logs include a capped/redacted response body and rate headers for submit, draft, close and the separate CFB collector. Synthetic test 429s are not proof of the production quota cause. Keep the current provider/key until real diagnostics justify a separate CFB key.
+
+No changes are planned for `legsIn: null` or a `forUid`-specific fetch theory.
+
+
 **Prepared for:** Codex, working on `github.com/JKapcar/data-dawgs`
 **Owner:** Kap (commissioner / god admin)
 **Date:** 2026-09-01 · Week 1 board open · roster in flux (see D18) · first kickoff **Sat 2026-09-05 12:00 ET — UNT @ IND**
@@ -28,9 +46,9 @@ What is *not* built is the layer that makes it a product: submit-time price capt
 | D5 | Providers | **The Odds API primary for close (archive at kickoff), SportsGameOdds secondary (live pre-kick), SGO for submit-time capture.** | Only self-serve provider with a timestamped archive. SGO free tier is 10-min delayed, so its "close" is systematically stale. |
 | D6 | Budget | **Attempt $0 (both free tiers). $30/mo Odds API "20K" plan is headroom, not baseline.** | One league fits inside 500 free credits. ~50 leagues fit inside 20K. Beyond that the budget must scale with leagues, i.e. revenue. |
 | D7 | Foreign IDs | **Never a join key.** ESPN, Odds API and SGO ids are attributes hung off a canonical key computed from `(league, sorted team pair, UTC date)` + kickoff tolerance. | This is the architecture behind Bug A and it is already half-true in the code. |
-| D8 | Missing close | **A missing CLOSE is still excluded — never back-filled, never zero.** A missing opposite SIDE of a price that exists is assumed at a standard overround and stamped `assumed` (reversed 2026-09-12 by Kap; see execution plan rule 3). | A missing close scored as 0.00 invents a fake bozo, and that has not changed. Refusing a lone price was different: it deleted CLV for every self-priced leg rather than approximating it, with no API able to supply the other side. |
+| D8 | Missing close | Both actual sides are required at entry and close. Missing or historically assumed prices stay unmeasured; no assumed juice (2026-09-24). | Explicit manual CLV overrides remain separately labelled. |
 | D9 | Basis discipline | Only `draftkings` and `draftkings_live` enter the headline CLV mean. `consensus` is reported separately. `self`/`other` never enter. D9 governs BASIS — whose price — not transport: a DK price read off a kickoff screenshot has basis `draftkings` and source `manual`, and is eligible; `self` means a price with no book behind it. | A consensus close against a DK entry answers a question nobody asked. |
-| D10 | Prop policy | Strict capture-or-reject for spread/ml/total. Attempt-then-flag for props (`priceSource: self`, `clvEligible: false`). `other` is always self, never CLV. | Props exist at DK but not always at the aggregator; blocking them is a regression. |
+| D10 | Capture failure | Accept a valid entered price as unverified in every supported market. The leg counts; verified original entry pairs restore CLV when a real closing pair exists. | Verification preserves the original timestamp and is audited; no assumed juice. |
 | D11 | Re-open after placement | Override with a typed reason, not a hard block. | Real life needs it; the audit log makes it safe. |
 | D12 | Commissioner edit and Last In | Edited leg **keeps its original position**; leg is marked `commissionerModified`. | Last In is about who saw what. An admin fix must not reshuffle it. |
 | D13 | Permutation | **Preserved across re-open.** A re-draw, if ever, logs old + new and renders on the page. | The single largest integrity hole in the feature. |

@@ -1,5 +1,23 @@
 # Bozo — Execution Plan
 
+## Current policy — 2026-09-24
+
+This amendment supersedes earlier capture-or-reject and assumed-juice instructions below.
+
+- **D10:** A valid leg still counts when odds capture fails. Accept the entered American odds inside the league band, mark the entry `unverified`, and preserve the capture failure code. It counts toward filling/locking the ticket, Last In, Shortest Odds and grading. Capture failure alone never disqualifies it.
+- A manager, delegate or site admin can verify **both original DraftKings entry prices**, for the exact line and period at submission. Verification preserves the submission timestamp, atomically updates the existing ledger row and commissioner audit, and restores automatic CLV eligibility. CLV still requires a real two-sided closing quote. Already graded verdicts are unchanged. Explicit manual CLV overrides remain distinct and available.
+- **D8 / no assumed juice:** Do not synthesize an opposite price, subtract a fixed `.022`, or treat a missing pair as zero CLV. Historical assumed opposite prices are not observed evidence. Fair-price and simulation calculations that need a pair remain unavailable until that evidence exists.
+- **Spread notation:** The form, preview and echo use slip signs: Titans **+7.5 gets 7.5 points**, Titans **−7.5 gives 7.5**. The existing stored/API convention is the inverse (positive gives points); conversion happens at the form boundary. Totals and props retain their unsigned numbers. No stored picks are reinterpreted.
+- **Worst Beat:** For spreads and totals it is the miss relative to the selected number, normalized by the sport/period SD. Price does not change that miss. Binary markets retain their separately labelled price-based fallback.
+- `dd_verify_bozo_entry` uses personal authentication and two phases. Show the original-quote attestation to the human before confirming. Verify permission on both phases; log `verify_entry` in `dd_bozo_admin_actions`. Durable replay returns the original result even after temporary confirmation expiry or rollover.
+- Browser submissions carry build `bozo-20260924-02` on both phases. The Worker rejects missing/stale builds before capture or writes. The page checks `/bozo/build` on load, focus, visibility return and submit, offers an explicit refresh, and leaves typed fields intact if connectivity fails. Old tabs without this JavaScript are protected by the server check.
+- Submit/draft SGO capture has a **seven-second total budget**, at most three attempts, and honors `Retry-After`. A delay over four seconds or outside the remaining budget falls back; monthly-quota and terminal 4xx responses are not retried. Closing capture keeps its own uncached path.
+- Successful submit/draft responses may be reused for **60 seconds**, preserving the original fetch/quote time. The full canonical request distinguishes sport, window, market filters, periods and alt lines; secrets are never cache keys. Cloudflare's cache is datacenter-local, not a global single-fetch guarantee. Errors are never cached.
+- SGO failure logs include a capped/redacted response body and rate headers for submit, draft, close and the separate CFB collector. Synthetic test 429s are not proof of the production quota cause. Keep the current provider/key until real diagnostics justify a separate CFB key.
+
+No changes are planned for `legsIn: null` or a `forUid`-specific fetch theory.
+
+
 **For:** Codex, working on `github.com/JKapcar/data-dawgs`
 **Owner:** Kap
 **Written:** 2026-09-03, Thursday evening

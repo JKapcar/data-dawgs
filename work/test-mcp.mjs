@@ -18,8 +18,8 @@ const makeSlate = require("./mkslate.js");
 // ⚠️ COUNTS, NOT A GUESS — bump these in the same commit that adds or retires a tool.
 // 58 = 26 core + 32 full, including account-scoped fantasy league discovery and the
 // Phase 2.7 dd_bozo_admin_actions audit read (core).
-const N_TOOLS = 74, N_CORE = 43;
-const WRITE_TOOLS = ["dd_dfs_sync","dd_dfs_compare","dd_dfs_create","dd_dfs_upload","dd_dfs_players","dd_dfs_settings","dd_dfs_solve","dd_dfs_explore","dd_dfs_simulate","dd_dfs_select","dd_dfs_delete","dd_submit_bozo_leg", "sd_start_session", "sd_log_set", "sd_log_sets",
+const N_TOOLS = 75, N_CORE = 44;
+const WRITE_TOOLS = ["dd_verify_bozo_entry","dd_dfs_sync","dd_dfs_compare","dd_dfs_create","dd_dfs_upload","dd_dfs_players","dd_dfs_settings","dd_dfs_solve","dd_dfs_explore","dd_dfs_simulate","dd_dfs_select","dd_dfs_delete","dd_submit_bozo_leg", "sd_start_session", "sd_log_set", "sd_log_sets",
                      "sd_finish_session", "sd_log_measurement", "sd_log_nutrition"];
 let pass = 0, fail = 0;
 const ok = (cond, name) => { if (cond) pass++; else { fail++; console.error("FAIL:", name); } };
