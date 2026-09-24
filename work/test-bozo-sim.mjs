@@ -455,5 +455,13 @@ ok(clvDeltaOf({ price: -150, entryPriceOpp: 130 }, { clvPts: 1, close: -200, clo
   ctx.CLV.data = null; ctx.S.results = {}; ctx.S.picks = {}; delete ctx.S.order;
 }
 
+// A missing opposite price must never blank the entire diagnostics panel.
+vm.runInContext(grab("function expected(x){", "/* ---------------- close-vs-submitted review flags"), ctx);
+ctx.S = {results:{},picks:{},week:3};
+const manual = legs.map(x=>({...x, entryPriceOpp:null, verificationStatus:'unverified'}));
+const manualRun = simulate(manual,[0,1,2,3]);
+ok(manualRun.n===manual.length && manualRun.win.every(Number.isFinite), "all manually priced legs remain simulated and visible");
+ok(clvDeltaOf(manual[0],{close:-180,closeOpp:150})===null, "simulation fallback does not fabricate measured CLV");
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

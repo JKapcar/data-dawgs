@@ -4407,9 +4407,10 @@ function sdOf(x){ const s=SPORTS[x.sport];
    That shift is why moneylines need no reference spread typed in: line is 0 and
    the price alone carries the whole expectation. */
 function expected(x){
+  // Simulation can use the entered price without fabricating a two-sided quote.
+  // Actual CLV remains separate and still needs its observed prices.
   const sd=sdOf(x), fair=devigP(x.price,x.entryPriceOpp ?? x.priceOpp);
-  if(fair == null || x.verificationStatus === "unverified") return null;
-  const p=Math.min(.98,Math.max(.02,fair));
+  const p=Math.min(.98,Math.max(.02,fair ?? imp(x.price)));
   const shift=sd*invNorm(p), base = x.mkt==='ml' ? 0 : x.line;
   return dirOf(x)==='under' ? base-shift : base+shift;
 }
@@ -6864,8 +6865,6 @@ const devig = x => x && x.verificationStatus !== 'unverified' ? devigP(x.price, 
 const fairParlay = live => live.every(x=>devig(x)!=null) ? 1/live.reduce((a,x)=>a*devig(x),1) : null;
 
 function simulate(live, levers){
-  if(live.some(x=>expected(x)==null))
-    return {unavailable:true};
   const n = live.length;
   const res = S.results || {};
   const L = live.map(x=>{
@@ -7206,14 +7205,7 @@ function paintDiag(live, players, status){
   const key = simKeyFor(live, levers, status);
   if(key!==simKey){ simKey=key; simOut=simulate(live,levers); }
   const R=simOut;
-  if(R.unavailable){
-    document.getElementById('dgMeta').textContent='Simulation is waiting for verified two-sided entry odds.';
-    document.getElementById('dgTiles').innerHTML='';
-    document.getElementById('dgFlags').innerHTML='';
-    document.querySelector('#dgTable tbody').innerHTML='';
-    document.getElementById('dgNote').textContent='';
-    return;
-  }
+
 
   const offDec  = live.reduce((a,x)=>a*dec(x.price),1);
   const fairDec = fairParlay(live);
@@ -7227,6 +7219,7 @@ function paintDiag(live, players, status){
      did not keep; now it also names how much of the week is fact rather than draw. */
   document.getElementById('dgMeta').textContent =
     R.sims.toLocaleString()+' simulations · re-run on every grade, price and lever change'
+    + (live.some(x=>devigP(x.price,x.entryPriceOpp ?? x.priceOpp)==null) ? ' · uses entered odds where an opposite price is unavailable' : '')
     + (R.settled ? ` · ${R.settled} of ${R.n} leg${R.settled===1?'':'s'} settled and held fixed` : '');
   document.getElementById('dgTiles').innerHTML =
     tile('Ticket cashes', pct(R.cash), `all ${R.n} legs land`) +
