@@ -1849,6 +1849,7 @@ export default {
     if (url.pathname === "/bozo/clv")     return bozoClv(request, url, env, cors);
     if (url.pathname === "/bozo/close")   return bozoCloseFill(request, env, cors);
     if (url.pathname === "/bozo/close-gaps") return bozoCloseGaps(request, url, env, cors);
+    if (url.pathname === "/bozo/verify-entry") return bozoVerifyEntry(request, env, cors);
     if (url.pathname === "/bozo/admin")   return bozoAdmin(request, url, env, cors);
     if (url.pathname === "/bozo/config")  return bozoConfigSet(request, env, cors);
     if (url.pathname === "/tts")          return handleTts(request, env, cors);
@@ -6892,9 +6893,11 @@ async function commitBozoLeg(env, lid, state, name, p, via = null, mkey = null, 
     period: bozoPeriodOf(p),
     prop: p.prop ? String(p.prop).slice(0, 80) : null,
     // ⚠️ Where the PRICE came from, not where the pick came from. "captured" is
-    // server-only and carries the SGO/DraftKings receipt fields below. "self" is limited
-    // to props whose capture failed and `other`; both are visibly excluded from CLV.
+    // server-only and carries the SGO/DraftKings receipt fields below. Fallback prices
+    // stay unverified until a manager verifies the original entry quote.
     priceSource: p.priceSource === "captured" ? "captured" : "self",
+    verificationStatus: p.priceSource === "captured" ? "verified" : "unverified",
+    captureFailureReason: p.captureFailureReason || null,
     // ⚠️ Stored so the uniqueness and contradiction checks never have to re-derive a
     // key from a row written under an older version of the rules. A key that drifts
     // between write time and read time silently stops catching collisions.
@@ -6910,8 +6913,8 @@ async function commitBozoLeg(env, lid, state, name, p, via = null, mkey = null, 
     entryBook: "draftkings",        // league rule: there is no other book at either end
     entryProvider: p.entryProvider || null,
     entrySnapshotAt: p.entrySnapshotAt || null,
-    fairEntry: Number.isFinite(Number(p.fairEntry)) ? Number(p.fairEntry) : null,
-    entryHold: Number.isFinite(Number(p.entryHold)) ? Number(p.entryHold) : null,
+    fairEntry: p.fairEntry != null && Number.isFinite(Number(p.fairEntry)) ? Number(p.fairEntry) : null,
+    entryHold: p.entryHold != null && Number.isFinite(Number(p.entryHold)) ? Number(p.entryHold) : null,
     clvEligible: p.clvEligible === true,
     canonicalKey: p.canonicalKey || null,
     commenceTime: p.commenceTime || p.startsAt || null,
@@ -7106,7 +7109,7 @@ async function bozoPick(request, env, cors) {
     const echo = p.label + " — " + p.game + ", " + (BOZO_PERIOD_LABEL[p.period] ? BOZO_PERIOD_LABEL[p.period] + " " : "") +
       bozoMarketPhrase(p) +
       " at " + p.price + " (other side " + (p.priceOpp == null ? "not captured" : p.priceOpp) + "), " +
-      (p.priceSource === "captured" ? "captured from DraftKings via SGO" : "self-priced; not CLV-eligible") + "." +
+      (p.priceSource === "captured" ? "captured from DraftKings via SGO" : "UNVERIFIED — manually entered odds; manager confirmation needed for CLV") + "." +
       (proxy ? " Submitted FOR " + name + " by you as league manager; it will be marked as such and stamped with the server time of this submission, not backdated." : "") +
       (mine ? " This replaces " + whose + " current leg and resets " + (proxy ? "their" : "your") + " submission clock." : "");
     await env.RL.put(kvKey, JSON.stringify({ code, lid, week: state.week || 1, forKey: mkey, p, echo, ts: Date.now() }), { expirationTtl: 300 });
@@ -7189,9 +7192,11 @@ function validatePick(p, name, existing, band, format, mkey = null, weekGate = n
   if (p.mkt !== "ml" && !isFinite(Number(p.line))) return "Number is required for that market.";
   { const signErr = bozoSpreadSignError(p); if (signErr) return signErr; }
   const gameMarket = p.mkt === "spread" || p.mkt === "ml" || p.mkt === "total";
-  if (gameMarket && p.priceSource !== "captured")
-    return "Spread, moneyline and total prices must be captured from DraftKings.";
-  if (gameMarket && bzAmerican(p.priceOpp) === null)
+  const unverified = p.priceSource === "self" && p.verificationStatus === "unverified"
+    && p.clvEligible === false && !!p.captureFailureReason;
+  if (gameMarket && p.priceSource !== "captured" && !unverified)
+    return "Game prices need a captured quote or an unverified manual fallback.";
+  if (gameMarket && !unverified && bzAmerican(p.priceOpp) === null)
     return "The captured opposite-side DraftKings price is required for that market.";
   if (p.priceSource === "captured" && (!p.entrySnapshotAt || !p.providerEventIds?.sgo))
     return "The captured quote is missing its source receipt.";
@@ -7632,6 +7637,10 @@ function ledgerEntries(lid, season, week, picks, order) {
       sport: x.sport, eventId: x.eventId, game: x.game,
       mkt: x.mkt, side: x.side, dir: x.dir,
       priceSource: x.priceSource || "self",     // see the note in bozoPick
+      verificationStatus: x.verificationStatus || null,
+      entryVerification: x.entryVerification || null,
+      clvEligible: x.clvEligible === true,
+      captureFailureReason: x.captureFailureReason || null,
       line: x.line == null ? null : x.line,     // numeric, and separate from the label,
       label: x.label,                           // or the Bozo Index can't be computed
       prop: x.prop || null,
@@ -8269,7 +8278,8 @@ async function bozoFetchEvents(env, sport, startMs, needProps, periods = ["game"
   // line — and a close snapped off the main line would be a different market's price.
   url.searchParams.set("includeAltLines", "true");
   url.searchParams.set("limit", needProps ? "25" : "100");
-  const res = await fetch(url, { headers: { "x-api-key": env.SGO_KEY } });
+  const res = await fetch(url, { headers: { "x-api-key": env.SGO_KEY },
+    ...(typeof AbortSignal !== "undefined" && AbortSignal.timeout ? { signal: AbortSignal.timeout(8000) } : {}) });
   if (!res.ok) throw new Error("SGO " + res.status);
   const body = await res.json();
   return (body && body.data) || [];
@@ -8332,10 +8342,13 @@ function bozoCanonicalKey(sport, event, registry) {
 
 function bozoSelfPricedEntry(p, reason) {
   const typed = bzAmerican(p.typedPrice ?? p.price);
-  if (typed === null) return { ok: false, error: reason + " A real American price is required for the self-priced fallback." };
+  if (typed === null) return { ok: false, reason: "manual_price_required",
+    error: "The odds checker could not verify this pick. Enter the DraftKings odds in the price box and submit again; your pick will be marked UNVERIFIED for manager review." };
   return { ok: true, p: { ...p, price: typed, priceOpp: null, priceSource: "self",
     entryBook: BOZO_CLOSE_BOOK, entryProvider: null, entrySnapshotAt: null,
     fairEntry: null, entryHold: null, clvEligible: false,
+    verificationStatus: "unverified", captureFailureReason: String(reason).slice(0, 300),
+    entryVerification: null, providerEventIds: {}, canonicalKey: p.canonicalKey || null,
     closeState: p.mkt === "other" ? "unmatched" : "pending" },
     captureWarning: reason };
 }
@@ -8345,6 +8358,9 @@ function bozoSelfPricedEntry(p, reason) {
 // without fetching SGO again.
 async function bozoCaptureEntry(env, input) {
   const p = { ...input };
+  // These are server-authored, never assertions accepted from a submitter.
+  for (const key of ["verificationStatus", "entryVerification", "captureFailureReason", "clvEligible",
+    "priceSource", "entrySnapshotAt", "entryProvider", "providerEventIds", "canonicalKey", "fairEntry", "entryHold"]) delete p[key];
   p.period = bozoPeriodOf(p);
   const periodErr = bozoPeriodError(p);
   if (periodErr) return { ok: false, reason: "bad_period", error: periodErr };
@@ -8374,19 +8390,16 @@ async function bozoCaptureEntry(env, input) {
       bozoTeamRegistry(env, p.sport),
     ]);
   } catch (e) {
-    if (p.mkt === "prop") return bozoSelfPricedEntry(p, "DraftKings capture failed: " + e.message + ".");
-    return { ok: false, error: "DraftKings capture failed: " + e.message + ". Nothing was submitted." };
+    return bozoSelfPricedEntry(p, "DraftKings capture failed: " + e.message + ".");
   }
   const event = bozoMatchEvent(events, p, registry);
   if (!event) {
-    if (p.mkt === "prop") return bozoSelfPricedEntry(p, "The game could not be matched at the odds source.");
-    return { ok: false, error: "The game could not be matched at the odds source. Nothing was submitted." };
+    return bozoSelfPricedEntry(p, "The game could not be matched at the odds source.");
   }
   const quote = bozoDkQuote(event, p, registry);
   const quoteError = assertQuote(quote, p);
   if (quoteError) {
-    if (p.mkt === "prop") return bozoSelfPricedEntry(p, "DraftKings capture failed: " + quoteError + ".");
-    return { ok: false, error: "DraftKings capture failed: " + quoteError + ". Nothing was submitted." };
+    return bozoSelfPricedEntry(p, "DraftKings capture failed: " + quoteError + ".");
   }
   const facts = bozoDevigPair(quote.price, quote.opp);
   const commenceTime = event.status?.startsAt || p.startsAt;
@@ -8400,7 +8413,7 @@ async function bozoCaptureEntry(env, input) {
   return { ok: true, p: { ...p,
     period: p.period, label: bozoLabelWithPeriod(p.label, p.period),
     line: quote.line, price: quote.price, priceOpp: quote.opp,
-    priceSource: "captured", entryBook: BOZO_CLOSE_BOOK, entryProvider: "sgo",
+    priceSource: "captured", verificationStatus: "verified", entryBook: BOZO_CLOSE_BOOK, entryProvider: "sgo",
     entrySnapshotAt: quote.snapshotAt || new Date().toISOString(),
     fairEntry: facts.fair, entryHold: facts.hold, clvEligible: true,
     canonicalKey: bozoCanonicalKey(p.sport, event, registry), commenceTime,
@@ -8560,6 +8573,9 @@ async function bozoClv(request, url, env, cors) {
 
       entryPrice: r.price ?? null,
       entryPriceOpp: r.priceOpp ?? null,
+      priceSource: r.priceSource || null,
+      verificationStatus: r.verificationStatus || null,
+      entryVerification: r.entryVerification || null,
       entryBook: r.entryBook || null,
       entrySubmittedAt: r.ts ? new Date(r.ts).toISOString() : null,
 
@@ -8863,6 +8879,8 @@ function royaleApplyLever(leverIdx, losers, picks, results) {
         const manual = r.clvPts != null && Number.isFinite(Number(r.clvPts))
           ? Number(r.clvPts) / 100 : null;
         if (manual != null) { v = -manual; break; }
+        if (x.verificationStatus === "unverified" ||
+            (x.priceSource === "manual" && (x.entryPriceOpp == null || r.closeOpp == null))) break;
         const pC = rDevig(r.close, r.closeOpp), pE = rDevig(x.price, x.entryPriceOpp);
         v = (pC == null || pE == null) ? null : -(pC - pE);
         break;
@@ -9553,6 +9571,68 @@ function adminPath(raw) {
   if (parts[0] === "audit")
     return { err: "The audit log is append-only — it is the record of these edits and cannot be one of them." };
   return { path: rel };
+}
+
+// Verify a manually entered ORIGINAL quote, without changing the pick or its clock.
+// Confirmation binds the manager, week and exact pick. A conditional league write
+// makes the pick, existing ledger receipt and audit record one atomic change.
+async function bozoVerifyEntry(request, env, cors) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, cors); }
+  const lid = leagueOf(body);
+  if (!lid) return json({ error: "Bad league id." }, 400, cors);
+  const auth = await requireManager(request, env, lid);
+  if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+  if (!env.RL) return json({ error: "Confirmation store unavailable." }, 503, cors);
+  const key = String(body.forUid || "");
+  if (!/^[A-Za-z0-9_%@+~-]{1,200}$/.test(key)) return json({ error: "Bad member key." }, 400, cors);
+  try {
+    const { data: state, etag } = await fbGet(env, LG(lid), true);
+    const pick = state?.picks?.[key];
+    if (!pick) return json({ error: "No current pick for this member." }, 404, cors);
+    if (pick.priceSource === "captured") return json({ error: "This entry already has a captured quote." }, 409, cors);
+    const kvKey = "bozoverify:" + (auth.uid || auth.name) + ":" + lid + ":" + key;
+    if (body.confirm === undefined) {
+      if (Number(body.week) !== Number(state.week || 1) || Number(body.ts) !== Number(pick.ts))
+        return json({ error: "The pick or week changed. Refresh before verifying." }, 409, cors);
+      const price = bzAmerican(body.price), opposite = bzAmerican(body.priceOpp);
+      if (price === null || opposite === null || !bozoDevigPair(price, opposite))
+        return json({ error: "Enter both original DraftKings entry prices, including their signs." }, 400, cors);
+      if (price !== Number(pick.price))
+        return json({ error: "The entry price differs from the submitted pick. Correct the pick explicitly before verifying it." }, 400, cors);
+      const code = crypto.randomUUID();
+      const echo = `${pick.who || key}: ${pick.label} (${pick.game}), original entry ${price} / ${opposite}. Confirm these were the DraftKings prices for this exact line and period at submission, not today's prices. The submission time will stay unchanged.`;
+      await env.RL.put(kvKey, JSON.stringify({ code, week: state.week || 1, before: pick, opposite, echo }), { expirationTtl: 300 });
+      return json({ status: "confirm_required", confirm_code: code, echo }, 200, cors);
+    }
+    const pending = JSON.parse(await env.RL.get(kvKey) || "null");
+    if (!pending || pending.code !== String(body.confirm))
+      return json({ error: "Verification expired or confirmation does not match." }, 409, cors);
+    if (pick.entryVerification?.confirmationId === pending.code) return json({ ok: true, replayed: true }, 200, cors);
+    if (pending.week !== (state.week || 1) || JSON.stringify(pending.before) !== JSON.stringify(pick))
+      return json({ error: "The pick or week changed. Review it again." }, 409, cors);
+    const at = new Date().toISOString(), facts = bozoDevigPair(pick.price, pending.opposite);
+    const verification = { byUid: auth.uid || null, byName: auth.name, at, confirmationId: pending.code,
+      originalSubmittedAt: new Date(pick.ts).toISOString(), price: pick.price, priceOpp: pending.opposite };
+    const next = { ...pick, priceOpp: pending.opposite, entryPriceOpp: pending.opposite,
+      priceSource: "manual", verificationStatus: "verified", clvEligible: true,
+      entryProvider: "manual", entryVerification: verification, fairEntry: facts.fair, entryHold: facts.hold };
+    state.picks[key] = next;
+    const rowKey = ledgerKey(state.season || SEASON, state.week || 1, key);
+    if (state.ledger?.[rowKey]) Object.assign(state.ledger[rowKey], {
+      priceOpp: pending.opposite, priceSource: "manual", verificationStatus: "verified",
+      clvEligible: true, entryVerification: verification,
+    });
+    state.audit = state.audit || {};
+    state.audit[pending.code] = { at, by: auth.name, byUid: auth.uid || null,
+      type: "verify_entry", path: "picks/" + key, from: pick, to: next, week: state.week || 1 };
+    if (!etag) throw new Error("Database did not supply a concurrency token.");
+    if (!await fbPut(env, LG(lid), state, etag))
+      return json({ error: "The league changed during verification. Review it again." }, 409, cors);
+    return json({ ok: true, verificationStatus: "verified", ts: next.ts,
+      warning: state.status === "graded" ? "Prices verified; an already graded verdict is unchanged." : null }, 200, cors);
+  } catch (e) { return json({ error: "Verification failed: " + e.message }, 502, cors); }
 }
 
 async function bozoAdmin(request, url, env, cors) {
@@ -18164,6 +18244,8 @@ const MCP_TOOLS = [
           week: r.week, player: r.player, sport: r.sport, eventId: r.eventId,
           mkt: r.mkt, label: r.label, result: r.result || null,
           entryPrice: r.price ?? null, entryPriceOpp: r.priceOpp ?? null,
+          priceSource: r.priceSource || null, verificationStatus: r.verificationStatus || null,
+          entryVerification: r.entryVerification || null,
           entryBook: r.entryBook || null, entrySubmittedAt: r.ts ? new Date(r.ts).toISOString() : null,
           closePrice: r.close ?? null, closePriceOpp: r.closeOpp ?? null,
           closeBook: r.closeBook || null, closeObservedAt: r.closeObservedAt || null,
@@ -18171,7 +18253,7 @@ const MCP_TOOLS = [
           closeUnavailableReason: r.closeUnavailableReason || null,
           // The one derived field, and it is a boolean rather than a number: whether
           // this leg is eligible to be in a CLV calculation at all.
-          clvMeasurable: r.close != null && r.closeOpp != null && r.price != null && r.priceOpp != null
+          clvMeasurable: r.verificationStatus !== "unverified" && r.close != null && r.closeOpp != null && r.price != null && r.priceOpp != null
             && (r.result === "won" || r.result === "lost"),
         }));
 
@@ -18225,6 +18307,7 @@ const MCP_TOOLS = [
           mkt: x.mkt, side: x.side, line: x.mkt === "ml" ? null : x.line,
           period: x.period || "game",     // Phase 2.8; absent on older legs = full game
           price: x.price, priceSource: x.priceSource || "self", clvEligible: x.clvEligible === true,
+          verificationStatus: x.verificationStatus || null, entryVerification: x.entryVerification || null,
           priceOpp: x.entryPriceOpp ?? null, entryBook: x.entryBook || null,
           entryProvider: x.entryProvider || null, entrySnapshotAt: x.entrySnapshotAt || null,
           fairEntry: x.fairEntry ?? null, entryHold: x.entryHold ?? null,
@@ -18266,7 +18349,7 @@ const MCP_TOOLS = [
           // unmeasured for a leg that does not; never average across the two.
           "CLV is computable only where closeObservedAt is set AND both priceOpp and closeOpp are present — de-vig proportionally, and report probability points, not cents.",
           "A leg with closeUnavailableReason has NO CLV. Do not substitute the entry price for a missing close: that fabricates a zero and drags any average toward it.",
-          "priceSource=captured means both entry sides came from DraftKings through SGO. priceSource=self is excluded from CLV; never mix those legs into a CLV average.",
+          "priceSource=captured means both entry sides came from DraftKings through SGO. Failed captures can be submitted with typed odds, marked verificationStatus=unverified. A manager can verify the original entry pair without changing the submission time; priceSource=manual then permits CLV with a real closing pair. Keep unverified prices out of measured CLV. Existing explicit manual CLV overrides remain supported.",
           "Every leg goes on a real DraftKings bet slip, so every market — props included — exists and closes. A missing close means the capture could not resolve the typed description onto the right market, and closeUnavailableReason says which of stat, player or number failed. \"Other\" legs are the exception: free text for an arbitrary market, with nothing to match on. Either way it is a matching gap, never evidence about a player.",
           "If two legs share an eventId the ticket is a same-game parlay and the displayed parlay price is INDICATIVE — DraftKings reprices correlated legs, so the product of the leg prices is an upper bound, not the payout.",
         ],
@@ -18473,7 +18556,7 @@ const MCP_TOOLS = [
           : undefined,
         caveats: [
           "Nothing was submitted. This tool cannot submit — it reads the board and runs the validator.",
-          p.priceSource === "captured" ? "Both prices were captured from DraftKings through SGO." : "This market is self-priced and excluded from CLV.",
+          p.priceSource === "captured" ? "Both prices were captured from DraftKings through SGO." : "UNVERIFIED: manually entered odds, awaiting manager verification of the original quote for CLV.",
           "A pass here is a pass at this instant. Someone else can take your exact leg, or fill the board, before you press submit.",
         ],
       });
@@ -18511,7 +18594,7 @@ const MCP_TOOLS = [
         mkt: { type: "string", description: "spread | ml | total | prop | other" },
         side: { type: "string", description: "Team abbreviation, or over / under" },
         line: { type: "number", description: "The number. Required for everything except ml. ⚠️ For a spread this is the handicap as points the side GIVES UP, not the slip display: positive lays, negative takes. CLE +8.5 on the slip is line -8.5; TB -8.5 is line 8.5; an MLB/NHL dog at +1.5 is line -1.5. The server cross-checks it against the sign in label and rejects a conflict instead of pricing the wrong side. Totals and props take the number as printed." },
-        price: { type: "number", description: "Optional typed DraftKings price tripwire. The Worker captures and stores the quote; use this only to detect a mismatch. Required only for self-priced other markets or a prop fallback." },
+        price: { type: "number", description: "DraftKings entry price. Used as a comparison when capture works, or accepted as unverified when the odds checker fails. Required for any manual fallback; manager verification can later enable CLV." },
         label: { type: "string", description: "How the leg reads on the DraftKings slip, sign included, e.g. \"BUF -6.5\" or \"CLE +8.5\". On a spread the sign is required and is checked against line: they describe one bet from two directions (label = slip display, line = points given up)." },
         prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
         priceOpp: { type: "number", description: "Deprecated input; the Worker captures the opposite DraftKings side itself." },

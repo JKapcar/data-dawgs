@@ -3783,14 +3783,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
        puts what it cannot stand behind. Everything here is also in Toto's sys block,
        because a caveat that lives only in page prose is one he gets talked past. -->
   <div class="pb-fine">
-    <p><b>Game-market prices are captured.</b> At submit, the Worker reads both sides from
-      DraftKings through SGO and freezes that quote for confirmation. A prop that cannot be
-      resolved, and every Other leg, is visibly marked self-priced and excluded from CLV.</p>
+    <p><b>Game-market prices are checked automatically when available.</b> At submit, the Worker reads both sides from
+      DraftKings through SGO and freezes that quote for confirmation. If the checker fails, manually entered odds are accepted as Unverified. The manager can verify the original entry prices afterward for CLV.</p>
     <p><b>Bozo odds are simulation.</b> Anywhere this site quotes a chance of wearing it, that is
       Monte Carlo output, not an observation, and the simulation draws every leg independently.
       Two legs on the same game are not independent, so a ticket carrying a stack is wrong in a
       direction nobody has measured.</p>
-    <p><b>CLV needs four real prices.</b> It is measured only when both sides of the captured
+    <p><b>CLV needs four real prices.</b> It is measured only when both sides of the automatically captured or manually verified
       DraftKings entry and both sides of the kickoff close exist. A missing side is unmeasured,
       never estimated and never treated as zero.</p>
     <p><b>Demo leagues are invented.</b> Every leg, price, close and result in a league badged
@@ -3856,8 +3855,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="f" id="priceWrap"><label id="priceLbl">Price check <span class="opt">optional</span></label>
       <span class="pxfix"><span class="sgnfix" aria-hidden="true">−</span><input id="fPrice"
         type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="175"
-        aria-label="Optional DraftKings price check. The Worker captures the price itself."
-        title="Optional check only. The captured DraftKings quote is the stored price."></span></div>
+        aria-label="DraftKings odds. Needed to submit if the odds checker is unavailable."
+        title="Enter the current DraftKings price to allow an unverified submission if automatic verification fails."></span></div>
     <div class="f w2" id="propWrap" style="display:none"><label>Player &amp; stat</label><input id="fProp" placeholder="Kelce receiving yards"></div>
     <div class="f w4"><div class="row" style="justify-content:flex-end">
       <button class="btn ghost sm" id="clearMine" style="display:none">Remove my leg</button>
@@ -3867,7 +3866,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="legprev" id="legPrev" style="display:none"></div>
   <div class="warnbox" id="priceWarn" style="display:none"></div>
   <div class="err" id="err"></div>
-  <p class="note" id="bandNote">DraftKings price and the opposite side are captured when you submit. The price box is only an optional typo check; it is required for Other and as a prop fallback. No exact duplicates. Editing resets your clock <em>and</em> captures a fresh price.</p>
+  <p class="note" id="bandNote">We check DraftKings odds when you submit. If the checker is unavailable, enter the odds yourself: your pick is accepted as <b>Unverified</b>, and the manager can confirm the original prices for CLV afterward. No exact duplicates. Editing a pick resets your clock; verifying its odds does not.</p>
 </div>
 
 <!-- ---------- player sheet (view: one per player; the bet form docks here on YOUR sheet) ---------- -->
@@ -4371,6 +4370,7 @@ const devigAssumed = (x, r) => !!x && ((x.price != null && x.entryPriceOpp == nu
 function clvDeltaOf(x, r){
   r = r || {};
   if(r.clvPts != null && Number.isFinite(+r.clvPts)) return +r.clvPts/100;
+  if(x.verificationStatus === "unverified" || (x.priceSource === "manual" && (x.entryPriceOpp == null || r.closeOpp == null))) return null;
   const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp);
   return (pC==null || pE==null) ? null : (pC - pE);
 }
@@ -4513,6 +4513,10 @@ function legRow(x){
    hand". A leg with a manual CLV has a CLV; the badge says which kind it is. */
 const priceSourceBadge = x => {
   const r = legRow(x);
+  if(x && x.priceSource === 'manual' && x.verificationStatus === 'verified')
+    return '<span class="cst ok" title="Original entry odds confirmed by a league manager; verification is recorded">Manually verified</span>';
+  if(x && x.verificationStatus === 'unverified')
+    return '<span class="cst warn" title="Pick accepted with manually entered odds. Manager review is needed.">Unverified' + (r && r.clvPts != null ? ' · CLV set by hand' : ' · awaiting review') + '</span>';
   if(r && r.clvPts != null && Number.isFinite(+r.clvPts))
     return `<span class="cst warn" title="No two-sided captured entry, so the manager set this leg's CLV by hand. Weaker evidence than a captured pair, and counted separately.">self · CLV set by hand</span>`;
   return x && x.priceSource === 'captured'
@@ -4980,7 +4984,7 @@ function paintSides(){
     ? 'Price <span class="opt">required · self-priced</span>'
     : mk==='prop'
       ? 'Fallback price <span class="opt">optional</span>'
-      : 'Price check <span class="opt">optional · DK captured</span>';
+      : 'DraftKings odds <span class="opt">needed if checker is unavailable</span>';
 }
 
 /* ---------------- live state ---------------- */
@@ -5535,8 +5539,8 @@ function paintHouseTicket(){
     `<div class="sl-rows">${rowHtml}</div>` + tot + exp + hubSlip +
     `<p class="sl-note">Favorites only, inside the band. No exact duplicate legs. ` +
     `<b>The ticket locks the moment the last leg lands</b> &mdash; that instant is the close, ` +
-    `and there are no edits after it. Game-market prices above are captured from ` +
-    `<b>DraftKings through SGO</b>; self-priced exceptions are badged and excluded from CLV.</p>`;
+    `and there are no edits after it. Prices are checked against ` +
+    `<b>DraftKings through SGO</b>. Unverified entries can be reviewed by the manager for CLV.</p>`;
 
   paintBozoTonight(players, picks, status, res);
 
@@ -6601,12 +6605,13 @@ async function submitLeg(){
     const agreement = proposal.agreement && proposal.agreement.needsConfirmation
       ? `\n\nYour check was ${fmtPrice(proposal.agreement.typedPrice)}; the captured price is ${fmtPrice(proposal.agreement.capturedPrice)} (${proposal.agreement.probabilityPointDifference.toFixed(2)} probability points apart).`
       : '';
-    if(!window.confirm(proposal.echo + agreement + '\n\nNothing has been submitted yet. Submit this exact captured quote?')){
+    if(!window.confirm(proposal.echo + agreement + '\n\nNothing has been submitted yet. Submit this pick at these odds?')){
       e.textContent='Nothing submitted.'; btn.disabled=false; return;
     }
     const res = await wPost('/bozo/pick', {confirm:proposal.confirm_code, ...forUid});
     e.className='err ok';
     e.textContent = (res.placed ? 'In — and that was the last leg. Ticket is locked.' : 'Submitted.')
+      + (res.leg && res.leg.priceSource !== 'captured' ? ' Odds unverified — awaiting manager review.' : '')
       + (res.forName ? ' Filed for ' + res.forName + ' and logged as a commissioner action.' : '');
     resetAsSelect();
     await refresh();
@@ -7114,7 +7119,7 @@ function paintDiagnosticsExplorer(){
   document.querySelector('#dxTable tbody').innerHTML=`<tr><th>${esc(group)}</th><th>Picks</th><th>W–L</th><th>Expected W</th><th>vs expected</th><th>Avg CLV</th><th>CLV n</th></tr>`+
     sums.map(x=>`<tr><td class="who">${esc(x.k)}</td><td>${x.picks}</td><td>${x.wins}–${x.losses}</td><td>${x.measurable.length?x.expected.toFixed(1):'—'}</td><td class="px">${x.measurable.length?(x.delta>=0?'+':'')+x.delta.toFixed(1):'—'}</td><td class="px ${x.clv==null?'':x.clv>=0?'clvup':'clvdn'}">${x.clv==null?'—':(x.clv>=0?'+':'')+(x.clv*100).toFixed(2)+'pp'}</td><td>${x.measurable.length}</td></tr>`).join('');
   const losers=rows.filter(l=>l.result==='loss'), badClv=losers.filter(l=>clvGraded(l)&&clvPair(l).clv<0).length;
-  document.getElementById('dxNote').innerHTML=`${losers.length} loss${losers.length===1?'':'es'} in this slice${losers.length?`; ${badClv} also had negative measured CLV`:''}. Positive result delta with flat CLV is more consistent with good luck than proven skill; positive CLV with ordinary results is the stronger price-quality signal. Measured CLV uses captured DraftKings prices at entry and close; self-priced legs are excluded.`;
+  document.getElementById('dxNote').innerHTML=`${losers.length} loss${losers.length===1?'':'es'} in this slice${losers.length?`; ${badClv} also had negative measured CLV`:''}. Positive result delta with flat CLV is more consistent with good luck than proven skill; positive CLV with ordinary results is the stronger price-quality signal. Measured CLV uses automatically captured or manually verified entry prices and closing prices. Unverified entries await review.`;
 }
 
 function paintDiag(live, players, status){
@@ -7240,14 +7245,16 @@ function paintDiag(live, players, status){
       return `<span class="${v>=0?'clvup':'clvdn'}" title="Set by the manager by hand, not derived from a captured close.">`
         + `${v>0?'+':''}${v.toFixed(2)} pts · by hand</span>`;
     }
+    const delta = clvDeltaOf(x, r);
     const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp);
-    if(pC != null && pE != null){
-      const v = (pC - pE) * 100;
+    if(delta != null){
+      const v = delta * 100;
       // ⚠️ NOT .pos/.neg — .pos is already the reel position label ("1ST"), and the
       // carnival skin restyles it. A CLV number would silently inherit both.
       return `<span class="${v>=0?'clvup':'clvdn'}" title="de-vigged close ${(pC*100).toFixed(1)}% − de-vigged entry ${(pE*100).toFixed(1)}%">`
         + `${v>0?'+':''}${v.toFixed(2)} pts</span>`;
     }
+    if(x.verificationStatus === "unverified") return "entry awaiting review";
     if(r.close != null && r.closeOpp == null)
       return `<span title="Only one side of the close was captured, so it can't be de-vigged.">one side only</span>`;
     if(r.closeUnavailableReason)
@@ -7372,7 +7379,7 @@ function leverStandings(live){
     // ⚠️ pE is the ENTRY de-vig, and it exists here only to make CLV — the Shortest odds
     // column ranks and prints the raw price. Do not route it back to that column.
     return { i, raw: imp(x.price), ts: x.ts||0, beat,
-             clv: (pC==null||pE==null) ? null : (pC-pE) };
+             clv: clvDeltaOf(x, r) };
   });
 
   // rank[k][i] and holds[k][i], k being the lever index. Absent i = this lever cannot
@@ -7478,7 +7485,7 @@ HOW TO TALK ABOUT THE NUMBERS:
 - Prop legs use a placeholder standard deviation (line x 0.55) that is openly a guess. Flag a prop before leaning on its Worst Beat exposure.
 - Period legs (1h, 2h, quarters) use the game SD scaled by the square root of the fraction played (beatBasis "scaled-sd"), a documented model pending calibration. They are hand-graded: no Worker-reachable score source carries per-period scores.
 - Worst CLV is measured only when both sides of the DraftKings entry and both sides of the kickoff close were captured. A missing side is unmeasured, never zero, and the lever passes it.
-- priceSource=captured means the Worker fetched both DraftKings sides through SGO at submit and froze them for confirmation. priceSource=self is limited to unresolved props and Other legs; those are visibly badged and clvEligible=false. Never mix self-priced legs into CLV.
+- priceSource=captured means both entry prices came from SGO. When the checker fails, entered odds are accepted as Unverified (verificationStatus=unverified); manager review is pending. priceSource=manual and verificationStatus=verified means a manager confirmed the original two-sided entry prices without changing the submission time. Those picks can count toward CLV once both closing prices exist. Existing manual CLV overrides remain supported. Never describe unverified prices as verified.
 - The "As it stands / If every leg lost" panel is a read-only hypothetical over currently filed legs. It assumes every filed leg loses, does not know results, and never names a bozo. Before the card locks there is no running order at all. Never present the panel as a prediction, a probability, or a graded outcome.
 - You may NOT place, edit or remove anyone's leg, and you must never tell someone their bet is guaranteed. Prices and probabilities, never certainties.`;
 
@@ -8346,7 +8353,7 @@ function paintGodResults(){
      real CLV out of it. Typed CLV would be a fourth opinion about the same fact. */
   const clvLine = (x, r) => {
     const v = clvDeltaOf(x, r);
-    if(v == null) return `<span class="tm">CLV &mdash; enter a closing price</span>`;
+    if(v == null) return `<span class="tm">CLV &mdash; ${x.verificationStatus === 'unverified' ? 'verify entry odds first' : x.priceSource === 'manual' ? 'both closing prices needed' : 'enter a closing price'}</span>`;
     const pts = v*100, cls = pts>=0 ? 'clvup' : 'clvdn';
     return `<span class="${cls}">CLV ${pts>0?'+':''}${pts.toFixed(2)} pts</span>`
       + `<span class="tm"> &middot; ${r.clvPts != null ? 'set by hand'
@@ -8365,7 +8372,13 @@ function paintGodResults(){
     const cur = r.result || (r.won===true?'won':r.won===false?'lost':'');
     return `<div class="gr leg" data-god="${esc(k)}">
       <div><b>${esc(x.who || memberLabel(k) || kDec(k))}</b> ${esc(x.label || '')}</div>
-      <div class="tm" style="margin:2px 0 6px">took ${x.price ?? '—'} / ${x.entryPriceOpp ?? '—'}</div>
+      <div class="tm" style="margin:2px 0 6px">took ${x.price ?? '—'} / ${x.entryPriceOpp ?? '—'} · ${priceSourceBadge({...x,key:k})}</div>
+      ${x.priceSource !== 'captured' ? `<div class="row" style="gap:6px;flex-wrap:wrap;margin:8px 0">
+        <label>Original entry odds <input class="gvep" aria-label="Original entry odds" value="${esc(x.price ?? '')}" readonly style="max-width:110px"></label>
+        <label>Opposite entry odds <input class="gveo" aria-label="Opposite entry odds" inputmode="text" placeholder="e.g. +150" value="${esc(x.entryPriceOpp ?? '')}" style="max-width:120px"></label>
+        <button class="btn ghost sm gverify">Verify entry odds</button>
+        <span class="tm">Confirm the original DraftKings quote for this exact line and period. Keeps the submission time.</span>
+      </div>` : ''}
       <div class="row" style="gap:6px;flex-wrap:wrap">${['won','lost','push',''].map(v=>btn(k,v,cur)).join('')}</div>
       ${isManualLeg(x) ? `<div class="row" style="gap:6px;margin-top:8px;align-items:center">
         <input type="number" step="any" class="gda" placeholder="actual" value="${r.actual ?? ''}"
@@ -8406,6 +8419,22 @@ function paintGodResults(){
       const v = i.value.trim();
       i.value = v.startsWith('-') ? v.slice(1) : (v ? '-'+v.replace(/^\+/,'') : '-');
       i.focus();
+    };
+  });
+
+  host.querySelectorAll('.gverify').forEach(b=>{
+    b.onclick = async ()=>{
+      const box=b.closest('[data-god]'), key=box.dataset.god, pick=picks[key];
+      b.disabled=true; godErr('');
+      try {
+        const proposal=await wPost('/bozo/verify-entry', {forUid:key, week:S.week||1, ts:pick.ts,
+          price:box.querySelector('.gvep').value.trim(), priceOpp:box.querySelector('.gveo').value.trim()});
+        if(!window.confirm(proposal.echo)) return;
+        const result=await wPost('/bozo/verify-entry', {forUid:key, confirm:proposal.confirm_code});
+        await refresh(); paintGod();
+        godErr(result.warning || 'Entry odds verified. Submission time unchanged. CLV uses these prices once both closing prices are available.', true);
+      } catch(e) { godErr(e.message); }
+      finally { b.disabled=false; }
     };
   });
 
@@ -8920,6 +8949,8 @@ const clvOppAssumed = l => !!l && ((l.closePrice != null && l.closePriceOpp == n
    ⚠️ An override is weaker evidence than a captured pair and every surface says which it
    is looking at. What must never happen is the two becoming indistinguishable. */
 function clvPair(l){
+  if(l && l.clvPts == null && (l.verificationStatus === "unverified" ||
+    (l.priceSource === "manual" && (l.entryPriceOpp == null || l.closePriceOpp == null)))) return null;
   const pE = clvDevig(l && l.entryPrice, l && l.entryPriceOpp);
   if(pE == null) return null;
   const ov = (l && l.clvPts != null && Number.isFinite(+l.clvPts)) ? +l.clvPts/100 : null;
@@ -9267,7 +9298,7 @@ function clvFootLive(){
   return `<p class="live"><b>${c.noClose} of ${c.legs}</b> legs have no capturable close and are excluded`
     + ` · <b>${c.pushes}</b> push${c.pushes===1?'':'es'} dropped`
     + (band ? ` · ${band}` : '')
-    + ` · captured entries only; self-priced legs are excluded</p>`;
+    + ` · captured or manually verified entries; unverified entries await review</p>`;
 }
 
 function clvMethod(){

@@ -73,6 +73,7 @@ vm.runInContext(
   grab("function clvAssumedOpp(price){", "\n/** proportional de-vig")
   + grab("const devigP = (a,b) => {", "/* The CLV a leg carries right now")
   + grab("function legRow(x){", "/* ⚠️ A HAND-SET CLV OUTRANKS")
+  + grab("const priceSourceBadge = x => {", "\n// Server capture replaced")
   + grab("function clvDeltaOf(x, r){", "const amer =")
   + grab("function paintGodResults(){", "async function paintGodAudit(){")
   + "\nglobalThis.__paint = paintGodResults; globalThis.__delta = clvDeltaOf;"

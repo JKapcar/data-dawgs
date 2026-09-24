@@ -2482,6 +2482,8 @@ const MCP_TOOLS = [
           week: r.week, player: r.player, sport: r.sport, eventId: r.eventId,
           mkt: r.mkt, label: r.label, result: r.result || null,
           entryPrice: r.price ?? null, entryPriceOpp: r.priceOpp ?? null,
+          priceSource: r.priceSource || null, verificationStatus: r.verificationStatus || null,
+          entryVerification: r.entryVerification || null,
           entryBook: r.entryBook || null, entrySubmittedAt: r.ts ? new Date(r.ts).toISOString() : null,
           closePrice: r.close ?? null, closePriceOpp: r.closeOpp ?? null,
           closeBook: r.closeBook || null, closeObservedAt: r.closeObservedAt || null,
@@ -2489,7 +2491,7 @@ const MCP_TOOLS = [
           closeUnavailableReason: r.closeUnavailableReason || null,
           // The one derived field, and it is a boolean rather than a number: whether
           // this leg is eligible to be in a CLV calculation at all.
-          clvMeasurable: r.close != null && r.closeOpp != null && r.price != null && r.priceOpp != null
+          clvMeasurable: r.verificationStatus !== "unverified" && r.close != null && r.closeOpp != null && r.price != null && r.priceOpp != null
             && (r.result === "won" || r.result === "lost"),
         }));
 
@@ -2543,6 +2545,7 @@ const MCP_TOOLS = [
           mkt: x.mkt, side: x.side, line: x.mkt === "ml" ? null : x.line,
           period: x.period || "game",     // Phase 2.8; absent on older legs = full game
           price: x.price, priceSource: x.priceSource || "self", clvEligible: x.clvEligible === true,
+          verificationStatus: x.verificationStatus || null, entryVerification: x.entryVerification || null,
           priceOpp: x.entryPriceOpp ?? null, entryBook: x.entryBook || null,
           entryProvider: x.entryProvider || null, entrySnapshotAt: x.entrySnapshotAt || null,
           fairEntry: x.fairEntry ?? null, entryHold: x.entryHold ?? null,
@@ -2584,7 +2587,7 @@ const MCP_TOOLS = [
           // unmeasured for a leg that does not; never average across the two.
           "CLV is computable only where closeObservedAt is set AND both priceOpp and closeOpp are present — de-vig proportionally, and report probability points, not cents.",
           "A leg with closeUnavailableReason has NO CLV. Do not substitute the entry price for a missing close: that fabricates a zero and drags any average toward it.",
-          "priceSource=captured means both entry sides came from DraftKings through SGO. priceSource=self is excluded from CLV; never mix those legs into a CLV average.",
+          "priceSource=captured means both entry sides came from DraftKings through SGO. Failed captures can be submitted with typed odds, marked verificationStatus=unverified. A manager can verify the original entry pair without changing the submission time; priceSource=manual then permits CLV with a real closing pair. Keep unverified prices out of measured CLV. Existing explicit manual CLV overrides remain supported.",
           "Every leg goes on a real DraftKings bet slip, so every market — props included — exists and closes. A missing close means the capture could not resolve the typed description onto the right market, and closeUnavailableReason says which of stat, player or number failed. \"Other\" legs are the exception: free text for an arbitrary market, with nothing to match on. Either way it is a matching gap, never evidence about a player.",
           "If two legs share an eventId the ticket is a same-game parlay and the displayed parlay price is INDICATIVE — DraftKings reprices correlated legs, so the product of the leg prices is an upper bound, not the payout.",
         ],
@@ -2791,7 +2794,7 @@ const MCP_TOOLS = [
           : undefined,
         caveats: [
           "Nothing was submitted. This tool cannot submit — it reads the board and runs the validator.",
-          p.priceSource === "captured" ? "Both prices were captured from DraftKings through SGO." : "This market is self-priced and excluded from CLV.",
+          p.priceSource === "captured" ? "Both prices were captured from DraftKings through SGO." : "UNVERIFIED: manually entered odds, awaiting manager verification of the original quote for CLV.",
           "A pass here is a pass at this instant. Someone else can take your exact leg, or fill the board, before you press submit.",
         ],
       });
@@ -2829,7 +2832,7 @@ const MCP_TOOLS = [
         mkt: { type: "string", description: "spread | ml | total | prop | other" },
         side: { type: "string", description: "Team abbreviation, or over / under" },
         line: { type: "number", description: "The number. Required for everything except ml. ⚠️ For a spread this is the handicap as points the side GIVES UP, not the slip display: positive lays, negative takes. CLE +8.5 on the slip is line -8.5; TB -8.5 is line 8.5; an MLB/NHL dog at +1.5 is line -1.5. The server cross-checks it against the sign in label and rejects a conflict instead of pricing the wrong side. Totals and props take the number as printed." },
-        price: { type: "number", description: "Optional typed DraftKings price tripwire. The Worker captures and stores the quote; use this only to detect a mismatch. Required only for self-priced other markets or a prop fallback." },
+        price: { type: "number", description: "DraftKings entry price. Used as a comparison when capture works, or accepted as unverified when the odds checker fails. Required for any manual fallback; manager verification can later enable CLV." },
         label: { type: "string", description: "How the leg reads on the DraftKings slip, sign included, e.g. \"BUF -6.5\" or \"CLE +8.5\". On a spread the sign is required and is checked against line: they describe one bet from two directions (label = slip display, line = points given up)." },
         prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
         priceOpp: { type: "number", description: "Deprecated input; the Worker captures the opposite DraftKings side itself." },
