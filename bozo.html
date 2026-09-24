@@ -597,6 +597,12 @@ h2.bz{font-size:13px;letter-spacing:1.3px;text-transform:uppercase;color:var(--i
 .frm{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .f{display:flex;flex-direction:column;gap:4px;min-width:0}
 .f.w2{grid-column:span 2}.f.w4{grid-column:span 4}
+.spread-direction{display:flex;gap:8px;margin-bottom:4px}
+.spread-direction[hidden]{display:none}
+.spread-direction button{flex:1;min-height:44px;padding:8px;border:1px solid var(--grid);border-radius:7px;
+  background:var(--page);color:var(--ink-1);font:700 14px system-ui;cursor:pointer}
+.spread-direction button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.spread-direction button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .bz label{font:700 10.5px/1 ui-monospace,monospace;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-3)}
 .bz input,.bz select{background:var(--page);border:1px solid var(--grid);color:var(--ink-1);border-radius:7px;
   padding:9px 10px;font:15px system-ui;width:100%;min-width:0}
@@ -3851,7 +3857,14 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
          other are full-game and the Worker refuses anything else. -->
     <div class="f" id="periodWrap" style="display:none"><label>Period</label><select id="fPeriod"></select></div>
     <div class="f w2"><label>Side</label><select id="fSide"></select></div>
-    <div class="f" id="lineWrap"><label id="lineLbl">Number</label><input id="fLine" type="number" step="0.5" placeholder="6.5"></div>
+    <div class="f w2" id="lineWrap">
+      <label id="lineLbl" for="fLine">Spread</label>
+      <div class="spread-direction" id="spreadDirection" role="group" aria-label="Get or give points">
+        <button type="button" id="spreadGet" aria-pressed="false">+ Get points</button>
+        <button type="button" id="spreadGive" aria-pressed="false">− Give points</button>
+      </div>
+      <input id="fLine" type="text" inputmode="decimal" autocomplete="off" placeholder="+7.5 or −7.5">
+    </div>
     <div class="f" id="priceWrap"><label id="priceLbl">Price check <span class="opt">optional</span></label>
       <span class="pxfix"><span class="sgnfix" aria-hidden="true">−</span><input id="fPrice"
         type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="175"
@@ -4672,7 +4685,7 @@ function prefillFromMyLeg(mine = myLegNow()){
   // after the market is set and before the side is chosen.
   paintSides();
   if(mine.side) fSd.value = mine.side;
-  if(mine.mkt !== 'ml' && mine.line != null) fL.value = mine.line;
+  if(mine.mkt !== 'ml' && mine.line != null) fL.value = formLineValue(mine.mkt, mine.line);
   if(mine.prop) fPr.value = mine.prop;
   // The optional price check stays empty: every edit captures a fresh quote.
   paintLegPreview(); paintPriceWarn();
@@ -4851,6 +4864,33 @@ function paintPeriod(){
   sel.value = (on && allowed.includes(keep)) ? keep : 'game';
   wrap.style.display = on ? '' : 'none';
 }
+/* The form uses the betting-slip sign: + gets points, - gives points. Translate ONLY
+   at the form boundary; saved picks, API payloads and graders retain their convention. */
+function formLine(mk, raw){
+  const text = String(raw ?? '').trim().replace(/[\u2212\u2013]/g, '-');
+  if(!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(text)) return NaN;
+  const n = Number(text);
+  return mk === 'spread' && n !== 0 ? -n : n;
+}
+function formLineValue(mk, line){
+  const n = mk === 'spread' ? -Number(line) : Number(line);
+  return (mk === 'spread' && n >= 0 ? '+' : '') + n;
+}
+function paintSpreadDirection(){
+  const mk = document.getElementById('fMkt').value;
+  const raw = document.getElementById('fLine').value.trim();
+  document.getElementById('spreadDirection').hidden = mk !== 'spread';
+  const negative = /^[-\u2212\u2013]/.test(raw);
+  const chosen = raw !== '' && (Number.isFinite(formLine(mk, raw)) || /^[+\-\u2212\u2013]$/.test(raw));
+  document.getElementById('spreadGet').setAttribute('aria-pressed', String(chosen && !negative));
+  document.getElementById('spreadGive').setAttribute('aria-pressed', String(chosen && negative));
+}
+function chooseSpreadDirection(sign){
+  const field = document.getElementById('fLine');
+  field.value = sign + field.value.trim().replace(/^[+\-\u2212\u2013]/, '');
+  field.dispatchEvent(new Event('input', {bubbles:true}));
+  field.focus();
+}
 function legLabel(mk, side, line, prop, gameShort, period){
   const pd = period || periodOf();
   const sfx = pd && pd!=='game' ? ' · '+PERIOD_LABEL[pd] : '';
@@ -4881,18 +4921,21 @@ const pageMarketKey = (eventId, mk, line, prop) =>
    felt by anyone reading a rules page. Showing you that your leg is already gone, and
    where you would land in the order, is what makes waiting cost something you can see. */
 function paintLegPreview(){
+  paintSpreadDirection();
   const el = document.getElementById('legPrev'); if(!el) return;
   const mk = fMkt.value, side = fSide.value, raw = fLine.value;
   const g = (GAMES[fSport.value]||[]).find(x=>x.id===fGame.value);
   if(!side || (mk!=='ml' && raw==='')){ el.style.display='none'; return; }
-  const line = +raw, prop = fProp.value, eventId = fGame.value;
+  const line = formLine(mk, raw), prop = fProp.value, eventId = fGame.value;
+  if(mk !== 'ml' && !Number.isFinite(line)){ el.style.display='none'; return; }
   el.style.display='';
   const takes = mk==='spread' && line < 0;
 
   let h = `<span class="pl">You are submitting</span> <b>${esc(legLabel(mk, side, line, prop, g?g.short:''))}</b>`
     + (mk==='spread'
-        ? ` <span class="pl">— ${takes ? `${esc(side)} TAKES ${Math.abs(line)} points`
-                                       : `${esc(side)} LAYS ${Math.abs(line)} points`}</span>`
+        ? ` <span class="pl">— ${line === 0 ? 'Pick’em — no points given or received'
+              : takes ? `${esc(side)} gets ${Math.abs(line)} points`
+                      : `${esc(side)} gives ${Math.abs(line)} points`}</span>`
         : '');
 
   /* ---- is it still available? ---- */
@@ -4958,22 +5001,13 @@ function paintSides(){
   if(OU) sel.innerHTML='<option value="over">Over</option><option value="under">Under</option>';
   else sel.innerHTML=(g?g.teams:[]).map(t=>`<option value="${esc(t.abbr)}">${esc(t.name)}</option>`).join('');
   document.getElementById('lineWrap').style.display = mk==='ml' ? 'none' : '';
-  /* ⚠️ THE SIGN IS THE WHOLE MEANING ON A SPREAD, and the form used to hide it. The
-     stored convention is "points THIS SIDE GIVES UP": positive lays, negative takes.
-     Both the grader (m − line) and expected() depend on that, and there are live legs
-     stored under it, so the convention stays. What changes is that the form stops being
-     silent about it.
-
-     This matters because of one specific leg. Bozo takes favourites only, so the legal
-     baseball and hockey spread is the DOG at +1.5 priced short — a TAKING bet, which has
-     to be typed −1.5. Typed as 1.5 it means laying 1.5 and resolves backwards, and
-     nothing in the old form would have told you. The preview under the box is the real
-     fix: it shows the leg exactly as the board will, before you submit it. */
+  // Members enter the number exactly as it reads on their slip. Mobile sign buttons
+  // avoid relying on a keyboard that may not have either a plus or a minus key.
   const fl = document.getElementById('fLine');
-  document.getElementById('lineLbl').innerHTML =
-    mk==='spread' ? 'Spread <span class="opt">+ lays &middot; &minus; takes</span>'
+  document.getElementById('lineLbl').textContent =
+    mk==='spread' ? 'Spread — as shown on your bet slip'
     : mk==='total' ? 'Total' : 'Number';
-  fl.placeholder = mk==='spread' ? '6.5 to lay  ·  -1.5 to take' : '6.5';
+  fl.placeholder = mk==='spread' ? '+7.5 or −7.5' : '6.5';
   paintLegPreview();
   const pw=document.getElementById('propWrap');
   pw.style.display = (mk==='prop'||mk==='other') ? '' : 'none';
@@ -6577,12 +6611,14 @@ document.getElementById('dSave').onclick = async ()=>{
 async function submitLeg(){
   const e=document.getElementById('err'); e.className='err'; e.textContent='';
   const sp=fSport.value, id=fGame.value, mk=fMkt.value, side=fSide.value;
-  const typedPrice=fPrice.value.trim() ? favPrice(fPrice.value) : null, line=+fLine.value;
+  const typedPrice=fPrice.value.trim() ? favPrice(fPrice.value) : null, line=formLine(mk, fLine.value);
   const g=(GAMES[sp]||[]).find(x=>x.id===id);
   if(!g) return e.textContent='Pick a game.';
   if(typedPrice!==null && !Number.isFinite(typedPrice)) return e.textContent='The optional price check has to be a whole American number, like -175.';
   if(mk==='other' && typedPrice===null) return e.textContent='Other markets are self-priced, so enter the DraftKings price.';
-  if(mk!=='ml' && !fLine.value) return e.textContent='Number is required for that market.';
+  if(mk!=='ml' && !Number.isFinite(line)) return e.textContent=mk==='spread'
+    ? 'Enter your spread, like +7.5 to get points or -7.5 to give points.'
+    : 'Enter a number for this market.';
   // mirrors the Worker: an "other" leg that doesn't say what it is cannot be graded
   if(mk==='other' && !fProp.value.trim())
     return e.textContent='Describe the bet — an "other" leg needs to say what it actually is.';
@@ -8266,7 +8302,14 @@ document.getElementById('fSport').innerHTML =
   Object.entries(SPORTS).map(([k,v])=>`<option value="${k}">${v.n}</option>`).join('');
 document.getElementById('fSport').onchange = ()=>loadGames(fSport.value);
 document.getElementById('fGame').onchange = paintSides;
-document.getElementById('fMkt').onchange = ()=>{ paintSides(); paintPriceWarn(); };
+document.getElementById('fMkt').onchange = ()=>{ fLine.value=''; paintSides(); paintPriceWarn(); };
+document.getElementById('spreadGet').onclick = ()=>chooseSpreadDirection('+');
+document.getElementById('spreadGive').onclick = ()=>chooseSpreadDirection('-');
+document.getElementById('fLine').addEventListener('blur', ()=>{
+  const field=document.getElementById('fLine'), mk=fMkt.value, line=formLine(mk, field.value);
+  if(mk==='spread' && Number.isFinite(line)) field.value=formLineValue(mk, line);
+  paintLegPreview();
+});
 document.getElementById('fPeriod').onchange = ()=>{ paintLegPreview(); };
 document.getElementById('fAs').onchange = ()=>{ render(); };
 /* ⚠️ Registered BEFORE paintPriceWarn, so the warning never reads a half-cleaned box.
