@@ -1,0 +1,68 @@
+name: bozo-odds-diagnostics
+on:
+  push:
+    branches: [diagnostics/bozo-odds-20260924]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Read existing odds-error logs without deployment
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: python
+        run: |
+          import collections, json, os, re, time, urllib.request, urllib.error
+          token = os.environ["CF_TOKEN"]
+          account = os.environ["CF_ACCOUNT"]
+          if not token or not account:
+              raise SystemExit("Existing Cloudflare CI credentials are unavailable.")
+          now = int(time.time() * 1000)
+          body = {"queryId":"bozo-odds-investigation-20260924","timeframe":{"from":now-24*3600*1000,"to":now},"dry":True,"view":"events","limit":2000,"parameters":{"needle":{"value":"bozo-sgo-error","isRegex":False,"matchCase":True}}}
+          req = urllib.request.Request("https://api.cloudflare.com/client/v4/accounts/"+account+"/workers/observability/telemetry/query", data=json.dumps(body).encode(), headers={"Authorization":"Bearer "+token,"Content-Type":"application/json"}, method="POST")
+          try:
+              with urllib.request.urlopen(req, timeout=45) as response:
+                  payload = json.load(response)
+          except urllib.error.HTTPError as e:
+              print(json.dumps({"diagnostics_http_status":e.code,"existing_credential_can_query_logs":False}))
+              raise SystemExit(1)
+          if not payload.get("success"):
+              print(json.dumps({"diagnostics_query_success":False}))
+              raise SystemExit(1)
+          records = []
+          seen = set()
+          def walk(value):
+              if isinstance(value, str):
+                  if "bozo-sgo-error" in value:
+                      try: walk(json.loads(value))
+                      except (ValueError, RecursionError): pass
+              elif isinstance(value, list):
+                  for item in value: walk(item)
+              elif isinstance(value, dict):
+                  if value.get("event") == "bozo-sgo-error":
+                      signature = json.dumps(value, sort_keys=True)
+                      if signature not in seen:
+                          seen.add(signature)
+                          records.append(value)
+                  else:
+                      for item in value.values(): walk(item)
+          walk(payload.get("result",{}))
+          print(json.dumps({"diagnostics_query_success":True,"matched_diagnostic_records":len(records),"window_hours":24,"result_limit":2000}))
+          # Only fixed classifications, HTTP codes and counts reach public Actions logs.
+          # Never print raw runtime logs, request metadata, credentials or provider bodies.
+          counts = collections.Counter()
+          for r in records:
+              d = str(r.get("detail","")).lower()
+              interval = "month" if re.search(r"monthly|per.month",d) else "minute" if re.search(r"per.minute|perminute",d) else "hour" if re.search(r"per.hour",d) else "day" if re.search(r"per.day",d) else "unspecified"
+              kind = "objects" if re.search(r"object|entit",d) else "requests" if "request" in d else "unspecified"
+              caller = r.get("caller")
+              if caller not in ("submit","draft","close","cfb-market"): caller="unknown"
+              status = r.get("status")
+              if not isinstance(status,int) or not 100<=status<=599: status=None
+              counts[(status,caller,interval,kind)] += 1
+          for (status,caller,interval,kind),count in counts.items():
+              print(json.dumps({"status":status,"caller":caller,"provider_limit_interval":interval,"provider_limit_kind":kind,"count":count}))
+          
