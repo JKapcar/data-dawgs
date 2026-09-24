@@ -18,7 +18,7 @@ function between(start, end) {
   return worker.slice(a, b);
 }
 
-const sandbox = { FIXTURE: fixture.data };
+const sandbox = { FIXTURE: fixture.data, setTimeout, clearTimeout };
 vm.createContext(sandbox);
 vm.runInContext([
   'const BOZO_CLOSE_BOOK = "draftkings";',

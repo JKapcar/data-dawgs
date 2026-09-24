@@ -24,19 +24,11 @@ ok(/async function bozoCloseFill/.test(worker), "the fill route exists");
 ok(/async function bozoCloseGaps/.test(worker), "the gap list exists");
 ok(/"\/bozo\/close"/.test(worker) && /"\/bozo\/close-gaps"/.test(worker), "both are routed");
 
-/* ⚠️ THIS INVARIANT WAS DELIBERATELY REVERSED. A lone price used to be refused because
-   it cannot be de-vigged — true, but the effect was that a leg whose other side nobody
-   wrote down never counted at all. The other side is now SYNTHESISED at a standard hold
-   and stamped "assumed". What must never happen is the two kinds of evidence becoming
-   indistinguishable, so the stamp is the thing under test, not the refusal. */
-ok(/function bozoAssumedOpposite/.test(worker) && /BOZO_DEFAULT_OVERROUND = 1\.047619/.test(worker),
-   "a missing other side is assumed from a standard -110/-110 two-way market");
-ok(/closeOppSource: oppAssumed \? "assumed" : "manual"/.test(worker),
-   "an assumed other side is stamped apart from one read off the slip");
-ok(/closeOverround: oppAssumed \? BOZO_DEFAULT_OVERROUND : null/.test(worker),
-   "the assumption it was derived from is recorded, so it can be recomputed later");
-ok(/too long to assume an other side for/.test(worker),
-   "a price so long that no sane opposite is left is refused rather than invented");
+// D10: an actual two-sided quote is required, no synthesized juice.
+ok(/function bozoAssumedOpposite\(close\) \{ return null; \}/.test(worker), "missing other side is never invented");
+ok(/closeOppSource: "manual"/.test(worker), "manual pair carries honest provenance");
+ok(/closeOverround: null/.test(worker), "no assumed hold is stored");
+ok(/Both sides are required; no juice is assumed/.test(worker), "missing opposite has an actionable error");
 ok(/can't be overwritten/.test(worker),
    "a close the cron observed at kickoff cannot be overwritten by hand");
 
@@ -89,8 +81,7 @@ ok(/class="gdo"/.test(pageCode),
    "the override takes an opposite side, not just a close");
 ok(/cRaw === '' && oRaw !== ''/.test(pageCode),
    "it refuses an other-side-only entry — the assumption runs from the close outwards");
-ok(/'auto '\+fmtPrice\(clvAssumedOpp\(r\.close\)\)/.test(pageCode),
-   "it shows what a blank other side will become before the manager saves it");
+ok(/actual opposite price/.test(pageCode), "the input requests actual evidence");
 ok(/closeOppSource`, value: assumed \? 'assumed' : 'manual'/.test(pageCode),
    "and stamps an assumed other side apart from one read off a slip");
 

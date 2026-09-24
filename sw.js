@@ -5,7 +5,7 @@
 // meant a JS-only fix never invalidated a phone's cache.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "49e47821da";
+const VERSION = "fd1ca1ef4b";
 // A policy revision also invalidates old caches when only this file changes.
 const CACHE = "dd-" + VERSION + "-public-v2";
 
@@ -112,7 +112,7 @@ async function fetchWithinBudget(req){
   let timer;
   try{
     return await Promise.race([
-      fetch(req), new Promise((_, reject)=>{ timer=setTimeout(()=>reject(new Error("slow")), 4000); })
+      fetch(new URL(req.url).pathname === "/bozo.html" ? new Request(req, {cache:"no-cache"}) : req), new Promise((_, reject)=>{ timer=setTimeout(()=>reject(new Error("slow")), 4000); })
     ]);
   }finally { clearTimeout(timer); }
 }

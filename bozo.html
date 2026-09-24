@@ -3842,6 +3842,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <!-- ---------- submit ---------- -->
 <div class="card" id="submitCard" style="display:none">
   <h2 class="bz" id="submitH">Your leg</h2>
+  <p class="note" id="buildStatus" role="status">Checking this page…</p>
+  <button type="button" class="btn" id="buildRefresh" hidden>Load latest page</button>
+
   <div class="frm">
     <!-- Phase 2.7: the manager can file a leg FOR an absent member. Painted only for the
          manager; the Worker re-checks the role from the session and the stored roster, so
@@ -4352,26 +4355,11 @@ const dec  = a => a<0 ? 1+100/Math.abs(a) : 1+a/100;
 const imp  = a => a<0 ? Math.abs(a)/(Math.abs(a)+100) : 100/(a+100);
 /* Proportional de-vig against the opposite side of the same two-way market.
 
-   ⚠️ A MISSING OPPOSITE SIDE IS ASSUMED AT STANDARD JUICE, not refused. It used to be
-   refused — null when either side was missing — on the reasoning that raw implied and
-   de-vigged differ by roughly the whole hold, so falling back to raw would compare two
-   different quantities as if they were one. That reasoning is still right, and this is
-   not that: the opposite is SYNTHESISED so a real de-vig can be done against an assumed
-   book, exactly as clvDevig() has always done for the chart.
-
-   The two functions disagreeing was a bug with teeth. A leg entered at -145 with no
-   opposite side — every self-priced prop — de-vigged on the chart and refused on the
-   board, so its CLV existed on one screen and was blank on the other, and no amount of
-   typing a closing price could make the board produce a number. One rule now.
-
-   Still null when the price itself is missing, or when it is so long that no sane
-   opposite is left. Weaker evidence than two captured sides, and every surface that
-   prints it says which it is looking at. */
+   Both observed prices are required. Missing prices stay missing; no standard
+   juice is synthesized. A manager can verify an original entry pair later. */
 const devigP = (a,b) => {
-  if(a == null) return null;
-  const other = b == null ? clvAssumedOpp(a) : b;
-  if(other == null) return null;
-  return imp(a)/(imp(a)+imp(other));
+  if(a == null || b == null || !Number.isFinite(+a) || !Number.isFinite(+b) || Math.abs(+a)<100 || Math.abs(+b)<100) return null;
+  return imp(a)/(imp(a)+imp(b));
 };
 /** did this leg's CLV rest on an assumed opposite at either end? */
 const devigAssumed = (x, r) => !!x && ((x.price != null && x.entryPriceOpp == null)
@@ -4383,7 +4371,7 @@ const devigAssumed = (x, r) => !!x && ((x.price != null && x.entryPriceOpp == nu
 function clvDeltaOf(x, r){
   r = r || {};
   if(r.clvPts != null && Number.isFinite(+r.clvPts)) return +r.clvPts/100;
-  if(x.verificationStatus === "unverified" || (x.priceSource === "manual" && (x.entryPriceOpp == null || r.closeOpp == null))) return null;
+  if(x.verificationStatus === "unverified" || x.clvEligible === false || r.closeOppSource === "assumed" || x.entryOppSource === "assumed") return null;
   const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp);
   return (pC==null || pE==null) ? null : (pC - pE);
 }
@@ -4419,7 +4407,9 @@ function sdOf(x){ const s=SPORTS[x.sport];
    That shift is why moneylines need no reference spread typed in: line is 0 and
    the price alone carries the whole expectation. */
 function expected(x){
-  const sd=sdOf(x), p=Math.min(.98,Math.max(.02, imp(x.price)-.022));   // crude de-vig
+  const sd=sdOf(x), fair=devigP(x.price,x.entryPriceOpp ?? x.priceOpp);
+  if(fair == null || x.verificationStatus === "unverified") return null;
+  const p=Math.min(.98,Math.max(.02,fair));
   const shift=sd*invNorm(p), base = x.mkt==='ml' ? 0 : x.line;
   return dirOf(x)==='under' ? base-shift : base+shift;
 }
@@ -5529,12 +5519,12 @@ function paintHouseTicket(){
   let tot = '';
   if(nIn){
     const offDec  = live.reduce((a,x)=>a*dec(x.x.price),1);
-    const fairDec = 1/live.reduce((a,x)=>a*devig(x.x.price),1);
+    const fairDec = fairParlay(live.map(x=>x.x));
     tot = `<div class="sl-tot">` +
       `<div><div class="k">Legs in</div><div class="v">${nIn}<span style="opacity:.45">/${nAll}</span></div></div>` +
       `<div><div class="k">Parlay price</div><div class="v red">${esc(amer(offDec))}</div></div>` +
       `<div><div class="k">$${stake} returns</div><div class="v">$${Math.round(offDec*stake).toLocaleString()}</div></div>` +
-      `<div><div class="k">Book keeps</div><div class="v">${esc(pct(1-offDec/fairDec))}</div></div>` +
+      `<div><div class="k">Book keeps</div><div class="v">${fairDec==null ? "Awaiting verified odds" : esc(pct(1-offDec/fairDec))}</div></div>` +
       stamp + `</div>`;
   } else {
     tot = `<div class="sl-tot"><div><div class="k">Legs in</div>` +
@@ -5752,7 +5742,7 @@ async function loadLeagues(){
     LID = (want && LEAGUES.some(l=>l.id===want)) ? want
         : (LEAGUES.some(l=>l.id===r.defaultLeague) ? r.defaultLeague : (LEAGUES[0]||{}).id || 'main');
   }catch(e){
-    LEAGUES = []; 
+    LEAGUES = [];
     document.getElementById('srcNote').textContent = 'Leagues unreachable — '+e.message;
   }
 }
@@ -6607,9 +6597,44 @@ document.getElementById('dSave').onclick = async ()=>{
   }catch(err){ e.textContent=err.message; }
 };
 
+// The server also checks both phases, including submissions from pre-guard tabs.
+const BOZO_BUILD_ID = 'bozo-20260924-02';
+let bozoBuildOK = false, bozoBuildPending = null, bozoSubmitting = false;
+function paintBuildGuard(){
+  document.getElementById('save').disabled = !bozoBuildOK || bozoSubmitting;
+}
+async function checkBozoBuild(){
+  if(bozoBuildPending) return bozoBuildPending;
+  bozoBuildOK = false; paintBuildGuard();
+  bozoBuildPending = (async()=>{
+    const status = document.getElementById('buildStatus');
+    const refresh = document.getElementById('buildRefresh');
+    try{
+      const r = await wGet('/bozo/build');
+      bozoBuildOK = r.build === BOZO_BUILD_ID;
+      status.textContent = bozoBuildOK ? '' : 'This page is out of date. Load the latest page before submitting.';
+      refresh.hidden = bozoBuildOK;
+    }catch{
+      status.textContent = 'Reconnect to check this page before submitting. Your entries are still here.';
+      refresh.hidden = false;
+    }
+    paintBuildGuard(); return bozoBuildOK;
+  })();
+  try { return await bozoBuildPending; } finally { bozoBuildPending = null; }
+}
+document.getElementById('buildRefresh').onclick = ()=>{
+  const u = new URL(location.href); u.searchParams.set('v', Date.now().toString());
+  location.replace(u.toString());
+};
+window.addEventListener('focus', ()=>checkBozoBuild());
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkBozoBuild(); });
+window.addEventListener('online', ()=>checkBozoBuild());
+checkBozoBuild();
+
 /* ---------------- submit ---------------- */
 async function submitLeg(){
   const e=document.getElementById('err'); e.className='err'; e.textContent='';
+  if(bozoSubmitting || !await checkBozoBuild()) return;
   const sp=fSport.value, id=fGame.value, mk=fMkt.value, side=fSide.value;
   const typedPrice=fPrice.value.trim() ? favPrice(fPrice.value) : null, line=formLine(mk, fLine.value);
   const g=(GAMES[sp]||[]).find(x=>x.id===id);
@@ -6631,20 +6656,20 @@ async function submitLeg(){
     // so this timestamp is the only thing that tells the cron WHEN to snap. A leg
     // without it never gets a close.
     startsAt: g.start || null};
-  const btn=document.getElementById('save'); btn.disabled=true;
+  const btn=document.getElementById('save'); bozoSubmitting=true; paintBuildGuard();
   try{
     // Phase 2.7: when the manager is filing for someone else, BOTH phases name the
     // target. The Worker resolves the seat from that key and the role from the session.
     const tgt = proxyTarget();
     const forUid = tgt ? {forUid: tgt.key} : {};
-    const proposal = await wPost('/bozo/pick', {captureVersion:1, pick, ...forUid});
+    const proposal = await wPost('/bozo/pick', {captureVersion:1, clientBuild:BOZO_BUILD_ID, pick, ...forUid});
     const agreement = proposal.agreement && proposal.agreement.needsConfirmation
       ? `\n\nYour check was ${fmtPrice(proposal.agreement.typedPrice)}; the captured price is ${fmtPrice(proposal.agreement.capturedPrice)} (${proposal.agreement.probabilityPointDifference.toFixed(2)} probability points apart).`
       : '';
     if(!window.confirm(proposal.echo + agreement + '\n\nNothing has been submitted yet. Submit this pick at these odds?')){
-      e.textContent='Nothing submitted.'; btn.disabled=false; return;
+      e.textContent='Nothing submitted.'; bozoSubmitting=false; paintBuildGuard(); return;
     }
-    const res = await wPost('/bozo/pick', {confirm:proposal.confirm_code, ...forUid});
+    const res = await wPost('/bozo/pick', {confirm:proposal.confirm_code, clientBuild:BOZO_BUILD_ID, ...forUid});
     e.className='err ok';
     e.textContent = (res.placed ? 'In — and that was the last leg. Ticket is locked.' : 'Submitted.')
       + (res.leg && res.leg.priceSource !== 'captured' ? ' Odds unverified — awaiting manager review.' : '')
@@ -6652,7 +6677,7 @@ async function submitLeg(){
     resetAsSelect();
     await refresh();
   }catch(err){ e.className='err'; e.textContent=err.message; }
-  btn.disabled=false;
+  bozoSubmitting=false; paintBuildGuard();
 }
 
 /* ---------------- Phase 2.7: commissioner actions this week ----------------
@@ -6668,7 +6693,7 @@ function paintAdminActions(){
     .sort((a,b)=>a.ts-b.ts);
   if(!rows.length){ el.style.display='none'; el.innerHTML=''; return; }
   const verb = t => t==='proxy_remove' ? 'removed the leg of' : t==='proxy_edit' ? 'replaced the leg of'
-    : t==='roster_add' ? 'added' : t==='roster_remove' ? 'removed' : 'submitted for';
+    : t==='verify_entry' ? 'verified the original odds for' : t==='roster_add' ? 'added' : t==='roster_remove' ? 'removed' : 'submitted for';
   el.innerHTML = '<b>Commissioner actions this week</b><br>' + rows.map(({ts,r})=>
     `${esc(when(ts))} · ${esc(r.byName||'?')} ` + (r.type==='reopen' ? 'unlocked the board'
       : `${verb(r.type)} ${esc(r.forName||'?')}`)
@@ -6835,9 +6860,12 @@ function shuffled(a){
   a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; const t=a[i]; a[i]=a[j]; a[j]=t; }
   return a;
 }
-const devig = px => Math.min(.98, Math.max(.02, imp(px)-.022));
+const devig = x => x && x.verificationStatus !== 'unverified' ? devigP(x.price, x.entryPriceOpp ?? x.priceOpp) : null;
+const fairParlay = live => live.every(x=>devig(x)!=null) ? 1/live.reduce((a,x)=>a*devig(x),1) : null;
 
 function simulate(live, levers){
+  if(live.some(x=>expected(x)==null))
+    return {unavailable:true};
   const n = live.length;
   const res = S.results || {};
   const L = live.map(x=>{
@@ -7046,7 +7074,7 @@ function simulate(live, levers){
    outlives the fact that invalidated it. */
 const simKeyFor = (live, levers, status) =>
   live.map(x=>{ const r=legRow(x);
-    return `${x.p}:${x.price}:${x.ts}:${x.line}:${x.mkt}:${x.side}:${r.close??''}:${r.closeOpp??''}`
+    return `${x.p}:${x.price}:${x.entryPriceOpp??x.priceOpp??''}:${x.verificationStatus??''}:${x.clvEligible??''}:${r.closeOppSource??''}:${x.ts}:${x.line}:${x.mkt}:${x.side}:${r.close??''}:${r.closeOpp??''}`
          + `:${r.result??''}:${r.won===true?1:r.won===false?0:''}:${r.actual??''}:${r.clvPts??''}`; }).join('|')
   + '#' + levers.join(',') + '#' + status
   /* ⚠️ The drawn hierarchy is part of what the sim reads, so it is part of what makes a
@@ -7178,10 +7206,15 @@ function paintDiag(live, players, status){
   const key = simKeyFor(live, levers, status);
   if(key!==simKey){ simKey=key; simOut=simulate(live,levers); }
   const R=simOut;
+  if(R.unavailable){
+    document.getElementById('dgMeta').textContent='Simulation is waiting for verified two-sided entry odds.';
+    document.getElementById('dgTiles').innerHTML='';
+    return;
+  }
 
   const offDec  = live.reduce((a,x)=>a*dec(x.price),1);
-  const fairDec = 1/live.reduce((a,x)=>a*devig(x.price),1);
-  const hold    = 1 - offDec/fairDec;                 // what the book keeps
+  const fairDec = fairParlay(live);
+  const hold    = fairDec==null ? null : 1 - offDec/fairDec;                 // what the book keeps
   const ev      = stake*(offDec*R.cash - 1);
 
   const tile=(lil,big,sub,cost)=>`<div><div class="lil">${lil}</div><div class="big${cost?' cost':''}">${big}</div>`
@@ -7195,8 +7228,8 @@ function paintDiag(live, players, status){
   document.getElementById('dgTiles').innerHTML =
     tile('Ticket cashes', pct(R.cash), `all ${R.n} legs land`) +
     tile('Parlay price', amer(offDec), 'what you are laying') +
-    tile('Fair price', amer(fairDec), 'de-vigged, same legs') +
-    tile("Book's edge", pct(hold), 'compounded across the legs', 1) +
+    tile('Fair price', fairDec==null?'—':amer(fairDec), fairDec==null?'Awaiting verified odds':'de-vigged, same legs') +
+    tile("Book's edge", hold==null?'—':pct(hold), 'compounded across the legs', 1) +
     tile('EV on $'+stake, (ev<0?'−$':'$')+Math.abs(ev).toFixed(2), 'per ticket, long run', 1) +
     tile('Legs in', R.n+' / '+players.length, status);
 
@@ -7249,8 +7282,7 @@ function paintDiag(live, players, status){
         It fills in once the snapshot lands.</span></div>`);
     else if(withClv < live.length)
       flags.push(`<div class="flag"><span>⚠</span><span><b>Worst CLV is measured on ${withClv} of ${live.length} legs.</b>
-        The rest have no closing price <b>yet</b> &mdash; one side is enough, since a missing opposite is assumed at
-        standard juice, so a leg is unmeasured only when nothing has closed or been typed for it.
+        The rest are awaiting verified two-sided entry and closing prices. Missing sides stay unmeasured; no juice is assumed.
         <b>The simulation does not treat those as unmeasurable forever.</b> A leg whose market can be captured draws a
         modelled CLV from <b>that player's own past legs</b>, or from exactly even when they have no history yet, because
         a close that has not landed is not a close that never will &mdash; and with this week's hierarchy drawing Worst
@@ -7560,10 +7592,10 @@ function bozoCtx(){
 
   if(live.length){
     const offDec = live.reduce((a,x)=>a*dec(x.price),1);
-    const fairDec = 1/live.reduce((a,x)=>a*devig(x.price),1);
-    L.push(`PARLAY: offered ${amer(offDec)}, de-vigged fair ${amer(fairDec)}, so the book keeps ${pct(1-offDec/fairDec)} across the legs. $${st.stake??50} returns $${Math.round(offDec*(st.stake??50)).toLocaleString()} if it cashes.`);
+    const fairDec = fairParlay(live);
+    L.push(`PARLAY: offered ${amer(offDec)}, ${fairDec==null ? "fair price unavailable until both sides are verified" : `de-vigged fair ${amer(fairDec)}, so the book keeps ${pct(1-offDec/fairDec)} across the legs`}. $${st.stake??50} returns $${Math.round(offDec*(st.stake??50)).toLocaleString()} if it cashes.`);
     // Only quote the sim if the CACHED run matches the board as it stands right now.
-    if(simOut && simKey === simKeyFor(live, levers, status)){
+    if(simOut && !simOut.unavailable && simKey === simKeyFor(live, levers, status)){
       L.push(`SIMULATION (${simOut.sims.toLocaleString()} runs, legs drawn independently — MODEL OUTPUT, NOT OBSERVED):`);
       L.push(`- ticket cashes ${pct(simOut.cash)}`);
       live.forEach((x,i)=>L.push(`- ${teamOf(x.p)}: leg wins ${pct(simOut.win[i])}, bozo odds ${pct(simOut.bozo[i])}, only-loser ${pct(simOut.solo[i])}${simOut.by[i]?`, usually named by ${simOut.by[i].name}`:''}`));
@@ -8391,7 +8423,7 @@ function paintGodResults(){
      in another, because each screen answered "does this leg have a CLV" its own way.
 
      The CLV is NOT typed. It is derived from the prices, by clvDeltaOf, the same rule the
-     simulation and the grader read. A missing opposite side is assumed at standard juice
+     simulation and the grader read. Both actual sides are required
      rather than refused, so a self-priced prop needs one number — its close — and gets a
      real CLV out of it. Typed CLV would be a fourth opinion about the same fact. */
   const clvLine = (x, r) => {
@@ -8400,7 +8432,7 @@ function paintGodResults(){
     const pts = v*100, cls = pts>=0 ? 'clvup' : 'clvdn';
     return `<span class="${cls}">CLV ${pts>0?'+':''}${pts.toFixed(2)} pts</span>`
       + `<span class="tm"> &middot; ${r.clvPts != null ? 'set by hand'
-          : devigAssumed(x, r) ? 'other side assumed at standard juice' : 'from the close'}</span>`;
+          : devigAssumed(x, r) ? 'incomplete quote — awaiting verification' : 'from the close'}</span>`;
   };
 
   const btn = (k, v, cur) =>
@@ -8433,8 +8465,7 @@ function paintGodResults(){
           class="gdc" placeholder="close" value="${r.close ?? ''}"
           ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
         <span class="pxin"><input type="text" inputmode="numeric" pattern="[+-]?[0-9]*" autocomplete="off"
-          class="gdo" placeholder="${r.close != null && clvAssumedOpp(r.close) != null
-            ? 'auto '+fmtPrice(clvAssumedOpp(r.close)) : 'other side'}" value="${r.closeOpp ?? ''}"
+          class="gdo" placeholder="actual opposite price" value="${r.closeOpp ?? ''}"
           ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
         <button class="btn ghost sm gdsave">Save</button>
       </div>
@@ -8529,20 +8560,17 @@ function paintGodResults(){
         av = Number(aRaw);
         if(!Number.isFinite(av)){ say('The actual needs a number, like 0 or 24.5.'); return; }
       }
-      if(cRaw === '' && oRaw !== ''){ say('Enter the closing price. The other side can be left blank.'); return; }
+      if(cRaw === '' && oRaw !== ''){ say('Enter the closing price. Both closing prices are required.'); return; }
       let cv = null, ov = null, assumed = false;
       if(cRaw !== ''){
         cv = priceNum(cRaw);
         if(!Number.isFinite(cv)){ say('The close needs a whole American price, like -175.'); return; }
         if(oRaw !== ''){
           ov = priceNum(oRaw);
-          if(!Number.isFinite(ov)){ say('The other side needs a whole American price, or leave it blank.'); return; }
+          if(!Number.isFinite(ov)){ say('The other side needs a whole American price, including its sign.'); return; }
         }else{
-          /* ⚠️ Stored, not left blank. The assumption is recorded as a real number with a
-             stamp saying it was assumed, so every surface reads one value and the CLV
-             cannot come out different depending on who recomputed the missing side. */
-          ov = clvAssumedOpp(cv); assumed = true;
-          if(ov == null){ say('That price is too long to assume an other side for — enter the real one.'); return; }
+          // Missing evidence cannot be replaced by assumed juice.
+          say('Enter the actual opposite closing price. Both sides are required.'); return;
         }
       }
       b.disabled = true;
@@ -8681,7 +8709,7 @@ function royalePool(player){
     l.player === player && (l.result === 'win' || l.result === 'loss'));
   const out = [];
   for(const l of legs){
-    const pC = clvDevig(l.closePrice, l.closePriceOpp);
+    const pC = l.closeOppSource==='assumed' ? null : clvDevig(l.closePrice, l.closePriceOpp);
     const pE = clvDevig(l.entryPrice, l.entryPriceOpp);
     // The closing price is the bar, so it is the win probability. Where no close was
     // captured the entry stands in, flagged by `soft` so the footnote can count them.
@@ -8696,7 +8724,7 @@ function royalePool(player){
     let beat;
     if(binary) beat = invNorm(p);
     else {
-      const sd = sdOf(shape), exp = expected(shape);
+      const sd = sdOf(shape), exp = shape.mkt==='ml' ? 0 : shape.line;
       beat = sd > 0 ? (dirOf(shape)==='under' ? (l.actual - exp) : (exp - l.actual)) / sd : 0;
     }
     out.push({
@@ -8948,30 +8976,13 @@ const CLV = {
 const clvImp = o => o < 0 ? (-o)/((-o)+100) : 100/(o+100);
 const clvAm = pr => pr >= 0.5 ? Math.round(-100*pr/(1-pr)) : Math.round(100*(1-pr)/pr);
 
-/* The other side of a lone price, assumed at a standard -110/-110 two-way market
-   (overround 1.047619). Mirrors bozoAssumedOpposite() in the Worker — if you change the
-   assumption, change it in both or the chart stops agreeing with the ledger. */
-const CLV_OVERROUND = 1.047619;
-function clvAssumedOpp(price){
-  if(price == null) return null;
-  const left = CLV_OVERROUND - clvImp(price);
-  if(!(left > 0.02 && left < 0.98)) return null;
-  const o = clvAm(left);
-  return Number.isFinite(o) && Math.abs(o) >= 100 ? o : null;
-}
+// Kept as a compatibility helper for historical rendering; never invent a price.
+function clvAssumedOpp(price){ return null; }
 
 /** proportional de-vig against the opposite side of the same two-way market */
 function clvDevig(price, opp){
-  if(price == null) return null;
-  const a = clvImp(price);
-  /* ⚠️ A missing opposite side used to end the calculation here, which dropped the leg
-     from the chart and from n. It is now assumed at standard juice instead. Raw implied
-     is still never returned — that would mix two different quantities in one average.
-     What is returned is a real de-vig against an ASSUMED book, and clvOppAssumed() says
-     when that happened so the surface can mark it rather than pass it off as observed. */
-  const other = opp == null ? clvAssumedOpp(price) : opp;
-  if(other == null) return null;
-  const b = clvImp(other);
+  if(price == null || opp == null || !Number.isFinite(+price) || !Number.isFinite(+opp) || Math.abs(+price)<100 || Math.abs(+opp)<100) return null;
+  const a=clvImp(price), b=clvImp(opp);
   return a/(a+b);
 }
 /** did either side of this leg's CLV rest on an assumed opposite? */
@@ -8992,13 +9003,12 @@ const clvOppAssumed = l => !!l && ((l.closePrice != null && l.closePriceOpp == n
    ⚠️ An override is weaker evidence than a captured pair and every surface says which it
    is looking at. What must never happen is the two becoming indistinguishable. */
 function clvPair(l){
-  if(l && l.clvPts == null && (l.verificationStatus === "unverified" ||
-    (l.priceSource === "manual" && (l.entryPriceOpp == null || l.closePriceOpp == null)))) return null;
+  if(l && l.clvPts == null && (l.verificationStatus === "unverified" || l.clvEligible === false || l.closeOppSource === "assumed" || l.entryOppSource === "assumed")) return null;
   const pE = clvDevig(l && l.entryPrice, l && l.entryPriceOpp);
   if(pE == null) return null;
   const ov = (l && l.clvPts != null && Number.isFinite(+l.clvPts)) ? +l.clvPts/100 : null;
   if(ov != null) return { pE, pC: pE + ov, clv: ov, manual: true };
-  const pC = clvDevig(l.closePrice, l.closePriceOpp);
+  const pC = l.closeOppSource==='assumed' ? null : clvDevig(l.closePrice, l.closePriceOpp);
   return pC == null ? null : { pE, pC, clv: pC - pE, manual: false };
 }
 const clvGraded = l => (l.result==='win' || l.result==='loss') && clvPair(l) != null;

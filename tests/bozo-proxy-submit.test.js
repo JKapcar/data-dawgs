@@ -36,7 +36,7 @@ test('no route reads the author or a role from the body — forUid names a targe
   const pick = between('async function bozoPick(', '/* ---------- the DraftKings SGP rule');
   assert.match(pick, /const seat = bozoTargetSeat\(state, auth, env, body\.forUid\);/);
   const bodyReads = new Set(pick.match(/body\.\w+/g) || []);
-  assert.deepEqual([...bodyReads].sort(), ['body.action', 'body.captureVersion', 'body.confirm', 'body.forUid', 'body.pick'],
+  assert.deepEqual([...bodyReads].sort(), ['body.action', 'body.captureVersion', 'body.clientBuild', 'body.confirm', 'body.forUid', 'body.pick'],
     'the route reads exactly these body fields — no author, no role');
 });
 
@@ -126,7 +126,7 @@ function rig() {
     'this.api = { memberKeyOf, memberKeys, memberNameAt, isSiteAdmin, canActFor, isLeagueOwner, memberKeyOfRef, bozoTargetSeat, bozoPick };',
   ].join('\n'), sandbox);
   const api = sandbox.api;
-  const post = (auth, body) => { ctx.auth = auth; return api.bozoPick({ method: 'POST', body }, env, {}); };
+  const post = (auth, body) => { ctx.auth = auth; return api.bozoPick({ method: 'POST', body: {clientBuild:'bozo-20260924-02', ...body} }, env, {}); };
   const submit = async (auth, extra = {}, pick = PICK) => {
     const p1 = await post(auth, { captureVersion: 1, pick, ...extra });
     if (p1.status !== 200) return p1;
@@ -348,4 +348,13 @@ test('league manager access: a delegated member can act for others, an undelegat
   // the settings route resolves names to roster keys and drops strangers
   assert.match(worker, /if \(!isLeagueOwner\(lg, auth, env\)\)\s*return json\(\{ error: "Only the person who created this league can grant manager access\." \}, 403, cors\);/);
   assert.match(worker, /const key = memberKeyOfRef\(lg, ref\);\s*if \(key\) next\[key\] = true;/);
+});
+
+test('old and missing browser builds refuse both phases before writes', async()=>{
+ const r=rig(); await r.seed();
+ for(const clientBuild of [undefined,'old']){
+  const a=await r.post(MGR,{captureVersion:1,clientBuild,pick:PICK});
+  assert.equal(a.status,409);assert.equal(a.body.code,'page_out_of_date');
+  const b=await r.post(MGR,{confirm:'never-issued',clientBuild});assert.equal(b.status,409);assert.equal(b.body.code,'page_out_of_date');
+ }
 });

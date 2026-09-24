@@ -86,15 +86,15 @@ const ok = (cond, name) => { if (cond) pass++; else { fail++; console.error("FAI
    reason a closing price alone can now produce a CLV: Squatch's entry is -145 with no
    other side, and while devigP refused that, no number typed into any close box anywhere
    could make the board produce a CLV for him. */
-ok(ctx.__devig(-145, null) != null,
-   "a price with no opposite side de-vigs against an assumed standard-juice book");
+ok(ctx.__devig(-145, null) === null,
+   "a price with no opposite side stays unmeasured");
 ok(ctx.__devig(-145, 200) !== ctx.__devig(-145, null),
    "and a real opposite side still gives a different, better answer");
 ok(ctx.__devig(null, 200) === null, "a missing price itself is still refused");
 
 /* The payoff: one close, and the leg has a CLV. */
-ok(ctx.__delta({ price: -145, entryPriceOpp: null }, { close: -175, closeOpp: null }) != null,
-   "one closing price on a self-priced prop yields a CLV — nothing else to type");
+ok(ctx.__delta({ price: -145, entryPriceOpp: null }, { close: -175, closeOpp: null }) === null,
+   "one closing price cannot invent CLV");
 
 ctx.__paint();
 const html = nodes["godResults"].innerHTML;
