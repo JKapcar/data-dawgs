@@ -7209,6 +7209,9 @@ function paintDiag(live, players, status){
   if(R.unavailable){
     document.getElementById('dgMeta').textContent='Simulation is waiting for verified two-sided entry odds.';
     document.getElementById('dgTiles').innerHTML='';
+    document.getElementById('dgFlags').innerHTML='';
+    document.querySelector('#dgTable tbody').innerHTML='';
+    document.getElementById('dgNote').textContent='';
     return;
   }
 
