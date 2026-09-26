@@ -2191,6 +2191,20 @@ async function handleScores(url, env, cors) {
   try { doc = await bozoScheduleDoc(env, sport, SEASON); }
   catch (e) { return json({ error: "scores unavailable", detail: e.message }, 503, cors); }
   if (!doc) return json({ error: "scores unavailable", detail: `schedule:${sport}:${SEASON} is not populated yet` }, 503, cors);
+  try {
+    const finals = await env.RL.get(bozoScoreArchiveKey(sport, SEASON), "json");
+    if (finals?.games?.length) doc = { ...doc, games: doc.games.map(game => {
+      if (game.completed) return game;
+      const final = bozoScheduleFindGame(finals, { sport, canonicalKey: game.canonicalKey });
+      if (!final) return game;
+      const homeSide = bozoScheduledTeamSide({ sport, side: game.home.name }, final);
+      if (!homeSide) return game;
+      return { ...game, completed: true,
+        homeScore: homeSide === "home" ? final.homeScore : final.awayScore,
+        awayScore: homeSide === "home" ? final.awayScore : final.homeScore,
+        scoreSource: final.scoreSource, scoreObservedAt: final.scoreObservedAt };
+    }) };
+  } catch {}
   let window = null;
   if (Number.isFinite(week) && week > 0) {
     let nflDoc = sport === "nfl" ? doc : null;
@@ -7474,7 +7488,11 @@ async function bozoRefreshOneSchedule(env, sport, season, nowMs, fetcher = fetch
 }
 
 async function runBozoScheduleRefresh(env, nowMs = Date.now()) {
-  return Promise.all(["nfl", "cfb"].map(sport => bozoRefreshOneSchedule(env, sport, SEASON, nowMs)));
+  const outcomes = await Promise.allSettled(["nfl", "cfb"].map(sport =>
+    bozoRefreshOneSchedule(env, sport, SEASON, nowMs)));
+  const failed = outcomes.find(x => x.status === "rejected");
+  if (failed) throw failed.reason;
+  return outcomes.map(x => x.value);
 }
 
 // Bozo week N is NFL regular-season week N. The date window is the inclusive Eastern
@@ -7589,6 +7607,7 @@ function bozoPublicScheduleGames(doc, dates, opts = {}) {
     id: String(g.espnEventId), short: `${g.away.abbr} @ ${g.home.abbr}`, start: g.startsAt,
     state: g.completed ? "post" : "pre", final: g.completed === true,
     week: g.week == null ? null : Number(g.week),
+    scoreSource: g.scoreSource || doc.source, scoreObservedAt: g.scoreObservedAt || doc.fetchedAt,
     teams: [
       { abbr: g.away.abbr, name: g.away.name, home: false, score: g.awayScore },
       { abbr: g.home.abbr, name: g.home.name, home: true, score: g.homeScore },
@@ -9581,9 +9600,69 @@ function bozoScheduledOutcome(pick, game) {
   return { pending: false, actual, result, won: result === "won" ? true : result === "lost" ? false : null };
 }
 
+// Independent of the research CSVs: the existing Odds API account carries NFL/CFB
+// finals. Keep a season archive because its endpoint only returns the last three days.
+const bozoScoreArchiveKey = (sport, season) => `bozo:score-finals:${sport}:${season}`;
+function bozoNormalizeOddsScores(sport, rows, fetchedAt) {
+  if (!Array.isArray(rows)) throw new Error("Score provider returned no events array");
+  const registry = bozoBuildTeamRegistry(sport).aliases;
+  const games = [];
+  for (const ev of rows) {
+    if (ev.sport_key !== BOZO_ODDS_API_SPORT[sport] || ev.completed !== true ||
+        !ev.id || !ev.home_team || !ev.away_team || !Array.isArray(ev.scores)) continue;
+    const canonicalKey = bozoCanonicalScheduleKey(sport, ev.away_team, ev.home_team, ev.commence_time);
+    const observed = Date.parse(ev.last_update || "");
+    const start = Date.parse(ev.commence_time || "");
+    if (!canonicalKey || !Number.isFinite(observed) || observed < start ||
+        observed > Date.parse(fetchedAt) + 60000 || start > Date.parse(fetchedAt)) continue;
+    const score = name => {
+      const matches = ev.scores.filter(s => bozoTeamNorm(s.name, registry) === bozoTeamNorm(name, registry));
+      const n = matches.length === 1 ? bozoCsvNumber(matches[0].score) : null;
+      return n !== null && Number.isInteger(n) && n >= 0 ? n : null;
+    };
+    const homeScore = score(ev.home_team), awayScore = score(ev.away_team);
+    if (homeScore === null || awayScore === null) continue;
+    games.push({ canonicalKey, providerEventId: String(ev.id), startsAt: ev.commence_time,
+      localDate: bozoEasternDate(ev.commence_time), completed: true,
+      home: { name: ev.home_team, abbr: ev.home_team },
+      away: { name: ev.away_team, abbr: ev.away_team }, homeScore, awayScore,
+      scoreSource: "the-odds-api", scoreObservedAt: ev.last_update });
+  }
+  return games;
+}
+
+async function bozoFallbackScores(env, sport, season, nowMs = Date.now()) {
+  const key = bozoScoreArchiveKey(sport, season);
+  let previous = null;
+  try { previous = await env.RL?.get(key, "json"); } catch {}
+  const saved = { source: "the-odds-api", fetchedAt: previous?.fetchedAt || null,
+    games: previous?.games || [] };
+  const age = nowMs - Date.parse(previous?.checkedAt || "");
+  if (!env.ODDS_API_KEY || (age >= 0 && age < 60000)) return { ...saved, error: previous?.error || null };
+  let next;
+  try {
+    const response = await bozoOddsApiRequest(env, `sports/${BOZO_ODDS_API_SPORT[sport]}/scores`,
+      { daysFrom: 3, dateFormat: "iso" }, { ttl: 60 });
+    const games = bozoNormalizeOddsScores(sport, response.data, response.fetchedAt);
+    const merged = new Map(saved.games.map(g => [g.canonicalKey, g]));
+    for (const game of games) {
+      const old = merged.get(game.canonicalKey);
+      if (!old || Date.parse(game.scoreObservedAt) >= Date.parse(old.scoreObservedAt))
+        merged.set(game.canonicalKey, game);
+    }
+    next = { ...saved, fetchedAt: response.fetchedAt, checkedAt: new Date(nowMs).toISOString(),
+      games: [...merged.values()], error: null };
+  } catch (e) {
+    // Never store provider error bodies/URLs, which can contain credentials.
+    next = { ...saved, checkedAt: new Date(nowMs).toISOString(), error: "score_fallback_unavailable" };
+  }
+  try { await env.RL?.put(key, JSON.stringify(next)); } catch {}
+  return next;
+}
+
 async function bozoGradeFromScheduleKv(env, state, supplied) {
   const results = JSON.parse(JSON.stringify(supplied || state.results || {}));
-  const pending = [], docs = new Map(), sources = {};
+  const pending = [], docs = new Map(), fallbacks = new Map(), sources = {};
   for (const [key, pick] of Object.entries(state.picks || {})) {
     if (!pick || pick.mkt === "prop" || pick.mkt === "other") continue;
     // ⚠️ Phase 2.8b: a PERIOD leg is hand-graded. The schedule sources carry final scores
@@ -9605,12 +9684,41 @@ async function bozoGradeFromScheduleKv(env, state, supplied) {
        let the feed overwrite it — but still report the game as pending so the week
        cannot close until every scheduled game has scores. */
     const stampedManual = (results[key] || {}).resultSource === "manual";
-    if (!docs.has(pick.sport)) docs.set(pick.sport, await bozoScheduleDoc(env, pick.sport, state.season || SEASON));
+    if (!docs.has(pick.sport)) {
+      try { docs.set(pick.sport, await bozoScheduleDoc(env, pick.sport, state.season || SEASON)); }
+      catch { docs.set(pick.sport, null); }
+    }
     const doc = docs.get(pick.sport);
     if (doc) sources[pick.sport] = { source: doc.source, fetchedAt: doc.fetchedAt, etag: doc.etag || null };
     const eventId = String(pick.espnEventId || pick.eventId || "");
-    const game = bozoScheduleFindGame(doc, pick);
-    const grade = bozoScheduledOutcome(pick, game);
+    let game = bozoScheduleFindGame(doc, pick);
+    let grade = bozoScheduledOutcome(pick, game);
+    let gradeSource = doc?.source, gradeObservedAt = doc?.fetchedAt;
+    const start = Date.parse(pick.startsAt || pick.commenceTime || game?.startsAt || "");
+    const banked = state.results?.[key];
+    const bankedFinal = !stampedManual && banked?.gradeSource && banked.gradeObservedAt &&
+      [BOZO_SCHEDULE_SOURCE.nfl, BOZO_SCHEDULE_SOURCE.cfb, "the-odds-api"].includes(banked.gradeSource) &&
+      ["won", "lost", "push"].includes(banked.result) && Number.isFinite(banked.actual);
+    if (grade.pending && !bankedFinal && env.ODDS_API_KEY && Number.isFinite(start) && start <= Date.now()) {
+      if (!fallbacks.has(pick.sport))
+        fallbacks.set(pick.sport, await bozoFallbackScores(env, pick.sport, state.season || SEASON));
+      const fallback = fallbacks.get(pick.sport);
+      sources[pick.sport + "_fallback"] = { source: fallback.source,
+        fetchedAt: fallback.fetchedAt, error: fallback.error || null };
+      const final = bozoScheduleFindGame(fallback, { ...pick, startsAt: pick.startsAt || game?.startsAt });
+      if (final) {
+        game = final;
+        grade = bozoScheduledOutcome(pick, final);
+        gradeSource = final.scoreSource;
+        gradeObservedAt = final.scoreObservedAt;
+      }
+    }
+    // An outage must not erase an already verified final on a still-open ticket.
+    // Only server-stamped rows from these score adapters qualify, never browser input.
+    if (grade.pending && bankedFinal) {
+      results[key] = { ...(results[key] || {}), ...banked };
+      continue;
+    }
     if (stampedManual) {
       if (grade.pending) {
         pending.push({ key, player: pick.who || playerName(key), eventId, reason: grade.reason });
@@ -9627,7 +9735,7 @@ async function bozoGradeFromScheduleKv(env, state, supplied) {
       continue;
     }
     results[key] = { ...(results[key] || {}), actual: grade.actual, result: grade.result, won: grade.won,
-      gradeSource: doc.source, gradeObservedAt: doc.fetchedAt };
+      gradeSource, gradeObservedAt };
   }
   return { results, pending, sources };
 }
