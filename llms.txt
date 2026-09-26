@@ -30,6 +30,9 @@ Rendered from the `domain: "arena"` rows of surfaces.json; owns no data file.
 - [Library](/data.html): every file in index.json, shelved by the surface that owns it, plus
 the sources we read and do not republish. Owns no data file either.
 - [NFL](/nfl.html): EPA, nfelo, calculators, blocked NFL work with its blockers.
+- [NFL Weather](/weather.html): live NWS hourly grid at stadium coordinates around kickoff. Pup. Not a weather-impact model.
+- [Stadium registry](/data/nfl-stadiums.json): 32 home venues, lat/lon, roof class.
+- [Weather method](/data/weather-method.md): flag thresholds and promotion bar.
 
 ## College football
 
