@@ -1,5 +1,5 @@
 ---
-as_of: 2026-08-12
+as_of: 2026-09-26
 source: Data Dawgs public site and identity/connect handoff.
 ---
 
@@ -14,6 +14,7 @@ account recovery, saved personal state and a personal AI connector.
 - **Draft:** the auction board, player pool, strategy and league rooms.
 - **Games:** Bozo, Guillotine, NFL Survivor, DFS and the live draft rig.
 - **Lab:** dated models, calculators and experiments.
+- **NFL Weather:** `/weather.html` — live NWS hourly grid at stadium coordinates around kickoff. Pup. Not a weather-impact model.
 - **Receipts:** forecasts locked before the result and graded in public.
 - **Your Dawgs:** after sign-in, a compact list of your real league memberships and
   personal connector status.
