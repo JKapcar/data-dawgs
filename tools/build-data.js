@@ -509,7 +509,8 @@ write('epa-teams.json', {
       `to ${prorate(QB_MIN.season, yr)} dropbacks. `).join('') +
     'The pooled table spans every season in the snapshot, including the partial one. These are descriptive ' +
     'aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026, ' +
-    'and do not read two weeks of 2026 as a season.',
+    'and do not read two weeks of 2026 as a season. ' +
+    'Dropback EPA counts every dropback including scrambles and penalty-nullified plays and uses play epa, not qb_epa; Rush EPA excludes scrambles and kneels. These will not match nflverse passing_epa / rushing_epa.',
   field_notes: {
     off_epa_play: 'offensive EPA per play (higher is better)',
     def_epa_play: 'EPA per play allowed (LOWER is better — sign is not flipped)',
