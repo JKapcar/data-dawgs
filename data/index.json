@@ -185,9 +185,9 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 170518,
+    "bytes": 170539,
     "as_of": "2026-09-26",
-    "sha256": "33bed088b86150f711e64b123e86dc579a5b2b45d5371ba135689ff092c65b02",
+    "sha256": "ea299cb10061dabf5d2fb75b54b2b5c2299ac3f59242b1a848c1797abfc27b9e",
     "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 33/272 regular-season games are settled and banked in wins_tracker; 239 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    },
    {
@@ -290,7 +290,7 @@
     "url": "https://datadawgs216.com/data/models.json",
     "bytes": 3183,
     "as_of": "2026-09-26",
-    "sha256": "7c74ecc98cd4074d6f295aee80ee097944696fe31c4647998daa2f9cf22d8c87",
+    "sha256": "e2936698d6fc78daa7fb36ea4011c0bacd1bf448dbe5d80256b382aeafe3621f",
     "note": "Survivor uses nfelo published probabilities or nfelo-season-v1, not the legacy margin model below. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
@@ -298,7 +298,7 @@
     "url": "https://datadawgs216.com/data/nfelo.json",
     "bytes": 99927,
     "as_of": "2026-09-26",
-    "sha256": "241cc915bbe78d93474637437297120239aca31d30287abcb2875cbfcbd5fb09",
+    "sha256": "7426957abbf8b1492f67476d149be6e0061af56dd7a3e6cd848e0c16dd283aad",
     "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp)."
    },
    {
@@ -384,9 +384,9 @@
    {
     "path": "/data/survivor.json",
     "url": "https://datadawgs216.com/data/survivor.json",
-    "bytes": 113905,
+    "bytes": 113906,
     "as_of": "2026-09-26",
-    "sha256": "841fe991aa1e40c6de20ebfa909907f980594ee36985c2aaab2002b688a14f98",
+    "sha256": "d0c4eb56a23ad57135d4ee6ab7d913b516fdffd740a1dc0751fbb395113ad023",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"nfelo\" = published nfelo forecast without an extra blend; \"nfelo-season\" = nfelo pre-market calculation with current team/QB strength and game-specific HFA. Ownership is modelled, not observed."
    },
    {
@@ -404,6 +404,14 @@
     "as_of": "2026-08-08",
     "sha256": "be3ef0c573ec68d3ebf57b00ff5bcce408f1384eb5d11e57c132bfc0cb229996",
     "note": "License status is an implementation gate, not legal advice. Public code without a verified reusable license is not copied or repackaged, and a reference-only source is not republished in any form."
+   },
+   {
+    "path": "/data/nfl-stadiums.json",
+    "url": "https://datadawgs216.com/data/nfl-stadiums.json",
+    "bytes": 9729,
+    "as_of": "2026-09-26",
+    "sha256": "dd1fcedcb31a4ff4dc5ba7715db46a68ae131ad459e5b5e113e23d0e9afeb40a",
+    "note": "Roof class is a play-condition flag, not a forecast. fixed = indoor play regardless of outdoor weather. retractable = roof state is unknown at forecast time; outdoor numbers are shown and labelled as contingent. open = outdoor play. Shared venues (MetLife, SoFi) are listed once per team with the same coordinates. New Highmark Stadium (BUF, opened 2026-06-23) uses 42.77306, -78.79222. Neutral-site games must override venue explicitly; this file only knows home venues."
    },
    {
     "path": "/data/leagues/pepperoninipples.json",
@@ -498,6 +506,13 @@
     "bytes": 2713,
     "sha256": "317bc66cf62df8de90b49176f80b63e20c45af42da309e080c3eff999c574ae3",
     "as_of": "2026-08-06"
+   },
+   {
+    "path": "/data/weather-method.md",
+    "url": "https://datadawgs216.com/data/weather-method.md",
+    "bytes": 2149,
+    "sha256": "1072717beea6b988415dc7476e0a4b3bcfe350c10ace3bea5e16ef8c8f79dc9c",
+    "as_of": "2026-09-26"
    }
   ]
  }
