@@ -49,7 +49,7 @@ vm.runInContext(sliceBetween('const ROYALE_SD = {', 'function rExpected(')   // 
   + '\n' + worker.slice(gradeRouteStart, gradeRouteEnd)
   + `\nthis.api={bozoCsvTable,bozoEasternKickoff,bozoNormalizeNflSchedule,bozoNormalizeCfbSchedule,
       bozoRefreshOneSchedule,bozoPublicScheduleGames,bozoScheduledOutcome,bozoGradeFromScheduleKv,
-      bozoGradeConfirmCode,readBozoGradeConfirm,bozoGrade};`, context);
+      bozoGradeConfirmCode,readBozoGradeConfirm,bozoGrade,bozoNormalizeOddsScores,bozoFallbackScores};`, context);
 const api = context.api;
 const byEspn = (games, id) => games.find(game => game.espnEventId === id);
 
@@ -224,4 +224,107 @@ test('/bozo/grade phase one writes nothing and phase two does not re-fetch score
   assert.equal(scheduleReads, 1);
   assert.equal(writes.some(write => write.path === '/bozo/leagues/main/results'), true);
   assert.equal(writes.some(write => write.path === '/bozo/leagues/main/status' && write.value === 'graded'), true);
+});
+
+// Synthetic provider payloads reproduce the September 26 stale-CFB-feed failure.
+const scoreNow = Date.now();
+const scoreStart = new Date(scoreNow - 8 * 3600_000).toISOString();
+const scoreUpdated = new Date(scoreNow - 4 * 3600_000).toISOString();
+context.BOZO_ODDS_API_SPORT = { nfl: 'americanfootball_nfl', cfb: 'americanfootball_ncaaf' };
+function scoreEvent(id, away, home, a, h, sport = 'cfb') {
+  return { id, sport_key: context.BOZO_ODDS_API_SPORT[sport], commence_time: scoreStart,
+    away_team: away, home_team: home, completed: true, last_update: scoreUpdated,
+    scores: [{ name: home, score: String(h) }, { name: away, score: String(a) }] };
+}
+const clemsonFinal = scoreEvent('synthetic-clemson', 'Clemson Tigers', 'California Golden Bears', 24, 10);
+const indianaFinal = scoreEvent('synthetic-indiana', 'Northwestern Wildcats', 'Indiana Hoosiers', 23, 29);
+const finalPick = (game, mkt, side, line = 0) => ({ sport: 'cfb', game, mkt, side, line,
+  period: 'game', startsAt: scoreStart });
+function scoreRig(rows, state) {
+  const store = new Map(), calls = [];
+  const env = { ODDS_API_KEY: 'test-only', RL: {
+    async get(k) { return store.get(k) || null; },
+    async put(k, v) { store.set(k, JSON.parse(v)); },
+  }};
+  context.bozoOddsApiRequest = async (_env, path, params) => {
+    calls.push({path, params}); return { data: rows, fetchedAt: new Date().toISOString() };
+  };
+  return { env, store, calls, state };
+}
+
+test('stale CFB feed: both Friday legs win using one backup request; future leg stays pending', async () => {
+  const state = { season: 2026, picks: {
+    Roger: finalPick('CLEM @ CAL', 'ml', 'CLEM'),
+    Tony: finalPick('NU @ IU', 'total', 'over', 45.5),
+    Kap: { ...finalPick('CLEM @ CAL', 'ml', 'CLEM'), startsAt: new Date(scoreNow + 86400_000).toISOString() },
+  }, results: { Roger: { close: -142, closeOpp: 120 } } };
+  const r = scoreRig([clemsonFinal, indianaFinal], state);
+  const out = await api.bozoGradeFromScheduleKv(r.env, state);
+  assert.equal(out.results.Roger.result, 'won'); assert.equal(out.results.Roger.actual, 14);
+  assert.equal(out.results.Tony.result, 'won'); assert.equal(out.results.Tony.actual, 52);
+  assert.equal(out.results.Roger.close, -142); assert.equal(out.results.Roger.closeOpp, 120);
+  assert.equal(out.results.Roger.gradeSource, 'the-odds-api');
+  assert.equal(out.results.Roger.gradeObservedAt, scoreUpdated);
+  assert.equal(out.pending.length, 1); assert.equal(out.pending[0].key, 'Kap');
+  assert.equal(r.calls.length, 1); assert.equal(r.calls[0].params.daysFrom, 3);
+});
+
+test('NFL fallback handles underdogs and does not depend on CFB availability', async () => {
+  const event = scoreEvent('synthetic-nfl', 'Tennessee Titans', 'New York Giants', 20, 24, 'nfl');
+  const pick = { ...finalPick('TEN @ NYG', 'spread', 'TEN', -7.5), sport: 'nfl' };
+  const r = scoreRig([event]);
+  const out = await api.bozoGradeFromScheduleKv(r.env, { season: 2026, picks: { A: pick } });
+  assert.equal(out.results.A.result, 'won'); assert.equal(out.results.A.actual, -4);
+  assert.match(r.calls[0].path, /americanfootball_nfl\/scores$/);
+});
+
+test('in-progress, blank, wrong sport, wrong date, and incomplete score pairs cannot settle', async () => {
+  const fetched = new Date().toISOString();
+  for (const mutate of [e => e.completed = false, e => e.scores[0].score = '',
+    e => e.scores[0].score = null, e => e.scores.pop(), e => e.sport_key = 'americanfootball_nfl',
+    e => e.last_update = null, e => e.scores[0].score = '-1']) {
+    const e = structuredClone(clemsonFinal); mutate(e);
+    assert.equal(api.bozoNormalizeOddsScores('cfb', [e], fetched).length, 0);
+  }
+  const differentDate = { ...clemsonFinal, commence_time: new Date(scoreNow - 7 * 86400_000).toISOString() };
+  const r = scoreRig([differentDate]);
+  const out = await api.bozoGradeFromScheduleKv(r.env, {season: 2026, picks: { A: finalPick('CLEM @ CAL','ml','CLEM') }});
+  assert.equal(out.pending.length, 1); assert.equal(out.results.A, undefined);
+});
+
+test('cached finals survive provider three-day expiry and outages without refreshing their timestamp', async () => {
+  const r = scoreRig([clemsonFinal]);
+  const first = await api.bozoFallbackScores(r.env, 'cfb', 2026, scoreNow);
+  await api.bozoFallbackScores(r.env, 'cfb', 2026, scoreNow + 1000);
+  assert.equal(r.calls.length, 1);
+  context.bozoOddsApiRequest = async () => ({ data: [], fetchedAt: new Date(scoreNow + 5 * 86400_000).toISOString() });
+  const later = await api.bozoFallbackScores(r.env, 'cfb', 2026, scoreNow + 5 * 86400_000);
+  assert.equal(later.games.length, 1); assert.equal(later.games[0].scoreObservedAt, scoreUpdated);
+  context.bozoOddsApiRequest = async () => { throw Error('private URL must not be copied'); };
+  const failed = await api.bozoFallbackScores(r.env, 'cfb', 2026, scoreNow + 6 * 86400_000);
+  assert.equal(failed.games.length, 1); assert.equal(failed.error, 'score_fallback_unavailable');
+  assert.ok(!JSON.stringify(failed).includes('private URL'));
+  assert.equal(first.games[0].homeScore, 10);
+});
+
+test('outage preserves server-banked finals, rejects forged supplied grades, preserves manual gate', async () => {
+  const pick = finalPick('CLEM @ CAL','ml','CLEM');
+  const banked = { actual: 14, result: 'won', won: true, gradeSource: 'the-odds-api', gradeObservedAt: scoreUpdated };
+  const r = scoreRig([]);
+  context.bozoOddsApiRequest = async () => { throw Error('offline'); };
+  const base = {season:2026,picks:{A:pick}};
+  const saved = await api.bozoGradeFromScheduleKv(r.env, {...base,results:{A:banked}});
+  assert.equal(saved.results.A.result, 'won'); assert.equal(saved.pending.length, 0);
+  const forged = await api.bozoGradeFromScheduleKv(r.env, base, {A:banked});
+  assert.equal(forged.results.A, undefined); assert.equal(forged.pending.length, 1);
+  const manual = await api.bozoGradeFromScheduleKv(r.env, {...base,results:{A:{...banked,resultSource:'manual'}}});
+  assert.equal(manual.pending.length, 1);
+});
+
+test('props and half-game picks never use full-game fallback scores', async () => {
+  const r = scoreRig([clemsonFinal]);
+  const state = {season:2026,picks:{A:{...finalPick('CLEM @ CAL','ml','CLEM'),period:'1h'},
+    B:finalPick('CLEM @ CAL','prop','CLEM')}};
+  const out = await api.bozoGradeFromScheduleKv(r.env,state);
+  assert.equal(Object.keys(out.results).length, 0); assert.equal(r.calls.length, 0);
 });
