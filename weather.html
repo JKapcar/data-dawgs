@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NFL Weather · Data Dawgs</title>
+<link rel="icon" href="/assets/icon-180.png">
+<meta name="theme-color" content="#f2ecdf">
+<style>
+:root{--page:#f2ecdf;--surface-1:#fffdf7;--ink-1:#2b1c0e;--ink-2:#5b4a37;--ink-3:#8c7b66;--border:rgba(49,29,0,.15);--accent:#d13a00;--good:#006300;--bad:#c73030;--warn:#a86e00;--likes:#006ee6;--grid:rgba(49,29,0,.12)}
+@media(prefers-color-scheme:dark){:root{--page:#161009;--surface-1:#241c12;--ink-1:#f5f1ea;--ink-2:#c8c1b4;--ink-3:#8f897d;--border:rgba(255,255,255,.10);--accent:#ff6a02;--good:#2fbf3f;--bad:#ff6b6b;--warn:#eda100;--likes:#2188ff;--grid:rgba(255,255,255,.08)}}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink-1);font:400 15px/1.55 Trebuchet MS,system-ui,sans-serif}.wrap{max-width:1180px;margin:0 auto;padding:16px 24px 80px}a{color:var(--accent)}code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.92em}.brand{display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap}.brand a.home{color:inherit;text-decoration:none;font-weight:800;letter-spacing:.04em}.brand .tag{color:var(--ink-3);font:700 11px ui-monospace,Menlo,monospace}.p-hero h1{font-size:clamp(34px,7vw,66px);line-height:.95;letter-spacing:-.045em;margin:10px 0 14px}.p-kicker{font:750 11px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}.p-lead{font-size:clamp(16px,2.1vw,20px);max-width:760px;color:var(--ink-2)}.p-disclosure{margin:22px 0;padding:14px 16px;border-left:4px solid var(--warn);background:color-mix(in srgb,var(--warn) 8%,var(--surface-1));border-radius:0 10px 10px 0;color:var(--ink-2)}.p-jump{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 28px}.p-jump a,.p-pill{border:1px solid var(--border);border-radius:999px;padding:6px 11px;color:var(--ink-2);text-decoration:none;font:700 12px ui-monospace,Menlo,monospace;background:var(--surface-1)}.tierchip{display:inline-block;margin-left:10px;font-size:10px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;padding:4px 9px;border-radius:5px;text-decoration:none;background:var(--surface-1);color:var(--good);border:1px solid color-mix(in srgb,var(--good) 55%,transparent)}.p-section{margin:34px 0}.p-section>header{display:flex;align-items:end;justify-content:space-between;gap:18px;border-bottom:1px solid var(--grid);padding-bottom:10px;margin-bottom:16px}.p-section h2{margin:0;font-size:clamp(23px,3.5vw,34px)}.p-section .dek{color:var(--ink-3);margin:3px 0 0}.p-meta{font:700 11px ui-monospace,Menlo,monospace;color:var(--ink-3)}.p-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}.p-stat{border:1px solid var(--border);background:var(--surface-1);border-radius:10px;padding:13px}.p-stat b{display:block;font-size:25px;line-height:1}.p-stat span{display:block;color:var(--ink-3);font:650 11px ui-monospace,Menlo,monospace;margin-top:6px;text-transform:uppercase}.p-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:11px;background:var(--surface-1)}.p-table{width:100%;border-collapse:collapse;min-width:820px;font-variant-numeric:tabular-nums}.p-table th,.p-table td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;font-size:13px;white-space:nowrap}.p-table th{font:750 11px ui-monospace,Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}.wx-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:0 0 16px}.wx-controls label{font:700 12px ui-monospace,Menlo,monospace;color:var(--ink-2);display:flex;align-items:center;gap:8px}.wx-controls select{font:inherit;background:var(--surface-1);color:var(--ink-1);border:1px solid var(--border);border-radius:8px;padding:6px 10px}.wx-status{font:650 12px ui-monospace,Menlo,monospace;color:var(--ink-3)}.wx-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}.wx-card{border:1px solid var(--border);background:var(--surface-1);border-radius:12px;padding:14px}.wx-card h3{margin:0 0 4px;font-size:20px}.wx-sub{color:var(--ink-3);font:650 11px ui-monospace,Menlo,monospace}.wx-kick{display:flex;gap:14px;flex-wrap:wrap;margin:8px 0 10px}.wx-kick b{display:block;font-size:22px;line-height:1}.wx-kick span{display:block;color:var(--ink-3);font:650 10px ui-monospace,Menlo,monospace;text-transform:uppercase;margin-top:4px}.wx-hours{width:100%;border-collapse:collapse;font-size:12px}.wx-hours th,.wx-hours td{padding:4px 6px;border-bottom:1px solid var(--border);text-align:left}.wx-flag{display:inline-block;margin:2px 4px 0 0;padding:2px 7px;border-radius:999px;font:750 10px ui-monospace,Menlo,monospace;letter-spacing:.04em;text-transform:uppercase;border:1px solid color-mix(in srgb,var(--warn) 55%,transparent);color:var(--warn)}.wx-flag.ok{border-color:var(--border);color:var(--ink-3)}.wx-flag.indoor{border-color:color-mix(in srgb,var(--likes) 45%,transparent);color:var(--likes)}.wx-note{margin:8px 0 0;color:var(--ink-2);font-size:13px}.wx-err{color:var(--bad)}.wx-method p,.wx-machines{color:var(--ink-2);max-width:72ch}.foot{margin-top:48px;color:var(--ink-3);font-size:13px}@media(max-width:720px){.p-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="brand"><a class="home" href="/">DATA DAWGS</a><span class="tag">Data, Not Dogma</span><a class="p-pill" href="/nfl.html">NFL hub</a><a class="p-pill" href="/llms.txt">For machines</a></div>
+<main class="p-hero">
+<p class="p-kicker">NFL · live NWS grid</p>
+<h1>NFL Weather. <a class="tierchip" href="index.html#tiers">Pup</a></h1>
+<p class="p-lead">Kickoff-window forecasts from the National Weather Service at stadium coordinates. Roof class is a registry we maintain. This is not a weather-impact model and not somebody else’s notes.</p>
+</main>
+<div class="p-disclosure"><b>No oracle lives here.</b> NWS is a forecast dated by <code>updateTime</code>. Fixed roofs ignore outdoor numbers for play. Retractable roofs may be closed; we do not know. Flag chips are thresholds, not evidence that scoring changes. Nothing on this page has been graded.</div>
+<nav class="p-jump"><a href="#slate">This week</a><a href="#games">Game cards</a><a href="#method">Method</a><a href="#machines">For machines</a><a href="https://mysportsweather.com/nfl" rel="noopener">Roth’s page ↗</a></nav>
+<section class="p-section" id="slate">
+<header><div><h2>This week</h2><p class="dek">Schedule from <code>/data/nfl-schedule.json</code>. Forecasts from <code>api.weather.gov</code>.</p></div><div class="p-meta" id="slate-meta">Loading schedule…</div></header>
+<div class="wx-controls"><label>Week <select id="week-sel"></select></label><label><input type="checkbox" id="outdoor-only"> Outdoor play only</label><button type="button" id="refresh-btn" class="p-pill">Refresh forecasts</button><span id="wx-status" class="wx-status"></span></div>
+<div class="p-summary"><div class="p-stat"><b id="sum-games">—</b><span>Games in week</span></div><div class="p-stat"><b id="sum-open">—</b><span>Open-air</span></div><div class="p-stat"><b id="sum-flag">—</b><span>Flagged outdoor</span></div><div class="p-stat"><b>NWS</b><span>Forecast source</span></div></div>
+<div class="p-table-wrap"><table class="p-table"><thead><tr><th>Kick</th><th>Game</th><th>Venue</th><th>Roof</th><th>Temp</th><th>Wind</th><th>Precip</th><th>NWS</th><th>Flags</th></tr></thead><tbody id="slate-body"><tr><td colspan="9">Loading…</td></tr></tbody></table></div>
+</section>
+<section class="p-section" id="games"><header><div><h2>Game cards</h2><p class="dek">Four hours around kickoff. Indoor games still show outdoor hours for travel — labelled as such.</p></div></header><div id="game-cards" class="wx-cards"></div></section>
+<section class="p-section" id="method"><header><div><h2>Method</h2><p class="dek">What is measured, what is assumed, what would promote this off Pup.</p></div></header><div class="wx-method"><p>Inputs: locked schedule, stadium registry with lat/lon and roof class, and the NWS hourly grid. The page does not store forecasts.</p><p>Flags fire at ≥15 mph wind, ≥40% precip, ≤32°F, or ≥90°F. Cutoffs are readable, not graded against scoring.</p><p>Kevin Roth’s <a href="https://mysportsweather.com/nfl" rel="noopener">MySportsWeather</a> is interpretation. This page is the raw official grid.</p><p>Writeup: <a href="/data/weather-method.md"><code>/data/weather-method.md</code></a>.</p></div></section>
+<section class="p-section" id="machines"><header><div><h2>For machines</h2><p class="dek">Read the files. Do not invent a weather-impact coefficient.</p></div></header><ul class="wx-machines"><li><code>/data/nfl-stadiums.json</code></li><li><code>/data/nfl-schedule.json</code></li><li><code>/data/weather-method.md</code></li><li>Live: <code>https://api.weather.gov/points/{lat},{lon}</code> then <code>forecast/hourly</code>. Quote <code>updateTime</code>.</li></ul></section>
+<footer class="foot">Data Dawgs · Data, Not Dogma · Pup · NWS numbers carry their <code>updateTime</code>.</footer>
+</div>
+<script>
+(function(){
+  const SCHED_URL="/data/nfl-schedule.json", STAD_URL="/data/nfl-stadiums.json";
+  const SCHED_FALLBACK="https://datadawgs216.com/data/nfl-schedule.json";
+  const STAD_FALLBACK="https://datadawgs216.com/data/nfl-stadiums.json";
+  const NWS="https://api.weather.gov";
+  const UA="DataDawgsWeather/0.1 (https://datadawgs216.com/weather.html)";
+  let schedule=[], stadiums={}, stadMeta={}, week=null, cache={}, outdoorOnly=false;
+  const $=id=>document.getElementById(id);
+  const fmtET=iso=>new Date(iso).toLocaleString("en-US",{timeZone:"America/New_York",weekday:"short",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+  const hourET=iso=>new Date(iso).toLocaleString("en-US",{timeZone:"America/New_York",hour:"numeric"});
+  const windMph=s=>{const n=String(s||"").match(/(\d+)/g);return n?Math.max(...n.map(Number)):null};
+  async function loadJSON(url, fallback){
+    try{const r=await fetch(url,{cache:"no-store"}); if(r.ok) return r.json();}catch(e){}
+    if(fallback&&fallback!==url){const r2=await fetch(fallback,{cache:"no-store"}); if(!r2.ok) throw new Error("fetch failed "+url); return r2.json();}
+    throw new Error("fetch failed "+url);
+  }
+  async function nwsHourly(lat,lon){
+    const key=lat.toFixed(4)+","+lon.toFixed(4);
+    if(cache[key]&&Date.now()-cache[key].got<20*60*1000) return cache[key];
+    const pts=await fetch(NWS+"/points/"+lat.toFixed(4)+","+lon.toFixed(4),{headers:{"Accept":"application/geo+json","User-Agent":UA}});
+    if(!pts.ok) throw new Error("NWS points "+pts.status);
+    const pj=await pts.json();
+    const href=pj.properties&&pj.properties.forecastHourly;
+    if(!href) throw new Error("no hourly href");
+    const hr=await fetch(href,{headers:{"Accept":"application/geo+json","User-Agent":UA}});
+    if(!hr.ok) throw new Error("NWS hourly "+hr.status);
+    const hj=await hr.json();
+    const out={got:Date.now(),updateTime:hj.properties&&hj.properties.updateTime,office:pj.properties&&pj.properties.cwa,city:pj.properties&&pj.properties.relativeLocation&&pj.properties.relativeLocation.properties&&pj.properties.relativeLocation.properties.city,periods:(hj.properties&&hj.properties.periods)||[]};
+    cache[key]=out; return out;
+  }
+  function nearestHours(periods,kickoffIso,n){
+    const k=new Date(kickoffIso).getTime();
+    const scored=periods.map(p=>({p,dist:Math.abs(new Date(p.startTime)-k),t:new Date(p.startTime).getTime()})).sort((a,b)=>a.dist-b.dist);
+    if(!scored[0]) return [];
+    return periods.map(p=>({p,t:new Date(p.startTime).getTime()})).filter(x=>x.t>=scored[0].t-30*60*1000&&x.t<=scored[0].t+(n-1)*60*60*1000).sort((a,b)=>a.t-b.t).slice(0,n).map(x=>x.p);
+  }
+  function flags(kick,roof){
+    if(!kick||roof==="fixed") return [];
+    const out=[], w=windMph(kick.windSpeed), pop=kick.probabilityOfPrecipitation&&kick.probabilityOfPrecipitation.value;
+    if(w!=null&&w>=15) out.push("wind "+w+" mph");
+    if(pop!=null&&pop>=40) out.push("precip "+pop+"%");
+    if(kick.temperature<=32) out.push("cold "+kick.temperature+"°");
+    if(kick.temperature>=90) out.push("heat "+kick.temperature+"°");
+    return out;
+  }
+  function weeksFrom(games){return [...new Set(games.filter(g=>g.season_type==="REG"||!g.season_type).map(g=>g.week))].sort((a,b)=>a-b);}
+  function defaultWeek(games){
+    const now=Date.now()-6*3600*1000;
+    const upcoming=games.filter(g=>g.status!=="final"&&new Date(g.kickoff_at)>=now);
+    if(upcoming.length) return upcoming.sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at))[0].week;
+    const w=weeksFrom(games); return w[w.length-1];
+  }
+  const venueFor=g=>stadiums[g.home_team]||null;
+  async function render(){
+    const games=schedule.filter(g=>g.week===week).sort((a,b)=>new Date(a.kickoff_at)-new Date(b.kickoff_at));
+    $("slate-meta").textContent=stadMeta.as_of?("stadiums as_of "+stadMeta.as_of+" · schedule live"):"schedule loaded";
+    $("sum-games").textContent=games.length;
+    $("sum-open").textContent=games.filter(g=>(venueFor(g)||{}).roof==="open").length;
+    const shown=outdoorOnly?games.filter(g=>{const r=(venueFor(g)||{}).roof;return r==="open"||r==="retractable";}):games;
+    $("slate-body").innerHTML=shown.map(g=>{const v=venueFor(g);return `<tr data-gid="${g.game_id}"><td>${fmtET(g.kickoff_at)}</td><td>${g.away_team} @ ${g.home_team}${g.neutral_site?" <span class='wx-flag'>neutral</span>":""}</td><td>${v?v.stadium:"?"}</td><td>${v?v.roof:"?"}</td><td class="c-temp">…</td><td class="c-wind">…</td><td class="c-pop">…</td><td class="c-nws">…</td><td class="c-flags">…</td></tr>`;}).join("")||`<tr><td colspan="9">No games in this week.</td></tr>`;
+    $("game-cards").innerHTML=shown.map(g=>{const v=venueFor(g);return `<article class="wx-card" id="card-${g.game_id}"><h3>${g.away_team} @ ${g.home_team}</h3><p class="wx-sub">${fmtET(g.kickoff_at)} ET · ${v?(v.stadium+", "+v.city+" "+v.state):"venue missing"} · roof ${v?v.roof:"?"}</p><div class="wx-body">Loading NWS…</div></article>`;}).join("");
+    $("wx-status").textContent="Fetching NWS…";
+    let flagged=0;
+    for(const g of shown){
+      const v=venueFor(g), row=document.querySelector(`tr[data-gid="${g.game_id}"]`), card=document.getElementById("card-"+g.game_id);
+      if(!v){if(row) row.querySelector(".c-nws").textContent="no venue"; if(card) card.querySelector(".wx-body").innerHTML=`<p class="wx-err">No stadium registry row for ${g.home_team}.</p>`; continue;}
+      try{
+        const wx=await nwsHourly(v.lat,v.lon);
+        const hours=nearestHours(wx.periods,g.kickoff_at,4);
+        const kick=hours[0];
+        const fl=flags(kick,v.roof);
+        if(fl.length&&v.roof!=="fixed") flagged++;
+        const pop=kick&&kick.probabilityOfPrecipitation&&kick.probabilityOfPrecipitation.value;
+        if(row){
+          row.querySelector(".c-temp").textContent=kick?kick.temperature+"°F":"—";
+          row.querySelector(".c-wind").textContent=kick?kick.windSpeed+" "+(kick.windDirection||""):"—";
+          row.querySelector(".c-pop").textContent=pop==null?"—":pop+"%";
+          row.querySelector(".c-nws").textContent=(wx.office||"NWS")+" "+(wx.updateTime||"").slice(0,16).replace("T"," ");
+          row.querySelector(".c-flags").innerHTML=v.roof==="fixed"?`<span class="wx-flag indoor">indoor</span>`:(fl.length?fl.map(f=>`<span class="wx-flag">${f}</span>`).join(" "):`<span class="wx-flag ok">clear</span>`);
+        }
+        if(card){
+          const indoorNote=v.roof==="fixed"?`<p class="wx-note"><b>Indoor play.</b> Outdoor hours are travel/tailgate only.</p>`:v.roof==="retractable"?`<p class="wx-note"><b>Retractable roof.</b> Closed-roof state is unknown here.</p>`:"";
+          const hoursHtml=hours.length?`<table class="wx-hours"><thead><tr><th>Hour ET</th><th>Temp</th><th>Wind</th><th>Precip</th><th>Sky</th></tr></thead><tbody>${hours.map(h=>`<tr><td>${hourET(h.startTime)}</td><td>${h.temperature}°F</td><td>${h.windSpeed} ${h.windDirection||""}</td><td>${h.probabilityOfPrecipitation&&h.probabilityOfPrecipitation.value!=null?h.probabilityOfPrecipitation.value+"%":"—"}</td><td>${h.shortForecast||""}</td></tr>`).join("")}</tbody></table>`:`<p class="wx-err">No hourly period near kickoff.</p>`;
+          const kickBox=kick?`<div class="wx-kick"><div><b>${kick.temperature}°</b><span>Kickoff temp</span></div><div><b>${kick.windSpeed}</b><span>${kick.windDirection||""} wind</span></div><div><b>${pop==null?"—":pop+"%"}</b><span>Precip</span></div></div>`:"";
+          card.querySelector(".wx-body").innerHTML=kickBox+indoorNote+hoursHtml+`<p class="wx-sub" style="margin-top:8px">NWS ${wx.office||""} · updated ${wx.updateTime||"?"} · ${wx.city||v.city}</p>`+(fl.length?`<div>${fl.map(f=>`<span class="wx-flag">${f}</span>`).join("")}</div>`:"");
+        }
+      }catch(err){
+        if(row) row.querySelector(".c-nws").textContent="NWS error";
+        if(card) card.querySelector(".wx-body").innerHTML=`<p class="wx-err">${String(err.message||err)}</p>`;
+      }
+    }
+    $("sum-flag").textContent=flagged;
+    $("wx-status").textContent="NWS pass finished "+new Date().toLocaleTimeString("en-US",{timeZone:"America/New_York"})+" ET";
+    window.DD_WX_STATE={week,n:shown.length,flagged,as_of:new Date().toISOString()};
+  }
+  async function boot(){
+    try{
+      const [sch,stad]=await Promise.all([loadJSON(SCHED_URL,SCHED_FALLBACK),loadJSON(STAD_URL,STAD_FALLBACK).catch(()=>null)]);
+      schedule=(sch.data&&sch.data.games)||sch.games||[];
+      if(stad&&stad.data&&stad.data.teams){stadiums=stad.data.teams;stadMeta={as_of:stad.as_of,source:stad.source};}
+      else $("wx-status").textContent="Stadium file missing";
+      const weeks=weeksFrom(schedule); week=defaultWeek(schedule);
+      const sel=$("week-sel"); sel.innerHTML=weeks.map(w=>`<option value="${w}"${w===week?" selected":""}>Week ${w}</option>`).join("");
+      sel.onchange=()=>{week=+sel.value;render();};
+      $("outdoor-only").onchange=e=>{outdoorOnly=e.target.checked;render();};
+      $("refresh-btn").onclick=()=>{cache={};render();};
+      await render();
+    }catch(err){
+      $("slate-meta").textContent=String(err.message||err);
+      $("slate-body").innerHTML=`<tr><td colspan="9" class="wx-err">${String(err.message||err)}</td></tr>`;
+    }
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
