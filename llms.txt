@@ -51,7 +51,7 @@ the sources we read and do not republish. Owns no data file either.
 
 ## Models and data
 
-- [Team + QB EPA](/data/epa-teams.json): 2023-2025 nflverse play-by-play; descriptive, not predictive.
+- [Team + QB EPA](/data/epa-teams.json): nflverse pbp 2023-2025 + 2026 Wk1-2; descriptive, not predictive.
 - [nfelo](/data/nfelo.json): ratings, current-season lines and backtest; mirrored daily from greerreNFL/nfelo (meta.captured_at, meta.sha). Backtest is in-sample; ratings move only after games are played.
 - [Schedule + win probabilities](/data/survivor.json): 272 games; market-derived where available, model-derived otherwise.
 - [Parameters](/data/models.json): margin, Bozo and survivor assumptions and limitations.
