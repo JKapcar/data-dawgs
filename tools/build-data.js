@@ -134,9 +134,31 @@ function aggregateEpa(seasonIdx, minDb) {
 }
 
 
+/* ---------------------------------------------------------------
+ * A season still in progress. DATA.coverage (written by tools/stats-epa-refresh.py)
+ * says which weeks each season carries: 'all' for a completed season, a week list for
+ * one in progress (2026 = Weeks 1-2 as of 2026-09-26).
+ *
+ * ⚠️ A full-season minimum applied to two weeks deletes every row — no quarterback has
+ * 200 dropbacks in two games — so an in-progress season uses the SAME bar prorated to
+ * the weeks covered (full bar × weeks / 17, rounded up), and the prorated number is
+ * published beside the full one. It is a small-sample table and says so; it is not a
+ * looser standard for completed seasons.
+ * ------------------------------------------------------------- */
+const COVERAGE = DATA.coverage || {};
+const SEASON_WEEKS = 17;
+const partialWeeks = yr => (COVERAGE[yr] && Array.isArray(COVERAGE[yr].weeks) ? COVERAGE[yr].weeks : null);
+const prorate = (bar, yr) => { const w = partialWeeks(yr); return w ? Math.ceil(bar * w.length / SEASON_WEEKS) : bar; };
+const PARTIAL = SEASONS.filter(yr => partialWeeks(yr));
+const COMPLETE = SEASONS.filter(yr => !partialWeeks(yr));
+const weekSpan = w => (w.length > 1 ? `Weeks ${w[0]}-${w[w.length - 1]}` : `Week ${w[0]}`);
+const PARTIAL_LINE = PARTIAL.map(yr => `${yr} regular-season ${weekSpan(COVERAGE[yr].weeks)} only ` +
+  `(${COVERAGE[yr].games} games, captured ${COVERAGE[yr].captured})`).join('; ');
+const QB_MIN = { season: 200, pooled: 500 };
+
 const EPA_AGG = { by_season: {}, pooled: null };
-SEASONS.forEach((yr, i) => { EPA_AGG.by_season[yr] = aggregateEpa(new Set([i]), 200); });
-EPA_AGG.pooled = aggregateEpa(new Set(SEASONS.map((_, i) => i)), 500);
+SEASONS.forEach((yr, i) => { EPA_AGG.by_season[yr] = aggregateEpa(new Set([i]), prorate(QB_MIN.season, yr)); });
+EPA_AGG.pooled = aggregateEpa(new Set(SEASONS.map((_, i) => i)), QB_MIN.pooled);
 
 /* ---------------------------------------------------------------
  * Per-player EPA — the same play-by-play, aggregated by the PRIMARY BALL HANDLER.
@@ -211,7 +233,10 @@ function aggregatePlayers(seasonIdx, min) {
 }
 
 const EPA_PLAYERS = { by_season: {}, pooled: null };
-SEASONS.forEach((yr, i) => { EPA_PLAYERS.by_season[yr] = aggregatePlayers(new Set([i]), PLAYER_MIN.season); });
+const PLAYER_MIN_PARTIAL = Object.fromEntries(PARTIAL.map(yr => [yr, {
+  dropbacks: prorate(PLAYER_MIN.season.dropbacks, yr), rushes: prorate(PLAYER_MIN.season.rushes, yr),
+  weeks: COVERAGE[yr].weeks, rule: 'full-season bar x weeks covered / 17, rounded up' }]));
+SEASONS.forEach((yr, i) => { EPA_PLAYERS.by_season[yr] = aggregatePlayers(new Set([i]), PLAYER_MIN_PARTIAL[yr] || PLAYER_MIN.season); });
 EPA_PLAYERS.pooled = aggregatePlayers(new Set(SEASONS.map((_, i) => i)), PLAYER_MIN.pooled);
 
 /* ---------------------------------------------------------------
@@ -473,18 +498,26 @@ write('epa-teams.json', {
   source_page: '/stats.html',
   tier: tierOf('stats.html'),
   graded: false,
-  as_of: '2026-07-29',
-  source: 'nflverse play-by-play, 2023-2025. Captured 2026-07-29; covers through the completed 2025 season.',
+  as_of: '2026-09-26',
+  source: 'nflverse play-by-play: 2023-2025 completed seasons (captured 2026-07-29) plus ' + PARTIAL_LINE +
+    '. A partial week is never encoded (see data.coverage).',
   note:
     'Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback ' +
-    'minimum for QBs; the pooled table uses 500. These are descriptive aggregates, not projections — ' +
-    'team EPA is famously unstable year to year, so do not read 2025 as 2026.',
+    'minimum for QBs; the pooled table uses 500. ' +
+    PARTIAL.map(yr => `${yr} covers ${weekSpan(COVERAGE[yr].weeks)} ONLY (${COVERAGE[yr].games} games) — a small sample ` +
+      `of two games per team, dominated by noise, opponent and game script; its QB minimum is the 200 bar prorated ` +
+      `to ${prorate(QB_MIN.season, yr)} dropbacks. `).join('') +
+    'The pooled table spans every season in the snapshot, including the partial one. These are descriptive ' +
+    'aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026, ' +
+    'and do not read two weeks of 2026 as a season. ' +
+    'Dropback EPA counts every dropback including scrambles and penalty-nullified plays and uses play epa, not qb_epa; Rush EPA excludes scrambles and kneels. These will not match nflverse passing_epa / rushing_epa.',
   field_notes: {
     off_epa_play: 'offensive EPA per play (higher is better)',
     def_epa_play: 'EPA per play allowed (LOWER is better — sign is not flipped)',
     cpoe: 'completion percentage over expected, percentage points',
   },
-  data: EPA_AGG,
+  data: { ...EPA_AGG, coverage: COVERAGE, qb_minimums: { ...QB_MIN,
+    partial_season: Object.fromEntries(PARTIAL.map(yr => [yr, prorate(QB_MIN.season, yr)])) } },
 });
 
 /* ---------- epa-players.json ---------- */
@@ -493,15 +526,18 @@ write('epa-players.json', {
   source_page: '/stats.html',
   tier: tierOf('stats.html'),
   graded: false,
-  as_of: '2026-07-29',
-  source: 'nflverse play-by-play, 2023-2025, the same columnar snapshot stats.html serves. ' +
-    'Captured 2026-07-29; covers through the completed 2025 season.',
+  as_of: '2026-09-26',
+  source: 'nflverse play-by-play, the same columnar snapshot stats.html serves: 2023-2025 completed seasons ' +
+    '(captured 2026-07-29) plus ' + PARTIAL_LINE + '. A partial week is never encoded (see data.coverage).',
   note:
     'Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. ' +
     'There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name ' +
     'per play, so the whole value of a completed pass is credited to the quarterback and a receiver ' +
     'appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, ' +
-    'not projections: do not read 2025 as 2026.',
+    'not projections: do not read 2025 as 2026. ' +
+    PARTIAL.map(yr => `${yr} is ${weekSpan(COVERAGE[yr].weeks)} ONLY (${COVERAGE[yr].games} games): a two-game small sample, ` +
+      `with the season minimums prorated to ${PLAYER_MIN_PARTIAL[yr].dropbacks} dropbacks / ${PLAYER_MIN_PARTIAL[yr].rushes} rushes. `).join('') +
+    'The pooled table spans every season in the snapshot, including the partial one.',
   field_notes: {
     epa_per_play: 'EPA per play over everything he handled the ball on',
     epa_per_dropback: 'EPA per dropback as the passer; null if he never dropped back',
@@ -513,7 +549,8 @@ write('epa-players.json', {
   data: {
     seasons: SEASONS,
     scope: 'primary-ball-handler-per-play',
-    minimums: PLAYER_MIN,
+    minimums: { ...PLAYER_MIN, partial_season: PLAYER_MIN_PARTIAL },
+    coverage: COVERAGE,
     minimum_rule: 'a player is included if he clears EITHER the dropback bar or the rush bar',
     unavailable: [
       'receiving EPA (no receiver is named on any play)',

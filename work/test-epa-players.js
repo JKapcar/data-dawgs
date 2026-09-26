@@ -83,10 +83,22 @@ test('every season and the pooled table are present and populated', () => {
 
 test('every row clears one of the two minimums, and the rule is published', () => {
   assert.match(D.minimum_rule, /EITHER/i);
-  for (const [yr, rows] of Object.entries(D.by_season))
+  /* A season still in progress (data.coverage gives it a week list, not 'all') is held to
+     the full-season bar prorated to the weeks covered, and that bar must be published.
+     A completed season never gets the prorated bar. */
+  const partial = D.minimums.partial_season || {};
+  for (const [yr, rows] of Object.entries(D.by_season)) {
+    const inProgress = Array.isArray(((D.coverage || {})[yr] || {}).weeks);
+    assert.equal(yr in partial, inProgress, `${yr}: partial minimum published iff the season is in progress`);
+    const min = partial[yr] || D.minimums.season;
+    if (inProgress) {
+      assert.equal(min.dropbacks, Math.ceil(D.minimums.season.dropbacks * D.coverage[yr].weeks.length / 17));
+      assert.equal(min.rushes, Math.ceil(D.minimums.season.rushes * D.coverage[yr].weeks.length / 17));
+    }
     for (const r of rows)
-      assert.ok(r.dropbacks >= D.minimums.season.dropbacks || r.rushes >= D.minimums.season.rushes,
+      assert.ok(r.dropbacks >= min.dropbacks || r.rushes >= min.rushes,
         `${yr} ${r.player}: ${r.dropbacks} db / ${r.rushes} ru`);
+  }
   for (const r of D.pooled)
     assert.ok(r.dropbacks >= D.minimums.pooled.dropbacks || r.rushes >= D.minimums.pooled.rushes,
       `pooled ${r.player}: ${r.dropbacks} db / ${r.rushes} ru`);
