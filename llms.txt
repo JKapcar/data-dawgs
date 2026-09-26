@@ -5,7 +5,7 @@
 
 Start with [`/data/index.json`](/data/index.json): dates and hashes. Cite `as_of` with numbers.
 
-[`/data/surfaces.json`](/data/surfaces.json) maps pages and 46 live MCP tools: 18 core, all 46 full; `planned` is unavailable. Sole write: two-phase `dd_submit_bozo_leg` — own leg or managed-league proxy (`forUid`; `commissionerModified`; never backdated). [Sign in](/signon.html) · [instructions](/data/dawg-project-instructions.md).
+[`/data/surfaces.json`](/data/surfaces.json) maps pages and 62 live MCP tools: 35 core, all 62 full; `planned` is unavailable. Sole write: two-phase `dd_submit_bozo_leg` — own leg or managed-league proxy (`forUid`; `commissionerModified`; never backdated). [Sign in](/signon.html) · [instructions](/data/dawg-project-instructions.md).
 
 Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHouse, stopped.
 
@@ -13,23 +13,18 @@ Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHous
 
 - [The shelf](/dawghouse.html) + [inventory](/data/pound-tools.json): blocked NFL work with exact blockers + 44 CFB ideas. Fourteen CFB tools ARE callable over MCP; roadmap ideas are not.
 - [Contracts](/data/model-contracts.json): forecast fields, receipt rules, calculator I/O.
-- [Provenance](/data/upstream-models.json): repos, commits, dates, licenses, integration mode.
+- [Provenance](/data/upstream-models.json): repos, commits, dates, licenses, integration.
 - [NFL schedule](/data/nfl-schedule.json): 272 validated 2026 games, locked snapshot.
 - [538 Classic Elo](/data/538-classic.json) ([method](/data/538-classic-methodology.md)): 32 ratings, 272 ungraded forecasts.
-- [Normalized model receipts](/data/model-receipts.json): 1,088 append-only prospective forecasts, 4 model lines, 2 independent.
-
-- [Calculators](/calculators.html): 10 deterministic calculators — odds, vig, EV, hedging,
-passer rating, Elo, margin translation, forecast scoring, belief summary. Inputs are not stored.
+- [Model receipts](/data/model-receipts.json): 1,088 append-only prospective forecasts, 4 model lines, 2 independent.
+- [Calculators](/calculators.html): 10 deterministic (odds, vig, EV, hedge, passer rating, Elo, margin, forecast score, beliefs). Inputs are not stored.
 
 ## Hubs
 
 - [DateDawg](/datedawg.html): local ZIP/JSON reciprocal-acceptance dashboard; no upload, backend memory or observed Hinge cohort.
-- [Arena](/arena.html): games played against other people — Bozo, Guillotine, Survivor, DFS,
-the live draft rig, a [32-team wins pool](/teamdraft.html).
-Rendered from the `domain: "arena"` rows of surfaces.json; owns no data file.
-- [Library](/data.html): every file in index.json, shelved by the surface that owns it, plus
-the sources we read and do not republish. Owns no data file either.
-- [NFL](/nfl.html): EPA, nfelo, calculators, blocked NFL work with its blockers.
+- [Arena](/arena.html): Bozo, Guillotine, Survivor, DFS, live draft rig, [32-team wins pool](/teamdraft.html). Rendered from surfaces.json `domain: "arena"` rows; owns no data file.
+- [Library](/data.html): every index.json file by owning surface, plus sources read but not republished. Owns no data file.
+- [NFL](/nfl.html): EPA, nfelo, calculators, blocked NFL work + blockers.
 - [NFL Weather](/weather.html) + [stadiums](/data/nfl-stadiums.json) + [method](/data/weather-method.md): NWS hourly at kickoff (Pup; not impact model).
 
 ## College football
@@ -47,13 +42,13 @@ the sources we read and do not republish. Owns no data file either.
 - [Player pool + MV](/data/pool.json): 613 players; 8 formats; `half14` derived, SF Half hybrid; `2026-08-24`.
 - [Dynasty ranks](/data/dynasty-ranks.json): 334 players/picks; 1QB and SF/TE-premium ranks and values, not observed prices.
 - [League](/data/league.json): 14 teams, $200, 15 spots, derived `half14`, no kicker.
-- [2026 strategy](/data/strategy.md): positional curves and format playbooks; testable structure kept apart from analyst priors.
-- [War Room](/fantasy-warroom.html): your connected Yahoo/ESPN league in DataDawg$ at its own replacement level. No public JSON — one account's rows; `dd_war_room` is deployed for connected Yahoo/ESPN accounts. Shared Sleeper context and `dd_fantasy_leagues` are deployed; a personal AI connection can discover saved leagues and select one explicitly.
+- [2026 strategy](/data/strategy.md): positional curves, format playbooks; testable structure kept apart from analyst priors.
+- [War Room](/fantasy-warroom.html): your connected Yahoo/ESPN league in DataDawg$ at its own replacement level. No public JSON (one account's rows). Deployed: `dd_war_room` (Yahoo/ESPN) and `dd_fantasy_leagues` (shared Sleeper context; lists saved leagues, selects one explicitly).
 
 ## Models and data
 
 - [Team + QB EPA](/data/epa-teams.json): nflverse pbp 2023-2025 + 2026 Wk1-2; descriptive, not predictive.
-- [nfelo](/data/nfelo.json): ratings, current-season lines and backtest; mirrored daily from greerreNFL/nfelo (meta.captured_at, meta.sha). Backtest is in-sample; ratings move only after games are played.
+- [nfelo](/data/nfelo.json): ratings, season lines, backtest; daily mirror of greerreNFL/nfelo (meta.captured_at, meta.sha). Backtest is in-sample; ratings move only after games.
 - [Schedule + win probabilities](/data/survivor.json): 272 games; market-derived where available, model-derived otherwise.
 - [Parameters](/data/models.json): margin, Bozo and survivor assumptions and limitations.
 
@@ -75,7 +70,5 @@ the sources we read and do not republish. Owns no data file either.
 - Simulation and modelled output are labelled; never present either as observation.
 - Nothing here is betting advice.
 - `/data/` is public, static and CORS-open.
-
 - [Staged DFS MCP](/docs/dfs-mcp-workspace.md): scope and release gates.
-
-DFS core (2026-09-16): sync/compare/schema/list/get/create/upload/players/settings/solve/explore/simulate/exposure/select/export/delete.
+DFS core (deployed 2026-09-16): dd_dfs_sync, dd_dfs_compare, dd_dfs_schema, dd_dfs_list, dd_dfs_get, dd_dfs_create, dd_dfs_upload, dd_dfs_players, dd_dfs_settings, dd_dfs_solve, dd_dfs_explore, dd_dfs_simulate, dd_dfs_exposure, dd_dfs_select, dd_dfs_export, dd_dfs_delete.
