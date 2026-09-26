@@ -201,18 +201,18 @@
    {
     "path": "/data/epa-players.json",
     "url": "https://datadawgs216.com/data/epa-players.json",
-    "bytes": 151018,
-    "as_of": "2026-07-29",
-    "sha256": "72f9f497bbef60c7855ddcc24111a417a613304b73ee8226297d37d99289f101",
-    "note": "Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name per play, so the whole value of a completed pass is credited to the quarterback and a receiver appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, not projections: do not read 2025 as 2026."
+    "bytes": 187468,
+    "as_of": "2026-09-26",
+    "sha256": "c901fdb65d2b6dda22c21c8263136194eaad80e2548b659a25758c02ac990f97",
+    "note": "Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name per play, so the whole value of a completed pass is credited to the quarterback and a receiver appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, not projections: do not read 2025 as 2026. 2026 is Weeks 1-2 ONLY (32 games): a two-game small sample, with the season minimums prorated to 18 dropbacks / 9 rushes. The pooled table spans every season in the snapshot, including the partial one."
    },
    {
     "path": "/data/epa-teams.json",
     "url": "https://datadawgs216.com/data/epa-teams.json",
-    "bytes": 85221,
-    "as_of": "2026-07-29",
-    "sha256": "904fe35fe49e484e1140a8ae76e6f674951f1c26339931f72ba9dc60f5a71341",
-    "note": "Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback minimum for QBs; the pooled table uses 500. These are descriptive aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026."
+    "bytes": 105899,
+    "as_of": "2026-09-26",
+    "sha256": "c2cec69a77901257245e8a6b7191f02657a47f36bc1813ecc0de6f6cdc71d6b2",
+    "note": "Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback minimum for QBs; the pooled table uses 500. 2026 covers Weeks 1-2 ONLY (32 games) — a small sample of two games per team, dominated by noise, opponent and game script; its QB minimum is the 200 bar prorated to 24 dropbacks. The pooled table spans every season in the snapshot, including the partial one. These are descriptive aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026, and do not read two weeks of 2026 as a season."
    },
    {
     "path": "/data/forecast-toto.json",
