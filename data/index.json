@@ -9,9 +9,9 @@
    {
     "path": "/data/538-classic.json",
     "url": "https://datadawgs216.com/data/538-classic.json",
-    "bytes": 79622,
+    "bytes": 78992,
     "as_of": "2026-09-27",
-    "sha256": "c63a289796f4e4d9e2452846b6a5387870cb4c3da8c35cb8a785769a4074daa5",
+    "sha256": "1e40658359e9b32ec8b5314bd2660f15130a32b1630e0267f66780e43689ce4e",
     "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority."
    },
    {
@@ -304,9 +304,9 @@
    {
     "path": "/data/nfl-schedule.json",
     "url": "https://datadawgs216.com/data/nfl-schedule.json",
-    "bytes": 113843,
+    "bytes": 113827,
     "as_of": "2026-09-27",
-    "sha256": "5fba6ea0665761a5e89652b38a02e1216b57a44d544a878aacb3ec59d62a7c3a",
+    "sha256": "0a3e35204fde09449eddb584e5c6fdec181da463afd6165e15de439bb569eafd",
     "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts."
    },
    {
@@ -346,7 +346,7 @@
     "url": "https://datadawgs216.com/data/receipts-inventory.json",
     "bytes": 3415,
     "as_of": "2026-09-27",
-    "sha256": "96b7cd97ae66eeb53dcc16023c5f00c7e105ba47cf25aa76e522e89041b408c6",
+    "sha256": "c95c378685183edda41304ee0ed91ab3a05bc9302a823148d262838b97ed33ee",
     "note": "An INVENTORY, not a scoreboard. There is no honest Brier across domains, so this file counts what has been registered and settled and never scores it. The ledgers OVERLAP: receipts.json and the nfelo half of model-receipts.json are the same forecasts, as are 538-classic.json and its half. aggregate is therefore computed from aggregate.counted_from alone; aggregate.naive_sum is what summing the registered column would wrongly give, published so it can be named and corrected rather than quietly reproduced."
    },
    {
