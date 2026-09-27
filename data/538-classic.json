@@ -1,6 +1,6 @@
 {
  "as_of": "2026-09-27",
- "source": "Data Dawgs reimplementation of FiveThirtyEight 538 Classic Elo at commit fbec1afa38ece5befe24fb21be8ddba8eb160fe6; state extended with nflverse/nfldata at 946b75c61fef4f8391a2a8ebd50252dd87681c53.",
+ "source": "Data Dawgs reimplementation of FiveThirtyEight 538 Classic Elo at commit fbec1afa38ece5befe24fb21be8ddba8eb160fe6; state extended with nflverse/nfldata at 7f7cc8c40f8f067284f83e60c5cebc24c9c9a391.",
  "tier": "labs",
  "graded": false,
  "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority.",
@@ -14,7 +14,7 @@
   "methodology_url": "https://datadawgs216.com/data/538-classic-methodology.md"
  },
  "provenance": {
-  "generated_at": "2026-09-27T20:18:35.655696Z",
+  "generated_at": "2026-09-27T20:44:16.396623Z",
   "official_reference": {
    "repository": "fivethirtyeight/nfl-elo-game",
    "commit": "fbec1afa38ece5befe24fb21be8ddba8eb160fe6",
@@ -24,15 +24,15 @@
   },
   "modern_history": {
    "repository": "nflverse/nfldata",
-   "commit": "946b75c61fef4f8391a2a8ebd50252dd87681c53",
+   "commit": "7f7cc8c40f8f067284f83e60c5cebc24c9c9a391",
    "source_data_license": "not-verified-for-nfldata-repository",
-   "games_sha256": "d6446015cd5253c6c7931ed1ad2e6d6c16c01b76e2c14f4185d2b437b26d617a",
+   "games_sha256": "bd1bbf426dba67a09a9ea30473589e4a339034a629f89ac229735e83d44f8e0d",
    "games_replayed": 1424,
    "first_game": "2021_01_DAL_TB",
    "last_game": "2025_22_SEA_NE",
    "last_game_date": "2026-02-08"
   },
-  "schedule_snapshot_id": "sha256:91d0d7d61711247c8d5525ac3ced3add8a7b037f4ac194a389119d2765863299",
+  "schedule_snapshot_id": "sha256:50b7b02dae0777b156aa57e8b0069cc2540d15e30119ff35b3591bf33519c422",
   "input_material": {
    "model": {
     "id": "538-classic",
@@ -50,11 +50,11 @@
    },
    "modern_history": {
     "repository": "nflverse/nfldata",
-    "commit": "946b75c61fef4f8391a2a8ebd50252dd87681c53",
-    "games_sha256": "d6446015cd5253c6c7931ed1ad2e6d6c16c01b76e2c14f4185d2b437b26d617a",
+    "commit": "7f7cc8c40f8f067284f83e60c5cebc24c9c9a391",
+    "games_sha256": "bd1bbf426dba67a09a9ea30473589e4a339034a629f89ac229735e83d44f8e0d",
     "games_replayed": 1424
    },
-   "schedule_snapshot_id": "sha256:91d0d7d61711247c8d5525ac3ced3add8a7b037f4ac194a389119d2765863299",
+   "schedule_snapshot_id": "sha256:50b7b02dae0777b156aa57e8b0069cc2540d15e30119ff35b3591bf33519c422",
    "target_season_ratings": [
     {
      "team": "ARI",
@@ -196,9 +196,9 @@
   "note": "This proves the published mathematics were reproduced; it does not establish current predictive skill or betting profitability."
  },
  "integrity": {
-  "input_snapshot_id": "sha256:f44b3254bec0fbc8318424f6bc5235cc04f6010827a98e78bf9f5d1b5cc65985",
-  "snapshot_id": "sha256:982024c8b3272d4bcaf017a03c99547221274a4419bfd5d9d964f9a318c3994f",
-  "forecast_rows": 228,
+  "input_snapshot_id": "sha256:099415b087bc3c21760f051d63a8ab302f07c1026f163efb18aea497da0d73dc",
+  "snapshot_id": "sha256:2ca7846b709b84db9fdea6e3b5144cde753076052d948a0dfec97495df5a89b2",
+  "forecast_rows": 226,
   "team_rows": 32
  },
  "data": {
@@ -334,32 +334,6 @@
    }
   ],
   "forecasts": [
-   {
-    "game_id": "2026_03_BAL_DAL",
-    "season": 2026,
-    "week": 3,
-    "kickoff_at": "2026-09-27T20:25:00Z",
-    "home_team": "DAL",
-    "away_team": "BAL",
-    "neutral_site": true,
-    "home_elo": 1461.458616,
-    "away_elo": 1546.590992,
-    "home_field_elo": 0,
-    "home_win_probability": 0.379879
-   },
-   {
-    "game_id": "2026_03_LV_NO",
-    "season": 2026,
-    "week": 3,
-    "kickoff_at": "2026-09-27T20:25:00Z",
-    "home_team": "NO",
-    "away_team": "LV",
-    "neutral_site": false,
-    "home_elo": 1440.800216,
-    "away_elo": 1351.134785,
-    "home_field_elo": 65,
-    "home_win_probability": 0.708957
-   },
    {
     "game_id": "2026_03_LAR_DEN",
     "season": 2026,
