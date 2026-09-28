@@ -7858,6 +7858,9 @@ const BOZO_CLOSE_LEAD_MS = 7 * 60 * 1000;
 // How far back we will still accept a capture. Past this the number is not a close any
 // more, it is an in-play price, and writing it into the close column would be a lie.
 const BOZO_CLOSE_STALE_MS = 20 * 60 * 1000;
+// Recover missed closes from historical PRE-KICKOFF snapshots for two days.
+const BOZO_CLOSE_RECOVERY_MS = 48 * 60 * 60 * 1000;
+const BOZO_CLOSE_RETRY_MS = 60 * 60 * 1000;
 const BOZO_SGO_LEAGUE = { nfl: "NFL", cfb: "NCAAF", nba: "NBA", cbb: "NCAAB", mlb: "MLB", nhl: "NHL" };
 const BOZO_CLOSE_BOOK = "draftkings";
 
@@ -8261,20 +8264,28 @@ async function bozoCloseTargets(env, nowMs) {
     // ⚠️ Synthetic leagues are skipped outright. Their closes are fabricated by design
     // and must never be overwritten with, or mistaken for, an observed market price.
     if (lg && lg.synthetic === true) continue;
-    // ⚠️ Graded weeks are finished receipts. A mis-pointed future startsAt on a live
-    // pick must not schedule a new close capture that rewrites results/ after the
-    // bozo has already been named — retarget the eventId instead.
-    if (lg && lg.status === "graded") continue;
+    // A graded current week can still have a missing close. Recovery fills its prices,
+    // not its verdict or elimination; never capture a future event on a graded week.
     const picks = (lg && lg.picks) || {};
     const results = (lg && lg.results) || {};
     for (const [key, p] of Object.entries(picks)) {
       if (!p || !p.eventId) continue;
       const r = results[key] || {};
-      if (r.close != null || r.closeUnavailableReason) continue;   // immutable once written
+      if (r.close != null && r.closeOpp != null) continue; // complete pairs are immutable
+      if (r.closeUnavailableReason && p.mkt === "other") continue;
       const start = Date.parse(p.startsAt || "");
       if (!Number.isFinite(start)) continue;                       // no kickoff, no window
       if (start > nowMs + BOZO_CLOSE_LEAD_MS) continue;            // too early
-      if (start < nowMs - BOZO_CLOSE_STALE_MS) continue;           // too late to be a close
+      if (lg.status === "graded" && start > nowMs) continue;
+      if (start < nowMs - BOZO_CLOSE_STALE_MS) {
+        if (!env.ODDS_API_KEY || !env.RL || !bozoOddsApiMarkets(p) || nowMs-start > BOZO_CLOSE_RECOVERY_MS) continue;
+        const retryKey = `bozo:close-retry:${lid}:${lg.season || SEASON}:${lg.week || 1}:${key}:${start}`;
+        try {
+          const last = Number(await env.RL.get(retryKey));
+          if (last && nowMs-last < BOZO_CLOSE_RETRY_MS) continue;
+          await env.RL.put(retryKey, String(nowMs), {expirationTtl: 3*24*60*60});
+        } catch { continue; } // do not spend historical credits without the retry gate
+      }
       const player = p.who || memberNameAt(lg, key) || playerName(key);
       const uid = UID_RE.test(key) ? key : (uidByName.get(player) || null);
       out.push({ lid, key, pick: p, player, uid, startMs: start,
@@ -8563,7 +8574,7 @@ async function bozoOddsApiCapture(env,p,registry,options = {}) {
   if (assertQuote(quote,p)) return null;
   const stamp = Date.parse(quote.snapshotAt);
   // Never label in-play odds as the pregame close, or accept a stale/future quote.
-  if (stamp > now+60000 || now-stamp > (historical?30:15)*60000) return null;
+  if (!Number.isFinite(stamp) || stamp > now+60000 || (!historical && now-stamp > 15*60000)) return null;
   if (options.caller === "close" && (stamp >= start || start-stamp > 15*60000)) return null;
   if (historical && (!Number.isFinite(Date.parse(response.data.timestamp)) || Date.parse(response.data.timestamp)>=start)) return null;
   return {event:bozoOddsApiEvent(raw),quote,fetchedAt:response.fetchedAt};
@@ -9482,26 +9493,24 @@ async function bozoCloseFill(request, env, cors) {
   if (!Object.keys(patch).length)
     return json({ error: "Nothing to save — fill in a closing price or a CLV." }, 400, cors);
 
-  try { await fbPatch(env, LG(lid) + "/ledger/" + rowKey, patch); }
-  catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
-
-  // Mirror onto the live week if this row is the current one, so the board agrees.
+  // Save the receipt, live board and audit together. Player IDs may contain hyphens;
+  // match the full ledger key instead of splitting and truncating the player key.
   const state = auth.league;
-  const parts = rowKey.split("-w");
-  if (parts.length === 2) {
-    const [wk, pKey] = parts[1].split("-");
-    if (Number(wk) === (state.week || 1) && (state.picks || {})[pKey]) {
-      const mirror = clvOnly ? {}
-        : clear
-        ? { close: null, closeOpp: null, closeBook: null, closeSource: null }
-        : { close, closeOpp, closeBook: "draftkings", closeSource: "manual", closeUnavailableReason: null };
-      // The grade card reads results/, so without this the box the manager just filled on
-      // one screen would still read empty on the other.
-      if (hasClv) { mirror.clvPts = clvPts; mirror.clvSource = clvPts == null ? null : "manual"; }
-      try { await fbPatch(env, LG(lid) + "/results/" + pKey, mirror); }
-      catch (e) { /* the ledger is the receipt; the live mirror is a convenience */ }
-    }
+  const currentKey = Object.keys(state.picks || {}).find(key =>
+    ledgerKey(state.season || SEASON, state.week || 1, key) === rowKey);
+  const changes = {};
+  for (const [field, value] of Object.entries(patch)) {
+    changes[`ledger/${rowKey}/${field}`] = value;
+    if (currentKey) changes[`results/${currentKey}/${field}`] = value;
   }
+  const stamp = Date.now();
+  changes[`audit/${stamp}-${crypto.randomUUID()}`] = {
+    at: new Date(stamp).toISOString(), by: auth.name, type: "close_fill",
+    row: rowKey, week: row.week, from: Object.fromEntries(Object.keys(patch).map(k => [k, row[k] ?? null])),
+    to: patch,
+  };
+  try { await fbPatch(env, LG(lid), changes); }
+  catch (e) { return json({ error: "Nothing saved: " + e.message }, 502, cors); }
   return json({ ok: true, row: rowKey, close: clvOnly ? (row.close ?? null) : (clear ? null : close),
     closeOpp: clvOnly ? (row.closeOpp ?? null) : (clear ? null : closeOpp),
     clvPts: hasClv ? clvPts : (row.clvPts ?? null) }, 200, cors);

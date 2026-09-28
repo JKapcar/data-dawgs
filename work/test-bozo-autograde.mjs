@@ -74,8 +74,8 @@ ok(/if \(lg\.synthetic === true\) continue;/.test(worker),
    "the simulator's league is never auto-graded — it is not real money");
 ok(/skipped: "already-decided"/.test(worker) && /bozoWhy/.test(worker),
    "a week that already carries bozoWhy is not re-opened by auto-grade if status flips back to placed");
-ok(/if \(lg && lg\.status === "graded"\) continue;/.test(worker),
-   "close capture skips graded weeks so a future-dated slip cannot rewrite settled results/");
+ok(/if \(lg\.status === "graded" && start > nowMs\) continue;/.test(worker),
+   "close recovery refuses future games on graded weeks");
 ok(/out\.push\(\{ league: lid, error:/.test(worker),
    "one league's bad state does not stop the others settling");
 
