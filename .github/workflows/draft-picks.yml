@@ -61,6 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pages: write
     steps:
       - uses: actions/checkout@v7
         with:
@@ -153,3 +154,9 @@ jobs:
         run: |
           echo "dry_run was set. The result above was computed but not committed."
           git --no-pager diff --stat -- data/draft-2026.json
+
+      - name: Publish Team Draft
+        if: ${{ inputs.dry_run != true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash work/request-survivor-pages-build.sh

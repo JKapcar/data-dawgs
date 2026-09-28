@@ -20,6 +20,11 @@ on:
       - "tools/validate-data.js"
   schedule:
     - cron: "17 10 * * *"
+    # Results-only checks during NFL game windows (UTC, including overnight ET).
+    # Keep the daily full-source refresh; don't wait for it to bank finished games.
+    - cron: "7,37 17-23 * 1,9-12 0,6"
+    - cron: "7,37 0-6 * 1,9-12 1,2,5"
+    - cron: "7,37 23 * 1,9-12 1,4"
   workflow_dispatch:
 
 permissions:
@@ -93,7 +98,13 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
+      - name: Publish canonical results
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash work/request-survivor-pages-build.sh
+
       - name: Refresh and validate
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 10 * * *'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -118,6 +129,7 @@ jobs:
           python scripts/nfl_data_backbone.py verify-history --base-ref origin/main
           node tools/validate-data.js
       - name: Open or update a review PR
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 10 * * *'
         env:
           GH_TOKEN: ${{ github.token }}
           REFRESH_BRANCH: automation/nfl-data-refresh
@@ -140,11 +152,6 @@ jobs:
               --title "Refresh canonical NFL model data" \
               --body "Automated schedule refresh (nfelodcm loader) and 538 Classic recompute. This is NOT a nfelo model refresh — see nfelo-refresh.yml. This PR failed closed on schema, freshness, row-count, team, week, historical-reproduction, manifest and receipt-history validation before it was opened. This full-source PR remains manual. A separate automation/nfl-results PR can merge only new finals for unchanged games under the approved 2026-09-04 rule."
           fi
-
-      - name: Publish canonical results
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: bash work/request-survivor-pages-build.sh
 
       # nfelo-refresh.yml owns the single daily forecast refresh.
 
