@@ -62,6 +62,7 @@ test('historical retrieval requests a pre-kickoff snapshot; in-play/stale histor
  let urls=[];const r=rig(async url=>{urls.push(new URL(url));return Response.json(String(url).includes('/odds?')?h:{data:[h.data]});});
  const out=await r.bozoOddsApiCapture({ODDS_API_KEY:'test-key'},p,r.reg('nfl'),{caller:'close',nowMs:start+1000});
  assert.ok(out?.quote);assert.ok(urls.every(u=>u.pathname.includes('/historical/')&&Date.parse(u.searchParams.get('date'))===start-1000));
+ assert.ok((await r.bozoOddsApiCapture({ODDS_API_KEY:'test-key'},p,r.reg('nfl'),{caller:'close',nowMs:start+24*3600000}))?.quote, 'next-day recovery uses the pregame snapshot');
  h.data.bookmakers[0].markets[0].last_update=new Date(start+1).toISOString();
  assert.equal(await r.bozoOddsApiCapture({ODDS_API_KEY:'test-key'},p,r.reg('nfl'),{caller:'close',nowMs:start+1000}),null);
  h.data.bookmakers[0].markets[0].last_update=new Date(start-16*60000).toISOString();

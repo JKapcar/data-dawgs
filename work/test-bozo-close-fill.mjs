@@ -82,8 +82,7 @@ ok(/class="gdo"/.test(pageCode),
 ok(/cRaw === '' && oRaw !== ''/.test(pageCode),
    "it refuses an other-side-only entry — the assumption runs from the close outwards");
 ok(/actual opposite price/.test(pageCode), "the input requests actual evidence");
-ok(/closeOppSource`, value: assumed \? 'assumed' : 'manual'/.test(pageCode),
-   "and stamps an assumed other side apart from one read off a slip");
+ok(/wPost\('\/bozo\/close', \{row:/.test(pageCode), "manual close uses the receipt-and-board endpoint");
 
 /* ---- the CLV override reaches the LEDGER, for any week ----
  * ⚠️ THE BUG THIS PINS. clvPts shipped in #106 with exactly one surface that could set
@@ -101,7 +100,7 @@ ok(/const clvOnly = hasClv && clear/.test(worker),
    "a CLV-only save is legitimate — a leg with no capturable market has no close to type");
 ok(/capturedComplete && !\(Object\.prototype\.hasOwnProperty\.call\(body, "clvPts"\)/.test(worker),
    "the capture lock guards the CLOSE, and does not block a CLV-only save");
-ok(/mirror\.clvPts = clvPts/.test(worker),
+ok(/changes\[`results\/\$\{currentKey\}\/\$\{field\}`\] = value/.test(worker),
    "the CLV mirrors onto the live week, so both screens agree about the same leg");
 ok(/Nothing to save — fill in a closing price or a CLV/.test(worker),
    "an empty save is refused out loud rather than writing an empty patch");
@@ -114,23 +113,10 @@ ok(/gap: r\.close == null \|\| r\.closeOpp == null/.test(worker),
 ok(/clvPts: r\.clvPts \?\? null/.test(worker),
    "each row carries its CLV, so the box renders what is already stored");
 
-/* ---- the page ----
- * ⚠️ THE CLV IS NO LONGER TYPED ANYWHERE. It is derived from the prices by clvDeltaOf,
- * which is what the simulation and the grader read, so the three-way disagreement that a
- * typed CLV allowed cannot recur. The clvPts write path stays on the Worker for the rows
- * that already carry one and for any future surface that needs it. */
-ok(!/class="gclv clvin"/.test(pageCode) && !/placeholder="clv pts"/.test(pageCode),
-   "no CLV input survives on the page — the number is derived, not entered");
-ok(/const v = clvDeltaOf\(x, r\);/.test(pageCode),
-   "the override reports the CLV through clvDeltaOf, the one rule");
-ok(!/Read them off the placed ticket/.test(pageCode),
-   "the old placed-ticket instruction is gone");
-/* ⚠️ KNOWN GAP, recorded rather than hidden: no surface now calls /bozo/close, so a
-   closing price for a PAST week cannot be fixed from the UI. This week's fixes reach the
-   ledger when the week is graded. The route and its guards stay tested above and remain
-   the way in when a past-week surface is built. */
-ok(!/'\/bozo\/close'/.test(pageCode),
-   "no page surface calls the ledger fill route today — the gap is known, not accidental");
+/* Current-week saves use the same endpoint as historical receipt fills. */
+ok(/class="gdclv"/.test(pageCode), "manual CLV can be entered directly");
+ok(/const v = clvDeltaOf\(x, r\);/.test(pageCode), "display uses the shared CLV rule");
+ok(/'\/bozo\/close'/.test(pageCode), "the page saves through the ledger fill route");
 
 /* ⚠️ The page and the Worker must score a binary leg the same way, or a Royale chop stops
    agreeing with the odds that predicted it. Both use the inverse Mills ratio; neither may

@@ -4362,7 +4362,7 @@ const devigP = (a,b) => {
   return imp(a)/(imp(a)+imp(b));
 };
 /** did this leg's CLV rest on an assumed opposite at either end? */
-const devigAssumed = (x, r) => !!x && ((x.price != null && x.entryPriceOpp == null)
+const devigAssumed = (x, r) => !!x && ((x.price != null && x.entryPriceOpp == null && x.priceOpp == null)
   || (r && r.close != null && r.closeOpp == null));
 /* The CLV a leg carries right now, from this week's results row and its pick: the
    manager's override if there is one, otherwise the captured close against entry.
@@ -4372,8 +4372,16 @@ function clvDeltaOf(x, r){
   r = r || {};
   if(r.clvPts != null && Number.isFinite(+r.clvPts)) return +r.clvPts/100;
   if(x.verificationStatus === "unverified" || x.clvEligible === false || r.closeOppSource === "assumed" || x.entryOppSource === "assumed") return null;
-  const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp);
+  const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp ?? x.priceOpp);
   return (pC==null || pE==null) ? null : (pC - pE);
+}
+function clvMissingReason(x, r = {}){
+  if(x.verificationStatus === 'unverified' || x.clvEligible === false) return 'entry odds need verification';
+  if(devigP(x.price, x.entryPriceOpp ?? x.priceOpp) == null || x.entryOppSource === 'assumed') return 'opposite entry odds missing';
+  if(r.closeOppSource === 'assumed') return 'opposite closing odds need verification';
+  if(r.close != null && r.closeOpp == null) return 'opposite closing odds missing';
+  if(r.close == null || r.closeOpp == null) return 'closing odds missing';
+  return 'check entry and closing odds';
 }
 const amer = d => d>=2 ? '+'+Math.round((d-1)*100) : '-'+Math.round(100/(d-1));
 // Acklam's inverse normal — turns a price into an expected margin.
@@ -4811,7 +4819,7 @@ function beatOf(x, r, sd){
   const binary = x.mkt === 'prop' || x.mkt === 'other';
   if(binary){
     const p = devigP(r && r.close, r && r.closeOpp)
-           ?? devigP(x.price, x.entryPriceOpp)
+           ?? devigP(x.price, x.entryPriceOpp ?? x.priceOpp)
            ?? imp(x.price);
     return (p > 0 && p < 1) ? binaryBeatOf(p) : null;
   }
@@ -6896,7 +6904,7 @@ function simulate(live, levers){
       binary: x.mkt==='prop' || x.mkt==='other',
       binaryBeat: (x.mkt==='prop' || x.mkt==='other')
         ? (()=>{ const p = devigP(r.close, r.closeOpp)
-                        ?? devigP(x.price, x.entryPriceOpp)
+                        ?? devigP(x.price, x.entryPriceOpp ?? x.priceOpp)
                         ?? imp(x.price);
                  return binaryBeatOf(p); })() : null,
       clv: clvDeltaOf(x, r),
@@ -7310,7 +7318,7 @@ function paintDiag(live, players, status){
         + `${v>0?'+':''}${v.toFixed(2)} pts · by hand</span>`;
     }
     const delta = clvDeltaOf(x, r);
-    const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp);
+    const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp ?? x.priceOpp);
     if(delta != null){
       const v = delta * 100;
       // ⚠️ NOT .pos/.neg — .pos is already the reel position label ("1ST"), and the
@@ -7323,7 +7331,7 @@ function paintDiag(live, players, status){
       return `<span title="Only one side of the close was captured, so it can't be de-vigged.">one side only</span>`;
     if(r.closeUnavailableReason)
       return `<span title="${esc(r.closeUnavailableReason)}">no close</span>`;
-    return `awaiting close`;
+    return esc(clvMissingReason(x, r));
   };
 
   /* One lever cell. A placement is printed only where that lever can actually rank the
@@ -7438,7 +7446,7 @@ function leverStandings(live){
   const res = S.results || {};
   const d = live.map((x,i)=>{
     const r = legRow(x);
-    const pE = devigP(x.price, x.entryPriceOpp), pC = devigP(r.close, r.closeOpp);
+    const pE = devigP(x.price, x.entryPriceOpp ?? x.priceOpp), pC = devigP(r.close, r.closeOpp);
     const beat = beatOf(x, r);
     // ⚠️ pE is the ENTRY de-vig, and it exists here only to make CLV — the Shortest odds
     // column ranks and prints the raw price. Do not route it back to that column.
@@ -8160,8 +8168,8 @@ async function autoGrade(){
 }
 /* ⚠️ paintManual() and saveLeg() lived here. They rendered the per-leg editor on the
    This Week card — result, actual, both sides of the close and a CLV box — and that card
-   is gone. Manager Override carries all of it now, keyed by pick key, with the CLV
-   DERIVED rather than typed.
+   is gone. Manager Override carries all of it now, keyed by pick key, with calculated
+   CLV and a separately labelled manual points override.
 
    decide() used to scrape [data-w]/[data-a]/[data-c]/[data-co] out of this markup to
    batch unsaved edits at grade time. It still reads them if they are present and simply
@@ -8412,19 +8420,10 @@ function paintGodResults(){
   const keys = Object.keys(picks);
   if(!keys.length){ host.innerHTML = '<p class="tm">No legs on the board this week.</p>'; return; }
 
-  /* ⚠️ ONE PLACE TO SETTLE A LEG. Result, closing price and the CLV that falls out of it
-     used to live on three screens — the grade card on This Week, the CLV section in
-     settings, and the result buttons here — and a manager fixing one leg had to visit all
-     three and hope they agreed. They did not: a close typed in one place showed "no CLV"
-     in another, because each screen answered "does this leg have a CLV" its own way.
-
-     The CLV is NOT typed. It is derived from the prices, by clvDeltaOf, the same rule the
-     simulation and the grader read. Both actual sides are required
-     rather than refused, so a self-priced prop needs one number — its close — and gets a
-     real CLV out of it. Typed CLV would be a fourth opinion about the same fact. */
+  // Prefer observed prices; keep a clearly labelled manual points override available.
   const clvLine = (x, r) => {
     const v = clvDeltaOf(x, r);
-    if(v == null) return `<span class="tm">CLV &mdash; ${x.verificationStatus === 'unverified' ? 'verify entry odds first' : x.priceSource === 'manual' ? 'both closing prices needed' : 'enter a closing price'}</span>`;
+    if(v == null) return `<span class="tm">CLV &mdash; ${esc(clvMissingReason(x, r))}</span>`;
     const pts = v*100, cls = pts>=0 ? 'clvup' : 'clvdn';
     return `<span class="${cls}">CLV ${pts>0?'+':''}${pts.toFixed(2)} pts</span>`
       + `<span class="tm"> &middot; ${r.clvPts != null ? 'set by hand'
@@ -8443,10 +8442,10 @@ function paintGodResults(){
     const cur = r.result || (r.won===true?'won':r.won===false?'lost':'');
     return `<div class="gr leg" data-god="${esc(k)}">
       <div><b>${esc(x.who || memberLabel(k) || kDec(k))}</b> ${esc(x.label || '')}</div>
-      <div class="tm" style="margin:2px 0 6px">took ${x.price ?? '—'} / ${x.entryPriceOpp ?? '—'} · ${priceSourceBadge({...x,key:k})}</div>
+      <div class="tm" style="margin:2px 0 6px">took ${x.price ?? '—'} / ${x.entryPriceOpp ?? x.priceOpp ?? '—'} · ${priceSourceBadge({...x,key:k})}</div>
       ${x.priceSource !== 'captured' ? `<div class="row" style="gap:6px;flex-wrap:wrap;margin:8px 0">
         <label>Original entry odds <input class="gvep" aria-label="Original entry odds" value="${esc(x.price ?? '')}" readonly style="max-width:110px"></label>
-        <label>Opposite entry odds <input class="gveo" aria-label="Opposite entry odds" inputmode="text" placeholder="e.g. +150" value="${esc(x.entryPriceOpp ?? '')}" style="max-width:120px"></label>
+        <label>Opposite entry odds <input class="gveo" aria-label="Opposite entry odds" inputmode="text" placeholder="e.g. +150" value="${esc(x.entryPriceOpp ?? x.priceOpp ?? '')}" style="max-width:120px"></label>
         <button class="btn ghost sm gverify">Verify entry odds</button>
         <span class="tm">Confirm the original DraftKings quote for this exact line and period. Keeps the submission time.</span>
       </div>` : ''}
@@ -8465,6 +8464,15 @@ function paintGodResults(){
           ><button type="button" class="sgn" aria-label="Flip the sign">±</button></span>
         <button class="btn ghost sm gdsave">Save</button>
       </div>
+      <div class="row" style="gap:8px;margin-top:12px;align-items:end;flex-wrap:wrap">
+        <label>Manual CLV (points)
+          <input type="text" inputmode="text" class="gdclv" aria-label="Manual CLV in points"
+            placeholder="e.g. -1.25 or +2.50" value="${esc(r.clvPts ?? '')}" style="max-width:180px">
+        </label>
+        <button type="button" class="btn ghost sm gdclvsave">Save CLV override</button>
+        <button type="button" class="btn ghost sm gdclvclear" ${r.clvPts == null ? 'disabled' : ''}>Use calculated CLV</button>
+      </div>
+      <div class="tm">Positive = beat the close. This saves points directly, labelled manual; closing odds are optional.</div>
       <div class="tm" style="margin-top:6px">${clvLine(x, r)}</div>
       <div class="gwhy gdst"></div>
     </div>`;
@@ -8536,6 +8544,24 @@ function paintGodResults(){
     };
   });
 
+  const saveClvOverride = async (b, clear) => {
+    const box = b.closest('[data-god]'), k = box.dataset.god;
+    const st = box.querySelector('.gdst'), raw = box.querySelector('.gdclv').value.trim();
+    const value = clear ? null : Number(raw.replace(/−/g, '-'));
+    if(!clear && (!raw || !Number.isFinite(value) || Math.abs(value) > 100)){
+      st.textContent = 'Enter CLV points from -100 to +100, including 0.'; return;
+    }
+    b.disabled = true;
+    try{
+      await wPost('/bozo/close', {row:`${S.season || 2026}-w${S.week || 1}-${k}`, clvPts:value});
+      await refresh(); paintGod();
+      godErr(clear ? 'Manual override cleared. CLV now uses the recorded odds.' : `Saved manual CLV: ${value > 0 ? '+' : ''}${value.toFixed(2)} pts.`, true);
+      clvLoad(true);
+    }catch(e){ st.textContent=e.message; b.disabled=false; }
+  };
+  host.querySelectorAll('.gdclvsave').forEach(b=>{ b.onclick=()=>saveClvOverride(b, false); });
+  host.querySelectorAll('.gdclvclear').forEach(b=>{ b.onclick=()=>saveClvOverride(b, true); });
+
   host.querySelectorAll('.gdsave').forEach(b=>{
     b.onclick = async ()=>{
       const box = b.closest('[data-god]'), k = box.dataset.god;
@@ -8573,16 +8599,16 @@ function paintGodResults(){
       try{
         const kk = encodeURIComponent(k);
         const edits = aBox ? [{ path:`results/${kk}/actual`, value: aRaw === '' ? null : av }] : [];
-        await godWrite(edits.concat(cRaw === ''
-          ? [ { path:`results/${kk}/close`, value:null }, { path:`results/${kk}/closeOpp`, value:null },
-              { path:`results/${kk}/closeSource`, value:null }, { path:`results/${kk}/closeOppSource`, value:null } ]
-          : [ { path:`results/${kk}/close`, value:cv }, { path:`results/${kk}/closeOpp`, value:ov },
-              { path:`results/${kk}/closeBook`, value:'draftkings' },
-              { path:`results/${kk}/closeSource`, value:'manual' },
-              { path:`results/${kk}/closeOppSource`, value: assumed ? 'assumed' : 'manual' },
-              { path:`results/${kk}/closeUnavailableReason`, value:null } ]));
+        // A separate CLV save never touches these odds. Only changed odds are sent,
+        // so a captured pair does not block saving a prop's actual result.
+        const prior = res[k] || {};
+        if(cv !== (prior.close ?? null) || ov !== (prior.closeOpp ?? null))
+          await wPost('/bozo/close', {row:`${S.season || 2026}-w${S.week || 1}-${k}`, close:cv, closeOpp:ov});
+        if(edits.length) await godWrite(edits);
         st.className='gwhy ok'; st.textContent = cRaw === '' ? 'Cleared.' : 'Saved.';
         await refresh(); paintGod();
+        godErr('Saved closing odds and result. Manual CLV, if set, stays in effect.', true);
+        clvLoad(true);
       }catch(e){ say(e.message); b.disabled = false; }
     };
   });
