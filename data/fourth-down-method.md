@@ -12,9 +12,51 @@ The recommendation's edge is measured in **percentage points** over the next-bes
 available choice. Decision cost compares the coach's choice with the best modeled
 option before the play; the play's result does not determine its decision quality.
 
-The conversion slider reweights the modeled win probabilities conditional on
-success and failure. It holds each conditional outcome mix fixed. It does not
-retrain the model or predict a different play call.
+The conversion and field-goal sliders reweight the modeled win probabilities
+conditional on success and failure. Each conditional outcome mix stays fixed.
+The recommendation, outcome cards, win-probability chart, and copy/share actions
+all use the selected scenario, clearly labelled separately from the model baseline.
+Each available alternative has its own break-even line; unattainable thresholds
+are stated explicitly. Changing FG probability changes the conversion threshold,
+and vice versa. This does not retrain the model or predict a different play call.
+
+## Comparable team history
+
+`/data/fourth-down-rates.json` contains completed regular-season games from the
+current and two previous seasons. The daily 12:23 UTC refresh replaces current
+season counts; prior seasons are frozen unless explicitly rebuilt. Every season
+has its source URL/hash, through date and completed game IDs. No-play penalties,
+kneels, spikes and overtime are excluded. Fourth-down attempts require nflverse's
+converted/failed flags. Field goals include made, missed and blocked attempts.
+
+Conversion comparisons match yards to go (1–10 exactly; 11+ pooled) and field zone
+(opponent 1–20, opponent 21–50, own territory). FG comparisons match a ten-yard
+kick-distance band and open/closed roof. Retractable scenarios use closed-roof
+history; actual games use the recorded open/closed roof. There is no adjustment
+for opponent, play call, personnel or selection into attempting fourth downs.
+The current snapshot includes later plays when exploring historical decisions;
+it is not a pre-play backtest.
+
+For each team with attempts, the descriptive estimate is
+`(successes + 20 × other-teams' pooled rate) / (attempts + 20)`.
+Twenty prior attempts is an explicit smoothing choice, not a fitted parameter.
+The model default stays unchanged; applying a historical estimate is a user
+scenario. Raw rates and counts are shown alongside smoothed estimates. A team
+with no comparable attempts has no displayed estimate. The median is the
+unweighted median across smoothed team rates with observations. Each distribution
+dot is one such team, not an uncertainty sample from nfl4th. Wilson 95% intervals
+refer to raw observed historical rates, not this play's conversion probability.
+The percentile curve is the empirical cumulative distribution: the share of
+comparison rates at or below each rate, including ties. It overlays each available
+break-even threshold, the model rate, sample median and selected-team estimate.
+The default compares the 32 observed smoothed team estimates; an alternate view
+compares raw team-season rates with a selectable minimum of 1, 5 (default), or 10
+attempts. Current seasons are partial. The sample changes when the minimum changes.
+Rates below/above the entire sample are labelled outside its observed range; no
+parametric tail or precise latent offense-strength percentile is fabricated.
+
+Small samples, roster turnover and different attempted-play mixes limit these
+comparisons. They are not independently calibrated team-specific forecasts.
 
 ## Inputs and assumptions
 

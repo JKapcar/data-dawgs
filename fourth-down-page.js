@@ -6,7 +6,7 @@
   for(const id of ['fd-homeTeam','fd-awayTeam'])$(id).innerHTML=Object.entries(teams).map(([k,v])=>`<option value="${k}">${k} · ${v}</option>`).join('');
   const browns={homeTeam:'CLE',awayTeam:'CAR',home:1,diff:3,qtr:4,seconds:65,toGo:1,yardline:15,offTO:3,defTO:0,spread:-2.5,total:41.5,roof:'outdoors',homeKickoff:0,touchback:25,runoff:0};
   const presets={browns,goal:{...browns,diff:-4,seconds:420,yardline:1,offTO:3,defTO:3},midfield:{...browns,qtr:1,seconds:600,diff:0,yardline:50,offTO:3,defTO:3},longkick:{...browns,qtr:2,seconds:125,diff:0,toGo:6,yardline:40,offTO:2,defTO:2}};
-  let engine,result,activeInput,weekly,requestId=0,sourceLabel='Browns vs Panthers · Sep 27, 2026';
+  let engine,result,displayResult,activeInput,weekly,requestId=0,sourceLabel='Browns vs Panthers · Sep 27, 2026';
   function setForm(s){
     for(const [k,v] of Object.entries(s))if(form.elements[k])form.elements[k].value=v;
     form.elements.minutes.value=Math.floor(s.seconds/60);form.elements.secondsPart.value=s.seconds%60;form.elements.line.value=-s.spread;
@@ -23,43 +23,39 @@
   function situation(s){const off=s.home?s.homeTeam:s.awayTeam,def=s.home?s.awayTeam:s.homeTeam;return `${off} vs ${def} · Q${s.qtr} ${Math.floor(s.seconds/60)}:${String(s.seconds%60).padStart(2,'0')} · 4th & ${s.toGo} · ${s.yardline>50?'own '+(100-s.yardline):def+' '+s.yardline} · ${s.diff>0?'leading by '+s.diff:s.diff<0?'trailing by '+(-s.diff):'tied'}`;}
   function render(r){
     result=r;activeInput={...r.input,homeTeam:form.elements.homeTeam.value,awayTeam:form.elements.awayTeam.value};
+    $('fd-sensitivity').hidden=false;explorer.setResult(r,activeInput,initialOverrides);initialOverrides=null;
+    $('fd-warnings').innerHTML=r.warnings.map(w=>`<p>${esc(w)}</p>`).join('');
+    $('fd-share').disabled=false;$('fd-copy').disabled=false;
+    $('fd-share-status').textContent='';status(sourceLabel+' · calculated locally.');
+  }
+  function paintDecision(r,mode){
+    displayResult=r;
+    const fgAvailable=DDFourthAnalysis.available(r,'fg');
     const best=r.choices.find(c=>c.id===r.best),runner=r.choices.filter(c=>c.wp!==null&&c.id!==r.best).sort((a,b)=>b.wp-a.wp)[0];
-    $('fd-strength').textContent=`${r.strength.toUpperCase()} RECOMMENDATION · MODEL ESTIMATE`;
+    $('fd-strength').textContent=`${r.strength.toUpperCase()} RECOMMENDATION · ${mode==='model'?'MODEL ESTIMATE':'YOUR SCENARIO'}`;
     $('fd-recommendation').textContent=best.label+'.';
     $('fd-verdict-text').textContent=`${pct(best.wp)} chance to win, averaging success and failure.`;
     $('fd-edge').hidden=false;$('fd-edge').textContent=`${pp(r.edge)} vs ${runner.label.toLowerCase()}`;
     $('fd-situation').textContent=situation(activeInput);
     $('fd-bars').innerHTML=r.choices.map(c=>`<div class="fd-bar-row ${c.id===r.best?'best':''}"><header><span>${c.label}${c.id===r.best?'<small>BEST CHANCE</small>':''}</span><strong>${pct(c.wp)}</strong></header><div class="fd-bar-track"><div class="fd-bar-fill" style="width:${c.wp===null?0:Math.max(0,Math.min(100,c.wp*100))}%"></div></div>${c.wp===null?`<span class="fd-note">${c.id==='punt'?'Outside the punt model’s field range.':'Outside the field-goal model’s range.'}</span>`:''}</div>`).join('');
-    $('fd-branches').innerHTML=[['Convert the fourth down',r.conversion,`Win if successful: ${pct(r.successWP)}`],['Make the field goal',r.fgMake>0?r.fgMake:null,r.fgMake>0?`${activeInput.yardline+18}-yard attempt · win if made: ${pct(r.makeWP)}`:'Attempt outside the model’s range.'],['Fail on fourth down',1-r.conversion,`Still win: ${pct(r.failWP)}`],['Miss the field goal',r.fgMake>0?1-r.fgMake:null,r.fgMake>0?`Still win: ${pct(r.missWP)}`:'Attempt outside the model’s range.']].map(([label,p,sub])=>`<div class="fd-branch"><span>${label}</span><b>${pct(p)}</b><small>${sub}</small></div>`).join('');
-    $('fd-sensitivity').hidden=false;
-    const threshold=r.breakEven;
-    $('fd-break-even').textContent=threshold===null?'Success and failure have the same modeled value.':threshold<0?'Going is preferred even with a 0% conversion chance under these outcome assumptions.':threshold>1?'Even a certain conversion does not beat the best kick under these outcome assumptions.':`Going beats the best kick above a ${pct(threshold)} conversion chance. The model estimates ${pct(r.conversion)}.`;
-    $('fd-conversion').value=Math.round(r.conversion*100);sensitivity(true);
-    $('fd-warnings').innerHTML=r.warnings.map(w=>`<p>${esc(w)}</p>`).join('');
-    $('fd-share').disabled=false;$('fd-copy').disabled=false;
-    $('fd-share-status').textContent='';status(sourceLabel+' · calculated locally.');
-    window.DDFourthState={input:activeInput,result:r,source:sourceLabel};
+    $('fd-branches').innerHTML=[['Convert the fourth down',r.conversion,`Win if successful: ${pct(r.successWP)}`],['Make the field goal',fgAvailable?r.fgMake:null,fgAvailable?`${activeInput.yardline+18}-yard attempt · win if made: ${pct(r.makeWP)}`:'Attempt outside the model’s range.'],['Fail on fourth down',1-r.conversion,`Still win: ${pct(r.failWP)}`],['Miss the field goal',fgAvailable?1-r.fgMake:null,fgAvailable?`Still win: ${pct(r.missWP)}`:'Attempt outside the model’s range.']].map(([label,p,sub],i)=>`<div class="fd-branch"><span>${label}</span><b>${pct(p)}</b><small>${sub}</small>${i<2&&p!==null?`<a class="fd-explore-link" href="#fd-sensitivity">${mode==='model'?'nfl4th estimate':'Your assumption'} · explore ↓</a>`:''}</div>`).join('');
+    window.DDFourthState={input:activeInput,result:r,baseline:result,scenario:explorer.getState(),source:sourceLabel};
   }
-  function sensitivity(modelExact=false){
-    if(!result)return;const p=modelExact?result.conversion:Number($('fd-conversion').value)/100;
-    const go=p*result.successWP+(1-p)*result.failWP;
-    const kick=Math.max(result.fgMake>0?result.fgWP:0,result.puntWP??0);
-    $('fd-scenario').textContent=`${modelExact?'Model':'Your scenario'}: ${pct(p)} convert → ${pct(go)} win by going (${pp(100*(go-kick))} vs best kick).`;
-  }
+  const explorer=DDFourthExplorer.create({onChange:paintDecision});
+  let initialOverrides=null;
   function calculate(){
     if(!engine)return;
     try{if(!form.reportValidity())return;render(engine.calculate(inputs()));}
-    catch(e){status(e.message,true);$('fd-strength').textContent='INPUT NEEDS ATTENTION';$('fd-recommendation').textContent='Check the situation.';$('fd-verdict-text').textContent=e.message;$('fd-edge').hidden=true;$('fd-share').disabled=true;$('fd-copy').disabled=true;$('fd-bars').innerHTML='';$('fd-branches').innerHTML='';$('fd-sensitivity').hidden=true;result=null;window.DDFourthState=null;}
+    catch(e){status(e.message,true);$('fd-strength').textContent='INPUT NEEDS ATTENTION';$('fd-recommendation').textContent='Check the situation.';$('fd-verdict-text').textContent=e.message;$('fd-edge').hidden=true;$('fd-share').disabled=true;$('fd-copy').disabled=true;$('fd-bars').innerHTML='';$('fd-branches').innerHTML='';$('fd-sensitivity').hidden=true;result=null;displayResult=null;window.DDFourthState=null;}
   }
   form.addEventListener('submit',e=>{e.preventDefault();calculate();});
-  form.addEventListener('input',()=>{sourceLabel='Custom situation';status('Inputs changed. Calculate to update the call.');$('fd-strength').textContent='PREVIOUS CALCULATION · INPUTS CHANGED';$('fd-share').disabled=true;$('fd-copy').disabled=true;window.DDFourthState=null;});
+  form.addEventListener('input',()=>{sourceLabel='Custom situation';status('Inputs changed. Calculate to update the call.');$('fd-strength').textContent='PREVIOUS CALCULATION · INPUTS CHANGED';$('fd-share').disabled=true;$('fd-copy').disabled=true;window.DDFourthState=null;$('fd-sensitivity').hidden=true;});
   form.addEventListener('change',updateTeamLabels);
   document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{sourceLabel=b.dataset.preset==='browns'?'Browns vs Panthers · Sep 27, 2026':'Hypothetical scenario';setForm(presets[b.dataset.preset]);calculate();}));
   $('fd-reset').addEventListener('click',()=>{sourceLabel='Browns vs Panthers · Sep 27, 2026';setForm(browns);calculate();});
-  $('fd-conversion').addEventListener('input',()=>sensitivity());$('fd-restore').addEventListener('click',()=>{if(result){$('fd-conversion').value=Math.round(result.conversion*100);sensitivity(true);}});
   async function copy(text){try{await navigator.clipboard.writeText(text);$('fd-share-status').textContent='Copied.';}catch{$('fd-share-status').textContent=text;}}
-  $('fd-share').addEventListener('click',()=>{if(!activeInput)return;const u=new URL(location.href);u.search='';u.hash='';for(const [k,v] of Object.entries(activeInput))if(Object.hasOwn(browns,k))u.searchParams.set(k,v);copy(u.href);});
-  $('fd-copy').addEventListener('click',()=>{if(!result)return;copy(`Data Dawgs · Fourth Down Lab\n${situation(activeInput)}\n${result.choices.filter(c=>c.wp!==null).map(c=>`${c.label}: ${pct(c.wp)} win probability`).join('\n')}\n${result.strength}: ${DDFourth.labels[result.best]} (${pp(result.edge)} over next option).\nModel estimates · nfl4th port exported Sep 28, 2026 · kickoff assumption: own ${activeInput.touchback}.`);});
+  $('fd-share').addEventListener('click',()=>{if(!activeInput)return;const u=new URL(location.href);u.search='';u.hash='';for(const [k,v] of Object.entries(activeInput))if(Object.hasOwn(browns,k))u.searchParams.set(k,v);if(explorer.getState().mode==='scenario'){u.searchParams.set('cp',(displayResult.conversion*100).toFixed(1));u.searchParams.set('fp',(displayResult.fgMake*100).toFixed(1));}copy(u.href);});
+  $('fd-copy').addEventListener('click',()=>{if(!displayResult)return;const r=displayResult;copy(`Data Dawgs · Fourth Down Lab\n${situation(activeInput)}\n${r.choices.filter(c=>c.wp!==null).map(c=>`${c.label}: ${pct(c.wp)} win probability`).join('\n')}\n${r.strength}: ${DDFourth.labels[r.best]} (${pp(r.edge)} over next option).\n${explorer.getState().mode==='model'?'Model estimates':'USER SCENARIO'} · convert ${pct(r.conversion)} / FG ${pct(r.fgMake)} · nfl4th port exported Sep 28, 2026 · kickoff: own ${activeInput.touchback}.`);});
   function renderBoard(){
     if(!weekly)return;
     const filter=$('fd-game-filter').value,sort=$('fd-sort').value;
@@ -85,7 +81,8 @@
   $('fd-refresh').addEventListener('click',refresh);$('fd-game-filter').addEventListener('change',renderBoard);$('fd-sort').addEventListener('change',renderBoard);
   setForm(browns);
   const query=new URLSearchParams(location.search);if(query.has('qtr')){const s={...browns};for(const k of Object.keys(s))if(query.has(k))s[k]=typeof s[k]==='number'?Number(query.get(k)):query.get(k);if(!teams[s.homeTeam]||!teams[s.awayTeam]){status('Shared team selection is invalid.',true);}else{setForm(s);sourceLabel='Shared situation';}}
+  if(query.has('qtr')&&(query.has('cp')||query.has('fp'))){const v={};for(const key of ['cp','fp'])if(query.has(key)){const value=Number(query.get(key));if(query.get(key)!==''&&Number.isFinite(value)&&value>=0&&value<=100)v[key]=value;}if(Object.keys(v).length)initialOverrides=v;}
   DDFourth.load().then(e=>{engine=e;$('fd-calculate').disabled=false;$('fd-calculate').textContent='Calculate the call';calculate();}).catch(e=>{status(e.message+' Reload to retry.',true);$('fd-recommendation').textContent='Model unavailable.';$('fd-verdict-text').textContent='No probabilities have been calculated.';});
   refresh();setInterval(()=>{if(!document.hidden)refresh();},60000);
-  window.DD_BOTCTX={label:'Fourth Down Lab',title:'Explain this decision',chrome:{sub:'Fourth Down Lab',ph:'Ask about this fourth down…',chips:['Why this call?','What conversion rate breaks even?','Explain the clock assumptions']},sys:'You are on Fourth Down Lab. Use ONLY DDFourthState for calculator values. All probabilities are model estimates, from the pinned nfl4th browser port; never invent numbers or claim independent calibration. The weekly feed is a delayed dated ESPN snapshot, not live odds. Regulation only; no overtime. The model does not know the play call, kicker identity, injuries or wind. Default kickoff assumption is the upstream own 25, with an optional own 35 scenario. A user-entered sensitivity probability is an assumption. Warn about clock sensitivity in the final two minutes. Data and method at /data/fourth-down.json and /data/fourth-down-method.md. There is no fourth-down MCP tool yet.',ctx:()=>JSON.stringify({current:window.DDFourthState||null,weeklyAsOf:weekly?.data.refreshed_at})};
+  window.DD_BOTCTX={label:'Fourth Down Lab',title:'Explain this decision',chrome:{sub:'Fourth Down Lab',ph:'Ask about this fourth down…',chips:['Why this call?','What conversion rate breaks even?','Explain the clock assumptions']},sys:'You are on Fourth Down Lab. Use ONLY DDFourthState for calculator values. All probabilities are model estimates, from the pinned nfl4th browser port; never invent numbers or claim independent calibration. The weekly feed is a delayed dated ESPN snapshot, not live odds. Regulation only; no overtime. The model does not know the play call, kicker identity, injuries or wind. Default kickoff assumption is the upstream own 25, with an optional own 35 scenario. Sliders update the current recommendation; distinguish result from baseline and label scenario inputs as assumptions. Historical team rates are separate descriptive comparisons: 2024 onward, regular season, matched distance/field zone or FG distance band/roof; smoothed toward other teams with 20 prior attempts. They are not calibrated matchup forecasts. Median is across smoothed team rates. The empirical percentile curve counts sample rates at or below a threshold, including ties; never extrapolate a precise tail percentile when outside the sample. The optional raw team-season view has an explicit attempt minimum and can be noisy. This is not a percentile of overall offense strength. The Wilson interval describes the raw historical rate, not model uncertainty. Never call the nfl4th baseline a team-specific personnel estimate. Warn about clock sensitivity in the final two minutes. Data and method at /data/fourth-down.json and /data/fourth-down-method.md. There is no fourth-down MCP tool yet.',ctx:()=>JSON.stringify({current:window.DDFourthState||null,weeklyAsOf:weekly?.data.refreshed_at})};
 })();

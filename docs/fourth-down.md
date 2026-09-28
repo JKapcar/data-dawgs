@@ -106,3 +106,19 @@ Publishing main requires fresh owner approval under `docs/worker-deploy.md`.
 This release changes no Worker code, credentials, private data or user accounts.
 After approved deployment verify the public page, model hash, dated data and
 scheduled workflow. Allow GitHub Pages / service-worker caches time to settle.
+
+## Probability explorer (2026-09-28)
+
+`fourth-down-analysis.js` supplies pure sensitivity and historical comparison
+math. `fourth-down-explorer.js` renders both sliders, win-probability intersections,
+and empirical distributions of smoothed team rates. Data provenance and smoothing
+are documented in `data/fourth-down-method.md`. The nfl4th engine and pinned model
+artifacts are unchanged. User scenarios are carried into copied text, links, and
+Toto state; changing situation inputs hides stale scenario controls.
+
+Rebuild history with `python tools/fourth-down-rates.py --rebuild-history` or use
+`--pbp-dir /path` containing `{year}.csv.gz` files. The scheduled daily workflow
+updates only current-season data, fails on coverage regression, and preserves
+source hashes. CI tests the original published bot cases plus threshold switching,
+zero/one probability endpoints, unavailable alternatives, historical aggregation
+and smoothing arithmetic.

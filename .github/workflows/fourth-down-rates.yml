@@ -1,0 +1,60 @@
+name: Fourth Down comparison rates
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 12 * * *'
+  pull_request:
+    paths: ['fourth-down*.js', 'fourth-down.html', 'fourth-down.css', 'tools/fourth-down-rates.py', 'data/fourth-down-rates.json', 'tests/fourth-down.test.cjs', 'tests/test_fourth_down_rates.py', '.github/workflows/fourth-down-rates.yml']
+permissions:
+  contents: read
+concurrency:
+  group: fourth-down-rates-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'refresh' }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: node --test tests/fourth-down.test.cjs
+      - run: python -m unittest discover -s tests -p 'test_fourth_down_rates.py'
+  refresh:
+    if: github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: main, fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Refresh daily and publish on latest main
+        run: |
+          set -euo pipefail
+          python tools/fourth-down-rates.py
+          cp data/fourth-down-rates.json /tmp/fourth-down-rates.json
+          git restore data/fourth-down-rates.json
+          git fetch origin main
+          git reset --hard origin/main
+          cp /tmp/fourth-down-rates.json data/fourth-down-rates.json
+          node --test tests/fourth-down.test.cjs
+          node tools/data-manifest.js
+          node tools/validate-data.js
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/fourth-down-rates.json data/index.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Refresh comparable fourth-down and field-goal rates'
+            git push origin HEAD:main
+          fi
+      - name: Publish through GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash work/request-survivor-pages-build.sh
