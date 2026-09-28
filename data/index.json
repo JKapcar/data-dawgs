@@ -422,6 +422,14 @@
     "note": "Delayed game-decision snapshot. Check per-game capture time and refresh_error. No overtime recommendations. Pregame lines, not live betting prices."
    },
    {
+    "path": "/data/fourth-down-rates.json",
+    "url": "https://datadawgs216.com/data/fourth-down-rates.json",
+    "bytes": 31501,
+    "as_of": "2026-09-28",
+    "sha256": "136932e616ba695e8b77cbb03365de60734590216b24d33be1a8f623c2a6229d",
+    "note": "Observed comparable team rates. Fourth-down distance + field zone; field goals by 10-yard distance band + open/closed roof. Not a matchup forecast or calibration of nfl4th."
+   },
+   {
     "path": "/data/leagues/pepperoninipples.json",
     "url": "https://datadawgs216.com/data/leagues/pepperoninipples.json",
     "bytes": 2205,
@@ -525,8 +533,8 @@
    {
     "path": "/data/fourth-down-method.md",
     "url": "https://datadawgs216.com/data/fourth-down-method.md",
-    "bytes": 4303,
-    "sha256": "03817215a9ac0fe6f570561d4d738df8562577d7543426888f438dcf5629f3f5",
+    "bytes": 7157,
+    "sha256": "36a0427ace13796c69e2b5df7501e1a8eb5cecfa45a4ab9bcb8791d1d48d811d",
     "as_of": "2026-09-28"
    },
    {
