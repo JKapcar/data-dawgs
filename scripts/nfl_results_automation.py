@@ -22,7 +22,7 @@ import elo_538_classic as elo
 ROOT = Path(__file__).resolve().parents[1]
 BRANCH = "automation/nfl-results"
 FILES = ["data/nfl-schedule.json", "data/538-classic.json", "data/model-receipts.json",
-         "data/receipts-inventory.json", "data/index.json"]
+         "data/receipts-inventory.json", "data/draft-2026.json", "data/index.json"]
 RESULT_FIELDS = {"status", "home_score", "away_score"}
 
 
@@ -115,6 +115,9 @@ def regenerate(work, captured, inputs):
         "--official-games", str(inputs / "official.csv"), "--official-initial", str(inputs / "initial.csv"),
         "--history-games", str(inputs / "history.csv"))
     run(work, "node", "tools/build-data.js", "receipts-inventory.json")
+    # Publish the standings with their results, in the same validated commit.
+    # A separate daily draft job can run before finals arrive or be delayed.
+    run(work, "python3", "scripts/team_draft_pool.py", "--as-of", captured[:10])
     run(work, "node", "tools/data-manifest.js")
 
 
