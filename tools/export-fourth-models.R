@@ -1,0 +1,15 @@
+# Run from a scratch directory containing the pinned upstream checkouts and RDS
+# models described in docs/fourth-down.md. R packages: mgcv and jsonlite.
+library(mgcv)
+library(jsonlite)
+load('nfl4th-upstream/R/sysdata.rda')
+fg <- expand.grid(yardline_100=1:40, fg_model_roof=factor(c('00','01','10','11')))
+fg$p <- as.numeric(predict(fg_model, newdata=fg, type='response'))
+write_json(list(fg=fg,punt=punt_df),'kicking.json',digits=16,dataframe='rows',auto_unbox=TRUE)
+writeBin(two_pt_model,'two_pt.ubj')
+writeBin(readRDS('fd_model.rds'),'fd.ubj')
+writeBin(readRDS('wp_model.rds'),'home_wp.ubj')
+load('fastrmodels-upstream/data/ep_model.rda')
+writeBin(ep_model,'ep.ubj')
+load('fastrmodels-upstream/data/wp_model_spread.rda')
+writeBin(wp_model_spread,'wp.ubj')

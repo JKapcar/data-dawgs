@@ -2154,6 +2154,7 @@ body.pb-hub{background:#120b05}
       ["stats.html","NFL EPA Stats","stats"],
       ["nfelo.html","nfelo Power Ratings","nfelo"],
       ["calculators.html","NFL Calculators","calculators"],
+      ["fourth-down.html","Fourth Down Lab","fourth-down"],
     ]},
     /* The build roadmap is off the visible dropdown deliberately: it is our own planning
        surface, not a destination. It stays reachable on the page and through the machine
@@ -2910,7 +2911,7 @@ teamdraft.html — the 32-team wins pool: spin wheel, board, eight rosters, Mont
 The draft rig: dashboard.html (a drafter's view), auction.html (the operator), board.html (read-only room view), bigboard.html (the projector), dataviz.html and report.html (afterwards), master.html (the player pool and scouting).
 datadawg-dollars.html — DataDawg$: our OWN converted auction dollars for one league room (Target $, conversion-sensitivity bands, delta vs the source price). It is NOT MV: MV is the dated market snapshot, DataDawg$ is this site's conversion of it. The league cheat sheet on board.html shows the same DataDawg$ alongside ESPN and PFF, all renormalized to that room's $2,800 — but ESPN and PFF are budget-only, with no custom-scoring shift, so they are not equivalent columns. Machine surfaces: /data/datadawg-dollars-values.json, /data/datadawg-dollars-method.json, /data/datadawg-dollars-method.md.
 strategy.html — the 2026 draft thesis, a dated snapshot of one analyst's argument.
-nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo power ratings and their backtest. calculators.html — ten deterministic calculators, nothing stored.
+nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo power ratings and their backtest. calculators.html — ten deterministic calculators, nothing stored. fourth-down.html — Fourth Down Lab: nfl4th go/field-goal/punt win probabilities, conversion break-even, shareable scenarios, and delayed weekly decisions. Model estimates; no fourth-down MCP tool.
 cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator. Its build roadmap is at cfb.html#roadmap and is our own planning surface, not a public destination.
 markets.html — the prediction-markets section, its own top-level group labelled Markets. ai.html — the A.I. Model Board, its own top-level group. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
 data.html — the Library: every machine-readable file, shelved by the surface that owns it. connect.html — forwards to the connector card on signon.html#connect, which is where you point your own AI (Claude, ChatGPT, Gemini or any MCP client) at the site.

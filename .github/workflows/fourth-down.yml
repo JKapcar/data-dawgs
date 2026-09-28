@@ -1,0 +1,55 @@
+name: Fourth Down Lab
+on:
+  workflow_dispatch:
+  schedule:
+    # Delayed public snapshot; GitHub schedules are best effort, not a live SLA.
+    - cron: '7,22,37,52 * * 9-12,1-2 0,1,4,5,6'
+  pull_request:
+    paths: ['fourth-down*.js', 'assets/fourth-down/**', 'tools/fourth-down-*', 'tests/fourth-down*', 'tests/test_fourth_down_feed.py', '.github/workflows/fourth-down.yml']
+permissions:
+  contents: read
+concurrency:
+  group: fourth-down-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: node --test tests/fourth-down.test.cjs
+      - run: python -m unittest discover -s tests -p 'test_fourth_down_feed.py'
+  refresh:
+    if: github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: main}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python tools/fourth-down-refresh.py
+      - run: node tools/fourth-down-score.cjs
+      - name: Commit refreshed snapshot on the latest main
+        run: |
+          cp data/fourth-down.json /tmp/fourth-down-snapshot.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git restore data/fourth-down.json
+          git fetch origin main
+          git reset --hard origin/main
+          cp /tmp/fourth-down-snapshot.json data/fourth-down.json
+          node tools/data-manifest.js
+          node tools/validate-data.js
+          git add data/fourth-down.json data/index.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'Refresh Fourth Down Lab decision snapshot'
+            git push origin HEAD:main
+          fi

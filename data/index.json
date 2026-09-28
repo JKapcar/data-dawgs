@@ -360,9 +360,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 37670,
-    "as_of": "2026-09-26",
-    "sha256": "6d4664611beacfd93679cfcc30c140824f7fcf7d06efa566c9f672bb8c915a84",
+    "bytes": 38319,
+    "as_of": "2026-09-28",
+    "sha256": "cc5d53c0cc5d4f55ce4dcda46e6a00167319fd9303cdd0ca66c15571f5dc9c1e",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -412,6 +412,14 @@
     "as_of": "2026-09-26",
     "sha256": "dd1fcedcb31a4ff4dc5ba7715db46a68ae131ad459e5b5e113e23d0e9afeb40a",
     "note": "Roof class is a play-condition flag, not a forecast. fixed = indoor play regardless of outdoor weather. retractable = roof state is unknown at forecast time; outdoor numbers are shown and labelled as contingent. open = outdoor play. Shared venues (MetLife, SoFi) are listed once per team with the same coordinates. New Highmark Stadium (BUF, opened 2026-06-23) uses 42.77306, -78.79222. Neutral-site games must override venue explicitly; this file only knows home venues."
+   },
+   {
+    "path": "/data/fourth-down.json",
+    "url": "https://datadawgs216.com/data/fourth-down.json",
+    "bytes": 233133,
+    "as_of": "2026-09-28",
+    "sha256": "7ed022d83f0a29aa334fadcf5ad361118dceb989734823b3ee34efdafea404c1",
+    "note": "Delayed game-decision snapshot. Check per-game capture time and refresh_error. No overtime recommendations. Pregame lines, not live betting prices."
    },
    {
     "path": "/data/leagues/pepperoninipples.json",
@@ -513,6 +521,13 @@
     "bytes": 2149,
     "sha256": "1072717beea6b988415dc7476e0a4b3bcfe350c10ace3bea5e16ef8c8f79dc9c",
     "as_of": "2026-09-26"
+   },
+   {
+    "path": "/data/fourth-down-method.md",
+    "url": "https://datadawgs216.com/data/fourth-down-method.md",
+    "bytes": 4303,
+    "sha256": "03817215a9ac0fe6f570561d4d738df8562577d7543426888f438dcf5629f3f5",
+    "as_of": "2026-09-28"
    }
   ]
  }
