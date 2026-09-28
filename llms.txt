@@ -5,7 +5,7 @@
 
 Start with [`/data/index.json`](/data/index.json): dates and hashes. Cite `as_of` with numbers.
 
-[`/data/surfaces.json`](/data/surfaces.json) maps pages and 46 live MCP tools: 18 core, all 46 full; `planned` is unavailable. Sole write: two-phase `dd_submit_bozo_leg` — own leg or managed-league proxy (`forUid`; `commissionerModified`; never backdated). [Sign in](/signon.html) · [instructions](/data/dawg-project-instructions.md).
+[`/data/surfaces.json`](/data/surfaces.json): pages and tool availability; `planned` is unavailable. `dd_submit_bozo_leg` uses two phases, own leg or commissioner proxy, never backdated. [Sign in](/signon.html) · [instructions](/data/dawg-project-instructions.md).
 
 Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHouse, stopped.
 
@@ -20,6 +20,8 @@ Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHous
 
 - [Calculators](/calculators.html): 10 deterministic calculators — odds, vig, EV, hedging,
 passer rating, Elo, margin translation, forecast scoring, belief summary. Inputs are not stored.
+
+- [Fourth Down Lab](/fourth-down.html): go/kick/punt. [Data](/data/fourth-down.json).
 
 ## Hubs
 
