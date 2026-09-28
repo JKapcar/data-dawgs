@@ -2391,6 +2391,21 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         <div class="fd-thresholds" id="fd-thresholds"></div>
         <p class="fd-chart-note">Vertical dashed lines mark break-even rates. Outcome values stay fixed as you move the sliders; the win-probability axis is zoomed to show the decision.</p>
         <details class="fd-source"><summary>Where the model probability comes from</summary><p id="fd-provenance"></p><p>Changing either slider creates your scenario. It does not retrain the model or change the play call. <a href="data/fourth-down-method.md">Full method</a>.</p></details>
+        <section class="fd-history" aria-labelledby="fd-published-title">
+          <div class="fd-kicker">Independent benchmark · fitted model published 2025</div>
+          <h3 id="fd-published-title">Published model comparison</h3>
+          <p id="fd-published-availability"></p>
+          <div id="fd-published-body">
+            <p>How much does matchup strength change fourth-and-1? Compare the published curve with nfl4th and the rates that flip this decision.</p>
+            <div class="fd-slider-control"><label for="fd-published-strength">Matchup strength <output id="fd-published-strength-value" for="fd-published-strength">0.0 SD</output></label><input id="fd-published-strength" type="range" min="-2" max="2" step="0.1" value="0"><small>−2 SD: much weaker · 0: average · +2 SD: much stronger.<br>Your assumption; not an automatically assigned team rating.</small></div>
+            <div class="fd-chart" id="fd-published-chart"></div>
+            <div class="fd-legend" id="fd-published-legend"></div>
+            <p id="fd-published-summary" class="fd-rank-summary" aria-live="polite"></p>
+            <div class="fd-compare-actions"><button type="button" id="fd-use-published">Apply published conversion rate</button><button type="button" id="fd-published-reset">Reset strength to average</button></div>
+            <p class="fd-chart-note">Preview holds the current field-goal assumption and all conditional win probabilities fixed. Apply the rate to update the main call. Agreement is a robustness check, not independent proof.</p>
+          </div>
+          <details class="fd-source"><summary>Source, scope &amp; interpretation</summary><p>Brill, Yurko &amp; Wyner (2025), <a href="https://ryansbrill.com/pdf/statistics_in_sports_papers/Brill_Humility_TAS.pdf" target="_blank" rel="noopener">Analytics, Have Some Humility</a>. Calculated from the authors’ <a href="https://github.com/snoopryan123/fourth_down/tree/2f4df27a1df102ad55b9983aa1e5b9daeb85ee74" target="_blank" rel="noopener">released fitted model</a>, retrieved September 28, 2026.</p><p>Strength is standardized market-implied scoring for the offense against its opponent. It is not EPA/play, a team percentile, or a distribution of underlying ability. Zero is the model’s average strength input, not the median team conversion rate. This panel does not assign a rating from today’s lines. Only the verified fourth-and-1 slice is available here.</p><p>This is a conversion-model comparison using nfl4th outcome values, not the paper’s full win-probability model. It omits personnel and exact inches, shares historical NFL data with other models, and has not been independently validated on later seasons by Data Dawgs. No frequency of sub-threshold true ability or precise tail percentile is inferred.</p></details>
+        </section>
         <div class="fd-history"><h3>How does this team compare?</h3><p id="fd-history-summary"></p>
           <div id="fd-history-body" hidden><div class="fd-benchmarks" id="fd-benchmarks"></div><div class="fd-chart" id="fd-distribution-chart"></div>
             <div class="fd-legend"><span style="--key:#9b793c"><i></i>Model</span><span style="--key:#8a7c68"><i></i>Median team</span><span style="--key:#23956d"><i></i>Selected team</span><span style="--key:var(--ink-1)"><i></i>Slider</span></div>
@@ -2417,7 +2432,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <footer class="foot">Data Dawgs · Data, Not Dogma · Fourth Down Lab · Built on open football analytics.</footer>
 </div>
 <script src="fourth-down-engine.js?v=1424d4441ff7"></script>
-<script src="fourth-down-analysis.js?v=8c79067742e4"></script>
-<script src="fourth-down-explorer.js?v=da44d8ea8707"></script>
-<script src="fourth-down-page.js?v=737249329cbc"></script>
+<script src="fourth-down-analysis.js?v=8a4d21c33101"></script>
+<script src="fourth-down-explorer.js?v=93b1ac8c0083"></script>
+<script src="fourth-down-page.js?v=ea1ee56373c6"></script>
 </body></html>

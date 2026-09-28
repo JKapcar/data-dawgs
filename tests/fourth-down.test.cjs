@@ -27,3 +27,11 @@ test('historical median is across observed teams; shrinking uses other-team rate
 test('historical snapshot counts and samples are coherent',()=>{const env=require('../data/fourth-down-rates.json');for(const season of Object.values(env.data.seasons)){assert.equal(season.games,season.game_ids.length);for(const kind of ['go','fg'])for(const cohort of Object.values(season[kind]))for(const [s,n] of Object.values(cohort)){assert.ok(s>=0&&s<=n&&n>0);}}const h=A.historical(env,{home:1,homeTeam:'CLE',yardline:15,toGo:1,roof:'outdoors'},'go');assert.ok(h.rows.length>20);assert.ok(h.selected.low<=h.selected.raw&&h.selected.high>=h.selected.raw);});
 
 test('empirical percentiles include ties and flag unresolved tails',()=>{assert.deepEqual(A.percentile([.4,.5,.5,.8],.5),{below:1,atOrBelow:3,n:4,percentile:75,min:.4,max:.8,belowSample:false,aboveSample:false});assert.equal(A.percentile([.4,.6],.3559).percentile,0);assert.equal(A.percentile([.4,.6],.3559).belowSample,true);assert.equal(A.percentile([.4,.6],.8).aboveSample,true);assert.equal(A.percentile([], .5),null);});
+
+test('published fourth-and-1 slice reproduces released fitted-model reference values',()=>{
+ for(const [z,p] of [[-2,.6062301882432214],[0,.6673233955601306],[2,.7232648531411295]])assert.ok(Math.abs(A.publishedConversion(1,z)-p)<1e-12);
+ assert.equal(A.publishedConversion(2,0),null);
+ for(const z of [-3,3,NaN])assert.throws(()=>A.publishedConversion(1,z));
+ const r=engine.calculate(browns);
+ for(const z of [-2,0,2])assert.equal(A.scenario(r,A.publishedConversion(1,z)).best,'go');
+});

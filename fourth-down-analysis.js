@@ -54,5 +54,12 @@
       through:env.data.seasons[String(current)].through,asOf:env.as_of,
       cohort:kind==='go'?`4th & ${input.toGo>=11?'11+':input.toGo} · ${zone==='red'?'opponent 1–20':zone==='opp'?'opponent 21–50':'own territory'}`:`${band}–${band+9}-yard field goals · ${input.roof==='outdoors'?'open-air':'closed-roof'}`};
   }
-  return {available,threshold,scenario,comparisons,historical,median,percentile};
+  // Brill/Yurko/Wyner fitted go_model_b1: at fourth-and-1 the distance basis is zero.
+  // Source commit 2f4df27a1df102ad55b9983aa1e5b9daeb85ee74, retrieved 2026-09-28.
+  function publishedConversion(toGo,z){
+    if(Number(toGo)!==1)return null;
+    if(!Number.isFinite(z)||z < -2||z > 2)throw Error('Published comparison strength must be between -2 and +2 SD.');
+    return 1/(1+Math.exp(-(0.6961039190652341+0.13230533049039203*z)));
+  }
+  return {available,threshold,scenario,comparisons,historical,median,percentile,publishedConversion};
 });

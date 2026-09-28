@@ -122,3 +122,29 @@ updates only current-season data, fails on coverage regression, and preserves
 source hashes. CI tests the original published bot cases plus threshold switching,
 zero/one probability endpoints, unavailable alternatives, historical aggregation
 and smoothing arithmetic.
+
+## Published model comparison (2026-09-28)
+
+The explorer adds a separately labeled fourth-and-1 benchmark from Brill, Yurko
+& Wyner (2025), *Analytics, Have Some Humility*. Source repository:
+https://github.com/snoopryan123/fourth_down at
+`2f4df27a1df102ad55b9983aa1e5b9daeb85ee74`, artifact
+`2_Decision_Making/fitted_models/go_model_b1.rds` (original fit).
+For fourth-and-1 all distance spline basis terms are zero, giving
+`logit(p) = 0.6961039190652341 + 0.13230533049039203 * z`.
+Reference predictions at z=-2,0,+2: .6062301882432214, .6673233955601306,
+.7232648531411295. Only this verified distance slice is exposed.
+
+The user chooses z in [-2,2], standardized market-implied offensive scoring
+against the defense. It is not inferred from current lines, EPA, or team name;
+zero means the original model's average strength input. A new situation resets
+z to zero. Preview holds current FG probability and nfl4th conditional outcome
+values fixed. Apply explicitly substitutes conversion in the main scenario;
+Restore both model estimates retains its original behavior. Shared scenarios
+carry applied conversion, not an implied claim of a fitted team rating.
+
+This is not a latent talent distribution, median conversion estimate, published
+WP implementation, post-training validation, or empirical estimate of the
+frequency of true conversion probabilities below a cutoff. Model agreement is
+not statistical independence. Source and limits appear in the panel and Toto
+system instructions; preview values are in `scenario.publishedComparison`.

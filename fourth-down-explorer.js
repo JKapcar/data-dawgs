@@ -50,12 +50,39 @@
   }
   return out+'</svg>';
  }
+ function publishedChart(base,r,z){
+  const x=v=>65+(v+2)*126.25,y=p=>245-p*200;
+  let out=svgStart('Published fourth-and-1 conversion curve versus assumed matchup strength; probability axis zero to one hundred percent',325);
+  for(const v of [0,.25,.5,.75,1])out+=line(65,y(v),570,y(v),'var(--grid)','',1)+txt(56,y(v)+5,Math.round(v*100)+'%','end');
+  for(const v of [-2,-1,0,1,2])out+=txt(x(v),272,(v>0?'+':'')+v,'middle');
+  out+=txt(65,22,'Fourth-and-1 conversion probability')+txt(315,303,'Assumed matchup strength (standard deviations)','middle');
+  for(const c of A.comparisons(r,'go'))if(c.p!==null&&c.p>=0&&c.p<=1)out+=line(65,y(c.p),570,y(c.p),colors[c.id],'7 5');
+  out+=line(65,y(base.conversion),570,y(base.conversion),colors.model,'3 5');
+  let d='';for(let i=0;i<=80;i++){const a=-2+i/20;d+=(i?' L':'M')+x(a)+' '+y(A.publishedConversion(1,a));}
+  const p=A.publishedConversion(1,z);
+  out+=`<path d="${d}" fill="none" stroke="${colors.team}" stroke-width="4"/>`;
+  out+=line(x(z),45,x(z),245,'var(--ink-1)','2 5',1.5)+`<circle cx="${x(z)}" cy="${y(p)}" r="7" fill="${colors.team}" stroke="var(--surface-1)" stroke-width="2"/>`;
+  return out+'</svg>';
+ }
  window.DDFourthExplorer={create({onChange}){
-  let base,input,env,hist,r,kind='go',mode='model',rankMode='teams',loadError='';
+  let base,input,env,hist,r,kind='go',mode='model',rankMode='teams',loadError='',publishedZ=0,publishedPreview=null;
   const history=()=>A.historical(env,input,kind);
   function draw(){
    if(!base)return;
    hist=history();
+   const publishedP=A.publishedConversion(input.toGo,publishedZ);
+   $('fd-published-body').hidden=publishedP===null;
+   $('fd-published-availability').textContent=publishedP===null?'Available for fourth-and-1 only. Change the distance and recalculate to explore this verified curve.':'';
+   publishedPreview=null;
+   if(publishedP!==null){
+    const preview=A.scenario(base,publishedP,r.fgMake),best=preview.choices.find(c=>c.id===preview.best);
+    publishedPreview={strengthSD:publishedZ,conversion:publishedP,goWP:preview.goWP,best:preview.best,edge:preview.edge,assumedStrength:true};
+    $('fd-published-strength-value').textContent=(publishedZ>0?'+':'')+publishedZ.toFixed(1)+' SD';
+    $('fd-published-strength').setAttribute('aria-valuetext',publishedZ.toFixed(1)+' standard deviations');
+    $('fd-published-chart').innerHTML=publishedChart(base,r,publishedZ);
+    $('fd-published-legend').innerHTML=[{name:'Published curve',color:colors.team},{name:'nfl4th baseline '+pct(base.conversion),color:colors.model},...A.comparisons(r,'go').filter(c=>c.p!==null&&c.p>=0&&c.p<=1).map(c=>({name:c.label+' break-even '+pct(c.p),color:colors[c.id]}))].map(v=>`<span style="--key:${v.color}"><i></i>${esc(v.name)}</span>`).join('');
+    $('fd-published-summary').textContent=`Preview: ${pct(publishedP)} convert → ${pct(preview.goWP)} win by going. ${best.label} has the highest win probability (${preview.edge.toFixed(1)} pp over the next option).`;
+   }
    $('fd-chart-go').setAttribute('aria-pressed',kind==='go');$('fd-chart-fg').setAttribute('aria-pressed',kind==='fg');
    const fg=A.available(base,'fg');$('fd-fg-control').hidden=!fg;$('fd-chart-fg').disabled=!fg;
    $('fd-conversion-value').textContent=pct(r.conversion);$('fd-fg-value').textContent=pct(r.fgMake);
@@ -104,12 +131,19 @@
   for(const [id,k] of [['fd-chart-go','go'],['fd-chart-fg','fg']])$(id).addEventListener('click',()=>{kind=k;draw();if(window.DDFourthState)onChange(r,mode);});
   for(const [id,value] of [['fd-rank-teams','teams'],['fd-rank-seasons','seasons']])$(id).addEventListener('click',()=>{rankMode=value;draw();});
   $('fd-season-min').addEventListener('change',draw);
+  $('fd-published-strength').addEventListener('input',()=>{publishedZ=Number($('fd-published-strength').value);draw();onChange(r,mode);});
+  $('fd-published-reset').addEventListener('click',()=>{publishedZ=0;$('fd-published-strength').value=0;draw();onChange(r,mode);});
+  $('fd-use-published').addEventListener('click',()=>{
+   if(!publishedPreview)return;kind='go';
+   r=A.scenario(base,publishedPreview.conversion,r.fgMake);$('fd-conversion').value=r.conversion*100;
+   mode='scenario';draw();onChange(r,mode);
+  });
   $('fd-restore').addEventListener('click',()=>{if(base){$('fd-conversion').value=base.conversion*100;$('fd-fg-probability').value=base.fgMake*100;update(true);}});
   for(const [id,which] of [['fd-use-team','team'],['fd-use-median','median']])$(id).addEventListener('click',()=>{
    if(!hist)return;const p=which==='team'?hist.selected?.estimate:hist.median;if(p==null)return;
    $(kind==='go'?'fd-conversion':'fd-fg-probability').value=p*100;update(false,kind);
   });
   fetch('data/fourth-down-rates.json',{cache:'no-store'}).then(v=>{if(!v.ok)throw Error('History unavailable');return v.json();}).then(v=>{if(!v.source||!v.as_of||!v.data?.seasons)throw Error('Incomplete history');env=v;draw();if(window.DDFourthState)onChange(r,mode);}).catch(()=>{loadError='Comparable history is unavailable. The model and sensitivity calculations still work.';draw();});
-  return {setResult(value,state,overrides){base=value;input=state;if(!A.available(base,'fg'))kind='go';$('fd-conversion').value=base.conversion*100;$('fd-fg-probability').value=base.fgMake*100;if(overrides){if(overrides.cp!=null)$('fd-conversion').value=overrides.cp;if(overrides.fp!=null)$('fd-fg-probability').value=overrides.fp;}update(!overrides);},getState:()=>({mode,conversion:r?.conversion,fgMake:r?.fgMake,comparison:hist,percentileView:rankMode})};
+  return {setResult(value,state,overrides){base=value;input=state;publishedZ=0;$('fd-published-strength').value=0;if(!A.available(base,'fg'))kind='go';$('fd-conversion').value=base.conversion*100;$('fd-fg-probability').value=base.fgMake*100;if(overrides){if(overrides.cp!=null)$('fd-conversion').value=overrides.cp;if(overrides.fp!=null)$('fd-fg-probability').value=overrides.fp;}update(!overrides);},getState:()=>({mode,conversion:r?.conversion,fgMake:r?.fgMake,comparison:hist,percentileView:rankMode,publishedComparison:publishedPreview})};
  }};
 })();
