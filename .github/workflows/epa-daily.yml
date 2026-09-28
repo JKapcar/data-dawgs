@@ -1,0 +1,83 @@
+name: Daily EPA refresh
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '43 11 * * *'
+  pull_request:
+    paths:
+      - 'stats.html'
+      - 'tools/stats-epa-*.py'
+      - 'tools/build-data.js'
+      - 'tests/test_epa_daily.py'
+      - 'tests/epa-page.test.cjs'
+      - '.github/workflows/epa-daily.yml'
+permissions:
+  contents: read
+concurrency:
+  group: epa-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'refresh' }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - uses: actions/setup-node@v6
+        with: {node-version: '24', package-manager-cache: false}
+      - run: python -m unittest discover -s tests -p 'test_epa_daily.py'
+      - run: node --test tests/epa-page.test.cjs
+      - run: node tools/validate-data.js
+  refresh:
+    if: github.event_name != 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - uses: actions/checkout@v7
+        with: {ref: main, fetch-depth: 0}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - uses: actions/setup-node@v6
+        with: {node-version: '24', package-manager-cache: false}
+      - name: Refresh and publish validated complete games
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            base=$(git rev-parse HEAD)
+            python tools/stats-epa-daily.py
+            node tools/build-data.js epa-teams.json epa-players.json
+            python work/stamp-sw-version.py
+            node tools/data-manifest.js
+            python -m unittest discover -s tests -p 'test_epa_daily.py'
+            node --test tests/epa-page.test.cjs
+            node tools/validate-data.js
+            python - <<'PY'
+          import subprocess
+          allowed={'stats.html','sw.js','data/epa-teams.json','data/epa-players.json','data/index.json'}
+          changed=set(subprocess.check_output(['git','diff','--name-only']).decode().splitlines())
+          if not changed <= allowed: raise SystemExit('Unexpected changed files: '+repr(changed-allowed))
+          PY
+            git add stats.html sw.js data/epa-teams.json data/epa-players.json data/index.json
+            node work/verify-sw.mjs
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m 'Refresh completed-game EPA data'
+            if git push origin HEAD:main; then exit 0; fi
+            git fetch origin main
+            if [ "$(git rev-parse origin/main)" = "$base" ]; then
+              echo 'Push denied; stopping without bypassing repository protections.' >&2
+              exit 1
+            fi
+            echo "Main changed; rebuilding on latest main (attempt $attempt/3)."
+          done
+          exit 1
+      - name: Publish through GitHub Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash work/request-survivor-pages-build.sh

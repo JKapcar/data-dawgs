@@ -137,18 +137,19 @@ function aggregateEpa(seasonIdx, minDb) {
 /* ---------------------------------------------------------------
  * A season still in progress. DATA.coverage (written by tools/stats-epa-refresh.py)
  * says which weeks each season carries: 'all' for a completed season, a week list for
- * one in progress (2026 = Weeks 1-2 as of 2026-09-26).
+ * one collected daily. Game IDs identify exact coverage, including partial weeks.
  *
  * ⚠️ A full-season minimum applied to two weeks deletes every row — no quarterback has
  * 200 dropbacks in two games — so an in-progress season uses the SAME bar prorated to
- * the weeks covered (full bar × weeks / 17, rounded up), and the prorated number is
+ * regular-season games covered (full bar × games / 272, rounded up), and that number is
  * published beside the full one. It is a small-sample table and says so; it is not a
  * looser standard for completed seasons.
  * ------------------------------------------------------------- */
 const COVERAGE = DATA.coverage || {};
-const SEASON_WEEKS = 17;
+const EPA_AS_OF = Object.values(COVERAGE).map(c=>c.captured).filter(Boolean).sort().at(-1);
+const EPA_SOURCE = 'nflverse play-by-play; current-season completed games refreshed daily, with corrections; historical seasons retain their dated snapshots. See data.coverage for exact games, source hash and timestamps.';
 const partialWeeks = yr => (COVERAGE[yr] && Array.isArray(COVERAGE[yr].weeks) ? COVERAGE[yr].weeks : null);
-const prorate = (bar, yr) => { const w = partialWeeks(yr); return w ? Math.ceil(bar * w.length / SEASON_WEEKS) : bar; };
+const prorate = (bar, yr) => { const w = partialWeeks(yr), c = COVERAGE[yr]; return w ? Math.max(1, Math.min(bar, Math.ceil(bar * (c.regular_games ?? c.games ?? w.length*16) / 272))) : bar; };
 const PARTIAL = SEASONS.filter(yr => partialWeeks(yr));
 const COMPLETE = SEASONS.filter(yr => !partialWeeks(yr));
 const weekSpan = w => (w.length > 1 ? `Weeks ${w[0]}-${w[w.length - 1]}` : `Week ${w[0]}`);
@@ -498,18 +499,17 @@ write('epa-teams.json', {
   source_page: '/stats.html',
   tier: tierOf('stats.html'),
   graded: false,
-  as_of: '2026-09-26',
-  source: 'nflverse play-by-play: 2023-2025 completed seasons (captured 2026-07-29) plus ' + PARTIAL_LINE +
-    '. A partial week is never encoded (see data.coverage).',
+  as_of: EPA_AS_OF,
+  source: EPA_SOURCE,
   note:
     'Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback ' +
     'minimum for QBs; the pooled table uses 500. ' +
     PARTIAL.map(yr => `${yr} covers ${weekSpan(COVERAGE[yr].weeks)} ONLY (${COVERAGE[yr].games} games) — a small sample ` +
-      `of two games per team, dominated by noise, opponent and game script; its QB minimum is the 200 bar prorated ` +
+      `sensitive to opponent and game script; its QB minimum is the 200 bar prorated ` +
       `to ${prorate(QB_MIN.season, yr)} dropbacks. `).join('') +
     'The pooled table spans every season in the snapshot, including the partial one. These are descriptive ' +
     'aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026, ' +
-    'and do not read two weeks of 2026 as a season. ' +
+    'and do not interpret an incomplete season as a complete season. ' +
     'Dropback EPA counts every dropback including scrambles and penalty-nullified plays and uses play epa, not qb_epa; Rush EPA excludes scrambles and kneels. These will not match nflverse passing_epa / rushing_epa.',
   field_notes: {
     off_epa_play: 'offensive EPA per play (higher is better)',
@@ -526,16 +526,15 @@ write('epa-players.json', {
   source_page: '/stats.html',
   tier: tierOf('stats.html'),
   graded: false,
-  as_of: '2026-09-26',
-  source: 'nflverse play-by-play, the same columnar snapshot stats.html serves: 2023-2025 completed seasons ' +
-    '(captured 2026-07-29) plus ' + PARTIAL_LINE + '. A partial week is never encoded (see data.coverage).',
+  as_of: EPA_AS_OF,
+  source: EPA_SOURCE,
   note:
     'Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. ' +
     'There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name ' +
     'per play, so the whole value of a completed pass is credited to the quarterback and a receiver ' +
     'appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, ' +
     'not projections: do not read 2025 as 2026. ' +
-    PARTIAL.map(yr => `${yr} is ${weekSpan(COVERAGE[yr].weeks)} ONLY (${COVERAGE[yr].games} games): a two-game small sample, ` +
+    PARTIAL.map(yr => `${yr} is ${weekSpan(COVERAGE[yr].weeks)} ONLY (${COVERAGE[yr].games} games): incomplete-season coverage, ` +
       `with the season minimums prorated to ${PLAYER_MIN_PARTIAL[yr].dropbacks} dropbacks / ${PLAYER_MIN_PARTIAL[yr].rushes} rushes. `).join('') +
     'The pooled table spans every season in the snapshot, including the partial one.',
   field_notes: {
@@ -1404,16 +1403,15 @@ const SURFACES = [
     machine: [{ kind: 'json', url: '/data/epa-teams.json', status: 'live', covers: 'team and QB aggregates' },
               { kind: 'json', url: '/data/epa-players.json', status: 'live',
                 covers: 'per-player aggregates by primary ball handler — passer on a dropback, ' +
-                        'carrier on a rush; no receiving EPA, because no play names a receiver' }],
+                        'carrier on a rush; no receiving EPA, because no play names a receiver' },
+              { kind: 'markdown', url: '/data/epa-method.md', status: 'live', covers: 'daily completed-game refresh, coverage and minimum-sample rules' }],
     planned: ['mcp:query_stats', 'rest:/api/epa'],
     /* ⚠️ epa-players.json closes the AGGREGATE half of what query_stats was for, and
        says so rather than letting the planned tool imply the aggregates are missing too.
        What is still genuinely unexposed is the play level: 109,933 rows, and the receiver,
        blocker and defensive-player identities that were never in the snapshot to begin
        with. A tool cannot conjure a column the source does not have. */
-    gap: 'Team and per-player aggregates are live as static JSON. Play-level data (109,933 plays) ' +
-         'is still not exposed, and no play names a receiver, a blocker or a defender, so no tool ' +
-         'built on this snapshot can produce receiving or defensive player EPA.' },
+    gap: 'Team and primary-ball-handler aggregates refresh daily from completed nflverse games. Play-level data and receiving, blocking and individual defensive EPA are not exposed. No live EPA feed or callable EPA query tool.' },
   { id: 'nfelo', domain: 'nfl', name: 'nfelo power ratings', page: '/nfelo.html',
     machine: [{ kind: 'json', url: '/data/nfelo.json', status: 'live' },
               { kind: 'json', url: '/data/models.json', status: 'live', covers: 'the margin model parameters' },

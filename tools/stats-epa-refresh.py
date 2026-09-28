@@ -99,10 +99,12 @@ def f(v):
     return None if v in ('', 'NA', None) else float(v)
 
 
-def pbp_rows(path, sidx, teams, weeks=None):
+def pbp_rows(path, sidx, teams, weeks=None, game_ids=None):
     ti = {t: i for i, t in enumerate(teams)}
     rows, games, ended, null_epa = [], defaultdict(set), set(), []
     for p in read_pbp(path):
+        if game_ids is not None and p['game_id'] not in game_ids:
+            continue
         wk = int(p['week'])
         if weeks is not None and (p['season_type'] != 'REG' or wk not in weeks):
             continue
