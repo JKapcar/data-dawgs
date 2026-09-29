@@ -7367,7 +7367,7 @@
     "par_delta": 1.63,
     "internal_games": 3,
     "sd_sim": 4.55,
-    "sd_model": 3.371,
+    "sd_model": 3.339,
     "picks_remaining": 0
    },
    "Kevin": {
@@ -7385,7 +7385,7 @@
     "par_delta": -0.63,
     "internal_games": 4,
     "sd_sim": 4.62,
-    "sd_model": 3.213,
+    "sd_model": 3.219,
     "picks_remaining": 0
    },
    "Chris": {
@@ -7403,7 +7403,7 @@
     "par_delta": -1.86,
     "internal_games": 2,
     "sd_sim": 4.58,
-    "sd_model": 3.488,
+    "sd_model": 3.453,
     "picks_remaining": 0
    },
    "Tyler": {
@@ -7439,7 +7439,7 @@
     "par_delta": 2.78,
     "internal_games": 3,
     "sd_sim": 4.76,
-    "sd_model": 3.294,
+    "sd_model": 3.298,
     "picks_remaining": 0
    },
    "Jared": {
@@ -7457,7 +7457,7 @@
     "par_delta": -0.33,
     "internal_games": 3,
     "sd_sim": 4.46,
-    "sd_model": 3.321,
+    "sd_model": 3.327,
     "picks_remaining": 0
    },
    "Alan": {
@@ -7475,7 +7475,7 @@
     "par_delta": -4.15,
     "internal_games": 2,
     "sd_sim": 5.08,
-    "sd_model": 3.292,
+    "sd_model": 3.284,
     "picks_remaining": 0
    }
   },
@@ -8971,7 +8971,7 @@
    }
   },
   "diagnostics": {
-   "checked_at_as_of": "2026-09-28",
+   "checked_at_as_of": "2026-09-29",
    "hard_failures": [],
    "checks": [
     {
@@ -9106,8 +9106,8 @@
      "id": "sd_models",
      "label": "Two roster standard deviations, and they disagree",
      "ok": true,
-     "detail": "The upstream simulation and the quadrature-plus-head-to-head calculation sit within 1.79 wins of each other (worst: Alan). They diverge most for rosters with internal games, and the simulation is the smaller of the two — it also draws correlated team strength, which quadrature cannot see. The page shows the simulated figure wherever it exists and says when it is falling back.",
-     "value": 1.788,
+     "detail": "The upstream simulation and the quadrature-plus-head-to-head calculation sit within 1.80 wins of each other (worst: Alan). They diverge most for rosters with internal games, and the simulation is the smaller of the two — it also draws correlated team strength, which quadrature cannot see. The page shows the simulated figure wherever it exists and says when it is falling back.",
+     "value": 1.796,
      "severity": "info"
     }
    ]
