@@ -1,6 +1,6 @@
 {
  "as_of": "2026-09-29",
- "source": "Data Dawgs reimplementation of FiveThirtyEight 538 Classic Elo at commit fbec1afa38ece5befe24fb21be8ddba8eb160fe6; state extended with nflverse/nfldata at 46e8b3ed1da14284a0bf4bfc6661470c9aa996ac.",
+ "source": "Data Dawgs reimplementation of FiveThirtyEight 538 Classic Elo at commit fbec1afa38ece5befe24fb21be8ddba8eb160fe6; state extended with nflverse/nfldata at a1d534d37986e2f3a80398384f7abd6cdb303e78.",
  "tier": "labs",
  "graded": false,
  "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority.",
@@ -14,7 +14,7 @@
   "methodology_url": "https://datadawgs216.com/data/538-classic-methodology.md"
  },
  "provenance": {
-  "generated_at": "2026-09-29T05:37:27.932218Z",
+  "generated_at": "2026-09-29T16:31:04.932239Z",
   "official_reference": {
    "repository": "fivethirtyeight/nfl-elo-game",
    "commit": "fbec1afa38ece5befe24fb21be8ddba8eb160fe6",
@@ -24,9 +24,9 @@
   },
   "modern_history": {
    "repository": "nflverse/nfldata",
-   "commit": "46e8b3ed1da14284a0bf4bfc6661470c9aa996ac",
+   "commit": "a1d534d37986e2f3a80398384f7abd6cdb303e78",
    "source_data_license": "not-verified-for-nfldata-repository",
-   "games_sha256": "baba37b0486ce5dbf19907930e76421f385292cbf2c3d63bcac1da2bff45ea4f",
+   "games_sha256": "dd31cf272c4b45f9bb669e51619f65b8899cec2b422778eb6ef75a27cefc3a06",
    "games_replayed": 1424,
    "first_game": "2021_01_DAL_TB",
    "last_game": "2025_22_SEA_NE",
@@ -50,8 +50,8 @@
    },
    "modern_history": {
     "repository": "nflverse/nfldata",
-    "commit": "46e8b3ed1da14284a0bf4bfc6661470c9aa996ac",
-    "games_sha256": "baba37b0486ce5dbf19907930e76421f385292cbf2c3d63bcac1da2bff45ea4f",
+    "commit": "a1d534d37986e2f3a80398384f7abd6cdb303e78",
+    "games_sha256": "dd31cf272c4b45f9bb669e51619f65b8899cec2b422778eb6ef75a27cefc3a06",
     "games_replayed": 1424
    },
    "schedule_snapshot_id": "sha256:436c6dec81bae51d48d22bf04e618d5de2731a7a7975e675847a9f13d51a6444",
@@ -196,7 +196,7 @@
   "note": "This proves the published mathematics were reproduced; it does not establish current predictive skill or betting profitability."
  },
  "integrity": {
-  "input_snapshot_id": "sha256:60cebb65fdc7a8e501f27b94dc7e43051ebe7a9ca86d64db7b16ac0079b2d360",
+  "input_snapshot_id": "sha256:34f413539107b76ca61f73fee0dc3310b442e52809664341a6225552cf368581",
   "snapshot_id": "sha256:38b28026fa8be31842dc441337fed7baf0460677a5272e991fc3ba854bd5617b",
   "forecast_rows": 224,
   "team_rows": 32
