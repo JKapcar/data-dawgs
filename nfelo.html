@@ -2296,7 +2296,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <h1>nfelo Power Ratings <a class="tierchip tierchip-collar" data-tier="dawg" href="index.html#tiers" title="Working Dawg — earned its collar. Criteria: /data/receipts-method.md"><span class="collar" role="img" aria-label="Working Dawg — earned its collar"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><ellipse cx="12" cy="9.5" rx="7.4" ry="5.4" fill="none" stroke="currentColor" stroke-width="2.4"></ellipse><circle cx="12" cy="17.6" r="3.1" fill="currentColor"></circle></svg></span></a></h1>
 </header>
 <p class="nf-sub">Elo-plus-market NFL model, mirrored from the public repository
-<code>greerreNFL/nfelo</code> @ <code>0d3f8418</code> &middot; model <code>v4.3.0</code> &middot; snapshot 2026-08-06.
+<code>greerreNFL/nfelo</code>. <span data-nfelo-provenance>Refresh details are available in the data file linked below.</span>
 No reusable software license was verified on 2026-08-07, so Data Dawgs consumes output and does not copy its code.
 Ratings and projections are the author's. <b>The backtest below is ours.</b></p>
 
@@ -2384,14 +2384,15 @@ Ratings and projections are the author's. <b>The backtest below is ours.</b></p>
     so the large-disagreement buckets are close to in-sample. The pattern &mdash; edge concentrated in
     the games where the model disagrees <em>most</em> &mdash; is what you'd expect from a real edge and
     also what you'd expect from an overfit one. The only test that separates them is forward
-    performance, which starts in September and which we will log here.
+    performance measured on separately logged forecasts and results.
   </div>
 </div>
 
 <div class="card">
   <h2>Power ratings &mdash; 2026 Week 4</h2>
+  <p class="muted" id="nfRatingsUpdated" style="margin-top:0">Ratings are mirrored on a daily refresh schedule.</p>
   <p class="muted" style="margin-top:0">Elo scale, 1500 = average. <b>Base</b> is the team rating
-  carried forward and regressed to a market-derived preseason prior; <b>QB</b> is the starter
+  before the starter adjustment; <b>QB</b> is the starter
   adjustment; <b>Pts</b> is the rating converted to points versus a neutral average opponent.</p>
   <div class="nf-scroll"><table class="nf-sortable" id="ratTable"></table></div>
 </div>
@@ -2404,9 +2405,8 @@ Ratings and projections are the author's. <b>The backtest below is ours.</b></p>
     <button data-v="p" class="on">By confidence</button><button data-v="m">By matchup</button>
   </div>
   <div class="nf-scroll"><table class="nf-w1" id="w1Table"></table></div>
-  <p class="muted" style="margin-top:12px">These are preseason numbers with no 2026 snaps behind them
-  and no closing lines to regress toward yet. Treat the confidence column as a ranking, not a
-  probability you'd bet at.</p>
+  <p class="muted" style="margin-top:12px">Projections reflect the latest mirrored model and market
+  inputs. Refreshes are scheduled daily; prices and injury news can change before the next refresh.</p>
 </div>
 
 <div class="card">
@@ -2417,8 +2417,11 @@ Ratings and projections are the author's. <b>The backtest below is ours.</b></p>
   nflverse final scores and scored them independently, published the disagreement count, and reported
   the benchmark comparison that goes against him alongside the one that goes for him.</p>
   <h3>Known limitations</h3>
-  <p class="muted">Snapshot, not a live feed &mdash; ratings are frozen at capture and will not move
-  with injuries or transactions until we re-pull. The 2009&ndash;2025 backtest overlaps the model's own
+  <p class="muted">Daily mirror &mdash; the timestamps above show when upstream published the data
+  and when we captured it. Changes appear after the next successful refresh.
+  The historical backtest is separate from the current ratings and projections;
+  <span data-nfelo-backtest>its capture date is recorded in the data file.</span>
+  The 2009&ndash;2025 backtest overlaps the model's own
   optimization window, so ATS figures are optimistic by an unknown amount. Ties are dropped from
   straight-up accuracy (17 games). Devigging is multiplicative, which understates favorite-longshot
   bias slightly in exactly the heavy-favorite tail survivor picks live in. And the model's edge, such as
@@ -2427,7 +2430,7 @@ Ratings and projections are the author's. <b>The backtest below is ours.</b></p>
 </div>
 
   <footer>
-    Data Dawgs &middot; Model and data mirrored from <a href="https://github.com/greerreNFL/nfelo" target="_blank" rel="noopener">greerreNFL/nfelo</a> (MIT), commit <code>0d3f8418</code>, captured 2026-08-06 &middot;
+    Data Dawgs &middot; Model and data mirrored from <a href="https://github.com/greerreNFL/nfelo" target="_blank" rel="noopener">greerreNFL/nfelo</a> (MIT). <span data-nfelo-provenance>Refresh details are available in the data file linked below.</span> &middot;
     Game results from <a href="https://github.com/nflverse/nfldata" target="_blank" rel="noopener">nflverse/nfldata</a> &middot;
     Backtest computed here, not reported by the model author &middot;
     Original model and analysis by <a href="https://www.nfeloapp.com" target="_blank" rel="noopener">nfeloapp.com</a><br><a class="udmach" href="/data/nfelo.json">🤖 For machines</a> · This site is mirrored for machines. 🙃 shows you the other side.
@@ -2443,6 +2446,24 @@ Ratings and projections are the author's. <b>The backtest below is ours.</b></p>
    ============================================================================ */
 (function(){
 const D = window.NF;
+/* Dates and source version come from the same snapshot as the ratings. */
+const nfDate = value => {
+  const date = new Date(value);
+  return value && Number.isFinite(date.getTime())
+    ? new Intl.DateTimeFormat("en-US", {timeZone:"America/New_York", year:"numeric",
+        month:"short", day:"numeric", hour:"numeric", minute:"2-digit", timeZoneName:"short"}).format(date)
+    : "not recorded";
+};
+window.NF_PROVENANCE = () => {
+  const m = window.NF.meta || {}, r = m.ratings_as_of || {};
+  return `Model v${m.model_version || "unknown"} · ratings ${r.season || "unknown"} Week ${r.week || "unknown"} · source commit ${m.sha || "unknown"} · upstream updated ${nfDate(m.upstream_committed_at)} · mirrored ${nfDate(m.captured_at)}.`;
+};
+document.querySelectorAll("[data-nfelo-provenance]").forEach(el => { el.textContent = window.NF_PROVENANCE(); });
+document.querySelectorAll("[data-nfelo-backtest]").forEach(el => {
+  el.textContent = `backtest captured ${D.meta?.backtest_captured || "date not recorded"}.`;
+});
+document.getElementById("nfRatingsUpdated").textContent =
+  `Mirrored ${nfDate(D.meta?.captured_at)} · upstream updated ${nfDate(D.meta?.upstream_committed_at)}. Refreshes are scheduled daily.`;
 /* ⚠️ nfelo ships the Raiders as OAK in elo_snapshot and LV in prediction_tracker —
    its own two outputs disagree. Normalised for display only; no number is altered. */
 const TEAM_FIX={OAK:"LV",SD:"LAC",STL:"LAR",WSH:"WAS"};
@@ -2675,15 +2696,15 @@ window.DD_BOTCTX = {
     ['Does nfelo actually beat the closing line?','Does it beat the close?'],
     ['Can I use these ratings for a survivor pick?','Good for survivor?'],
     ['Why should I discount the against-the-spread numbers?','Why discount ATS?']]},
-  sys: `RIGHT NOW you are on the nfelo Power Ratings page. nfelo is somebody else's model — greerreNFL/nfelo, v4.3.0, commit 0d3f8418, captured 2026-08-06 — mirrored here unmodified. The ratings and projections are the author's; the BACKTEST on this page is ours.
+  sys: `RIGHT NOW you are on the nfelo Power Ratings page. nfelo is somebody else's model — greerreNFL/nfelo — mirrored here unmodified. ${window.NF_PROVENANCE()} Historical backtest captured ${window.NF.meta?.backtest_captured || 'date not recorded'}. The ratings and projections are the author's; the BACKTEST on this page is ours.
 - ⚠️ THE HEADLINE CLAIM DOES NOT REPLICATE. The model's own site reports beating the closing line by about +0.14 points of straight-up accuracy; recomputed here against the devigged closing MONEYLINE it is −0.02, inside a standard error of ±0.20. Against the closing SPREAD it is +0.20. Both readings are noise. The honest statement is that nfelo and the closing line pick winners at the same rate and the winner depends on a convention nobody published. Never quote one of those two numbers without the other.
 - WHERE IT DOES EDGE AHEAD IS BRIER SCORE — probability quality, not pick quality. Real, consistent in direction, and very small. If someone wants a number, nfelo's is worth having; if they want a pick, the closing line is just as good and free.
-- ⚠️ DISCOUNT THE ATS SECTION HARD. nfelo's parameters were optimised on the same 2009-2025 window, so the big-disagreement buckets are close to in-sample. Edge concentrated in the games where a model disagrees most is what a real edge looks like AND what an overfit one looks like; only forward performance separates them, and that has not started.
-- ⚠️ IT IS A DAILY MIRROR, NOT A LIVE FEED. tools/nfelo-refresh.mjs pulls upstream output once daily (meta.captured_at says when); lines can move after that, and ratings move only after games are played. Week 1 projections have no 2026 snaps behind them and no closing lines to regress toward — treat the confidence column as a ranking, not a probability anyone should bet at.
+- ⚠️ DISCOUNT THE ATS SECTION HARD. nfelo's parameters were optimised on the same 2009-2025 window, so the big-disagreement buckets are close to in-sample. Edge concentrated in the games where a model disagrees most is what a real edge looks like AND what an overfit one looks like; only forward performance measured on separately logged forecasts and results separates them. The historical backtest does not establish forward performance.
+- ⚠️ IT IS A DAILY MIRROR, NOT A LIVE FEED. Refreshes are scheduled daily. meta.upstream_committed_at records the source update; meta.captured_at records our capture. Ratings and projections reflect that snapshot; later upstream changes appear after the next successful refresh. Do not describe current projections as preseason or confuse the historical backtest capture date with rating freshness.
 - FOR SURVIVOR, THE CALIBRATION CHART IS THE WHOLE ANSWER: in the 75-90% band nfelo and the closing market are both calibrated to within about a point, so a pick sourced from either is the same pick at the same price. The edge in a survivor pool is pick popularity and future value, which neither number knows anything about.
 - Ties are dropped from straight-up accuracy. Devigging is multiplicative, which understates favourite-longshot bias slightly in exactly the heavy-favourite tail survivor picks live in. It cleared the instrument gate, not the forecast gate: no receipts against the close.`,
-  ctx: () => `THE NFELO PAGE. Model and data mirrored from greerreNFL/nfelo (MIT) at commit 0d3f8418, model v4.3.0, captured 2026-08-06. Game results from nflverse/nfldata. No reusable software licence was verified on 2026-08-07, so this site consumes output and does not copy code. The backtest was computed here and is not reported by the model author.
-WHAT THE SECTIONS ARE: the receipts section joins nfelo's projections to final scores and scores them against the devigged closing moneyline; calibration plots favourite win probability against how often that favourite won, with the survivor band shaded; season-by-season is straight-up accuracy minus the market close; the ATS section takes nfelo's side whenever it differs from the close, graded on the closing number, breakeven 52.38% at −110; power ratings are Elo scale with 1500 average, Base is carried forward and regressed to a market-derived preseason prior, QB is the starter adjustment, Pts is the rating in points versus a neutral average opponent; week 1 projections are nfelo's own numbers with spreads from the home team's perspective.
+  ctx: () => `THE NFELO PAGE. Model and data mirrored from greerreNFL/nfelo (MIT). ${window.NF_PROVENANCE()} Historical backtest captured ${window.NF.meta?.backtest_captured || 'date not recorded'}. Game results from nflverse/nfldata. No reusable software licence was verified on 2026-08-07, so this site consumes output and does not copy code. The backtest was computed here and is not reported by the model author.
+WHAT THE SECTIONS ARE: the receipts section joins nfelo's projections to final scores and scores them against the devigged closing moneyline; calibration plots favourite win probability against how often that favourite won, with the survivor band shaded; season-by-season is straight-up accuracy minus the market close; the ATS section takes nfelo's side whenever it differs from the close, graded on the closing number, breakeven 52.38% at −110; power ratings are Elo scale with 1500 average, Base is the team rating before the starter adjustment, QB is the starter adjustment, Pts is the rating in points versus a neutral average opponent; Week ${window.NF.upcoming_week || window.NF.meta?.ratings_as_of?.week || 'unknown'} projections use the latest mirrored model and market inputs, with spreads from the home team's perspective.
 
 ` + (window.DDBotScan ? window.DDBotScan(5200) : "The page reader could not run, so nothing on the page can be read right now.")
 };
