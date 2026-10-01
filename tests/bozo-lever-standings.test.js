@@ -15,7 +15,7 @@ const bozo = fs.readFileSync(path.join(__dirname, '..', 'bozo.html'), 'utf8');
 
 function lift(name) {
   const m = bozo.match(new RegExp(
-    `(function ${name}\\([\\s\\S]*?\\n\\}|const ${name} += [\\s\\S]*?\\n\\};|const ${name} += [^\\n]*;\\n)`));
+    `(function ${name}\\([\\s\\S]*?\\n\\}|const ${name} += [^\\n]*;\\n|const ${name} += [\\s\\S]*?\\n\\};)`));
   assert.ok(m, `${name} is defined in bozo.html`);
   return m[1];
 }
