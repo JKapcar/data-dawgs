@@ -7373,7 +7373,7 @@ function paintDiag(live, players, status){
         <td data-l="Bozo odds"><span class="mcell"><span class="v">${pct(R.bozo[i])}</span>${meter(R.bozo[i],true)}</span></td>
         <td class="px" data-l="Killed it alone">${pct(R.solo[i])}</td>
         ${levers.includes(0) ? lvCell(0, i, LVL[0], (x.price>0?'+':'')+x.price) : outCell(LVL[0])}
-        ${levers.includes(1) ? lvCell(1, i, LVL[1], v.beat!=null ? v.beat.toFixed(2)+' SD' : 'awaiting kickoff', v.beat==null) : outCell(LVL[1])}
+        ${levers.includes(1) ? lvCell(1, i, LVL[1], v.beat!=null ? v.beat.toFixed(2)+' SD' : 'awaiting result', v.beat==null) : outCell(LVL[1])}
         ${levers.includes(2) ? lvCell(2, i, LVL[2], v.ts ? when(v.ts) : '—', !v.ts) : outCell(LVL[2])}
         ${levers.includes(3) ? lvCell(3, i, LVL[3], clvText(x), v.clv==null) : outCell(LVL[3])}
         <td class="tm" data-l="Usually named by">${by ? esc(by.name)+' · '+pct(by.share) : '—'}</td></tr>`;
@@ -7448,7 +7448,7 @@ function leverStandings(live){
   const d = live.map((x,i)=>{
     const r = legRow(x);
     const pE = devigP(x.price, x.entryPriceOpp ?? x.priceOpp), pC = devigP(r.close, r.closeOpp);
-    const beat = beatOf(x, r);
+    const beat = r.won === false ? beatOf(x, r) : null;
     // ⚠️ pE is the ENTRY de-vig, and it exists here only to make CLV — the Shortest odds
     // column ranks and prints the raw price. Do not route it back to that column.
     return { i, raw: imp(x.price), ts: x.ts||0, beat,
