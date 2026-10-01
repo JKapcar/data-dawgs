@@ -25,7 +25,7 @@ function standings(picks, results) {
   const sandbox = { S: { results }, kEnc: n => n, sdOf: () => 10, dirOf: () => 'over',
     beatDeficit: (m, d, line, margin) => (margin - line) / -10 };
   const c = vm.createContext(sandbox);
-  vm.runInContext(['imp', 'devigP', 'rankRows', 'leverStandings'].map(lift).join('\n')
+  vm.runInContext(['imp', 'devigP', 'invNorm', 'binaryBeatOf', 'legRow', 'beatOf', 'clvDeltaOf', 'rankRows', 'leverStandings'].map(lift).join('\n')
     + '\nthis.RESULT = leverStandings(PICKS);', Object.assign(c, { PICKS: picks }));
   return sandbox.RESULT;
 }
@@ -159,6 +159,20 @@ test('Worst beat ranks once a score lands, and does not rank what it cannot scor
   assert.equal(L.rank[1][1], undefined, 'the unscored one is absent, not last');
   assert.ok(L.holds[1][0]);
   assert.equal(L.d[0].beat, 2);
+});
+
+test('Worst beat ignores an ungraded prop until it actually loses', () => {
+  const picks = [{
+    p: 'WBeamen', price: -141, entryPriceOpp: 118, ts: 1,
+    mkt: 'prop', line: 47.5, label: 'Sunday prop'
+  }];
+  const L = standings(picks, {});
+
+  assert.equal(L.d[0].beat, null, 'no placeholder beat score before a result');
+  assert.equal(Object.keys(L.rank[1]).length, 0, 'lever II has no ranking before the prop is graded');
+  assert.equal(Object.keys(L.holds[1]).length, 0, 'lever II marks no holder before the prop is graded');
+  assert.equal(L.scored, 0);
+  assert.match(bozo, /'awaiting result'/, 'the empty cell describes grading state, not kickoff state');
 });
 
 test('Worst CLV drops a leg it cannot de-vig rather than scoring it zero', () => {
