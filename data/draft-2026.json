@@ -7350,7 +7350,7 @@
     "par_delta": 0.98,
     "internal_games": 2,
     "sd_sim": 4.71,
-    "sd_model": 3.402,
+    "sd_model": 3.398,
     "picks_remaining": 0
    },
    "Rob": {
@@ -7386,7 +7386,7 @@
     "par_delta": -0.63,
     "internal_games": 4,
     "sd_sim": 4.62,
-    "sd_model": 3.214,
+    "sd_model": 3.213,
     "picks_remaining": 0
    },
    "Chris": {
@@ -7404,7 +7404,7 @@
     "par_delta": -1.86,
     "internal_games": 2,
     "sd_sim": 4.58,
-    "sd_model": 3.405,
+    "sd_model": 3.407,
     "picks_remaining": 0
    },
    "Tyler": {
@@ -7422,7 +7422,7 @@
     "par_delta": 1.59,
     "internal_games": 1,
     "sd_sim": 4.7,
-    "sd_model": 3.51,
+    "sd_model": 3.504,
     "picks_remaining": 0
    },
    "Kap": {
@@ -7440,7 +7440,7 @@
     "par_delta": 2.78,
     "internal_games": 3,
     "sd_sim": 4.76,
-    "sd_model": 3.319,
+    "sd_model": 3.311,
     "picks_remaining": 0
    },
    "Jared": {
@@ -7458,7 +7458,7 @@
     "par_delta": -0.33,
     "internal_games": 3,
     "sd_sim": 4.46,
-    "sd_model": 3.358,
+    "sd_model": 3.353,
     "picks_remaining": 0
    },
    "Alan": {
@@ -7476,7 +7476,7 @@
     "par_delta": -4.15,
     "internal_games": 2,
     "sd_sim": 5.08,
-    "sd_model": 3.342,
+    "sd_model": 3.344,
     "picks_remaining": 0
    }
   },
@@ -8978,7 +8978,7 @@
    }
   },
   "diagnostics": {
-   "checked_at_as_of": "2026-10-02",
+   "checked_at_as_of": "2026-10-03",
    "hard_failures": [],
    "checks": [
     {
@@ -9114,7 +9114,7 @@
      "label": "Two roster standard deviations, and they disagree",
      "ok": true,
      "detail": "The upstream simulation and the quadrature-plus-head-to-head calculation sit within 1.74 wins of each other (worst: Alan). They diverge most for rosters with internal games, and the simulation is the smaller of the two — it also draws correlated team strength, which quadrature cannot see. The page shows the simulated figure wherever it exists and says when it is falling back.",
-     "value": 1.738,
+     "value": 1.736,
      "severity": "info"
     }
    ]
