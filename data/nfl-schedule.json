@@ -13,10 +13,10 @@
   "source_commit": "23b6606ba5babe19edad43e76119e8dfcfcf9a59",
   "source_committed_at": "2026-10-04T16:45:20Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-10-04T23:39:16.450412Z"
+  "captured_at": "2026-10-04T23:49:48.758819Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:3775ace8254b515ba8e206731b4168048d6f93bbfc6ebe54d2ab82a07d99adc6",
+  "snapshot_id": "sha256:22525d222a6a8460b1d0a614f5cd69d5f67575d8d17fcc86b303b4bc6d9f6473",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -1057,9 +1057,9 @@
     "divisional": true,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 30,
+    "home_score": 27
    },
    {
     "game_id": "2026_04_LAC_SEA",
@@ -1074,9 +1074,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 23,
+    "home_score": 30
    },
    {
     "game_id": "2026_04_DET_CAR",
