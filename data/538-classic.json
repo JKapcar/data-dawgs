@@ -14,7 +14,7 @@
   "methodology_url": "https://datadawgs216.com/data/538-classic-methodology.md"
  },
  "provenance": {
-  "generated_at": "2026-10-04T20:24:24.255297Z",
+  "generated_at": "2026-10-04T23:06:45.450023Z",
   "official_reference": {
    "repository": "fivethirtyeight/nfl-elo-game",
    "commit": "fbec1afa38ece5befe24fb21be8ddba8eb160fe6",
@@ -32,7 +32,7 @@
    "last_game": "2025_22_SEA_NE",
    "last_game_date": "2026-02-08"
   },
-  "schedule_snapshot_id": "sha256:de88db8c8f17ca6dce70c4acf2c0ac29281c9fdb63bec6a9c275752eb5d3cbb7",
+  "schedule_snapshot_id": "sha256:bf8c91d637062f832029eae6b71a8703c4dd7082f6da730ec25c86f81980dd20",
   "input_material": {
    "model": {
     "id": "538-classic",
@@ -54,7 +54,7 @@
     "games_sha256": "c53ec77581c5667f7e73490255a583dede921883474c170edd9e8474353e1c4a",
     "games_replayed": 1424
    },
-   "schedule_snapshot_id": "sha256:de88db8c8f17ca6dce70c4acf2c0ac29281c9fdb63bec6a9c275752eb5d3cbb7",
+   "schedule_snapshot_id": "sha256:bf8c91d637062f832029eae6b71a8703c4dd7082f6da730ec25c86f81980dd20",
    "target_season_ratings": [
     {
      "team": "ARI",
@@ -196,9 +196,9 @@
   "note": "This proves the published mathematics were reproduced; it does not establish current predictive skill or betting profitability."
  },
  "integrity": {
-  "input_snapshot_id": "sha256:2a4e5eb21dee5b9360e2b7ce76f83cae8d81b32caa572994f6c927dd1bab9c00",
-  "snapshot_id": "sha256:e39c3c6263df3672e63a35098eb3af158aad27f4eb3c6ae617d3f2e8f0687f26",
-  "forecast_rows": 213,
+  "input_snapshot_id": "sha256:047707c74ecb5879daf6aeb302006bd883f5759ea26b2af8434f2980597ec324",
+  "snapshot_id": "sha256:972fbfb35191b79fbaa8fd17abad1c9630b7476d204066652eef9a778886175a",
+  "forecast_rows": 210,
   "team_rows": 32
  },
  "data": {
@@ -334,45 +334,6 @@
    }
   ],
   "forecasts": [
-   {
-    "game_id": "2026_04_DEN_SF",
-    "season": 2026,
-    "week": 4,
-    "kickoff_at": "2026-10-04T20:25:00Z",
-    "home_team": "SF",
-    "away_team": "DEN",
-    "neutral_site": false,
-    "home_elo": 1563.09603,
-    "away_elo": 1607.908322,
-    "home_field_elo": 65,
-    "home_win_probability": 0.52902
-   },
-   {
-    "game_id": "2026_04_KC_LV",
-    "season": 2026,
-    "week": 4,
-    "kickoff_at": "2026-10-04T20:25:00Z",
-    "home_team": "LV",
-    "away_team": "KC",
-    "neutral_site": false,
-    "home_elo": 1351.134785,
-    "away_elo": 1491.71403,
-    "home_field_elo": 65,
-    "home_win_probability": 0.392917
-   },
-   {
-    "game_id": "2026_04_LAC_SEA",
-    "season": 2026,
-    "week": 4,
-    "kickoff_at": "2026-10-04T20:25:00Z",
-    "home_team": "SEA",
-    "away_team": "LAC",
-    "neutral_site": false,
-    "home_elo": 1676.307045,
-    "away_elo": 1530.500956,
-    "home_field_elo": 65,
-    "home_win_probability": 0.770917
-   },
    {
     "game_id": "2026_04_DET_CAR",
     "season": 2026,
