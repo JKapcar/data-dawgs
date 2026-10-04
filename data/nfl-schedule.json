@@ -13,10 +13,10 @@
   "source_commit": "23b6606ba5babe19edad43e76119e8dfcfcf9a59",
   "source_committed_at": "2026-10-04T16:45:20Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-10-04T20:01:26.402756Z"
+  "captured_at": "2026-10-04T20:14:52.654619Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:df4f2dfafe81835a75f00b9ffdae272f385783ddbee1460362fd95a9b21c3ef7",
+  "snapshot_id": "sha256:f853dbe1a246c8d56ba7fd59daac93bfa6616488c35afc8d88f9b56d5ae8bd35",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -887,9 +887,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 24,
+    "home_score": 36
    },
    {
     "game_id": "2026_04_DAL_HOU",
@@ -904,9 +904,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 34,
+    "home_score": 30
    },
    {
     "game_id": "2026_04_GB_TB",
@@ -972,9 +972,9 @@
     "divisional": true,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 29,
+    "home_score": 26
    },
    {
     "game_id": "2026_04_NYJ_CHI",
@@ -1006,9 +1006,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 18,
+    "home_score": 24
    },
    {
     "game_id": "2026_04_MIA_MIN",
@@ -4651,6 +4651,6 @@
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-04T20:01:26.402756Z",
+ "built": "2026-10-04T20:14:52.654619Z",
  "canonical_url": "https://datadawgs216.com/data/nfl-schedule.json"
 }

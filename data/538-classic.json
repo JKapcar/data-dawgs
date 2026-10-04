@@ -14,7 +14,7 @@
   "methodology_url": "https://datadawgs216.com/data/538-classic-methodology.md"
  },
  "provenance": {
-  "generated_at": "2026-10-04T20:00:50.407505Z",
+  "generated_at": "2026-10-04T20:15:00.037440Z",
   "official_reference": {
    "repository": "fivethirtyeight/nfl-elo-game",
    "commit": "fbec1afa38ece5befe24fb21be8ddba8eb160fe6",
@@ -32,7 +32,7 @@
    "last_game": "2025_22_SEA_NE",
    "last_game_date": "2026-02-08"
   },
-  "schedule_snapshot_id": "sha256:df4f2dfafe81835a75f00b9ffdae272f385783ddbee1460362fd95a9b21c3ef7",
+  "schedule_snapshot_id": "sha256:f853dbe1a246c8d56ba7fd59daac93bfa6616488c35afc8d88f9b56d5ae8bd35",
   "input_material": {
    "model": {
     "id": "538-classic",
@@ -54,7 +54,7 @@
     "games_sha256": "c53ec77581c5667f7e73490255a583dede921883474c170edd9e8474353e1c4a",
     "games_replayed": 1424
    },
-   "schedule_snapshot_id": "sha256:df4f2dfafe81835a75f00b9ffdae272f385783ddbee1460362fd95a9b21c3ef7",
+   "schedule_snapshot_id": "sha256:f853dbe1a246c8d56ba7fd59daac93bfa6616488c35afc8d88f9b56d5ae8bd35",
    "target_season_ratings": [
     {
      "team": "ARI",
@@ -196,9 +196,9 @@
   "note": "This proves the published mathematics were reproduced; it does not establish current predictive skill or betting profitability."
  },
  "integrity": {
-  "input_snapshot_id": "sha256:598c08fe168f8bc011fe3a4f0e7971fce255b4bf8d932f501e9c6f0f512ac9bb",
-  "snapshot_id": "sha256:b720d3311d5ab2e7a17771a965db0b77ec50a9148eead54ca3e89fc8235b183e",
-  "forecast_rows": 214,
+  "input_snapshot_id": "sha256:299b75529fdd94ea7166835a22b2997858fb1228e83511163ce6c4cccffe91d2",
+  "snapshot_id": "sha256:e39c3c6263df3672e63a35098eb3af158aad27f4eb3c6ae617d3f2e8f0687f26",
+  "forecast_rows": 213,
   "team_rows": 32
  },
  "data": {
@@ -334,19 +334,6 @@
    }
   ],
   "forecasts": [
-   {
-    "game_id": "2026_04_MIA_MIN",
-    "season": 2026,
-    "week": 4,
-    "kickoff_at": "2026-10-04T20:05:00Z",
-    "home_team": "MIN",
-    "away_team": "MIA",
-    "neutral_site": false,
-    "home_elo": 1552.217939,
-    "away_elo": 1461.544821,
-    "home_field_elo": 65,
-    "home_win_probability": 0.710153
-   },
    {
     "game_id": "2026_04_DEN_SF",
     "season": 2026,
