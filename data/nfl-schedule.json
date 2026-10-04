@@ -13,10 +13,10 @@
   "source_commit": "23b6606ba5babe19edad43e76119e8dfcfcf9a59",
   "source_committed_at": "2026-10-04T16:45:20Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-10-04T16:48:01.264798Z"
+  "captured_at": "2026-10-04T20:01:26.402756Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:8e276cae61ec86a139991522b233e1d67ef46b6970a549cc69e6ff7a074c136c",
+  "snapshot_id": "sha256:df4f2dfafe81835a75f00b9ffdae272f385783ddbee1460362fd95a9b21c3ef7",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -921,9 +921,9 @@
     "divisional": false,
     "away_rest_days": 10,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 17,
+    "home_score": 14
    },
    {
     "game_id": "2026_04_JAX_CIN",
@@ -989,9 +989,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 6,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 12,
+    "home_score": 23
    },
    {
     "game_id": "2026_04_TEN_BAL",
@@ -4651,6 +4651,6 @@
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-04",
+ "built": "2026-10-04T20:01:26.402756Z",
  "canonical_url": "https://datadawgs216.com/data/nfl-schedule.json"
 }
