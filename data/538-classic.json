@@ -1,6 +1,6 @@
 {
- "as_of": "2026-10-02",
- "source": "Data Dawgs reimplementation of FiveThirtyEight 538 Classic Elo at commit fbec1afa38ece5befe24fb21be8ddba8eb160fe6; state extended with nflverse/nfldata at fcaddeb43598604dadc8af0a00f17d0c5007a41b.",
+ "as_of": "2026-10-04",
+ "source": "Data Dawgs reimplementation of FiveThirtyEight 538 Classic Elo at commit fbec1afa38ece5befe24fb21be8ddba8eb160fe6; state extended with nflverse/nfldata at 23b6606ba5babe19edad43e76119e8dfcfcf9a59.",
  "tier": "labs",
  "graded": false,
  "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority.",
@@ -14,7 +14,7 @@
   "methodology_url": "https://datadawgs216.com/data/538-classic-methodology.md"
  },
  "provenance": {
-  "generated_at": "2026-10-02T05:27:25.007131Z",
+  "generated_at": "2026-10-04T16:48:26.588811Z",
   "official_reference": {
    "repository": "fivethirtyeight/nfl-elo-game",
    "commit": "fbec1afa38ece5befe24fb21be8ddba8eb160fe6",
@@ -24,15 +24,15 @@
   },
   "modern_history": {
    "repository": "nflverse/nfldata",
-   "commit": "fcaddeb43598604dadc8af0a00f17d0c5007a41b",
+   "commit": "23b6606ba5babe19edad43e76119e8dfcfcf9a59",
    "source_data_license": "not-verified-for-nfldata-repository",
-   "games_sha256": "842e192d44cf1677d529b15957377ab647cc8d33a79ea7099062d473cb645fc8",
+   "games_sha256": "c53ec77581c5667f7e73490255a583dede921883474c170edd9e8474353e1c4a",
    "games_replayed": 1424,
    "first_game": "2021_01_DAL_TB",
    "last_game": "2025_22_SEA_NE",
    "last_game_date": "2026-02-08"
   },
-  "schedule_snapshot_id": "sha256:fb198dd45f66191d91fdc18a34237daed92cf70f59ff53390760181d597c3cda",
+  "schedule_snapshot_id": "sha256:8e276cae61ec86a139991522b233e1d67ef46b6970a549cc69e6ff7a074c136c",
   "input_material": {
    "model": {
     "id": "538-classic",
@@ -50,11 +50,11 @@
    },
    "modern_history": {
     "repository": "nflverse/nfldata",
-    "commit": "fcaddeb43598604dadc8af0a00f17d0c5007a41b",
-    "games_sha256": "842e192d44cf1677d529b15957377ab647cc8d33a79ea7099062d473cb645fc8",
+    "commit": "23b6606ba5babe19edad43e76119e8dfcfcf9a59",
+    "games_sha256": "c53ec77581c5667f7e73490255a583dede921883474c170edd9e8474353e1c4a",
     "games_replayed": 1424
    },
-   "schedule_snapshot_id": "sha256:fb198dd45f66191d91fdc18a34237daed92cf70f59ff53390760181d597c3cda",
+   "schedule_snapshot_id": "sha256:8e276cae61ec86a139991522b233e1d67ef46b6970a549cc69e6ff7a074c136c",
    "target_season_ratings": [
     {
      "team": "ARI",
@@ -196,9 +196,9 @@
   "note": "This proves the published mathematics were reproduced; it does not establish current predictive skill or betting profitability."
  },
  "integrity": {
-  "input_snapshot_id": "sha256:b25e79a65d2c2c309383c869ffc07d3cde4dcfc8d5fdece270c71a6ff073266d",
-  "snapshot_id": "sha256:5ce16a1e71c6a5d64bd1e3e66eddf1d081c7e5fc2c19af7fd6654fdaa96ed772",
-  "forecast_rows": 223,
+  "input_snapshot_id": "sha256:7021df987959d74a5394eed750ec63d48e7e08648243534ba69527e82cc8ca61",
+  "snapshot_id": "sha256:fad2e9bceaf922a88fd7601d98df32dcd87b284b58206a4a9100dc056c499816",
+  "forecast_rows": 222,
   "team_rows": 32
  },
  "data": {
@@ -334,19 +334,6 @@
    }
   ],
   "forecasts": [
-   {
-    "game_id": "2026_04_IND_WAS",
-    "season": 2026,
-    "week": 4,
-    "kickoff_at": "2026-10-04T13:30:00Z",
-    "home_team": "WAS",
-    "away_team": "IND",
-    "neutral_site": true,
-    "home_elo": 1464.860364,
-    "away_elo": 1470.729752,
-    "home_field_elo": 0,
-    "home_win_probability": 0.491554
-   },
    {
     "game_id": "2026_04_ARI_NYG",
     "season": 2026,
@@ -3236,6 +3223,6 @@
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-02",
+ "built": "2026-10-04",
  "canonical_url": "https://datadawgs216.com/data/538-classic.json"
 }
