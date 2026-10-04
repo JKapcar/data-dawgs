@@ -2,7 +2,7 @@
  "source_page": "/stats.html",
  "tier": "dawg",
  "graded": false,
- "as_of": "2026-10-03",
+ "as_of": "2026-10-04",
  "source": "nflverse play-by-play; current-season completed games refreshed daily, with corrections; historical seasons retain their dated snapshots. See data.coverage for exact games, source hash and timestamps.",
  "note": "Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name per play, so the whole value of a completed pass is credited to the quarterback and a receiver appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, not projections: do not read 2025 as 2026. 2026 is Weeks 1-4 ONLY (49 games): incomplete-season coverage, with the season minimums prorated to 28 dropbacks / 14 rushes. The pooled table spans every season in the snapshot, including the partial one.",
  "field_notes": {
@@ -182,12 +182,12 @@
      "WAS": 3
     },
     "through": "2026-10-01",
-    "captured": "2026-10-03",
-    "refreshed_at": "2026-10-03T15:14:26.449466Z",
+    "captured": "2026-10-04",
+    "refreshed_at": "2026-10-04T15:59:05.409956Z",
     "source_url": "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2026.csv.gz",
-    "source_updated": "Sat, 03 Oct 2026 14:20:45 GMT",
-    "source_sha256": "8ae5b278bbc504ece0ebfbb9f3efe49cc4022d0a2c1d35114005e772365c34fc",
-    "schedule_sha256": "fc382285b0ae01d64455bf0a90b5190694a89cae1f92a5cc8a23a78dd485bfba",
+    "source_updated": "Sun, 04 Oct 2026 14:47:33 GMT",
+    "source_sha256": "a32a95c6b79b047ea8736ba4d32de9629324308471fe5b85cffee251b47a0de9",
+    "schedule_sha256": "8f1bdc9d07fbc08467dc5c7ad71e27e9c69431c588f54bb76d36fa4cc6ffa411",
     "pending_games": [],
     "refresh_frequency": "daily at 11:43 UTC",
     "note": "Completed games only, including incomplete weeks. Daily published nflverse EPA; not live. Historical seasons retained; current-season corrections incorporated."
@@ -8838,6 +8838,6 @@
   ]
  },
  "tier_meaning": "Working Dawg — earned its collar. Evidence survived validation: receipts against a benchmark chosen in advance for forecasters, named sources and reproducible maths for measurement tools.",
- "built": "2026-10-03",
+ "built": "2026-10-04",
  "canonical_url": "https://datadawgs216.com/data/epa-players.json"
 }
