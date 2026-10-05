@@ -24,7 +24,7 @@
   "board[].delta": "Chosen team's expected wins minus the best still available. Descriptive, not a grade."
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-04",
+ "built": "2026-10-05",
  "canonical_url": "https://datadawgs216.com/data/draft-2026.json",
  "data": {
   "season": 2026,
@@ -864,22 +864,22 @@
     "division": "NFC South",
     "line": 7.0,
     "ew": 7.09,
-    "sd": 1.819,
+    "sd": 1.817,
     "dist": {
-     "1": 0.00016,
-     "2": 0.00165,
-     "3": 0.01144,
-     "4": 0.04133,
-     "5": 0.09793,
-     "6": 0.16912,
-     "7": 0.20952,
-     "8": 0.20137,
-     "9": 0.14791,
-     "10": 0.07835,
-     "11": 0.0303,
-     "12": 0.00903,
-     "13": 0.00169,
-     "14": 0.00018,
+     "1": 0.00018,
+     "2": 0.00164,
+     "3": 0.01186,
+     "4": 0.04223,
+     "5": 0.09949,
+     "6": 0.17112,
+     "7": 0.21015,
+     "8": 0.20064,
+     "9": 0.14616,
+     "10": 0.07645,
+     "11": 0.02962,
+     "12": 0.00862,
+     "13": 0.00165,
+     "14": 0.00017,
      "15": 2e-05
     },
     "p10": 5.0,
@@ -924,7 +924,7 @@
       "wpf": 0.3871,
       "tier": "model",
       "settled": false,
-      "live": 0.3873
+      "live": 0.3627
      },
      {
       "week": 6,
@@ -1058,8 +1058,8 @@
      }
     ],
     "banked": 1.0,
-    "remaining": 6.369,
-    "projected": 7.369
+    "remaining": 6.344,
+    "projected": 7.344
    },
    "CHI": {
     "name": "Bears",
@@ -2068,22 +2068,22 @@
     "division": "NFC North",
     "line": 10.5,
     "ew": 10.68,
-    "sd": 1.749,
+    "sd": 1.748,
     "dist": {
      "3": 2e-05,
      "4": 8e-05,
-     "5": 0.00077,
-     "6": 0.00415,
-     "7": 0.01853,
-     "8": 0.05205,
-     "9": 0.11138,
-     "10": 0.1818,
-     "11": 0.22356,
-     "12": 0.20317,
-     "13": 0.12915,
-     "14": 0.0583,
-     "15": 0.01527,
-     "16": 0.00177
+     "5": 0.00075,
+     "6": 0.004,
+     "7": 0.01796,
+     "8": 0.05057,
+     "9": 0.1102,
+     "10": 0.17964,
+     "11": 0.22349,
+     "12": 0.20441,
+     "13": 0.13167,
+     "14": 0.05964,
+     "15": 0.01575,
+     "16": 0.00182
     },
     "p10": 9.0,
     "p50": 11.0,
@@ -2127,7 +2127,7 @@
       "wpf": 0.6129,
       "tier": "model",
       "settled": false,
-      "live": 0.6127
+      "live": 0.6373
      },
      {
       "week": 5,
@@ -2261,8 +2261,8 @@
      }
     ],
     "banked": 2.0,
-    "remaining": 9.046,
-    "projected": 11.046
+    "remaining": 9.071,
+    "projected": 11.071
    },
    "GB": {
     "name": "Packers",
@@ -7335,7 +7335,7 @@
     "par_delta": 0.98,
     "internal_games": 2,
     "sd_sim": 4.71,
-    "sd_model": 3.321,
+    "sd_model": 3.322,
     "picks_remaining": 0
    },
    "Rob": {
@@ -7353,7 +7353,7 @@
     "par_delta": 1.63,
     "internal_games": 3,
     "sd_sim": 4.55,
-    "sd_model": 3.247,
+    "sd_model": 3.229,
     "picks_remaining": 0
    },
    "Kevin": {
@@ -7371,7 +7371,7 @@
     "par_delta": -0.63,
     "internal_games": 4,
     "sd_sim": 4.62,
-    "sd_model": 3.088,
+    "sd_model": 3.089,
     "picks_remaining": 0
    },
    "Chris": {
@@ -7389,7 +7389,7 @@
     "par_delta": -1.86,
     "internal_games": 2,
     "sd_sim": 4.58,
-    "sd_model": 3.331,
+    "sd_model": 3.294,
     "picks_remaining": 0
    },
    "Tyler": {
@@ -7407,7 +7407,7 @@
     "par_delta": 1.59,
     "internal_games": 1,
     "sd_sim": 4.7,
-    "sd_model": 3.444,
+    "sd_model": 3.439,
     "picks_remaining": 0
    },
    "Kap": {
@@ -7425,7 +7425,7 @@
     "par_delta": 2.78,
     "internal_games": 3,
     "sd_sim": 4.76,
-    "sd_model": 3.223,
+    "sd_model": 3.198,
     "picks_remaining": 0
    },
    "Jared": {
@@ -7443,7 +7443,7 @@
     "par_delta": -0.33,
     "internal_games": 3,
     "sd_sim": 4.46,
-    "sd_model": 3.277,
+    "sd_model": 3.247,
     "picks_remaining": 0
    },
    "Alan": {
@@ -7461,7 +7461,7 @@
     "par_delta": -4.15,
     "internal_games": 2,
     "sd_sim": 5.08,
-    "sd_model": 3.216,
+    "sd_model": 3.215,
     "picks_remaining": 0
    }
   },
@@ -8309,26 +8309,26 @@
      }
     },
     "CAR": {
-     "mean": 7.366,
-     "sd": 1.819,
+     "mean": 7.342,
+     "sd": 1.817,
      "p10": 5.0,
      "p50": 7.0,
      "p90": 10.0,
      "dist": {
-      "1": 0.00016,
-      "2": 0.00165,
-      "3": 0.01144,
-      "4": 0.04133,
-      "5": 0.09793,
-      "6": 0.16912,
-      "7": 0.20952,
-      "8": 0.20137,
-      "9": 0.14791,
-      "10": 0.07835,
-      "11": 0.0303,
-      "12": 0.00903,
-      "13": 0.00169,
-      "14": 0.00018,
+      "1": 0.00018,
+      "2": 0.00164,
+      "3": 0.01186,
+      "4": 0.04223,
+      "5": 0.09949,
+      "6": 0.17112,
+      "7": 0.21015,
+      "8": 0.20064,
+      "9": 0.14616,
+      "10": 0.07645,
+      "11": 0.02962,
+      "12": 0.00862,
+      "13": 0.00165,
+      "14": 0.00017,
       "15": 2e-05
      }
     },
@@ -8445,26 +8445,26 @@
      }
     },
     "DET": {
-     "mean": 11.045,
-     "sd": 1.749,
+     "mean": 11.07,
+     "sd": 1.748,
      "p10": 9.0,
      "p50": 11.0,
      "p90": 13.0,
      "dist": {
       "3": 2e-05,
       "4": 8e-05,
-      "5": 0.00077,
-      "6": 0.00415,
-      "7": 0.01853,
-      "8": 0.05205,
-      "9": 0.11138,
-      "10": 0.1818,
-      "11": 0.22356,
-      "12": 0.20317,
-      "13": 0.12915,
-      "14": 0.0583,
-      "15": 0.01527,
-      "16": 0.00177
+      "5": 0.00075,
+      "6": 0.004,
+      "7": 0.01796,
+      "8": 0.05057,
+      "9": 0.1102,
+      "10": 0.17964,
+      "11": 0.22349,
+      "12": 0.20441,
+      "13": 0.13167,
+      "14": 0.05964,
+      "15": 0.01575,
+      "16": 0.00182
      }
     },
     "GB": {
@@ -9076,7 +9076,7 @@
      "label": "Two roster standard deviations, and they disagree",
      "ok": true,
      "detail": "The upstream simulation and the quadrature-plus-head-to-head calculation sit within 1.86 wins of each other (worst: Alan). They diverge most for rosters with internal games, and the simulation is the smaller of the two — it also draws correlated team strength, which quadrature cannot see. The page shows the simulated figure wherever it exists and says when it is falling back.",
-     "value": 1.864,
+     "value": 1.865,
      "severity": "info"
     }
    ]
