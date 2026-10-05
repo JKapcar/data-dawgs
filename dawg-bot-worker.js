@@ -1765,6 +1765,7 @@ export default {
     if (url.pathname === "/survivor-picks") return handleSurvivorPicks(request, url, env, cors);
     if (url.pathname === "/cfb/market-snapshots") return handleCfbMarketSnapshots(request, url, env, cors);
     if (url.pathname === "/sleeper/players-slim") return handleSleeperPlayersSlim(request, env, cors);
+    if (url.pathname.startsWith("/api/bozo-menu/")) return handleBozoMenu(request, url, env, cors);
     if (url.pathname.startsWith("/api/dfs/")) return handleDfsWorkspace(request, url, env, cors);
     if (url.pathname.startsWith("/api/swoledawg")) return handleSwole(request, url, env, cors);
     // DD-RANKINGS-ROUTE — The Dog Track capture half; see the DD-RANKINGS-BLOCK below.
@@ -2424,6 +2425,30 @@ async function ttsModels(request, env, cors) {
   } catch (e) {
     return json({ error: "models lookup failed: " + e.message }, 502, cors);
   }
+}
+
+// The Bozo Menu is account-scoped research; no contest state is touched.
+async function bozoMenuRun(op, args, env, caller) {
+  return BOZO_MENU.runMenu(op, args, caller, {
+    get: (path, etag) => fbGet(env, path, etag),
+    put: (path, value, etag) => fbPut(env, path, value, etag),
+  });
+}
+async function handleBozoMenu(request, url, env, cors) {
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({error:auth.err}, auth.code || 401, cors);
+  const op = url.pathname.slice('/api/bozo-menu/'.length);
+  if (!['list','get','save'].includes(op)) return json({error:'Unknown menu operation'},404,cors);
+  if (request.method !== (op === 'save' ? 'POST' : 'GET')) return json({error:'Method not allowed'},405,cors);
+  try {
+    let args = op === 'get' ? {week:url.searchParams.get('week')} : {};
+    if (op === 'save') {
+      const parsed = await readCappedJson(request, 250000);
+      if (parsed.tooLarge || parsed.malformed) return json({error:'Invalid JSON or body over 250 KB'},400,cors);
+      args = parsed.value;
+    }
+    return json(await bozoMenuRun(op,args,env,{kind:'user',uid:auth.uid}),200,cors);
+  } catch(e) { return json({error:e.message},e.status || 502,cors); }
 }
 
 /* ============================== RTDB plumbing ============================= */
@@ -14635,6 +14660,93 @@ function dfsToolSchema(op){
 
 /* ===== DD-DFS-WORKSPACE END ===== */
 
+/* ===== DD-BOZO-MENU START — generated from bozo-menu.mjs ===== */
+const BOZO_MENU = (() => {
+// Private weekly research library. This module cannot reach Bozo contest writes.
+const key = {type:'string',pattern:'^[A-Za-z0-9_-]{1,80}$'};
+const text = {type:'string',maxLength:1600};
+const stamp = {type:'string',format:'date-time'};
+const quote = {type:'object',additionalProperties:false,required:['line','odds','book','quoted_at'],properties:{line:{type:['number','null']},odds:{type:'integer'},book:text,quoted_at:stamp}};
+const edge = {type:'object',additionalProperties:false,required:['value','unit','definition'],properties:{value:{type:'number'},unit:{type:'string',enum:['points','percentage_points','percent_ev','provider_defined']},definition:text}};
+const candidateSchema = {type:'object',additionalProperties:false,required:['id','event','sport','market','selection','status','reason'],properties:{
+ id:key,event:text,sport:text,market:text,selection:text,kickoff:stamp,rank:{type:'integer',minimum:1,maximum:200},
+ base:quote,alternate:quote,edge,adjusted_edge:edge,
+ status:{type:'string',enum:['keep','downgrade','hold','scratch']},reason:text,screened_at:stamp,
+ sources:{type:'array',maxItems:10,items:{type:'object',additionalProperties:false,required:['name','as_of','evidence'],properties:{name:text,as_of:stamp,evidence:text,weight:{type:'number',minimum:0,maximum:1},url:{type:'string',format:'uri'}}}},
+ probability:{type:'object',additionalProperties:false,required:['value','basis'],properties:{value:{type:'number',minimum:0,maximum:1},basis:text}},
+ worst_acceptable:text,result:{type:'string',enum:['pending','win','loss','push','void']},notes:text
+}};
+function menuSchema(op){
+ const common={week:{type:'string',pattern:'^\\d{4}-\\d{2}-\\d{2}$',description:'Monday date for the menu week, Eastern Time calendar.'}};
+ const properties=op==='list'?{}:op==='get'?common:{...common,expected_revision:{type:'integer',minimum:0},title:{type:'string',maxLength:120},candidates:{type:'array',minItems:1,maxItems:200,items:candidateSchema}};
+ return {type:'object',additionalProperties:false,properties,required:Object.keys(properties).filter(k=>k!=='title')};
+}
+function fail(message,code=400){throw Object.assign(new Error(message),{status:code});}
+// Same schema is enforced for browser, direct API and MCP callers.
+function validate(value,s,path='arguments'){
+ if(s.type){const types=Array.isArray(s.type)?s.type:[s.type];if(!types.some(t=>t==='null'?value===null:t==='array'?Array.isArray(value):t==='integer'?Number.isInteger(value):t==='number'?typeof value==='number'&&Number.isFinite(value):t==='object'?value!==null&&typeof value==='object'&&!Array.isArray(value):typeof value===t))fail(path+': invalid type');}
+ if(s.enum&&!s.enum.includes(value))fail(path+': invalid value');
+ if(typeof value==='string'){
+  if(!value.trim()||value.length>(s.maxLength||1600))fail(path+': empty or too long');
+  if(s.pattern&&!new RegExp(s.pattern).test(value))fail(path+': invalid format');
+  if(s.format==='date-time'&&(!/^\d{4}-\d\d-\d\dT.*(?:Z|[+-]\d\d:\d\d)$/.test(value)||!Number.isFinite(Date.parse(value))))fail(path+': supply a timestamp with timezone');
+  if(s.format==='uri'){try{if(new URL(value).protocol!=='https:')throw 0;}catch{fail(path+': HTTPS URL required');}}
+ }
+ if(typeof value==='number'&&((s.minimum!=null&&value<s.minimum)||(s.maximum!=null&&value>s.maximum)))fail(path+': outside bounds');
+ if(Array.isArray(value)){if(value.length<(s.minItems||0)||value.length>(s.maxItems||200))fail(path+': too many or too few items');value.forEach((v,i)=>validate(v,s.items,path+'['+i+']'));}
+ if(s.type==='object'){
+  for(const k of s.required||[])if(value[k]===undefined)fail(path+'.'+k+': required');
+  for(const k of Object.keys(value)){if(!Object.hasOwn(s.properties,k))fail(path+'.'+k+': unknown field');validate(value[k],s.properties[k],path+'.'+k);}
+ }
+}
+function quoteState(c,now=Date.now()){
+ if(c.status==='scratch')return 'Scratched';
+ if(c.kickoff&&Date.parse(c.kickoff)<=now)return 'Started / archived';
+ if(c.status==='hold')return 'On hold';
+ if(!c.alternate)return 'Needs alternate quote';
+ if(c.alternate.odds < -500 || c.alternate.odds > -200)return 'Outside −200 to −500';
+ if(!c.kickoff||!c.screened_at)return 'Needs screening / kickoff';
+ if(now-Date.parse(c.alternate.quoted_at)>60*60*1000)return 'Recheck price';
+ return 'Quoted in target band · verify contest rules';
+}
+async function runMenu(op,args,caller,store,now=Date.now()){
+ if(caller?.kind!=='user'||!caller.uid||!/^[A-Za-z0-9_-]{1,80}$/.test(caller.uid))fail('Sign in with a personal Data Dawgs account.',401);
+ if(!['list','get','save'].includes(op))fail('Unknown menu operation',404);
+ validate(args,menuSchema(op));
+ if(args.week){const d=new Date(args.week+'T00:00:00Z');if(!Number.isFinite(+d)||d.toISOString().slice(0,10)!==args.week||d.getUTCDay()!==1)fail('week must be a valid Monday date (YYYY-MM-DD).');}
+ const path='/users/'+caller.uid+'/bozoMenus';
+ const saved=await store.get(path,op==='save');
+ const weeks=saved.data?.weeks||{};
+ if(op==='list')return {weeks:Object.values(weeks).map(w=>({week:w.week,title:w.title,revision:w.revision,updated_at:w.updated_at,count:(w.candidates||[]).length})).sort((a,b)=>b.week.localeCompare(a.week))};
+ const existing=weeks[args.week]||{week:args.week,title:'Week of '+args.week,revision:0,candidates:[]};
+ const output=w=>({...w,candidates:(w.candidates||[]).map(c=>({...c,quote_state:quoteState(c,now)})),scope:'private account research; no contest picks submitted'});
+ if(op==='get')return output(existing);
+ if(args.expected_revision!==existing.revision)fail('Menu changed. Reload it before saving; nothing was overwritten.',409);
+ const ids=new Set();
+ for(const c of args.candidates){
+  if(ids.has(c.id))fail('Duplicate candidate id: '+c.id);ids.add(c.id);
+  for(const q of [c.base,c.alternate].filter(Boolean)){
+   if(Math.abs(q.odds)<100||Math.abs(q.odds)>100000)fail(c.id+': invalid American odds');
+   if(Date.parse(q.quoted_at)>now+300000)fail(c.id+': quote timestamp is in the future');
+   if(c.market!=='moneyline'&&q.line===null)fail(c.id+': this market requires a line');
+  }
+  if(c.screened_at&&Date.parse(c.screened_at)>now+300000)fail(c.id+': screening timestamp is in the future');
+ }
+ const candidates=new Map((existing.candidates||[]).map(c=>[c.id,c]));
+ for(const c of args.candidates)candidates.set(c.id,{...c,updated_at:new Date(now).toISOString()});
+ if(candidates.size>200)fail('At most 200 candidates per week.');
+ const week={...existing,title:args.title||existing.title,revision:existing.revision+1,updated_at:new Date(now).toISOString(),candidates:[...candidates.values()].sort((a,b)=>(a.rank||200)-(b.rank||200)||a.id.localeCompare(b.id))};
+ const library={version:1,weeks:{...weeks,[args.week]:week}};
+ if(Object.keys(library.weeks).length>104||new TextEncoder().encode(JSON.stringify(library)).byteLength>2000000)fail('Library limit reached (104 weeks / 2 MB). Export your archive.');
+ if(!saved.etag)fail('Storage did not provide a revision lock. Nothing saved.',503);
+ if(!await store.put(path,library,saved.etag))fail('Library changed while saving. Reload and retry.',409);
+ return output(week);
+}
+
+return {runMenu, menuSchema};
+})();
+/* ===== DD-BOZO-MENU END ===== */
+
 /* ===== DD-MCP-BLOCK START — generated from work/mcp-block.js; edit THERE ===== */
 /* Shared DFS engine — generated verbatim from work/dfs-engine.js except for its private root. */
 const mcpDdfsRoot = {};
@@ -18282,7 +18394,7 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
             ? "You are connected as " + caller.name + ". When a tool marks a row `you: true`, that is them.\n"
             : "⚠️ This is the SHARED league connector — you do NOT know which member you are talking to. " +
               "Never assume whose team, leg or ledger is whose; ask. A personal URL from " + SITE + "/connect.html fixes this.\n") +
-          "Every tool here is read-only except dd_submit_bozo_leg, which can write exactly one thing — " +
+          "Tools with readOnlyHint=false can save account workspaces or explicit actions. dd_bozo_menu_save saves private research only; it never submits a pick. dd_submit_bozo_leg can write a Bozo leg — " +
           "the caller's own Bozo leg, in an open week, and only after the human has read back the parsed bet and " +
           "confirmed with the code it returns. Never call its confirm step without showing the human the echo first. " +
           "On a spread leg `line` is points the side gives up (positive lays, negative takes) while `label` reads as the slip prints it — CLE +8.5 is label \"CLE +8.5\", line -8.5 — and the server rejects a sign conflict rather than pricing the wrong side. " +
@@ -18368,6 +18480,36 @@ const MCP_TOOLS = [
     description: "Read all configurable fields, units, defaults, compute limits and workflow.",
     inputSchema: dfsToolSchema("schema"),
     async run(args, env, caller) { return toolText(await dfsRun("schema", args, env, caller)); },
+  },
+  {
+    name: "dd_bozo_menu_list",
+    title: "List my weekly Bozo menus",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "List your private weekly candidate library. No league picks are read or submitted.",
+    inputSchema: BOZO_MENU.menuSchema("list"),
+    async run(args, env, caller) { return toolText(await bozoMenuRun("list", args, env, caller)); },
+  },
+  {
+    name: "dd_bozo_menu_get",
+    title: "Read a weekly Bozo menu",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "Read a menu by Monday date, including its revision and saved evidence. Quotes are snapshots, not current availability.",
+    inputSchema: BOZO_MENU.menuSchema("get"),
+    async run(args, env, caller) { return toolText(await bozoMenuRun("get", args, env, caller)); },
+  },
+  {
+    name: "dd_bozo_menu_save",
+    title: "Save Bozo research candidates",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Save supplied research candidates to your private weekly menu. Read get first and send expected_revision (0 for new). Upserts by stable candidate id; each supplied candidate replaces that row, omitted rows remain. Use scratch to retain rejected candidates. Preserve source edge units, dates and weights; omit unknown quotes and probabilities. Does not place wagers or submit Bozo picks.",
+    inputSchema: BOZO_MENU.menuSchema("save"),
+    async run(args, env, caller) { return toolText(await bozoMenuRun("save", args, env, caller)); },
   },
   {
     name: "dd_dfs_list",

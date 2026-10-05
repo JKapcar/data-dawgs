@@ -1262,7 +1262,7 @@ const MCP_REGISTRY = (() => {
 // endpoint served 43: the map under-claims and every caller of a retired name keeps
 // working. Deploying first and failing to commit would leave this file claiming two tools
 // are live that answer -32602, which is the one thing it exists to prevent.
-const MCP_STAGED = [];
+const MCP_STAGED = ["dd_bozo_menu_list", "dd_bozo_menu_get", "dd_bozo_menu_save"];
 const MCP_LIVE = MCP_REGISTRY.map(t => t.name).filter(n => !MCP_STAGED.includes(n));
 for (const n of MCP_STAGED)
   if (!MCP_REGISTRY.some(t => t.name === n)) throw new Error(`${n} is listed as staged but is not in the registry`);
@@ -1275,8 +1275,8 @@ for (const n of [...MCP_POUND_LIVE, ...MCP_CFB_LIVE, 'dd_model_scoreboard'])
  * below are therefore about the DEPLOYED SOURCE, which was read back and structurally
  * diffed after the PUT. If you get a credential, run docs/mcp-catalogs.md step 4. */
 const MCP_CATALOGS = {
-  core: MCP_REGISTRY.filter(t => t.catalog === 'core').map(t => t.name),
-  full: MCP_REGISTRY.map(t => t.name),
+  core: MCP_REGISTRY.filter(t => t.catalog === 'core' && !MCP_STAGED.includes(t.name)).map(t => t.name),
+  full: MCP_LIVE,
 };
 const MCP_ENDPOINT = {
   path: '/mcp/u_<personal token>   ·   catalogs: /mcp/core/<credential> and /mcp/full/<credential>   (legacy: /mcp/<league passphrase>, still full)',
