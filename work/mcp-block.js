@@ -2699,7 +2699,7 @@ const MCP_TOOLS = [
     catalog: "core",
     readOnlyHint: true,
     description:
-      "Capture the live DraftKings quote for a proposed Bozo leg, check it against the LIVE board, " +
+      "Capture failures include captureAttempts and captureFailureReason for each odds provider. Capture the live DraftKings quote for a proposed Bozo leg, check it against the LIVE board, " +
       "or the reason it would be rejected. ⚠️ READ-ONLY: this submits nothing and changes no board " +
       "state. Runs the server's own capture and validator; use dd_submit_bozo_leg to " +
       "make a separately captured, two-phase submission.",
@@ -2829,6 +2829,7 @@ const MCP_TOOLS = [
         },
         captured: { line: p.line, price: p.price, priceOpp: p.priceOpp,
           priceSource: p.priceSource, clvEligible: p.clvEligible, captureFailureCode: p.captureFailureCode || null,
+          captureFailureReason: p.captureFailureReason || null, captureAttempts: p.captureAttempts || [],
           entrySnapshotAt: p.entrySnapshotAt, providerEventIds: p.providerEventIds,
           startsAt: p.startsAt, espnEventId: p.espnEventId, canonicalKey: p.canonicalKey },
         agreement: captured.agreement || null,
@@ -2843,7 +2844,7 @@ const MCP_TOOLS = [
           : undefined,
         caveats: [
           "Nothing was submitted. This tool cannot submit — it reads the board and runs the validator.",
-          p.priceSource === "captured" ? "Both prices were captured from DraftKings through the odds feeds." : "UNVERIFIED: manually entered odds, awaiting manager verification of the original quote for CLV.",
+          p.priceSource === "captured" ? "Both prices were captured from DraftKings through the odds feeds." : "UNVERIFIED: manually entered odds, awaiting manager verification of the original quote for CLV. " + (p.captureFailureReason || ""),
           "A pass here is a pass at this instant. Someone else can take your exact leg, or fill the board, before you press submit.",
         ],
       });
@@ -2861,7 +2862,7 @@ const MCP_TOOLS = [
     readOnlyHint: false,
     destructiveHint: true,   // an edit overwrites your existing leg and resets your clock
     description:
-      "Submit (or replace) YOUR OWN leg on the live Bozo board — or another member's leg, via forUid, " +
+      "Capture failures include captureAttempts and captureFailureReason for each odds provider. Submit (or replace) YOUR OWN leg on the live Bozo board — or another member's leg, via forUid, " +
       "if you are this league's manager or the site admin (the leg is marked commissionerModified and " +
       "timestamped at YOUR write, never backdated; the absent member carries the Last In exposure). TWO-PHASE, and phase one writes " +
       "nothing: call with the bet fields and it validates against the live board, then returns a " +
@@ -3101,6 +3102,7 @@ const MCP_TOOLS = [
         wouldLockTheBoard: wouldLock,
         captured: { line: p.line, price: p.price, priceOpp: p.priceOpp,
           priceSource: p.priceSource, clvEligible: p.clvEligible, captureFailureCode: p.captureFailureCode || null,
+          captureFailureReason: p.captureFailureReason || null, captureAttempts: p.captureAttempts || [],
           entrySnapshotAt: p.entrySnapshotAt, providerEventIds: p.providerEventIds,
           startsAt: p.startsAt, espnEventId: p.espnEventId, canonicalKey: p.canonicalKey },
         agreement: captured.agreement || null,
