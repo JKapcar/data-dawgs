@@ -132,3 +132,10 @@ test('all Odds API miss exits are explicit and typed',async()=>{
  }
  const r=rig();assert.equal((await r.bozoOddsApiCapture({ODDS_API_KEY:'fixture'},bp,r.reg('nfl'),{deadline:Date.now()-1})).code,'timeout');
 });
+
+test('canonical event and schedule keys use the UTC day for offset-bearing timestamps',()=>{
+ const r=rig(),start='2026-10-08T21:00:00-04:00';
+ const expected='cfb|libertyflames~samhoustonbearkats|2026-10-09';
+ assert.equal(r.ctx.bozoCanonicalScheduleKey('cfb','SHSU','LIB',start),expected);
+ assert.equal(r.ctx.bozoCanonicalKey('cfb',r.bozoOddsApiEvent({home_team:'Liberty Flames',away_team:'Sam Houston Bearkats',commence_time:start}),r.reg('cfb')),expected);
+});
