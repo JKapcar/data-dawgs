@@ -2886,7 +2886,7 @@ const MCP_TOOLS = [
         label: { type: "string", description: "How the leg reads on the DraftKings slip, sign included, e.g. \"BUF -6.5\" or \"CLE +8.5\". On a spread the sign is required and is checked against line: they describe one bet from two directions (label = slip display, line = points given up)." },
         prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
         priceOpp: { type: "number", description: "Deprecated input; the Worker captures the opposite DraftKings side itself." },
-        startsAt: { type: "string", description: "Kickoff ISO timestamp. Optional when eventId resolves from the Worker schedule cache; phase two needs only confirm." },
+        startsAt: { type: "string", description: "Kickoff ISO timestamp. The schedule is resolved even when supplied; discrepancies over three hours are rejected, otherwise the schedule kickoff is adopted. Phase two needs only confirm." },
         period: { type: "string", enum: ["game", "1h", "2h", "1q", "2q", "3q", "4q"], description: "Which part of the game (default game). Spread, moneyline and total only; props and other are full-game. NFL/CFB/NBA take halves and quarters, NCAAB halves." },
         league: { type: "string", description: "League id (default: main)" },
         forUid: { type: "string", description: "Submit FOR another member (their member key or display name). Only this league's manager or the site admin may. Phase one only; phase two needs just confirm." },
@@ -3117,7 +3117,7 @@ const MCP_TOOLS = [
     catalog: "core",
     readOnlyHint: false,
     destructiveHint: false,
-    description: "Manager, delegate or site admin: verify an unverified current pick using BOTH original DraftKings prices for its exact line and period at submission. Never substitute current odds. Phase one returns an echo and confirm_code; SHOW the human the echo and obtain their approval before phase two. Preserves the submission clock and any graded verdict. Records an atomic commissioner audit receipt. Requires a personal connector.",
+    description: "Missing canonical identity is also repaired from the schedule and included in the audited confirmation, preserving the submission timestamp. Manager, delegate or site admin: verify an unverified current pick using BOTH original DraftKings prices for its exact line and period at submission. Never substitute current odds. Phase one returns an echo and confirm_code; SHOW the human the echo and obtain their approval before phase two. Preserves the submission clock and any graded verdict. Records an atomic commissioner audit receipt. Requires a personal connector.",
     inputSchema: { type: "object", properties: {
       league: { type: "string", description: "League id, default main" },
       forUid: { type: "string", description: "Member key or unique display name" },

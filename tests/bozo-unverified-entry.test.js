@@ -11,6 +11,7 @@ const base={sport:'nfl',eventId:'game-1',game:'A @ B',mkt:'ml',side:'B',line:0,l
 function rig(){
  let state={week:4,season:2026,status:'placed',picks:{pat:{...base,price:-150,priceSource:'self',verificationStatus:'unverified',entryPriceOpp:null}},
   ledger:{'2026-w4-pat':{player:'Pat',price:-150,priceOpp:null,ts:base.ts,close:-170,closeOpp:145}}};
+ let schedule=null;
  let writes=0,deny=false,conflict=false,requests=0,fail='429';
  const kv=new Map(); const env={RL:{get:async k=>kv.get(k),put:async(k,v)=>kv.set(k,v)}};
  const ctx={crypto,console,Date,Request,Response,setTimeout,clearTimeout,SEASON:2026,BOZO_CLOSE_BOOK:'draftkings',
@@ -22,6 +23,8 @@ function rig(){
   fbPut:async(e,p,v,etag)=>{assert.equal(etag,'v1');if(conflict)return false;state=structuredClone(v);writes++;return true;},
   bozoFetchEvents:async()=>{requests++;if(fail)throw new Error('SGO '+fail);return[];},
   bozoTeamRegistry:async()=>({}),bozoMatchEvent:()=>null,
+  bozoScheduleDoc:async()=>schedule,
+  bozoScheduleFindGame:(doc,p)=>doc?.games?.find(g=>String(g.espnEventId)===String(p.eventId)) || null,
   bozoPeriodOf:p=>p.period||'game',bozoPeriodError:()=>null,bozoSpreadSignError:()=>null,
   bozoWeekGateError:()=>null,playerName:x=>x,
  };
@@ -33,9 +36,9 @@ function rig(){
   cut(worker,'const selectionKeyOf =','// Server-side Fisher'),
   'const ledgerKey=(s,w,k)=>`${s}-w${w}-${k}`;',
   cut(worker,'async function bozoVerifyEntry(','async function bozoAdmin('),
-  'this.api={bozoCaptureEntry,validatePick,bozoVerifyEntry};'
+  'this.api={bozoCaptureEntry,validatePick,bozoVerifyEntry,bozoRepairIdentityCore};'
  ].join('\n'),ctx);
- return{api:ctx.api,env,state:()=>state,writes:()=>writes,requests:()=>requests,
+ return{api:ctx.api,env,schedule:g=>schedule={games:g},repair:b=>ctx.api.bozoRepairIdentityCore(env,{uid:"kap",name:"Kap"},b),state:()=>state,writes:()=>writes,requests:()=>requests,
   expire:()=>kv.clear(), deny:()=>deny=true,conflict:()=>conflict=true,change:fn=>fn(state),
   post:b=>ctx.api.bozoVerifyEntry({method:'POST',body:b},env,{}),
   capture:p=>ctx.api.bozoCaptureEntry(env,{...base,...p})};
@@ -113,4 +116,47 @@ test('MCP verification rejects shared callers and forwards personal identity to 
  assert.ok((await ctx.tool.run({forUid:'pat'},{},{kind:'shared'})).error);assert.equal(calls,0);
  const p=await ctx.tool.run({forUid:'pat',price:-150,priceOpp:130},{},{kind:'user',name:'Delegate',uid:'delegate'});
  assert.equal(p.status,'confirm_required');assert.equal(calls,1);
+});
+
+const liberty={espnEventId:'401870766',canonicalKey:'cfb|libertyflames~samhoustonbearkats|2026-10-08',startsAt:'2026-10-08T23:00:00Z'};
+const libPick={...base,sport:'cfb',eventId:liberty.espnEventId,game:'SHSU @ LIB',side:'LIB',mkt:'spread',line:4.5,label:'LIB -4.5',startsAt:'2026-10-08T19:00:00-04:00',canonicalKey:null};
+test('supplied kickoff plus provider failure still resolves schedule identity; conflicts reject before capture',async()=>{
+ const r=rig();r.schedule([liberty]);
+ const out=await r.capture({...libPick,espnEventId:'forged'});
+ assert.equal(out.ok,true);assert.equal(out.p.priceSource,'self');assert.equal(out.p.canonicalKey,liberty.canonicalKey);
+ assert.equal(out.p.espnEventId,liberty.espnEventId);assert.equal(out.p.startsAt,liberty.startsAt);assert.equal(r.writes(),0);
+ const conflict=await r.capture({...libPick,startsAt:'2026-10-09T03:00:01Z'});
+ assert.equal(conflict.reason,'starts_at_conflict');assert.equal(r.requests(),1);
+ assert.equal((await r.capture({...libPick,startsAt:'2026-10-09T02:00:00Z'})).p.startsAt,liberty.startsAt);
+});
+test('entry verification repairs identity in the same audited fields without moving timestamps',async()=>{
+ const r=rig();r.schedule([liberty]);r.change(s=>Object.assign(s.picks.pat,libPick));
+ const p=await r.post({forUid:'pat',price:-150,priceOpp:130});
+ assert.equal(r.writes(),0);assert.match(p.body.echo,/cfb\|libertyflames/);
+ const out=await r.post({forUid:'pat',confirm:p.body.confirm_code});assert.equal(out.status,200);
+ const s=r.state(),audit=s.audit[p.body.confirm_code];
+ for(const row of [s.picks.pat,s.ledger['2026-w4-pat']]){
+  assert.equal(row.canonicalKey,liberty.canonicalKey);assert.equal(row.espnEventId,liberty.espnEventId);assert.equal(row.startsAt,liberty.startsAt);assert.equal(row.ts,base.ts);
+ }
+ assert.equal(audit.from.canonicalKey,null);assert.equal(audit.to.canonicalKey,liberty.canonicalKey);
+});
+test('admin identity repair is KV-only until confirmed, audited, replay-safe and preserves all prices/closes/clocks',async()=>{
+ const r=rig();r.schedule([liberty]);r.change(s=>Object.assign(s.picks.pat,libPick));
+ const before=structuredClone(r.state());
+ const p=await r.repair({league:'main'});assert.equal(p.body.status,'confirm_required');assert.equal(r.writes(),0);
+ assert.equal(JSON.stringify(r.state()),JSON.stringify(before));
+ const req={league:'main',confirm:p.body.confirm_code},done=await r.repair(req);assert.equal(done.status,200);
+ const s=r.state();assert.equal(s.picks.pat.canonicalKey,liberty.canonicalKey);assert.equal(s.picks.pat.ts,base.ts);
+ assert.equal(s.picks.pat.priceSource,'self');assert.equal(s.picks.pat.price,before.picks.pat.price);
+ assert.equal(s.ledger['2026-w4-pat'].close,-170);assert.equal(s.ledger['2026-w4-pat'].closeOpp,145);
+ assert.equal(s.admin.actions[req.confirm].changes[0].before.canonicalKey,null);
+ assert.equal(s.audit[req.confirm].changes[0].after.canonicalKey,liberty.canonicalKey);
+ assert.equal(JSON.stringify(await r.repair(req)),JSON.stringify(done));assert.equal(r.writes(),1);
+});
+test('identity repair refuses changed picks, week rollover, demotion and concurrency conflicts',async()=>{
+ for(const change of [r=>r.change(s=>s.week++),r=>r.change(s=>s.picks.pat.ts++),r=>r.deny(),r=>r.conflict()]){
+  const r=rig();r.schedule([liberty]);r.change(s=>Object.assign(s.picks.pat,libPick));
+  const p=await r.repair({});change(r);
+  assert.ok((await r.repair({confirm:p.body.confirm_code})).status>=400);assert.equal(r.writes(),0);
+ }
 });

@@ -7454,7 +7454,7 @@ function bozoCanonicalScheduleKey(sport, away, home, startsAt) {
   const registry = bozoBuildTeamRegistry(sport).aliases;
   const teams = [away, home].map(x => bozoTeamNorm(x, registry)).filter(Boolean).sort();
   return teams.length === 2 && !isNaN(Date.parse(startsAt || ""))
-    ? [sport, teams.join("~"), startsAt.slice(0, 10)].join("|") : null;
+    ? [sport, teams.join("~"), new Date(startsAt).toISOString().slice(0, 10)].join("|") : null;
 }
 
 function bozoEspnSeedTeam(sport, id, name) {
@@ -8525,7 +8525,7 @@ function bozoCanonicalKey(sport, event, registry) {
   }).filter(Boolean).sort();
   const startsAt = event?.status?.startsAt;
   return teams.length === 2 && !isNaN(Date.parse(startsAt || ""))
-    ? [sport, teams.join("~"), startsAt.slice(0, 10)].join("|") : null;
+    ? [sport, teams.join("~"), new Date(startsAt).toISOString().slice(0, 10)].join("|") : null;
 }
 
 // The already-configured paid account supplies exact DraftKings game markets. SGO
@@ -8656,7 +8656,7 @@ async function bozoCaptureEntry(env, input, options = {}) {
   const p = { ...input };
   // These are server-authored, never assertions accepted from a submitter.
   for (const key of ["verificationStatus", "entryVerification", "captureFailureReason", "captureFailureCode", "captureAttempts", "clvEligible",
-    "priceSource", "entrySnapshotAt", "entryProvider", "providerEventIds", "canonicalKey", "fairEntry", "entryHold"]) delete p[key];
+    "priceSource", "entrySnapshotAt", "entryProvider", "providerEventIds", "canonicalKey", "espnEventId", "fairEntry", "entryHold"]) delete p[key];
   p.period = bozoPeriodOf(p);
   const periodErr = bozoPeriodError(p);
   if (periodErr) return { ok: false, reason: "bad_period", error: periodErr };
@@ -8664,11 +8664,13 @@ async function bozoCaptureEntry(env, input, options = {}) {
   if (!BOZO_GRADEABLE_SPORTS.has(p.sport)) return { ok: false, reason: "sport_not_gradeable",
     error: `${p.sport || "That sport"} cannot be submitted until it has a Worker-reachable grading adapter.` };
   let startMs = Date.parse(p.startsAt || "");
-  if (!Number.isFinite(startMs) && p.eventId) {
+  if (p.eventId) {
     let doc = null;
     try { doc = await bozoScheduleDoc(env, p.sport, SEASON); } catch { doc = null; }
     const game = bozoScheduleFindGame(doc, p);
     if (game && !isNaN(Date.parse(game.startsAt || ""))) {
+      if (Number.isFinite(startMs) && Math.abs(startMs - Date.parse(game.startsAt)) > 3 * 3600000)
+        return {ok:false, reason:"starts_at_conflict", error:"Caller kickoff differs from the schedule by more than three hours."};
       p.startsAt = game.startsAt;
       p.espnEventId = String(game.espnEventId || p.eventId);
       p.canonicalKey = game.canonicalKey || null;
@@ -8741,8 +8743,8 @@ async function bozoCaptureEntry(env, input, options = {}) {
     priceSource: "captured", verificationStatus: "verified", entryBook: BOZO_CLOSE_BOOK, entryProvider: backup ? "odds_api" : "sgo",
     entrySnapshotAt: quote.snapshotAt || events.fetchedAt || new Date().toISOString(),
     fairEntry: facts.fair, entryHold: facts.hold, clvEligible: true,
-    canonicalKey: bozoCanonicalKey(p.sport, event, registry), commenceTime,
-    startsAt: commenceTime, espnEventId: String(p.eventId),
+    canonicalKey: p.canonicalKey || bozoCanonicalKey(p.sport, event, registry), commenceTime,
+    startsAt: p.startsAt, espnEventId: p.espnEventId || String(p.eventId),
     providerEventIds: { [backup ? "odds_api" : "sgo"]: String(event.eventID) }, closeState: "pending",
   }, agreement };
 }
@@ -10041,9 +10043,10 @@ async function bozoVerifyEntryCore(env, auth, body, via = "site") {
       if (price !== Number(pick.price)) return fail("The entry price differs from the submitted pick. Correct the pick explicitly before verifying it.", 400);
       if (body.evidence !== undefined && (typeof body.evidence !== "string" || body.evidence.length > 200))
         return fail("Evidence must be text of at most 200 characters.", 400);
+      const identityFields = await bozoMissingIdentityFields(env, pick, state.season || SEASON);
       const confirmation = crypto.randomUUID(), evidence = body.evidence || null;
-      const echo = `${pick.who || key}: ${pick.label} (${pick.game}), original entry ${price} / ${opposite}. Confirm these were the DraftKings prices for this exact line and period at submission, not today's prices. The submission time will stay unchanged.`;
-      await env.RL.put(kvKey, JSON.stringify({ code: confirmation, week: state.week || 1, before: pick, opposite, evidence, via, echo }), { expirationTtl: 300 });
+      const echo = `${pick.who || key}: ${pick.label} (${pick.game}), original entry ${price} / ${opposite}. Confirm these were the DraftKings prices for this exact line and period at submission, not today's prices. The submission time will stay unchanged.${identityFields.canonicalKey ? " Schedule identity: " + identityFields.canonicalKey + ", kickoff " + identityFields.startsAt + "." : ""}`;
+      await env.RL.put(kvKey, JSON.stringify({ code: confirmation, week: state.week || 1, before: pick, opposite, evidence, via, echo, identityFields }), { expirationTtl: 300 });
       return result({ status: "confirm_required", confirm_code: confirmation, echo, league: lid, forUid: key });
     }
     const pending = JSON.parse(await env.RL.get(kvKey) || "null");
@@ -10054,7 +10057,7 @@ async function bozoVerifyEntryCore(env, auth, body, via = "site") {
     const verification = { byUid: auth.uid || null, byName: auth.name, at, confirmationId: code,
       verifiedVia: pending.via, evidence: pending.evidence,
       originalSubmittedAt: new Date(pick.ts).toISOString(), price: pick.price, priceOpp: pending.opposite };
-    const fields = { priceOpp: pending.opposite, entryPriceOpp: pending.opposite,
+    const fields = { ...(pending.identityFields || {}), priceOpp: pending.opposite, entryPriceOpp: pending.opposite,
       priceSource: "manual", verificationStatus: "verified", clvEligible: true,
       entryProvider: "manual", entryVerification: verification, fairEntry: facts.fair, entryHold: facts.hold };
     const next = { ...pick, ...fields };
@@ -10083,6 +10086,68 @@ async function bozoVerifyEntryCore(env, auth, body, via = "site") {
   } catch (e) { return fail("Verification failed: " + e.message, 502); }
 }
 
+// Schedule-only repair: no quote, result, clock or close is invented.
+async function bozoMissingIdentityFields(env, pick, season) {
+  if (pick.canonicalKey || !pick.eventId) return {};
+  let doc;
+  try { doc = await bozoScheduleDoc(env, pick.sport, season); } catch { return {}; }
+  const game = bozoScheduleFindGame(doc, {...pick, espnEventId:null});
+  if (!game?.canonicalKey || !Number.isFinite(Date.parse(game.startsAt))) return {};
+  return {canonicalKey:game.canonicalKey, espnEventId:String(game.espnEventId || pick.eventId), startsAt:game.startsAt};
+}
+
+// POST /bozo/admin {action:"repair_identity",league} stages only KV.
+// Confirm with the same action/league plus {confirm}; current-week picks only.
+async function bozoRepairIdentityCore(env, auth, body) {
+  const reply = (body, status = 200) => ({body,status});
+  const lid = leagueOf(body), actor = auth?.uid || auth?.name;
+  if (!lid || !actor || auth.err) return reply({error:"Sign in to a valid league."},403);
+  try {
+    const {data:state,etag} = await fbGet(env,LG(lid),true);
+    if (!state || !canActFor(state,auth,env)) return reply({error:"Only league managers, delegates or site admin may repair identity."},403);
+    const code = body.confirm === undefined ? null : String(body.confirm);
+    const receipt = code && state.audit?.[code];
+    if (receipt?.type === "repair_identity" && receipt.actor === actor && receipt.leagueId === lid) return reply(receipt.result);
+    if (!env.RL) return reply({error:"Confirmation store unavailable."},503);
+    const kvKey = "bozoidentity:" + actor + ":" + lid;
+    if (code === null) {
+      const repairs = [], skipped = [];
+      for (const [key,pick] of Object.entries(state.picks || {})) {
+        if (!pick || pick.canonicalKey || !pick.eventId) continue;
+        const fields = await bozoMissingIdentityFields(env,pick,state.season || SEASON);
+        if (!fields.canonicalKey) {skipped.push({forUid:key,reason:"schedule_identity_unresolved"});continue;}
+        repairs.push({key,before:pick,fields});
+      }
+      if (!repairs.length) return reply({status:"nothing_to_repair",league:lid,week:state.week || 1,skipped});
+      const code = crypto.randomUUID();
+      const echo = `Repair schedule identity for ${repairs.length} current-week picks in ${lid}, week ${state.week || 1}; submission times, prices, results and closes stay unchanged.`;
+      await env.RL.put(kvKey,JSON.stringify({code,week:state.week || 1,season:state.season || SEASON,repairs,echo}),{expirationTtl:300});
+      return reply({status:"confirm_required",confirm_code:code,echo,repairs:repairs.map(r=>({forUid:r.key,...r.fields,ts:r.before.ts})),skipped});
+    }
+    const pending = JSON.parse(await env.RL.get(kvKey) || "null");
+    if (!pending || pending.code !== code) return reply({error:"Repair expired or confirmation does not match."},409);
+    if (pending.week !== (state.week || 1) || pending.season !== (state.season || SEASON) ||
+        pending.repairs.some(r=>JSON.stringify(state.picks?.[r.key]) !== JSON.stringify(r.before)))
+      return reply({error:"The picks or week changed. Review the repair again."},409);
+    const at = new Date().toISOString(), changes = [];
+    for (const r of pending.repairs) {
+      const after = {...r.before,...r.fields};
+      state.picks[r.key] = after;
+      const rowKey = ledgerKey(state.season || SEASON,state.week || 1,r.key);
+      if (state.ledger?.[rowKey]) Object.assign(state.ledger[rowKey],r.fields);
+      changes.push({forUid:r.key,before:r.before,after});
+    }
+    const result = {ok:true,league:lid,week:state.week || 1,repaired:changes.map(c=>({forUid:c.forUid,canonicalKey:c.after.canonicalKey,ts:c.after.ts}))};
+    state.audit ||= {};
+    state.audit[code] = {type:"repair_identity",actor,leagueId:lid,at,by:auth.name,byUid:auth.uid || null,week:state.week || 1,changes,result};
+    state.admin ||= {}; state.admin.actions ||= {};
+    state.admin.actions[code] = {type:"repair_identity",ts:Date.parse(at),byName:auth.name,byUid:auth.uid || null,leagueId:lid,week:state.week || 1,changes,via:"site"};
+    if (!etag) throw Error("Database did not supply a concurrency token.");
+    if (!await fbPut(env,LG(lid),state,etag)) return reply({error:"League changed during repair. Review it again."},409);
+    return reply(result);
+  } catch (e) {return reply({error:"Identity repair failed: " + e.message},502);}
+}
+
 async function bozoAdmin(request, url, env, cors) {
   const method = request.method;
   if (method !== "GET" && method !== "POST") return json({ error: "GET or POST only" }, 405, cors);
@@ -10099,6 +10164,11 @@ async function bozoAdmin(request, url, env, cors) {
 
   const auth = await requireManager(request, env, lid);
   if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
+
+  if (method === "POST" && body.action === "repair_identity") {
+    const out = await bozoRepairIdentityCore(env,auth,body);
+    return json(out.body,out.status,cors);
+  }
 
   if (method === "GET") {
     const at = adminPath(url.searchParams.get("path") || "");
@@ -19229,7 +19299,7 @@ const MCP_TOOLS = [
         label: { type: "string", description: "How the leg reads on the DraftKings slip, sign included, e.g. \"BUF -6.5\" or \"CLE +8.5\". On a spread the sign is required and is checked against line: they describe one bet from two directions (label = slip display, line = points given up)." },
         prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
         priceOpp: { type: "number", description: "Deprecated input; the Worker captures the opposite DraftKings side itself." },
-        startsAt: { type: "string", description: "Kickoff ISO timestamp. Optional when eventId resolves from the Worker schedule cache; phase two needs only confirm." },
+        startsAt: { type: "string", description: "Kickoff ISO timestamp. The schedule is resolved even when supplied; discrepancies over three hours are rejected, otherwise the schedule kickoff is adopted. Phase two needs only confirm." },
         period: { type: "string", enum: ["game", "1h", "2h", "1q", "2q", "3q", "4q"], description: "Which part of the game (default game). Spread, moneyline and total only; props and other are full-game. NFL/CFB/NBA take halves and quarters, NCAAB halves." },
         league: { type: "string", description: "League id (default: main)" },
         forUid: { type: "string", description: "Submit FOR another member (their member key or display name). Only this league's manager or the site admin may. Phase one only; phase two needs just confirm." },
@@ -19460,7 +19530,7 @@ const MCP_TOOLS = [
     catalog: "core",
     readOnlyHint: false,
     destructiveHint: false,
-    description: "Manager, delegate or site admin: verify an unverified current pick using BOTH original DraftKings prices for its exact line and period at submission. Never substitute current odds. Phase one returns an echo and confirm_code; SHOW the human the echo and obtain their approval before phase two. Preserves the submission clock and any graded verdict. Records an atomic commissioner audit receipt. Requires a personal connector.",
+    description: "Missing canonical identity is also repaired from the schedule and included in the audited confirmation, preserving the submission timestamp. Manager, delegate or site admin: verify an unverified current pick using BOTH original DraftKings prices for its exact line and period at submission. Never substitute current odds. Phase one returns an echo and confirm_code; SHOW the human the echo and obtain their approval before phase two. Preserves the submission clock and any graded verdict. Records an atomic commissioner audit receipt. Requires a personal connector.",
     inputSchema: { type: "object", properties: {
       league: { type: "string", description: "League id, default main" },
       forUid: { type: "string", description: "Member key or unique display name" },
