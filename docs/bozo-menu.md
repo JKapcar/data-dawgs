@@ -1,6 +1,10 @@
 # The Bozo Menu
 
-Status: implemented on `feat/bozo-menu`; not deployed or production-verified.
+Status: Worker deployed on 2026-10-05 after Kap approved deployment. Version
+`b8fa24f4-3b00-41c9-acac-0a94759facf4` serves 100% of traffic
+([deployment run](https://github.com/JKapcar/data-dawgs/actions/runs/37260164049)).
+Pages publishes when this release merges to main. A read-only production smoke
+workflow verifies the public feeds and site after publication.
 
 A weekly research library with private drafts on `bozo.html#bozoMenu` and a
 separate public published menu linked from `bozo-menu.html`. It reuses
@@ -116,14 +120,12 @@ The feature suites (`node --test tests/bozo-menu*.test.mjs` and
 `DDFS_JSDOM=<installed jsdom path> node work/test-bozo-menu-ui.mjs`) exercise
 DOM import/edit/filter/logout behavior and real API + MCP dispatch with isolated storage, account
 isolation, concurrent writes, malformed imports, quote-state boundaries and no
-contest writes. Browser rendering still needs visual verification where a preview
-browser is available.
+contest writes. Browser rendering is checked against the published page after release.
 
-The five menu tool names remain in `MCP_STAGED` until Worker deployment. A production
-release requires Kap's fresh approval per worker-deploy.md. Deploy/verify the Worker
-first, then clear those staged names, regenerate the machine catalog/manifest and
-publish the page. Verify authenticated browser and MCP access against the same
-private week; do not seed test candidates into Kap's production account.
+The five menu tools are no longer staged: the approved Worker deployment passed
+its complete CI release gates and promoted successfully. Production smoke checks
+make only anonymous reads and do not seed candidates into any account. A private
+production save/publish roundtrip remains unverified until a real menu is supplied.
 
 Local release checks passed: 7 feature cases (including all 200 public rows, anonymous reads and publisher checks); DOM interactions; Worker assembly,
 syntax and dry-run; identity (144), MCP (453), SwoleDawg (91), backup (14), CFB

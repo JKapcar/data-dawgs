@@ -1262,7 +1262,7 @@ const MCP_REGISTRY = (() => {
 // endpoint served 43: the map under-claims and every caller of a retired name keeps
 // working. Deploying first and failing to commit would leave this file claiming two tools
 // are live that answer -32602, which is the one thing it exists to prevent.
-const MCP_STAGED = ["dd_bozo_menu_public", "dd_bozo_menu_publish", "dd_bozo_menu_list", "dd_bozo_menu_get", "dd_bozo_menu_save"];
+const MCP_STAGED = [];
 const MCP_LIVE = MCP_REGISTRY.map(t => t.name).filter(n => !MCP_STAGED.includes(n));
 for (const n of MCP_STAGED)
   if (!MCP_REGISTRY.some(t => t.name === n)) throw new Error(`${n} is listed as staged but is not in the registry`);
@@ -1292,7 +1292,7 @@ const MCP_ENDPOINT = {
   identity:
     'dd_whoami reports the caller. Rows belonging to them are marked `you: true`. An anonymous ' +
     'connection is told so explicitly and instructed to ask rather than assume whose is whose.',
-  writes: 'None. Every tool is read-only, asserted by test against the source.',
+  writes: 'Authenticated account-scoped writes include private menus; public menu publication requires a verified site admin. Read/write annotations come from the tool registry.',
 };
 
 /* `domain` names the hub a surface belongs to, so a hub page can COMPUTE its own card
@@ -1417,6 +1417,15 @@ const SURFACES = [
               { kind: 'json', url: '/data/models.json', status: 'live', covers: 'the margin model parameters' },
               { kind: 'mcp', tool: 'dd_analyze_matchup', status: 'live', covers: 'one current matchup with dated nfelo, market and model context' }],
     planned: ['rest:/api/matchup'] },
+  { id: 'bozo-menu', domain: 'arena', name: 'The Bozo Menu', page: '/bozo-menu.html',
+    machine: [
+      { kind: 'mcp', tool: 'dd_bozo_menu_public', status: 'live', covers: 'same published menu through an existing connector' },
+      { kind: 'mcp', tool: 'dd_bozo_menu_list', status: 'live', covers: 'private weekly index for the authenticated account' },
+      { kind: 'mcp', tool: 'dd_bozo_menu_get', status: 'live', covers: 'private weekly research draft' },
+      { kind: 'mcp', tool: 'dd_bozo_menu_save', status: 'live', covers: 'account-scoped candidate upserts with revision checks' },
+      { kind: 'mcp', tool: 'dd_bozo_menu_publish', status: 'live', covers: 'site-admin publication of a reviewed public snapshot' }],
+    reading: [{ url: 'https://toto.jkapcar4.workers.dev/bozo/menu', title: 'Complete public Bozo Menu', covers: 'Server-rendered HTML with full text and JSON feed links; no login.' }],
+    planned: [], gap: 'Research and quotes are supplied, not scraped or refreshed. Draft saves never publish. No menu exists until explicitly published.' },
   { id: 'survivor', domain: 'arena', name: 'NFL Survivor', page: '/survivor.html',
     machine: [{ kind: 'json', url: '/data/survivor.json', status: 'live', covers: 'schedule and win probabilities' },
               { kind: 'mcp', tool: 'dd_survivor_week', status: 'live', covers: 'stored weekly ownership snapshots, staleness-flagged' },
@@ -1597,7 +1606,7 @@ write('surfaces.json', {
     'call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing.',
   policy: {
     reads: 'Public, free, CORS-open, no key, no rate limit.',
-    writes: 'Every write goes through a Worker that stamps server time and validates. None are live yet.',
+    writes: 'Authenticated writes go through the Worker with identity checks and validation. Private drafts are account-scoped; public menu publication requires a site admin.',
     dating: 'Every payload carries as_of and source. Quote the date with the number.',
     tiers: TIER_MEANING,
   },
@@ -1620,7 +1629,7 @@ write('surfaces.json', {
     },
     annotations: {
       status: 'LIVE with the catalogs since 2026-08-09, present in the deployed source. Every ' +
-              'registered tool carries a display title and readOnlyHint:true on tools/list. ' +
+              'registered tool carries a display title and a readOnlyHint matching its read/write behavior on tools/list. ' +
               'destructiveHint, idempotentHint and openWorldHint are deliberately absent rather ' +
               'than guessed. NOT VERIFIED ON THE WIRE: reading them back needs a credential.',
       titles: Object.fromEntries(MCP_REGISTRY.map(t => [t.name, t.title])),
