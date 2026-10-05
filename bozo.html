@@ -5251,7 +5251,7 @@ function displayBozoWhy(){
 /* ---------------- the hub: every league in one place ---------------- */
 // bozo.html with no ?l= is the general Bozo page: the league directory plus, for the
 // site admin, the controls to create more. ?l=<id> opens that league's board.
-const onHub = () => !new URLSearchParams(location.search).get('l');
+const onHub = () => !new URLSearchParams(location.search).get('l') && !['#menu','#bozoMenu'].includes(location.hash);
 
 // Who may edit a given league: the site admin anywhere, a manager in their own.
 const canManage = l => !!ME && (isAdmin() || l.manager === ME.name);
