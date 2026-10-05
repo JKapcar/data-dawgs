@@ -67,6 +67,10 @@ const warroom = privateWrapper("../warroom-weekly.js", "wrWeeklyRoot", "})(typeo
   + "\n" + privateWrapper("../warroom-sleeper.js", "wrSleeperRoot", "})(typeof module!=='undefined'?module.exports:globalThis);")
   + "\n" + readFileSync("warroom-worker.js", "utf8").trimEnd();
 
+const BM_START = "/* ===== DD-BOZO-MENU START — generated from bozo-menu.mjs ===== */";
+const BM_END = "/* ===== DD-BOZO-MENU END ===== */";
+const bozoMenu = "const BOZO_MENU = (() => {\n" + readFileSync("../bozo-menu.mjs", "utf8").replace(/^export /gm, "") + "\nreturn {runMenu, menuSchema, getPublicMenu, publishMenu, publicMenuSchema, renderPublicMenu};\n})();";
+
 let src = readFileSync(TARGET, "utf8");
 const before = src;
 
@@ -100,6 +104,9 @@ const yahoo = readFileSync("yahoo-parse.js", "utf8").replace(/\s+$/, "")
 /* ---- the whole pipeline, so the build and its idempotency proof cannot diverge ---- */
 function transform(input) {
   let t = input;
+  const bmStart = t.indexOf(BM_START), bmEnd = t.indexOf(BM_END);
+  if (bmStart >= 0 && bmEnd > bmStart) t = t.slice(0,bmStart) + t.slice(bmEnd + BM_END.length);
+
 
   /* 1. strip any previously injected MCP block */
   const s = t.indexOf(START), e = t.indexOf(END);
@@ -172,6 +179,7 @@ function transform(input) {
     + "\n\n" + W_START + "\n" + warroom + "\n" + W_END
     + "\n\n" + F_START + "\n" + forecast.trimEnd() + "\n" + F_END
     + "\n\n" + D_START + "\n" + dfsModules + "\n" + D_END
+    + "\n\n" + BM_START + "\n" + bozoMenu + "\n" + BM_END
     + "\n\n" + START + "\n" + block + "\n" + END + "\n";
 }
 
@@ -182,6 +190,9 @@ const once = (needle, what) => {
   const n = out.split(needle).length - 1;
   if (n !== 1) fail(`${what}: expected exactly 1, found ${n}`);
 };
+once(BM_START, "Bozo Menu block start");
+once(BM_END, "Bozo Menu block end");
+once("const BOZO_MENU =", "Bozo Menu shared implementation");
 once(W_START, "War Room block start");
 once(W_END, "War Room block end");
 once("DD-WARROOM-ROUTE", "War Room route");

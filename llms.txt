@@ -18,8 +18,7 @@ Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHous
 - [538 Classic Elo](/data/538-classic.json) ([method](/data/538-classic-methodology.md)): 32 ratings, 272 ungraded forecasts.
 - [Normalized model receipts](/data/model-receipts.json): 1,088 append-only prospective forecasts, 4 model lines, 2 independent.
 
-- [Calculators](/calculators.html): 10 deterministic calculators — odds, vig, EV, hedging,
-passer rating, Elo, margin translation, forecast scoring, belief summary. Inputs are not stored.
+- [Calculators](/calculators.html): deterministic betting and forecast maths; inputs not stored.
 
 - [Fourth Down Lab](/fourth-down.html): go/kick/punt. [Data](/data/fourth-down.json).
 
@@ -28,7 +27,6 @@ passer rating, Elo, margin translation, forecast scoring, belief summary. Inputs
 - [DateDawg](/datedawg.html): local ZIP/JSON reciprocal-acceptance dashboard; no upload, backend memory or observed Hinge cohort.
 - [Arena](/arena.html): games played against other people — Bozo, Guillotine, Survivor, DFS,
 the live draft rig, a [32-team wins pool](/teamdraft.html).
-Rendered from the `domain: "arena"` rows of surfaces.json; owns no data file.
 - [Library](/data.html): every file in index.json, shelved by the surface that owns it, plus
 the sources we read and do not republish. Owns no data file either.
 - [NFL](/nfl.html): EPA, nfelo, calculators, blocked NFL work with its blockers.
@@ -50,7 +48,7 @@ the sources we read and do not republish. Owns no data file either.
 - [Dynasty ranks](/data/dynasty-ranks.json): 334 players/picks; 1QB and SF/TE-premium ranks and values, not observed prices.
 - [League](/data/league.json): 14 teams, $200, 15 spots, derived `half14`, no kicker.
 - [2026 strategy](/data/strategy.md): positional curves and format playbooks; testable structure kept apart from analyst priors.
-- [War Room](/fantasy-warroom.html): your connected Yahoo/ESPN league in DataDawg$ at its own replacement level. No public JSON — one account's rows; `dd_war_room` is deployed for connected Yahoo/ESPN accounts. Shared Sleeper context and `dd_fantasy_leagues` are deployed; a personal AI connection can discover saved leagues and select one explicitly.
+- [War Room](/fantasy-warroom.html): private Yahoo/ESPN/Sleeper league context, DataDawg$ and replacement levels. Deployed `dd_war_room` and `dd_fantasy_leagues` let personal AI connections discover and select saved leagues. No public account data.
 
 ## Models and data
 
@@ -81,3 +79,7 @@ the sources we read and do not republish. Owns no data file either.
 - [Staged DFS MCP](/docs/dfs-mcp-workspace.md): scope and release gates.
 
 DFS core (2026-09-16): sync/compare/schema/list/get/create/upload/players/settings/solve/explore/simulate/exposure/select/export/delete.
+
+## Bozo Menu
+
+[Full public menu](/bozo-menu.html). Follow its text/JSON feeds; include all rows, actual week and quote timestamps.

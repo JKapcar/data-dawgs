@@ -18,6 +18,9 @@ on:
       - "fantasy-warroom.html"
       - "tests/warroom-weekly.test.js"
       - "bozo.html"
+      - "bozo-menu-ui.js"
+      - "bozo-menu.html"
+      - "work/test-bozo-menu-ui.mjs"
       - "tests/bozo-form-spread.test.cjs"
       - "tests/service-worker.test.js"
       - "tests/live-state.test.js"
@@ -38,6 +41,9 @@ on:
       - "fantasy-warroom.html"
       - "tests/warroom-weekly.test.js"
       - "bozo.html"
+      - "bozo-menu-ui.js"
+      - "bozo-menu.html"
+      - "work/test-bozo-menu-ui.mjs"
       - "tests/bozo-form-spread.test.cjs"
       - "tests/service-worker.test.js"
       - "tests/live-state.test.js"
@@ -58,6 +64,7 @@ jobs:
       - run: node work/test-dfs-main-slate.cjs
       - run: npm install --prefix /tmp/dd-dfs-test jsdom@30.0.1 --no-audit --no-fund
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node --test tests/bozo-form-spread.test.cjs tests/bozo-spread-sign.test.js tests/bozo-price-sign.test.js
+      - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-bozo-menu-ui.mjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-autoload-ui.cjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-workspace-ui.cjs
       - run: node --check sw.js

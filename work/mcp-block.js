@@ -2148,7 +2148,7 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
             ? "You are connected as " + caller.name + ". When a tool marks a row `you: true`, that is them.\n"
             : "⚠️ This is the SHARED league connector — you do NOT know which member you are talking to. " +
               "Never assume whose team, leg or ledger is whose; ask. A personal URL from " + SITE + "/connect.html fixes this.\n") +
-          "Every tool here is read-only except dd_submit_bozo_leg, which can write exactly one thing — " +
+          "Tools with readOnlyHint=false can save account workspaces or explicit actions. dd_bozo_menu_save saves private research only; it never submits a pick. dd_submit_bozo_leg can write a Bozo leg — " +
           "the caller's own Bozo leg, in an open week, and only after the human has read back the parsed bet and " +
           "confirmed with the code it returns. Never call its confirm step without showing the human the echo first. " +
           "On a spread leg `line` is points the side gives up (positive lays, negative takes) while `label` reads as the slip prints it — CLE +8.5 is label \"CLE +8.5\", line -8.5 — and the server rejects a sign conflict rather than pricing the wrong side. " +
@@ -2234,6 +2234,55 @@ const MCP_TOOLS = [
     description: "Read all configurable fields, units, defaults, compute limits and workflow.",
     inputSchema: dfsToolSchema("schema"),
     async run(args, env, caller) { return toolText(await dfsRun("schema", args, env, caller)); },
+  },
+  {
+    name: "dd_bozo_menu_public",
+    title: "Get the full shared Bozo Menu",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "Read every published Data Dawgs candidate, including hold/scratch, timestamps and sources. Omit week for latest published; always name its actual week, which can be old. Public HTTP HTML/Markdown/JSON feeds at /bozo/menu on the Toto host need no connector. Never present saved quotes as current offers.",
+    inputSchema: BOZO_MENU.publicMenuSchema(),
+    async run(args, env) { return toolText(await bozoMenuPublic(args, env)); },
+  },
+  {
+    name: "dd_bozo_menu_publish",
+    title: "Publish the shared Bozo Menu",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Site publisher only. Replace one public weekly snapshot with the complete supplied candidate list. Read dd_bozo_menu_public for expected_revision first (0 if unpublished). Publish only Data Dawgs authored summaries and derived estimates. Exclude raw paid-provider outputs, source evidence and private notes. Every supplied field will be public. This does not submit contest entries. Private saves never publish automatically.",
+    inputSchema: BOZO_MENU.publicMenuSchema(true),
+    async run(args, env, caller) { return toolText(await bozoMenuPublish(args, env, caller)); },
+  },
+  {
+    name: "dd_bozo_menu_list",
+    title: "List my weekly Bozo menus",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "List your private weekly candidate library. No league picks are read or submitted.",
+    inputSchema: BOZO_MENU.menuSchema("list"),
+    async run(args, env, caller) { return toolText(await bozoMenuRun("list", args, env, caller)); },
+  },
+  {
+    name: "dd_bozo_menu_get",
+    title: "Read a weekly Bozo menu",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "Read a menu by Monday date, including its revision and saved evidence. Quotes are snapshots, not current availability.",
+    inputSchema: BOZO_MENU.menuSchema("get"),
+    async run(args, env, caller) { return toolText(await bozoMenuRun("get", args, env, caller)); },
+  },
+  {
+    name: "dd_bozo_menu_save",
+    title: "Save Bozo research candidates",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Save supplied research candidates to your private weekly menu. Read get first and send expected_revision (0 for new). Upserts by stable candidate id; each supplied candidate replaces that row, omitted rows remain. Use scratch to retain rejected candidates. Preserve source edge units, dates and weights; omit unknown quotes and probabilities. Does not place wagers or submit Bozo picks.",
+    inputSchema: BOZO_MENU.menuSchema("save"),
+    async run(args, env, caller) { return toolText(await bozoMenuRun("save", args, env, caller)); },
   },
   {
     name: "dd_dfs_list",
