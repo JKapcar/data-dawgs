@@ -1956,6 +1956,26 @@ body.pb-hub{background:#120b05}
 .bm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:16px;margin:20px 0}
 .bm-candidate{padding:20px;border:1px solid var(--grid,#69553a);border-radius:12px;background:rgba(128,96,50,.06);min-width:0;overflow-wrap:anywhere}.bm-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .bm-candidate h3{font-size:23px;margin:14px 0 7px;line-height:1.2}.bm-event{font-size:12px;line-height:1.7}.bm-candidate dl{margin:18px 0}.bm-candidate dl>div{padding:10px 0;border-top:1px solid var(--grid,#69553a)}.bm-candidate dt{font-size:10px;text-transform:uppercase;letter-spacing:.1em;opacity:.7;margin-bottom:6px}.bm-candidate dd{margin:0;font-weight:650}.bm-candidate small{display:block;font-size:11px;font-weight:400;opacity:.75;line-height:1.6;margin-top:4px}.bm-alt dd{font-size:19px}.bm-price-state{font-weight:700;font-size:12px;color:var(--accent,#eab451)}.bm-candidate p{line-height:1.55}.bm-candidate summary,#bmImport summary{cursor:pointer;padding:10px 0}.bm-candidate button{margin-top:14px}.bm-scratch{opacity:.7}.bm-keep .bm-status{border-color:#648761}.bm-downgrade .bm-status,.bm-hold .bm-status{border-color:#bd8c3d}.bm-empty{padding:28px;border:1px dashed var(--grid,#69553a);border-radius:10px}.bm-empty h3{margin-top:0}#bmMessage{font-size:13px;line-height:1.6}#bmImport{border-top:1px solid var(--grid,#69553a);padding-top:10px}
+#bozoMenu[hidden]{display:none!important}
+#bozoMenu{padding:clamp(18px,3vw,32px);border-radius:18px}
+.bm-intro{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding-bottom:16px;border-bottom:1px solid var(--grid)}
+.bm-intro p{margin:0;max-width:50ch;font-size:14px;line-height:1.6}
+.bm-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0}
+.bm-stat{padding:14px 16px;background:var(--surface-1);border:1px solid var(--grid);border-radius:10px}
+.bm-stat strong{display:block;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}.bm-stat span{font-size:11px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em}
+.bm-tools{padding:12px 16px;background:var(--surface-1);border:1px solid var(--grid);border-radius:12px}
+#bozoMenu .bm-tools select{width:100%;min-width:0;font-size:13px}.bm-tools label:first-child{flex:1 1 230px;min-width:0}.bm-tools details{flex:1 1 100%;font-size:12px}
+.bm-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));align-items:start}
+.bm-candidate{background:var(--surface-1);padding:0;overflow:hidden;border-radius:12px}
+.bm-candidate>summary{list-style:none;cursor:pointer;padding:18px!important}.bm-candidate>summary::-webkit-details-marker{display:none}
+.bm-candidate h3{font-size:19px;margin:12px 0 8px;text-wrap:pretty}.bm-candidate .bm-event{margin:0;color:var(--ink-3)}
+.bm-open-hint{display:block;margin-top:14px;font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.04em}.bm-candidate[open] .bm-open-hint{display:none}
+.bm-detail{padding:0 18px 18px;border-top:1px solid var(--grid);font-size:13px}.bm-detail dl{margin:10px 0}.bm-detail summary{font-weight:700}
+.bm-status{text-transform:uppercase;font-size:10px;letter-spacing:.06em}.bm-hold .bm-status{background:rgba(189,140,61,.12)}
+.bm-keep .bm-status{background:rgba(100,135,97,.12)}
+#bmPublish,#bmImport{border:1px solid var(--grid);border-radius:10px;padding:12px 16px;margin-top:12px;font-size:13px}
+#bozoMenu button:focus-visible,#bozoMenu summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+@media(max-width:600px){#bozoMenu .bm-intro a{width:100%;text-align:center}.bm-stat{padding:12px}.bm-stat strong{font-size:24px}.bm-toolbar{gap:8px}.bm-grid{gap:10px}#bozoMenu .bm-candidate{padding:0}}
 @media(max-width:600px){.bm-toolbar>label{flex:1 1 160px}.bm-candidate{padding:16px}#bozoMenu .bz-hdr{gap:12px;align-items:start}#bozoMenu h2{font-size:25px}}
 </style>
 
@@ -2917,7 +2937,7 @@ index.html — the manifesto: what Data Dawgs is for, "Data, not dogma", Bring Y
 receipts.html — every pre-registered forecast, the grading, calibration, the model scoreboard, 538 Classic, provenance, the tier audit.
 dawghouse.html — the shelf: work that was stopped, each item with its blocker and the condition that would reopen it.
 arena.html — the hub for games played against other people; links to all of the below.
-bozo.html — the weekly one-leg parlay game with four sheets: Overview (season Bozo Count, CLV chart, current-week diagnostics and weekly hierarchy grid), This Week (hierarchy machine, ticket and personal entry), Diagnostics (filterable league ledger), and League Settings (roster, rules, shared league password, member cap and public/private visibility).
+bozo.html — the weekly one-leg parlay game with five sheets: Overview (season Bozo Count, CLV chart, current-week diagnostics and weekly hierarchy grid), This Week (hierarchy machine, ticket and personal entry), Diagnostics (filterable league ledger), Bozo Menu (weekly research, screening and quotes), and League Settings (roster, rules, shared league password, member cap and public/private visibility).
 challenge.html — the NFL Forecasting Challenge: put a probability on a game before kickoff, get graded after.
 survivor.html — survivor pool: this week's board, pick popularity, an optimal path, a season simulation, model settings.
 guillotine.html — guillotine league companion. dfs.html — DFS Labs: This week dashboard, slate, solver, simulator, exposure, bankroll, screener, standings, method (keys 1–9). The projections there are the USER'S OWN.
@@ -3756,7 +3776,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   <div class="pb-cta">
     <a class="pb-btn" id="pbOpen" href="bozo.html?l=main">Open my live league &rarr;</a>
-    <a class="pb-btn ghost" href="#bozoMenu">The Bozo Menu</a>
+    <a class="pb-btn ghost" href="bozo.html?l=main#menu">The Bozo Menu</a>
     <a class="pb-btn ghost" href="#pbHow">How the bozo is named</a>
   </div>
   <p class="pb-orn">&#9733; &#10022; &#9733;</p>
@@ -3857,7 +3877,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <div class="card" id="seatNote" style="display:none"></div>
 
 <!-- ---------- submit ---------- -->
-<section class="card" id="bozoMenu" aria-label="The Bozo Menu" data-ddb-skip></section>
+<section class="card" id="bozoMenu" hidden aria-label="The Bozo Menu" data-ddb-skip></section>
 
 <div class="card" id="submitCard" style="display:none">
   <h2 class="bz" id="submitH">Your leg</h2>
@@ -5782,6 +5802,7 @@ function view(){
   const h = decodeURIComponent(location.hash.slice(1));
   if(h === 'week' || h === 'this-week') return 'week';
   if(h === 'diagnostics') return 'diagnostics';
+  if(h === 'menu' || h === 'bozoMenu') return 'menu';
   if(h === 'league' || h === 'league-settings') return 'league';
   if(h.startsWith('s=')) return 'diagnostics';
   return 'overview';
@@ -5789,7 +5810,7 @@ function view(){
 function goto(v){
   location.hash = v==='overview' ? '' : v==='league' ? 'league-settings' : v;
 }
-/* Four page-level destinations. Player identity is now a diagnostics filter and the
+/* Five page-level destinations. Player identity is now a diagnostics filter and the
    entry form lives at the bottom of This Week, so roster-sized navigation is gone. */
 let snavActive = null;
 function paintSnav(v){
@@ -5799,6 +5820,7 @@ function paintSnav(v){
   el.innerHTML = btn('overview','Overview')
     + btn('week','This Week')
     + btn('diagnostics','Diagnostics')
+    + btn('menu','Bozo Menu')
     + btn('league','League Settings');
 
   /* ⚠️ Scroll the active cell into view ONLY when the active view actually changed.
@@ -5971,6 +5993,7 @@ function render(){
   // ⚠️ keys via kEnc — picks are stored URL-encoded, roster names aren't
   const live = players.map(p=>({p, ...(picks[kEnc(p)]||{})})).filter(x=>x.price!=null);
   const hub = onHub();
+  document.getElementById('bozoMenu').hidden = hub || view()!=='menu';
   paintHub();
   document.body.classList.toggle('pb-hub', hub);
   // The band reports one league's week, status and roster — nonsense on a directory of
