@@ -64,9 +64,9 @@ test('historical retrieval requests a pre-kickoff snapshot; in-play/stale histor
  assert.ok(out?.quote);assert.ok(urls.every(u=>u.pathname.includes('/historical/')&&Date.parse(u.searchParams.get('date'))===start-1000));
  assert.ok((await r.bozoOddsApiCapture({ODDS_API_KEY:'test-key'},p,r.reg('nfl'),{caller:'close',nowMs:start+24*3600000}))?.quote, 'next-day recovery uses the pregame snapshot');
  h.data.bookmakers[0].markets[0].last_update=new Date(start+1).toISOString();
- assert.equal(await r.bozoOddsApiCapture({ODDS_API_KEY:'test-key'},p,r.reg('nfl'),{caller:'close',nowMs:start+1000}),null);
+ assert.equal((await r.bozoOddsApiCapture({ODDS_API_KEY:'test-key'},p,r.reg('nfl'),{caller:'close',nowMs:start+1000})).code,'stale_snapshot');
  h.data.bookmakers[0].markets[0].last_update=new Date(start-16*60000).toISOString();
- assert.equal(await r.bozoOddsApiCapture({ODDS_API_KEY:'test-key'},p,r.reg('nfl'),{caller:'close',nowMs:start+1000}),null);
+ assert.equal((await r.bozoOddsApiCapture({ODDS_API_KEY:'test-key'},p,r.reg('nfl'),{caller:'close',nowMs:start+1000})).code,'stale_snapshot');
 });
 test('cache preserves observation times and excludes credentials; receipt records source at both paths',async()=>{
  let calls=0,stored;const r=rig(async()=>{calls++;return Response.json([bills.data]);});
@@ -98,4 +98,37 @@ test('closing cron uses the backup, writes both receipts, and never fetches live
  r.ctx.bozoOddsApiCapture=async()=>null;patches=[];
  const missed=await r.ctx.runClose({ODDS_API_KEY:'test-key'},start+1000);
  assert.equal(missed.captured,0);assert.equal(sgo,0);assert.equal(patches.length,0);
+});
+
+test('both provider failure codes survive manual fallback and warning',async()=>{
+ const r=rig(async()=>Response.json([]));
+ r.ctx.bozoFetchEvents=async()=>{throw Object.assign(Error('SGO 429'),{code:'rate_limited'});};
+ const out=await r.bozoCaptureEntry({ODDS_API_KEY:'fixture'},{...bp,typedPrice:-259});
+ assert.equal(out.p.priceSource,'self');
+ assert.deepEqual(Array.from(out.p.captureAttempts,a=>a.code),['event_not_matched','rate_limited']);
+ assert.match(out.captureWarning,/odds_api: event_not_matched.*sgo: rate_limited/);
+ assert.equal(out.p.captureFailureReason,out.captureWarning);
+});
+test('provider name fixtures resolve SHSU and both accent spellings of SJSU without merging Ohio State',()=>{
+ const r=rig(), reg=r.reg('cfb');
+ const rows=JSON.parse(fs.readFileSync('tests/fixtures/bozo-provider-team-names.json','utf8'));
+ for(const row of rows) {
+   const ev={id:'synthetic',home_team:row.provider,away_team:'Liberty Flames',commence_time:'2026-10-08T23:00:00Z'};
+   const pick={game:row.espn+' @ LIB',startsAt:ev.commence_time};
+   assert.ok(r.ctx.bozoMatchEvent([r.bozoOddsApiEvent(ev)],pick,reg),row.provider);
+ }
+ assert.notEqual(reg.ohio,reg.ohiostate);
+});
+test('all Odds API miss exits are explicit and typed',async()=>{
+ const fresh=structuredClone(bills.data);fresh.bookmakers[0].markets.forEach(m=>m.last_update=new Date().toISOString());
+ for(const [mode,expected] of [['mismatch','event_mismatch'],['market','market_missing'],['stale','stale_snapshot'],['rate','rate_limited'],['bad','provider_error']]) {
+  const data=structuredClone(fresh);
+  if(mode==='mismatch')data.home_team='Dallas Cowboys';
+  if(mode==='market')data.bookmakers=[];
+  if(mode==='stale')data.bookmakers[0].markets.forEach(m=>m.last_update='2020-01-01T00:00:00Z');
+  const r=rig(async url=>mode==='rate'?new Response('',{status:429}):mode==='bad'?Response.json({}):Response.json(String(url).includes('/odds?')?data:[fresh]));
+  const out=await r.bozoOddsApiCapture({ODDS_API_KEY:'fixture'},bp,r.reg('nfl'));
+  assert.equal(out.ok,false);assert.equal(out.code,expected);assert.ok(out.reason);
+ }
+ const r=rig();assert.equal((await r.bozoOddsApiCapture({ODDS_API_KEY:'fixture'},bp,r.reg('nfl'),{deadline:Date.now()-1})).code,'timeout');
 });

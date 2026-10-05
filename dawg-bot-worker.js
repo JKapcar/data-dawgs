@@ -6960,6 +6960,7 @@ async function commitBozoLeg(env, lid, state, name, p, via = null, mkey = null, 
     priceSource: p.priceSource === "captured" ? "captured" : "self",
     verificationStatus: p.priceSource === "captured" ? "verified" : "unverified",
     captureFailureReason: p.captureFailureReason || null, captureFailureCode: p.captureFailureCode || null,
+    captureAttempts: p.captureAttempts || [],
     // ⚠️ Stored so the uniqueness and contradiction checks never have to re-derive a
     // key from a row written under an older version of the rules. A key that drifts
     // between write time and read time silently stops catching collisions.
@@ -7713,6 +7714,7 @@ function ledgerEntries(lid, season, week, picks, order) {
       entryVerification: x.entryVerification || null,
       clvEligible: x.clvEligible === true,
       captureFailureReason: x.captureFailureReason || null, captureFailureCode: x.captureFailureCode || null,
+      captureAttempts: x.captureAttempts || [],
       line: x.line == null ? null : x.line,     // numeric, and separate from the label,
       label: x.label,                           // or the Bozo Index can't be computed
       prop: x.prop || null,
@@ -7911,7 +7913,7 @@ const BOZO_CLOSE_BOOK = "draftkings";
 
 // Team names arrive spelled differently at each end. Strip everything that is not a
 // letter or digit and compare on that — "St. Louis" / "St Louis" / "ST-LOUIS" collapse.
-const bzNorm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+const bzNorm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
 
 // Week 1 floor: SGO returned only `names.long` for North Texas and Indiana, while the
 // filed leg stores UNT and IU. Keep these aliases even with the ESPN registry: they are
@@ -7920,8 +7922,9 @@ const BOZO_TEAM_FALLBACK_ALIASES = Object.freeze({
   unt: "northtexas",
   iu: "indiana",
   ind: "indiana",
+  samhoustonstatebearkats: "samhoustonbearkats",
 });
-const BOZO_TEAM_REGISTRY_VERSION = 1;
+const BOZO_TEAM_REGISTRY_VERSION = 2;
 const BOZO_TEAM_REGISTRY_TTL = 7 * 24 * 60 * 60;
 
 function bozoBuildTeamRegistry(sport) {
@@ -8366,21 +8369,22 @@ async function bozoSgoFailure(response, env, context, suppliedText) {
   return error;
 }
 
-// Submit/draft only. Cloudflare Cache API is local to a datacenter; closes bypass it.
+// Shared 60-second KV cache: submits can reuse a cron fetch across datacenters.
+// Preserve fetchedAt; close quote validation still enforces pregame freshness.
 async function bozoSgoRequest(env, url, context, options = {}) {
   const submit = context.caller === "submit" || context.caller === "draft";
   const deadline = options.deadline || Date.now() + (submit ? 7000 : 8000);
   const fault = (code, message) => Object.assign(new Error(message), {code});
   let cache = null, key = null;
-  if (submit && typeof caches !== "undefined") {
+  if (env.RL) {
     try {
-      cache = caches.default;
+      cache = env.RL;
       // The API key is a header, never in the cache key or stored response.
       const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(url.toString()));
-      key = new Request("https://bozo-entry-cache.invalid/v1/" + [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,"0")).join(""));
-      const hit = await cache.match(key);
+      key = "https://bozo-entry-cache.invalid/v1/" + [...new Uint8Array(bytes)].map(x=>x.toString(16).padStart(2,"0")).join("");
+      const hit = await cache.get(key, "json");
       if (hit) {
-        const saved = await hit.json(), age = Date.now() - Date.parse(saved.fetchedAt);
+        const saved = hit, age = Date.now() - Date.parse(saved.fetchedAt);
         if (age >= 0 && age < 60000 && Array.isArray(saved.events)) {
           Object.defineProperty(saved.events, "fetchedAt", {value:saved.fetchedAt});
           return saved.events;
@@ -8418,7 +8422,7 @@ async function bozoSgoRequest(env, url, context, options = {}) {
       clearTimeout(timer);
       // Never reset the observation time when a cached quote is reused.
       if (cache && key) {
-        try { await cache.put(key, new Response(JSON.stringify(saved), {headers:{"content-type":"application/json","cache-control":"public, max-age=60"}})); } catch {}
+        try { await cache.put(key, JSON.stringify(saved), {expirationTtl:60}); } catch {}
       }
       Object.defineProperty(saved.events, "fetchedAt", {value:saved.fetchedAt});
       return saved.events;
@@ -8597,32 +8601,39 @@ async function bozoOddsApiRequest(env, path, params, options = {}) {
   finally { clearTimeout(timer); }
 }
 async function bozoOddsApiCapture(env,p,registry,options = {}) {
-  const markets = bozoOddsApiMarkets(p);
-  if (!env.ODDS_API_KEY || !markets) return null;
-  const sport = BOZO_ODDS_API_SPORT[p.sport];
-  const start = Date.parse(p.startsAt || p.commenceTime || "");
-  const now = options.nowMs ?? Date.now();
-  const historical = options.caller === "close" && now >= start;
-  const date = historical ? new Date(start-1000).toISOString() : null;
-  const prefix = historical ? "historical/" : "";
-  const base = `${prefix}sports/${sport}/events`;
-  const listed = await bozoOddsApiRequest(env,base,date?{date}:{},{...options,ttl:300});
-  const events = historical ? listed.data.data : listed.data;
-  if (!Array.isArray(events)) throw Object.assign(new Error("Odds API events missing"),{code:"invalid_response"});
-  const event = bozoMatchEvent(events.map(bozoOddsApiEvent),p,registry);
-  if (!event) return null;
-  const response = await bozoOddsApiRequest(env,`${base}/${encodeURIComponent(event.eventID)}/odds`,
-    {bookmakers:"draftkings",markets:markets.join(","),oddsFormat:"american",...(date?{date}:{})},options);
-  const raw = historical ? response.data.data : response.data;
-  if (!raw || raw.id !== event.eventID || !bozoMatchEvent([bozoOddsApiEvent(raw)],p,registry)) return null;
-  const quote = bozoOddsApiQuote(raw,p,registry);
-  if (assertQuote(quote,p)) return null;
-  const stamp = Date.parse(quote.snapshotAt);
-  // Never label in-play odds as the pregame close, or accept a stale/future quote.
-  if (!Number.isFinite(stamp) || stamp > now+60000 || (!historical && now-stamp > 15*60000)) return null;
-  if (options.caller === "close" && (stamp >= start || start-stamp > 15*60000)) return null;
-  if (historical && (!Number.isFinite(Date.parse(response.data.timestamp)) || Date.parse(response.data.timestamp)>=start)) return null;
-  return {event:bozoOddsApiEvent(raw),quote,fetchedAt:response.fetchedAt};
+  const miss = (code, reason) => ({ok:false, code, reason});
+  try {
+    const markets = bozoOddsApiMarkets(p);
+    if (!env.ODDS_API_KEY) return miss("provider_error", "Odds API is not configured");
+    if (!markets) return miss("market_missing", "Market is not supported by Odds API");
+    const sport = BOZO_ODDS_API_SPORT[p.sport];
+    const start = Date.parse(p.startsAt || p.commenceTime || "");
+    const now = options.nowMs ?? Date.now();
+    const historical = options.caller === "close" && now >= start;
+    const date = historical ? new Date(start-1000).toISOString() : null;
+    const prefix = historical ? "historical/" : "";
+    const base = `${prefix}sports/${sport}/events`;
+    const listed = await bozoOddsApiRequest(env,base,date?{date}:{},{...options,ttl:300});
+    const events = historical ? listed.data.data : listed.data;
+    if (!Array.isArray(events)) throw Object.assign(new Error("Odds API events missing"),{code:"provider_error"});
+    const event = bozoMatchEvent(events.map(bozoOddsApiEvent),p,registry);
+    if (!event) return miss("event_not_matched", "No event matched the canonical teams and kickoff window");
+    const response = await bozoOddsApiRequest(env,`${base}/${encodeURIComponent(event.eventID)}/odds`,
+      {bookmakers:"draftkings",markets:markets.join(","),oddsFormat:"american",...(date?{date}:{})},options);
+    const raw = historical ? response.data.data : response.data;
+    if (!raw || raw.id !== event.eventID || !bozoMatchEvent([bozoOddsApiEvent(raw)],p,registry)) return miss("event_mismatch", "Odds response did not match the requested event");
+    const quote = bozoOddsApiQuote(raw,p,registry);
+    if (assertQuote(quote,p)) return miss("market_missing", assertQuote(quote,p));
+    const stamp = Date.parse(quote.snapshotAt);
+    // Never label in-play odds as the pregame close, or accept a stale/future quote.
+    if (!Number.isFinite(stamp) || stamp > now+60000 || (!historical && now-stamp > 15*60000)) return miss("stale_snapshot", "Quote timestamp is outside the allowed pregame freshness window");
+    if (options.caller === "close" && (stamp >= start || start-stamp > 15*60000)) return miss("stale_snapshot", "Quote timestamp is outside the allowed pregame freshness window");
+    if (historical && (!Number.isFinite(Date.parse(response.data.timestamp)) || Date.parse(response.data.timestamp)>=start)) return miss("stale_snapshot", "Quote timestamp is outside the allowed pregame freshness window");
+    return {ok:true,event:bozoOddsApiEvent(raw),quote,fetchedAt:response.fetchedAt};
+  } catch (e) {
+    const code = ["rate_limited", "timeout"].includes(e.code) ? e.code : "provider_error";
+    return miss(code, code === "provider_error" ? "Odds API request failed" : e.message);
+  }
 }
 
 function bozoSelfPricedEntry(p, reason, code = "market_missing") {
@@ -8644,7 +8655,7 @@ function bozoSelfPricedEntry(p, reason, code = "market_missing") {
 async function bozoCaptureEntry(env, input, options = {}) {
   const p = { ...input };
   // These are server-authored, never assertions accepted from a submitter.
-  for (const key of ["verificationStatus", "entryVerification", "captureFailureReason", "captureFailureCode", "clvEligible",
+  for (const key of ["verificationStatus", "entryVerification", "captureFailureReason", "captureFailureCode", "captureAttempts", "clvEligible",
     "priceSource", "entrySnapshotAt", "entryProvider", "providerEventIds", "canonicalKey", "fairEntry", "entryHold"]) delete p[key];
   p.period = bozoPeriodOf(p);
   const periodErr = bozoPeriodError(p);
@@ -8668,6 +8679,12 @@ async function bozoCaptureEntry(env, input, options = {}) {
     error: "Kickoff time (startsAt) could not be resolved from the schedule cache." };
   if (p.mkt === "other") return bozoSelfPricedEntry(p, "Other markets require manual verification of the original quote for CLV.", "unsupported_market");
 
+  const captureAttempts = [];
+  const failed = (provider, code, reason) => {
+    captureAttempts.push({provider, code, reason});
+    p.captureAttempts = captureAttempts;
+    return bozoSelfPricedEntry(p, captureAttempts.map(a => `${a.provider}: ${a.code} (${a.reason})`).join("; "), code);
+  };
   let events, registry, timer;
   const deadline = Date.now() + 7000;
   let backup = null;
@@ -8675,8 +8692,17 @@ async function bozoCaptureEntry(env, input, options = {}) {
     try {
       registry = await bozoTeamRegistry(env,p.sport);
       backup = await bozoOddsApiCapture(env,p,registry,{deadline:Math.min(deadline,Date.now()+5000),caller:"submit"});
-      if (backup) events = [backup.event];
-    } catch { /* the independent SGO source remains available */ }
+      if (backup.ok) {
+        events = [backup.event];
+        captureAttempts.push({provider:"odds_api",code:"captured",reason:"Exact two-sided quote captured"});
+      } else {
+        captureAttempts.push({provider:"odds_api",code:backup.code,reason:backup.reason});
+        backup = null;
+      }
+    } catch (e) {
+      captureAttempts.push({provider:"odds_api",code:e.code || "provider_error",reason:"Odds API capture failed"});
+      backup = null;
+    }
   }
   if (!backup) try {
     [events, registry] = await Promise.race([
@@ -8687,17 +8713,19 @@ async function bozoCaptureEntry(env, input, options = {}) {
       new Promise((_, reject) => { timer = setTimeout(() => reject(Object.assign(new Error("Capture timed out"), {code:"timeout"})), 7000); }),
     ]);
   } catch (e) {
-    return bozoSelfPricedEntry(p, "DraftKings capture failed: " + e.message + ".", e.code || "provider_error");
+    return failed("sgo", e.code || "provider_error", e.message);
   } finally { clearTimeout(timer); }
   const event = bozoMatchEvent(events, p, registry);
   if (!event) {
-    return bozoSelfPricedEntry(p, "The game could not be matched at the odds source.", "event_not_found");
+    return failed("sgo", "event_not_found", "The game could not be matched at the odds source");
   }
   const quote = backup?.quote || bozoDkQuote(event, p, registry);
   const quoteError = assertQuote(quote, p);
   if (quoteError) {
-    return bozoSelfPricedEntry(p, "DraftKings capture failed: " + quoteError + ".", quote?.code || "invalid_quote");
+    return failed("sgo", quote?.code || "invalid_quote", quoteError);
   }
+  if (!backup) captureAttempts.push({provider:"sgo",code:"captured",reason:"Exact two-sided quote captured"});
+  p.captureAttempts = captureAttempts;
   const facts = bozoDevigPair(quote.price, quote.opp);
   const commenceTime = event.status?.startsAt || p.startsAt;
   const typed = bzAmerican(p.typedPrice ?? p.price);
@@ -8781,8 +8809,11 @@ async function runBozoCloseCapture(env, nowMs) {
     for (const t of bucket.legs) {
       let reason = null, quote = null;
       if (env.ODDS_API_KEY && bozoOddsApiMarkets(t.pick)) {
-        try { quote = (await bozoOddsApiCapture(env,t.pick,registry,{caller:"close",nowMs,deadline:Date.now()+7000}))?.quote || null; }
-        catch { /* retry or use the independent pregame source */ }
+        try {
+          const capture = await bozoOddsApiCapture(env,t.pick,registry,{caller:"close",nowMs,deadline:Date.now()+7000});
+          quote = capture.quote || null;
+          if (!quote) console.log("bozo-close-odds-api", JSON.stringify({code:capture.code,reason:capture.reason,canonicalKey:t.pick.canonicalKey}));
+        } catch (e) { console.log("bozo-close-odds-api", JSON.stringify({code:e.code || "provider_error"})); }
       }
       // After kickoff only historical pregame snapshots qualify; never request live SGO.
       if (!quote && nowMs >= t.startMs) { skipped++; continue; }
@@ -19011,7 +19042,7 @@ const MCP_TOOLS = [
     catalog: "core",
     readOnlyHint: true,
     description:
-      "Capture the live DraftKings quote for a proposed Bozo leg, check it against the LIVE board, " +
+      "Capture failures include captureAttempts and captureFailureReason for each odds provider. Capture the live DraftKings quote for a proposed Bozo leg, check it against the LIVE board, " +
       "or the reason it would be rejected. ⚠️ READ-ONLY: this submits nothing and changes no board " +
       "state. Runs the server's own capture and validator; use dd_submit_bozo_leg to " +
       "make a separately captured, two-phase submission.",
@@ -19141,6 +19172,7 @@ const MCP_TOOLS = [
         },
         captured: { line: p.line, price: p.price, priceOpp: p.priceOpp,
           priceSource: p.priceSource, clvEligible: p.clvEligible, captureFailureCode: p.captureFailureCode || null,
+          captureFailureReason: p.captureFailureReason || null, captureAttempts: p.captureAttempts || [],
           entrySnapshotAt: p.entrySnapshotAt, providerEventIds: p.providerEventIds,
           startsAt: p.startsAt, espnEventId: p.espnEventId, canonicalKey: p.canonicalKey },
         agreement: captured.agreement || null,
@@ -19155,7 +19187,7 @@ const MCP_TOOLS = [
           : undefined,
         caveats: [
           "Nothing was submitted. This tool cannot submit — it reads the board and runs the validator.",
-          p.priceSource === "captured" ? "Both prices were captured from DraftKings through the odds feeds." : "UNVERIFIED: manually entered odds, awaiting manager verification of the original quote for CLV.",
+          p.priceSource === "captured" ? "Both prices were captured from DraftKings through the odds feeds." : "UNVERIFIED: manually entered odds, awaiting manager verification of the original quote for CLV. " + (p.captureFailureReason || ""),
           "A pass here is a pass at this instant. Someone else can take your exact leg, or fill the board, before you press submit.",
         ],
       });
@@ -19173,7 +19205,7 @@ const MCP_TOOLS = [
     readOnlyHint: false,
     destructiveHint: true,   // an edit overwrites your existing leg and resets your clock
     description:
-      "Submit (or replace) YOUR OWN leg on the live Bozo board — or another member's leg, via forUid, " +
+      "Capture failures include captureAttempts and captureFailureReason for each odds provider. Submit (or replace) YOUR OWN leg on the live Bozo board — or another member's leg, via forUid, " +
       "if you are this league's manager or the site admin (the leg is marked commissionerModified and " +
       "timestamped at YOUR write, never backdated; the absent member carries the Last In exposure). TWO-PHASE, and phase one writes " +
       "nothing: call with the bet fields and it validates against the live board, then returns a " +
@@ -19413,6 +19445,7 @@ const MCP_TOOLS = [
         wouldLockTheBoard: wouldLock,
         captured: { line: p.line, price: p.price, priceOpp: p.priceOpp,
           priceSource: p.priceSource, clvEligible: p.clvEligible, captureFailureCode: p.captureFailureCode || null,
+          captureFailureReason: p.captureFailureReason || null, captureAttempts: p.captureAttempts || [],
           entrySnapshotAt: p.entrySnapshotAt, providerEventIds: p.providerEventIds,
           startsAt: p.startsAt, espnEventId: p.espnEventId, canonicalKey: p.canonicalKey },
         agreement: captured.agreement || null,
