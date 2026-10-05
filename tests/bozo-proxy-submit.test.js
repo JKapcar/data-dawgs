@@ -85,9 +85,11 @@ function tree() {
 function rig() {
   const fb = tree();
   const ctx = { auth: null, tripwires: [], logs: [], placed: false, validate: () => null };
-  const kv = { store: new Map(), async get(k) { return this.store.has(k) ? this.store.get(k) : null; }, async put(k, v) { this.store.set(k, v); } };
+  const kv = { store: new Map(), async get(k) { return this.store.has(k) ? this.store.get(k) : null; }, async put(k, v, options) { this.store.set(k, v); this.ttls.set(k,options?.expirationTtl); }, ttls:new Map(), async delete(k) {this.store.delete(k);} };
   const env = { RL: kv, BOZO_ADMIN: 'Kap' };
   const sandbox = {
+    SITE:'https://example.test',DEFAULT_LEAGUE:'main',
+    toolText:body=>body,toolErr:error=>({error}),validLeagueId:s=>/^[a-z0-9-]+$/.test(s),
     fbPut: async (e, p, v) => { fb.put(p, v); return true; },
     fbPatch: async (e, p, o) => { fb.patch(p, o); return true; },
     fbGet: async (e, p) => ({ data: fb.get(p) }),
@@ -125,6 +127,9 @@ function rig() {
     between('async function bozoPick(', '/* ---------- the DraftKings SGP rule'),
     'this.api = { memberKeyOf, memberKeys, memberNameAt, isSiteAdmin, canActFor, isLeagueOwner, memberKeyOfRef, bozoTargetSeat, bozoPick };',
   ].join('\n'), sandbox);
+  const at=block.indexOf('    name: "dd_submit_bozo_leg"');
+  const source=block.slice(block.lastIndexOf('  {',at),block.indexOf('  {\n    name:',at)).trim().replace(/,$/,'');
+  vm.runInContext('this.mcp = ('+source+');',sandbox);
   const api = sandbox.api;
   const post = (auth, body) => { ctx.auth = auth; return api.bozoPick({ method: 'POST', body: {clientBuild:'bozo-20260924-02', ...body} }, env, {}); };
   const submit = async (auth, extra = {}, pick = PICK) => {
@@ -139,7 +144,7 @@ function rig() {
   });
   const league = () => fb.get('/bozo/leagues/main');
   const audit = () => Object.values((league().admin || {}).actions || {});
-  return { api, env, ctx, kv, fb, post, submit, seed, league, audit };
+  return { api, env, ctx, kv, fb, post, submit, seed, league, audit, mcp:(args,caller={...MGR,kind:"user"})=>sandbox.mcp.run(args,env,caller) };
 }
 
 const PICK = { sport: 'cfb', eventId: '401', game: 'UAB @ NAVY', mkt: 'ml', side: 'NAVY', line: 0, label: 'NAVY ML', startsAt: '2026-09-12T19:30:00.000Z' };
@@ -357,4 +362,57 @@ test('old and missing browser builds refuse both phases before writes', async()=
   assert.equal(a.status,409);assert.equal(a.body.code,'page_out_of_date');
   const b=await r.post(MGR,{confirm:'never-issued',clientBuild});assert.equal(b.status,409);assert.equal(b.body.code,'page_out_of_date');
  }
+});
+
+test('MCP main and royale proposals both land; confirmations need only code and replay the original result',async()=>{
+ const r=rig();r.seed();r.fb.put('/bozo/leagues/royale',{...r.league(),format:'royale'});
+ const a=await r.mcp({...PICK,league:'main'}),b=await r.mcp({...PICK,league:'royale'});
+ assert.equal(a.status,'confirm_required');assert.equal(b.status,'confirm_required');
+ assert.ok(!r.league().picks);assert.ok(!r.fb.get('/bozo/leagues/royale').picks);
+ for(const key of ['mcpconfirm:u_mgr:main:u_mgr','mcpconfirm:u_mgr:royale:u_mgr',`mcpconfirm-code:u_mgr:${a.confirm_code}`,`mcpconfirm-code:u_mgr:${b.confirm_code}`]){
+  assert.ok(r.kv.store.has(key));assert.equal(r.kv.ttls.get(key),300);
+ }
+ const first=await r.mcp({confirm:a.confirm_code}),second=await r.mcp({confirm:b.confirm_code});
+ assert.equal(first.status,'submitted');assert.equal(second.status,'submitted');
+ assert.equal(r.league().picks.u_mgr.label,PICK.label);assert.equal(r.fb.get('/bozo/leagues/royale').picks.u_mgr.label,PICK.label);
+ const snapshot=JSON.stringify(r.league());
+ assert.equal(JSON.stringify(await r.mcp({confirm:a.confirm_code})),JSON.stringify(first));
+ assert.equal(JSON.stringify(r.league()),snapshot);
+ assert.equal(r.kv.ttls.get(`mcpconfirm-code:u_mgr:${a.confirm_code}`),3600);
+});
+test('MCP same-seat proposal supersedes old code; consumed result survives a newer proposal without writes',async()=>{
+ const r=rig();r.seed();
+ const a=await r.mcp(PICK),b=await r.mcp({...PICK,label:'NAVY -3.5',mkt:'spread',line:3.5});
+ const old=await r.mcp({confirm:a.confirm_code});assert.equal(old.status,'superseded');assert.equal(old.echo,b.echo);assert.ok(!r.league().picks);
+ const landed=await r.mcp({confirm:b.confirm_code});assert.equal(landed.status,'submitted');
+ const c=await r.mcp({...PICK,label:'new proposal'});assert.equal(c.status,'confirm_required');
+ const state=JSON.stringify(r.league()),kv=JSON.stringify([...r.kv.store]);
+ assert.equal(JSON.stringify(await r.mcp({confirm:b.confirm_code})),JSON.stringify(landed));
+ assert.equal(JSON.stringify(r.league()),state);assert.equal(JSON.stringify([...r.kv.store]),kv);
+ assert.equal((await r.mcp({confirm:'UNKNOWN'})).status,'nothing_pending');
+});
+test('MCP two forUid proposals confirm independently and retain proxy audits',async()=>{
+ const r=rig();r.seed();
+ const a=await r.mcp({...PICK,forUid:'u_rog'}),b=await r.mcp({...PICK,forUid:'u_sue',label:'ARMY ML',side:'ARMY'});
+ assert.ok(!r.league().picks);
+ assert.equal((await r.mcp({confirm:a.confirm_code})).status,'submitted');
+ assert.equal((await r.mcp({confirm:b.confirm_code})).status,'submitted');
+ assert.equal(r.league().picks.u_rog.label,'NAVY ML');assert.equal(r.league().picks.u_sue.label,'ARMY ML');
+ assert.equal(r.audit().length,2);assert.ok(!r.league().picks.u_mgr);
+});
+test('MCP stale-week and invalid-pick cleanup deletes both keys without affecting other seats',async()=>{
+ for(const mode of ['week','validation']){
+  const r=rig();r.seed();const a=await r.mcp(PICK),b=await r.mcp({...PICK,forUid:'u_rog'});
+  if(mode==='week'){const lg=r.league();lg.week++;r.fb.put('/bozo/leagues/main',lg);}else r.ctx.validate=()=> 'selection taken';
+  const out=await r.mcp({confirm:a.confirm_code});assert.equal(out.status,mode==='week'?'stale':'rejected');
+  assert.ok(!r.kv.store.has('mcpconfirm:u_mgr:main:u_mgr'));assert.ok(!r.kv.store.has(`mcpconfirm-code:u_mgr:${a.confirm_code}`));
+  assert.ok(r.kv.store.has('mcpconfirm:u_mgr:main:u_rog'));assert.ok(r.kv.store.has(`mcpconfirm-code:u_mgr:${b.confirm_code}`));
+  assert.ok(!r.league().picks);
+ }
+});
+test('MCP code index is isolated by caller; proxy permissions are checked again on confirmation',async()=>{
+ const r=rig();r.seed();const a=await r.mcp({...PICK,forUid:'u_rog'});
+ assert.equal((await r.mcp({confirm:a.confirm_code},{...SUE,kind:'user'})).status,'nothing_pending');
+ const lg=r.league();lg.managerUid='u_sue';r.fb.put('/bozo/leagues/main',lg);
+ assert.ok((await r.mcp({confirm:a.confirm_code})).error);assert.ok(!r.league().picks);
 });

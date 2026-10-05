@@ -270,8 +270,8 @@ console.log("\nthe write-scope invariant still holds");
   ok("no fbDelete in the MCP block", !/fbDelete\s*\(/.test(block));
   ok("commitBozoLeg is called exactly once in the block",
      (block.match(/commitBozoLeg\s*\(/g) || []).length === 1);
-  ok("every KV write in the block targets the caller's own mcpconfirm staging key",
-     (block.match(/\.put\s*\(/g) || []).length === (block.match(/env\.RL\.put\(kvKey/g) || []).length);
+  ok("every KV write in the block targets the caller's own confirmation envelope or code index",
+     (block.match(/\.put\s*\(/g) || []).length === (block.match(/env\.RL\.put\((?:kvKey|codeKey)/g) || []).length);
   // Two namespaces, and nothing outside them: dd_* reads the league, sd_* reads and
   // writes the signed-in athlete's own training log.
   ok("every tool name is namespaced", W.MCP_TOOLS.every(t => /^(dd|sd)_/.test(t.name)));

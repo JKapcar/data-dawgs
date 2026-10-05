@@ -2288,6 +2288,7 @@ const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", sid
       return value == null ? null : type === "json" ? value : JSON.stringify(value);
     },
     async put(k, v) { kv.set(k, v); },
+    async delete(k) { kv.delete(k); },
   } };
   const reqW = (body, path) => worker.fetch(new Request("https://toto.jkapcar4.workers.dev" + path, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -2318,7 +2319,7 @@ const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", sid
 
   // a wrong code commits nothing
   const wrong = await (await submit({ confirm: "NOPE99" })).json();
-  ok(wrong.result.isError === true && legWrites.length === 0, "a wrong confirm code writes nothing");
+  ok(text(wrong).status === "nothing_pending" && legWrites.length === 0, "an unknown confirm code returns nothing_pending and writes nothing");
 
   // phase two: the same code commits, through the same write path the site uses
   const p2 = text(await (await submit({ confirm: p1.confirm_code })).json());
@@ -2373,9 +2374,11 @@ const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", sid
 ok(!/fbPut|fbPatch|fbDelete/.test(noComments), "block calls NO Firebase write helper directly");
 ok((noComments.match(/commitBozoLeg\(/g) || []).length === 1,
    "the block reaches the Firebase write path via commitBozoLeg exactly once");
-ok((noComments.match(/\.put\(/g) || []).length === (noComments.match(/env\.RL\.put\(kvKey/g) || []).length,
-   "every KV write in the block is env.RL.put on the caller's own mcpconfirm staging key");
-ok(!/\.delete\(/.test(noComments), "block performs NO KV deletes");
+ok((noComments.match(/\.put\(/g) || []).length === (noComments.match(/env\.RL\.put\((?:kvKey|codeKey)/g) || []).length,
+   "every KV write in the block is env.RL.put on the caller's own confirmation envelope or code index");
+ok((noComments.match(/\.delete\(/g) || []).length === 4 &&
+   (noComments.match(/env\.RL\.delete\((?:kvKey|codeKey)\)/g) || []).length === 4,
+   "KV deletes are exactly the envelope and index on stale-week and invalid-pick rejection");
 ok(!/method:\s*["'](PUT|POST|PATCH|DELETE)/.test(noComments), "block issues NO writing HTTP methods");
 const assembled = readFileSync(resolve(WORK, "..", "dawg-bot-worker.js"), "utf8");
 /* ⚠️ THIS USED TO BE AN ASSERTION THAT COULD NOT FAIL. It read dawg-bot-worker.js into

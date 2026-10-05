@@ -2869,7 +2869,7 @@ const MCP_TOOLS = [
       "plain-English echo of the parsed bet plus a confirm_code. ⚠️ SHOW THE HUMAN THE ECHO and only " +
       "call again with {confirm: code} after they have approved it — the echo is what stops a " +
       "misparsed team, line or price from becoming a real bet. The code expires in 5 minutes; " +
-      "replaying a used code is a no-op that returns the original result. Editing an existing leg " +
+      "replaying a used code is a no-op that returns the original result. Proposals in different leagues or for different members can be pending at once; a newer proposal for the same seat replaces the older one. Editing an existing leg " +
       "resets its server timestamp AND price, which moves you in the Last In lever. If the response " +
       "says the submission would lock the board, say so out loud before confirming: the last leg " +
       "places the ticket for everyone and draws the lever hierarchy, and there is no undo.",
@@ -2911,23 +2911,26 @@ const MCP_TOOLS = [
       const uid = caller.uid || caller.name;
       // ⚠️ Keyed by uid, not display name: display names are mutable, and a rename
       // between propose and confirm must not orphan (or worse, cross-match) a pending bet.
-      const kvKey = "mcpconfirm:" + uid;
+      const seatKey = (lid, mkey) => "mcpconfirm:" + uid + ":" + lid + ":" + mkey;
 
       /* -------------------------- phase two: confirm -------------------------- */
       if (args.confirm !== undefined) {
         const code = String(args.confirm || "").trim().toUpperCase();
         if (!code) return toolErr("Empty confirm code.");
+        const codeKey = "mcpconfirm-code:" + uid + ":" + code;
+        let index;
+        try { index = JSON.parse((await env.RL.get(codeKey)) || "null"); } catch { index = null; }
+        if (!index)
+          return toolText({ status: "nothing_pending", detail: "No proposal is waiting on this code — it may have expired (codes live 5 minutes). Propose the leg again." });
+        // A consumed code survives later proposals for the same seat and replays unchanged.
+        if (index.consumed) return toolText(index.result);
+        const kvKey = seatKey(index.lid, index.mkey);
         let pend;
         try { pend = JSON.parse((await env.RL.get(kvKey)) || "null"); } catch { pend = null; }
         if (!pend)
-          return toolText({ status: "nothing_pending", detail: "No proposal is waiting on a confirmation — it may have expired (codes live 5 minutes). Propose the leg again." });
+          return toolText({ status: "nothing_pending", detail: "The proposal expired. Propose the leg again." });
         if (pend.code !== code)
-          return toolErr(pend.consumed
-            ? "That code was already used for a different submission. Propose again if you want to change the leg."
-            : "Wrong confirm code. The pending proposal is: " + pend.echo);
-        // ⚠️ Idempotent replay, spec §4.2: the same code returns the ORIGINAL result and
-        // writes nothing. An agent retry must not become a second submission.
-        if (pend.consumed) return toolText(pend.result);
+          return toolText({ status: "superseded", echo: pend.echo, detail: "A newer proposal for this seat replaced that code. Review the newer echo before confirming it." });
 
         // Re-check EVERYTHING against the live board. The confirm may arrive minutes
         // after the propose; someone can have taken the selection, filled the board, or
@@ -2944,7 +2947,7 @@ const MCP_TOOLS = [
           return toolErr(pend.forUid ? seat.error : "You are not in " + lid + " any more, so nothing can go on that board under your name.");
         const who = seat.name, proxy = seat.proxy;
         if ((lg.week || 1) !== pend.week) {
-          try { await env.RL.put(kvKey, "null", { expirationTtl: 60 }); } catch {}
+          try { await env.RL.delete(kvKey); await env.RL.delete(codeKey); } catch {}
           return toolText({ status: "stale", detail: "The league moved to week " + (lg.week || 1) + " since this was proposed for week " + pend.week + ". Propose again on the current board." });
         }
         const set = settingsOf(lg);
@@ -2969,7 +2972,7 @@ const MCP_TOOLS = [
         const weekGate = await bozoWeekGate(env, lg);
         const err = validatePick(pend.p, who, picks, bandOf(lg), set.format, mkey, weekGate);
         if (err) {
-          try { await env.RL.put(kvKey, "null", { expirationTtl: 60 }); } catch {}
+          try { await env.RL.delete(kvKey); await env.RL.delete(codeKey); } catch {}
           return toolText({ status: "rejected", detail: "The board changed since this was proposed and the leg no longer passes: " + err + " Propose again." });
         }
 
@@ -2997,7 +3000,7 @@ const MCP_TOOLS = [
             : "Your leg is on the board. Others can still see and react to it; the board locks when the last leg lands.",
         };
         // Consumed marker, kept 1 hour so a retry storm keeps getting the same answer.
-        try { await env.RL.put(kvKey, JSON.stringify({ code, consumed: true, result }), { expirationTtl: 3600 }); } catch {}
+        try { await env.RL.put(codeKey, JSON.stringify({ lid, mkey, consumed: true, result }), { expirationTtl: 3600 }); } catch {}
         return toolText(result);
       }
 
@@ -3014,6 +3017,7 @@ const MCP_TOOLS = [
       if (seat.error)
         return toolErr(args.forUid ? seat.error : "You are not in " + lid + ", so nothing can go on that board under your name.");
       const who = seat.name, mkey = seat.key, proxy = seat.proxy;
+      const kvKey = seatKey(lid, mkey);
       if ((lg.status || "open") !== "open")
         return toolText({ status: "board-locked", detail: "The ticket is placed and the board is locked — nothing can be added or changed for week " + (lg.week || 1) + ". The lever hierarchy has already been drawn." });
 
@@ -3084,12 +3088,14 @@ const MCP_TOOLS = [
       for (const r of rnd) code += alphabet[r % alphabet.length];
       p.submissionId = code;
 
-      // ⚠️ The pending record is the ONLY thing written in phase one, it lives in KV —
+      const codeKey = "mcpconfirm-code:" + uid + ":" + code;
+      // ⚠️ The pending envelope and code index are the ONLY writes in phase one, in KV —
       // never Firebase — and it expires on its own. Nothing on the board changes here.
       try {
         // The TARGET rides in the envelope, so phase two re-resolves and re-gates it.
         await env.RL.put(kvKey, JSON.stringify({ code, lid, week: lg.week || 1, p, echo, ts: Date.now(),
           forUid: proxy ? mkey : null, forKey: mkey }), { expirationTtl: 300 });
+        await env.RL.put(codeKey, JSON.stringify({lid,mkey}), {expirationTtl:300});
       } catch (e) { return toolErr("Could not stage the confirmation: " + e.message); }
 
       return toolText({
