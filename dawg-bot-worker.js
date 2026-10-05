@@ -6960,6 +6960,7 @@ async function commitBozoLeg(env, lid, state, name, p, via = null, mkey = null, 
     priceSource: p.priceSource === "captured" ? "captured" : "self",
     verificationStatus: p.priceSource === "captured" ? "verified" : "unverified",
     captureFailureReason: p.captureFailureReason || null, captureFailureCode: p.captureFailureCode || null,
+    captureAttempts: p.captureAttempts || [],
     // ⚠️ Stored so the uniqueness and contradiction checks never have to re-derive a
     // key from a row written under an older version of the rules. A key that drifts
     // between write time and read time silently stops catching collisions.
@@ -7713,6 +7714,7 @@ function ledgerEntries(lid, season, week, picks, order) {
       entryVerification: x.entryVerification || null,
       clvEligible: x.clvEligible === true,
       captureFailureReason: x.captureFailureReason || null, captureFailureCode: x.captureFailureCode || null,
+      captureAttempts: x.captureAttempts || [],
       line: x.line == null ? null : x.line,     // numeric, and separate from the label,
       label: x.label,                           // or the Bozo Index can't be computed
       prop: x.prop || null,
