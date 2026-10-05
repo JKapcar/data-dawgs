@@ -1765,6 +1765,7 @@ export default {
     if (url.pathname === "/survivor-picks") return handleSurvivorPicks(request, url, env, cors);
     if (url.pathname === "/cfb/market-snapshots") return handleCfbMarketSnapshots(request, url, env, cors);
     if (url.pathname === "/sleeper/players-slim") return handleSleeperPlayersSlim(request, env, cors);
+    if (["/bozo/menu", "/bozo/menu.json", "/bozo/menu.md"].includes(url.pathname)) return handlePublicBozoMenu(request, url, env);
     if (url.pathname.startsWith("/api/bozo-menu/")) return handleBozoMenu(request, url, env, cors);
     if (url.pathname.startsWith("/api/dfs/")) return handleDfsWorkspace(request, url, env, cors);
     if (url.pathname.startsWith("/api/swoledawg")) return handleSwole(request, url, env, cors);
@@ -2434,20 +2435,39 @@ async function bozoMenuRun(op, args, env, caller) {
     put: (path, value, etag) => fbPut(env, path, value, etag),
   });
 }
+async function bozoMenuPublic(args, env) {
+  return BOZO_MENU.getPublicMenu(args, {get:path=>fbGet(env,path)});
+}
+async function bozoMenuPublish(args, env, caller) {
+  return BOZO_MENU.publishMenu(args, {...caller,site_admin:isSiteAdmin(caller,env)}, {
+    get:(path,etag)=>fbGet(env,path,etag), put:(path,value,etag)=>fbPut(env,path,value,etag),
+  });
+}
+async function handlePublicBozoMenu(request, url, env) {
+  const headers={'Access-Control-Allow-Origin':'*','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'};
+  if (request.method === 'OPTIONS') return new Response(null,{headers:{...headers,'Access-Control-Allow-Methods':'GET, HEAD, OPTIONS'}});
+  if (!['GET','HEAD'].includes(request.method)) return json({error:'Read-only public menu'},405,headers);
+  try {
+    const menu=await bozoMenuPublic(url.searchParams.has('week')?{week:url.searchParams.get('week')}:{},env);
+    const format=url.pathname.endsWith('.json')?'json':url.pathname.endsWith('.md')?'md':'html';
+    const body=format==='json'?JSON.stringify(menu):BOZO_MENU.renderPublicMenu(menu,format);
+    return new Response(request.method==='HEAD'?null:body,{headers:{...headers,'Content-Type':format==='json'?'application/json; charset=utf-8':format==='md'?'text/plain; charset=utf-8':'text/html; charset=utf-8',...(format==='html'?{'Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"}:{})}});
+  } catch(e) { return json({error:e.message},e.status||502,headers); }
+}
 async function handleBozoMenu(request, url, env, cors) {
   const auth = await sessionAuth(request, env);
   if (auth.err) return json({error:auth.err}, auth.code || 401, cors);
   const op = url.pathname.slice('/api/bozo-menu/'.length);
-  if (!['list','get','save'].includes(op)) return json({error:'Unknown menu operation'},404,cors);
-  if (request.method !== (op === 'save' ? 'POST' : 'GET')) return json({error:'Method not allowed'},405,cors);
+  if (!['list','get','save','publish'].includes(op)) return json({error:'Unknown menu operation'},404,cors);
+  if (request.method !== (['save','publish'].includes(op) ? 'POST' : 'GET')) return json({error:'Method not allowed'},405,cors);
   try {
     let args = op === 'get' ? {week:url.searchParams.get('week')} : {};
-    if (op === 'save') {
+    if (['save','publish'].includes(op)) {
       const parsed = await readCappedJson(request, 250000);
       if (parsed.tooLarge || parsed.malformed) return json({error:'Invalid JSON or body over 250 KB'},400,cors);
       args = parsed.value;
     }
-    return json(await bozoMenuRun(op,args,env,{kind:'user',uid:auth.uid}),200,cors);
+    return json(await (op==='publish'?bozoMenuPublish(args,env,{...auth,kind:'user'}):bozoMenuRun(op,args,env,{kind:'user',uid:auth.uid})),200,cors);
   } catch(e) { return json({error:e.message},e.status || 502,cors); }
 }
 
@@ -14662,7 +14682,7 @@ function dfsToolSchema(op){
 
 /* ===== DD-BOZO-MENU START — generated from bozo-menu.mjs ===== */
 const BOZO_MENU = (() => {
-// Private weekly research library. This module cannot reach Bozo contest writes.
+// Private drafts and explicitly published weekly research. No Bozo contest writes.
 const key = {type:'string',pattern:'^[A-Za-z0-9_-]{1,80}$'};
 const text = {type:'string',maxLength:1600};
 const stamp = {type:'string',format:'date-time'};
@@ -14743,7 +14763,53 @@ async function runMenu(op,args,caller,store,now=Date.now()){
  return output(week);
 }
 
-return {runMenu, menuSchema};
+// Publishing is explicit. The public store never reads a personal library.
+const publicProperties={...candidateSchema.properties};
+delete publicProperties.notes;
+publicProperties.edge={...edge,description:'Data Dawgs authored/derived estimate only; never a raw paid-provider export.'};
+publicProperties.sources={type:'array',maxItems:10,items:{type:'object',additionalProperties:false,required:['name','as_of'],properties:{name:text,as_of:stamp,weight:{type:'number',minimum:0,maximum:1},url:{type:'string',format:'uri'}}}};
+const publicCandidateSchema={...candidateSchema,properties:publicProperties};
+function publicMenuSchema(publish=false){
+ const week=menuSchema('get').properties.week;
+ return publish?{...menuSchema('save'),properties:{...menuSchema('save').properties,candidates:{type:'array',minItems:1,maxItems:200,items:publicCandidateSchema}}}:{type:'object',additionalProperties:false,properties:{week},required:[]};
+}
+function validMenuWeek(week){if(!week)return;const d=new Date(week+'T00:00:00Z');if(!Number.isFinite(+d)||d.toISOString().slice(0,10)!==week||d.getUTCDay()!==1)fail('week must be a valid Monday date.');}
+async function getPublicMenu(args,store,now=Date.now()){
+ validate(args,publicMenuSchema());validMenuWeek(args.week);
+ const weeks=(await store.get('/publishedBozoMenus')).data?.weeks||{};
+ const keys=Object.keys(weeks).sort().reverse();const selected=args.week||keys[0];const w=weeks[selected];
+ return {title:w?.title||'The Bozo Menu',week:selected||null,revision:w?.revision||0,published_at:w?.published_at||null,retrieved_at:new Date(now).toISOString(),status:w?'published':'unpublished',
+ scope:'Public Data Dawgs research. Saved quotes, not guaranteed current offers. No contest picks submitted.',
+ candidates:(w?.candidates||[]).map(c=>({...c,quote_state:quoteState(c,now)})),
+ published_weeks:keys.map(week=>({week,title:weeks[week].title,revision:weeks[week].revision,published_at:weeks[week].published_at}))};
+}
+async function publishMenu(args,caller,store,now=Date.now()){
+ if(caller?.kind!=='user'||!caller.uid||caller.site_admin!==true)fail('Only the Data Dawgs publisher can publish the shared menu.',403);
+ validate(args,publicMenuSchema(true));validMenuWeek(args.week);
+ // Reuse private-row semantic validation without reading or writing a private account.
+ const normalized=args.candidates.map(c=>({...c,...(c.sources?{sources:c.sources.map(s=>({...s,evidence:'Public source attribution'}))}:{})}));
+ await runMenu('save',{...args,expected_revision:0,candidates:normalized},caller,{get:async()=>({data:null,etag:'validation'}),put:async()=>true},now);
+ const path='/publishedBozoMenus',saved=await store.get(path,true),weeks=saved.data?.weeks||{},old=weeks[args.week];
+ if((old?.revision||0)!==args.expected_revision)fail('Published menu changed. Read its revision and retry.',409);
+ const published={week:args.week,title:args.title||'The Bozo Menu · '+args.week,revision:args.expected_revision+1,published_at:new Date(now).toISOString(),published_by:caller.uid,candidates:structuredClone(args.candidates)};
+ const library={version:1,weeks:{...weeks,[args.week]:published}};
+ if(Object.keys(library.weeks).length>104||new TextEncoder().encode(JSON.stringify(library)).byteLength>2000000)fail('Public archive limit reached (104 weeks / 2 MB).');
+ if(!saved.etag)fail('Storage did not provide a revision lock.',503);
+ if(!await store.put(path,library,saved.etag))fail('Public archive changed. Read its revision and retry.',409);
+ return getPublicMenu({week:args.week},store,now);
+}
+function renderPublicMenu(menu,format='html'){
+ const escape=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const date=s=>s?new Date(s).toLocaleString('en-US',{timeZone:'America/New_York',year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET':'Not supplied';
+ const quote=q=>q?`${q.line??'Moneyline'} at ${q.odds>0?'+':''}${q.odds} · ${q.book} · quoted ${date(q.quoted_at)}`:'Not supplied';
+ const estimate=e=>e?`${e.value} ${e.unit.replaceAll('_',' ')} — ${e.definition}`:'Not supplied for sharing';
+ const header=[menu.title,`Week beginning ${menu.week||'not yet published'} · revision ${menu.revision}`,`Published ${date(menu.published_at)} · retrieved ${date(menu.retrieved_at)}`,menu.scope,`${menu.candidates.length} candidates. Keep, downgrade, hold and scratch are screening decisions; scratched/held rows are not active recommendations.`];
+ const sections=menu.candidates.map((c,i)=>({title:`${c.rank||i+1}. ${c.selection} — ${c.status}`,lines:[`${c.sport} · ${c.event} · ${c.market} · ${date(c.kickoff)}`,`Base bet: ${quote(c.base)}`,`Data Dawgs edge estimate: ${estimate(c.edge)}`,...(c.adjusted_edge?[`Adjusted edge (judgment): ${estimate(c.adjusted_edge)}`]:[]),`Alternate offer: ${quote(c.alternate)}`,`Quote status: ${c.quote_state}`,`Screen: ${c.reason} · checked ${date(c.screened_at)}`,...(c.probability?[`Estimated hit probability: ${(c.probability.value*100).toFixed(1)}% — ${c.probability.basis}`]:[]),...(c.worst_acceptable?[`Worst acceptable offer: ${c.worst_acceptable}`]:[]),...(c.sources||[]).map(s=>`Source: ${s.name} · ${date(s.as_of)}${s.weight!=null?' · weight '+Math.round(s.weight*100)+'%':''}${s.url?' · '+s.url:''}`),`Result: ${c.result||'pending'}`]}));
+ if(format==='md')return '# '+header[0]+'\n\n'+header.slice(1).join('\n\n')+'\n\n'+sections.map(s=>'## '+s.title+'\n\n'+s.lines.map(l=>'- '+l.replace(/\n/g,' ')).join('\n')).join('\n\n');
+ return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>The Bozo Menu · Data Dawgs</title><style>body{margin:auto;max-width:1100px;padding:24px;background:#17120e;color:#f5efe3;font:16px/1.6 system-ui}a{color:#ffb365}h1{font-size:38px}article{padding:20px;border:1px solid #624832;border-radius:12px;background:#231a13;overflow-wrap:anywhere}article p{margin:10px 0}main{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:18px}nav{display:flex;gap:16px;flex-wrap:wrap;margin:20px 0}</style></head><body><a href="https://datadawgs216.com/bozo.html#bozoMenu">Data Dawgs · Bozo</a><h1>'+escape(header[0])+'</h1>'+header.slice(1).map(l=>'<p>'+escape(l)+'</p>').join('')+'<nav><a href="/bozo/menu.md'+(menu.week?'?week='+menu.week:'')+'">Full menu for AI / text</a><a href="/bozo/menu.json'+(menu.week?'?week='+menu.week:'')+'">JSON</a><a href="/bozo/menu">Latest published</a></nav><nav>'+menu.published_weeks.map(w=>'<a href="?week='+w.week+'">'+escape(w.week)+'</a>').join('')+'</nav><main>'+sections.map(s=>'<article><h2>'+escape(s.title)+'</h2>'+s.lines.map(l=>'<p>'+escape(l)+'</p>').join('')+'</article>').join('')+'</main>'+(menu.status==='unpublished'?'<p>No menu has been published for this week.</p>':'')+'</body></html>';
+}
+
+return {runMenu, menuSchema, getPublicMenu, publishMenu, publicMenuSchema, renderPublicMenu};
 })();
 /* ===== DD-BOZO-MENU END ===== */
 
@@ -18480,6 +18546,25 @@ const MCP_TOOLS = [
     description: "Read all configurable fields, units, defaults, compute limits and workflow.",
     inputSchema: dfsToolSchema("schema"),
     async run(args, env, caller) { return toolText(await dfsRun("schema", args, env, caller)); },
+  },
+  {
+    name: "dd_bozo_menu_public",
+    title: "Get the full shared Bozo Menu",
+    catalog: "core",
+    readOnlyHint: true,
+    description: "Read every published Data Dawgs candidate, including hold/scratch, timestamps and sources. Omit week for latest published; always name its actual week, which can be old. Public HTTP HTML/Markdown/JSON feeds at /bozo/menu on the Toto host need no connector. Never present saved quotes as current offers.",
+    inputSchema: BOZO_MENU.publicMenuSchema(),
+    async run(args, env) { return toolText(await bozoMenuPublic(args, env)); },
+  },
+  {
+    name: "dd_bozo_menu_publish",
+    title: "Publish the shared Bozo Menu",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Site publisher only. Replace one public weekly snapshot with the complete supplied candidate list. Read dd_bozo_menu_public for expected_revision first (0 if unpublished). Publish only Data Dawgs authored summaries and derived estimates. Exclude raw paid-provider outputs, source evidence and private notes. Every supplied field will be public. This does not submit contest entries. Private saves never publish automatically.",
+    inputSchema: BOZO_MENU.publicMenuSchema(true),
+    async run(args, env, caller) { return toolText(await bozoMenuPublish(args, env, caller)); },
   },
   {
     name: "dd_bozo_menu_list",

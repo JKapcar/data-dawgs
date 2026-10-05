@@ -81,3 +81,10 @@ the sources we read and do not republish. Owns no data file either.
 - [Staged DFS MCP](/docs/dfs-mcp-workspace.md): scope and release gates.
 
 DFS core (2026-09-16): sync/compare/schema/list/get/create/upload/players/settings/solve/explore/simulate/exposure/select/export/delete.
+
+## The Bozo Menu — staged pending deployment
+
+- [Full published Bozo Menu](https://datadawgs216.com/bozo-menu.html): public read-only page; no account or MCP setup required.
+- [Complete text](https://toto.jkapcar4.workers.dev/bozo/menu.md), [server-rendered HTML](https://toto.jkapcar4.workers.dev/bozo/menu), [JSON](https://toto.jkapcar4.workers.dev/bozo/menu.json). These routes are staged until the Worker release; an unavailable feed does not mean an empty menu.
+- Omit `week` for the latest published menu; `?week=YYYY-MM-DD` selects a Monday-dated archive. JSON includes the full candidate list and `published_weeks`. Always identify the actual menu week, publication time and quote timestamps. A full-menu request includes every candidate; label held/scratched rows separately from active recommendations. Saved offers require rechecking. No contest picks are submitted by menu tools.
+- `dd_bozo_menu_public` reads the same published snapshot for connected AIs. `dd_bozo_menu_publish` is publisher-only. Personal list/get/save tools manage private drafts, which never publish automatically.

@@ -31,3 +31,32 @@ test('browser API and personal MCP share records; no public or shared access and
   const res=await api('list');assert.match(res.headers.get('Cache-Control'),/no-store/);
  }finally{globalThis.fetch=real;}
 });
+
+test('anonymous full feeds, explicit publication, publisher-only writes and revision protection',async()=>{
+ const original=globalThis.fetch,db=new Map(),writes=[];let version=0;
+ const friendUid='u_friend',friendBody=Buffer.from(JSON.stringify({u:friendUid,n:'Friend',p:1,i:Date.now(),e:Date.now()+86400000})).toString('base64url');
+ const friendSession=friendBody+'.'+sign(friendBody);
+ const cfg={...env,BOZO_ADMIN:'Kap'};
+ globalThis.fetch=async(input,init={})=>{const path=new URL(input).pathname.replace(/\.json$/,'');if(init.method==='PUT'){assert.ok(['/publishedBozoMenus','/users/'+uid+'/bozoMenus'].includes(path));if(init.headers['if-match']!==String(version))return new Response('',{status:412});db.set(path,JSON.parse(init.body));writes.push(path);version++;return Response.json(true);}return Response.json(path==='/users'?{[uid]:account}:path==='/users/'+uid?account:path==='/users/'+friendUid?{name:'Friend',passwordSetAt:1}:db.get(path)||null,{headers:{ETag:String(version)}});};
+ const request=(path,{auth,method='GET',data}={})=>worker.fetch(new Request('https://toto.jkapcar4.workers.dev'+path,{method,headers:{'Content-Type':'application/json',...(auth?{'X-Bozo-Session':auth}:{})},...(data?{body:JSON.stringify(data)}:{})}),cfg);
+ const candidates=Array.from({length:200},(_,i)=>({id:'pick-'+i,event:'A at B',sport:'cfb',market:'spread',selection:'Pick '+i,status:i===199?'scratch':'hold',reason:'Public authored screening summary'}));
+ const payload={week:'2026-10-05',expected_revision:0,candidates};
+ try{
+  const empty=await (await request('/bozo/menu.json')).json();assert.equal(empty.status,'unpublished');assert.equal(empty.candidates.length,0);
+  assert.equal((await request('/api/bozo-menu/save',{auth:session,method:'POST',data:{...payload,candidates:[{...candidates[0],notes:'private-only'}]}})).status,200);
+  assert.equal((await (await request('/bozo/menu.json')).json()).status,'unpublished');
+  assert.equal((await request('/api/bozo-menu/publish',{method:'POST',data:payload})).status,401);
+  assert.equal((await request('/api/bozo-menu/publish',{auth:friendSession,method:'POST',data:payload})).status,403);
+  assert.equal((await request('/api/bozo-menu/publish',{auth:session,method:'POST',data:{...payload,candidates:[{...candidates[0],notes:'private-only'}]}})).status,400);
+  assert.equal((await request('/api/bozo-menu/publish',{auth:session,method:'POST',data:payload})).status,200);
+  const full=await (await request('/bozo/menu.json')).json();assert.equal(full.candidates.length,200);assert.equal(full.revision,1);assert.equal(full.week,'2026-10-05');assert.ok(!JSON.stringify(full).includes('published_by'));assert.ok(!JSON.stringify(full).includes('private-only'));
+  const md=await (await request('/bozo/menu.md')).text();assert.match(md,/Pick 199/);assert.match(md,/scratch/);
+  const html=await (await request('/bozo/menu')).text();assert.match(html,/Pick 199/);assert.equal((html.match(/<article>/g)||[]).length,200);
+  assert.equal((await request('/bozo/menu.json',{method:'POST',data:payload})).status,405);
+  assert.equal((await request('/api/bozo-menu/publish',{auth:session,method:'POST',data:payload})).status,409);
+  assert.equal((await request('/bozo/menu.json?week=../../users')).status,400);
+  assert.equal((await (await request('/bozo/menu.json?week=2026-10-12')).json()).status,'unpublished');
+  const rpc=await (await request('/mcp/core/fixture-shared',{method:'POST',data:{jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'dd_bozo_menu_public',arguments:{}}}})).json();assert.equal(JSON.parse(rpc.result.content[0].text).candidates.length,200);
+  assert.equal(writes.filter(p=>p==='/publishedBozoMenus').length,1);
+ }finally{globalThis.fetch=original;}
+});

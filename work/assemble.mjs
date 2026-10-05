@@ -69,7 +69,7 @@ const warroom = privateWrapper("../warroom-weekly.js", "wrWeeklyRoot", "})(typeo
 
 const BM_START = "/* ===== DD-BOZO-MENU START — generated from bozo-menu.mjs ===== */";
 const BM_END = "/* ===== DD-BOZO-MENU END ===== */";
-const bozoMenu = "const BOZO_MENU = (() => {\n" + readFileSync("../bozo-menu.mjs", "utf8").replace(/^export /gm, "") + "\nreturn {runMenu, menuSchema};\n})();";
+const bozoMenu = "const BOZO_MENU = (() => {\n" + readFileSync("../bozo-menu.mjs", "utf8").replace(/^export /gm, "") + "\nreturn {runMenu, menuSchema, getPublicMenu, publishMenu, publicMenuSchema, renderPublicMenu};\n})();";
 
 let src = readFileSync(TARGET, "utf8");
 const before = src;
