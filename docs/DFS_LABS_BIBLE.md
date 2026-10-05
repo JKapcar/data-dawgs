@@ -1,4 +1,6 @@
-# DFS Labs Bible
+# DFS Labs Bible — historical research
+
+> **Operational update · October 5, 2026:** Start with [the current DFS Labs Playbook](dfs-playbook.md). This September research document contains superseded architecture, proposed features and hypotheses. Its read-only/client-only restrictions were replaced by explicit private account workspaces and remote computation. Its calibration claims, hard construction language, universal top-10/EV sorting rules and three-week thresholds do not establish validity for our model. Live schema governs capabilities; the Playbook governs the current operating workflow. Retained below for research provenance, not as current agent instructions.
 
 **Repo home:** `docs/DFS_LABS_BIBLE.md` (sequenced by `docs/DFS_PHASE*` checklists; supersedes prior roadmap §1 where they conflict — see §3.3)
 **Status:** v1.0, 2026-09-04. Pre-Week-1. Nothing below is calibrated on 2026 data yet.
