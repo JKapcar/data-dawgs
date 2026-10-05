@@ -10165,11 +10165,6 @@ async function bozoAdmin(request, url, env, cors) {
   const auth = await requireManager(request, env, lid);
   if (auth.err) return json({ error: auth.err }, auth.code || 403, cors);
 
-  if (method === "POST" && body.action === "repair_identity") {
-    const out = await bozoRepairIdentityCore(env,auth,body);
-    return json(out.body,out.status,cors);
-  }
-
   if (method === "GET") {
     const at = adminPath(url.searchParams.get("path") || "");
     if (at.err) return json({ error: at.err }, 400, cors);
@@ -10177,6 +10172,11 @@ async function bozoAdmin(request, url, env, cors) {
       const node = (await fbGet(env, LG(lid) + (at.path ? "/" + at.path : ""))).data;
       return json({ ok: true, league: lid, path: at.path, value: node ?? null }, 200, cors);
     } catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
+  }
+
+  if (method === "POST" && body.action === "repair_identity") {
+    const out = await bozoRepairIdentityCore(env,auth,body);
+    return json(out.body,out.status,cors);
   }
 
   const edits = Array.isArray(body.edits) ? body.edits
