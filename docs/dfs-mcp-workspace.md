@@ -1,5 +1,7 @@
 # DFS MCP workspace suite
 
+Start with the [DFS Labs Playbook](dfs-playbook.md) for the complete human/AI workflow and contest-specific decisions. This page records technical scope and release history; use live schema for current limits.
+
 Status: deployed 2026-09-16. PR #134 merged; Worker version `4791555e-9667-4455-8414-37c8905d346c` serves 100% of production traffic. [Release run](https://github.com/JKapcar/data-dawgs/actions/runs/35150848946).
 
 The old integration could solve a transient caller-supplied slate but could not upload and save data, run the correlated simulator, or share a slate with the page. The new account-scoped boundary powers both POST `/api/dfs/{operation}` and the core MCP catalog. It uses the existing parser, solver, exploration module, correlation model and simulator rather than a second numerical implementation.

@@ -2231,7 +2231,7 @@ const MCP_TOOLS = [
     catalog: "core",
     readOnlyHint: true,
     destructiveHint: false,
-    description: "Read all configurable fields, units, defaults, compute limits and workflow.",
+    description: "Start here for DFS Labs. Read fields, units, defaults, compute limits and workflow, then the operating playbook at https://datadawgs216.com/docs/dfs-playbook.md for actual-lobby construction and final checks.",
     inputSchema: dfsToolSchema("schema"),
     async run(args, env, caller) { return toolText(await dfsRun("schema", args, env, caller)); },
   },

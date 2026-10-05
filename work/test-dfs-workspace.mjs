@@ -5,6 +5,7 @@ vm.runInContext(source+`\nglobalThis.api={run:dfsRun,tools:MCP_TOOLS,engine:mcpD
 const env={rows:{},versions:{}},caller={kind:'user',uid:'userA'},run=(op,args={},who=caller)=>context.api.run(op,args,env,who);
 let checks=0;async function reject(op,args,re,who){await assert.rejects(run(op,args,who),re);checks++;}
 assert.equal(context.api.dupe.ownFrac({own:.5}),.005);assert.equal(context.api.dupe.ownFrac({own:1}),.01);checks+=2;
+const schema=await run('schema');assert.equal(schema.guide.url,'https://datadawgs216.com/docs/dfs-playbook.md');assert.ok(schema.guide.contest_inputs.includes('payout table'));assert.ok(schema.guide.required_checks.length);checks++;
 const workspace_id='test-sd';let rev=1;
 await reject('create',{workspace_id,site:'dk_showdown',source:'fixture',as_of:'2026-09-16'},/personal/,{kind:'shared'});
 await run('create',{workspace_id,site:'dk_showdown',source:'fixture',as_of:'2026-09-16'});
