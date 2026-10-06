@@ -1,17 +1,17 @@
 {
- "as_of": "2026-10-05",
+ "as_of": "2026-10-06",
  "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
  "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
  "site": "https://datadawgs216.com",
- "built": "2026-10-05",
+ "built": "2026-10-06",
  "data": {
   "files": [
    {
     "path": "/data/538-classic.json",
     "url": "https://datadawgs216.com/data/538-classic.json",
-    "bytes": 73609,
-    "as_of": "2026-10-05",
-    "sha256": "bebc32ed00068605d2e10339fe73f1c40a53fa64efc28e6dd2846dfc37d5c789",
+    "bytes": 73293,
+    "as_of": "2026-10-06",
+    "sha256": "9fc0c97f0cdce96e61fabc70b77653fdaac989f4df73ca8450d7857134592438",
     "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority."
    },
    {
@@ -185,10 +185,10 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 168261,
+    "bytes": 168442,
     "as_of": "2026-10-05",
-    "sha256": "9f88c3e875f5086d7c361acca7bf0eda266e637df8a3d6ab74ac43a2f8156a29",
-    "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 63/272 regular-season games are settled and banked in wins_tracker; 209 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
+    "sha256": "54c95a65a2c6dd81709612950a08a697d32e8edf99e1c945e3f69342693d2c86",
+    "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 64/272 regular-season games are settled and banked in wins_tracker; 208 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    },
    {
     "path": "/data/dynasty-ranks.json",
@@ -304,9 +304,9 @@
    {
     "path": "/data/nfl-schedule.json",
     "url": "https://datadawgs216.com/data/nfl-schedule.json",
-    "bytes": 113675,
+    "bytes": 113667,
     "as_of": "2026-10-04",
-    "sha256": "4c8a75d1a89aadb202cb237a517965bccdf61b2fda3c6eca3146b2d80e50fcc8",
+    "sha256": "5b8c5b37aa5ee4e3adc465d6e561199426dec42249d9b5c25223cb6a17d63d9e",
     "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts."
    },
    {
@@ -345,8 +345,8 @@
     "path": "/data/receipts-inventory.json",
     "url": "https://datadawgs216.com/data/receipts-inventory.json",
     "bytes": 3415,
-    "as_of": "2026-10-05",
-    "sha256": "0ecaffde3b325d73f891034114a11127704df1a658a679cd1ae0e916a4e3b7cc",
+    "as_of": "2026-10-06",
+    "sha256": "03679e96d97f77ce2a2d73cd111e6de0c62b4cc34d8ca5a9ad48e51f00887642",
     "note": "An INVENTORY, not a scoreboard. There is no honest Brier across domains, so this file counts what has been registered and settled and never scores it. The ledgers OVERLAP: receipts.json and the nfelo half of model-receipts.json are the same forecasts, as are 538-classic.json and its half. aggregate is therefore computed from aggregate.counted_from alone; aggregate.naive_sum is what summing the registered column would wrongly give, published so it can be named and corrected rather than quietly reproduced."
    },
    {
