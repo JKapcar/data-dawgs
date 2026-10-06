@@ -85,7 +85,8 @@ t('post-lock snapshot refused unless explicitly allowed',()=>{
 });
 
 t('audit CSV matches the reference fixture',()=>{
- assert.strictEqual(L.auditCSV(ledger,true),read('expected-audit-full.csv'));
+ // Fixtures are stored LF (.gitattributes); the export itself is CRLF.
+ assert.strictEqual(L.auditCSV(ledger,true),read('expected-audit-full.csv').replace(/\r?\n/g,'\r\n'));
  const short=L.auditCSV(ledger,false).split('\r\n');
  assert.strictEqual(short[0],'Contest,CPT,FLEX,Salary,Pred Top1%,Pred Cash,Pred Dupes,Actual Finish,Actual Percentile,Copies,Payout,ROI');
  assert.strictEqual(short.length,7);
