@@ -2034,7 +2034,7 @@ arena.html — the hub for games played against other people; links to all of th
 bozo.html — the weekly one-leg parlay game with four sheets: Overview (season Bozo Count, CLV chart, current-week diagnostics and weekly hierarchy grid), This Week (hierarchy machine, ticket and personal entry), Diagnostics (filterable league ledger), and League Settings (roster, rules, shared league password, member cap and public/private visibility).
 challenge.html — the NFL Forecasting Challenge: put a probability on a game before kickoff, get graded after.
 survivor.html — survivor pool: this week's board, pick popularity, an optimal path, a season simulation, model settings.
-guillotine.html — guillotine league companion. dfs.html — DFS Labs: Playbook and Copy AI starter at #dfsPlaybook; This week dashboard, slate, solver, simulator, exposure, bankroll, screener, standings, method (keys 1–9). The projections there are the USER'S OWN.
+guillotine.html — guillotine league companion. dfs.html — DFS Labs: Playbook and Copy AI starter at #dfsPlaybook; This week dashboard, slate, solver, simulator, exposure, bankroll, screener, standings (post-lock results ledger: joins DK contest-standings CSVs to the saved pre-lock workspace, audit CSV), method (keys 1–9). The projections there are the USER'S OWN.
 teamdraft.html — the 32-team wins pool: spin wheel, board, eight rosters, Monte Carlo season sim.
 The draft rig: dashboard.html (a drafter's view), auction.html (the operator), board.html (read-only room view), bigboard.html (the projector), dataviz.html and report.html (afterwards), master.html (the player pool and scouting).
 datadawg-dollars.html — DataDawg$: our OWN converted auction dollars for one league room (Target $, conversion-sensitivity bands, delta vs the source price). It is NOT MV: MV is the dated market snapshot, DataDawg$ is this site's conversion of it. The league cheat sheet on board.html shows the same DataDawg$ alongside ESPN and PFF, all renormalized to that room's $2,800 — but ESPN and PFF are budget-only, with no custom-scoring shift, so they are not equivalent columns. Machine surfaces: /data/datadawg-dollars-values.json, /data/datadawg-dollars-method.json, /data/datadawg-dollars-method.md.
@@ -3242,6 +3242,30 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
 <!-- ======================================================= STANDINGS -->
 <section class="sheet" id="sh-standings" hidden>
+  <div class="card" id="lgCard">
+    <h3>Results ledger · post-lock audit</h3>
+    <p class="sub">Join DraftKings contest-standings CSVs to the workspace you saved <b>before lock</b>. Predictions are read from that snapshot as saved; nothing is re-simulated. CSVs are parsed in this browser and never uploaded; only your entries, field ownership and duplicate counts are kept.</p>
+    <div class="grid3">
+      <label class="fld"><span>DraftKings username(s)</span><input class="fi" id="lgUser" autocomplete="off" placeholder="your DK name" data-ddb-skip></label>
+      <label class="fld"><span>Lock time</span><input class="fi" type="datetime-local" id="lgLock"></label>
+      <label class="fld"><span>Pre-lock workspace</span><select class="fi" id="lgWs"></select></label>
+    </div>
+    <label class="fld"><span>Contest-standings CSVs (contest-standings-&lt;id&gt;.csv)</span><input class="fi" type="file" id="lgFiles" multiple accept=".csv,text/csv"></label>
+    <label class="note"><input type="checkbox" id="lgDk" checked> Fetch entry fee and payout table from DraftKings by contest ID</label>
+    <label class="note"><input type="checkbox" id="lgPost"> Allow a snapshot saved after lock (every row is labelled not pre-lock)</label>
+    <div class="btnrow">
+      <button class="btn ghost sm" id="lgList">List saved workspaces</button>
+      <button class="btn sm" id="lgBuild">Build audit</button>
+      <button class="btn ghost sm" id="lgCsv" disabled>Audit CSV</button>
+      <button class="btn ghost sm" id="lgCsvFull" disabled>Full CSV</button>
+      <button class="btn ghost sm" id="lgJson" disabled>Ledger JSON</button>
+      <button class="btn ghost sm" id="lgKeep" disabled>Keep on this device</button>
+    </div>
+    <div class="btnrow"><select class="fi" id="lgSaved" style="max-width:260px"></select><button class="btn ghost sm" id="lgOpen" disabled>Open kept ledger</button></div>
+    <div class="banner" id="lgWarn" hidden></div>
+    <div class="tscroll"><table class="dtab" id="lgTab"><thead></thead><tbody></tbody></table></div>
+    <p class="note" id="lgNote"></p>
+  </div>
   <div class="card">
     <h3>Standings ingest <span class="rt" id="stState"></span></h3>
     <p class="sub">Week 1+ receipts (Bible §9.1). Paste a GameCenter standings CSV; it stays in <b>IndexedDB on this device only</b> (I3). Entry names are hashed on ingest. Grades (§9.3) run below on whatever exists.</p>
@@ -4602,6 +4626,8 @@ root.DDFS.tieOutcome=tieOutcome;root.DDFS.wilson=wilson;root.DDFS.lineupKey=line
 <script src="dfs-lab-audit.js?v=20260910-contests"></script>
 <script src="dfs-lab-contests.js?v=20260910-confidence"></script>
 <script src="dfs-pareto.js?v=20260910-contests"></script>
+<script src="dfs-ledger.js?v=20261006"></script>
+<script defer src="dfs-ledger-ui.js?v=20261006"></script>
 <script>
 /* =========================================================================
    DFS workbench — slate ingest, solver + simulator wiring, exposure, bankroll.

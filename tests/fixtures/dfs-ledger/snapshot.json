@@ -1,0 +1,323 @@
+{
+ "id": "fixture-showdown",
+ "site": "dk_showdown",
+ "source": "synthetic fixture (invented players)",
+ "as_of": "2026-09-07T15:00:00.000Z",
+ "revision": 5,
+ "updated_at": "2026-09-07T16:30:00.000Z",
+ "players": [
+  {
+   "id": "AAA:Alex Quill",
+   "name": "Alex Quill",
+   "pos": "QB",
+   "team": "AAA",
+   "opp": "BBB",
+   "gid": "AAA-BBB",
+   "sal": 8000,
+   "cptSal": 12000,
+   "proj": 18.2,
+   "cptProj": 27.3,
+   "ceil": 30.1,
+   "own": 60,
+   "cptOwn": 22
+  },
+  {
+   "id": "BBB:Blake Torren",
+   "name": "Blake Torren",
+   "pos": "QB",
+   "team": "BBB",
+   "opp": "AAA",
+   "gid": "AAA-BBB",
+   "sal": 7200,
+   "cptSal": 10800,
+   "proj": 15.1,
+   "cptProj": 22.65,
+   "ceil": 26,
+   "own": 40,
+   "cptOwn": 10
+  },
+  {
+   "id": "AAA:Chris Vale",
+   "name": "Chris Vale",
+   "pos": "RB",
+   "team": "AAA",
+   "opp": "BBB",
+   "gid": "AAA-BBB",
+   "sal": 8800,
+   "cptSal": 13200,
+   "proj": 20.4,
+   "cptProj": 30.6,
+   "ceil": 33.5,
+   "own": 70,
+   "cptOwn": 25
+  },
+  {
+   "id": "BBB:Drew Holm",
+   "name": "Drew Holm",
+   "pos": "RB",
+   "team": "BBB",
+   "opp": "AAA",
+   "gid": "AAA-BBB",
+   "sal": 6400,
+   "cptSal": 9600,
+   "proj": 12,
+   "cptProj": 18,
+   "ceil": 22,
+   "own": 35,
+   "cptOwn": 6
+  },
+  {
+   "id": "AAA:Evan Pike",
+   "name": "Evan Pike",
+   "pos": "WR",
+   "team": "AAA",
+   "opp": "BBB",
+   "gid": "AAA-BBB",
+   "sal": 7500,
+   "cptSal": 11250,
+   "proj": 14.5,
+   "cptProj": 21.75,
+   "ceil": 27.9,
+   "own": 55,
+   "cptOwn": 12
+  },
+  {
+   "id": "BBB:Finn Ortega",
+   "name": "Finn Ortega",
+   "pos": "WR",
+   "team": "BBB",
+   "opp": "AAA",
+   "gid": "AAA-BBB",
+   "sal": 5800,
+   "cptSal": 8700,
+   "proj": 11.2,
+   "cptProj": 16.8,
+   "ceil": 21.4,
+   "own": 38,
+   "cptOwn": 7
+  },
+  {
+   "id": "AAA:Gabe Niles",
+   "name": "Gabe Niles",
+   "pos": "WR",
+   "team": "AAA",
+   "opp": "BBB",
+   "gid": "AAA-BBB",
+   "sal": 4800,
+   "cptSal": 7200,
+   "proj": 9.1,
+   "cptProj": 13.65,
+   "ceil": 19,
+   "own": 30,
+   "cptOwn": 4
+  },
+  {
+   "id": "AAA:Hugo Remy",
+   "name": "Hugo Remy",
+   "pos": "TE",
+   "team": "AAA",
+   "opp": "BBB",
+   "gid": "AAA-BBB",
+   "sal": 5100,
+   "cptSal": 7650,
+   "proj": 10,
+   "cptProj": 15,
+   "ceil": 19.5,
+   "own": 32,
+   "cptOwn": 4
+  },
+  {
+   "id": "BBB:Ivan Cole",
+   "name": "Ivan Cole",
+   "pos": "TE",
+   "team": "BBB",
+   "opp": "AAA",
+   "gid": "AAA-BBB",
+   "sal": 3500,
+   "cptSal": 5250,
+   "proj": 7.2,
+   "cptProj": 10.8,
+   "ceil": 15,
+   "own": 20,
+   "cptOwn": 2
+  },
+  {
+   "id": "AAA:Jess Marlow",
+   "name": "Jess Marlow",
+   "pos": "K",
+   "team": "AAA",
+   "opp": "BBB",
+   "gid": "AAA-BBB",
+   "sal": 4000,
+   "cptSal": 6000,
+   "proj": 8,
+   "cptProj": 12,
+   "ceil": 13,
+   "own": 28,
+   "cptOwn": 2.5
+  },
+  {
+   "id": "BBB:Kai Brandt",
+   "name": "Kai Brandt",
+   "pos": "K",
+   "team": "BBB",
+   "opp": "AAA",
+   "gid": "AAA-BBB",
+   "sal": 3800,
+   "cptSal": 5700,
+   "proj": 7.1,
+   "cptProj": 10.65,
+   "ceil": 12,
+   "own": 22,
+   "cptOwn": 1.5
+  },
+  {
+   "id": "BBB:BBB Hawks",
+   "name": "BBB Hawks",
+   "pos": "DST",
+   "team": "BBB",
+   "opp": "AAA",
+   "gid": "AAA-BBB",
+   "sal": 3000,
+   "cptSal": 4500,
+   "proj": 5.5,
+   "cptProj": 8.25,
+   "ceil": 13,
+   "own": 18,
+   "cptOwn": 1
+  },
+  {
+   "id": "AAA:AAA Owls",
+   "name": "AAA Owls",
+   "pos": "DST",
+   "team": "AAA",
+   "opp": "BBB",
+   "gid": "AAA-BBB",
+   "sal": 3400,
+   "cptSal": 5100,
+   "proj": 6.4,
+   "cptProj": 9.6,
+   "ceil": 14,
+   "own": 24,
+   "cptOwn": 2
+  }
+ ],
+ "lineups": [
+  {
+   "cpt": 0,
+   "ids": [
+    0,
+    2,
+    4,
+    5,
+    7,
+    9
+   ],
+   "sal": 43200,
+   "proj": 91.4
+  },
+  {
+   "cpt": 2,
+   "ids": [
+    2,
+    0,
+    4,
+    1,
+    9,
+    12
+   ],
+   "sal": 43300,
+   "proj": 92.8
+  },
+  {
+   "cpt": 4,
+   "ids": [
+    4,
+    0,
+    1,
+    5,
+    8,
+    10
+   ],
+   "sal": 39550,
+   "proj": 80.55
+  },
+  {
+   "cpt": 1,
+   "ids": [
+    1,
+    5,
+    3,
+    0,
+    4,
+    11
+   ],
+   "sal": 41500,
+   "proj": 84.05
+  }
+ ],
+ "total_lineups": 4,
+ "simulation": {
+  "workspace_indices": [
+   0,
+   1,
+   2
+  ],
+  "input_revision": 4,
+  "dupe_prior": true,
+  "perLineup": [
+   {
+    "i": 0,
+    "mean": 101.2,
+    "sd": 24,
+    "cash": 0.31,
+    "top1": 0.02,
+    "top10": 0.001,
+    "meanRank": 5000,
+    "dupes": 40,
+    "eDupes": 35,
+    "top1Share": 0.0004878048780487805
+   },
+   {
+    "i": 1,
+    "mean": 98.4,
+    "sd": 27.5,
+    "cash": 0.27,
+    "top1": 0.024,
+    "top10": 0.0015,
+    "meanRank": 6000,
+    "dupes": 12,
+    "eDupes": 10,
+    "top1Share": 0.0018461538461538461
+   },
+   {
+    "i": 2,
+    "mean": 90.1,
+    "sd": 29,
+    "cash": 0.2,
+    "top1": 0.016,
+    "top10": 0.0008,
+    "meanRank": 8000,
+    "dupes": 2,
+    "eDupes": 1.5,
+    "top1Share": 0.005333333333333333
+   }
+  ],
+  "meta": {
+   "engineVersion": 2,
+   "sims": 1600,
+   "seed": 216,
+   "fieldSize": 20001,
+   "entryFee": 20,
+   "paidPlaces": 4000,
+   "fieldSample": 4000,
+   "rankMethod": "scaled empirical opponent field",
+   "payout": {
+    "kind": "param",
+    "paidFrac": 0.2,
+    "alpha": 1.15,
+    "rake": 0.15
+   }
+  }
+ }
+}

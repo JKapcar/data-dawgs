@@ -9,6 +9,10 @@ on:
       - "work/dfs-engine.js"
       - "work/test-dfs-page.js"
       - "work/test-dfs-autoload-ui.cjs"
+      - "dfs-ledger*.js"
+      - "tests/dfs-ledger.test.js"
+      - "tests/fixtures/dfs-ledger/**"
+      - "work/test-dfs-ledger-ui.cjs"
       - "guillotine*.js"
       - "guillotine.html"
       - "tools/guillotine-*"
@@ -32,6 +36,10 @@ on:
       - "work/dfs-engine.js"
       - "work/test-dfs-page.js"
       - "work/test-dfs-autoload-ui.cjs"
+      - "dfs-ledger*.js"
+      - "tests/dfs-ledger.test.js"
+      - "tests/fixtures/dfs-ledger/**"
+      - "work/test-dfs-ledger-ui.cjs"
       - "guillotine*.js"
       - "guillotine.html"
       - "tools/guillotine-*"
@@ -67,6 +75,8 @@ jobs:
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-bozo-menu-ui.mjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-autoload-ui.cjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-workspace-ui.cjs
+      - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-ledger-ui.cjs
+      - run: node tests/dfs-ledger.test.js
       - run: node --check sw.js
       - run: node --check dd-live-state.js
       - run: node --check warroom-weekly.js

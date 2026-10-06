@@ -29,3 +29,6 @@ work/artifacts/
 # sheets rather than committing it: it is derived, and a stale copy in the tree is a
 # board full of prices nobody can trace back to a run.
 work/vendor-dollars.json
+
+# DFS results ledgers: built from paid projections and DK standings. Private, never committed.
+/private/dfs-ledger/
