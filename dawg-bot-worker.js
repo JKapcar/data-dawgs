@@ -2172,6 +2172,10 @@ async function handleDkContest(request, url, cors) {
       maxEntries: Number(detail.maximumEntries != null ? detail.maximumEntries : detail.maxEntries) || 0,
       maxEntriesPerUser: Number(detail.maximumEntriesPerUser != null ? detail.maximumEntriesPerUser : detail.maxEntriesPerUser) || 1,
       payout: mapDkContestPayoutTiers(detail),
+      // Additive (results ledger): contest label and scheduled start, which is the lock
+      // the pre-lock snapshot check compares against.
+      name: typeof detail.name === "string" ? detail.name.slice(0, 200) : null,
+      startTime: detail.contestStartTime ? String(detail.contestStartTime) : null,
     };
     return new Response(JSON.stringify(payload), {
       headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" },

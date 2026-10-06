@@ -1,0 +1,48 @@
+{
+ "100000001": {
+  "name": "Fixture GPP $20",
+  "entry_fee": 20,
+  "max_entries": 20,
+  "max_entries_per_user": 3,
+  "payout": [
+   {
+    "from": 1,
+    "to": 1,
+    "prize": 150
+   },
+   {
+    "from": 2,
+    "to": 2,
+    "prize": 60
+   },
+   {
+    "from": 3,
+    "to": 4,
+    "prize": 30
+   },
+   {
+    "from": 5,
+    "to": 10,
+    "prize": 10
+   }
+  ]
+ },
+ "100000002": {
+  "name": "Fixture Single Entry $5",
+  "entry_fee": 5,
+  "max_entries": 10,
+  "max_entries_per_user": 1,
+  "payout": [
+   {
+    "from": 1,
+    "to": 1,
+    "prize": 20
+   },
+   {
+    "from": 2,
+    "to": 3,
+    "prize": 10
+   }
+  ]
+ }
+}
