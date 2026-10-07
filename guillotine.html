@@ -3097,6 +3097,23 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     return WEEK_P;
   }
 
+  /* ⚠ The daily feed is a SNAPSHOT of one week. It is rebuilt once a day by CI, and
+     Sleeper rolls display_week on Tuesday — so for part of every Tuesday the file on
+     disk is still LAST week's: every kickoff in it is in the past and every player has
+     "finished". Blending that into a new week's matchups made every starter 100% done,
+     every team's spread collapse to the 0.1 floor, and every team print the same chop
+     odds. A feed that is not for the week being modeled is refused here, in one place,
+     and the page falls back to a basis it can label truthfully. FEED_STALE is what the
+     labels read so the fallback cannot narrate itself as the current week. */
+  var FEED_STALE = null;
+  function feedForWeek(wk, league, week){
+    if(!wk || !wk.players || !wk.players.length) return null;
+    var fw = Number(wk.week), fs = Number(wk.season), ls = Number(league && league.season);
+    if(!Number.isFinite(fw) || !Number.isFinite(fs)) { FEED_STALE = {feedWeek: wk.week, want: week, reason: "unlabeled"}; return null; }
+    if(fs !== ls || fw !== Number(week)) { FEED_STALE = {feedWeek: fw, feedSeason: fs, want: week, reason: "stale"}; return null; }
+    return wk;
+  }
+
   /* Score one weekly stat line with the league's own settings. Sleeper's stat keys and
      its scoring_settings keys are the same namespace, so this is a dot product and not
      a mapping table — anything the league does not price is worth zero, which is the
@@ -3130,6 +3147,14 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
      after — and roughest in the middle of a game. Anything better needs a play-by-play
      feed this page does not have. */
   var GAME_MS = 190*60*1000;
+  var CAL_P = null;
+  function liveCalibration(){
+    if(!CAL_P) CAL_P = fetch("/data/guillotine-calibration.json",{cache:"no-cache",signal:AbortSignal.timeout(20000)})
+      .then(function(r){ if(!r.ok) throw new Error("calibration http "+r.status); return r.json(); })
+      .then(function(j){ return (j&&j.data)||null; })
+      .catch(function(e){ CAL_P=null; throw e; });
+    return CAL_P;
+  }
   function leftOf(kickoff, now){
     if(!kickoff) return 1;                       // unknown kickoff — treat as not started
     var gone = now - kickoff;
@@ -3145,15 +3170,29 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     if(!week || week < 1) return null;
     var ms = await jget("/league/"+id+"/matchups/"+week);
     if(!ms || !ms.length) return null;
-    var wk = await weekRows();
-    if(!wk || !wk.players || !wk.players.length) return null;
+    var wk = feedForWeek(await weekRows(), league, week);
+    if(!wk) return null;
 
-    var proj={}, kick={};
+    var proj={}, kick={}, ppos={}, pout={};
     wk.players.forEach(function(pl){
       if(!pl || pl.id==null) return;
       proj[pl.id] = pl.has_projection ? scoreWeekly(pl.stats, league.scoring_settings) : 0;
       kick[pl.id] = pl.kickoff ? Date.parse(pl.kickoff) : null;
+      ppos[pl.id] = pl.position || null;
+      pout[pl.id] = /^(out|ir|pup|suspended|inactive)$/i.test(String(pl.injury||"")) || !pl.opponent;
     });
+
+    /* Per-position weekly spread for THIS league's scoring, from the same calibration the
+       weekly dashboard uses. Optional: if it is unreachable the blend still runs, on the
+       sqrt fallback below, and says nothing new. */
+    var buckets = null;
+    try{ var cal = await liveCalibration(); buckets = (cal && cal.league_calibrations && cal.league_calibrations[id] && cal.league_calibrations[id].buckets) || null; }catch(e){ buckets = null; }
+    function playerSd(pid, mu){
+      if(!buckets) return null;
+      var pos = ppos[pid]; if(!pos) return null;
+      var b = buckets[pos+":"+(mu>=15?"high":mu>=7?"mid":"low")] || buckets[pos];
+      return b && Number.isFinite(b.sd) ? b.sd : null;
+    }
 
     var now = Date.now(), byRid = {};
     ms.forEach(function(m){ if(m && m.roster_id!=null) byRid[m.roster_id] = m; });
@@ -3166,16 +3205,23 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       var m = byRid[t.rid]; if(!m) return;
       var starters = (m.starters||[]).filter(function(x){ return x && x !== "0"; });
       if(!starters.length) return;
-      var pp = m.players_points || {}, mean = 0, left = 0;
+      var pp = m.players_points || {}, mean = 0, left = 0, varLeft = 0, sdKnown = true;
       starters.forEach(function(pid){
         var f = leftOf(kick[pid], now);
         var got = typeof pp[pid] === "number" ? pp[pid] : 0;
         mean += got + (proj[pid]||0)*f;
         left += f;
         totalStarters++; if(f < 1) started++;
+        /* Variance of what is still to come grows with the time left, and it belongs to
+           the PLAYER, not the roster average. One unplayed QB carries a QB's spread. */
+        if(f > 0 && !pout[pid] && (proj[pid]||0) > 0){
+          var sdp = playerSd(pid, proj[pid]);
+          if(sdp == null) sdKnown = false; else varLeft += f*sdp*sdp;
+        }
       });
       t.liveMean = mean;
       t.liveLeft = left/starters.length;
+      t.liveSd = sdKnown ? Math.sqrt(varLeft) : null;
       sumLeft += t.liveLeft;
       applied++;
     });
@@ -3186,7 +3232,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       t.mean = t.liveMean;
       /* Uncertainty is only about what has NOT been played. A finished roster has no
          spread left, so the sim stops pretending its final score might move. */
-      t.sd = Math.max(0.1, (t.sd || PROJ_SD) * t.liveLeft);
+      /* ⚠ This used to be sd × liveLeft — linear in the AVERAGE fraction left across
+         all starters. With seven of eight starters done that shrank a team's spread to an
+         eighth, so one unplayed QB was modeled at ±2 points and a team that needed a big
+         Monday night read 0%. Remaining spread is now the sum of each unplayed starter's
+         own variance (calibrated by position for this league's scoring); without the
+         calibration it falls back to sd × sqrt(liveLeft), the variance-scaled form. */
+      t.sd = Math.max(0.1, t.liveSd != null ? t.liveSd : (t.sd || PROJ_SD) * Math.sqrt(t.liveLeft));
       t.live = true;
     });
 
@@ -3386,7 +3438,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     return out;
   }
 
-  async function projectTeams(league, rosters, aliveTeams){
+  async function projectTeams(league, rosters, aliveTeams, week){
     var rec = (league.scoring_settings && typeof league.scoring_settings.rec==="number") ? league.scoring_settings.rec : 0.5;
     var key = rec>=1 ? "pts_ppr" : rec>0 ? "pts_half_ppr" : "pts_std";
     var pg={}, ppos={}, basis="weekly";
@@ -3397,8 +3449,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
        exactly the players it matters most for. The fallback below is whole-source: it
        fires only if the file itself is unreachable, never per player. */
     try{
-      var wk = await weekRows();
-      if(!wk || !wk.players || !wk.players.length) throw new Error("weekly payload empty");
+      var wk = feedForWeek(await weekRows(), league, week);
+      if(!wk) throw new Error("weekly payload empty or not for week "+week);
       wk.players.forEach(function(row){
         if(!row || row.id==null) return;
         pg[row.id] = row.has_projection ? scoreWeekly(row.stats, league.scoring_settings) : 0;
@@ -3568,9 +3620,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     if(request!==SYNC_ID)return;
     CURRENT={league:league,rosters:rosters,teams:teams,alive:alive,budget:faabBudget,done:done};
     var MODE = "observed";
+    var curWeek = (state.season_type||"") === "pre" ? 0 : (state.display_week||0);
+    FEED_STALE = null;
     if(live.length < 2){
       var projected = null;
-      try{ projected = await projectTeams(league, rosters, alive); }catch(e){ projected = null; }
+      try{ projected = await projectTeams(league, rosters, alive, curWeek); }catch(e){ projected = null; }
       if(request!==SYNC_ID)return;
       if(projected && projected.length >= 2){ MODE = "projected"; live = projected; }
       else {
@@ -3595,7 +3649,6 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
        partly played. Never fatal — a failure here leaves the pre-kickoff basis intact
        and the card says which one it is showing. */
     var LIVE = null;
-    var curWeek = (state.season_type||"") === "pre" ? 0 : (state.display_week||0);
     try{ LIVE = await applyLive(league, id, curWeek, live); }catch(e){ LIVE = null; }
     if(request!==SYNC_ID)return;
 
@@ -3622,13 +3675,14 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       ? ("LIVE week "+LIVE.week+" scoring — points already banked plus what the clock leaves of each starter's projection ("
          + Math.round(LIVE.left*100) + "% of the week still to play)")
       : (PB === "season" ? "season projections divided by games" : "weekly player projections, league-scored");
+    var STALE = FEED_STALE ? ("the daily player feed is still week "+FEED_STALE.feedWeek+", not week "+FEED_STALE.want+" — no live blend until it refreshes") : null;
 
     window.__GX = {
       leagueId: id, league: league.name, season: league.season, teamCount: teams.length,
       done: done, mode: MODE, ws: WS, plan: WP, chopHistory: chopHistory, chop: res.chop, chopLo: res.chopLo, chopHi: res.chopHi,
       /* which projection basis actually loaded — the label and Toto both read this, so a
          silent fallback to season averages cannot masquerade as the weekly number */
-      projBasis: PB,
+      projBasis: PB, feedStale: FEED_STALE ? {feedWeek: FEED_STALE.feedWeek, want: FEED_STALE.want} : null,
       /* live: null before the week's first kickoff, otherwise this week's blend of
          points already scored and what the clock leaves. Toto and every label read it,
          so an in-progress board can never be quoted as a pre-kickoff forecast. */
@@ -3660,6 +3714,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     elLive.style.display="";
     elState.textContent = (LIVE ? (LIVE.complete ? "Week "+LIVE.week+" final · " : "LIVE week "+LIVE.week+" · ")
                                  : (MODE==="projected" ? "Projected · " : "Modeled week · "))
+      + (STALE ? "feed stale (week "+FEED_STALE.feedWeek+") · " : "")
       + (me ? "focus selected" : "pick a focus team");
     if(me){
       elPct.textContent = Math.round(me.surv*100) + "%";
@@ -3668,7 +3723,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
           ? " — modeled from Sleeper "+PBWORD+" with an assumed ±"+PROJ_SD+"-point spread. Nothing observed yet."
           : (LIVE
               ? " — modeled from "+PBWORD+", with the spread from "+done+" weeks of this league's own scoring shrunk to what is left to play."
-              : " — the probability of not being the lowest scorer, from "+done+" weeks of this league's own scoring."));
+              : " — the probability of not being the lowest scorer, from "+done+" weeks of this league's own scoring."))
+        + (STALE ? " ⚠ "+STALE+"." : "");
       elGauge.innerHTML = gauge(res.chop, me.mean);
       elStats.innerHTML = tile(me.mean.toFixed(1),"Your average")
         + tile(res.chop.toFixed(1),"Projected chop line")
@@ -3870,7 +3926,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
            + Math.round(G.live.left*100) + "% of the week still to play"
            + (G.live.complete ? ". Every game is final." : ". It moves as games are played."))
         : G.mode==="projected"
-        ? ("Modeled from Sleeper " + (G.projBasis==="season" ? "SEASON projections divided by games — the dated weekly file was unreachable, so this is a typical week, not this one" : "weekly player projections, league-scored") + " — assumed ±21 spread; observed scoring takes over at two completed weeks.")
+        ? ("Modeled from Sleeper " + (G.projBasis==="season" ? "SEASON projections divided by games — the dated weekly file was unreachable or not for this week, so this is a typical week, not this one" : "weekly player projections, league-scored") + " — assumed ±21 spread; observed scoring takes over at two completed weeks.")
         : "Modeled from "+G.done+" completed week"+(G.done===1?"":"s")+" — a simulation, not live scores.")
         +" Tap a bar to make that team your focus.";
     }else{
@@ -4286,10 +4342,11 @@ window.DD_BOTCTX = {
     const L=[];
     if(dl.length){ dl.forEach(x => L.push(x)); L.push(''); }
     L.push(`LEAGUE: ${G.league} (${G.season}). ${G.teamCount} teams, ${G.done} completed week(s) of scoring history. Next week is week ${G.done+1}.`);
+    if(G.feedStale) L.push(`⚠️ DAILY FEED STALE — the player feed on disk is week ${G.feedStale.feedWeek} but Sleeper is on week ${G.feedStale.want}. No live blend was applied; the numbers below are the pre-kickoff basis and must be quoted as such. Do not say they reflect this week's games.`);
     if(G.live)
       L.push(`⚠️ LIVE WEEK ${G.live.week} — these are NOT pre-kickoff projections. Every team mean below is points already scored plus each starter's projection scaled by how much of his game is left (${Math.round(G.live.left*100)}% of the week still to play, ${G.live.startersPlaying} of ${G.live.starters} starters' games underway or done). ${G.live.complete ? "Every game is finished, so these are final scores and the chop is settled — report it as fact, not as odds." : "It moves as games are played; say it is live and say when."} The clock is approximated linearly from kickoff because Sleeper exposes no game clock, so mid-game numbers are the roughest.`);
     else if(G.mode === "projected")
-      L.push(`⚠️ PROJECTION MODE — no observed scoring yet. Every team mean below is ${G.projBasis === "season" ? "Sleeper SEASON player projections divided by projected games (the dated weekly file was unreachable, so it describes a typical week, not this one)" : "Sleeper WEEKLY player projections scored with this league's own settings"} (best projected lineup per roster); every team carries an ASSUMED ±21-point spread; byes, injuries and schedule are not modeled. These are PRE-KICKOFF projections: they do not blend in points already scored, so they will not match Sleeper's live in-progress total for a team whose starters have played. Quote all of it as projected.`);
+      L.push(`⚠️ PROJECTION MODE — no observed scoring yet. Every team mean below is ${G.projBasis === "season" ? "Sleeper SEASON player projections divided by projected games (the dated weekly file was unreachable or not for this week, so it describes a typical week, not this one)" : "Sleeper WEEKLY player projections scored with this league's own settings"} (best projected lineup per roster); every team carries an ASSUMED ±21-point spread; byes, injuries and schedule are not modeled. These are PRE-KICKOFF projections: they do not blend in points already scored, so they will not match Sleeper's live in-progress total for a team whose starters have played. Quote all of it as projected.`);
     L.push(G.me
       ? `THE USER'S TEAM: ${G.me.name} — simulated ${Math.round(G.me.surv*100)}% to survive week ${G.done+1}. Average ${G.me.mean.toFixed(1)}, margin over the projected chop line ${(G.me.mean-G.chop>=0?'+':'')+(G.me.mean-G.chop).toFixed(1)}.`
       : `THE USER HAS NOT PICKED THEIR TEAM YET — they click their row in the table. Until then you do not know which team is theirs, so do not assume one.`);

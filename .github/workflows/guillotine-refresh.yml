@@ -2,6 +2,10 @@ name: Guillotine daily weekly inputs and receipts
 on:
   schedule:
     - cron: '15 14 * * *'
+    # Sleeper rolls display_week on Tuesday. Until this job has run after the roll, the
+    # feed on disk is LAST week's — every kickoff in the past — and the live board refuses
+    # to blend it (guillotine.html feedForWeek). Extra Tue/Wed runs shorten that window.
+    - cron: '15 8,11 * * 2,3'
   workflow_dispatch:
   # Initialize or re-check the job when its configuration is deployed.
   push:

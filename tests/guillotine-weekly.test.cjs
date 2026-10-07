@@ -36,3 +36,4 @@ test('local votes close at actual first kickoff, including a Wednesday opener',(
  const locked=new Function('window','Date',source+';return locked;')(win,{now:()=>now});
  assert.equal(locked(),false);now+=1000;assert.equal(locked(),true);win.GX_VOTE_DEADLINE=null;assert.equal(locked(),true);
 });
+test('a saved exclusion list never suppresses auto-detected chops',()=>{const s=require('fs').readFileSync(require('path').join(__dirname,'..','guillotine-weekly.js'),'utf8');assert.ok(!/saved\[id\]\?\.excluded\)\|\|/.test(s),'saved list must not replace auto-detection');assert.ok(/autoOut\.filter\(x=>!keepIn\.includes\(x\)\)/.test(s),'auto-detected empty rosters are always excluded unless explicitly re-included');});

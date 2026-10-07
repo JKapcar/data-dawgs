@@ -21691,15 +21691,28 @@ const MCP_TOOLS = [
         };
       });
 
+      // ⚠️ Drop chopped teams. Sleeper has no "eliminated" flag; a chopped roster is
+      // cleared to waivers, so an EMPTY roster after a completed week is the signal —
+      // the same rule guillotine.html uses (preseason every roster is empty, hence the
+      // anyRostered guard). Leaving them in let two dead teams absorb ~93% of simulated
+      // chop risk and dragged the "chop line" to single digits.
+      const players = {};
+      for (const r of rosters || []) players[r.roster_id] = (r.players || []).length;
+      const anyRostered = Object.values(players).some(n => n > 0);
+      const isDead = t => anyRostered && completed > 0 && !players[t.rosterId];
+      const eliminated = teams.filter(isDead).map(t => ({ rosterId: t.rosterId, team: t.team, manager: t.manager }));
+      const aliveTeams = teams.filter(t => !isDead(t));
+
       const base = {
         league: league.name, season: league.season, leagueId: id,
-        completedWeeks: completed, teamCount: teams.length, teams,
+        completedWeeks: completed, teamCount: teams.length,
+        aliveCount: aliveTeams.length, eliminated, teams: aliveTeams,
       };
 
       // ⚠️ Two completed weeks is the floor. One week gives a mean and no spread, and a
       // survival probability without a spread is a coin flip wearing a lab coat. The page
       // refuses here too — this must not quietly return 1/n.
-      const usable = teams.filter(t => t.weeks >= 2);
+      const usable = aliveTeams.filter(t => t.weeks >= 2);
       if (completed < 2 || usable.length < 2)
         return toolText({
           ...base, survivalAvailable: false,
@@ -21757,6 +21770,8 @@ const MCP_TOOLS = [
         note: want && !highlighted ? "No team or manager matched '" + args.team + "'." : undefined,
         caveats: [
           "Built from this league's own completed weekly scores and nothing else — no projections, no rankings, no ADP.",
+          "Chopped teams (empty roster after a completed week) are dropped; they are listed under eliminated.",
+          "It does NOT see live in-week scores. Once games kick off, quote the live board on guillotine.html, not this number.",
           "Scores are drawn NORMAL and INDEPENDENT across teams. Real weeks are neither.",
           "It cannot see a bye week, an injury, a favourable matchup, or a roster change made after the last completed week.",
           "Survival is the share of simulated weeks in which a team is NOT the lowest scorer; the chop line is the median simulated minimum.",
