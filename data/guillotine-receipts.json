@@ -2,7 +2,7 @@
   "tier": "labs",
   "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
   "graded": false,
-  "as_of": "2026-10-06",
+  "as_of": "2026-10-07",
   "source": "Sleeper league current starters and completed matchup points; Data Dawgs weekly player simulation",
   "note": "Prospective pregame forecasts. Roster IDs only; no ownership identities or player rosters. Multiclass Brier is the sum of squared chop-probability errors; lower is better. Repeated full ties await resolution.",
   "canonical_url": "https://datadawgs216.com/data/guillotine-receipts.json",
@@ -1579,7 +1579,7 @@
       "feed_sha256": "6c5828dacb9e96b60adb6a4a3db3ad13ca20765f47ea3881e07f1abb2145a89d",
       "lineup_sha256": "bd82b7c63505981f68fba09a2a1683a85552b339a9a61da9c8196f37a33640eb",
       "n": 10000,
-      "status": "pending",
+      "status": "graded",
       "chop_line": 74.03,
       "rows": [
         {
@@ -1732,7 +1732,72 @@
           "draft_position": 4,
           "prior_season_points": 311.58
         }
-      ]
+      ],
+      "graded_at": "2026-10-07T19:58:40.023Z",
+      "chopped_rid": 10,
+      "actual_scores": [
+        {
+          "rid": 5,
+          "points": 94.4
+        },
+        {
+          "rid": 8,
+          "points": 90.22
+        },
+        {
+          "rid": 10,
+          "points": 59.24
+        },
+        {
+          "rid": 7,
+          "points": 174.52
+        },
+        {
+          "rid": 17,
+          "points": 116.18
+        },
+        {
+          "rid": 9,
+          "points": 113.66
+        },
+        {
+          "rid": 15,
+          "points": 98.88
+        },
+        {
+          "rid": 12,
+          "points": 128.1
+        },
+        {
+          "rid": 3,
+          "points": 98.42
+        },
+        {
+          "rid": 14,
+          "points": 137.36
+        },
+        {
+          "rid": 18,
+          "points": 68.7
+        },
+        {
+          "rid": 4,
+          "points": 136.52
+        },
+        {
+          "rid": 1,
+          "points": 95.42
+        },
+        {
+          "rid": 2,
+          "points": 111.58
+        },
+        {
+          "rid": 16,
+          "points": 117.86
+        }
+      ],
+      "brier": 1.0194824
     },
     {
       "receipt_id": "1389344040964599808:2026:4",
@@ -1746,7 +1811,7 @@
       "feed_sha256": "6c5828dacb9e96b60adb6a4a3db3ad13ca20765f47ea3881e07f1abb2145a89d",
       "lineup_sha256": "9441f0c44c881e646fc8ff2fb8d9b729a4041e37a0e353e5d0553141b57e87de",
       "n": 10000,
-      "status": "pending",
+      "status": "graded",
       "chop_line": 58.4,
       "rows": [
         {
@@ -1899,7 +1964,72 @@
           "draft_position": 11,
           "prior_season_points": 193.5
         }
-      ]
+      ],
+      "graded_at": "2026-10-07T19:58:40.023Z",
+      "chopped_rid": 12,
+      "actual_scores": [
+        {
+          "rid": 7,
+          "points": 136.4
+        },
+        {
+          "rid": 3,
+          "points": 94.58
+        },
+        {
+          "rid": 13,
+          "points": 147.92
+        },
+        {
+          "rid": 10,
+          "points": 95.24
+        },
+        {
+          "rid": 17,
+          "points": 112.38
+        },
+        {
+          "rid": 11,
+          "points": 63.88
+        },
+        {
+          "rid": 1,
+          "points": 91.76
+        },
+        {
+          "rid": 4,
+          "points": 91.32
+        },
+        {
+          "rid": 18,
+          "points": 67.26
+        },
+        {
+          "rid": 14,
+          "points": 91.12
+        },
+        {
+          "rid": 16,
+          "points": 71.68
+        },
+        {
+          "rid": 12,
+          "points": 55.08
+        },
+        {
+          "rid": 9,
+          "points": 96.82
+        },
+        {
+          "rid": 15,
+          "points": 111.5
+        },
+        {
+          "rid": 8,
+          "points": 76.14
+        }
+      ],
+      "brier": 0.89343608
     }
   ]
 }
