@@ -2,7 +2,7 @@
   "tier": "labs",
   "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
   "graded": false,
-  "as_of": "2026-10-07",
+  "as_of": "2026-10-08",
   "source": "Sleeper league current starters and completed matchup points; Data Dawgs weekly player simulation",
   "note": "Prospective pregame forecasts. Roster IDs only; no ownership identities or player rosters. Multiclass Brier is the sum of squared chop-probability errors; lower is better. Repeated full ties await resolution.",
   "canonical_url": "https://datadawgs216.com/data/guillotine-receipts.json",
@@ -2030,6 +2030,320 @@
         }
       ],
       "brier": 0.89343608
+    },
+    {
+      "receipt_id": "1400972302392262656:2026:5",
+      "league_id": "1400972302392262656",
+      "season": 2026,
+      "week": 5,
+      "captured_at": "2026-10-08T16:50:16.946Z",
+      "kickoff_at": "2026-10-09T00:15:00.000Z",
+      "last_kickoff_at": "2026-10-13T00:15:00.000Z",
+      "model_version": "guillotine-weekly-v1",
+      "feed_sha256": "b4260c34955d31ea4d3bdbdcc56b88085a49769e31fa7a1eaa68004cc53f54da",
+      "lineup_sha256": "69a8e54b6d297ac3849ad779dc03d3c6b7e4ef2c99eb39e8147977e0e0ad71b6",
+      "n": 10000,
+      "status": "pending",
+      "chop_line": 66.93,
+      "rows": [
+        {
+          "rid": 2,
+          "mean": 123.38828771383653,
+          "lo": 96.42688433141238,
+          "hi": 150.84157783920406,
+          "risk": 0.0086,
+          "survival": 0.9914,
+          "draft_position": 10,
+          "prior_season_points": 425.44
+        },
+        {
+          "rid": 7,
+          "mean": 119.9162963809526,
+          "lo": 93.05502285732449,
+          "hi": 146.64732957425517,
+          "risk": 0.0124,
+          "survival": 0.9876,
+          "draft_position": 7,
+          "prior_season_points": 493.88
+        },
+        {
+          "rid": 17,
+          "mean": 110.75410035463418,
+          "lo": 84.5094021163857,
+          "hi": 137.0064329617496,
+          "risk": 0.0279,
+          "survival": 0.9721,
+          "draft_position": 8,
+          "prior_season_points": 391.18
+        },
+        {
+          "rid": 12,
+          "mean": 108.62437698214679,
+          "lo": 82.26912770998477,
+          "hi": 134.30585646860092,
+          "risk": 0.0344,
+          "survival": 0.9656,
+          "draft_position": 16,
+          "prior_season_points": 468.98
+        },
+        {
+          "rid": 18,
+          "mean": 108.44211141443662,
+          "lo": 82.16862618666843,
+          "hi": 134.58062601061783,
+          "risk": 0.0377,
+          "survival": 0.9623,
+          "draft_position": 17,
+          "prior_season_points": 340.18
+        },
+        {
+          "rid": 8,
+          "mean": 109.14233622007983,
+          "lo": 81.73498810445295,
+          "hi": 135.97410607536264,
+          "risk": 0.0379,
+          "survival": 0.9621,
+          "draft_position": 1,
+          "prior_season_points": 372.14
+        },
+        {
+          "rid": 14,
+          "mean": 107.62357688664454,
+          "lo": 81.32624512706028,
+          "hi": 133.8361183464899,
+          "risk": 0.0412,
+          "survival": 0.9588,
+          "draft_position": 12,
+          "prior_season_points": 438.06
+        },
+        {
+          "rid": 5,
+          "mean": 105.82496962546215,
+          "lo": 80.31521998362729,
+          "hi": 131.39870015009242,
+          "risk": 0.0417,
+          "survival": 0.9583,
+          "draft_position": 5,
+          "prior_season_points": 453.56
+        },
+        {
+          "rid": 15,
+          "mean": 105.79067630028808,
+          "lo": 79.73081486071658,
+          "hi": 131.74726253908668,
+          "risk": 0.0472,
+          "survival": 0.9528,
+          "draft_position": 3,
+          "prior_season_points": 403.12
+        },
+        {
+          "rid": 3,
+          "mean": 104.6660659360223,
+          "lo": 78.36849011499149,
+          "hi": 131.39113704325965,
+          "risk": 0.0537,
+          "survival": 0.9463,
+          "draft_position": 11,
+          "prior_season_points": 451.84
+        },
+        {
+          "rid": 4,
+          "mean": 99.52452571122271,
+          "lo": 74.5593186992542,
+          "hi": 123.96621539363761,
+          "risk": 0.0744,
+          "survival": 0.9256,
+          "draft_position": 18,
+          "prior_season_points": 450.76
+        },
+        {
+          "rid": 1,
+          "mean": 99.75716977251442,
+          "lo": 73.52754532233547,
+          "hi": 125.80056549062978,
+          "risk": 0.0816,
+          "survival": 0.9184,
+          "draft_position": 6,
+          "prior_season_points": 360.28
+        },
+        {
+          "rid": 16,
+          "mean": 94.91905169020609,
+          "lo": 70.9877156387131,
+          "hi": 119.07981781518093,
+          "risk": 0.1106,
+          "survival": 0.8894,
+          "draft_position": 4,
+          "prior_season_points": 429.44
+        },
+        {
+          "rid": 9,
+          "mean": 77.96447956446384,
+          "lo": 54.89663962897767,
+          "hi": 100.81691290137783,
+          "risk": 0.3907,
+          "survival": 0.6093,
+          "draft_position": 14,
+          "prior_season_points": 480.42
+        }
+      ]
+    },
+    {
+      "receipt_id": "1389344040964599808:2026:5",
+      "league_id": "1389344040964599808",
+      "season": 2026,
+      "week": 5,
+      "captured_at": "2026-10-08T16:50:16.946Z",
+      "kickoff_at": "2026-10-09T00:15:00.000Z",
+      "last_kickoff_at": "2026-10-13T00:15:00.000Z",
+      "model_version": "guillotine-weekly-v1",
+      "feed_sha256": "b4260c34955d31ea4d3bdbdcc56b88085a49769e31fa7a1eaa68004cc53f54da",
+      "lineup_sha256": "e10ce34ebde5ec1245c4b50badc31ad216fcbafb5832c25719961f89dbb24ade",
+      "n": 10000,
+      "status": "pending",
+      "chop_line": 54.18,
+      "rows": [
+        {
+          "rid": 7,
+          "mean": 113.07676358962846,
+          "lo": 87.97312383424867,
+          "hi": 137.7618015214635,
+          "risk": 0.0037,
+          "survival": 0.9963,
+          "draft_position": 10,
+          "prior_season_points": 480.8
+        },
+        {
+          "rid": 11,
+          "mean": 98.10625866515116,
+          "lo": 74.33129911349809,
+          "hi": 121.95158538261917,
+          "risk": 0.0162,
+          "survival": 0.9838,
+          "draft_position": 16,
+          "prior_season_points": 402.82
+        },
+        {
+          "rid": 3,
+          "mean": 95.97906605389994,
+          "lo": 72.3513411796448,
+          "hi": 119.75230952223248,
+          "risk": 0.0212,
+          "survival": 0.9788,
+          "draft_position": 7,
+          "prior_season_points": 399.14
+        },
+        {
+          "rid": 18,
+          "mean": 97.52268785083189,
+          "lo": 72.36364463777534,
+          "hi": 122.62755879285206,
+          "risk": 0.0238,
+          "survival": 0.9762,
+          "draft_position": 5,
+          "prior_season_points": 320.14
+        },
+        {
+          "rid": 14,
+          "mean": 94.42120951275945,
+          "lo": 70.26071500278928,
+          "hi": 118.82910450302639,
+          "risk": 0.027,
+          "survival": 0.973,
+          "draft_position": 15,
+          "prior_season_points": 372.98
+        },
+        {
+          "rid": 4,
+          "mean": 95.24286870282546,
+          "lo": 70.86057358459064,
+          "hi": 119.47957741888045,
+          "risk": 0.0279,
+          "survival": 0.9721,
+          "draft_position": 13,
+          "prior_season_points": 359.14
+        },
+        {
+          "rid": 13,
+          "mean": 95.05418624385183,
+          "lo": 71.37350503404504,
+          "hi": 119.61326101340937,
+          "risk": 0.0288,
+          "survival": 0.9712,
+          "draft_position": 14,
+          "prior_season_points": 459.92
+        },
+        {
+          "rid": 1,
+          "mean": 91.3984626461577,
+          "lo": 67.55881447898479,
+          "hi": 115.69104015399141,
+          "risk": 0.0366,
+          "survival": 0.9634,
+          "draft_position": 3,
+          "prior_season_points": 425.28
+        },
+        {
+          "rid": 17,
+          "mean": 90.89794950957318,
+          "lo": 67.43580006543245,
+          "hi": 114.4015128211398,
+          "risk": 0.0376,
+          "survival": 0.9624,
+          "draft_position": 9,
+          "prior_season_points": 379.46
+        },
+        {
+          "rid": 10,
+          "mean": 90.65522348438331,
+          "lo": 67.5710572860269,
+          "hi": 113.48721064831409,
+          "risk": 0.0382,
+          "survival": 0.9618,
+          "draft_position": 4,
+          "prior_season_points": 370.92
+        },
+        {
+          "rid": 16,
+          "mean": 85.53211801812687,
+          "lo": 61.03835675559404,
+          "hi": 109.75930678187213,
+          "risk": 0.0742,
+          "survival": 0.9258,
+          "draft_position": 17,
+          "prior_season_points": 283.08
+        },
+        {
+          "rid": 8,
+          "mean": 83.7507870269172,
+          "lo": 60.20701617379478,
+          "hi": 107.36173310313026,
+          "risk": 0.0832,
+          "survival": 0.9168000000000001,
+          "draft_position": 11,
+          "prior_season_points": 269.64
+        },
+        {
+          "rid": 9,
+          "mean": 71.66074907828143,
+          "lo": 50.29977417420368,
+          "hi": 92.66735281151831,
+          "risk": 0.2102,
+          "survival": 0.7898000000000001,
+          "draft_position": 12,
+          "prior_season_points": 351.36
+        },
+        {
+          "rid": 15,
+          "mean": 64.85884236522668,
+          "lo": 44.08010046031035,
+          "hi": 85.5336319096782,
+          "risk": 0.3714,
+          "survival": 0.6286,
+          "draft_position": 8,
+          "prior_season_points": 369.78
+        }
+      ]
     }
   ]
 }
