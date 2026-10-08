@@ -2,7 +2,7 @@
  "source_page": "/survivor.html",
  "tier": "labs",
  "graded": true,
- "as_of": "2026-10-04",
+ "as_of": "2026-10-08",
  "source": "Captured by work/survivor-receipt.mjs from survivor.html's own engine, before each week's earliest kickoff.",
  "note": "PROSPECTIVE RECEIPTS. Every row was written before the week it forecasts kicked off — captured_at < kickoff_at is enforced at capture, not flagged afterwards, and a row is never edited once written. What is graded is CALIBRATION of the stated win probabilities (Brier) and whether the pick survived. This is NOT a claim that the tool beats a pool: whether an entry would have won depends on the rest of the field, which is not ours to score. `n` is small and stays small — 18 weeks is at most 18 scored predictions per entry — so read every figure next to its n and do not draw a calibration curve on a season.",
  "field_notes": {
@@ -14,15 +14,15 @@
   "supersedes": "receipt_id this row replaces, when lines moved before kickoff; both rows stay"
  },
  "counts": {
-  "registered": 4,
+  "registered": 5,
   "resolved": 4,
-  "prospective": 0,
+  "prospective": 1,
   "survived": 3,
   "brier_n": 4,
   "brier_mean": 0.173136
  },
  "integrity": {
-  "rows": 4
+  "rows": 5
  },
  "data": [
   {
@@ -271,9 +271,63 @@
     "brier": 0.021404,
     "result_source": "data/nfl-schedule.json"
    }
+  },
+  {
+   "receipt_id": "survivor-2026-w05-default",
+   "season": 2026,
+   "week": 5,
+   "entry_id": "default",
+   "entry_label": "Public default — 200 entries, single life, no reuse, winnings objective",
+   "recommended": [
+    "DAL"
+   ],
+   "stated_win_probability": [
+    0.799
+   ],
+   "stated_leg_source": [
+    "nfelo"
+   ],
+   "stated_equity_index": 100,
+   "stated_run_the_table": 0.044832826,
+   "alternatives": [
+    {
+     "team": "CIN",
+     "win_probability": 0.7305,
+     "equity_index": 91.5,
+     "run_the_table": 0.041066079
+    },
+    {
+     "team": "HOU",
+     "win_probability": 0.7151,
+     "equity_index": 89.6,
+     "run_the_table": 0.038087343
+    }
+   ],
+   "objective": "winnings",
+   "ownership_source": "modelled",
+   "ownership_model": null,
+   "ownership_adjustment": "alive-count projection; pick mix assumed independent of survival",
+   "config": {
+    "entries": 200,
+    "lives": 1,
+    "reuse": false,
+    "double_pick_weeks": [],
+    "week18_mode": "normal",
+    "probability_method": "nfelo-season-v1",
+    "chalk": 2.4,
+    "used_teams": []
+   },
+   "input_snapshot_id": "sha256:836e4e0bbff88ffc9b97b2f0670c8bd3069c587e58f8d22fa297bc5a9e29cd24",
+   "input_as_of": "2026-10-08",
+   "engine_version": "survivor.html@76c684d7bc67",
+   "captured_at": "2026-10-08T20:06:46.226Z",
+   "kickoff_at": "2026-10-09T00:15:00.000Z",
+   "forecast_status": "prospective",
+   "supersedes": null,
+   "resolved": null
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-04",
+ "built": "2026-10-08",
  "canonical_url": "https://datadawgs216.com/data/survivor-receipts.json"
 }
