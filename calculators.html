@@ -938,6 +938,7 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
        carries its own sheet bar, which is the better place for them. */
     {label:"Data", href:"data.html", key:"data", items:[
       ["data.html","The Library","data"],
+      ["explore.html","Data Explorer (Pup)","explore"],
       ["receipts.html","Receipts","receipts"],
       ["master.html","Master Data","master"],
       ["strategy.html","2026 Strategy","strategy"],
@@ -1685,7 +1686,7 @@ strategy.html — the 2026 draft thesis, a dated snapshot of one analyst's argum
 nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo power ratings and their backtest. calculators.html — ten deterministic calculators, nothing stored. fourth-down.html — Fourth Down Lab: nfl4th go/field-goal/punt win probabilities, conversion break-even, shareable scenarios, and delayed weekly decisions. Model estimates; no fourth-down MCP tool.
 cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator. Its build roadmap is at cfb.html#roadmap and is our own planning surface, not a public destination.
 markets.html — the prediction-markets section, its own top-level group labelled Markets. ai.html — the A.I. Model Board, its own top-level group. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
-data.html — the Library: every machine-readable file, shelved by the surface that owns it. connect.html — forwards to the connector card on signon.html#connect, which is where you point your own AI (Claude, ChatGPT, Gemini or any MCP client) at the site.
+data.html — the Library: every machine-readable file, shelved by the surface that owns it. explore.html — the Data Explorer (Pup): in-browser DuckDB SQL and a simple chart builder over the public /data JSON; pure query, no forecasts, every result cites its file and as_of; no public closing-market line exists for an nfelo-vs-close query. connect.html — forwards to the connector card on signon.html#connect, which is where you point your own AI (Claude, ChatGPT, Gemini or any MCP client) at the site.
 signon.html — sign in, sign up, recover an account, and join a Bozo league by searching its name and entering its shared password; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, DDCC Profile, SwoleDawg and DateDawg. swoledawg.html — body and training. datedawg.html — local-only reciprocal-acceptance analysis of a Hinge export; no upload or backend memory. fantasy-warroom.html — the fantasy league war room. Its Money sheet selects the best legal current-week Sleeper lineup, shows projected points and weekly rank, and uses that lineup for dollar starter/bench splits. Full-roster dollar rank includes the bench; season grades and simulations remain separate.
 rankings.html — the Dog Track: ranking services graded against actual finishes. draft-leagues.html — create or join a draft league, import Sleeper, connect public Yahoo, or connect ESPN. cfb-power.html — CFB conference power curves. radar.html — the radar view.
 Machine surfaces: /data/index.json lists every file with its as_of and hash; /llms.txt is the curated index; /data/surfaces.json maps pages to files and MCP tools.
