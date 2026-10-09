@@ -2,8 +2,10 @@ name: Fourth Down Lab
 on:
   workflow_dispatch:
   schedule:
-    # Delayed public snapshot; GitHub schedules are best effort, not a live SLA.
+    # Recheck every 15 minutes on game days; catch Tuesday/Wednesday corrections daily.
+    # GitHub scheduled workflows are best-effort and can be delayed.
     - cron: '7,22,37,52 * * 9-12,1-2 0,1,4,5,6'
+    - cron: '17 12 * * 9-12,1-2 2,3'
   pull_request:
     paths: ['fourth-down*.js', 'assets/fourth-down/**', 'tools/fourth-down-*', 'tests/fourth-down*', 'tests/test_fourth_down_feed.py', '.github/workflows/fourth-down.yml']
 permissions:
