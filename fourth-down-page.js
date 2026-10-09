@@ -73,7 +73,10 @@
       const filter=$('fd-game-filter').value;$('fd-game-filter').innerHTML='<option value="all">All games</option>'+env.data.games.map(g=>`<option value="${esc(g.id)}">${esc(g.away)} @ ${esc(g.home)} · ${esc(g.status)}</option>`).join('');if(env.data.games.some(g=>g.id===filter))$('fd-game-filter').value=filter;
       $('fd-week-title').textContent=`Week ${env.data.week} decisions · ${env.data.season}`;
       const age=Date.now()-Date.parse(env.data.refreshed_at);const active=env.data.games.some(g=>/progress|halftime/i.test(g.status));
-      $('fd-updated').textContent=`Captured ${new Date(env.data.refreshed_at).toLocaleString()} · ESPN + nflverse${active&&age>30*60000?' · DELAYED: older than 30 minutes':''}`;
+      const stale=!Number.isFinite(age)||age>24*60*60000||(active&&age>30*60000);
+      $('fd-updated').textContent=`${stale?'STALE DATA — ':'Snapshot · '}Captured ${new Date(env.data.refreshed_at).toLocaleString()} · ESPN + nflverse${stale?' · Not current; refresh pipeline needs attention':''}`;
+      $('fd-updated').setAttribute('role',stale?'alert':'status');
+      if(stale)$('fd-board-status').textContent='Warning: fourth-down feed is stale. Decisions below are historical snapshots, not live analysis.';
       renderBoard();
     }catch(e){$('fd-board-status').textContent=`Could not refresh: ${e.message}${weekly?' Showing the previous dated snapshot.':' No game numbers are available.'}`;if(!weekly)$('fd-decisions').innerHTML='<tr><td colspan="6">The weekly feed is unavailable. The situation calculator works independently.</td></tr>';}
     finally{if(rid===requestId)$('fd-refresh').disabled=false;}
