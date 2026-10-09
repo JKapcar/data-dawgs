@@ -201,18 +201,18 @@
    {
     "path": "/data/epa-players.json",
     "url": "https://datadawgs216.com/data/epa-players.json",
-    "bytes": 190270,
-    "as_of": "2026-10-08",
-    "sha256": "198956594a4e51aa760efcaa165c31485dc12ac521e0f13e4e4f2634ee360a59",
-    "note": "Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name per play, so the whole value of a completed pass is credited to the quarterback and a receiver appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, not projections: do not read 2025 as 2026. 2026 is Weeks 1-4 ONLY (64 games): incomplete-season coverage, with the season minimums prorated to 36 dropbacks / 18 rushes. The pooled table spans every season in the snapshot, including the partial one."
+    "bytes": 190327,
+    "as_of": "2026-10-09",
+    "sha256": "e7d2451fddeb3a13bff5c6e5919f106c66e75495971c58d4771f9be10622c37d",
+    "note": "Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name per play, so the whole value of a completed pass is credited to the quarterback and a receiver appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, not projections: do not read 2025 as 2026. 2026 is Weeks 1-5 ONLY (65 games): incomplete-season coverage, with the season minimums prorated to 36 dropbacks / 18 rushes. The pooled table spans every season in the snapshot, including the partial one."
    },
    {
     "path": "/data/epa-teams.json",
     "url": "https://datadawgs216.com/data/epa-teams.json",
-    "bytes": 110224,
-    "as_of": "2026-10-08",
-    "sha256": "19dfe8be318a5f90188c41a8f3b4cff12aba657b4696880b661aa86535d4cd60",
-    "note": "Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback minimum for QBs; the pooled table uses 500. 2026 covers Weeks 1-4 ONLY (64 games) — a small sample sensitive to opponent and game script; its QB minimum is the 200 bar prorated to 48 dropbacks. The pooled table spans every season in the snapshot, including the partial one. These are descriptive aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026, and do not interpret an incomplete season as a complete season. Dropback EPA counts every dropback including scrambles and penalty-nullified plays and uses play epa, not qb_epa; Rush EPA excludes scrambles and kneels. These will not match nflverse passing_epa / rushing_epa."
+    "bytes": 110275,
+    "as_of": "2026-10-09",
+    "sha256": "c652d89bfd182a0aedfd01da60953cbf12b10af510ff58af2e7a4e2b9128af2f",
+    "note": "Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback minimum for QBs; the pooled table uses 500. 2026 covers Weeks 1-5 ONLY (65 games) — a small sample sensitive to opponent and game script; its QB minimum is the 200 bar prorated to 48 dropbacks. The pooled table spans every season in the snapshot, including the partial one. These are descriptive aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026, and do not interpret an incomplete season as a complete season. Dropback EPA counts every dropback including scrambles and penalty-nullified plays and uses play epa, not qb_epa; Rush EPA excludes scrambles and kneels. These will not match nflverse passing_epa / rushing_epa."
    },
    {
     "path": "/data/forecast-toto.json",
