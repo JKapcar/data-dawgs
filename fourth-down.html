@@ -2375,7 +2375,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <div class="fd-field"><label for="fd-total">Pregame total</label><input id="fd-total" name="total" type="number" value="41.5" min="15" max="90" step=".5" required></div>
       <div class="fd-field"><label for="fd-roof">Stadium roof</label><select id="fd-roof" name="roof"><option value="outdoors">Outdoors</option><option value="dome">Dome</option><option value="retractable">Retractable</option></select></div>
       <div class="fd-field"><label for="fd-homeKickoff">Opening kickoff received by</label><select id="fd-homeKickoff" name="homeKickoff"><option value="0">Away team</option><option value="1">Home team</option></select></div>
-      <div class="fd-field fd-full"><label for="fd-touchback">Kickoff assumption after a made field goal</label><select id="fd-touchback" name="touchback"><option value="25">Own 25 · match the original bot</option><option value="35">Own 35 · modern touchback scenario</option></select></div>
+      <div class="fd-field fd-full"><label for="fd-touchback">Kickoff assumption after a made field goal</label><select id="fd-touchback" name="touchback"><option value="25">Own 25 · legacy nfl4th assumption</option><option value="35">Own 35 · 2026 fly-ball touchback</option></select></div>
       <div class="fd-field fd-full"><label for="fd-runoff">Extra seconds after a successful conversion</label><input id="fd-runoff" name="runoff" type="number" value="0" min="0" max="40" required><small>0 matches the report. Use 40 only when an in-bounds play can burn that time.</small></div>
     </div></details><div class="fd-form-actions"><button type="submit" class="fd-primary" id="fd-calculate" disabled>Loading model…</button><button type="button" id="fd-reset">Reset</button></div><p class="fd-status" id="fd-status" role="status">Loading trained models, about 5 MB once.</p></form>
     <section class="fd-panel fd-result" aria-label="Decision result" aria-live="polite" id="fd-result"><div class="fd-verdict"><div class="fd-kicker" id="fd-strength">NFL4TH / MODEL ESTIMATE</div><h2 id="fd-recommendation">Reading the defense…</h2><p id="fd-verdict-text">Your decision probabilities will appear here.</p><div class="fd-edge" id="fd-edge" hidden></div></div><div class="fd-result-body"><div class="fd-situation" id="fd-situation"></div><div class="fd-bars" id="fd-bars"></div><div class="fd-branches" id="fd-branches"></div>
@@ -2434,5 +2434,5 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <script src="fourth-down-engine.js?v=1424d4441ff7"></script>
 <script src="fourth-down-analysis.js?v=8a4d21c33101"></script>
 <script src="fourth-down-explorer.js?v=93b1ac8c0083"></script>
-<script src="fourth-down-page.js?v=ea1ee56373c6"></script>
+<script src="fourth-down-page.js?v=robust20261009"></script>
 </body></html>
