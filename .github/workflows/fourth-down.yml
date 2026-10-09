@@ -8,7 +8,7 @@ on:
     - cron: '17 12 * 9-12,1-2 2,3'
   push:
     branches: [main]
-    paths: ['.github/workflows/fourth-down.yml', 'tools/fourth-down-*', 'fourth-down*.js']
+    paths: ['.github/workflows/fourth-down.yml', 'tools/fourth-down-*', 'fourth-down*.js', 'tests/fourth-down.test.cjs', 'tests/test_fourth_down_feed.py']
   pull_request:
     paths: ['fourth-down*.js', 'assets/fourth-down/**', 'tools/fourth-down-*', 'tests/fourth-down*', 'tests/test_fourth_down_feed.py', '.github/workflows/fourth-down.yml']
 permissions:
