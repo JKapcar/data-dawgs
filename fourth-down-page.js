@@ -76,8 +76,8 @@
       const stale=!Number.isFinite(age)||age>24*60*60000||(active&&age>30*60000);
       $('fd-updated').textContent=`${stale?'STALE DATA — ':'Snapshot · '}Captured ${new Date(env.data.refreshed_at).toLocaleString()} · ESPN + nflverse${stale?' · Not current; refresh pipeline needs attention':''}`;
       $('fd-updated').setAttribute('role',stale?'alert':'status');
-      if(stale)$('fd-board-status').textContent='Warning: fourth-down feed is stale. Decisions below are historical snapshots, not live analysis.';
       renderBoard();
+      if(stale)$('fd-board-status').textContent='Warning: fourth-down feed is stale. Decisions below are historical snapshots, not live analysis. '+$('fd-board-status').textContent;
     }catch(e){$('fd-board-status').textContent=`Could not refresh: ${e.message}${weekly?' Showing the previous dated snapshot.':' No game numbers are available.'}`;if(!weekly)$('fd-decisions').innerHTML='<tr><td colspan="6">The weekly feed is unavailable. The situation calculator works independently.</td></tr>';}
     finally{if(rid===requestId)$('fd-refresh').disabled=false;}
   }
