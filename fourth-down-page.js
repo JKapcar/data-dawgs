@@ -21,9 +21,46 @@
   }
   function status(text,error=false){$('fd-status').textContent=text;$('fd-status').classList.toggle('error',error);}
   function situation(s){const off=s.home?s.homeTeam:s.awayTeam,def=s.home?s.awayTeam:s.homeTeam;return `${off} vs ${def} · Q${s.qtr} ${Math.floor(s.seconds/60)}:${String(s.seconds%60).padStart(2,'0')} · 4th & ${s.toGo} · ${s.yardline>50?'own '+(100-s.yardline):def+' '+s.yardline} · ${s.diff>0?'leading by '+s.diff:s.diff<0?'trailing by '+(-s.diff):'tied'}`;}
+  // Decision robustness: each scenario reruns the same pinned nfl4th models.
+  // These are stress tests, not confidence intervals or personnel-adjusted forecasts.
+  function robustness(r){
+    let panel=$('fd-robustness');
+    if(!panel){
+      panel=document.createElement('section');panel.id='fd-robustness';panel.className='fd-sensitivity';
+      const anchor=$('fd-sensitivity');anchor.parentNode.insertBefore(panel,anchor);
+    }
+    const base=r.input, offSpread=base.home?base.spread:-base.spread;
+    const cases=[
+      ['Captured baseline',{}],
+      ['2026 fly-ball touchback: own 35',{touchback:35}],
+      ['Legacy touchback: own 25',{touchback:25}],
+      ['Offense has zero timeouts',{offTO:0}],
+      ['Defense has zero timeouts',{defTO:0}],
+      ['Offense weaker by 7-point spread',{spread:base.spread+(base.home?-7:7)}],
+      ['Offense stronger by 7-point spread',{spread:base.spread+(base.home?7:-7)}],
+      ['Pregame total minus 7',{total:Math.max(15,base.total-7)}],
+      ['Pregame total plus 7',{total:Math.min(90,base.total+7)}],
+      ['Combined: weak offense, 35 kickoff',{spread:base.spread+(base.home?-7:7),touchback:35}]
+    ];
+    const tested=cases.map(([name,changes])=>{
+      try{
+        const x=engine.calculate({...base,...changes});
+        return {name,x,edge:100*(x.goWP-Math.max(x.fgMake>0?x.fgWP:-Infinity,x.puntWP??-Infinity))};
+      }catch{return null;}
+    }).filter(Boolean);
+    const flips=tested.filter(t=>t.x.best!==r.best);
+    panel.innerHTML='<div class="fd-kicker">Decision robustness · model stress tests</div>'+
+      '<h3>Does the recommendation survive different assumptions?</h3>'+
+      '<p>Each row recalculates the full win-probability model, including post-play states. Changes are hypothetical one-factor tests unless marked combined, <strong>not</strong> calibrated probabilities or a measure of statistical confidence.</p>'+
+      '<p><strong>'+tested.length+' scenarios checked · '+flips.length+' changed the preferred decision.</strong> '+(flips.length?'Inspect flipped rows before concluding the call is robust.':'No tested stress scenario reverses the decision. This does not establish a confidence interval.')+'</p>'+
+      '<div style="overflow-x:auto"><table class="fd-table" style="width:100%"><thead><tr><th>Assumption</th><th>Best call</th><th>Go WP</th><th>FG WP</th><th>Go edge vs best alternative</th><th>Go break-even</th></tr></thead><tbody>'+
+      tested.map(t=>'<tr><td>'+esc(t.name)+'</td><td>'+esc(DDFourth.labels[t.x.best])+'</td><td>'+pct(t.x.goWP)+'</td><td>'+pct(t.x.fgMake>0?t.x.fgWP:null)+'</td><td>'+pp(t.edge)+'</td><td>'+(t.x.breakEven===null?'—':(t.x.breakEven*100).toFixed(1)+'%')+'</td></tr>').join('')+
+      '</tbody></table></div>'+
+      '<p><small><strong>Clock caveat:</strong> The existing extra-runoff control affects successful non-touchdown conversions only. On fourth-and-goal from the 1 it cannot model time consumed by a failed run, which requires a separate play-type and clock-state model. The kickoff setting is a deterministic field-position scenario, not a return distribution. Pregame spread changes are stress tests, not live market updates. Conversion-rate uncertainty remains separate in the slider below.</small></p>';
+  }
   function render(r){
     result=r;activeInput={...r.input,homeTeam:form.elements.homeTeam.value,awayTeam:form.elements.awayTeam.value};
-    $('fd-sensitivity').hidden=false;explorer.setResult(r,activeInput,initialOverrides);initialOverrides=null;
+    $('fd-sensitivity').hidden=false;robustness(r);explorer.setResult(r,activeInput,initialOverrides);initialOverrides=null;
     $('fd-warnings').innerHTML=r.warnings.map(w=>`<p>${esc(w)}</p>`).join('');
     $('fd-share').disabled=false;$('fd-copy').disabled=false;
     $('fd-share-status').textContent='';status(sourceLabel+' · calculated locally.');
