@@ -105,3 +105,41 @@ test('singleton zero CLV and endpoint closing probabilities have finite geometry
     if(rows[0].clvPts===-50)assert.match(calibration.querySelector('details tbody tr:first-child').textContent,/0–20%10\.0%0\.0%/);
   }
 });
+
+test('ledger loading clears the previous slice for missing or mismatched league data',()=>{
+  const loading=html.slice(html.indexOf('  if(onDiagnostics && CLV.data && CLV.lid===LID)'),html.indexOf('  // grading — the Worker is the authority'));
+  assert.ok(loading.includes('Loading the season ledger'),'actual loading branch found');
+  for(const missing of [true,false]){
+    const {document:d,context}=fixture(mixed());
+    assert.ok(d.querySelector('#dxChart [data-chart]'),'previous slice initially visible');
+    context.onDiagnostics=true;
+    context.CLV.lid='previous-fixture-league';
+    if(missing)context.CLV.data=null;
+    vm.runInContext(loading,context);
+    assert.match(d.getElementById('dxMeta').textContent,/loading ledger/);
+    assert.match(d.getElementById('dxChart').textContent,/Loading the season ledger/);
+    assert.equal(d.querySelectorAll('#dxChart [data-chart], #dxChart svg').length,0);
+    for(const selector of ['#dxTiles','#dxScope','#dxTable tbody','#dxNote'])assert.equal(d.querySelector(selector).textContent,'',selector+' clears stale values');
+  }
+});
+
+test('failed ledger request clears stale values, exposes error and releases loading state',async()=>{
+  const {document:d,context}=fixture(mixed());
+  const loadSource=html.slice(html.indexOf('async function clvLoad(force)'),html.indexOf('(function clvWireControls(){'));
+  let rejectRequest;
+  context.onHub=()=>false;
+  context.wGet=url=>{
+    assert.equal(url,'/bozo/clv?league=fixture');
+    return new Promise((resolve,reject)=>{rejectRequest=reject;});
+  };
+  vm.runInContext(loadSource,context);
+  const pending=context.clvLoad(true);
+  assert.equal(context.CLV.loading,true,'request remains loading until it settles');
+  rejectRequest(new Error('Synthetic offline ledger'));
+  await pending;
+  assert.equal(context.CLV.loading,false);
+  assert.match(d.getElementById('dxMeta').textContent,/ledger unavailable/);
+  assert.match(d.getElementById('dxChart').textContent,/could not be reached/);
+  assert.equal(d.querySelectorAll('#dxChart [data-chart], #dxChart svg').length,0);
+  for(const selector of ['#dxTiles','#dxScope','#dxTable tbody','#dxNote'])assert.equal(d.querySelector(selector).textContent,'',selector+' clears stale values');
+});
