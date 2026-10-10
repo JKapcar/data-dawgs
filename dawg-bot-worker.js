@@ -8652,7 +8652,8 @@ async function bozoOddsApiRequest(env, path, params, options = {}) {
         const v=response.headers.get(name); if(v !== null && /^\d+$/.test(v)) quota[name]=Number(v);
       }
       console.log("bozo-odds-api",JSON.stringify({status:response.status,...quota}));
-      if (!response.ok) throw fault(response.status===429?"rate_limited":"provider_error","Odds API HTTP "+response.status);
+      // The quota rides on a refusal too: an exhausted account still reports what is left.
+      if (!response.ok) throw Object.assign(fault(response.status===429?"rate_limited":"provider_error","Odds API HTTP "+response.status),{quota});
       return {data:await response.json(),fetchedAt:new Date().toISOString(),quota};
     })(),new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(fault("timeout","Odds API capture timed out"));},remaining);})]);
     if(cache) { try { await cache.put(cacheKey,new Response(JSON.stringify(result),{headers:{"content-type":"application/json","cache-control":"public, max-age="+(options.ttl || 30)}})); } catch {} }
@@ -9759,11 +9760,20 @@ const bozoScoreArchiveKey = (sport, season) => `bozo:score-finals:${sport}:${sea
    backoff, so a menu or board game nobody had bet stayed unscored for days while a leg
    that could never match burned two credits a tick. runBozoLiveScores now refreshes it
    on the five-minute tick only while some scheduled game is due (kickoff + 2.5 h, still
-   not final): every BOZO_SCORE_REFRESH_MS at first, hourly once every due game is long
-   overdue, never past the provider's three-day horizon, and not at all when nothing is
-   due. Each call costs two provider credits (daysFrom is set). */
+   not final), never past the provider's three-day horizon, and not at all when nothing
+   is due. Each call costs two provider credits (daysFrom is set).
+   ⚠️ CLOSES OUTRANK SCORES. The budget (docs/bozo-workplan.md D6) is the 500-credit free
+   tier, and one league's closes need ~345–390 of it a month; at two credits every five
+   minutes the old polling could spend a month's quota in a day and starve them. So the
+   cadence follows the credits the provider last reported (bozoScoreRefreshInterval):
+   ten minutes with ≥ 2,000 left, thirty with ≥ 500, hourly below that, and below the
+   floor only one daily probe to notice the monthly reset — the schedule CSVs still land
+   every final eventually. A failed call backs off to hourly. */
 const BOZO_SCORE_REFRESH_MS = 10 * 60 * 1000;
+const BOZO_SCORE_THRIFT_MS = 30 * 60 * 1000;
 const BOZO_SCORE_SLOW_REFRESH_MS = 60 * 60 * 1000;
+const BOZO_SCORE_PROBE_MS = 24 * 60 * 60 * 1000;
+const BOZO_SCORE_CREDIT_FLOOR = 150;
 const BOZO_SCORE_DUE_AFTER_MS = 150 * 60 * 1000;
 const BOZO_SCORE_FAST_WINDOW_MS = 8 * 60 * 60 * 1000;
 const BOZO_SCORE_GIVE_UP_MS = 72 * 60 * 60 * 1000;
@@ -9771,6 +9781,17 @@ const BOZO_SCORE_DAILY_CAP = 150;   // per sport: a ceiling on a bug, not a work
 // A program cannot play twice inside twelve hours; the close capture pins events with the
 // same six-hour window (bozoMatchEvent).
 const BOZO_FINAL_MATCH_MS = 6 * 60 * 60 * 1000;
+
+// Minimum wait between archive refreshes, from the last known archive state.
+function bozoScoreRefreshInterval(archive, overdueLong = false) {
+  const remaining = archive && archive.quotaRemaining;
+  const known = Number.isFinite(remaining);
+  if (known && remaining < BOZO_SCORE_CREDIT_FLOOR) return BOZO_SCORE_PROBE_MS;
+  let ms = !known || remaining >= 2000 ? BOZO_SCORE_REFRESH_MS
+    : remaining >= 500 ? BOZO_SCORE_THRIFT_MS : BOZO_SCORE_SLOW_REFRESH_MS;
+  if (overdueLong || (archive && archive.errorCode)) ms = Math.max(ms, BOZO_SCORE_SLOW_REFRESH_MS);
+  return ms;
+}
 function bozoNormalizeOddsScores(sport, rows, fetchedAt) {
   if (!Array.isArray(rows)) throw new Error("Score provider returned no events array");
   const registry = bozoBuildTeamRegistry(sport).aliases;
@@ -9868,9 +9889,11 @@ async function bozoFallbackScores(env, sport, season, nowMs = Date.now(), option
   const key = bozoScoreArchiveKey(sport, season);
   // One refresh per window no matter how many callers share a tick: grading and the live
   // job both land here, and the provider's three-day payload costs two credits a call.
-  const minAgeMs = Number.isFinite(options.minAgeMs) ? options.minAgeMs : BOZO_SCORE_REFRESH_MS - 60000;
   let previous = null;
   try { previous = await env.RL?.get(key, "json"); } catch {}
+  // A minute of slack keeps a cadence from slipping a whole five-minute tick.
+  const minAgeMs = Number.isFinite(options.minAgeMs) ? options.minAgeMs
+    : bozoScoreRefreshInterval(previous) - 60000;
   const saved = { source: "the-odds-api", fetchedAt: previous?.fetchedAt || null,
     checkedAt: previous?.checkedAt || null, games: previous?.games || [],
     quotaRemaining: previous?.quotaRemaining ?? null, calls: previous?.calls || null };
@@ -9899,9 +9922,11 @@ async function bozoFallbackScores(env, sport, season, nowMs = Date.now(), option
   } catch (e) {
     // Never store provider error bodies/URLs, which can contain credentials. The code is
     // one of three fixed words, so a quota or rate-limit outage is visible without them.
+    const remaining = e && e.quota && e.quota["x-requests-remaining"];
     next = { ...saved, checkedAt: new Date(nowMs).toISOString(), calls,
       error: "score_fallback_unavailable",
-      errorCode: ["rate_limited", "timeout"].includes(e && e.code) ? e.code : "provider_error" };
+      errorCode: ["rate_limited", "timeout"].includes(e && e.code) ? e.code : "provider_error",
+      quotaRemaining: Number.isFinite(remaining) ? remaining : saved.quotaRemaining };
   }
   try { await env.RL?.put(key, JSON.stringify(next)); } catch {}
   return next;
@@ -9935,8 +9960,8 @@ async function runBozoLiveScores(env, nowMs = Date.now(), season = SEASON) {
     }
     // Ticks land every five minutes with jitter; a minute of slack keeps a 10-minute
     // cadence from slipping to fifteen.
-    const interval = freshest < BOZO_SCORE_DUE_AFTER_MS + BOZO_SCORE_FAST_WINDOW_MS
-      ? BOZO_SCORE_REFRESH_MS : BOZO_SCORE_SLOW_REFRESH_MS;
+    const interval = bozoScoreRefreshInterval(finals,
+      freshest >= BOZO_SCORE_DUE_AFTER_MS + BOZO_SCORE_FAST_WINDOW_MS);
     const archive = await bozoFallbackScores(env, sport, season, nowMs, { minAgeMs: interval - 60000 });
     out[sport] = { due, interval, refreshed: archive.checkedAt === new Date(nowMs).toISOString(),
       error: archive.errorCode || archive.error || null };

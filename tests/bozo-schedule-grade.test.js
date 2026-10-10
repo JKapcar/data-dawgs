@@ -433,6 +433,40 @@ test('live scores: no due game, no provider call; a due game refreshes every ten
   assert.equal(r.calls.length, 3); assert.equal(out.cfb.due, 0);
 });
 
+test('live scores spend credits by what is left, and closes keep a protected floor', async () => {
+  // docs/bozo-workplan.md D6: the 500-credit free tier, ~345-390 of it owed to closes.
+  const due = { ...libRow, startsAt: new Date(scoreNow - 3 * 3600_000).toISOString() };
+  const withQuota = async (remaining, ticksMin) => {
+    const r = scoreRig([]);
+    r.store.set('schedule:cfb:2026', { games: [due] });
+    r.store.set('bozo:score-finals:cfb:2026', { games: [], checkedAt: new Date(scoreNow).toISOString(), quotaRemaining: remaining });
+    for (const m of ticksMin) await api.runBozoLiveScores(r.env, scoreNow + m * 60_000, 2026);
+    return r.calls.length;
+  };
+  assert.equal(await withQuota(5000, [10]), 1, 'plenty left: ten-minute cadence');
+  assert.equal(await withQuota(1200, [10, 25]), 0, 'thrifty: not before thirty minutes');
+  assert.equal(await withQuota(1200, [30]), 1);
+  assert.equal(await withQuota(300, [45]), 0, 'under 500: hourly');
+  assert.equal(await withQuota(300, [60]), 1);
+  assert.equal(await withQuota(100, [60, 12 * 60]), 0, 'below the floor: closes keep the credits');
+  assert.equal(await withQuota(100, [24 * 60]), 1, 'one daily probe notices the monthly reset');
+  // A refused call records the quota the provider still reports, and backs off to hourly.
+  const r = scoreRig([]);
+  r.store.set('schedule:cfb:2026', { games: [due] });
+  context.bozoOddsApiRequest = async (_env, path, params) => {
+    r.calls.push({ path, params });
+    throw Object.assign(new Error('Odds API HTTP 401'), { code: 'provider_error', quota: { 'x-requests-remaining': 0 } });
+  };
+  await api.runBozoLiveScores(r.env, scoreNow, 2026);
+  const archive = r.store.get('bozo:score-finals:cfb:2026');
+  assert.equal(archive.errorCode, 'provider_error'); assert.equal(archive.quotaRemaining, 0);
+  await api.runBozoLiveScores(r.env, scoreNow + 2 * 3600_000, 2026);
+  assert.equal(r.calls.length, 1, 'an exhausted account is not hammered');
+  assert.equal((await api.bozoFallbackScores(r.env, 'cfb', 2026, scoreNow + 2 * 3600_000)).quotaRemaining, 0,
+    'grading shares the same budget throttle');
+  assert.equal(r.calls.length, 1);
+});
+
 test('live scores: long-overdue games poll hourly, and the daily cap holds', async () => {
   const stale = { ...libRow, startsAt: new Date(scoreNow - 20 * 3600_000).toISOString() };
   const r = scoreRig([]);
