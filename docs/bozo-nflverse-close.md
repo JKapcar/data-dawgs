@@ -25,6 +25,68 @@ Every surface labels these closes **"nflverse close (book unspecified)"** (`clos
 `/bozo/clv` and the MCP ledger read). They are never shown as "Circa", "DraftKings" or a
 plain "closing line".
 
+## Points vs the nflverse main close (alternate numbers)
+
+nflverse publishes only the main closing number. A spread or total leg on any other
+number keeps `close` / `closeOpp` **null** with its reason, and no price is ever made
+up for it. The number comparison goes in separate fields instead. These are written once,
+to both receipts for the current week and to the ledger row for past weeks:
+
+| field | meaning |
+|---|---|
+| `closeLineRef` | nflverse closing number in the leg's own stored convention (same units as `line`) |
+| `closePointsVsClose` | points vs that close. **Positive = the leg got a better number** |
+| `closeLineRefSource` | `"nflverse"` |
+| `closeLineRefObservedAt` | schedule document `fetchedAt` |
+| `closeLineRefEventId` | nflverse `game_id` |
+
+Signs: spread `closeLineRef - line`, over `closeLineRef - line`, under `line - closeLineRef`.
+Examples:
+- DAL -7.5 vs a -9.5 close: stored 7.5 vs 9.5, so +2.
+- TB +10.5 vs +9.5: stored -10.5 vs -9.5, so +1.
+- Over 47.5 vs 49.5: +2.
+- Under 51.5 vs 49.5: +2.
+
+A leg on the main number gets 0. Moneylines get none. `/bozo/clv` and the MCP ledger read
+expose these fields next to the close fields, with `closeLineRefLabel`:
+**"points vs nflverse main close (book unspecified)"**. The CLV chart and tooltip are
+unchanged.
+
+## Precedence
+
+1. **Any existing full pair is final.** No automatic source rewrites it: `bozoCloseTargets`
+   skips complete pairs before any paid or free call, and the ledger backfill skips any row
+   with a close. A manual fill is refused (409) once a captured complete close has
+   `closeObservedAt`, and nflverse closes have one.
+2. Before kickoff: Odds API (DraftKings), then SGO.
+3. After kickoff, current week: if the paid historical retry gate allows it, the Odds API
+   historical pregame snapshot is tried first on that tick. If it misses, nflverse fills
+   **immediately** once the row is final. There's no wait for the 48h paid recovery.
+4. After an nflverse full pair lands, later paid recovery never targets the leg (rule 1).
+   After an nflverse **reasoned miss** (alternate number), paid recovery may still fill a
+   real DraftKings price inside its 48h window. That clears the reason and leaves
+   `closeLineRef*` in place.
+5. A half close is left alone by nflverse in every path.
+
+## Past-week ledger backfill
+
+Past weeks exist only in `ledger/<season-wN-key>`. `results/<key>` is cleared at
+`bozoNext`, so the live path never reaches them. `runBozoNflverseLedgerBackfill` runs on
+the 5-minute close cron with its own 30-minute gate in RL KV (`bozo:nflverse-ledger:last`).
+- **Writes:** ledger rows only, never `results/`.
+- **Rows it skips:** the current week (the live path owns that), synthetic leagues, other
+  seasons, rows with any close, rows with an nflverse reason and a line ref already set,
+  and props, `other` and period legs.
+- **Period:** the ledger has no `period` column. The period comes from `selectionKey`'s
+  suffix, and a row without a `selectionKey` or with a half/quarter label is skipped
+  (fail closed).
+- **Bounded:** at most 25 rows written and 2,000 rows examined per run, one PATCH per
+  league. Written rows drop out of the filter, so repeated runs converge and never write
+  a row twice.
+- **Window:** the whole current season, not 10 days. nflverse closing values don't age,
+  the schedule document only holds this season, and every write is write-once. The
+  10-day window still bounds the live path, which also drives paid recovery decisions.
+
 ## Column mapping and sign
 
 | nflverse column | meaning | Bozo use |
@@ -55,9 +117,10 @@ plus kickoff (`bozoScheduleFindGame`).
   final reason, e.g. "No nflverse close: nflverse closing spread was DAL -9.5; this leg is
   DAL -7.5…". It is never interpolated and never copied from the entry price. That reason
   is written once and not re-read. Paid recovery can still replace it inside its 48h window.
+  The points-vs-close fields above carry the number comparison.
 - Props, period legs, `other` legs and CFB are untouched.
-- Window: 10 days after kickoff (`BOZO_NFLVERSE_CLOSE_WINDOW_MS`), and only while the
-  leg is still in the league's current `picks`.
+- Window: 10 days after kickoff (`BOZO_NFLVERSE_CLOSE_WINDOW_MS`) for the live path. Past
+  weeks are covered by the ledger backfill below.
 - No credits, no new secret, one KV read per cron run.
 
 ## CFB

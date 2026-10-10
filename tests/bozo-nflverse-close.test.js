@@ -22,7 +22,7 @@ function rig() {
     cut('function bozoScheduledTeamSide(', 'function bozoScheduledOutcome('),
     cut('function bozoScheduledOutcome(', '// Independent of the research CSVs'),
     'const ledgerKey = (season, week, playerKey) => `${season}-w${week}-${playerKey}`;',
-    'this.api={bozoNormalizeNflSchedule,bozoNflverseCloseQuote,bozoNflverseCloseEligible,bozoCloseMutation,bozoScheduleFindGame,bozoScheduledOutcome,bozoCloseTargets,assertQuote};',
+    'this.api={bozoNormalizeNflSchedule,bozoNflverseCloseQuote,bozoNflverseCloseEligible,bozoCloseMutation,bozoScheduleFindGame,bozoScheduledOutcome,bozoCloseTargets,assertQuote,bozoNflverseLineRef,bozoNflverseLedgerPlan,bozoNflverseLedgerPeriod,runBozoNflverseLedgerBackfill};',
   ].join('\n'), ctx);
   return { ctx, logs, ...ctx.api };
 }
@@ -193,7 +193,7 @@ test('cron: paid miss after kickoff → nflverse fills; final miss is written on
   assert.equal(patches[0]['results/pat/close'], null);
   assert.match(patches[0]['results/pat/closeUnavailableReason'], /^No nflverse close: nflverse closing spread was DAL -9\.5/);
   const why = patches[0]['results/pat/closeUnavailableReason'];
-  patches = []; target = { ...target, priorReason: why };
+  patches = []; target = { ...target, priorReason: why, priorLineRef: 9.5 };   // points-vs-close already written too
   await r.ctx.runClose({}, now);
   assert.equal(patches.length, 0);                                     // same reason is not rewritten
 
@@ -212,4 +212,179 @@ test('surfaces label nflverse closes and never as plain "closing line"', () => {
   assert.match(src, /const BOZO_NFLVERSE_CLOSE_LABEL = "nflverse close \(book unspecified\)";/);
   assert.match(fs.readFileSync('work/mcp-block.js', 'utf8'), /closeLabel: r\.closeSource === "nflverse" && r\.close != null \? "nflverse close \(book unspecified\)"/);
   assert.doesNotMatch(cut('/* ===================== nflverse backup close', 'function bozoScheduledOutcome('), /circa/i);
+});
+
+/* ---------------- points vs the nflverse main close ---------------- */
+const pts = (p, g = tbDal) => r0.bozoNflverseLineRef(p, g, doc);
+
+test('points vs close: spread sign for HOME and AWAY legs (positive = better number)', () => {
+  // Close: DAL -9.5 (stored 9.5), TB +9.5 (stored -9.5).
+  assert.equal(pts(leg({ side: 'DAL', mkt: 'spread', line: 7.5 })).closePointsVsClose, 2);    // DAL -7.5: better
+  assert.equal(pts(leg({ side: 'DAL', mkt: 'spread', line: 10.5 })).closePointsVsClose, -1);  // DAL -10.5: worse
+  assert.equal(pts(leg({ side: 'TB', mkt: 'spread', line: -10.5 })).closePointsVsClose, 1);   // TB +10.5: better
+  assert.equal(pts(leg({ side: 'TB', mkt: 'spread', line: -8.5 })).closePointsVsClose, -1);   // TB +8.5: worse
+  const home = pts(leg({ side: 'DAL', mkt: 'spread', line: 7.5 }));
+  assert.equal(home.closeLineRef, 9.5); assert.equal(home.closeLineRefSource, 'nflverse');
+  assert.equal(home.closeLineRefObservedAt, doc.fetchedAt); assert.equal(home.closeLineRefEventId, '2026_05_TB_DAL');
+  assert.equal(pts(leg({ side: 'TB', mkt: 'spread', line: -10.5 })).closeLineRef, -9.5);
+  // Away favourite (ARI -2.5 close): ARI -1.5 is better by 1, NYG +1.5 is worse by 1.
+  const a = { sport: 'nfl', game: 'ARI @ NYG', startsAt: ariNyg.startsAt, canonicalKey: ariNyg.canonicalKey, mkt: 'spread' };
+  assert.equal(pts({ ...a, side: 'ARI', line: 1.5 }, ariNyg).closePointsVsClose, 1);
+  assert.equal(pts({ ...a, side: 'NYG', line: -1.5 }, ariNyg).closePointsVsClose, -1);
+  assert.equal(pts(leg({ side: 'DAL', mkt: 'spread', line: 9.5 })).closePointsVsClose, 0);    // main number
+});
+
+test('points vs close: OVER and UNDER signs; ml, props, periods and pregame rows get none', () => {
+  assert.equal(pts(leg({ side: 'over', mkt: 'total', line: 47.5 })).closePointsVsClose, 2);
+  assert.equal(pts(leg({ side: 'over', mkt: 'total', line: 50.5 })).closePointsVsClose, -1);
+  assert.equal(pts(leg({ side: 'under', mkt: 'total', line: 51.5 })).closePointsVsClose, 2);
+  assert.equal(pts(leg({ side: 'under', mkt: 'total', line: 48.5 })).closePointsVsClose, -1);
+  assert.equal(pts(leg({ side: 'over', dir: 'over', mkt: 'total', line: 47.5 })).closeLineRef, 49.5);
+  assert.equal(pts(leg({ side: 'DAL', mkt: 'ml' })), null);
+  assert.equal(pts(leg({ side: 'over', mkt: 'prop', line: 60.5 })), null);
+  assert.equal(pts(leg({ side: 'DAL', mkt: 'spread', line: 4.5, period: '1h' })), null);
+  assert.equal(pts({ sport: 'nfl', side: 'JAX', mkt: 'spread', line: 5.5, startsAt: phiJax.startsAt }, phiJax), null);
+  assert.equal(r0.bozoNflverseLineRef(leg({ side: 'DAL', mkt: 'spread', line: 7.5 }), tbDal, { ...doc, fetchedAt: '2026-10-08T00:00:00Z' }), null);
+});
+
+function closeRig() {
+  const r = rig();
+  let patches = [];
+  Object.assign(r.ctx, {
+    bozoOddsApiCapture: async () => { throw Error('must not be called when oddsApi is false'); },
+    bozoFetchEvents: async () => { throw Error('no live SGO after kickoff'); },
+    bozoTeamRegistry: async () => r.ctx.bozoBuildTeamRegistry('nfl').aliases,
+    bozoScheduleDoc: async () => doc, LG: l => l, cfbMarketKV: () => null,
+    fbPatch: async (e, path, patch) => patches.push([path, patch]),
+  });
+  vm.runInContext(cut('async function runBozoCloseCapture(', '/* GET /bozo/clv?') + 'this.runClose=runBozoCloseCapture;', r.ctx);
+  return { r, get patches() { return patches; }, reset() { patches = []; } };
+}
+
+test('cron: alternate spread keeps price null with its reason and writes points-vs-close separately, once', async () => {
+  const c = closeRig(), start = Date.parse(tbDal.startsAt), now = start + 6 * 3600000;
+  const base = { key: 'pat', player: 'Pat', uid: 'u_pat', lid: 'main', season: 2026, week: 5, startMs: start, oddsApi: false, nflverse: true };
+  let target = { ...base, pick: leg({ side: 'DAL', mkt: 'spread', line: 7.5 }) };
+  c.r.ctx.bozoCloseTargets = async () => [target];
+  await c.r.ctx.runClose({}, now);
+  const p = c.patches[0][1];
+  for (const b of ['results/pat', 'ledger/2026-w5-pat']) {
+    assert.equal(p[`${b}/close`], null); assert.equal(p[`${b}/closeOpp`], null);
+    assert.match(p[`${b}/closeUnavailableReason`], /No nflverse close: nflverse closing spread was DAL -9\.5/);
+    assert.equal(p[`${b}/closeLineRef`], 9.5); assert.equal(p[`${b}/closePointsVsClose`], 2);
+    assert.equal(p[`${b}/closeLineRefSource`], 'nflverse');
+  }
+  c.reset(); target = { ...target, priorReason: p['results/pat/closeUnavailableReason'], priorLineRef: 9.5 };
+  await c.r.ctx.runClose({}, now);
+  assert.equal(c.patches.length, 0);                                    // nothing rewritten
+  c.reset(); target = { ...base, pick: leg({ side: 'DAL', mkt: 'ml' }) };
+  await c.r.ctx.runClose({}, now);
+  assert.equal(c.patches[0][1]['results/pat/close'], -535);
+  assert.equal(c.patches[0][1]['results/pat/closeLineRef'], undefined);  // ml has no number
+});
+
+test('precedence: once nflverse wrote a full pair, paid recovery inside 48h does not target the leg', async () => {
+  const r = rig(), start = Date.parse(tbDal.startsAt), now = start + 6 * 3600000, kv = new Map();
+  const picks = { a: { ...leg({ side: 'DAL', mkt: 'ml' }), eventId: '401872980' } };
+  const league = { week: 5, season: 2026, status: 'open', picks,
+    results: { a: { close: -535, closeOpp: 400, closeSource: 'nflverse', closeBook: 'unspecified' } } };
+  Object.assign(r.ctx, { BOZO_CLOSE_LEAD_MS: 420000, BOZO_CLOSE_STALE_MS: 1200000, BOZO_CLOSE_RECOVERY_MS: 172800000,
+    BOZO_CLOSE_RETRY_MS: 3600000, loadLeagues: async () => ({ main: league }), loadUsers: async () => ({}),
+    playerName: k => k, memberNameAt: () => null, accountName: () => '', UID_RE: /^u_/ });
+  const env = { ODDS_API_KEY: 'fixture', RL: { get: async k => kv.get(k), put: async (k, v) => kv.set(k, v) } };
+  assert.equal((await r.ctx.bozoCloseTargets(env, now)).length, 0);
+  assert.equal(kv.size, 0);                                             // no paid credit gate even touched
+});
+
+/* ---------------- past-week ledger backfill ---------------- */
+const sk = (x) => [x.eventId, x.mkt, x.side, x.mkt === 'ml' ? '' : String(x.line ?? ''), '', ...(x.period ? [x.period] : [])].join('|');
+const row = (week, x) => { const r = { league: 'main', season: 2026, week, player: 'Pat', sport: 'nfl', ...x };
+  r.selectionKey = x.selectionKey === undefined ? sk(r) : x.selectionKey; return r; };
+const atl = { eventId: '401872979', game: 'ATL @ NO', startsAt: atlNo.startsAt, canonicalKey: atlNo.canonicalKey };
+const ari = { eventId: '401872966', game: 'ARI @ NYG', startsAt: ariNyg.startsAt, canonicalKey: ariNyg.canonicalKey };
+const tbd = { eventId: '401872980', game: 'TB @ DAL', startsAt: tbDal.startsAt, canonicalKey: tbDal.canonicalKey };
+function ledgerLeagues() {
+  return {
+    main: { week: 5, season: 2026, ledger: {
+      '2026-w4-a': row(4, { ...atl, mkt: 'ml', side: 'ATL' }),                         // price
+      '2026-w4-b': row(4, { ...ari, mkt: 'spread', side: 'ARI', line: 1.5 }),          // alt: reason + ref
+      '2026-w4-c': row(4, { ...atl, mkt: 'total', side: 'over', dir: 'over', line: 47.5 }), // exact main: price + ref 0
+      '2026-w4-d': row(4, { ...atl, mkt: 'prop', side: 'over', line: 60.5, prop: 'Bijan rush yds' }),
+      '2026-w4-e': row(4, { ...atl, mkt: 'ml', side: 'ATL', period: '1h' }),           // period: skipped
+      '2026-w4-f': row(4, { ...atl, mkt: 'ml', side: 'ATL', selectionKey: null }),     // no key: fail closed
+      '2026-w4-g': row(4, { ...atl, mkt: 'ml', side: 'ATL', close: -110, closeOpp: -110, closeSource: 'odds_api' }),
+      '2026-w4-h': row(4, { ...atl, mkt: 'ml', side: 'ATL', close: -120 }),            // half: left alone
+      '2025-w4-i': row(4, { ...atl, season: 2025, mkt: 'ml', side: 'ATL' }),           // other season
+      '2026-w5-j': row(5, { ...tbd, mkt: 'ml', side: 'DAL' }),                         // current week: live path
+    } },
+    fake: { synthetic: true, week: 5, season: 2026, ledger: { '2026-w4-z': row(4, { ...atl, mkt: 'ml', side: 'ATL' }) } },
+  };
+}
+const apply = (leagues, plan) => { for (const [lid, patch] of plan.patches) for (const [path, v] of Object.entries(patch)) {
+  const [, rowKey, f] = path.split('/'); leagues[lid].ledger[rowKey][f] = v; } };
+const NOW = Date.parse('2026-10-10T12:00:00Z');
+
+test('ledger backfill: past-week rows only, write-once, no overwrites, fail-closed period', () => {
+  const L = ledgerLeagues(), plan = r0.bozoNflverseLedgerPlan(L, doc, NOW);
+  const keys = [...plan.patches.keys()];
+  assert.deepEqual(keys, ['main']);                                     // synthetic league untouched
+  const p = plan.patches.get('main'), touched = [...new Set(Object.keys(p).map(k => k.split('/')[1]))].sort();
+  assert.deepEqual(touched, ['2026-w4-a', '2026-w4-b', '2026-w4-c']);
+  assert.equal(p['ledger/2026-w4-a/close'], -102); assert.equal(p['ledger/2026-w4-a/closeOpp'], -118);
+  assert.equal(p['ledger/2026-w4-a/closeSource'], 'nflverse'); assert.equal(p['ledger/2026-w4-a/closeBook'], 'unspecified');
+  assert.equal(p['ledger/2026-w4-a/closeProviderEventId'], '2026_04_ATL_NO');
+  assert.equal(p['ledger/2026-w4-b/close'], null); assert.match(p['ledger/2026-w4-b/closeUnavailableReason'], /ARI -2\.5.*ARI -1\.5/);
+  assert.equal(p['ledger/2026-w4-b/closePointsVsClose'], 1); assert.equal(p['ledger/2026-w4-b/closeLineRef'], 2.5);
+  assert.equal(p['ledger/2026-w4-c/close'], -112); assert.equal(p['ledger/2026-w4-c/closePointsVsClose'], 0); // main number 47.5
+  assert.ok(Object.keys(p).every(k => k.startsWith('ledger/')));         // never results/ for past weeks
+  assert.equal(r0.bozoNflverseLedgerPeriod({ selectionKey: '1|ml|ATL|||1h' }), '1h');
+  assert.equal(r0.bozoNflverseLedgerPeriod({ selectionKey: '1|ml|ATL||', label: 'ATL 1st half ML' }), null);
+  assert.equal(r0.bozoNflverseLedgerPeriod({ selectionKey: '' }), null);
+});
+
+test('ledger backfill is idempotent: applying the plan then re-planning writes nothing', () => {
+  const L = ledgerLeagues();
+  apply(L, r0.bozoNflverseLedgerPlan(L, doc, NOW));
+  const again = r0.bozoNflverseLedgerPlan(L, doc, NOW);
+  assert.equal(again.written, 0); assert.equal(again.patches.size, 0);
+  assert.equal(L.main.ledger['2026-w4-g'].close, -110); assert.equal(L.main.ledger['2026-w4-g'].closeSource, 'odds_api');
+  assert.equal(L.main.ledger['2026-w4-h'].close, -120); assert.equal(L.main.ledger['2026-w4-h'].closeOpp, undefined);
+});
+
+test('ledger backfill is bounded per run and converges without double writes', () => {
+  const L = { main: { week: 9, season: 2026, ledger: {} } };
+  for (let i = 0; i < 7; i++) L.main.ledger[`2026-w4-p${i}`] = row(4, { ...atl, mkt: 'ml', side: i % 2 ? 'NO' : 'ATL' });
+  const seen = new Map(); let runs = 0, plan;
+  do {
+    plan = r0.bozoNflverseLedgerPlan(L, doc, NOW, { batch: 3 });
+    assert.ok(plan.written <= 3);
+    for (const k of Object.keys(plan.patches.get('main') || {})) { const rk = k.split('/')[1]; if (k.endsWith('/close')) seen.set(rk, (seen.get(rk) || 0) + 1); }
+    apply(L, plan); runs++;
+  } while (plan.written > 0 && runs < 10);
+  assert.equal(runs, 4);                                                // 3 + 3 + 1, then an empty run
+  assert.equal(seen.size, 7); assert.ok([...seen.values()].every(n => n === 1));
+  const capped = r0.bozoNflverseLedgerPlan(ledgerLeagues(), doc, NOW, { scanMax: 2 });
+  assert.equal(capped.scanned, 2); assert.equal(capped.truncated, true);
+});
+
+test('ledger runner: cadence gate, no KV, and one PATCH per league', async () => {
+  const r = rig(), kv = new Map(), patches = [];
+  Object.assign(r.ctx, { bozoScheduleDoc: async () => doc, loadLeagues: async () => ledgerLeagues(), LG: l => l,
+    fbPatch: async (e, path, patch) => patches.push([path, patch]) });
+  const env = { RL: { get: async k => kv.get(k), put: async (k, v) => kv.set(k, v) } };
+  const first = await r.ctx.runBozoNflverseLedgerBackfill(env, NOW);
+  assert.equal(first.written, 3); assert.equal(patches.length, 1); assert.equal(patches[0][0], 'main');
+  assert.equal((await r.ctx.runBozoNflverseLedgerBackfill(env, NOW + 60000)).skipped, 'cadence');
+  assert.equal((await r.ctx.runBozoNflverseLedgerBackfill({}, NOW)).skipped, 'no_kv');
+  assert.equal((await r.ctx.runBozoNflverseLedgerBackfill(env, NOW + 31 * 60000)).written, 3); // stub tree is fresh each call
+});
+
+test('surfaces expose points-vs-close next to the close fields with its own label', () => {
+  const clv = cut('async function bozoClv(', 'const weeks = [...new Set');
+  for (const f of ['closeLineRef', 'closePointsVsClose', 'closeLineRefSource', 'closeLineRefObservedAt', 'closeLineRefLabel']) {
+    assert.match(clv, new RegExp(f + ':'));
+    assert.match(fs.readFileSync('work/mcp-block.js', 'utf8'), new RegExp(f + ':'));
+  }
+  assert.match(src, /const BOZO_NFLVERSE_LINE_REF_LABEL = "points vs nflverse main close \(book unspecified\)";/);
+  assert.match(src, /ledgerBackfill = await runBozoNflverseLedgerBackfill\(/);
 });
