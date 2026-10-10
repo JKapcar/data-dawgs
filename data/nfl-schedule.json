@@ -1,6 +1,6 @@
 {
  "as_of": "2026-10-10",
- "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 4319428a055b20e2746d0578d9091eedbb0ab253.",
+ "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 21a617515b5499a6cccd8d015f801fa1ef26eaf4.",
  "tier": "labs",
  "graded": false,
  "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts.",
@@ -10,10 +10,10 @@
   "loader_license": "MIT",
   "source_repository": "nflverse/nfldata",
   "source_url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-  "source_commit": "4319428a055b20e2746d0578d9091eedbb0ab253",
-  "source_committed_at": "2026-10-10T00:45:13Z",
+  "source_commit": "21a617515b5499a6cccd8d015f801fa1ef26eaf4",
+  "source_committed_at": "2026-10-10T15:45:13Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-10-10T01:01:03.458703Z"
+  "captured_at": "2026-10-10T15:52:40.315221Z"
  },
  "integrity": {
   "snapshot_id": "sha256:d2af9641fb67d14d565cee1f604f86aa61616eacdf47c30dedd9e5f49a6a3850",
