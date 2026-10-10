@@ -32,6 +32,7 @@ on:
       - "bozo-menu.html"
       - "work/test-bozo-menu-ui.mjs"
       - "tests/bozo-form-spread.test.cjs"
+      - "tests/bozo-disclosures.test.cjs"
       - "tests/service-worker.test.js"
       - "tests/live-state.test.js"
       - ".github/workflows/site-safety.yml"
@@ -65,6 +66,7 @@ on:
       - "bozo-menu.html"
       - "work/test-bozo-menu-ui.mjs"
       - "tests/bozo-form-spread.test.cjs"
+      - "tests/bozo-disclosures.test.cjs"
       - "tests/service-worker.test.js"
       - "tests/live-state.test.js"
       - ".github/workflows/site-safety.yml"
@@ -89,7 +91,7 @@ jobs:
       - run: /tmp/dd-feedback-pw/node_modules/.bin/playwright install --with-deps chromium
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-agent-feedback-ui.mjs
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-agent-board-ui.mjs
-      - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node --test tests/bozo-form-spread.test.cjs tests/bozo-spread-sign.test.js tests/bozo-price-sign.test.js
+      - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node --test tests/bozo-form-spread.test.cjs tests/bozo-spread-sign.test.js tests/bozo-price-sign.test.js tests/bozo-disclosures.test.cjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-bozo-menu-ui.mjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-autoload-ui.cjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-workspace-ui.cjs

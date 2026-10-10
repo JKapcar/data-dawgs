@@ -882,6 +882,18 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
   font:800 15px/1 ui-monospace,monospace;letter-spacing:3px;text-transform:uppercase;
   padding:6px 10px;border:2.5px solid currentColor;border-radius:5px;opacity:.5}
 .stamp.open{color:var(--accent)}.stamp.placed{color:var(--warn)}.stamp.graded{color:var(--good)}
+/* ---- optional explanations: native tap, click and keyboard disclosures ---- */
+.bz-help{margin:10px 0;font-size:13.5px;line-height:1.65;color:var(--ink-2)}
+.bz-help>summary{cursor:pointer;min-height:44px;display:list-item;list-style-position:inside;width:fit-content;
+  max-width:100%;box-sizing:border-box;padding:10px 6px;font-weight:700;color:var(--ink-1)}
+.bz-help>summary:hover{color:var(--accent)}
+.bz-help>summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.bz-help[open]>summary{margin-bottom:4px}
+.bz-help .note{margin:0 0 12px}
+.flag .bz-help{margin:0}
+.flag .bz-help>summary{padding-left:0}
+.diag-caption{margin:12px 0;font-size:12px;color:var(--ink-2)}
+#diagCard.empty .diag-caption{display:none}
 /* ---- diagnostics ---- */
 .meter{display:block;width:100%;min-width:56px;height:8px;border-radius:4px;overflow:hidden;
   background:color-mix(in srgb,var(--accent) 15%,transparent)}
@@ -3663,7 +3675,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <!-- Overview receipt: one row per locked week, preserving the server-drawn order. -->
 <div class="card" id="hierHistoryCard" style="display:none">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">Tiebreaker hierarchy by week</h2><span class="tm" id="hierHistoryMeta"></span></div>
-  <p class="note" style="margin:6px 0 0">Each row is the server-drawn order for that week. The first lever that isolates one losing leg names the bozo.</p>
+  <details class="bz-help"><summary>About the hierarchy</summary><p class="note">Each row is the server-drawn order for that week. The first lever that isolates one losing leg names the bozo.</p></details>
   <div class="hier-grid" id="hierHistory"></div>
 </div>
 
@@ -3671,7 +3683,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
      on Overview; this is the longitudinal slice-and-dice surface. -->
 <div class="card" id="diagExploreCard" style="display:none">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">Diagnostics dashboard</h2><span class="tm" id="dxMeta"></span></div>
-  <p class="note" style="margin:6px 0 0">Filter the league ledger to separate price quality from results. Expected wins use the de-vigged closing line; CLV needs both sides at entry and close.</p>
+  <details class="bz-help"><summary>About this dashboard</summary><p class="note">Filter the league ledger to separate price quality from results. Expected wins use the de-vigged closing line; CLV needs both sides at entry and close.</p></details>
   <div class="dash-controls">
     <label>Player<select id="dxPlayer"><option value="all">All players</option></select></label>
     <label>Window<select id="dxWindow"><option value="all">All picks</option><option value="last5">Last 5 weeks</option><option value="last24">Last 24 picks</option><option value="custom">Custom weeks</option></select></label>
@@ -4120,9 +4132,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <div class="card" id="clvCard" style="display:none">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">Beating the number vs. beating the close</h2>
     <span class="tm" id="clvHead"></span></div>
+  <details class="bz-help"><summary>How to read this chart</summary>
   <p class="note" id="clvSub" style="margin:0 0 14px">Each dot is one player through one week. Horizontal is the price
     they got against the closing line; vertical is how often they actually won versus how often the closing line said
     they should. Hover or pick a name to trace a season.</p>
+  <div class="clv-legnote">Click a name to trace it &middot; shift-click to hide &middot; shape and colour both carry
+    identity, because eight series is past the point where colour alone is reliable &middot; dot size is sample size,
+    so a week-1 dot is one coin flip and a Super Bowl dot is twenty-two.</div></details>
 
   <!-- ⚠️ This does NOT go in the methodology drawer, and it is not a paragraph of the
        footnote. It is a truth claim about the numbers on screen, the demo-badge
@@ -4153,9 +4169,6 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   </div>
 
   <div class="clv-legend" id="clvLegend"></div>
-  <div class="clv-legnote">Click a name to trace it &middot; shift-click to hide &middot; shape and colour both carry
-    identity, because eight series is past the point where colour alone is reliable &middot; dot size is sample size,
-    so a week-1 dot is one coin flip and a Super Bowl dot is twenty-two.</div>
 
   <div id="clvChartView">
     <div class="clv-plot">
@@ -4176,9 +4189,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <div class="card" id="survCard" style="display:none">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">Survival odds</h2>
     <span class="tm" id="survMeta"></span></div>
+  <details class="bz-help"><summary>About survival odds</summary>
   <p class="note" id="survSub" style="margin:0 0 14px">How the season ends if everyone keeps betting the way
     they have been. Each simulated week deals every survivor one of their own past legs and re-rolls only the
-    result, so nobody's future betting is invented — it is their own history, replayed.</p>
+    result, so nobody's future betting is invented — it is their own history, replayed.</p></details>
   <div class="surv-wrap">
     <svg class="surv-svg" id="survSvg" viewBox="0 0 960 380" role="img"
          aria-label="Probability each player is still alive, by week"></svg>
@@ -4205,7 +4219,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="stat-grid" id="dgTiles"></div>
   <div id="dgFlags"></div>
   <div class="tscroll"><table class="bz" id="dgTable"><tbody></tbody></table></div>
-  <p class="note" id="dgNote"></p>
+  <p class="diag-caption">Simulation, not observation. Lever standings are conditional on a loss, not a forecast.</p>
+  <div class="note" id="dgNote"></div>
 </div>
 
 <!-- ---------- grading (admin) ---------- -->
@@ -7237,6 +7252,10 @@ function paintDiagnosticsExplorer(){
 }
 
 function paintDiag(live, players, status){
+  const helpOpen = document.getElementById('dgHelp')?.open || false;
+  const clvHelpOpen = document.getElementById('dgClvHelp')?.open || false;
+  const focusedHelp = document.activeElement?.matches('#dgHelp > summary, #dgClvHelp > summary')
+    ? document.activeElement.parentElement.id : null;
   const card=document.getElementById('diagCard');
   if(!live.length){
     card.style.display='';
@@ -7323,20 +7342,20 @@ function paintDiag(live, players, status){
        passed on a leg it had not passed on. Two definitions of one fact is one too many. */
     const withClv = live.filter(x=>clvDeltaOf(x, legRow(x)) != null).length;
     if(withClv === 0)
-      flags.push(`<div class="flag"><span>⚠</span><span><b>Worst CLV can't be measured on this board yet.</b>
-        The closes are captured at kickoff, so until the games start there is nothing to compare against — in the
+      flags.push(`<div class="flag"><span>⚠</span><div><b>Worst CLV can't be measured on this board yet.</b>
+        <details class="bz-help" id="dgClvHelp"${clvHelpOpen ? ' open' : ''}><summary>Why CLV is pending</summary><div>The closes are captured at kickoff, so until the games start there is nothing to compare against — in the
         simulation CLV picks uniformly among whoever is still tied, which is what "no information" actually means.
-        It fills in once the snapshot lands.</span></div>`);
+        It fills in once the snapshot lands.</div></details></div></div>`);
     else if(withClv < live.length)
-      flags.push(`<div class="flag"><span>⚠</span><span><b>Worst CLV is measured on ${withClv} of ${live.length} legs.</b>
+      flags.push(`<div class="flag"><span>⚠</span><div><b>Worst CLV is measured on ${withClv} of ${live.length} legs.</b>
         The rest are awaiting verified two-sided entry and closing prices. Missing sides stay unmeasured; no juice is assumed.
-        <b>The simulation does not treat those as unmeasurable forever.</b> A leg whose market can be captured draws a
+        <details class="bz-help" id="dgClvHelp"${clvHelpOpen ? ' open' : ''}><summary>How missing CLV is modelled</summary><div><b>The simulation does not treat those as unmeasurable forever.</b> A leg whose market can be captured draws a
         modelled CLV from <b>that player's own past legs</b>, or from exactly even when they have no history yet, because
         a close that has not landed is not a close that never will &mdash; and with this week's hierarchy drawing Worst
         CLV first, that lever decides the graded week outright. A prop or &ldquo;other&rdquo; leg is left unmeasured on
         purpose: no close will ever arrive for it, and assuming one would invent evidence rather than predict it. Such a
         leg is carried forward to the next lever rather than ruled safe &mdash; being unmeasurable is not evidence of
-        anything &mdash; while a measured leg beaten by another measured leg is still eliminated.</span></div>`);
+        anything &mdash; while a measured leg beaten by another measured leg is still eliminated.</div></details></div></div>`);
   }
   if(levers.length<4)
     flags.push(`<div class="flag"><span>⚠</span><span><b>Only ${levers.length} of 4 levers are in the draw.</b>
@@ -7422,7 +7441,8 @@ function paintDiag(live, players, status){
     }).join('');
 
   document.getElementById('dgNote').innerHTML =
-    `<b>Bozo odds</b> is the chance you wear it: the week simulated ${R.sims.toLocaleString()} times, `
+    `<details class="bz-help" id="dgHelp"${helpOpen ? ' open' : ''}><summary>How these numbers work</summary><div>
+     <b>Bozo odds</b> is the chance you wear it: the week simulated ${R.sims.toLocaleString()} times, `
     + (Array.isArray(S.order)
       ? `each run walking <b>this week's drawn hierarchy</b>
          (${S.order.filter(i=>levers.includes(i)).map(i=>esc(LEVERS[i].name)).join(' &rarr; ')}), which is the cascade the
@@ -7448,7 +7468,9 @@ function paintDiag(live, players, status){
      <em>bottom</em> of that column — it is the only lever you can move by acting, and editing a leg refiles it.
      <b>Worst beat</b> and <b>Worst CLV</b> keep their columns while they wait: beat needs a final score, CLV needs
      a close with both sides at both ends. Both stay in the draw and pass while they cannot measure, which is
-     dormant, not absent.`;
+     dormant, not absent.</div></details>`;
+  // Live updates must not knock a keyboard reader off the disclosure they are using.
+  if(focusedHelp) document.getElementById(focusedHelp)?.querySelector('summary')?.focus({preventScroll:true});
 }
 
 /* ---------------- where the levers stand, per leg ----------------
