@@ -1,6 +1,6 @@
 {
- "as_of": "2026-10-09",
- "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 8536f7777791b82966de877c13a8513996217e63.",
+ "as_of": "2026-10-10",
+ "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 4319428a055b20e2746d0578d9091eedbb0ab253.",
  "tier": "labs",
  "graded": false,
  "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts.",
@@ -10,13 +10,13 @@
   "loader_license": "MIT",
   "source_repository": "nflverse/nfldata",
   "source_url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-  "source_commit": "8536f7777791b82966de877c13a8513996217e63",
-  "source_committed_at": "2026-10-09T03:23:19Z",
+  "source_commit": "4319428a055b20e2746d0578d9091eedbb0ab253",
+  "source_committed_at": "2026-10-10T00:45:13Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-10-09T03:31:04.488351Z"
+  "captured_at": "2026-10-10T01:01:03.458703Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:cd80f12c8ddcbe71e5e43dde23afff6ecf825e748a89a3850b575c0b0e87c726",
+  "snapshot_id": "sha256:d2af9641fb67d14d565cee1f604f86aa61616eacdf47c30dedd9e5f49a6a3850",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -1147,6 +1147,23 @@
     "home_score": null
    },
    {
+    "game_id": "2026_05_CHI_GB",
+    "upstream_game_id": "2026_05_CHI_GB",
+    "season": 2026,
+    "week": 5,
+    "season_type": "REG",
+    "kickoff_at": "2026-10-11T17:00:00Z",
+    "away_team": "CHI",
+    "home_team": "GB",
+    "neutral_site": false,
+    "divisional": true,
+    "away_rest_days": 7,
+    "home_rest_days": 7,
+    "status": "scheduled",
+    "away_score": null,
+    "home_score": null
+   },
+   {
     "game_id": "2026_05_CIN_MIA",
     "upstream_game_id": "2026_05_CIN_MIA",
     "season": 2026,
@@ -1274,23 +1291,6 @@
     "kickoff_at": "2026-10-11T20:05:00Z",
     "away_team": "DEN",
     "home_team": "LAC",
-    "neutral_site": false,
-    "divisional": true,
-    "away_rest_days": 7,
-    "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
-   },
-   {
-    "game_id": "2026_05_CHI_GB",
-    "upstream_game_id": "2026_05_CHI_GB",
-    "season": 2026,
-    "week": 5,
-    "season_type": "REG",
-    "kickoff_at": "2026-10-11T20:25:00Z",
-    "away_team": "CHI",
-    "home_team": "GB",
     "neutral_site": false,
     "divisional": true,
     "away_rest_days": 7,
@@ -4651,6 +4651,6 @@
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-09",
+ "built": "2026-10-10",
  "canonical_url": "https://datadawgs216.com/data/nfl-schedule.json"
 }
