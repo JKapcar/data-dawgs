@@ -1,0 +1,19 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import http from 'node:http';
+import {loadPlaywright,chromiumExecutable} from './playwright-loader.mjs';
+const {chromium}=loadPlaywright(),html=readFileSync(new URL('../agent-board.html',import.meta.url));
+const server=http.createServer((req,res)=>{res.writeHead(200,{'Content-Type':'text/html'});res.end(html);});
+await new Promise(r=>server.listen(0,'127.0.0.1',r));
+let browser;
+try{
+ browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM||chromiumExecutable(chromium),args:['--no-sandbox']});
+ const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[],calls=[];page.on('pageerror',e=>errors.push(e.message));
+ const post={id:'test-thread',kind:'thread',title:'A public thread',agent_name:'Unverified agent',message:'<script>window.injected=true</script> '+ 'x'.repeat(150),created_at:'2026-10-10',status:'pending'};
+ let enabled=false;
+ await page.route('https://toto.jkapcar4.workers.dev/agent-board**',async route=>{const request=route.request();if(request.method()==='OPTIONS'){await route.fulfill({status:204,headers:{'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'Content-Type, Idempotency-Key, X-Dawg-Session','Access-Control-Allow-Methods':'GET, POST, OPTIONS'}});return;}calls.push({url:request.url(),method:request.method(),body:request.postDataJSON()});await route.fulfill({status:request.method()==='POST'?202:200,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'},body:JSON.stringify(request.method()==='POST'?{receipt_id:'test-receipt',status:'pending_review'}:request.url().endsWith('/moderation')?{posts:[post],notice:'Owner queue'}:{submissions_enabled:enabled,posts:[post],notice:'Names unverified'})});});
+ await page.goto('http://127.0.0.1:'+server.address().port);await page.getByText('1 public threads.').waitFor();assert.equal(calls.length,1);assert(await page.locator('#submit').isDisabled());assert.equal(await page.evaluate(()=>window.injected),undefined);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+ enabled=true;await page.getByRole('button',{name:'Refresh board',exact:true}).click();await page.getByText('Submissions are open.',{exact:false}).waitFor();await page.locator('#title').fill('New thread');await page.locator('#agent-name').fill('Agent');await page.locator('#message').fill('A useful message');await page.locator('#submit').click();assert.equal(calls.filter(c=>c.method==='POST').length,0);await page.locator('#consent').check();await page.locator('#submit').click();await page.getByText('Not public yet.',{exact:false}).waitFor();assert.equal(calls.filter(c=>c.method==='POST').length,1);
+ await page.evaluate(()=>localStorage.setItem('dd-bozo-sess','synthetic'));assert.equal(calls.filter(c=>c.url.endsWith('/moderation')).length,0);await page.locator('#review').click();await page.locator('#pending article').waitFor();page.once('dialog',dialog=>dialog.dismiss());await page.getByRole('button',{name:'Approve public publication',exact:true}).click();assert.equal(calls.filter(c=>c.method==='POST'&&c.url.endsWith('/moderation')).length,0);page.once('dialog',dialog=>{assert(dialog.message().includes(post.message));return dialog.accept();});await page.getByRole('button',{name:'Approve public publication',exact:true}).click();await page.getByText('Post approved for public publication.',{exact:true}).waitFor();assert.equal(calls.filter(c=>c.method==='POST'&&c.url.endsWith('/moderation')).length,1);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);
+ console.log('PASS board browser: mobile fit, script inertness, default closed, browser consent validation, submit, no automatic owner request, approve cancel and exact-text confirmation, no page errors');
+}finally{await browser?.close();server.close();}
