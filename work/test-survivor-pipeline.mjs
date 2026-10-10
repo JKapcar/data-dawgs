@@ -214,6 +214,8 @@ try {
     await h.go({ workflow_run: fresh });
     const keys = keysOf(h.calls.created[0].body);
     assert.deepEqual(keys, ['fail:guillotine-refresh.yml', 'watchdog:epa-daily.yml'], 'one retry absorbs a blip; two failures are reported');
+    assert.match(h.calls.created[0].body, /Watchdog could not read epa-daily\.yml runs \(Error\)\./);
+    assert.ok(!h.calls.created[0].body.includes('API unavailable'), 'the public issue never carries an error\'s own text');
     assert.ok(h.calls.lines.some(l => l.startsWith('  site-safety.yml')), 'rows after the failed one were still evaluated');
     const h2 = harness();
     await h2.go({ workflow_run: { name: 'Mystery job', path: WF + 'mystery.yml', conclusion: 'failure', html_url: 'https://example.invalid/runs/9' } });
@@ -326,7 +328,14 @@ try {
     h.github.rest.repos.listCommits = async () => ({ data: [{ commit: { committer: { date: iso(NOW - 90 * 6e4) } } }] });
     await h.go();
     assert.deepEqual(keysOf(h.calls.created[0].body), ['live:survivor', 'watchdog:live-survivor-receipts']);
-    assert.ok(!/socket|hang/i.test(keysOf(h.calls.created[0].body).join()), 'keys carry no error text');
+    assert.ok(!/socket hang up/i.test(h.calls.created[0].body), 'neither keys nor lines carry error text');
+    assert.match(h.calls.created[0].body, /Live survivor-receipts\.json unreadable \(network error\)\./);
+    serve({ nfelo: () => local('nfelo'), survivor: () => Buffer.from('older deploy'), 'survivor-receipts': () => local('survivor-receipts') });
+    h = harness();
+    h.github.rest.repos.listCommits = async () => { throw Object.assign(new Error('Resource not accessible by integration'), { status: 403 }); };
+    await h.go();
+    assert.match(h.calls.created[0].body, /Watchdog could not read the history of data\/survivor\.json \(HTTP 403\)\./);
+    assert.ok(!/not accessible/.test(h.calls.created[0].body), 'a GitHub API error is reported by status, not its text');
   }
 
   // The Worker's own job health is read year-round (this is February, out of NFL season) and

@@ -55,6 +55,9 @@ const WORKER_HEALTH = 'https://toto.jkapcar4.workers.dev/ops/health';
 const sha = s => crypto.createHash('sha256').update(s).digest('hex');
 const iso = t => new Date(t).toISOString().replace(/\.\d{3}Z$/, 'Z');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+/* ⚠️ The issue is public: a problem names WHAT failed in a fixed vocabulary, never an error's
+   own text, which can carry a URL or a response body. */
+const kindOf = error => (error && Number.isInteger(error.status) ? `HTTP ${error.status}` : (error && error.name) || 'error');
 
 // When the row's window opened (ms), or null while it is shut. A missing success is news only
 // once the window has been open longer than max_age, so a season's first day is not judged
@@ -160,8 +163,8 @@ module.exports = async ({ github, context, core }) => {
       for (const p of found) add(p.key, p.text);
       core.info('  ' + line);
     } catch (error) {
-      add(`watchdog:${row.file}`, `Watchdog could not read ${row.file} runs: ${error.message}`);
-      core.info(`  ${row.file} [${row.name}] → check failed: ${error.message}`);
+      add(`watchdog:${row.file}`, `Watchdog could not read ${row.file} runs (${kindOf(error)}).`);
+      core.info(`  ${row.file} [${row.name}] → check failed (${kindOf(error)})`);
     }
   }
 
@@ -193,7 +196,7 @@ module.exports = async ({ github, context, core }) => {
     games = schedule.games.filter(g => g.season === schedule.season && g.season_type === 'REG');
     const starts = games.map(g => Date.parse(g.kickoff_at));
     inSeason = now >= Math.min(...starts) - 7 * 864e5 && now <= Math.max(...starts) + 7 * 864e5;
-  } catch (error) { add('watchdog:nfl-schedule', `Watchdog check failed: ${error.message}`); }
+  } catch (error) { add('watchdog:nfl-schedule', `Watchdog could not read data/nfl-schedule.json (${kindOf(error)}).`); }
   core.info(`NFL survivor checks: ${inSeason ? 'in season' : 'out of season, skipped'}.`);
   if (inSeason) {
     try {
@@ -213,7 +216,7 @@ module.exports = async ({ github, context, core }) => {
         if (legs.length && now > Math.max(...legs.map(g => Date.parse(g.kickoff_at))) + 48 * H)
           add(`receipt:${r.receipt_id}`, `${r.receipt_id}: still prospective 48 hours after its latest leg. Check schedule PR and resolver.`);
       }
-    } catch (error) { add('watchdog:nfl', `Watchdog check failed: ${error.message}`); }
+    } catch (error) { add('watchdog:nfl', `Watchdog NFL survivor checks failed (${kindOf(error)}).`); }
     for (const name of ['nfelo', 'survivor', 'survivor-receipts']) {
       try {
         // A blip is retried here rather than reported: one failed fetch is not a broken site.
@@ -225,14 +228,18 @@ module.exports = async ({ github, context, core }) => {
           } catch (error) { if (attempt === 3) throw error; }
           await sleep(5000 * attempt);
         }
-        if (!response.ok) throw new Error(`live ${name}: HTTP ${response.status}`);
+        if (!response.ok) throw Object.assign(new Error('live fetch refused'), { liveStatus: response.status });
         if (sha(Buffer.from(await response.arrayBuffer())) !== sha(fs.readFileSync(`data/${name}.json`))) {
           // Allow a deploy to settle; compare age of the repository's last change.
           const { data: commits } = await github.rest.repos.listCommits({ ...repo, sha: 'main', path: `data/${name}.json`, per_page: 1 });
           if (now - Date.parse(commits[0]?.commit.committer.date) > LIVE_SETTLE_MS)
             add(`live:${name}`, `Live ${name}.json differs from main more than ${LIVE_SETTLE_MS / 6e4} minutes after its commit.`);
         }
-      } catch (error) { add(`watchdog:live-${name}`, `Watchdog check failed: ${error.message}`); }
+      } catch (error) {
+        add(`watchdog:live-${name}`, error.liveStatus ? `Live ${name}.json unreadable (HTTP ${error.liveStatus}).`
+          : Number.isInteger(error.status) ? `Watchdog could not read the history of data/${name}.json (HTTP ${error.status}).`
+          : `Live ${name}.json unreadable (network error).`);
+      }
     }
   }
 
