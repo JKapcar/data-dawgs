@@ -97,6 +97,15 @@ assert.equal(windowOpenSince({ months: [9, 10, 11, 12, 1, 2] }, Date.parse('2027
 // workflow file and records every issue write.
 const realNow = Date.now, realFetch = globalThis.fetch, realTimeout = globalThis.setTimeout;
 globalThis.setTimeout = (fn, ms, ...a) => realTimeout(fn, 0, ...a);   // retries without the wait
+// The Worker's GET /ops/health, read on every run. Healthy unless a test says otherwise.
+const HEALTHY = { jobs: [{ job: 'bozo:close', cron: '*/5 * * * *', failing: false, since: null, last_ok_at: null }],
+  crons: [{ cron: '*/5 * * * *', last_fired_at: null }] };
+const healthy = () => ({ ok: true, status: 200, json: async () => HEALTHY });
+let workerHealth = healthy;
+globalThis.fetch = async url => {
+  if (String(url).includes('/ops/health')) return workerHealth();
+  throw new Error('unexpected fetch ' + url);
+};
 let NOW = Date.parse('2026-02-01T12:00:00Z');
 Date.now = () => NOW;
 const iso = t => new Date(t).toISOString();
@@ -205,6 +214,8 @@ try {
     await h.go({ workflow_run: fresh });
     const keys = keysOf(h.calls.created[0].body);
     assert.deepEqual(keys, ['fail:guillotine-refresh.yml', 'watchdog:epa-daily.yml'], 'one retry absorbs a blip; two failures are reported');
+    assert.match(h.calls.created[0].body, /Watchdog could not read epa-daily\.yml runs \(Error\)\./);
+    assert.ok(!h.calls.created[0].body.includes('API unavailable'), 'the public issue never carries an error\'s own text');
     assert.ok(h.calls.lines.some(l => l.startsWith('  site-safety.yml')), 'rows after the failed one were still evaluated');
     const h2 = harness();
     await h2.go({ workflow_run: { name: 'Mystery job', path: WF + 'mystery.yml', conclusion: 'failure', html_url: 'https://example.invalid/runs/9' } });
@@ -299,6 +310,7 @@ try {
     NOW = Date.parse('2026-10-10T12:00:00Z');
     const local = name => fs.readFileSync(`data/${name}.json`);
     const serve = (plan) => { const tries = {}; globalThis.fetch = async url => {
+      if (String(url).includes('/ops/health')) return workerHealth();
       const name = url.match(/\/data\/([\w-]+)\.json/)[1]; tries[name] = (tries[name] || 0) + 1;
       const r = plan[name](tries[name]);
       if (r instanceof Error) throw r;
@@ -316,7 +328,65 @@ try {
     h.github.rest.repos.listCommits = async () => ({ data: [{ commit: { committer: { date: iso(NOW - 90 * 6e4) } } }] });
     await h.go();
     assert.deepEqual(keysOf(h.calls.created[0].body), ['live:survivor', 'watchdog:live-survivor-receipts']);
-    assert.ok(!/socket|hang/i.test(keysOf(h.calls.created[0].body).join()), 'keys carry no error text');
+    assert.ok(!/socket hang up/i.test(h.calls.created[0].body), 'neither keys nor lines carry error text');
+    assert.match(h.calls.created[0].body, /Live survivor-receipts\.json unreadable \(network error\)\./);
+    serve({ nfelo: () => local('nfelo'), survivor: () => Buffer.from('older deploy'), 'survivor-receipts': () => local('survivor-receipts') });
+    h = harness();
+    h.github.rest.repos.listCommits = async () => { throw Object.assign(new Error('Resource not accessible by integration'), { status: 403 }); };
+    await h.go();
+    assert.match(h.calls.created[0].body, /Watchdog could not read the history of data\/survivor\.json \(HTTP 403\)\./);
+    assert.ok(!/not accessible/.test(h.calls.created[0].body), 'a GitHub API error is reported by status, not its text');
+  }
+
+  // The Worker's own job health is read year-round (this is February, out of NFL season) and
+  // only names and timestamps cross over — even when the route offers more.
+  {
+    NOW = Date.parse('2026-02-01T12:00:00Z');
+    globalThis.fetch = async url => { if (String(url).includes('/ops/health')) return workerHealth(); throw new Error('unexpected fetch ' + url); };
+    workerHealth = () => ({ ok: true, status: 200, json: async () => ({
+      jobs: [
+        { job: 'bozo:close', cron: '*/5 * * * *', failing: true, since: '2026-02-01T10:00:00.000Z', last_ok_at: '2026-01-31T00:00:00.000Z',
+          error: 'RTDB read 401 https://db.invalid/x.json?auth=top-secret' },
+        { job: 'backup', cron: '0 9 * * *', failing: false, since: null, last_ok_at: '2026-02-01T09:00:00.000Z' },
+      ],
+      crons: [
+        { cron: '*/5 * * * *', last_fired_at: iso(NOW - 2 * H) },     // 120 min: past 5 + 60 + 30
+        { cron: '9 * * * *', last_fired_at: iso(NOW - 2 * H) },       // 120 min: inside 60 + 60 + 30
+        { cron: '0 9 * * *', last_fired_at: null },                   // no heartbeat yet: not an alarm
+      ] }) });
+    let h = harness();
+    await h.go();
+    const body = h.calls.created[0].body;
+    const st = JSON.parse(body.match(/<!-- watch-state: (.*?) -->/s)[1]);
+    assert.deepEqual(Object.keys(st).sort(), ['worker:cron:*/5 * * * *', 'worker:job:bozo:close']);
+    assert.equal(st['worker:job:bozo:close'].text, 'Worker bozo:close failing since 2026-02-01T10:00:00.000Z');
+    assert.equal(st['worker:cron:*/5 * * * *'].text, `Worker cron */5 * * * * silent since ${iso(NOW - 2 * H)}`);
+    assert.ok(!/top-secret|RTDB|auth=/.test(body), 'nothing but names and timestamps crosses over');
+    assert.ok(h.calls.lines.some(l => l.includes('out of season')), 'read even out of NFL season');
+    assert.ok(h.calls.lines.some(l => l.includes('worker cron 0 9 * * *: no heartbeat yet')));
+
+    // A failed read is one problem line, worded by kind, and every GitHub row still ran.
+    let reads = 0;
+    workerHealth = () => { reads++; return { ok: false, status: 503, json: async () => ({}) }; };
+    h = harness();
+    await h.go();
+    assert.equal(reads, 3, 'retried twice before it counts');
+    assert.deepEqual(keysOf(h.calls.created[0].body), ['worker:health']);
+    assert.match(h.calls.created[0].body, /Worker health unreadable \(HTTP 503\)/);
+    for (const r of WATCHED) assert.ok(h.calls.lines.some(l => l.includes(r.file) && l.includes('→ ok')), `${r.file} still evaluated`);
+    workerHealth = () => { throw new Error('getaddrinfo ENOTFOUND toto.invalid?auth=top-secret'); };
+    h = harness();
+    await h.go();
+    assert.match(h.calls.created[0].body, /Worker health unreadable \(network error\)/);
+    assert.ok(!/ENOTFOUND|top-secret/.test(h.calls.created[0].body), 'a fetch error is reported by kind, not by its text');
+    workerHealth = () => ({ ok: true, status: 200, json: async () => ({ status: 'fine' }) });
+    h = harness();
+    await h.go();
+    assert.match(h.calls.created[0].body, /Worker health unreadable \(unexpected shape\)/);
+    workerHealth = healthy;
+    h = harness();
+    await h.go();
+    assert.equal(h.calls.created.length, 0, 'a healthy Worker adds nothing');
   }
 } finally { Date.now = realNow; globalThis.fetch = realFetch; globalThis.setTimeout = realTimeout; }
-console.log(`PASS: 14 gate cases, invalid schedule, capture outcomes, watchdog coverage of ${WATCHED.length} workflows, both checks per row, windows, hold-down, live-compare debounce, rolling notifier create/edit/change/close/legacy/failure`);
+console.log(`PASS: 14 gate cases, invalid schedule, capture outcomes, watchdog coverage of ${WATCHED.length} workflows, both checks per row, windows, hold-down, live-compare debounce, Worker job health, rolling notifier create/edit/change/close/legacy/failure`);
