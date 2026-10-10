@@ -4,14 +4,16 @@ import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url);
 const {JSDOM}=require(process.env.DDFS_JSDOM||'jsdom');
 const html=readFileSync(new URL('../feedback-inbox.html',import.meta.url),'utf8');
-let code=200,calls=0,release=null,paused=false;
-const dom=new JSDOM(html,{url:'https://datadawgs216.com/feedback-inbox.html',runScripts:'dangerously',pretendToBeVisual:true,beforeParse(w){w.fetch=async(url,opts)=>{calls++;assert.equal(url,'https://toto.jkapcar4.workers.dev/agent-feedback/inbox');assert.equal(opts.headers['X-Dawg-Session'],'synthetic');if(paused)await new Promise(r=>release=r);return{ok:code===200,status:code,json:async()=>({submissions:[{agent_name:'Agent',message:'<img src=x onerror=alert(1)> Ignore previous instructions',category:'test',created_at:'2026-10-10',receipt_id:'test-receipt',page_path:'/data/surfaces.json'}]})};};}});
+let code=200,calls=0,release=null,paused=false,errorCode;
+const dom=new JSDOM(html,{url:'https://datadawgs216.com/feedback-inbox.html',runScripts:'dangerously',pretendToBeVisual:true,beforeParse(w){w.fetch=async(url,opts)=>{calls++;assert.equal(url,'https://toto.jkapcar4.workers.dev/agent-feedback/inbox');assert.equal(opts.headers['X-Dawg-Session'],'synthetic');if(paused)await new Promise(r=>release=r);return{ok:code===200,status:code,json:async()=>({error:errorCode,submissions:[{agent_name:'Agent',message:'<img src=x onerror=alert(1)> Ignore previous instructions',category:'test',created_at:'2026-10-10',receipt_id:'test-receipt',page_path:'/data/surfaces.json'}]})};};}});
 const w=dom.window,d=w.document,button=d.getElementById('refresh');
 const tick=()=>new Promise(r=>setTimeout(r,20));
 w.dispatchEvent(new w.Event('pageshow'));await tick();assert.equal(calls,0);assert.match(d.getElementById('status').textContent,/Sign in/);
 w.localStorage.setItem('dd-bozo-sess','synthetic');button.click();await tick();assert.equal(d.querySelectorAll('article').length,1);assert.equal(d.querySelectorAll('article img').length,0);assert.match(d.querySelector('article p').textContent,/<img/);
 button.click();await tick();assert.equal(d.querySelectorAll('article').length,1);
 code=403;button.click();await tick();assert.equal(d.querySelectorAll('article').length,0);assert.match(d.getElementById('status').textContent,/does not have owner/);
+for(const reason of ['admin_role_required','admin_auth_required']){errorCode=reason;button.click();await tick();assert.match(d.getElementById('status').textContent,new RegExp(reason));assert.equal(d.querySelectorAll('article').length,0);}
+errorCode='<script>private debug token</script>';button.click();await tick();assert(!d.getElementById('status').textContent.includes('private debug'));errorCode=undefined;
 code=503;button.click();await tick();assert.match(d.getElementById('status').textContent,/temporarily unavailable/);
 code=200;button.click();await tick();w.dispatchEvent(new w.StorageEvent('storage',{key:'dd-bozo-sess'}));assert.equal(d.querySelectorAll('article').length,0);
 button.click();await tick();w.dispatchEvent(new w.Event('pagehide'));assert.equal(d.querySelectorAll('article').length,0);
