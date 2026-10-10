@@ -7440,8 +7440,14 @@ const SEASON = 2026;
      schedule:cfb:<season>  — cfbfastR-data processed schedule (never raw)
 
    Foreign ids remain attributes. The ESPN id is useful for resolving old/browser picks,
-   but the normalized row also carries a canonical team/date key. No odds column is copied
-   out of either source. Blank/NA scores stay null all the way through grading.
+   but the normalized row also carries a canonical team/date key. Blank/NA scores stay null
+   all the way through grading.
+
+   ⚠️ ODDS: the NFL row carries nflverse's main-line columns, verbatim, under `nflverseLines`
+   (see bozoNflverseLines). They exist ONLY as the free, labelled backup close source
+   ("nflverse close (book unspecified)") used by runBozoCloseCapture after kickoff. They
+   never grade a leg (grading reads scores and the leg's own number) and are never shown
+   as a DraftKings price. cfbfastR's schedule carries no odds columns at all.
 
    Neither source is live. cfbfastR-data publishes four times a week (Sat/Sun/Mon) and
    nflverse can trail a final by most of a day, so finals arrive first from the Odds API
@@ -7527,6 +7533,24 @@ function bozoEspnSeedTeam(sport, id, name) {
     || null;
 }
 
+/* nflverse games.csv betting columns, copied as numbers (blank/NA → null).
+   Sign convention, verified against real rows (2026_05_TB_DAL: spread_line 9.5,
+   home_moneyline -535, DAL favoured; 2026_04_ARI_NYG: spread_line -2.5, away -135):
+     spread_line          = HOME team's expected margin. Positive → home favoured.
+                            Printed home spread = -spread_line; printed away = +spread_line.
+     home/away_spread_odds = American price of each team's side at that number.
+     total_line, over_odds, under_odds; home/away_moneyline.
+   The closing book is not named by nflverse, so these are "book unspecified". */
+function bozoNflverseLines(table, row) {
+  const n = name => bozoCsvNumber(bozoCsvValue(table, row, name));
+  const lines = {
+    spreadLine: n("spread_line"), homeSpreadOdds: n("home_spread_odds"), awaySpreadOdds: n("away_spread_odds"),
+    totalLine: n("total_line"), overOdds: n("over_odds"), underOdds: n("under_odds"),
+    homeMoneyline: n("home_moneyline"), awayMoneyline: n("away_moneyline"),
+  };
+  return Object.values(lines).some(v => v !== null) ? lines : null;
+}
+
 function bozoNormalizeNflSchedule(text, season) {
   const table = bozoCsvTable(text), games = [];
   for (const row of table.rows) {
@@ -7543,6 +7567,8 @@ function bozoNormalizeNflSchedule(text, season) {
       week: bozoCsvNumber(bozoCsvValue(table, row, "week")), seasonType: bozoCsvValue(table, row, "game_type"),
       completed: awayScore !== null && homeScore !== null,
       away: { name: away, abbr: away }, home: { name: home, abbr: home }, awayScore, homeScore,
+      nflverseGameId: bozoCsvValue(table, row, "game_id") || null,
+      nflverseLines: bozoNflverseLines(table, row),
     });
   }
   return games;
@@ -8416,22 +8442,44 @@ async function bozoCloseTargets(env, nowMs) {
       if (!Number.isFinite(start)) continue;                       // no kickoff, no window
       if (start > nowMs + BOZO_CLOSE_LEAD_MS) continue;            // too early
       if (lg.status === "graded" && start > nowMs) continue;
+      // The free nflverse backfill is independent of the paid retry gate below: it costs
+      // no credits, reads one KV document per run, and only ever fills an EMPTY pair.
+      const nflverse = bozoNflverseCloseEligible(p, r, start, nowMs);
+      let oddsApi = true;
       if (start < nowMs - BOZO_CLOSE_STALE_MS) {
-        if (!env.ODDS_API_KEY || !env.RL || !bozoOddsApiMarkets(p) || nowMs-start > BOZO_CLOSE_RECOVERY_MS) continue;
-        const retryKey = `bozo:close-retry:${lid}:${lg.season || SEASON}:${lg.week || 1}:${key}:${start}`;
-        try {
-          const last = Number(await env.RL.get(retryKey));
-          if (last && nowMs-last < BOZO_CLOSE_RETRY_MS) continue;
-          await env.RL.put(retryKey, String(nowMs), {expirationTtl: 3*24*60*60});
-        } catch { continue; } // do not spend historical credits without the retry gate
+        oddsApi = false;
+        if (env.ODDS_API_KEY && env.RL && bozoOddsApiMarkets(p) && nowMs-start <= BOZO_CLOSE_RECOVERY_MS) {
+          const retryKey = `bozo:close-retry:${lid}:${lg.season || SEASON}:${lg.week || 1}:${key}:${start}`;
+          try {
+            const last = Number(await env.RL.get(retryKey));
+            if (!(last && nowMs-last < BOZO_CLOSE_RETRY_MS)) {
+              await env.RL.put(retryKey, String(nowMs), {expirationTtl: 3*24*60*60});
+              oddsApi = true;
+            }
+          } catch { /* do not spend historical credits without the retry gate */ }
+        }
+        if (!oddsApi && !nflverse) continue;
       }
       const player = p.who || memberNameAt(lg, key) || playerName(key);
       const uid = UID_RE.test(key) ? key : (uidByName.get(player) || null);
       out.push({ lid, key, pick: p, player, uid, startMs: start,
-                 season: lg.season || SEASON, week: lg.week || 1 });
+                 season: lg.season || SEASON, week: lg.week || 1, oddsApi, nflverse,
+                 priorReason: r.closeUnavailableReason || null });
     }
   }
   return out;
+}
+
+/* nflverse fills only an EMPTY pair (a half close may be a manual or DK side and is
+   left for the paid recovery or the manager), only NFL full-game ml/spread/total, only
+   after kickoff, and only inside BOZO_NFLVERSE_CLOSE_WINDOW_MS. A final nflverse miss
+   (different number) is recorded once and not re-read every tick. */
+const BOZO_NFLVERSE_CLOSE_WINDOW_MS = 10 * 24 * 60 * 60 * 1000;
+function bozoNflverseCloseEligible(p, r, start, nowMs) {
+  if (!r || r.close != null || r.closeOpp != null) return false;
+  if (!p || p.sport !== "nfl" || !["ml", "spread", "total"].includes(p.mkt) || bozoPeriodOf(p) !== "game") return false;
+  if (r.closeSource === "nflverse" && r.closeUnavailableReason) return false;
+  return nowMs >= start && nowMs - start <= BOZO_NFLVERSE_CLOSE_WINDOW_MS;
 }
 
 // `periods` is every period the bucket's legs need, so the oddID filter asks for them all.
@@ -8845,7 +8893,7 @@ async function bozoCaptureEntry(env, input, options = {}) {
  * while it still carries the pick and both identity fields. That makes a stale target
  * (pick removed after discovery) and an unresolved legacy UID retryable no-ops instead
  * of allowing either to manufacture a close-only ledger row. */
-function bozoCloseMutation(t, quote, reason, observedAt) {
+function bozoCloseMutation(t, quote, reason, observedAt, missSource = "sgo") {
   if (!t || !t.pick || !t.key || !t.player || !t.uid) return null;
   const patch = {};
   const base = `results/${t.key}`;
@@ -8856,17 +8904,20 @@ function bozoCloseMutation(t, quote, reason, observedAt) {
   if (quote) {
     both("close", quote.price);
     both("closeOpp", quote.opp);
-    both("closeBook", BOZO_CLOSE_BOOK);
+    // The book is DraftKings for both paid providers; nflverse does not name its book.
+    both("closeBook", quote.book || BOZO_CLOSE_BOOK);
     both("closeSource", quote.provider || "sgo");
     both("closeObservedAt", quote.snapshotAt || observedAt);
     both("closeUnavailableReason", null);
+    if (quote.provider === "nflverse") both("closeProviderEventId", quote.providerEventId || null);
   } else {
     both("close", null);
     both("closeOpp", null);
     both("closeBook", null);
     both("closeObservedAt", null);
     both("closeUnavailableReason", reason);
-    both("closeSource", "sgo");
+    if (missSource === "nflverse") both("closeSource", "nflverse");
+    else both("closeSource", "sgo");
   }
   return patch;
 }
@@ -8886,6 +8937,7 @@ async function runBozoCloseCapture(env, nowMs) {
 
   const observedAt = new Date(nowMs).toISOString();
   let captured = 0, skipped = 0;
+  let nflDoc;                                                 // nflverse schedule, read once per run
   const patches = new Map();                                  // lid -> deep-path patch
   const add = (lid, path, val) => {
     if (!patches.has(lid)) patches.set(lid, {});
@@ -8902,7 +8954,7 @@ async function runBozoCloseCapture(env, nowMs) {
 
     for (const t of bucket.legs) {
       let reason = null, quote = null;
-      if (env.ODDS_API_KEY && bozoOddsApiMarkets(t.pick)) {
+      if (t.oddsApi !== false && env.ODDS_API_KEY && bozoOddsApiMarkets(t.pick)) {
         try {
           const capture = await bozoOddsApiCapture(env,t.pick,registry,{caller:"close",nowMs,deadline:Date.now()+7000});
           quote = capture.quote || null;
@@ -8910,7 +8962,26 @@ async function runBozoCloseCapture(env, nowMs) {
         } catch (e) { console.log("bozo-close-odds-api", JSON.stringify({code:e.code || "provider_error"})); }
       }
       // After kickoff only historical pregame snapshots qualify; never request live SGO.
-      if (!quote && nowMs >= t.startMs) { skipped++; continue; }
+      // The free nflverse closing row is the post-game backfill when the paid path misses.
+      if (!quote && nowMs >= t.startMs) {
+        if (!t.nflverse) { skipped++; continue; }
+        if (nflDoc === undefined) {
+          try { nflDoc = await bozoScheduleDoc(env, "nfl", t.season || SEASON); } catch { nflDoc = null; }
+        }
+        const nv = bozoNflverseCloseQuote(t.pick, nflDoc ? bozoScheduleFindGame(nflDoc, t.pick) : null, nflDoc);
+        const bad = nv.reason ? null : assertQuote(nv, t.pick);
+        if (!nv.reason && !bad) quote = nv;
+        else if (nv.final) {
+          const why = "No nflverse close: " + nv.reason + ".";
+          if (t.priorReason === why) { skipped++; continue; }
+          const mutation = bozoCloseMutation(t, null, why, observedAt, BOZO_NFLVERSE_CLOSE_SOURCE);
+          if (mutation) for (const [path, value] of Object.entries(mutation)) add(t.lid, path, value);
+          skipped++; continue;
+        } else {
+          console.log("bozo-close-nflverse", JSON.stringify({code: nv.code || "invalid_quote", reason: nv.reason || bad, canonicalKey: t.pick.canonicalKey || null}));
+          skipped++; continue;   // not final yet / transient: retry next tick
+        }
+      }
       if (!quote && !sgoLoaded) {
         sgoLoaded = true;
         try { events = await bozoFetchEvents(env,bucket.sport,bucket.startMs,needProps,periods,{caller:"close"}); }
@@ -8959,7 +9030,7 @@ async function runBozoCloseCapture(env, nowMs) {
     try {
       await kv.put("bozo:close:last-run", JSON.stringify({
         at: observedAt, checked: targets.length, captured, skipped,
-        book: BOZO_CLOSE_BOOK, via: env.ODDS_API_KEY ? "odds_api+sgo" : "sportsgameodds",
+        book: BOZO_CLOSE_BOOK, via: (env.ODDS_API_KEY ? "odds_api+sgo" : "sportsgameodds") + "+nflverse",
       }));
     } catch { /* the capture already landed; the summary is a convenience */ }
   }
@@ -9022,6 +9093,8 @@ async function bozoClv(request, url, env, cors) {
       closeSource: r.closeSource || null,
       closeOppSource: r.closeOppSource || null,
       closeUnavailableReason: r.closeUnavailableReason || null,
+      // nflverse does not name its book; never present that close as plain "closing line".
+      closeLabel: r.closeSource === BOZO_NFLVERSE_CLOSE_SOURCE && r.close != null ? BOZO_NFLVERSE_CLOSE_LABEL : null,
 
       /* The manager's CLV, in points, when they set one. Null means "derive it from the
          close", which is the ordinary path. Named in points because that is the unit the
@@ -9755,6 +9828,78 @@ function bozoScheduledTeamSide(pick, game) {
     if (bozoTeamNorm(parts[1], registry) === side) return "home";
   }
   return null;
+}
+
+/* ===================== nflverse backup close (free, book unspecified) ==============
+   The free fallback for a Bozo close when the Odds API and SportsGameOdds have nothing.
+   nflverse/nfldata games.csv publishes one CLOSING main line per game (spread, total,
+   moneyline, both prices) and does not name the book, so every value written from here
+   is labelled closeSource "nflverse", closeBook "unspecified", and surfaces as
+   "nflverse close (book unspecified)". It is a POST-GAME backfill: a row's numbers are
+   only treated as the close once that same CSV row carries both final scores, which
+   proves the file was refreshed after the game. Before that the columns can be a
+   pregame snapshot of unknown age and are refused.
+
+   ⚠️ Main line only. nflverse has no alternate numbers, so a spread/total leg is priced
+   only when its number equals the nflverse closing number exactly; otherwise it is a
+   final, reasoned miss. Never an interpolation, never the entry price.
+
+   ⚠️ SIGN. Bozo stores a spread as the points the selected side GIVES UP (+9.5 renders
+   "DAL -9.5"). nflverse spread_line is the HOME team's expected margin (+9.5 = home
+   favoured by 9.5). So the Bozo-stored closing number is +spread_line for the home side
+   and -spread_line for the away side. 2026_05_TB_DAL: spread_line 9.5 → DAL stored 9.5
+   (printed -9.5), TB stored -9.5 (printed +9.5). */
+const BOZO_NFLVERSE_CLOSE_SOURCE = "nflverse";
+const BOZO_NFLVERSE_CLOSE_BOOK = "unspecified";
+const BOZO_NFLVERSE_CLOSE_LABEL = "nflverse close (book unspecified)";
+const BOZO_NFLVERSE_MARKETS = new Set(["ml", "spread", "total"]);
+
+function bozoNflverseFmt(n) { return (n > 0 ? "+" : "") + n; }
+
+// Pure. Returns a two-sided quote, or {code, reason, final}. `final` misses can never
+// be priced from nflverse (wrong market, different number); others may be retried.
+function bozoNflverseCloseQuote(pick, game, doc) {
+  const miss = (code, reason, final = false) => ({ code, reason, final });
+  if (!pick || pick.sport !== "nfl") return miss("unsupported_market", "nflverse closes cover NFL only", true);
+  if (!BOZO_NFLVERSE_MARKETS.has(pick.mkt) || bozoPeriodOf(pick) !== "game")
+    return miss("unsupported_market", "nflverse publishes full-game moneyline, spread and total only", true);
+  if (!game) return miss("event_not_matched", "game not found in the nflverse schedule");
+  const start = Date.parse(game.startsAt || "");
+  const fetched = Date.parse((doc && doc.fetchedAt) || "");
+  if (game.completed !== true || !Number.isFinite(start) || !Number.isFinite(fetched) || fetched <= start)
+    return miss("nflverse_not_final", "nflverse row is not final yet, so its lines may be a pregame snapshot");
+  const L = game.nflverseLines;
+  if (!L) return miss("market_missing", "nflverse row has no betting columns");
+  const ok = v => Number.isInteger(v) && Math.abs(v) >= 100;
+  let price, opp, line, bookLine;
+  if (pick.mkt === "total") {
+    const dir = pick.dir || pick.side;
+    if (dir !== "over" && dir !== "under") return miss("invalid_quote", "total direction missing", true);
+    if (!Number.isFinite(L.totalLine)) return miss("market_missing", "nflverse total_line is blank");
+    if (Math.abs(Number(pick.line) - L.totalLine) > 0.001)
+      return miss("line_differs", `nflverse closing total was ${L.totalLine}; this leg is ${dir} ${pick.line}. nflverse has no alternate totals`, true);
+    [price, opp] = dir === "over" ? [L.overOdds, L.underOdds] : [L.underOdds, L.overOdds];
+    line = L.totalLine; bookLine = L.totalLine;
+  } else {
+    const side = bozoScheduledTeamSide(pick, game);
+    if (!side) return miss("team_unmatched", "selection team did not match the nflverse game", true);
+    const home = side === "home";
+    if (pick.mkt === "ml") {
+      [price, opp] = home ? [L.homeMoneyline, L.awayMoneyline] : [L.awayMoneyline, L.homeMoneyline];
+      line = 0; bookLine = 0;
+    } else {
+      if (!Number.isFinite(L.spreadLine)) return miss("market_missing", "nflverse spread_line is blank");
+      const stored = home ? L.spreadLine : -L.spreadLine;   // Bozo "gives up" convention
+      const team = home ? game.home.abbr : game.away.abbr;
+      if (Math.abs(Number(pick.line) - stored) > 0.001)
+        return miss("line_differs", `nflverse closing spread was ${team} ${bozoNflverseFmt(-stored)}; this leg is ${team} ${bozoNflverseFmt(-Number(pick.line))}. nflverse has no alternate spreads`, true);
+      [price, opp] = home ? [L.homeSpreadOdds, L.awaySpreadOdds] : [L.awaySpreadOdds, L.homeSpreadOdds];
+      line = stored; bookLine = -stored;
+    }
+  }
+  if (!ok(price) || !ok(opp)) return miss("one_sided_market", "nflverse row is missing one side's price");
+  return { price, opp, line, bookLine, snapshotAt: doc.fetchedAt, provider: BOZO_NFLVERSE_CLOSE_SOURCE,
+           book: BOZO_NFLVERSE_CLOSE_BOOK, providerEventId: game.nflverseGameId || null };
 }
 
 function bozoScheduledOutcome(pick, game) {
@@ -19540,6 +19685,7 @@ const MCP_TOOLS = [
           closePrice: r.close ?? null, closePriceOpp: r.closeOpp ?? null,
           closeBook: r.closeBook || null, closeObservedAt: r.closeObservedAt || null,
           closeSource: r.closeSource || null,
+          closeLabel: r.closeSource === "nflverse" && r.close != null ? "nflverse close (book unspecified)" : null,
           closeUnavailableReason: r.closeUnavailableReason || null,
           // The one derived field, and it is a boolean rather than a number: whether
           // this leg is eligible to be in a CLV calculation at all.
