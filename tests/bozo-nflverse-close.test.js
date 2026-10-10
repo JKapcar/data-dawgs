@@ -388,3 +388,106 @@ test('surfaces expose points-vs-close next to the close fields with its own labe
   assert.match(src, /const BOZO_NFLVERSE_LINE_REF_LABEL = "points vs nflverse main close \(book unspecified\)";/);
   assert.match(src, /ledgerBackfill = await runBozoNflverseLedgerBackfill\(/);
 });
+
+/* ---------------- manual replacement of an nflverse close ---------------- */
+const fkey = 'u_pat', frow = `2026-w4-${fkey}`;
+function fillRig(row) {
+  const writes = [], ctx = { Request, Response, Date, Intl, crypto: require('node:crypto').webcrypto,
+    readBody: r => r.json(), leagueOf: () => 'main', SEASON: 2026, LG: id => '/bozo/leagues/' + id,
+    ledgerKey: (s, w, k) => `${s}-w${w}-${k}`, json: (b, status) => ({ body: b, status }),
+    requireManager: async () => ({ name: 'Manager', league: { season: 2026, week: 4, picks: { [fkey]: {} } } }),
+    fbGet: async () => ({ data: { week: 4, ...row } }), fbPatch: async (env, ...args) => writes.push(args) };
+  vm.createContext(ctx);
+  vm.runInContext(cut('async function bozoCloseFill(', '/* GET /bozo/close-gaps'), ctx);
+  return { writes, save: b => ctx.bozoCloseFill(new Request('https://t/bozo/close', { method: 'POST',
+    body: JSON.stringify({ league: 'main', row: frow, ...b }) }), {}, {}) };
+}
+const nvRow = { close: -102, closeOpp: -118, closeBook: 'unspecified', closeSource: 'nflverse',
+  closeObservedAt: '2026-10-06T14:00:00.000Z', closeProviderEventId: '2026_04_ATL_NO',
+  closeLineRef: 9.5, closePointsVsClose: 2, closeLineRefSource: 'nflverse' };
+
+test('manual fill REPLACES an nflverse close once, keeps the replaced values and the line ref', async () => {
+  const r = fillRig(nvRow), out = await r.save({ close: -110, closeOpp: -110, closeBook: 'FanDuel' });
+  assert.equal(out.status, 200);
+  const p = r.writes[0][1];
+  for (const b of [`ledger/${frow}`, `results/${fkey}`]) {
+    assert.equal(p[`${b}/close`], -110); assert.equal(p[`${b}/closeOpp`], -110);
+    assert.equal(p[`${b}/closeSource`], 'manual'); assert.equal(p[`${b}/closeBook`], 'fanduel');
+    assert.match(p[`${b}/closeObservedAt`], /^\d{4}-\d\d-\d\dT/);
+    assert.equal(p[`${b}/closeProviderEventId`], null);
+    const was = p[`${b}/closeReplaced`];
+    assert.deepEqual({ ...was, replacedAt: 'x' }, { close: -102, closeOpp: -118, closeBook: 'unspecified',
+      closeSource: 'nflverse', closeObservedAt: '2026-10-06T14:00:00.000Z', closeProviderEventId: '2026_04_ATL_NO',
+      replacedAt: 'x', replacedBy: 'Manager' });
+  }
+  assert.ok(!Object.keys(p).some(k => /closeLineRef|closePointsVsClose/.test(k)));   // left intact
+  const audit = Object.entries(p).find(([k]) => k.startsWith('audit/'))[1];
+  assert.equal(audit.from.close, -102); assert.equal(audit.from.closeSource, 'nflverse'); assert.equal(audit.to.closeSource, 'manual');
+  // Default book stays DraftKings when none is entered.
+  const d = fillRig(nvRow); await d.save({ close: -110, closeOpp: -110 });
+  assert.equal(d.writes[0][1][`ledger/${frow}/closeBook`], 'draftkings');
+});
+
+test('the manual replacement is write-once: a later fill or clear is refused with the real source', async () => {
+  const replaced = { ...nvRow, close: -110, closeOpp: -110, closeSource: 'manual', closeBook: 'draftkings',
+    closeObservedAt: '2026-10-07T01:30:00.000Z', closeReplaced: { close: -102, closeOpp: -118, closeSource: 'nflverse' } };
+  for (const body of [{ close: -102, closeOpp: -118 }, { close: null, closeOpp: null }]) {
+    const r = fillRig(replaced), out = await r.save(body);
+    assert.equal(out.status, 409); assert.equal(r.writes.length, 0);
+    assert.equal(out.body.error, "That leg already has a manual DraftKings close entered at Oct 6, 2026, 9:30 PM ET (it replaced the nflverse close) and can't be overwritten.");
+  }
+});
+
+test('book closes stay refused exactly as before, and the message names the actual source', async () => {
+  const cases = [
+    [{ close: -150, closeOpp: 130, closeBook: 'draftkings', closeSource: 'odds_api', closeObservedAt: '2026-10-04T16:58:00Z' },
+     "That leg already has a DraftKings close captured at Oct 4, 2026, 12:58 PM ET via The Odds API and can't be overwritten."],
+    [{ close: -150, closeOpp: 130, closeBook: 'draftkings', closeSource: 'sgo', closeObservedAt: '2026-10-04T16:58:00Z' },
+     "That leg already has a DraftKings close captured at Oct 4, 2026, 12:58 PM ET via SportsGameOdds and can't be overwritten."],
+  ];
+  for (const [row, msg] of cases) {
+    const r = fillRig(row), out = await r.save({ close: -110, closeOpp: -110 });
+    assert.equal(out.status, 409); assert.equal(out.body.error, msg); assert.equal(r.writes.length, 0);
+    assert.equal((await fillRig(row).save({ clvPts: 1 })).status, 200);       // CLV-only still allowed
+  }
+});
+
+test('an nflverse close cannot be cleared or half-replaced; CLV-only and bad book handled', async () => {
+  for (const body of [{ close: null, closeOpp: null }, { close: -110 }]) {
+    const r = fillRig(nvRow), out = await r.save(body);
+    assert.equal(out.status, 409); assert.equal(r.writes.length, 0);
+    assert.equal(out.body.error, 'That leg has an nflverse close (book unspecified) read at Oct 6, 2026, 10:00 AM ET. It can be replaced with a real two-sided book price, but not cleared.');
+  }
+  const c = fillRig(nvRow); assert.equal((await c.save({ clvPts: 0.5 })).status, 200);
+  assert.equal(c.writes[0][1][`ledger/${frow}/close`], undefined);
+  assert.equal((await fillRig(nvRow).save({ close: -110, closeOpp: -110, closeBook: '<script>' })).status, 400);
+});
+
+test('automatic sources never overwrite a manual close (live targets and ledger backfill)', async () => {
+  const manual = { close: -110, closeOpp: -110, closeSource: 'manual', closeBook: 'draftkings',
+    closeObservedAt: '2026-10-07T01:30:00.000Z', closeReplaced: { closeSource: 'nflverse' } };
+  const start = Date.parse(tbDal.startsAt);
+  assert.equal(r0.bozoNflverseCloseEligible(leg({ side: 'DAL', mkt: 'ml' }), manual, start, start + 3600000), false);
+  const r = rig(), kv = new Map();
+  const league = { week: 5, season: 2026, status: 'open', picks: { a: { ...leg({ side: 'DAL', mkt: 'ml' }), eventId: '401872980' } },
+    results: { a: manual } };
+  Object.assign(r.ctx, { BOZO_CLOSE_LEAD_MS: 420000, BOZO_CLOSE_STALE_MS: 1200000, BOZO_CLOSE_RECOVERY_MS: 172800000,
+    BOZO_CLOSE_RETRY_MS: 3600000, loadLeagues: async () => ({ main: league }), loadUsers: async () => ({}),
+    playerName: k => k, memberNameAt: () => null, accountName: () => '', UID_RE: /^u_/ });
+  const env = { ODDS_API_KEY: 'fixture', RL: { get: async k => kv.get(k), put: async (k, v) => kv.set(k, v) } };
+  assert.equal((await r.ctx.bozoCloseTargets(env, start + 3600000)).length, 0);
+  const L = { main: { week: 9, season: 2026, ledger: { '2026-w4-m': row(4, { ...atl, mkt: 'ml', side: 'ATL', ...manual }) } } };
+  assert.equal(r0.bozoNflverseLedgerPlan(L, doc, NOW).written, 0);
+});
+
+test('surfaces: replaced value and label exposed; gap list unlocks only nflverse closes', () => {
+  const clv = cut('async function bozoClv(', 'const weeks = [...new Set');
+  assert.match(clv, /closeReplaced: r\.closeReplaced \|\| null/);
+  assert.match(clv, /"manual close \(replaced nflverse close\)"/);
+  const mcp = fs.readFileSync('work/mcp-block.js', 'utf8');
+  assert.match(mcp, /closeReplaced: r\.closeReplaced \|\| null/); assert.match(mcp, /"manual close \(replaced nflverse close\)"/);
+  const gaps = cut('async function bozoCloseGaps(', 'const every =');
+  assert.match(gaps, /locked: r\.closeObservedAt != null && r\.close != null && r\.closeOpp != null && r\.closeSource !== "nflverse"/);
+  assert.match(gaps, /replaceable: r\.closeSource === "nflverse"/);
+  assert.doesNotMatch(src, /captured at kickoff from the book/);
+});

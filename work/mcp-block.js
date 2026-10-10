@@ -2537,7 +2537,9 @@ const MCP_TOOLS = [
           closePrice: r.close ?? null, closePriceOpp: r.closeOpp ?? null,
           closeBook: r.closeBook || null, closeObservedAt: r.closeObservedAt || null,
           closeSource: r.closeSource || null,
-          closeLabel: r.closeSource === "nflverse" && r.close != null ? "nflverse close (book unspecified)" : null,
+          closeLabel: r.closeSource === "nflverse" && r.close != null ? "nflverse close (book unspecified)"
+            : r.closeSource === "manual" && r.closeReplaced ? "manual close (replaced nflverse close)" : null,
+          closeReplaced: r.closeReplaced || null,
           closeLineRef: r.closeLineRef ?? null, closePointsVsClose: r.closePointsVsClose ?? null,
           closeLineRefSource: r.closeLineRefSource || null, closeLineRefObservedAt: r.closeLineRefObservedAt || null,
           closeLineRefLabel: r.closeLineRef != null ? "points vs nflverse main close (book unspecified)" : null,

@@ -9129,7 +9129,9 @@ async function bozoClv(request, url, env, cors) {
       closeOppSource: r.closeOppSource || null,
       closeUnavailableReason: r.closeUnavailableReason || null,
       // nflverse does not name its book; never present that close as plain "closing line".
-      closeLabel: r.closeSource === BOZO_NFLVERSE_CLOSE_SOURCE && r.close != null ? BOZO_NFLVERSE_CLOSE_LABEL : null,
+      closeLabel: r.closeSource === BOZO_NFLVERSE_CLOSE_SOURCE && r.close != null ? BOZO_NFLVERSE_CLOSE_LABEL
+        : r.closeSource === "manual" && r.closeReplaced ? "manual close (replaced nflverse close)" : null,
+      closeReplaced: r.closeReplaced || null,
       // Points vs the nflverse main close — a NUMBER comparison, never a price.
       closeLineRef: r.closeLineRef ?? null,
       closePointsVsClose: r.closePointsVsClose ?? null,
@@ -9706,9 +9708,18 @@ async function bozoCloseFill(request, env, cors) {
      override on the same row, and refusing a CLV-only save here would relock the one
      surface that can fix a leg the capture got wrong. Checked after the body is parsed so
      a CLV-only save passes through. */
+  /* ⚠️ ONE EXCEPTION, and only one: an nflverse close is a free post-game number from an
+     unnamed book, so a manager holding the real slip/book price may REPLACE it, once.
+     The replaced nflverse values are kept in closeReplaced and the audit row; the
+     replacement is stamped closeObservedAt, which re-locks the row, so no later manual
+     fill can flip it back or rewrite it. Clearing an nflverse close is still refused —
+     it can be replaced with a real two-sided price, not erased. Book closes (Odds API /
+     SGO DraftKings, a prior manual replacement) stay immutable exactly as before. */
+  const replacingNflverse = capturedComplete && row.closeSource === "nflverse"
+    && body.close != null && body.closeOpp != null;
   if (capturedComplete && !(Object.prototype.hasOwnProperty.call(body, "clvPts")
-                            && body.close == null && body.closeOpp == null))
-    return json({ error: "That close was captured at kickoff from the book and can't be overwritten." }, 409, cors);
+                            && body.close == null && body.closeOpp == null) && !replacingNflverse)
+    return json({ error: bozoCloseLockMessage(row) }, 409, cors);
 
   /* ⚠️ A CLV THE MANAGER READS OFF THE SLIP IS THE ONLY NUMBER SOME LEGS WILL EVER HAVE.
      A prop has no two-way market to capture, so no close can ever arrive for it and the
@@ -9751,6 +9762,14 @@ async function bozoCloseFill(request, env, cors) {
     }
   }
 
+  // The book is recorded as entered (default DraftKings, the league's book).
+  let book = "draftkings";
+  if (body.closeBook != null && body.closeBook !== "") {
+    book = String(body.closeBook).trim().toLowerCase();
+    if (!/^[a-z0-9][a-z0-9 ._-]{0,39}$/.test(book))
+      return json({ error: "The book has to be a short name like draftkings or circa." }, 400, cors);
+  }
+
   /* closeObservedAt is cleared on both paths. Half of a captured pair plus a typed
      other side is not a captured close, and leaving the stamp on would both re-lock the
      row and let a hand-read number inherit the authority of a feed observation. */
@@ -9760,7 +9779,7 @@ async function bozoCloseFill(request, env, cors) {
     ? { close: null, closeOpp: null, closeBook: null, closeSource: null,
         closeObservedAt: null, closeOppSource: null, closeOverround: null,
         closeEnteredBy: null, closeEnteredTs: null }
-    : { close, closeOpp, closeBook: "draftkings", closeSource: "manual",
+    : { close, closeOpp, closeBook: book, closeSource: "manual",
         closeObservedAt: null, closeUnavailableReason: null,
         // Provenance of the OTHER side travels separately: one of these numbers may be
         // read off a slip while the other was never observed by anybody.
@@ -9768,6 +9787,19 @@ async function bozoCloseFill(request, env, cors) {
         closeOverround: null,
         closeEnteredBy: auth.name, closeEnteredTs: Date.now() };
 
+  if (replacingNflverse && !clvOnly) {
+    // Nothing is lost: the nflverse pair and its provenance travel into closeReplaced
+    // (and the audit `from`). closeLineRef* (points vs the nflverse main close) stays.
+    const enteredAt = new Date().toISOString();
+    patch.closeObservedAt = enteredAt;            // re-locks the row: write-once from here
+    patch.closeProviderEventId = null;
+    patch.closeReplaced = {
+      close: row.close ?? null, closeOpp: row.closeOpp ?? null, closeBook: row.closeBook ?? null,
+      closeSource: row.closeSource ?? null, closeObservedAt: row.closeObservedAt ?? null,
+      closeProviderEventId: row.closeProviderEventId ?? null,
+      replacedAt: enteredAt, replacedBy: auth.name,
+    };
+  }
   if (hasClv) {
     patch.clvPts = clvPts;
     patch.clvSource = clvPts == null ? null : "manual";
@@ -9800,6 +9832,26 @@ async function bozoCloseFill(request, env, cors) {
     clvPts: hasClv ? clvPts : (row.clvPts ?? null) }, 200, cors);
 }
 
+/* Why a complete close is locked, naming where it actually came from. */
+const BOZO_CLOSE_BOOK_NAMES = { draftkings: "DraftKings", circa: "Circa", pinnacle: "Pinnacle", fanduel: "FanDuel" };
+const BOZO_CLOSE_SOURCE_NAMES = { odds_api: "The Odds API", sgo: "SportsGameOdds" };
+function bozoCloseWhen(iso) {
+  const t = Date.parse(iso || "");
+  if (!Number.isFinite(t)) return "an unrecorded time";
+  return new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", month: "short", day: "numeric",
+    year: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(t)) + " ET";
+}
+function bozoCloseLockMessage(row) {
+  const when = bozoCloseWhen(row && row.closeObservedAt);
+  const book = BOZO_CLOSE_BOOK_NAMES[row && row.closeBook] || (row && row.closeBook) || "book";
+  if (row && row.closeSource === "nflverse")
+    return `That leg has an nflverse close (book unspecified) read at ${when}. It can be replaced with a real two-sided book price, but not cleared.`;
+  if (row && row.closeSource === "manual")
+    return `That leg already has a manual ${book} close entered at ${when}${row.closeReplaced ? " (it replaced the nflverse close)" : ""} and can't be overwritten.`;
+  const via = BOZO_CLOSE_SOURCE_NAMES[row && row.closeSource];
+  return `That leg already has a ${book} close captured at ${when}${via ? " via " + via : ""} and can't be overwritten.`;
+}
+
 /* GET /bozo/close-gaps?league=<id> — every ledger row still missing a usable close.
    Public, like the rest of the board. "Usable" means BOTH sides present: one side alone
    cannot be de-vigged and is dropped by the chart, so it belongs on this list. */
@@ -9829,7 +9881,10 @@ async function bozoCloseGaps(request, url, env, cors) {
       /* Locked means the fill route will refuse it, so it must use that route's own
          test: a COMPLETE captured pair. A row the cron only half-observed is a gap the
          manager can still close by hand, and marking it locked was what hid the boxes. */
-      locked: r.closeObservedAt != null && r.close != null && r.closeOpp != null,
+      locked: r.closeObservedAt != null && r.close != null && r.closeOpp != null && r.closeSource !== "nflverse",
+      // An nflverse close is complete but may be replaced once with a real book price.
+      closeSource: r.closeSource || null,
+      replaceable: r.closeSource === "nflverse" && r.close != null && r.closeOpp != null,
       result: r.result || null,
       // The manager's CLV, and whether this row has one. A leg with no capturable market
       // has nothing else, so it is never filtered out of the list below.
@@ -19842,7 +19897,9 @@ const MCP_TOOLS = [
           closePrice: r.close ?? null, closePriceOpp: r.closeOpp ?? null,
           closeBook: r.closeBook || null, closeObservedAt: r.closeObservedAt || null,
           closeSource: r.closeSource || null,
-          closeLabel: r.closeSource === "nflverse" && r.close != null ? "nflverse close (book unspecified)" : null,
+          closeLabel: r.closeSource === "nflverse" && r.close != null ? "nflverse close (book unspecified)"
+            : r.closeSource === "manual" && r.closeReplaced ? "manual close (replaced nflverse close)" : null,
+          closeReplaced: r.closeReplaced || null,
           closeLineRef: r.closeLineRef ?? null, closePointsVsClose: r.closePointsVsClose ?? null,
           closeLineRefSource: r.closeLineRefSource || null, closeLineRefObservedAt: r.closeLineRefObservedAt || null,
           closeLineRefLabel: r.closeLineRef != null ? "points vs nflverse main close (book unspecified)" : null,

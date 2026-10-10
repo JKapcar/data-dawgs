@@ -54,10 +54,13 @@ unchanged.
 
 ## Precedence
 
-1. **Any existing full pair is final.** No automatic source rewrites it: `bozoCloseTargets`
+1. **Any existing full pair is final for every automatic source.** `bozoCloseTargets`
    skips complete pairs before any paid or free call, and the ledger backfill skips any row
-   with a close. A manual fill is refused (409) once a captured complete close has
-   `closeObservedAt`, and nflverse closes have one.
+   with a close. That covers nflverse, Odds API, SGO and manual closes.
+   Manual fills (`POST /bozo/close`):
+   - A complete **book** close (Odds API or SGO DraftKings, i.e. `closeObservedAt` set) is
+     refused with 409, exactly as before.
+   - A complete **nflverse** close is the one exception (see below).
 2. Before kickoff: Odds API (DraftKings), then SGO.
 3. After kickoff, current week: if the paid historical retry gate allows it, the Odds API
    historical pregame snapshot is tried first on that tick. If it misses, nflverse fills
@@ -67,6 +70,37 @@ unchanged.
    real DraftKings price inside its 48h window. That clears the reason and leaves
    `closeLineRef*` in place.
 5. A half close is left alone by nflverse in every path.
+
+## Manual replacement of an nflverse close
+
+A manager with the real slip or book price may **replace** an nflverse close once, using
+the ledger close-fill route with both prices (`close`, `closeOpp`, and optionally
+`closeBook`).
+- **What's written** (ledger, plus results for the current week): `closeSource: "manual"`,
+  `closeBook` as entered (lowercased, default `draftkings`), `closeObservedAt` = entry
+  time, `closeProviderEventId: null`.
+- **Nothing is lost.** `closeReplaced` keeps the nflverse `close`, `closeOpp`,
+  `closeBook`, `closeSource`, `closeObservedAt` and `closeProviderEventId`, plus
+  `replacedAt` and `replacedBy`. The audit row also records `from` / `to`.
+- **`closeLineRef*` stays as it was**, because the points-vs-close comparison is still
+  against the nflverse main number.
+- **Write-once.** The replacement sets `closeObservedAt`, so the row re-locks. A later
+  manual fill or clear is refused: "That leg already has a manual DraftKings close entered
+  at <ET time> (it replaced the nflverse close) and can't be overwritten."
+- **Refused on nflverse rows:** clearing, or sending only one side. The message is "That
+  leg has an nflverse close (book unspecified) read at <ET time>. It can be replaced with
+  a real two-sided book price, but not cleared."
+- **Book-close refusals name the source**, e.g. "That leg already has a DraftKings close
+  captured at Oct 4, 2026, 12:58 PM ET via The Odds API and can't be overwritten." The old
+  "captured at kickoff from the book" wording is gone.
+- CLV-only saves (`clvPts`) are still allowed on every row.
+- `/bozo/close-gaps` now marks nflverse closes `locked: false, replaceable: true` and
+  includes `closeSource`, so the existing fill boxes reach them.
+- `/bozo/clv` and the MCP ledger read add `closeReplaced`, and set `closeLabel: "manual close
+  (replaced nflverse close)"` on those rows.
+- The **grade card** (re-grade) path still treats any complete captured pair, nflverse
+  included, as locked and doesn't touch it. The close-fill route is the only way to
+  replace a close.
 
 ## Past-week ledger backfill
 
