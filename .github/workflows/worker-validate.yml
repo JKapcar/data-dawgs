@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - ".github/workflows/worker-validate.yml"
+      # Any workflow change: a new scheduled or chained workflow must get a watchdog row
+      # (work/test-survivor-pipeline.mjs derives the required list from these files).
+      - ".github/workflows/**"
       - "dawg-bot-worker.js"
       - "bozo-menu.mjs"
       - "tests/bozo-menu*.test.mjs"
@@ -52,4 +55,5 @@ jobs:
       - run: node work/test-bozo-sim.mjs
       - run: node work/test-bozo-clv-pipes.mjs
       - run: node work/test-bozo-override.mjs
+      - run: node work/test-survivor-pipeline.mjs
       - run: node tools/validate-data.js

@@ -1,7 +1,27 @@
 name: survivor pipeline watch
+# Watches every workflow that runs unattended against main: the WATCHED table in
+# work/survivor-pipeline-watch.cjs. ⚠️ The workflow_run list must name every row, copied
+# exactly from each workflow's name: field; the trigger matches names, not filenames, and
+# work/test-survivor-pipeline.mjs fails on any row missing here.
+# ⚠️ Do not rename this file: nfelo-refresh, nfl-data and survivor-receipt dispatch it by filename.
 on:
   workflow_run:
-    workflows: ["nfelo refresh", "survivor-receipt", "NFL data backbone"]
+    workflows:
+      - "nfelo refresh"
+      - "survivor-receipt"
+      - "NFL data backbone"
+      - "Fourth Down Lab"
+      - "Fourth Down comparison rates"
+      - "Daily EPA refresh"
+      - "CFB efficiency backbone"
+      - "Record draft picks"
+      - "Guillotine daily weekly inputs and receipts"
+      - "Bozo Menu ledger"
+      - "Dog Track grades mirror"
+      - "forecast-resolve-grade"
+      - "forecast-pool"
+      - "Bozo Menu production smoke"
+      - "Site cache and live-state checks"
     types: [completed]
     branches: [main]
   schedule:
