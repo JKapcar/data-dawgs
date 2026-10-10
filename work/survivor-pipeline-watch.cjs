@@ -46,6 +46,11 @@ const FRESH_EVENTS = new Set(['schedule', 'workflow_dispatch', 'workflow_run', '
 const HOLD_MS = 60 * 6e4;
 // A deploy that has not landed this long after its commit is a problem, not a deploy in flight.
 const LIVE_SETTLE_MS = 60 * 6e4;
+/* The Worker's own job health (dawg-bot-worker.js, GET /ops/health): which scheduled jobs are
+   failing since when, and when each cron last fired. PULLED, so a failure stays listed until
+   the job itself succeeds. Only names and timestamps cross over: the route never carries error
+   text, and nothing here would echo it if it did. */
+const WORKER_HEALTH = 'https://toto.jkapcar4.workers.dev/ops/health';
 
 const sha = s => crypto.createHash('sha256').update(s).digest('hex');
 const iso = t => new Date(t).toISOString().replace(/\.\d{3}Z$/, 'Z');
@@ -103,6 +108,33 @@ async function checkRow(github, repo, row, now, eventRun) {
   return { found, line };
 }
 
+// How long a cron's heartbeat may be quiet before the cron counts as silent: its own period,
+// plus the hour the heartbeat may lag (it is written at most hourly), plus half an hour.
+function cronSilentAfterMs(cron) {
+  const [minute, hour] = String(cron).split(/\s+/);
+  const period = /^\*\/\d+$/.test(minute) && hour === '*' ? Number(minute.slice(2)) * 6e4
+    : /^\d+$/.test(minute) && hour === '*' ? 60 * 6e4
+    : 24 * H;
+  return period + 90 * 6e4;
+}
+
+// A blip is retried; three failures are one problem, worded from a fixed vocabulary.
+async function readWorkerHealth() {
+  let why = 'no response';
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response = await fetch(WORKER_HEALTH, { signal: AbortSignal.timeout(20000), cache: 'no-store' });
+      if (response.ok) {
+        const body = await response.json();
+        if (Array.isArray(body.jobs) && Array.isArray(body.crons)) return body;
+        why = 'unexpected shape';
+      } else why = `HTTP ${response.status}`;
+    } catch { why = 'network error'; }
+    if (attempt < 3) await sleep(5000 * attempt);
+  }
+  throw Object.assign(new Error(why), { why });
+}
+
 // The previous run's problems, carried in the issue body so the hold-down survives between runs.
 function readState(body) {
   const m = String(body || '').match(/<!-- watch-state: (.*?) -->/s);
@@ -131,6 +163,28 @@ module.exports = async ({ github, context, core }) => {
       add(`watchdog:${row.file}`, `Watchdog could not read ${row.file} runs: ${error.message}`);
       core.info(`  ${row.file} [${row.name}] → check failed: ${error.message}`);
     }
+  }
+
+  // Year-round, outside the NFL season gate, in its own try: a failed read is one problem
+  // line and never skips the GitHub checks above or the NFL checks below.
+  try {
+    const health = await readWorkerHealth();
+    const when = v => (typeof v === 'string' && Number.isFinite(Date.parse(v)) ? v : null);
+    for (const j of health.jobs) {
+      const job = String(j.job || '').replace(/[^\w:.-]/g, '');
+      core.info(`  worker ${job}: ${j.failing === true ? `failing since ${when(j.since) || 'an unrecorded time'}` : 'ok'}`);
+      if (job && j.failing === true) add(`worker:job:${job}`, `Worker ${job} failing since ${when(j.since) || 'an unrecorded time'}`);
+    }
+    for (const c of health.crons) {
+      const cron = String(c.cron || '').replace(/[^\w*\/ ,-]/g, '');
+      const last = when(c.last_fired_at);
+      const silent = last !== null && now - Date.parse(last) > cronSilentAfterMs(cron);
+      core.info(`  worker cron ${cron}: ${last ? `last fired ${last}` : 'no heartbeat yet'}${silent ? ' → silent' : ''}`);
+      if (cron && silent) add(`worker:cron:${cron}`, `Worker cron ${cron} silent since ${last}`);
+    }
+  } catch (error) {
+    add('worker:health', `Worker health unreadable (${error.why || 'error'}): ${WORKER_HEALTH}`);
+    core.info(`  worker health unreadable (${error.why || 'error'})`);
   }
 
   let schedule, games, inSeason = false;
