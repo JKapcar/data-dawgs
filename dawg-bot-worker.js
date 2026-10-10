@@ -11705,9 +11705,11 @@ async function handleAgentFeedback(request, url, env) {
     // Existing server-validated admin session; no owner credential in public discovery.
     const auth = await requireAdmin(request, env);
     if (auth.err) return agentFeedbackJson({error:'admin_auth_required'},auth.code === 403 ? 403 : 401);
-    // Display names are not unique in this app. Require the stored UID-era admin role
-    // as well as the existing owner-name gate; legacy/name-only identities fail closed.
-    if (!auth.uid || auth.user?.roles?.site_admin !== true)
+    // Display names are not unique. Require an existing UID and an explicit stored
+    // permission as well as the owner-name gate. feedback_reader grants only this
+    // inbox read; it is never interpreted as site_admin or a league permission.
+    const roles = auth.user?.roles;
+    if (!auth.uid || !(roles?.site_admin === true || roles?.feedback_reader === true))
       return agentFeedbackJson({error:'admin_role_required'},403);
     try {
       const {data} = await fbGet(env, AGENT_FEEDBACK_PATH);
