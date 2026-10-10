@@ -2537,6 +2537,12 @@ const MCP_TOOLS = [
           closePrice: r.close ?? null, closePriceOpp: r.closeOpp ?? null,
           closeBook: r.closeBook || null, closeObservedAt: r.closeObservedAt || null,
           closeSource: r.closeSource || null,
+          closeLabel: r.closeSource === "nflverse" && r.close != null ? "nflverse close (book unspecified)"
+            : r.closeSource === "manual" && r.closeReplaced ? "manual close (replaced nflverse close)" : null,
+          closeReplaced: r.closeReplaced || null,
+          closeLineRef: r.closeLineRef ?? null, closePointsVsClose: r.closePointsVsClose ?? null,
+          closeLineRefSource: r.closeLineRefSource || null, closeLineRefObservedAt: r.closeLineRefObservedAt || null,
+          closeLineRefLabel: r.closeLineRef != null ? "points vs nflverse main close (book unspecified)" : null,
           closeUnavailableReason: r.closeUnavailableReason || null,
           // The one derived field, and it is a boolean rather than a number: whether
           // this leg is eligible to be in a CLV calculation at all.
