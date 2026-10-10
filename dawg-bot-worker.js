@@ -1677,12 +1677,33 @@ export default {
       // Independent failure domains: forecast problems never suppress Bozo capture.
       const forecastRun = runForecastLive(env).catch(e => ({ error: String(e.message || e) }));
       if (ctx && ctx.waitUntil) ctx.waitUntil(forecastRun);
+      /* Live finals: refresh the provider score archive while any scheduled game is due.
+         Own failure domain and lasterror key. Grading is chained AFTER it (never in place
+         of it — the catch below always resolves), so a final that lands on this tick
+         settles a leg on this tick, and the two callers share one provider request. */
+      const tickMs = (controller && controller.scheduledTime) || Date.now();
+      const scoresRun = runBozoLiveScores(env, tickMs).catch(async e => {
+        const kv = cfbMarketKV(env);
+        if (kv) await kv.put("bozo:scores:lasterror",
+          JSON.stringify({ at: new Date().toISOString(), error: String((e && e.message) || e) }));
+        return { error: String((e && e.message) || e) };
+      });
+      if (ctx && ctx.waitUntil) ctx.waitUntil(scoresRun);
+      // Near-close archive for every NFL/FBS game: own failure domain and lasterror key, so
+      // a provider hiccup here can never cost a league leg its close, or the reverse.
+      const nearCloseRun = runBozoNearCloses(env, tickMs).catch(async e => {
+        const kv = cfbMarketKV(env);
+        if (kv) await kv.put("bozo:nearclose:lasterror",
+          JSON.stringify({ at: new Date().toISOString(), error: String((e && e.message) || e) }));
+        return { error: String((e && e.message) || e) };
+      });
+      if (ctx && ctx.waitUntil) ctx.waitUntil(nearCloseRun);
       /* Automatic grading rides the same five-minute tick, in its OWN failure domain.
          It is the tick that already knows about games starting and finishing, so it is
          the right one to notice them ending — and a close-capture outage must not stop
          tickets settling, any more than a grading bug should stop closes being captured.
          Its own lasterror key, for the same reason. */
-      const gradeRun = runBozoAutoGrade(env, (controller && controller.scheduledTime) || Date.now())
+      const gradeRun = scoresRun.then(() => runBozoAutoGrade(env, tickMs))
         .catch(async e => {
           const kv = cfbMarketKV(env);
           if (kv) await kv.put("bozo:autograde:lasterror",
@@ -1691,8 +1712,9 @@ export default {
         });
       if (ctx && ctx.waitUntil) ctx.waitUntil(gradeRun);
       try {
-        const bozo = await runBozoCloseCapture(env, (controller && controller.scheduledTime) || Date.now());
-        return { ...bozo, forecast: await forecastRun, autograde: await gradeRun };
+        const bozo = await runBozoCloseCapture(env, tickMs);
+        return { ...bozo, forecast: await forecastRun, scores: await scoresRun,
+          nearCloses: await nearCloseRun, autograde: await gradeRun };
       } catch (e) {
         const kv = cfbMarketKV(env);
         if (kv) await kv.put("bozo:close:lasterror",
@@ -2197,19 +2219,18 @@ async function handleScores(url, env, cors) {
   try { doc = await bozoScheduleDoc(env, sport, SEASON); }
   catch (e) { return json({ error: "scores unavailable", detail: e.message }, 503, cors); }
   if (!doc) return json({ error: "scores unavailable", detail: `schedule:${sport}:${SEASON} is not populated yet` }, 503, cors);
+  // The schedule CSVs are the canonical record; the provider archive is the live overlay
+  // that lands a final minutes after the whistle (runBozoLiveScores keeps it current).
+  let finals = null;
   try {
-    const finals = await env.RL.get(bozoScoreArchiveKey(sport, SEASON), "json");
-    if (finals?.games?.length) doc = { ...doc, games: doc.games.map(game => {
-      if (game.completed) return game;
-      const final = bozoScheduleFindGame(finals, { sport, canonicalKey: game.canonicalKey });
-      if (!final) return game;
-      const homeSide = bozoScheduledTeamSide({ sport, side: game.home.name }, final);
-      if (!homeSide) return game;
-      return { ...game, completed: true,
-        homeScore: homeSide === "home" ? final.homeScore : final.awayScore,
-        awayScore: homeSide === "home" ? final.awayScore : final.homeScore,
-        scoreSource: final.scoreSource, scoreObservedAt: final.scoreObservedAt };
-    }) };
+    finals = await env.RL.get(bozoScoreArchiveKey(sport, SEASON), "json");
+    if (finals?.games?.length) {
+      const index = bozoFinalsIndex(finals, sport), now = Date.now();
+      doc = { ...doc, games: doc.games.map(game => {
+        if (game.completed || !(Date.parse(game.startsAt || "") <= now)) return game;
+        return bozoAttachFinal(index, game) || game;
+      }) };
+    }
   } catch {}
   let window = null;
   if (Number.isFinite(week) && week > 0) {
@@ -2224,10 +2245,31 @@ async function handleScores(url, env, cors) {
         ? bozoPublicScheduleGames(doc, dates, { week, matchWeek: true })
         : bozoPublicScheduleGames(doc, dates, { window }))
     : bozoPublicScheduleGames(doc, dates);
+  // Opt-in (closes=1): the DraftKings near-close per game, in the scheduled orientation.
+  // The page's game picker never asks for it, so its request stays one KV read.
+  if (url.searchParams.get("closes") === "1") {
+    try {
+      const internal = new Map(doc.games.map(g => [String(g.espnEventId), g]));
+      const rows = games.map(p => internal.get(p.id)).filter(Boolean);
+      const index = await bozoNearCloseIndexFor(env, sport, rows);
+      for (const p of games) {
+        const g = internal.get(p.id);
+        p.close = g ? bozoNearCloseForGame(index, g) : null;
+      }
+    } catch { for (const p of games) if (!("close" in p)) p.close = null; }
+  }
   return new Response(JSON.stringify({
     sport, games, via: doc.source, fetched: doc.fetchedAt,
     week: Number.isFinite(week) && week > 0 ? week : null,
     window: window ? { loDate: window.loDate, hiDate: window.hiDate, week: window.week } : null,
+    // Both feeds' freshness, so a stale board says which half is stale. `fetched` above is
+    // the schedule CSV's last CHANGE (a 304 keeps it), not the last time anyone looked.
+    feeds: {
+      schedule: { source: doc.source, changedAt: doc.fetchedAt || null },
+      finals: finals ? { source: "the-odds-api", checkedAt: finals.checkedAt || null,
+        fetchedAt: finals.fetchedAt || null, error: finals.errorCode || finals.error || null,
+        games: Array.isArray(finals.games) ? finals.games.length : 0 } : null,
+    },
   }), {
     headers: { "Content-Type": "application/json", "Cache-Control": "max-age=60", ...cors },
   });
@@ -6457,8 +6499,12 @@ async function forecastEntry(request, env, cors) {
 
   // ⚠️ SERVER TIME, ALWAYS. This refusal is what makes forecast_status "prospective"
   // (captured_at < kickoff_at) true by construction instead of true by audit.
+  // ⚠️ AND THE EARLIER KICKOFF. The published schedule takes a league move only through a
+  // reviewed PR; until then the Worker's nflverse copy knows the game starts sooner (see
+  // fclEarliestKickoffs). The lock seals at the earlier time, so the refusal must too.
   const now = Date.now();
-  if (now >= game.kickoff_ms)
+  const lockMs = sport === "nfl" ? await fclEarliestKickoffMs(env, game) : game.kickoff_ms;
+  if (now >= lockMs)
     return json({ error: "That game has kicked off. Forecasts are locked." }, 409, cors);
 
   const slider = Number(body.slider_value);
@@ -6546,7 +6592,7 @@ async function forecastEntry(request, env, cors) {
     idempotency_key: idemKey,
   };
 
-  if (Date.now() >= Date.parse(game.kickoff_at)) return json({ error: "That game has kicked off. Forecasts are locked." }, 409, cors);
+  if (Date.now() >= Math.min(lockMs, Date.parse(game.kickoff_at))) return json({ error: "That game has kicked off. Forecasts are locked." }, 409, cors);
   entry.submitted_at = Date.now();
   try { await fbPut(env, path, entry); }
   catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
@@ -7387,7 +7433,12 @@ const SEASON = 2026;
 
    Foreign ids remain attributes. The ESPN id is useful for resolving old/browser picks,
    but the normalized row also carries a canonical team/date key. No odds column is copied
-   out of either source. Blank/NA scores stay null all the way through grading. */
+   out of either source. Blank/NA scores stay null all the way through grading.
+
+   Neither source is live. cfbfastR-data publishes four times a week (Sat/Sun/Mon) and
+   nflverse can trail a final by most of a day, so finals arrive first from the Odds API
+   archive (bozo:score-finals:*), refreshed on the five-minute tick by runBozoLiveScores
+   and overlaid by bozoAttachFinal wherever the CSV has not caught up. */
 const BOZO_GRADEABLE_SPORTS = new Set(["nfl", "cfb"]);
 const BOZO_SCHEDULE_SOURCE = Object.freeze({
   nfl: "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
@@ -7927,12 +7978,40 @@ const BOZO_TEAM_FALLBACK_ALIASES = Object.freeze({
   iu: "indiana",
   ind: "indiana",
   samhoustonstatebearkats: "samhoustonbearkats",
+  // Long-form provider spellings of programs ESPN lists under a short name. Explicit and
+  // one-to-one on purpose: an alias only ever points at a team's own displayName.
+  southernmississippigoldeneagles: "southernmissgoldeneagles",
+  appalachianstatemountaineers: "appstatemountaineers",
+  connecticuthuskies: "uconnhuskies",
+  louisianamonroewarhawks: "ulmonroewarhawks",
+  louisianalafayetteragincajuns: "louisianaragincajuns",
+  texaselpasominers: "utepminers",
+  texassanantonioroadrunners: "utsaroadrunners",
+  northcarolinastatewolfpack: "ncstatewolfpack",
+  centralfloridaknights: "ucfknights",
+  southerncaliforniatrojans: "usctrojans",
+  brighamyoungcougars: "byucougars",
+  mississippirebels: "olemissrebels",
+  umassminutemen: "massachusettsminutemen",
 });
-const BOZO_TEAM_REGISTRY_VERSION = 2;
+/* ⚠️ ESPN's FBS group (groups/80) also lists bowl ALL-STAR squads, and the committed seed
+   (2026-09-03) carries ten of them. They are not programs anyone can bet, and two collide
+   with real ones: "SOUTH FLORIDA STARS" made "South Florida" ambiguous, so the registry
+   deleted it and cfbfastR's "South Florida" stopped resolving. Every USF game then had a
+   canonical key no provider final could ever equal — USF @ UTSA sat unscored while its
+   final was in hand. tools/build-bozo-team-registry.mjs now drops isAllStar rows at the
+   source; this list covers the seed already committed until it is regenerated. */
+const BOZO_TEAM_SEED_EXCLUDED = Object.freeze({
+  cfb: new Set(["3144", "3145", "3146", "3147", "3193", "3194", "3197", "3198", "125290", "125291"]),
+});
+// v3: the all-star exclusion changes the alias table, and v2 copies sit in KV for 7 days.
+const BOZO_TEAM_REGISTRY_VERSION = 3;
 const BOZO_TEAM_REGISTRY_TTL = 7 * 24 * 60 * 60;
 
 function bozoBuildTeamRegistry(sport) {
-  const rows = ((BOZO_ESPN_TEAM_SEED.sports || {})[sport] || []);
+  const excluded = BOZO_TEAM_SEED_EXCLUDED[sport];
+  const rows = ((BOZO_ESPN_TEAM_SEED.sports || {})[sport] || [])
+    .filter(team => !(excluded && excluded.has(String(team.id))));
   const aliases = Object.create(null);
   const ambiguous = new Set();
   const add = (value, canonical) => {
@@ -8596,8 +8675,9 @@ async function bozoOddsApiRequest(env, path, params, options = {}) {
         const v=response.headers.get(name); if(v !== null && /^\d+$/.test(v)) quota[name]=Number(v);
       }
       console.log("bozo-odds-api",JSON.stringify({status:response.status,...quota}));
-      if (!response.ok) throw fault(response.status===429?"rate_limited":"provider_error","Odds API HTTP "+response.status);
-      return {data:await response.json(),fetchedAt:new Date().toISOString()};
+      // The quota rides on a refusal too: an exhausted account still reports what is left.
+      if (!response.ok) throw Object.assign(fault(response.status===429?"rate_limited":"provider_error","Odds API HTTP "+response.status),{quota});
+      return {data:await response.json(),fetchedAt:new Date().toISOString(),quota};
     })(),new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(fault("timeout","Odds API capture timed out"));},remaining);})]);
     if(cache) { try { await cache.put(cacheKey,new Response(JSON.stringify(result),{headers:{"content-type":"application/json","cache-control":"public, max-age="+(options.ttl || 30)}})); } catch {} }
     return result;
@@ -9694,6 +9774,47 @@ function bozoScheduledOutcome(pick, game) {
 // Independent of the research CSVs: the existing Odds API account carries NFL/CFB
 // finals. Keep a season archive because its endpoint only returns the last three days.
 const bozoScoreArchiveKey = (sport, season) => `bozo:score-finals:${sport}:${season}`;
+/* ⚠️ THIS IS THE LIVE HALF OF THE SCORE FEED, NOT A BACKUP. cfbfastR-data publishes its
+   schedule CSV from four cron slots a week (Sat 16:00 and 20:15 UTC, Sun and Mon 06:30 UTC,
+   Sep–Dec — its .github/workflows/daily_cfb.yml), so a Tuesday–Friday game has no score
+   there until Saturday afternoon, and nflverse's games.csv can trail a final by most of a
+   day. The provider marks a game completed within minutes of the whistle.
+   It used to be fetched only while a LEAGUE leg sat ungraded, every five minutes with no
+   backoff, so a menu or board game nobody had bet stayed unscored for days while a leg
+   that could never match burned two credits a tick. runBozoLiveScores now refreshes it
+   on the five-minute tick only while some scheduled game is due (kickoff + 2.5 h, still
+   not final), never past the provider's three-day horizon, and not at all when nothing
+   is due. Each call costs two provider credits (daysFrom is set).
+   ⚠️ CLOSES OUTRANK SCORES. The budget (docs/bozo-workplan.md D6) is the 500-credit free
+   tier, and one league's closes need ~345–390 of it a month; at two credits every five
+   minutes the old polling could spend a month's quota in a day and starve them. So the
+   cadence follows the credits the provider last reported (bozoScoreRefreshInterval):
+   ten minutes with ≥ 2,000 left, thirty with ≥ 500, hourly below that, and below the
+   floor only one daily probe to notice the monthly reset — the schedule CSVs still land
+   every final eventually. A failed call backs off to hourly. */
+const BOZO_SCORE_REFRESH_MS = 10 * 60 * 1000;
+const BOZO_SCORE_THRIFT_MS = 30 * 60 * 1000;
+const BOZO_SCORE_SLOW_REFRESH_MS = 60 * 60 * 1000;
+const BOZO_SCORE_PROBE_MS = 24 * 60 * 60 * 1000;
+const BOZO_SCORE_CREDIT_FLOOR = 150;
+const BOZO_SCORE_DUE_AFTER_MS = 150 * 60 * 1000;
+const BOZO_SCORE_FAST_WINDOW_MS = 8 * 60 * 60 * 1000;
+const BOZO_SCORE_GIVE_UP_MS = 72 * 60 * 60 * 1000;
+const BOZO_SCORE_DAILY_CAP = 150;   // per sport: a ceiling on a bug, not a working budget
+// A program cannot play twice inside twelve hours; the close capture pins events with the
+// same six-hour window (bozoMatchEvent).
+const BOZO_FINAL_MATCH_MS = 6 * 60 * 60 * 1000;
+
+// Minimum wait between archive refreshes, from the last known archive state.
+function bozoScoreRefreshInterval(archive, overdueLong = false) {
+  const remaining = archive && archive.quotaRemaining;
+  const known = Number.isFinite(remaining);
+  if (known && remaining < BOZO_SCORE_CREDIT_FLOOR) return BOZO_SCORE_PROBE_MS;
+  let ms = !known || remaining >= 2000 ? BOZO_SCORE_REFRESH_MS
+    : remaining >= 500 ? BOZO_SCORE_THRIFT_MS : BOZO_SCORE_SLOW_REFRESH_MS;
+  if (overdueLong || (archive && archive.errorCode)) ms = Math.max(ms, BOZO_SCORE_SLOW_REFRESH_MS);
+  return ms;
+}
 function bozoNormalizeOddsScores(sport, rows, fetchedAt) {
   if (!Array.isArray(rows)) throw new Error("Score provider returned no events array");
   const registry = bozoBuildTeamRegistry(sport).aliases;
@@ -9722,33 +9843,329 @@ function bozoNormalizeOddsScores(sport, rows, fetchedAt) {
   return games;
 }
 
-async function bozoFallbackScores(env, sport, season, nowMs = Date.now()) {
+/* Attach provider finals to scheduled games. ⚠️ NEVER BY EXACT CANONICAL KEY.
+   canonicalKey carries the UTC date, and evening Eastern kickoffs sit on the UTC midnight
+   line: one source's 7:30 PM ET and another's 8:00 PM ET for the same game are different
+   UTC days. The exact-key lookup this replaces could never match those — and they are the
+   midweek MACtion/CUSA nights, precisely the games cfbfastR has not published yet.
+   Teams plus the nearest kickoff inside BOZO_FINAL_MATCH_MS instead. One side may be a
+   provider spelling the registry does not know yet: the known side still pins the game,
+   as long as the unknown side does not resolve to some OTHER registered team. Two equally
+   good candidates is ambiguity, and ambiguity is null — never a guess. The game returned
+   keeps the SCHEDULED names and orientation, so grading resolves a side against the
+   schedule's own spelling, never the provider's. */
+// Index provider rows (finals, near-closes) by normalized teams and kickoff.
+function bozoTeamIndex(rows, sport, facts, registry = bozoBuildTeamRegistry(sport).aliases) {
+  const known = new Set(Object.values(registry));
+  const norm = v => bozoTeamNorm(v, registry);
+  const entries = [];
+  for (const row of rows || []) {
+    const x = row && facts(row);
+    const t = Date.parse((x && x.startsAt) || "");
+    if (!x || !Number.isFinite(t)) continue;
+    entries.push({ f: row, t, home: norm(x.home), away: norm(x.away) });
+  }
+  return { known, norm, entries };
+}
+
+function bozoFinalsIndex(finals, sport, registry = bozoBuildTeamRegistry(sport).aliases) {
+  const done = ((finals && finals.games) || []).filter(f =>
+    f && f.completed === true && f.homeScore != null && f.awayScore != null);
+  return bozoTeamIndex(done, sport,
+    f => ({ startsAt: f.startsAt, home: f.home && f.home.name, away: f.away && f.away.name }), registry);
+}
+
+// The one provider row for a scheduled game, and whether the provider lists it the other
+// way round. Null on no candidate or on a tie.
+function bozoNearestByTeams(index, game) {
+  if (!index || !game) return null;
+  const { known, norm } = index;
+  const resolve = team => [team && team.name, team && team.abbr].map(norm).find(k => known.has(k))
+    || norm(team && team.name);
+  const home = resolve(game.home), away = resolve(game.away);
+  const start = Date.parse(game.startsAt || "");
+  if (!home || !away || home === away || !Number.isFinite(start)) return null;
+  // Provider name against the scheduled team: 2 same team, 1 a spelling the registry does
+  // not know, -1 a DIFFERENT registered team (that pairing is impossible).
+  const fit = (provider, scheduled) => provider === scheduled ? 2 : known.has(provider) ? -1 : 1;
+  let best = null, tied = false;
+  for (const e of index.entries) {
+    const delta = Math.abs(e.t - start);
+    if (delta > BOZO_FINAL_MATCH_MS) continue;
+    for (const swapped of [false, true]) {
+      const a = fit(e.home, swapped ? away : home), b = fit(e.away, swapped ? home : away);
+      if (a < 0 || b < 0 || a + b < 3) continue;   // at least one side must be the same team
+      const score = a + b;
+      if (!best || score > best.score || (score === best.score && delta < best.delta)) {
+        best = { e, swapped, score, delta }; tied = false;
+      } else if (score === best.score && delta === best.delta && e !== best.e) tied = true;
+    }
+  }
+  return best && !tied ? best : null;
+}
+
+function bozoAttachFinal(index, game) {
+  const best = bozoNearestByTeams(index, game);
+  if (!best) return null;
+  const f = best.e.f;
+  return { ...game, completed: true,
+    homeScore: best.swapped ? f.awayScore : f.homeScore,
+    awayScore: best.swapped ? f.homeScore : f.awayScore,
+    scoreSource: f.scoreSource || "the-odds-api", scoreObservedAt: f.scoreObservedAt || null,
+    providerEventId: f.providerEventId || null };
+}
+
+// A leg the schedule cannot place (no KV yet, an id it does not carry) still names its
+// game as "AWAY @ HOME" with a kickoff — enough to pin a provider final.
+function bozoPickAsGame(pick) {
+  const parts = String((pick && pick.game) || "").split(/\s+(?:@|vs\.?)\s+/i);
+  if (parts.length !== 2) return null;
+  return { startsAt: pick.startsAt || pick.commenceTime || null,
+    away: { name: parts[0], abbr: parts[0] }, home: { name: parts[1], abbr: parts[1] } };
+}
+
+async function bozoFallbackScores(env, sport, season, nowMs = Date.now(), options = {}) {
   const key = bozoScoreArchiveKey(sport, season);
+  // One refresh per window no matter how many callers share a tick: grading and the live
+  // job both land here, and the provider's three-day payload costs two credits a call.
   let previous = null;
   try { previous = await env.RL?.get(key, "json"); } catch {}
+  // A minute of slack keeps a cadence from slipping a whole five-minute tick.
+  const minAgeMs = Number.isFinite(options.minAgeMs) ? options.minAgeMs
+    : bozoScoreRefreshInterval(previous) - 60000;
   const saved = { source: "the-odds-api", fetchedAt: previous?.fetchedAt || null,
-    games: previous?.games || [] };
+    checkedAt: previous?.checkedAt || null, games: previous?.games || [],
+    quotaRemaining: previous?.quotaRemaining ?? null, calls: previous?.calls || null };
   const age = nowMs - Date.parse(previous?.checkedAt || "");
-  if (!env.ODDS_API_KEY || (age >= 0 && age < 60000)) return { ...saved, error: previous?.error || null };
+  if (!env.ODDS_API_KEY || (age >= 0 && age < minAgeMs))
+    return { ...saved, error: previous?.error || null, errorCode: previous?.errorCode || null };
+  const day = new Date(nowMs).toISOString().slice(0, 10);
+  const calls = { day, n: (saved.calls && saved.calls.day === day ? Number(saved.calls.n) || 0 : 0) + 1 };
   let next;
   try {
     const response = await bozoOddsApiRequest(env, `sports/${BOZO_ODDS_API_SPORT[sport]}/scores`,
       { daysFrom: 3, dateFormat: "iso" }, { ttl: 60 });
     const games = bozoNormalizeOddsScores(sport, response.data, response.fetchedAt);
-    const merged = new Map(saved.games.map(g => [g.canonicalKey, g]));
+    // Identity is the provider's event id: canonicalKey embeds the registry, which changes.
+    const id = g => g.providerEventId || g.canonicalKey;
+    const merged = new Map(saved.games.map(g => [id(g), g]));
     for (const game of games) {
-      const old = merged.get(game.canonicalKey);
+      const old = merged.get(id(game));
       if (!old || Date.parse(game.scoreObservedAt) >= Date.parse(old.scoreObservedAt))
-        merged.set(game.canonicalKey, game);
+        merged.set(id(game), game);
     }
+    const remaining = response.quota && response.quota["x-requests-remaining"];
     next = { ...saved, fetchedAt: response.fetchedAt, checkedAt: new Date(nowMs).toISOString(),
-      games: [...merged.values()], error: null };
+      games: [...merged.values()], error: null, errorCode: null, calls,
+      quotaRemaining: Number.isFinite(remaining) ? remaining : saved.quotaRemaining };
   } catch (e) {
-    // Never store provider error bodies/URLs, which can contain credentials.
-    next = { ...saved, checkedAt: new Date(nowMs).toISOString(), error: "score_fallback_unavailable" };
+    // Never store provider error bodies/URLs, which can contain credentials. The code is
+    // one of three fixed words, so a quota or rate-limit outage is visible without them.
+    const remaining = e && e.quota && e.quota["x-requests-remaining"];
+    next = { ...saved, checkedAt: new Date(nowMs).toISOString(), calls,
+      error: "score_fallback_unavailable",
+      errorCode: ["rate_limited", "timeout"].includes(e && e.code) ? e.code : "provider_error",
+      quotaRemaining: Number.isFinite(remaining) ? remaining : saved.quotaRemaining };
   }
   try { await env.RL?.put(key, JSON.stringify(next)); } catch {}
   return next;
+}
+
+/* The five-minute tick's score job. Reads the scheduled games, decides whether any is due,
+   and refreshes the provider archive only then. Pure policy over bozoFallbackScores: the
+   archive, its throttle and its error handling stay in one place. */
+async function runBozoLiveScores(env, nowMs = Date.now(), season = SEASON) {
+  const out = {};
+  for (const sport of ["nfl", "cfb"]) {
+    let doc = null, finals = null;
+    try { doc = await bozoScheduleDoc(env, sport, season); } catch { doc = null; }
+    if (!doc || !Array.isArray(doc.games)) { out[sport] = { skipped: "no_schedule" }; continue; }
+    try { finals = await env.RL.get(bozoScoreArchiveKey(sport, season), "json"); } catch { finals = null; }
+    const index = bozoFinalsIndex(finals, sport);
+    let due = 0, freshest = Infinity;
+    for (const game of doc.games) {
+      if (!game || game.completed) continue;
+      const age = nowMs - Date.parse(game.startsAt || "");
+      if (!Number.isFinite(age) || age < BOZO_SCORE_DUE_AFTER_MS || age > BOZO_SCORE_GIVE_UP_MS) continue;
+      if (bozoAttachFinal(index, game)) continue;
+      due++;
+      freshest = Math.min(freshest, age);
+    }
+    if (!due) { out[sport] = { due: 0 }; continue; }
+    if (finals && finals.calls && finals.calls.day === new Date(nowMs).toISOString().slice(0, 10) &&
+        Number(finals.calls.n) >= BOZO_SCORE_DAILY_CAP) {
+      out[sport] = { due, skipped: "daily_cap" };
+      continue;
+    }
+    // Ticks land every five minutes with jitter; a minute of slack keeps a 10-minute
+    // cadence from slipping to fifteen.
+    const interval = bozoScoreRefreshInterval(finals,
+      freshest >= BOZO_SCORE_DUE_AFTER_MS + BOZO_SCORE_FAST_WINDOW_MS);
+    const archive = await bozoFallbackScores(env, sport, season, nowMs, { minAgeMs: interval - 60000 });
+    out[sport] = { due, interval, refreshed: archive.checkedAt === new Date(nowMs).toISOString(),
+      error: archive.errorCode || archive.error || null };
+  }
+  return out;
+}
+
+/* ======================= near-close archive: every game ======================
+   The league close capture prices only the legs on a board. Grading anything else —
+   the Bozo Menu, a model's lean, a source's CLV — needs the market at kickoff for EVERY
+   NFL/FBS game, under the same rules: DraftKings, both sides of the same number, before
+   kickoff, never back-filled from an entry price. SportsGameOdds' free tier trails the
+   book by about ten minutes (docs/bozo-workplan.md D5), so these are labelled
+   NEAR-CLOSE, never close: the last pre-kickoff DraftKings quote this tier can see,
+   captured inside BOZO_NEARCLOSE_LEAD_MS of kickoff.
+   One request per sport per tick, and only while a scheduled game kicks off inside the
+   gate, so an idle tick spends nothing. Each game costs one or two SGO objects (about a
+   hundred a week across NFL and FBS, against 2,500 a month).
+     bozo:nearclose:<sport>:<eastern-date>  — { events: { <sgo event id>: record } }
+   A later pre-kickoff capture replaces an earlier one, because it is closer to the
+   close; a capture at or after kickoff is never written. */
+const BOZO_NEARCLOSE_PREFIX = "bozo:nearclose:";
+const BOZO_NEARCLOSE_LEAD_MS = 7 * 60 * 1000;
+const BOZO_NEARCLOSE_GATE_MS = 20 * 60 * 1000;
+const BOZO_NEARCLOSE_ALT_BAND = 7;   // points either side of the main line
+const bozoNearCloseKey = (sport, date) => `${BOZO_NEARCLOSE_PREFIX}${sport}:${date}`;
+
+// DraftKings' two sides of one game market, main number first, alternates in a band.
+// Spreads pair home x with away -x; totals pair over x with under x. Null unless both
+// sides of the main number are priced.
+function bozoNearCloseMarket(odds, mkt) {
+  const [homeId, awayId] = bozoOddIds(mkt, "game");
+  const a = odds && odds[homeId] && odds[homeId].byBookmaker && odds[homeId].byBookmaker[BOZO_CLOSE_BOOK];
+  const b = odds && odds[awayId] && odds[awayId].byBookmaker && odds[awayId].byBookmaker[BOZO_CLOSE_BOOK];
+  if (!a || !b) return null;
+  const field = mkt === "spread" ? "spread" : mkt === "total" ? "overUnder" : null;
+  const usable = r => !!r && r.available !== false && bzAmerican(r.odds) !== null &&
+    (field === null || Number.isFinite(Number(r[field])));
+  if (!usable(a) || !usable(b)) return null;
+  const stamp = rows => rows.map(r => r.lastUpdatedAt).filter(x => !isNaN(Date.parse(x || ""))).sort().pop() || null;
+  if (mkt === "ml") return { home_price: bzAmerican(a.odds), away_price: bzAmerican(b.odds), updated_at: stamp([a, b]) };
+  const opposite = x => mkt === "spread" ? -x : x;
+  const main = Number(a[field]);
+  if (Math.abs(Number(b[field]) - opposite(main)) > 0.001) return null;
+  const pair = (ra, rb) => mkt === "spread"
+    ? { home_line: Number(ra.spread), home_price: bzAmerican(ra.odds), away_price: bzAmerican(rb.odds) }
+    : { line: Number(ra.overUnder), over_price: bzAmerican(ra.odds), under_price: bzAmerican(rb.odds) };
+  const alternates = [];
+  for (const ra of a.altLines || []) {
+    if (!usable(ra)) continue;
+    const x = Number(ra[field]);
+    if (Math.abs(x - main) < 0.001 || Math.abs(x - main) > BOZO_NEARCLOSE_ALT_BAND) continue;
+    const rb = (b.altLines || []).find(r => usable(r) && Math.abs(Number(r[field]) - opposite(x)) < 0.001);
+    if (rb) alternates.push({ ...pair(ra, rb), updated_at: stamp([ra, rb]) });
+  }
+  alternates.sort((p, q) => (field === "spread" ? p.home_line - q.home_line : p.line - q.line));
+  return { ...pair(a, b), updated_at: stamp([a, b]), alternates };
+}
+
+function bozoNearCloseRecord(event, sport, capturedMs) {
+  const kickoff = Date.parse((event && event.status && event.status.startsAt) || "");
+  const eventId = String((event && event.eventID) || "");
+  if (!eventId || eventId.length > 200 || !Number.isFinite(kickoff) || kickoff <= capturedMs) return null;
+  const team = t => { const n = (t && t.names) || {}; return { name: String(n.long || n.medium || n.short || ""), abbr: String(n.short || "") }; };
+  const teams = { home: team(event.teams && event.teams.home), away: team(event.teams && event.teams.away) };
+  if (!teams.home.name || !teams.away.name) return null;
+  const markets = {};
+  for (const [name, mkt] of [["spread", "spread"], ["total", "total"], ["moneyline", "ml"]]) {
+    const m = bozoNearCloseMarket(event.odds || {}, mkt);
+    if (m) markets[name] = m;
+  }
+  if (!Object.keys(markets).length) return null;
+  return { schema_version: 1, sport, event_id: eventId, kickoff: new Date(kickoff).toISOString(),
+    captured_at: new Date(capturedMs).toISOString(), lead_seconds: Math.round((kickoff - capturedMs) / 1000),
+    label: "near-close", book: BOZO_CLOSE_BOOK, source: "SportsGameOdds", teams, markets };
+}
+
+async function runBozoNearCloses(env, nowMs = Date.now(), season = SEASON) {
+  const kv = env && env.RL;
+  if (!kv) throw new Error("no KV binding for near-close captures");
+  if (!env.SGO_KEY) return { skipped: "sgo_unconfigured" };
+  const out = {};
+  for (const sport of ["nfl", "cfb"]) {
+    let doc = null;
+    try { doc = await bozoScheduleDoc(env, sport, season); } catch { doc = null; }
+    const soon = ((doc && doc.games) || []).some(g => {
+      const t = Date.parse((g && g.startsAt) || "");
+      return Number.isFinite(t) && t > nowMs && t - nowMs <= BOZO_NEARCLOSE_GATE_MS;
+    });
+    if (!soon) { out[sport] = { skipped: "no_kickoff_in_gate" }; continue; }
+    const url = new URL(BOZO_CLOSE_API);
+    url.searchParams.set("leagueID", BOZO_SGO_LEAGUE[sport]);
+    url.searchParams.set("startsAfter", new Date(nowMs).toISOString());
+    url.searchParams.set("startsBefore", new Date(nowMs + BOZO_NEARCLOSE_LEAD_MS).toISOString());
+    url.searchParams.set("oddID", ["ml", "spread", "total"].flatMap(m => bozoOddIds(m, "game")).join(","));
+    url.searchParams.set("includeOpposingOdds", "true");
+    url.searchParams.set("includeAltLines", "true");
+    url.searchParams.set("limit", "100");
+    let events;
+    try { events = await bozoSgoRequest(env, url, { sport, needProps: false, caller: "near-close" }); }
+    catch (e) {
+      // One sport's refusal must not cost the other its closes. Fixed codes only: provider
+      // detail text stays out of KV.
+      out[sport] = { error: ["quota_exceeded", "rate_limited", "timeout", "provider_rejected", "invalid_response"]
+        .includes(e && e.code) ? e.code : "provider_error" };
+      continue;
+    }
+    const byDate = new Map();
+    let unpriced = 0;
+    for (const event of events || []) {
+      const record = bozoNearCloseRecord(event, sport, nowMs);
+      if (!record) { unpriced++; continue; }
+      const date = bozoEasternDate(record.kickoff);
+      if (!byDate.has(date)) byDate.set(date, []);
+      byDate.get(date).push(record);
+    }
+    let stored = 0;
+    for (const [date, records] of byDate) {
+      const key = bozoNearCloseKey(sport, date);
+      let day = null;
+      try { day = await kv.get(key, "json"); } catch { day = null; }
+      if (!day || typeof day.events !== "object" || !day.events) day = { schema_version: 1, sport, date, events: {} };
+      for (const record of records) {
+        const prior = day.events[record.event_id];
+        if (prior && Date.parse(prior.captured_at) >= Date.parse(record.captured_at)) continue;
+        day.events[record.event_id] = { ...record, captures: ((prior && prior.captures) || 0) + 1 };
+        stored++;
+      }
+      await kv.put(key, JSON.stringify(day));
+    }
+    out[sport] = { events: (events || []).length, stored, unpriced };
+  }
+  try { await kv.put(BOZO_NEARCLOSE_PREFIX + "last-run", JSON.stringify({ at: new Date(nowMs).toISOString(), ...out })); } catch {}
+  return out;
+}
+
+// A near-close record in the SCHEDULED orientation: home means the schedule's home team,
+// even when the provider lists a neutral-site game the other way round.
+function bozoNearCloseForGame(index, game) {
+  const best = bozoNearestByTeams(index, game);
+  if (!best) return null;
+  const r = best.e.f, m = r.markets || {};
+  const flipSpread = s => s && ({ home_line: -s.home_line, home_price: s.away_price, away_price: s.home_price,
+    updated_at: s.updated_at || null });
+  const spread = !m.spread ? null : best.swapped
+    ? { ...flipSpread(m.spread), alternates: (m.spread.alternates || []).map(flipSpread).sort((p, q) => p.home_line - q.home_line) }
+    : m.spread;
+  const moneyline = !m.moneyline ? null : best.swapped
+    ? { home_price: m.moneyline.away_price, away_price: m.moneyline.home_price, updated_at: m.moneyline.updated_at || null }
+    : m.moneyline;
+  return { label: r.label, book: r.book, source: r.source, event_id: r.event_id, provider_kickoff: r.kickoff,
+    captured_at: r.captured_at, lead_seconds: r.lead_seconds,
+    spread, total: m.total || null, moneyline };
+}
+
+async function bozoNearCloseIndexFor(env, sport, games) {
+  const dates = [...new Set(games.map(g => bozoEasternDate(g.startsAt)).filter(Boolean))].slice(0, 16);
+  const records = [];
+  for (const date of dates) {
+    let day = null;
+    try { day = await env.RL.get(bozoNearCloseKey(sport, date), "json"); } catch { day = null; }
+    if (day && day.events && typeof day.events === "object") records.push(...Object.values(day.events));
+  }
+  return bozoTeamIndex(records, sport, r => ({ startsAt: r.kickoff,
+    home: r.teams && r.teams.home && r.teams.home.name, away: r.teams && r.teams.away && r.teams.away.name }));
 }
 
 async function bozoGradeFromScheduleKv(env, state, supplied) {
@@ -9791,12 +10208,16 @@ async function bozoGradeFromScheduleKv(env, state, supplied) {
       [BOZO_SCHEDULE_SOURCE.nfl, BOZO_SCHEDULE_SOURCE.cfb, "the-odds-api"].includes(banked.gradeSource) &&
       ["won", "lost", "push"].includes(banked.result) && Number.isFinite(banked.actual);
     if (grade.pending && !bankedFinal && env.ODDS_API_KEY && Number.isFinite(start) && start <= Date.now()) {
-      if (!fallbacks.has(pick.sport))
-        fallbacks.set(pick.sport, await bozoFallbackScores(env, pick.sport, state.season || SEASON));
-      const fallback = fallbacks.get(pick.sport);
+      if (!fallbacks.has(pick.sport)) {
+        const archive = await bozoFallbackScores(env, pick.sport, state.season || SEASON);
+        fallbacks.set(pick.sport, { archive, index: bozoFinalsIndex(archive, pick.sport) });
+      }
+      const { archive: fallback, index } = fallbacks.get(pick.sport);
       sources[pick.sport + "_fallback"] = { source: fallback.source,
         fetchedAt: fallback.fetchedAt, error: fallback.error || null };
-      const final = bozoScheduleFindGame(fallback, { ...pick, startsAt: pick.startsAt || game?.startsAt });
+      // The scheduled row first (its names and kickoff); then the leg's own game and
+      // captured kickoff, which still pins it when the CSV carries a TBD placeholder time.
+      const final = (game && bozoAttachFinal(index, game)) || bozoAttachFinal(index, bozoPickAsGame(pick));
       if (final) {
         game = final;
         grade = bozoScheduledOutcome(pick, final);
@@ -13523,6 +13944,35 @@ async function fclInputs() {
   if(games.some(g=>g.season!==season||!Number.isFinite(Date.parse(g.kickoff_at))))throw new Error('Mixed or invalid NFL slate');
   return {schedule,nfelo,classic,games,season};
 }
+/* ⚠️ A GAME CAN LOCK EARLIER THAN THE PUBLISHED SCHEDULE SAYS, NEVER LATER.
+   /data/nfl-schedule.json takes a kickoff move only through the reviewed full-source PR,
+   so it can trail the league by days: CHI@GB (2026 week 5) moved 20:25Z -> 17:00Z while
+   main still said 20:25Z, which would have kept entries open for three and a half hours
+   of a game already being played. The Worker's hourly nflverse copy in KV sees a move
+   first, so every game closes at the EARLIER of the two kickoffs. A later upstream time
+   is ignored (the published one already closes the game first), and each move is
+   reported in health so the stale schedule is visible rather than silently patched. */
+function fclEarliestKickoffs(games,doc) {
+  const upstream=Array.isArray(doc?.games)?doc.games:[],moves=[];
+  const out=games.map(g=>{
+    const x=upstream.find(u=>u&&String(u.seasonType||'').toUpperCase()==='REG'&&Number(u.week)===Number(g.week)&&
+      fclTeam(u.home?.abbr)===g.home_team&&fclTeam(u.away?.abbr)===g.away_team);
+    const t=Date.parse(x?.startsAt||'');
+    if(!Number.isFinite(t)||t>=Date.parse(g.kickoff_at))return g;
+    const kickoff_at=new Date(t).toISOString().replace('.000Z','Z');
+    moves.push({game_id:g.game_id,scheduled:g.kickoff_at,earliest:kickoff_at,source:doc.source||null});
+    return {...g,kickoff_at};
+  });
+  return {games:out,moves};
+}
+async function fclScheduleDocOrNull(env,season) {
+  try{return await bozoScheduleDoc(env,'nfl',season);}catch{return null;}
+}
+// The entry route's half of the same rule: refuse at whichever kickoff comes first.
+async function fclEarliestKickoffMs(env,game) {
+  const {games}=fclEarliestKickoffs([game],await fclScheduleDocOrNull(env,game.season));
+  return Date.parse(games[0].kickoff_at);
+}
 async function fclCollectResults(env,games,now) {
   // Reuse the existing Worker-reachable nflverse adapter. No ESPN dependency.
   // Keep finals in a different node from forecast locks. A conflicting correction
@@ -13561,11 +14011,14 @@ async function runForecastLive(env) {
   if(!await fbPut(env,leasePath,{id:leaseId,until:started+240e3},lease.etag))return {status:'already_running'};
   try {
     const input=await fclInputs(),{season,nfelo,classic}=input,root=fclRoot(season);
-    const {finals,conflicts}=await fclCollectResults(env,input.games,Date.now());
-    const games=input.games.map(g=>finals[g.game_id]||g), ratings=fclRatings(classic,games);
+    const {games:scheduled,moves}=fclEarliestKickoffs(input.games,await fclScheduleDocOrNull(env,season));
+    const {finals,conflicts}=await fclCollectResults(env,scheduled,Date.now());
+    const games=scheduled.map(g=>finals[g.game_id]||g), ratings=fclRatings(classic,games);
     const old=(await fbGet(env,root+'/models')).data||{}, locks=(await fbGet(env,root+'/locks')).data||{};
     const entryTree=(await fbGet(env,FC_ROOT+'/entries/nfl/'+season)).data||{};
-    const modelDigest=await sha256hex(JSON.stringify({nfelo:nfelo.data.meta,ratings,finals:Object.keys(finals),schedule:input.schedule.integrity}));
+    // A move re-keys the model rows so they are re-captured carrying the earlier kickoff;
+    // no move leaves the digest exactly as it was.
+    const modelDigest=await sha256hex(JSON.stringify({nfelo:nfelo.data.meta,ratings,finals:Object.keys(finals),schedule:input.schedule.integrity,...(moves.length?{moves}:{})}));
     let toto=null,totoError=null;
     try {toto=await fclReadJson('/data/forecast-toto.json');}catch(e){totoError=e.message;}
     let updated=0,locked=0;
@@ -13635,7 +14088,7 @@ async function runForecastLive(env) {
     const health={version:FCL_VERSION,checked_at:fclIso(Date.now()),status:conflicts.length||missing.length||totoError?'attention':'ok',missing_upcoming:missing,
       nfelo_captured_at:nfelo.data.meta.captured_at,nfelo_version:nfelo.data.meta.model_version,
       nfelo_stale:Date.now()-Date.parse(nfelo.data.meta.captured_at)>36*3600e3,
-      updated,locked,finals:Object.keys(finals).length,correction_conflicts:conflicts,toto_error:totoError};
+      updated,locked,finals:Object.keys(finals).length,correction_conflicts:conflicts,toto_error:totoError,kickoff_moves:moves};
     await fbPut(env,root+'/health',health);return health;
   } catch(e) {
     await fbPut(env,FCL_ROOT+'/error',{at:fclIso(Date.now()),error:String(e.message||e)});throw e;
@@ -13655,7 +14108,8 @@ async function forecastLiveRoute(request,url,env,cors) {
   const season=Number(url.searchParams.get('season')||2026);
   if(season!==2026)return json({error:'This contest covers NFL 2026.'},400,cors);
   try {
-    const schedule=await fclReadJson('/data/nfl-schedule.json'),games=schedule.data.games,now=Date.now();
+    const schedule=await fclReadJson('/data/nfl-schedule.json'),now=Date.now();
+    const {games}=fclEarliestKickoffs(schedule.data.games,await fclScheduleDocOrNull(env,season));
     // Never load the growing history ledger for a dashboard request.
     const [md,lk,oc,hc,entryData,botsData,errorData]=await Promise.all([
       ...['models','locks','outcomes','health'].map(k=>fbGet(env,fclRoot(season)+'/'+k)),
@@ -21511,12 +21965,13 @@ const MCP_TOOLS = [
     title: "Live scores",
     catalog: "core",
     readOnlyHint: true,
-    description: "NFL/CFB schedule and scores from the Worker's scheduled nflverse/cfbfastR cache (sport + optional YYYYMMDD dates). Other sports fail until an adapter exists.",
+    description: "NFL/CFB schedule and scores (sport + optional YYYYMMDD dates). The schedule is the Worker's nflverse/cfbfastR cache; finals are overlaid from the Odds API scores archive, refreshed every 10 minutes while a game is due, so a final usually lands within minutes even when cfbfastR (published Sat/Sun/Mon only) has not caught up. Each game names its scoreSource and scoreObservedAt; `feeds` reports both feeds' freshness and any refresh error. Other sports fail until an adapter exists.",
     inputSchema: {
       type: "object",
       properties: {
         sport: { type: "string", enum: ["nfl", "cfb", "nba", "cbb", "mlb", "nhl"], description: "Sport key" },
         dates: { type: "string", description: "YYYYMMDD or YYYYMMDD-YYYYMMDD (optional)" },
+        closes: { type: "boolean", description: "Attach each game's DraftKings NEAR-CLOSE (spread, total, moneyline, both sides, alternates within 7 points), captured inside 7 minutes of kickoff from SportsGameOdds' free tier, which trails the book by about 10 minutes. Labelled near-close, never close." },
       },
       required: ["sport"],
       additionalProperties: false,
@@ -21527,6 +21982,7 @@ const MCP_TOOLS = [
       const u = new URL("https://mcp.internal/scores");
       u.searchParams.set("sport", args.sport);
       if (args.dates) u.searchParams.set("dates", args.dates);
+      if (args.closes === true) u.searchParams.set("closes", "1");
       const resp = await handleScores(u, env, {});
       const data = await resp.json();
       if (!resp.ok) return toolErr("Scores unavailable from this Worker's schedule cache (" + (data.detail || data.error || resp.status) + ").");

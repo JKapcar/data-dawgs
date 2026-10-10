@@ -22,7 +22,9 @@ async function fetchLeague(url) {
   const teams = [];
   for (let offset = 0; offset < refs.length; offset += 20) {
     const batch = await Promise.all(refs.slice(offset, offset + 20).map(getJson));
-    teams.push(...batch.map((team) => ({
+    // groups/80 also lists bowl all-star squads ("SOUTH FLORIDA STARS", "Team Gaither").
+    // They are not programs, and their locations collide with real ones in the alias table.
+    teams.push(...batch.filter((team) => team.isAllStar !== true).map((team) => ({
       id: String(team.id || ""),
       abbreviation: String(team.abbreviation || ""),
       displayName: String(team.displayName || ""),

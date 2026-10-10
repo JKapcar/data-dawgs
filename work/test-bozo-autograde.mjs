@@ -82,8 +82,14 @@ ok(/out\.push\(\{ league: lid, error:/.test(worker),
 /* ---- the cron ---- */
 ok(/bozo:autograde:lasterror/.test(worker),
    "auto-grading has its own lasterror key, so a failure is attributable");
-ok(/const gradeRun = runBozoAutoGrade\(env,/.test(worker) && /ctx\.waitUntil\(gradeRun\)/.test(worker),
+// Chained after the live-score job so a final landing this tick settles this tick — but
+// only after that job's own catch, so a score-feed failure can never stop grading.
+ok(/const scoresRun = runBozoLiveScores\(env, tickMs\)\.catch\(/.test(worker) &&
+   /const gradeRun = scoresRun\.then\(\(\) => runBozoAutoGrade\(env, tickMs\)\)\s*\.catch\(/.test(worker) &&
+   /ctx\.waitUntil\(gradeRun\)/.test(worker),
    "it runs in its own failure domain and is kept alive past the tick");
+ok(/bozo:scores:lasterror/.test(worker) && /ctx\.waitUntil\(scoresRun\)/.test(worker),
+   "the live-score refresh has its own lasterror key and is kept alive past the tick");
 
 /* ---- the override ---- */
 
