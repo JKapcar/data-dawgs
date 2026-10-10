@@ -56,8 +56,10 @@ write prunes expired records atomically; at most 100 records are retained by nor
 
 ## Release gates (not completed by this change)
 
-1. Verify the owner account already has the stored UID-era site_admin role; no role
-   is created or changed by this pilot. Review and approve publication/deployment. Do not deploy or push main implicitly.
+1. Deploy the tested pilot with public intake disabled. Authenticate through the
+   owner page and verify the existing UID-era site_admin role permits readback. No
+   role is created or changed by this pilot. Only then enable public intake.
+   Review and approve publication/deployment. Do not deploy or push main implicitly.
 2. Verify Firebase rules at `/agentFeedback`, including inherited parent rules, deny
    anonymous reads AND writes. Rules are not tracked here. An anonymous read returned
    HTTP 401 `Permission denied` on 2026-10-10; an isolated anonymous conditional write to a unique synthetic entry also returned
@@ -70,7 +72,9 @@ write prunes expired records atomically; at most 100 records are retained by nor
 4. Explicitly set `AGENT_FEEDBACK_ENABLED` to the string `true` only after rule and
    deployment approval. The committed default is `false`; missing dependencies also
    fail closed. Rollback/emergency stop: set it back to `false` and redeploy. This
-   disables inbox reads as well as submissions; stored data remains in Firebase.
+   disables public submissions/discovery; strict authenticated owner review remains
+   available and stored data remains in Firebase. To remove the whole feature, revert
+   the scoped feature commit and redeploy (storage is not deleted automatically).
 5. On the exact deployed version, submit the synthetic example once, retry its key,
    verify one matching receipt through authenticated owner readback, check anonymous
    inbox denial and malformed input rejection. No live write test has been run yet.
