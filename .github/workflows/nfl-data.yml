@@ -26,6 +26,15 @@ on:
     - cron: "7,37 0-6 * 1,9-12 1,2,5"
     - cron: "7,37 23 * 1,9-12 1,4"
   workflow_dispatch:
+    inputs:
+      mode:
+        # The Worker's GitHub pacer dispatches `results` the moment nflverse has a final the
+        # published schedule lacks; a manual run keeps the full refresh by default.
+        description: "full = bank finals and refresh the full-source review PR; results = bank new finals only"
+        required: false
+        default: "full"
+        type: choice
+        options: [full, results]
 
 permissions:
   contents: read
@@ -104,7 +113,7 @@ jobs:
         run: bash work/request-survivor-pages-build.sh
 
       - name: Refresh and validate
-        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 10 * * *'
+        if: (github.event_name == 'workflow_dispatch' && inputs.mode != 'results') || github.event.schedule == '17 10 * * *'
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -129,7 +138,7 @@ jobs:
           python scripts/nfl_data_backbone.py verify-history --base-ref origin/main
           node tools/validate-data.js
       - name: Open or update a review PR
-        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '17 10 * * *'
+        if: (github.event_name == 'workflow_dispatch' && inputs.mode != 'results') || github.event.schedule == '17 10 * * *'
         env:
           GH_TOKEN: ${{ github.token }}
           REFRESH_BRANCH: automation/nfl-data-refresh

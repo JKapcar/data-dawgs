@@ -1,0 +1,125 @@
+{
+ "sport": "cfb",
+ "games": [
+  {
+   "id": "401871066",
+   "short": "NMSU @ FIU",
+   "start": "2026-10-07T23:30:00.000Z",
+   "state": "post",
+   "final": true,
+   "week": 6,
+   "scoreSource": "the-odds-api",
+   "scoreObservedAt": "2026-10-08T08:56:44Z",
+   "teams": [
+    {
+     "abbr": "NMSU",
+     "name": "New Mexico State",
+     "home": false,
+     "score": 3
+    },
+    {
+     "abbr": "FIU",
+     "name": "Florida International",
+     "home": true,
+     "score": 22
+    }
+   ]
+  },
+  {
+   "id": "401870766",
+   "short": "SHSU @ LIB",
+   "start": "2026-10-08T23:00:00.000Z",
+   "state": "post",
+   "final": true,
+   "week": 6,
+   "scoreSource": "the-odds-api",
+   "scoreObservedAt": "2026-10-09T02:39:51Z",
+   "teams": [
+    {
+     "abbr": "SHSU",
+     "name": "Sam Houston",
+     "home": false,
+     "score": 3
+    },
+    {
+     "abbr": "LIB",
+     "name": "Liberty",
+     "home": true,
+     "score": 35
+    }
+   ]
+  },
+  {
+   "id": "401862794",
+   "short": "USF @ UTSA",
+   "start": "2026-10-08T23:30:00.000Z",
+   "state": "pre",
+   "final": false,
+   "week": 6,
+   "scoreSource": "cfbfastR",
+   "scoreObservedAt": "2026-10-05T16:09:17.000Z",
+   "teams": [
+    {
+     "abbr": "USF",
+     "name": "South Florida",
+     "home": false,
+     "score": null
+    },
+    {
+     "abbr": "UTSA",
+     "name": "UTSA",
+     "home": true,
+     "score": null
+    }
+   ]
+  },
+  {
+   "id": "401858481",
+   "short": "IU @ NEB",
+   "start": "2026-10-10T16:00:00.000Z",
+   "state": "pre",
+   "final": false,
+   "week": 6,
+   "scoreSource": "cfbfastR",
+   "scoreObservedAt": "2026-10-05T16:09:17.000Z",
+   "teams": [
+    {
+     "abbr": "IU",
+     "name": "Indiana",
+     "home": false,
+     "score": null
+    },
+    {
+     "abbr": "NEB",
+     "name": "Nebraska",
+     "home": true,
+     "score": null
+    }
+   ]
+  },
+  {
+   "id": "401858482",
+   "short": "BALL @ NU",
+   "start": "2026-10-10T16:30:00.000Z",
+   "state": "pre",
+   "final": false,
+   "week": 6,
+   "scoreSource": "cfbfastR",
+   "scoreObservedAt": "2026-10-05T16:09:17.000Z",
+   "teams": [
+    {
+     "abbr": "BALL",
+     "name": "Ball State",
+     "home": false,
+     "score": null
+    },
+    {
+     "abbr": "NU",
+     "name": "Northwestern",
+     "home": true,
+     "score": null
+    }
+   ]
+  }
+ ]
+}

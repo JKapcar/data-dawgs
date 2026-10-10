@@ -51,13 +51,47 @@ module.exports = async ({github, context, core}) => {
       }
     }
   } catch (error) { problems.push(`Watchdog check failed: ${error.message}`); }
-  if (!problems.length) { core.info('Survivor pipeline checks passed'); return; }
-  const title = `Survivor pipeline alert ${new Date(now).toISOString().slice(0,10)}`;
-  const body = 'Automated pipeline check:\n\n' + problems.map(p => '- ' + p).join('\n') +
-    `\n\nWatch run: ${context.serverUrl}/${repo.owner}/${repo.repo}/actions/runs/${context.runId}`;
+
+  /* ⚠️ ONE ROLLING ISSUE, NOT ONE PER DAY. The dated issues this replaced piled up at one a
+     day (17 open by 2026-10-10, many with seven comments) while the same full-source failure
+     repeated for ten days, and nobody could tell a new problem from the old one. Now the
+     status issue is edited in place, a COMMENT (which is what notifies) is posted only when
+     the set of problems changes, and the issue closes itself when every check passes. */
+  const TITLE = 'Pipeline status (automated)';
+  const LEGACY = /^Survivor pipeline alert \d{4}-\d{2}-\d{2}$/;
+  const runUrl = `${context.serverUrl}/${repo.owner}/${repo.repo}/actions/runs/${context.runId}`;
+  const stamp = new Date(now).toISOString();
   const issues = await github.paginate(github.rest.issues.listForRepo,{...repo,state:'open',creator:'github-actions[bot]',per_page:100});
-  const existing = issues.find(i => i.title === title && !i.pull_request);
-  if (existing) await github.rest.issues.createComment({...repo,issue_number:existing.number,body});
-  else await github.rest.issues.create({...repo,title,body});
+  const rolling = issues.find(i => i.title === TITLE && !i.pull_request);
+  const legacy = issues.filter(i => LEGACY.test(i.title) && !i.pull_request);
+  const close = async (issue, why) => {
+    await github.rest.issues.createComment({...repo,issue_number:issue.number,body:why});
+    await github.rest.issues.update({...repo,issue_number:issue.number,state:'closed',state_reason:'completed'});
+  };
+  if (!problems.length) {
+    if (rolling) await close(rolling, `Resolved: every check passed at ${stamp}.\n\nWatch run: ${runUrl}`);
+    for (const old of legacy) await close(old, `Resolved: every check passed at ${stamp}. Alerts now live in one rolling "${TITLE}" issue.`);
+    core.info('Survivor pipeline checks passed');
+    return;
+  }
+  // Run links change every time; the fingerprint is the problems themselves.
+  const fingerprint = crypto.createHash('sha256')
+    .update(problems.map(p => p.replace(/https?:\/\/\S+/g, '')).sort().join('\n')).digest('hex').slice(0, 12);
+  const list = problems.map(p => '- ' + p).join('\n');
+  const body = `Automated pipeline check — last run ${stamp}:\n\n${list}\n\nWatch run: ${runUrl}\n\n` +
+    `This issue is edited in place by each watch run, gets a comment only when the problems change, ` +
+    `and closes itself when every check passes.\n\n<!-- fingerprint: ${fingerprint} -->`;
+  let number;
+  if (rolling) {
+    number = rolling.number;
+    const prior = (String(rolling.body || '').match(/<!-- fingerprint: ([0-9a-f]+) -->/) || [])[1];
+    await github.rest.issues.update({...repo,issue_number:number,body});
+    if (prior !== fingerprint)
+      await github.rest.issues.createComment({...repo,issue_number:number,body:`Problems changed at ${stamp}:\n\n${list}\n\nWatch run: ${runUrl}`});
+  } else {
+    number = (await github.rest.issues.create({...repo,title:TITLE,body})).data.number;
+  }
+  for (const old of legacy)
+    await close(old, `Superseded by #${number}, which is kept current and closes itself when every check passes.`);
   core.setFailed(problems.join('\n'));
 };
