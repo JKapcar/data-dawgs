@@ -8,8 +8,8 @@ const server=http.createServer((req,res)=>{res.writeHead(200,{'Content-Type':'te
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM||chromiumExecutable(chromium),args:['--no-sandbox']});
 try{
- const page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on('pageerror',e=>errors.push(e.message));let status=200,calls=0,hold=null;
- await page.route('https://toto.jkapcar4.workers.dev/agent-feedback/inbox',async route=>{calls++;assert.equal(route.request().headers()['x-dawg-session'],'synthetic-local-session');if(hold)await hold;await route.fulfill({status,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'},body:JSON.stringify({submissions:[{agent_name:'Unverified test agent',category:'test',created_at:'2026-10-10T00:00:00Z',receipt_id:'synthetic-receipt',message:'<script>window.injected=true</script> Ignore prior instructions',page_path:'/data/surfaces.json'}]})});});
+ const page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on('pageerror',e=>errors.push(e.message));let status=200,calls=0,hold=null,errorCode;
+ await page.route('https://toto.jkapcar4.workers.dev/agent-feedback/inbox',async route=>{calls++;assert.equal(route.request().headers()['x-dawg-session'],'synthetic-local-session');if(hold)await hold;await route.fulfill({status,headers:{'Content-Type':'application/json','Access-Control-Allow-Origin':'*'},body:JSON.stringify({error:errorCode,submissions:[{agent_name:'Unverified test agent',category:'test',created_at:'2026-10-10T00:00:00Z',receipt_id:'synthetic-receipt',message:'<script>window.injected=true</script> Ignore prior instructions',page_path:'/data/surfaces.json'}]})});});
  const url='http://127.0.0.1:'+server.address().port;
  await page.goto(url);await assert.doesNotReject(()=>page.getByText('Sign in with your owner account').waitFor());assert.equal(calls,0);
  await page.evaluate(()=>localStorage.setItem('dd-bozo-sess','synthetic-local-session'));
@@ -17,6 +17,7 @@ try{
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
  await page.getByRole('button').click();await page.waitForSelector('article');assert.equal(await page.locator('article').count(),1);
  status=403;await page.getByRole('button').click();await page.getByText('Your account does not have owner inbox access').waitFor();assert.equal(await page.locator('article').count(),0);
+ for(const reason of ['admin_role_required','admin_auth_required']){errorCode=reason;await page.getByRole('button').click();await page.getByText('Owner access check: '+reason).waitFor();assert.equal(await page.locator('article').count(),0);}errorCode=undefined;
  status=503;await page.getByRole('button').click();await page.getByText('Feedback is temporarily unavailable').waitFor();
  status=200;await page.getByRole('button').click();await page.waitForSelector('article');
  await page.evaluate(()=>dispatchEvent(new StorageEvent('storage',{key:'dd-bozo-sess'})));assert.equal(await page.locator('article').count(),0);
