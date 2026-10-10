@@ -45,15 +45,17 @@ jobs:
       - name: Commit refreshed snapshot on the latest main
         run: |
           cp data/fourth-down.json /tmp/fourth-down-snapshot.json
+          cp data/fourth-down-previous.json /tmp/fourth-down-previous.json
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git restore data/fourth-down.json
+          git restore data/fourth-down.json data/fourth-down-previous.json
           git fetch origin main
           git reset --hard origin/main
           cp /tmp/fourth-down-snapshot.json data/fourth-down.json
+          cp /tmp/fourth-down-previous.json data/fourth-down-previous.json
           node tools/data-manifest.js
           node tools/validate-data.js
-          git add data/fourth-down.json data/index.json
+          git add data/fourth-down.json data/fourth-down-previous.json data/index.json
           if ! git diff --cached --quiet; then
             git commit -m 'Refresh Fourth Down Lab decision snapshot'
             git push origin HEAD:main

@@ -165,6 +165,19 @@ the source bot's weekly scope. Penalties and unusual feed representations may
 still require review. Model-input errors remain visible as unavailable rows.
 There is no push notification or social auto-posting service.
 
+**Previous week.** When the snapshot rolls to a new week, the outgoing week is
+frozen into `/data/fourth-down-previous.json` exactly as last captured (no later
+ESPN revisions). A week with no captured decisions never replaces an existing
+archive, so the file can hold an older week: quote its week number. As seeded on
+2026-10-10 it holds week 3 (captured 2026-09-28, before the Monday night game).
+Week 4 was not captured: the refresh pipeline failed from October 3 to 9.
+
+**What the page opens on.** The latest fourth down of a live game; otherwise the
+current week's largest coach-versus-model gap (the decision cost above), ties
+broken by the strength of the call; otherwise the previous week by the same rule.
+The choice is a display default, not a ranking of coaches. Games with nothing
+captured fold into one "upcoming" chip once any game has been played.
+
 ## Provenance and validation
 
 Exported September 28, 2026; export date is not a model training date. MIT-licensed

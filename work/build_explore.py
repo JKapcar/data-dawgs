@@ -46,7 +46,7 @@ head = re.sub(r'<meta name="description" content="[^"]*">',
               '<meta name="description" content="Query the public Data Dawgs /data files with SQL in your browser '
               '(DuckDB-Wasm) and turn the result into a cited chart. Lab / Pup: pure query, no forecasts.">',
               head, count=1)
-head = sub1(head, '<link rel="stylesheet" href="fourth-down.css?v=e1b6e4326a88">\n', "", "fourth-down css")
+head = sub1(head, '<link rel="stylesheet" href="fourth-down.css?v=e7b0f60025ef">\n', "", "fourth-down css")
 assert "fourth-down" not in head.split("</style>")[-1], "a fourth-down asset survived in the head"
 
 CSS = r"""<style>

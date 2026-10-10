@@ -454,6 +454,14 @@
     "note": "Fitted path model for the Fourth Down Lab Goal Lens. Fitted on 2016-2022; every error below is measured on 2023-2025. Modelled, not observed, when applied to a new play. The WP series is nflfastR spread-adjusted home WP, not the nfl4th blend the calculator prices outcomes with. Not prospectively graded."
    },
    {
+    "path": "/data/fourth-down-previous.json",
+    "url": "https://datadawgs216.com/data/fourth-down-previous.json",
+    "bytes": 232676,
+    "as_of": "2026-09-28",
+    "sha256": "33e3643ed72454eb78278e46385ac5f69c88b424ad8eae485ab0052efaa4d458",
+    "note": "Previous captured week: week 3, seeded from the live snapshot as committed 2026-09-28 (git 4aa3d2a), captured before the Monday night game (PHI @ CHI has no decisions). Week 4 was not captured: the refresh pipeline failed from Oct 3 to Oct 9. Replaced automatically when the live snapshot rolls from week 5 to week 6. Later ESPN revisions are not applied. Delayed snapshot; pregame lines, not live prices."
+   },
+   {
     "path": "/data/leagues/pepperoninipples.json",
     "url": "https://datadawgs216.com/data/leagues/pepperoninipples.json",
     "bytes": 2205,
@@ -557,8 +565,8 @@
    {
     "path": "/data/fourth-down-method.md",
     "url": "https://datadawgs216.com/data/fourth-down-method.md",
-    "bytes": 11541,
-    "sha256": "726c83a4587870657284e0e393853d3cf0382d30551d4d0b743651244246474f",
+    "bytes": 12405,
+    "sha256": "2822ceef1436a79d78e23e896bffe743747d60b6ac1a69189ba6af492a46d850",
     "as_of": "2026-10-10"
    },
    {
