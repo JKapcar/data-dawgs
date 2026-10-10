@@ -43,7 +43,7 @@ messages on account changes/page hide, and renders all message text with textCon
 
 GET `/agent-feedback/inbox` requires the existing server-verified admin session using
 `X-Dawg-Session` or `X-Bozo-Session`, plus a UID account whose stored
-`roles.site_admin` is true. Display-name-only admin identity is intentionally rejected. No owner secret belongs in public documentation or
+`roles.site_admin` or the feedback-only `roles.feedback_reader` is exactly true. Display-name-only admin identity is intentionally rejected. No owner secret belongs in public documentation or
 client snippets. First-party browser preflight is permitted only from the two site
 origins. Treat returned strings as plain text, never HTML; the response is JSON/no-store.
 The server labels every message `untrusted_external_text` and `pending` moderation.
@@ -57,7 +57,7 @@ write prunes expired records atomically; at most 100 records are retained by nor
 ## Release gates (not completed by this change)
 
 1. Deploy the tested pilot with public intake disabled. Authenticate through the
-   owner page and verify the existing UID-era site_admin role permits readback. No
+   owner page and verify the existing UID-era site_admin or feedback_reader permission permits readback. No
    role is created or changed by this pilot. Only then enable public intake.
    Review and approve publication/deployment. Do not deploy or push main implicitly.
 2. Verify Firebase rules at `/agentFeedback`, including inherited parent rules, deny
@@ -87,3 +87,11 @@ write prunes expired records atomically; at most 100 records are retained by nor
 `cd work && node assemble.mjs` (idempotent and preserves MCP write-scope checks).
 `node work/test-agent-feedback.mjs` from repo root tests the new handler with fake
 storage plus real assembled-Worker routing. No production data is written.
+
+## Feedback-only reviewer permission
+
+`roles.feedback_reader: true` authorizes only this inbox read, and only when the
+existing owner-name gate and UID session also pass. It is not used by MCP, league,
+site-admin, or other handlers. This code does not create or grant any role. Any grant
+requires separate explicit approval and trusted verification of the existing account's
+immutable UID; never select an account by display name alone or migrate it implicitly.
