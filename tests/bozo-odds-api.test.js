@@ -139,3 +139,36 @@ test('canonical event and schedule keys use the UTC day for offset-bearing times
  assert.equal(r.ctx.bozoCanonicalScheduleKey('cfb','SHSU','LIB',start),expected);
  assert.equal(r.ctx.bozoCanonicalKey('cfb',r.bozoOddsApiEvent({home_team:'Liberty Flames',away_team:'Sam Houston Bearkats',commence_time:start}),r.reg('cfb')),expected);
 });
+
+test('request diagnostics preserve HTTP status and quota, never response bodies or credential URLs', async()=>{
+ for(const status of [401,403,429,500,503]) {
+  const r=rig(async()=>new Response('private provider message apiKey=test-key',{status,headers:{'x-requests-remaining':'0'}}));
+  await assert.rejects(r.bozoOddsApiRequest({ODDS_API_KEY:'test-key'},'sports/americanfootball_ncaaf/scores',{}),e=>{
+   assert.equal(e.httpStatus,status);assert.equal(e.failureKind,'http_error');
+   assert.equal(e.code,status===429?'rate_limited':'provider_error');
+   assert.equal(e.quota['x-requests-remaining'],0);
+   assert.ok(!String(e).includes('test-key'));assert.ok(!JSON.stringify(e).includes('private provider'));
+   return true;
+  });
+ }
+});
+test('request diagnostics distinguish malformed JSON, network failure and deadline without cache writes', async()=>{
+ for(const mode of ['json','network','deadline']) {
+  let puts=0;
+  const r=rig(async()=>{
+   if(mode==='network')throw Object.assign(Error('https://private.invalid/?apiKey=test-key'),{code:'ENOTFOUND'});
+   return new Response('not json test-key',{headers:{'x-requests-remaining':'432'}});
+  });
+  r.ctx.caches={default:{match:async()=>null,put:async()=>{puts++;}}};
+  await assert.rejects(r.bozoOddsApiRequest({ODDS_API_KEY:'test-key'},'sports/americanfootball_ncaaf/scores',{},
+   mode==='deadline'?{deadline:Date.now()-1}:{}),e=>{
+    assert.equal(e.failureKind,mode==='json'?'invalid_response':mode==='network'?'network_error':'timeout');
+    assert.equal(e.httpStatus,mode==='json'?200:undefined);
+    assert.equal(e.code,mode==='deadline'?'timeout':'provider_error');
+    if(mode==='json')assert.equal(e.quota['x-requests-remaining'],432);
+    assert.ok(!String(e).includes('test-key'));assert.ok(!JSON.stringify(e).includes('test-key'));
+    return true;
+   });
+  assert.equal(puts,0);
+ }
+});
