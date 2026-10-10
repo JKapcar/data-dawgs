@@ -1,13 +1,38 @@
 name: forecast-draw-collect
-on: {workflow_dispatch: {}}
-concurrency: {group: collect, cancel-in-progress: false}
+# Draw the cohort from a frozen pool with a public randomness beacon, then collect forecasts.
+# The randomness is supplied at dispatch (a drand round published after the pool froze), so the
+# selection cannot be chosen after the fact. Skips until data/preregistration.md is ratified.
+on:
+  workflow_dispatch:
+    inputs:
+      cohort: {description: 'Pool date, YYYY-MM-DD', required: true, type: string}
+      randomness: {description: 'drand randomness (hex) for the draw; blank = collect only, cohort already drawn', required: false, type: string}
+permissions: {contents: write}
+concurrency: {group: forecast-study, cancel-in-progress: false}
 jobs:
   draw_collect:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+        with: {ref: main, fetch-depth: 0}
+      - id: gate
+        run: |
+          if [ -f data/preregistration.md ]; then echo ratified=true >> "$GITHUB_OUTPUT"
+          else echo "::notice title=Forecast study not ratified::data/preregistration.md is absent; skipping"; fi
+      - if: steps.gate.outputs.ratified == 'true'
+        uses: actions/setup-python@v5
         with: {python-version: '3.12'}
-      - run: pip install requests
-      - run: python -m pipeline.collect "${{ inputs.cohort }}"
-        env: {OPENROUTER_API_KEY: '${{ secrets.OPENROUTER_API_KEY }}'}
+      - if: steps.gate.outputs.ratified == 'true'
+        run: pip install requests
+      - if: steps.gate.outputs.ratified == 'true'
+        env:
+          COHORT: ${{ inputs.cohort }}
+          RANDOMNESS: ${{ inputs.randomness }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          if [ -n "$RANDOMNESS" ]; then
+            [ -f "data/cohorts/$COHORT/cohort.json" ] && { echo "::error::cohort $COHORT is already drawn; leave randomness blank"; exit 1; }
+            python -m pipeline.draw "$COHORT" --randomness "$RANDOMNESS"
+          fi
+          python -m pipeline.collect "$COHORT"
+          bash work/commit-forecast-study.sh "Forecast study: draw/collect $COHORT"

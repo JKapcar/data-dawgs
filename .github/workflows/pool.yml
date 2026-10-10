@@ -1,11 +1,27 @@
 name: forecast-pool
+# Phase 1 of the prompt study (ai.html). Nothing runs until data/preregistration.md is
+# ratified: until then this job skips with a notice instead of failing. A preregistration that
+# exists but is invalid still fails loudly (pipeline/config.py), by design.
 on: {schedule: [{cron: '30 13 * * 2'}], workflow_dispatch: {}}
+permissions: {contents: write}
+concurrency: {group: forecast-study, cancel-in-progress: false}
 jobs:
   pool:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+        with: {ref: main, fetch-depth: 0}
+      - id: gate
+        run: |
+          if [ -f data/preregistration.md ]; then echo ratified=true >> "$GITHUB_OUTPUT"
+          else echo "::notice title=Forecast study not ratified::data/preregistration.md is absent; skipping"; fi
+      - if: steps.gate.outputs.ratified == 'true'
+        uses: actions/setup-python@v5
         with: {python-version: '3.12'}
-      - run: pip install requests
-      - run: python -m pipeline.pool "$(date -u +%F)"
+      - if: steps.gate.outputs.ratified == 'true'
+        run: pip install requests
+      - if: steps.gate.outputs.ratified == 'true'
+        run: |
+          COHORT="$(date -u +%F)"
+          python -m pipeline.pool "$COHORT"
+          bash work/commit-forecast-study.sh "Forecast study: pool $COHORT"

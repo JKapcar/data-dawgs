@@ -1,11 +1,54 @@
 name: forecast-resolve-grade
-on: {schedule: [{cron: '15 4 * * *'}], workflow_dispatch: {}}
+# Settle every drawn cohort against Polymarket and grade what has settled. Skips until
+# data/preregistration.md is ratified. On a pull request it runs the pipeline's unit tests.
+on:
+  schedule: [{cron: '15 4 * * *'}]
+  workflow_dispatch:
+    inputs:
+      cohort: {description: 'Pool date, YYYY-MM-DD; blank = every drawn cohort', required: false, type: string}
+  pull_request:
+    paths:
+      - 'pipeline/**'
+      - 'tests/test_pipeline.py'
+      - '.github/workflows/pool.yml'
+      - '.github/workflows/draw-collect.yml'
+      - '.github/workflows/resolve-grade.yml'
+      - 'work/commit-forecast-study.sh'
+permissions: {contents: read}
 jobs:
-  resolve_grade:
+  test:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: pip install requests
-      - run: python -m pipeline.resolve "${{ inputs.cohort }}"
+      - run: python -m unittest discover -s tests -p 'test_pipeline.py'
+  resolve_grade:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions: {contents: write}
+    concurrency: {group: forecast-study, cancel-in-progress: false}
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: main, fetch-depth: 0}
+      - id: gate
+        run: |
+          if [ -f data/preregistration.md ]; then echo ratified=true >> "$GITHUB_OUTPUT"
+          else echo "::notice title=Forecast study not ratified::data/preregistration.md is absent; skipping"; fi
+      - if: steps.gate.outputs.ratified == 'true'
+        uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - if: steps.gate.outputs.ratified == 'true'
+        run: pip install requests
+      - if: steps.gate.outputs.ratified == 'true'
+        env: {COHORT: '${{ inputs.cohort }}'}
+        run: |
+          for d in data/cohorts/${COHORT:-*}/; do
+            [ -f "$d/cohort.json" ] || continue
+            c="$(basename "$d")"
+            python -m pipeline.resolve "$c"
+            if [ -f "$d/forecasts.json" ]; then python -m pipeline.grade "$c"; fi
+          done
+          bash work/commit-forecast-study.sh "Forecast study: resolve/grade $(date -u +%F)"
