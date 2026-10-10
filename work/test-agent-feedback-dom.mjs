@@ -12,7 +12,7 @@ w.dispatchEvent(new w.Event('pageshow'));await tick();assert.equal(calls,0);asse
 w.localStorage.setItem('dd-bozo-sess','synthetic');button.click();await tick();assert.equal(d.querySelectorAll('article').length,1);assert.equal(d.querySelectorAll('article img').length,0);assert.match(d.querySelector('article p').textContent,/<img/);
 button.click();await tick();assert.equal(d.querySelectorAll('article').length,1);
 code=403;button.click();await tick();assert.equal(d.querySelectorAll('article').length,0);assert.match(d.getElementById('status').textContent,/does not have owner/);
-code=503;button.click();await tick();assert.match(d.getElementById('status').textContent,/not enabled/);
+code=503;button.click();await tick();assert.match(d.getElementById('status').textContent,/temporarily unavailable/);
 code=200;button.click();await tick();w.dispatchEvent(new w.StorageEvent('storage',{key:'dd-bozo-sess'}));assert.equal(d.querySelectorAll('article').length,0);
 button.click();await tick();w.dispatchEvent(new w.Event('pagehide'));assert.equal(d.querySelectorAll('article').length,0);
 paused=true;button.click();await tick();w.localStorage.removeItem('dd-bozo-sess');w.dispatchEvent(new w.StorageEvent('storage',{key:'dd-bozo-sess'}));release();await tick();assert.equal(d.querySelectorAll('article').length,0);assert.equal(button.disabled,false);

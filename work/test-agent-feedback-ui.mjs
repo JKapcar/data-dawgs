@@ -17,7 +17,7 @@ try{
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
  await page.getByRole('button').click();await page.waitForSelector('article');assert.equal(await page.locator('article').count(),1);
  status=403;await page.getByRole('button').click();await page.getByText('Your account does not have owner inbox access').waitFor();assert.equal(await page.locator('article').count(),0);
- status=503;await page.getByRole('button').click();await page.getByText('The feedback pilot is not enabled yet').waitFor();
+ status=503;await page.getByRole('button').click();await page.getByText('Feedback is temporarily unavailable').waitFor();
  status=200;await page.getByRole('button').click();await page.waitForSelector('article');
  await page.evaluate(()=>dispatchEvent(new StorageEvent('storage',{key:'dd-bozo-sess'})));assert.equal(await page.locator('article').count(),0);
  await page.getByRole('button').click();await page.waitForSelector('article');await page.evaluate(()=>dispatchEvent(new PageTransitionEvent('pagehide')));assert.equal(await page.locator('article').count(),0);

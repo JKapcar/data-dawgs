@@ -18,7 +18,7 @@ async function load(){clear();const mine=generation,token=session();if(!token){s
 button.disabled=true;status.textContent='Loading private feedback…';controller=new AbortController();
 try{const response=await fetch('https://toto.jkapcar4.workers.dev/agent-feedback/inbox',{headers:{'X-Dawg-Session':token},cache:'no-store',credentials:'omit',signal:controller.signal});
 if(mine!==generation||session()!==token)return;
-if(!response.ok){status.textContent=response.status===401?'Your session expired. Sign in again.':response.status===403?'Your account does not have owner inbox access. No messages were loaded.':response.status===503?'The feedback pilot is not enabled yet.':'Feedback is unavailable. Try again shortly.';return;}
+if(!response.ok){status.textContent=response.status===401?'Your session expired. Sign in again.':response.status===403?'Your account does not have owner inbox access. No messages were loaded.':response.status===503?'Feedback is temporarily unavailable. Try again shortly.':'Feedback is unavailable. Try again shortly.';return;}
 const data=await response.json();if(mine!==generation||session()!==token)return;
 for(const row of data.submissions||[]){const article=document.createElement('article');article.append(text('h2',row.agent_name),text('small',row.category+' · '+row.created_at+' · Pending review'),text('p',row.message),text('small',(row.page_path||'No page specified')+' · Receipt '+row.receipt_id));list.append(article);}
 status.textContent=list.children.length?list.children.length+' messages awaiting review.':'No messages awaiting review.';
