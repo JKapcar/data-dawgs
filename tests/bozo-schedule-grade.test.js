@@ -49,7 +49,8 @@ vm.runInContext(sliceBetween('const ROYALE_SD = {', 'function rExpected(')   // 
   + '\n' + worker.slice(gradeRouteStart, gradeRouteEnd)
   + `\nthis.api={bozoCsvTable,bozoEasternKickoff,bozoNormalizeNflSchedule,bozoNormalizeCfbSchedule,
       bozoRefreshOneSchedule,bozoPublicScheduleGames,bozoScheduledOutcome,bozoGradeFromScheduleKv,
-      bozoGradeConfirmCode,readBozoGradeConfirm,bozoGrade,bozoNormalizeOddsScores,bozoFallbackScores};`, context);
+      bozoGradeConfirmCode,readBozoGradeConfirm,bozoGrade,bozoNormalizeOddsScores,bozoFallbackScores,
+      bozoFinalsIndex,bozoAttachFinal,bozoPickAsGame,runBozoLiveScores};`, context);
 const api = context.api;
 const byEspn = (games, id) => games.find(game => game.espnEventId === id);
 
@@ -327,4 +328,124 @@ test('props and half-game picks never use full-game fallback scores', async () =
     B:finalPick('CLEM @ CAL','prop','CLEM')}};
   const out = await api.bozoGradeFromScheduleKv(r.env,state);
   assert.equal(Object.keys(out.results).length, 0); assert.equal(r.calls.length, 0);
+});
+
+/* ---- live finals: tolerant attachment (Oct 2026 midweek CFB gap) ----
+   Reproduces the week-6 shape: cfbfastR has the game at 7:30 PM ET (23:30Z) and the
+   provider at 8:00 PM ET (00:00Z the NEXT UTC day). The old exact canonical-key lookup
+   embedded the UTC date, so this final could never attach. All times are relative to
+   the run so the suite does not age out. */
+const utcMidnight = (() => { const d = new Date(scoreNow - 86400_000); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()); })();
+const schedStart = new Date(utcMidnight - 30 * 60_000).toISOString();
+const provStart = new Date(utcMidnight).toISOString();
+const provUpdated = new Date(utcMidnight + 3 * 3600_000).toISOString();
+const libFinal = { ...scoreEvent('synthetic-lib', 'Sam Houston State Bearkats', 'Liberty Flames', 10, 31),
+  commence_time: provStart, last_update: provUpdated };
+const libRow = { espnEventId: '401870766', canonicalKey: 'cfb|libertyflames~samhoustonbearkats|' + schedStart.slice(0, 10),
+  startsAt: schedStart, completed: false, week: 6, away: { name: 'Sam Houston', abbr: 'SHSU' },
+  home: { name: 'Liberty', abbr: 'LIB' }, awayScore: null, homeScore: null };
+const indexOf = rows => api.bozoFinalsIndex({ games: api.bozoNormalizeOddsScores('cfb', rows, new Date().toISOString()) }, 'cfb');
+
+test('a final across the UTC date line attaches, keeping the scheduled names and orientation', () => {
+  const attached = api.bozoAttachFinal(indexOf([libFinal]), libRow);
+  assert.equal(attached.completed, true);
+  assert.equal(attached.homeScore, 31); assert.equal(attached.awayScore, 10);
+  assert.equal(attached.home.name, 'Liberty'); assert.equal(attached.away.name, 'Sam Houston');
+  assert.equal(attached.scoreSource, 'the-odds-api'); assert.equal(attached.scoreObservedAt, provUpdated);
+  assert.equal(attached.espnEventId, '401870766');
+});
+
+test('a leg keyed only by ESPN id grades from the scheduled row plus the provider final', async () => {
+  const r = scoreRig([libFinal]);
+  r.store.set('schedule:cfb:2026', { schemaVersion: 1, sport: 'cfb', season: 2026, source: 'cfbfastR', games: [libRow] });
+  const pick = { sport: 'cfb', game: 'SHSU @ LIB', eventId: '401870766', canonicalKey: null,
+    mkt: 'spread', side: 'LIB', line: 4.5, period: 'game', startsAt: schedStart };
+  const out = await api.bozoGradeFromScheduleKv(r.env, { season: 2026, picks: { Kap: pick } });
+  assert.equal(out.results.Kap.result, 'won'); assert.equal(out.results.Kap.actual, 21);
+  assert.equal(out.results.Kap.gradeSource, 'the-odds-api');
+  assert.equal(out.pending.length, 0);
+});
+
+test('one unknown provider spelling still attaches; a different registered team never does', () => {
+  const usmRow = { startsAt: schedStart, completed: false,
+    away: { name: 'Southern Miss', abbr: 'USM' }, home: { name: 'Troy', abbr: 'TROY' } };
+  const unknown = { ...scoreEvent('synthetic-usm', 'Hattiesburg Golden Eagles', 'Troy Trojans', 17, 20),
+    commence_time: provStart, last_update: provUpdated };
+  const attached = api.bozoAttachFinal(indexOf([unknown]), usmRow);
+  assert.equal(attached.homeScore, 20); assert.equal(attached.awayScore, 17);
+  const wrongTeam = { ...unknown, id: 'synthetic-arst', away_team: 'Arkansas State Red Wolves',
+    scores: [{ name: 'Troy Trojans', score: '20' }, { name: 'Arkansas State Red Wolves', score: '17' }] };
+  assert.equal(api.bozoAttachFinal(indexOf([wrongTeam]), usmRow), null);
+  const bothUnknown = { ...unknown, id: 'synthetic-unk', home_team: 'Trojans of Alabama',
+    scores: [{ name: 'Trojans of Alabama', score: '20' }, { name: 'Hattiesburg Golden Eagles', score: '17' }] };
+  assert.equal(api.bozoAttachFinal(indexOf([bothUnknown]), usmRow), null);
+});
+
+test('a neutral-site final listed the other way round is re-oriented, and a tie is refused', () => {
+  const ouRow = { startsAt: schedStart, completed: false,
+    away: { name: 'Texas', abbr: 'TEX' }, home: { name: 'Oklahoma', abbr: 'OU' } };
+  const flipped = { ...scoreEvent('synthetic-rrs', 'Oklahoma Sooners', 'Texas Longhorns', 24, 30),
+    commence_time: schedStart, last_update: provUpdated };
+  const attached = api.bozoAttachFinal(indexOf([flipped]), ouRow);
+  assert.equal(attached.awayScore, 30); assert.equal(attached.homeScore, 24);   // Texas 30, OU 24
+  const early = { ...flipped, id: 'synthetic-a', commence_time: new Date(Date.parse(schedStart) - 3600_000).toISOString() };
+  const late = { ...flipped, id: 'synthetic-b', commence_time: new Date(Date.parse(schedStart) + 3600_000).toISOString() };
+  assert.equal(api.bozoAttachFinal(indexOf([early, late]), ouRow), null);
+  const farAway = { ...flipped, id: 'synthetic-c', commence_time: new Date(Date.parse(schedStart) + 7 * 3600_000).toISOString() };
+  assert.equal(api.bozoAttachFinal(indexOf([farAway]), ouRow), null);
+});
+
+test('the archive dedupes by provider event id, so a registry change cannot double a game', async () => {
+  const r = scoreRig([libFinal]);
+  r.store.set('bozo:score-finals:cfb:2026', { games: [{ ...api.bozoNormalizeOddsScores('cfb', [libFinal], new Date().toISOString())[0],
+    canonicalKey: 'cfb|libertyflames~samhoustonbearkats|old-key' }], checkedAt: null });
+  const out = await api.bozoFallbackScores(r.env, 'cfb', 2026, scoreNow);
+  assert.equal(out.games.length, 1); assert.equal(out.games[0].providerEventId, 'synthetic-lib');
+  assert.equal(out.calls.n, 1); assert.equal(out.error, null);
+});
+
+test('live scores: no due game, no provider call; a due game refreshes every ten minutes, then stops once final', async () => {
+  const due = { ...libRow, startsAt: new Date(scoreNow - 3 * 3600_000).toISOString() };
+  const future = { ...libRow, espnEventId: 'f', startsAt: new Date(scoreNow + 3600_000).toISOString() };
+  const r = scoreRig([]);
+  r.store.set('schedule:cfb:2026', { games: [future, { ...due, completed: true, homeScore: 1, awayScore: 0 }] });
+  r.store.set('schedule:nfl:2026', { games: [] });
+  let out = await api.runBozoLiveScores(r.env, scoreNow, 2026);
+  assert.equal(r.calls.length, 0); assert.equal(out.cfb.due, 0);
+
+  r.store.set('schedule:cfb:2026', { games: [future, due] });
+  out = await api.runBozoLiveScores(r.env, scoreNow, 2026);
+  assert.equal(r.calls.length, 1); assert.equal(out.cfb.due, 1); assert.equal(out.cfb.refreshed, true);
+  await api.runBozoLiveScores(r.env, scoreNow + 5 * 60_000, 2026);
+  assert.equal(r.calls.length, 1, 'throttled inside the window');
+  await api.runBozoLiveScores(r.env, scoreNow + 10 * 60_000, 2026);
+  assert.equal(r.calls.length, 2);
+
+  // The final arrives: the game attaches and polling stops.
+  const final = { ...scoreEvent('synthetic-due', 'Sam Houston State Bearkats', 'Liberty Flames', 3, 7),
+    commence_time: due.startsAt, last_update: new Date(scoreNow - 60_000).toISOString() };
+  context.bozoOddsApiRequest = async (_env, path, params) => {
+    r.calls.push({ path, params }); return { data: [final], fetchedAt: new Date(scoreNow).toISOString(), quota: { 'x-requests-remaining': 4321 } };
+  };
+  out = await api.runBozoLiveScores(r.env, scoreNow + 20 * 60_000, 2026);
+  assert.equal(r.calls.length, 3); assert.equal(r.store.get('bozo:score-finals:cfb:2026').quotaRemaining, 4321);
+  out = await api.runBozoLiveScores(r.env, scoreNow + 40 * 60_000, 2026);
+  assert.equal(r.calls.length, 3); assert.equal(out.cfb.due, 0);
+});
+
+test('live scores: long-overdue games poll hourly, and the daily cap holds', async () => {
+  const stale = { ...libRow, startsAt: new Date(scoreNow - 20 * 3600_000).toISOString() };
+  const r = scoreRig([]);
+  r.store.set('schedule:cfb:2026', { games: [stale] });
+  await api.runBozoLiveScores(r.env, scoreNow, 2026);
+  await api.runBozoLiveScores(r.env, scoreNow + 15 * 60_000, 2026);
+  assert.equal(r.calls.length, 1, 'slow cadence');
+  await api.runBozoLiveScores(r.env, scoreNow + 61 * 60_000, 2026);
+  assert.equal(r.calls.length, 2);
+  const archive = r.store.get('bozo:score-finals:cfb:2026');
+  r.store.set('bozo:score-finals:cfb:2026', { ...archive, checkedAt: null, calls: { day: new Date(scoreNow + 3 * 3600_000).toISOString().slice(0, 10), n: 150 } });
+  const out = await api.runBozoLiveScores(r.env, scoreNow + 3 * 3600_000, 2026);
+  assert.equal(out.cfb.skipped, 'daily_cap'); assert.equal(r.calls.length, 2);
+  const gone = await api.runBozoLiveScores(r.env, scoreNow + 80 * 3600_000, 2026);
+  assert.equal(gone.cfb.due, 0, 'past the provider horizon nothing is due');
 });

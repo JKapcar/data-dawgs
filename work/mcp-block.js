@@ -5094,7 +5094,7 @@ const MCP_TOOLS = [
     title: "Live scores",
     catalog: "core",
     readOnlyHint: true,
-    description: "NFL/CFB schedule and scores from the Worker's scheduled nflverse/cfbfastR cache (sport + optional YYYYMMDD dates). Other sports fail until an adapter exists.",
+    description: "NFL/CFB schedule and scores (sport + optional YYYYMMDD dates). The schedule is the Worker's nflverse/cfbfastR cache; finals are overlaid from the Odds API scores archive, refreshed every 10 minutes while a game is due, so a final usually lands within minutes even when cfbfastR (published Sat/Sun/Mon only) has not caught up. Each game names its scoreSource and scoreObservedAt; `feeds` reports both feeds' freshness and any refresh error. Other sports fail until an adapter exists.",
     inputSchema: {
       type: "object",
       properties: {

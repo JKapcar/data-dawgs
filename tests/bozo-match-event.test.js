@@ -58,7 +58,8 @@ test('the Week 1 floor matches UNT @ IU and both supported separators', () => {
 });
 
 test('the ESPN registry joins abbreviations to SGO long names without collapsing Miami', () => {
-  assert.equal(cfbBuilt.teamCount, 148);
+  // 148 seed rows less the ten bowl all-star squads (BOZO_TEAM_SEED_EXCLUDED).
+  assert.equal(cfbBuilt.teamCount, 138);
   assert.equal(nflBuilt.teamCount, 32);
   assert.equal(bozoTeamNorm('UNT', cfbRegistry), bozoTeamNorm('North Texas', cfbRegistry));
   assert.equal(bozoTeamNorm('IU', cfbRegistry), bozoTeamNorm('Indiana', cfbRegistry));
@@ -67,6 +68,25 @@ test('the ESPN registry joins abbreviations to SGO long names without collapsing
   assert.equal(bozoMatchEvent(fixture.data, { game: 'M-OH @ PITT' }, cfbRegistry)?.eventID,
     'ndZjaKF9HZGCGNyZ1w45');
   assert.equal(bozoMatchEvent(fixture.data, { game: 'MIA @ PITT' }, cfbRegistry), null);
+});
+
+test('all-star seed rows no longer make a real program ambiguous', () => {
+  // "SOUTH FLORIDA STARS" (ESPN id 3198) shares the location "South Florida" with USF.
+  // While it sat in the registry, cfbfastR's "South Florida" resolved to nothing and no USF
+  // game could ever take a provider final.
+  const usf = bozoTeamNorm('USF', cfbRegistry);
+  assert.equal(usf, 'southfloridabulls');
+  for (const name of ['South Florida', 'South Florida Bulls', 'USF']) {
+    assert.equal(bozoTeamNorm(name, cfbRegistry), usf, name);
+  }
+  for (const allStar of ['SOUTH FLORIDA STARS', 'Team Gaither', 'East All-Stars']) {
+    assert.equal(Object.values(cfbRegistry).includes(bozoTeamNorm(allStar, cfbRegistry)), false, allStar);
+  }
+  // Long-form provider spellings resolve to the ESPN program, one-to-one.
+  assert.equal(bozoTeamNorm('Southern Mississippi Golden Eagles', cfbRegistry), bozoTeamNorm('USM', cfbRegistry));
+  assert.equal(bozoTeamNorm('Appalachian State Mountaineers', cfbRegistry), bozoTeamNorm('APP', cfbRegistry));
+  assert.equal(bozoTeamNorm('Connecticut Huskies', cfbRegistry), bozoTeamNorm('CONN', cfbRegistry));
+  assert.equal(bozoTeamNorm('North Carolina State Wolfpack', cfbRegistry), bozoTeamNorm('NCSU', cfbRegistry));
 });
 
 test('the NFL registry supports both separators with the full three-name SGO shape', () => {
