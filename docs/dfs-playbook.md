@@ -1,6 +1,6 @@
 # DFS Labs Playbook
 
-Updated October 5, 2026. Operating instructions for DraftKings NFL Classic and Showdown, for people and personal AIs. This guide describes the implemented workflow; simulation outputs remain model estimates. Read the live `dd_dfs_schema` for current fields and limits. The older DFS Labs Bible is a research archive, not proof of calibration or a list of shipped features.
+Updated October 9, 2026. Operating instructions for DraftKings NFL Classic and Showdown, for people and personal AIs. This guide describes the implemented workflow; simulation outputs remain model estimates. Read the live `dd_dfs_schema` for current fields and limits. The older DFS Labs Bible is a research archive, not proof of calibration or a list of shipped features.
 
 ## Start here
 
@@ -10,13 +10,51 @@ Each person uses their own account and authorized projection files. A public gui
 
 ## The short instruction to give your AI
 
-Read https://datadawgs216.com/docs/dfs-playbook.md, discover my Data Dawgs tools, and call dd_dfs_schema. Use my saved DFS workspace and contest screenshots to build and compare lineups for each actual contest. Check the data before solving, use the actual field and payout settings, and give me a short menu of defensible game-script choices. Show the cost of weaker choices. I choose how many entries to play. Audit my combined exposure, refresh availability before lock, and provide a contest-to-lineup table. Ask only for missing inputs. Do not claim a simulation ran unless it did, invent unavailable EV, or submit paid entries.
+Read https://datadawgs216.com/docs/dfs-playbook.md, discover my Data Dawgs tools, and call dd_dfs_schema. Use my saved DFS workspace and contest screenshots to build and compare lineups for each actual contest. Check the data before solving, use the actual field and payout settings, and give me a short menu of defensible game-script choices. Show the cost of weaker choices. I choose how many entries to play. Audit my combined exposure, refresh availability before lock, and provide a contest-to-lineup table. Ask only for missing inputs. Rank evidence by section 0 of the playbook and label anything else as a hypothesis. Do not claim a simulation ran unless it did, invent unavailable EV, or submit paid entries.
+
+## Optional command words
+
+Users can drive the workflow with one word plus their files. Ask for anything a command needs that is missing.
+
+| Word | What the AI does |
+| --- | --- |
+| `screen` | Screens the listed contests (section 1): rake, payout shape, entry cap against the user's entry count, total buy-in against bankroll |
+| `classic` or `showdown` | Runs sections 1–7 for that format. Showdown starts with a menu of captains and game scripts for the user to choose from |
+| `sim` | Simulates the actual contests and ranks candidates without overclaiming (section 6) |
+| `swap` | Late swap from the live state: unlocked slots only, with the remaining field in mind; says whether it protects position or chases |
+| `results` | Builds the post-slate audit (section 8) |
+| `review` | Summarizes the ledger by format, contest type and construction, with sample sizes |
+
+## 0. Weigh evidence before using it
+
+Rank evidence before acting on it. First, the user's own logged results (section 8). Second, the user's private research notes, whose confidence labels are binding. Third, published studies with a stated method and sample. Everything else, including podcasts, videos, social posts and your general knowledge, is a hypothesis: label it as one when it shapes a recommendation. Logged results outrank published research only once their interval excludes the published figure; until then, show the two side by side.
+
+- Name the format first: Classic or Showdown, plus field size, buy-in and entry cap. Findings do not transfer between formats, or between a 1,500-entry contest and a 100,000-entry one.
+- A rate among winners shows nothing about leverage without the field's rate for the same thing. State or ask for the comparator.
+- When a number drives a decision, give its season, sample size and contest type. An old top-100 study gives a direction, not a current rule.
+- Cash, top-10 and top-1% rates are not ROI. Say ROI is unknown until duplicate prize splits are accounted for.
+- When credible sources disagree, show both sides and the test that would settle it. Do not average them.
+- Label any figure computed from published numbers as derived.
+
+| Label | Meaning | How to use it |
+| --- | --- | --- |
+| verified | Checked against its source; not contradicted by independent evidence | Default rule |
+| challenged | Direction holds; size or currency disputed | Use the direction, never the exact number |
+| vendor-only | One vendor's data, not reproduced elsewhere | Working rule or tiebreaker; retest in season |
+| measured | A Data Dawgs estimate from public data, such as `dd_dfs_correlations` | League-average structure, not a forecast for a specific game |
+| social | A number from a social post | Log it and test it; never change a rule because of one |
+| hypothesis | Anything outside the ranks above | Test it before relying on it |
+| own-data | The user's logged results | Top rank once the sample supports it; always state n |
+
+Private notes may use their own names for these labels; map each to the closest row.
 
 ## 1. Establish the slate and each contest
 
 Record the sport, date, timezone, site, format, slate or draft-group ID and lock time. Do not combine games, formats or vendor files just because the names look similar. For every contest, capture its ID/name, buy-in, field capacity and current entrants, maximum entries per person, the user's entry count, prize pool and full payout table when available. Record where and when these came from.
 
 Ask for missing screenshots or exports once; prepare candidates while waiting. Never infer field size from a contest name, buy-in or prize pool alone. Distinguish projected final fill from current entrants. A default profile is a scenario, not the user's actual lobby. The user sets budget and entry count; a 150-entry cap is not a recommendation to buy 150 entries.
+
+Screen each contest before building for it. Rake is 1 − prize pool ÷ (entries × entry fee). Lower rake, flatter payouts, smaller fields and an entry cap near the user's own entry count are friendlier. Contests full of max-entry players are a structural disadvantage for someone entering a few lineups. If the user asks for a bankroll rule, the house default is total weekly buy-ins at or under 1/40 of bankroll, with more cushion for larger, more top-heavy fields.
 
 ## 2. Audit the inputs before choosing players
 
@@ -79,8 +117,15 @@ Return one row per purchased or intended entry: contest ID/name, entry fee, rost
 
 Before export, recheck official inactives, slate, eligibility, salary cap, unique players, team/game constraints, slot IDs, existing locked players, entry count and current exposures. Never re-optimize a locked entry as if every slot were open. Re-run affected comparisons after fresh news. Preserve the selected rosters and their evaluation receipt before selection invalidates prior results. The user reviews and submits entries.
 
+## 8. Close the loop after the slate
+
+- Build the post-lock audit from DraftKings contest-standings files: sign in, open dfs.html#standings, choose the slate's saved workspace, enter the DraftKings username and add the standings CSVs. The ledger joins each entry to the pre-lock workspace and refuses snapshots saved after lock unless overridden. Command line: `node tools/dfs-ledger.mjs`. Reference: https://datadawgs216.com/docs/dfs-results-ledger.md
+- Check the three ownership misses that sink lineups after lock: the stack's correlated pieces owned more than projected, chalk players owned together more often than their individual ownerships imply, and the intended differentiator becoming popular.
+- Compare pre-lock and post-lock expectations. One slate never changes a rule.
+- The ledger is the user's own-data rank (section 0). Report sample sizes. ROI needs hundreds of entries in a bucket before it can outrank published research; cash and top-10 rates settle sooner.
+
 ## Maintenance and evidence
 
 This is the reusable operating guide; current-slate research belongs in the user's private workspace or dated report. Technical reference: https://datadawgs216.com/docs/dfs-mcp-workspace.md. Historical research: https://datadawgs216.com/docs/DFS_LABS_BIBLE.md. Live schema and deployed behavior take precedence for capabilities. Historical findings do not establish this tool's calibration.
 
-When a tool, workflow or material model limit changes, update this guide, its app rendering, the schema guidance and discovery links in the same release. Source: docs/dfs-playbook.md; render with node tools/sync-dfs-playbook.mjs. Public instructions must never embed subscriber projections, user lineups or connector credentials.
+When a tool, workflow or material model limit changes, update this guide, its app rendering, the schema guidance and discovery links in the same release. Source: docs/dfs-playbook.md; render with node tools/sync-dfs-playbook.mjs. Public instructions must never embed subscriber projections, subscriber research figures, user lineups or connector credentials. Evidence rules here stay generic; numbers from subscriber research belong in each user's private notes.

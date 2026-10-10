@@ -11,25 +11,23 @@ Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHous
 
 ## The DawgHouse
 
-- [The shelf](/dawghouse.html) + [inventory](/data/pound-tools.json): blocked NFL work with exact blockers + 44 CFB ideas. Fourteen CFB tools ARE callable over MCP; roadmap ideas are not.
+- [The shelf](/dawghouse.html) + [inventory](/data/pound-tools.json): blocked NFL work + exact blockers + 44 CFB ideas. Fourteen CFB tools ARE MCP-callable; roadmap ideas are not.
 - [Contracts](/data/model-contracts.json): forecast fields, receipt rules, calculator I/O.
 - [Provenance](/data/upstream-models.json): repos, commits, dates, licenses, integration mode.
 - [NFL schedule](/data/nfl-schedule.json): 272 validated 2026 games, locked snapshot.
 - [538 Classic Elo](/data/538-classic.json) ([method](/data/538-classic-methodology.md)): 32 ratings, 272 ungraded forecasts.
 - [Normalized model receipts](/data/model-receipts.json): 1,088 append-only prospective forecasts, 4 model lines, 2 independent.
-
-- [Calculators](/calculators.html): deterministic betting + forecast maths; inputs not stored.
-
+- [Calculators](/calculators.html): deterministic betting/forecast maths; inputs not stored.
 - [Fourth Down Lab](/fourth-down.html): go/kick/punt. [Data](/data/fourth-down.json).
 
 ## Hubs
 
 - [DateDawg](/datedawg.html): local ZIP/JSON reciprocal-acceptance dashboard; no upload, backend memory or observed Hinge cohort.
-- [Arena](/arena.html): games against other people: Bozo, Guillotine, Survivor, DFS,
+- [Arena](/arena.html): games vs other people: Bozo, Guillotine, Survivor, DFS,
 the live draft rig, a [32-team wins pool](/teamdraft.html).
-- [Library](/data.html): each index.json file under its owning surface, plus sources read, not republished; owns no data.
+- [Library](/data.html): each index.json file by owning surface, plus sources read, not republished; owns no data.
 - [Data Explorer](/explore.html): browser SQL + charts over /data; cites file + as_of.
-- [NFL](/nfl.html): EPA, nfelo, calculators, blocked NFL work with its blockers.
+- [NFL](/nfl.html): EPA, nfelo, calculators, blocked NFL work + blockers.
 - [NFL Weather](/weather.html) + [stadiums](/data/nfl-stadiums.json) + [method](/data/weather-method.md): NWS hourly at kickoff (Pup; not impact model).
 
 ## College football
@@ -45,7 +43,7 @@ the live draft rig, a [32-team wins pool](/teamdraft.html).
 ## Draft
 
 - [Player pool + MV](/data/pool.json): 613 players; 8 formats; `half14` derived, SF Half hybrid; `2026-08-24`.
-- [Dynasty ranks](/data/dynasty-ranks.json): 334 players/picks; 1QB + SF/TE-premium ranks and values, not observed prices.
+- [Dynasty ranks](/data/dynasty-ranks.json): 334 players/picks; 1QB + SF/TE-premium ranks + values, not observed prices.
 - [League](/data/league.json): 14 teams, $200, 15 spots, derived `half14`, no kicker.
 - [2026 strategy](/data/strategy.md): positional curves + format playbooks; testable structure apart from analyst priors.
 - [War Room](/fantasy-warroom.html): private Yahoo/ESPN/Sleeper league context, DataDawg$ + replacement levels. Deployed `dd_war_room` and `dd_fantasy_leagues` let personal AIs pick saved leagues. No public account data.
@@ -53,7 +51,7 @@ the live draft rig, a [32-team wins pool](/teamdraft.html).
 ## Models and data
 
 - [Team + QB EPA](/data/epa-teams.json): nflverse pbp 2023-2025 + 2026 Wk1-2; descriptive, not predictive.
-- [nfelo](/data/nfelo.json): ratings, current-season lines, backtest; mirrored daily from greerreNFL/nfelo (meta.captured_at, meta.sha). Backtest is in-sample; ratings move only after games are played.
+- [nfelo](/data/nfelo.json): ratings, current-season lines, backtest; daily mirror of greerreNFL/nfelo (meta.captured_at, meta.sha). Backtest is in-sample; ratings move only after games are played.
 - [Schedule + win probabilities](/data/survivor.json): 272 games; market-derived if available, else model-derived.
 - [Parameters](/data/models.json): margin, Bozo, survivor assumptions + limitations.
 
@@ -62,7 +60,7 @@ the live draft rig, a [32-team wins pool](/teamdraft.html).
 - [Pre-registered forecasts](/data/receipts.json): 272 calls locked 2026-08-06; the lock is `integrity.sha256`.
 - [Survivor receipts](/data/survivor-receipts.json): pre-kickoff top pick, graded after.
 - [DFS week objects](/data/dfs-weeks.json): locked week receipts (lineup hashes + expectations; realized:null until Monday ingest). Aggregates only — never player lists/projections/ownership (I3).
-- [Rankings report card](/data/rankings-grades.json): ranking services graded vs actual PPR finishes; pre-registered, derived scores only, ungraded until W1.
+- [Rankings report card](/data/rankings-grades.json): rankers graded vs actual PPR finishes; pre-registered, derived scores only, ungraded until W1.
 - [Receipt method](/data/receipts-method.md): hypotheses, grading, hash reproduction, tier collar.
 - [Bozo rules](/data/bozo-rules.json) ([prose](/data/bozo-rules.md)): open weekly one-leg parlay.
 - [House reasoning rules](/data/method.md): base rates, ranges, falsifiers, selection bias.
@@ -78,7 +76,7 @@ the live draft rig, a [32-team wins pool](/teamdraft.html).
 
 ## DFS Labs
 
-[Playbook](/docs/dfs-playbook.md): start here for tools, actual-lobby construction and checks. [App](/dfs.html#dfsPlaybook): Copy AI starter. Use personal access and live `dd_dfs_schema`; [MCP reference](/docs/dfs-mcp-workspace.md). The older Bible is historical research, not current instructions.
+[Playbook](/docs/dfs-playbook.md): start here for evidence rules, tools, lobby builds and checks. [App](/dfs.html#dfsPlaybook): Copy AI starter. Use personal access and live `dd_dfs_schema`; [MCP reference](/docs/dfs-mcp-workspace.md). The older Bible is historical research, not current instructions.
 
 ## Bozo Menu
 
