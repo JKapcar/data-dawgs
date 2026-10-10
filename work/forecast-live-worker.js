@@ -23,6 +23,35 @@ async function fclInputs() {
   if(games.some(g=>g.season!==season||!Number.isFinite(Date.parse(g.kickoff_at))))throw new Error('Mixed or invalid NFL slate');
   return {schedule,nfelo,classic,games,season};
 }
+/* ⚠️ A GAME CAN LOCK EARLIER THAN THE PUBLISHED SCHEDULE SAYS, NEVER LATER.
+   /data/nfl-schedule.json takes a kickoff move only through the reviewed full-source PR,
+   so it can trail the league by days: CHI@GB (2026 week 5) moved 20:25Z -> 17:00Z while
+   main still said 20:25Z, which would have kept entries open for three and a half hours
+   of a game already being played. The Worker's hourly nflverse copy in KV sees a move
+   first, so every game closes at the EARLIER of the two kickoffs. A later upstream time
+   is ignored (the published one already closes the game first), and each move is
+   reported in health so the stale schedule is visible rather than silently patched. */
+function fclEarliestKickoffs(games,doc) {
+  const upstream=Array.isArray(doc?.games)?doc.games:[],moves=[];
+  const out=games.map(g=>{
+    const x=upstream.find(u=>u&&String(u.seasonType||'').toUpperCase()==='REG'&&Number(u.week)===Number(g.week)&&
+      fclTeam(u.home?.abbr)===g.home_team&&fclTeam(u.away?.abbr)===g.away_team);
+    const t=Date.parse(x?.startsAt||'');
+    if(!Number.isFinite(t)||t>=Date.parse(g.kickoff_at))return g;
+    const kickoff_at=new Date(t).toISOString().replace('.000Z','Z');
+    moves.push({game_id:g.game_id,scheduled:g.kickoff_at,earliest:kickoff_at,source:doc.source||null});
+    return {...g,kickoff_at};
+  });
+  return {games:out,moves};
+}
+async function fclScheduleDocOrNull(env,season) {
+  try{return await bozoScheduleDoc(env,'nfl',season);}catch{return null;}
+}
+// The entry route's half of the same rule: refuse at whichever kickoff comes first.
+async function fclEarliestKickoffMs(env,game) {
+  const {games}=fclEarliestKickoffs([game],await fclScheduleDocOrNull(env,game.season));
+  return Date.parse(games[0].kickoff_at);
+}
 async function fclCollectResults(env,games,now) {
   // Reuse the existing Worker-reachable nflverse adapter. No ESPN dependency.
   // Keep finals in a different node from forecast locks. A conflicting correction
@@ -61,11 +90,14 @@ async function runForecastLive(env) {
   if(!await fbPut(env,leasePath,{id:leaseId,until:started+240e3},lease.etag))return {status:'already_running'};
   try {
     const input=await fclInputs(),{season,nfelo,classic}=input,root=fclRoot(season);
-    const {finals,conflicts}=await fclCollectResults(env,input.games,Date.now());
-    const games=input.games.map(g=>finals[g.game_id]||g), ratings=fclRatings(classic,games);
+    const {games:scheduled,moves}=fclEarliestKickoffs(input.games,await fclScheduleDocOrNull(env,season));
+    const {finals,conflicts}=await fclCollectResults(env,scheduled,Date.now());
+    const games=scheduled.map(g=>finals[g.game_id]||g), ratings=fclRatings(classic,games);
     const old=(await fbGet(env,root+'/models')).data||{}, locks=(await fbGet(env,root+'/locks')).data||{};
     const entryTree=(await fbGet(env,FC_ROOT+'/entries/nfl/'+season)).data||{};
-    const modelDigest=await sha256hex(JSON.stringify({nfelo:nfelo.data.meta,ratings,finals:Object.keys(finals),schedule:input.schedule.integrity}));
+    // A move re-keys the model rows so they are re-captured carrying the earlier kickoff;
+    // no move leaves the digest exactly as it was.
+    const modelDigest=await sha256hex(JSON.stringify({nfelo:nfelo.data.meta,ratings,finals:Object.keys(finals),schedule:input.schedule.integrity,...(moves.length?{moves}:{})}));
     let toto=null,totoError=null;
     try {toto=await fclReadJson('/data/forecast-toto.json');}catch(e){totoError=e.message;}
     let updated=0,locked=0;
@@ -135,7 +167,7 @@ async function runForecastLive(env) {
     const health={version:FCL_VERSION,checked_at:fclIso(Date.now()),status:conflicts.length||missing.length||totoError?'attention':'ok',missing_upcoming:missing,
       nfelo_captured_at:nfelo.data.meta.captured_at,nfelo_version:nfelo.data.meta.model_version,
       nfelo_stale:Date.now()-Date.parse(nfelo.data.meta.captured_at)>36*3600e3,
-      updated,locked,finals:Object.keys(finals).length,correction_conflicts:conflicts,toto_error:totoError};
+      updated,locked,finals:Object.keys(finals).length,correction_conflicts:conflicts,toto_error:totoError,kickoff_moves:moves};
     await fbPut(env,root+'/health',health);return health;
   } catch(e) {
     await fbPut(env,FCL_ROOT+'/error',{at:fclIso(Date.now()),error:String(e.message||e)});throw e;
@@ -155,7 +187,8 @@ async function forecastLiveRoute(request,url,env,cors) {
   const season=Number(url.searchParams.get('season')||2026);
   if(season!==2026)return json({error:'This contest covers NFL 2026.'},400,cors);
   try {
-    const schedule=await fclReadJson('/data/nfl-schedule.json'),games=schedule.data.games,now=Date.now();
+    const schedule=await fclReadJson('/data/nfl-schedule.json'),now=Date.now();
+    const {games}=fclEarliestKickoffs(schedule.data.games,await fclScheduleDocOrNull(env,season));
     // Never load the growing history ledger for a dashboard request.
     const [md,lk,oc,hc,entryData,botsData,errorData]=await Promise.all([
       ...['models','locks','outcomes','health'].map(k=>fbGet(env,fclRoot(season)+'/'+k)),

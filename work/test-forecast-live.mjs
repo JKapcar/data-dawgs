@@ -45,7 +45,7 @@ class Clock extends Date {constructor(...a){super(...(a.length?a:[clock]));} sta
 const ctx=vm.createContext({crypto:webcrypto,fetch:fakeFetch,Date:Clock,Response,Request,URL,Headers,TextEncoder,TextDecoder,
   console,atob,btoa,setTimeout,clearTimeout,structuredClone,BOZO_ESPN_TEAM_SEED});
 vm.runInContext(fs.readFileSync(new URL('../dawg-bot-worker.js',import.meta.url),'utf8').replace(/^import .*;\n/,'').replace('export default {','const worker = {')+
-  '\nglobalThis.api={runForecastLive,forecastLiveRoute,fclGrade,fclRatings,fclCandidates,fclBoards,bozoScheduleKey};',ctx);
+  '\nglobalThis.api={runForecastLive,forecastLiveRoute,fclGrade,fclRatings,fclCandidates,fclBoards,bozoScheduleKey,fclEarliestKickoffs};',ctx);
 const a=ctx.api,root='/forecast/live/nfl/2026';
 const board=async path=>{
   const req=new Request('https://toto.jkapcar4.workers.dev'+path);
@@ -97,5 +97,38 @@ await a.runForecastLive(env);assert.equal(get(root+'/outcomes/'+gid).home_score,
 const ties=a.fclGrade(lock,{...game,status:'final',home_score:17,away_score:17});assert(ties.every(r=>r.outcome==='void'&&r.points===null));
 const extremes=a.fclGrade({forecasts:[{home_win_probability:0},{home_win_probability:1}]},{...game,status:'final',home_score:24,away_score:17});
 assert.equal(extremes[0].points,-75);assert.equal(extremes[1].points,25);assert(extremes.every(r=>Number.isFinite(r.log_loss)));
+/* A league move the published schedule has not taken yet (CHI@GB 2026 week 5: 20:25Z on
+   main, 17:00Z upstream). The game must seal at the EARLIER kickoff, re-capture its model
+   rows at that kickoff, and refuse an entry made after it — never wait for the later time. */
+{
+  const g2=schedule.data.games.find(g=>g.status==='scheduled'&&Date.parse(g.kickoff_at)>clock+12*3600e3);
+  const late=Date.parse(g2.kickoff_at),early=late-3*3600e3,earlyIso=new Date(early).toISOString().replace('.000Z','Z');
+  const pure=a.fclEarliestKickoffs([g2],{source:'fixture',games:[{week:g2.week,seasonType:'REG',home:{abbr:g2.home_team},away:{abbr:g2.away_team},startsAt:new Date(early).toISOString()}]});
+  assert.equal(pure.games[0].kickoff_at,earlyIso,'the earlier upstream kickoff wins');
+  assert.equal(pure.moves[0].scheduled,g2.kickoff_at);
+  const later=a.fclEarliestKickoffs([g2],{games:[{week:g2.week,seasonType:'REG',home:{abbr:g2.home_team},away:{abbr:g2.away_team},startsAt:new Date(late+3600e3).toISOString()}]});
+  assert.equal(later.games[0].kickoff_at,g2.kickoff_at,'a later upstream kickoff never delays a lock');
+  assert.equal(later.moves.length,0);
+  const doc2=JSON.parse(kv.get(a.bozoScheduleKey('nfl',2026)));
+  doc2.games.push({week:g2.week,seasonType:'REG',home:{abbr:g2.home_team},away:{abbr:g2.away_team},startsAt:new Date(early).toISOString(),completed:false,homeScore:null,awayScore:null});
+  // Fresh enough that neither run below re-fetches nflverse (the rig has no network).
+  doc2.fetchedAt=new Date(early+60e3).toISOString();kv.set(a.bozoScheduleKey('nfl',2026),JSON.stringify(doc2));
+  clock=early-3600e3;
+  const entry=(name,at)=>({...g2,sport:'nfl',entrant:name,entrant_kind:'human',owner:'Kap',touched:true,home_win_probability:.55,
+    submitted_at:at,slider_value:55,slider_side:'home',idempotency_key:'PRIVATE-ID'});
+  put('/forecast/entries/nfl/2026/'+g2.week+'/OnTime/'+g2.game_id,entry('OnTime',early-1800e3));
+  await a.runForecastLive(env);
+  assert.equal(get(root+'/models/'+g2.game_id+'/538-classic').kickoff_at,earlyIso,'model rows carry the earlier kickoff');
+  assert.equal(get(root+'/health').kickoff_moves.some(m=>m.game_id===g2.game_id&&m.earliest===earlyIso),true,'the move is reported');
+  clock=early+60e3;
+  put('/forecast/entries/nfl/2026/'+g2.week+'/InPlay/'+g2.game_id,entry('InPlay',early+30e3));
+  await a.runForecastLive(env);
+  const lock2=get(root+'/locks/'+g2.game_id);
+  assert(lock2,'sealed at the earlier kickoff, hours before the published one');
+  assert.equal(lock2.kickoff_at,earlyIso);
+  assert(lock2.forecasts.some(e=>e.entrant==='OnTime'),'a pre-kickoff entry counts');
+  assert(!lock2.forecasts.some(e=>e.entrant==='InPlay'),'an entry after the real kickoff does not');
+  assert(lock2.forecasts.some(e=>e.model_id==='538-classic'),'the re-keyed model row is inside the lock');
+}
 failSource=true;await assert.rejects(a.runForecastLive(env));assert.equal(get('/forecast/live/lease').until,0,'failed run releases lease');
 console.log('PASS: live capture, freshness, Toto isolation, privacy, kickoff locks, crowd, per-game grades, boards, ties, extremes, correction alerts, idempotency and failed-run recovery.');
