@@ -1539,6 +1539,15 @@ const SURFACES = [
               ...MCP_POUND_LIVE.map(tool => ({ kind: 'mcp', tool, status: 'live',
                 covers: 'deterministic calculation over caller-supplied inputs; inputs and results are not stored' }))],
     planned: [] },
+  /* Data Explorer, 2026-10-09 (Lab / Pup). It owns NO file: every table it queries is a
+     /data file another surface already claims, so `machine` stays empty rather than
+     double-claiming thirteen books on the Library shelf. It is a reading surface. */
+  { id: 'data-explorer', domain: 'data', name: 'Data Explorer — SQL + charts over /data', page: '/explore.html',
+    machine: [],
+    reading: [{ url: '/explore.html', title: 'Data Explorer (DuckDB-Wasm SQL + chart builder)',
+                covers: 'In-browser DuckDB-Wasm SQL over the public /data JSON (EPA, nfelo, schedule, receipts, 538 Classic, CFB efficiency and teams, player pool, dynasty ranks), with starter queries, CSV/JSON export, and a chart builder (sorted bar, horizontal bar, line, scatter, table) with PNG and share-link output. Every result and chart cites its file and as_of. Pure query: no forecasts, no blends. No public closing-market line exists for an nfelo-vs-close query.' }],
+    planned: [],
+    gap: 'No machine surface of its own, by design: an agent should fetch the cited /data/*.json files directly. No MCP query tool.' },
   { id: 'method', domain: 'site', name: 'How this site reasons', page: '/index.html',
     machine: [{ kind: 'markdown', url: '/data/method.md', status: 'live' },
               { kind: 'markdown', url: '/data/toto-philosophy.md', status: 'live' }],
