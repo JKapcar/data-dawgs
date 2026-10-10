@@ -47,6 +47,7 @@ jobs:
       - run: node work/test-backup.mjs
       - run: node work/test-identity.mjs
       - run: node work/test-mcp.mjs
+      - run: node work/test-agent-feedback.mjs
       - run: node work/test-dfs-workspace.mjs
       - run: node work/test-swoledawg.mjs
       - run: node work/test-bozo-close-fill.mjs
