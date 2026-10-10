@@ -73,6 +73,14 @@ const warroom = privateWrapper("../warroom-weekly.js", "wrWeeklyRoot", "})(typeo
   + "\n" + privateWrapper("../warroom-sleeper.js", "wrSleeperRoot", "})(typeof module!=='undefined'?module.exports:globalThis);")
   + "\n" + readFileSync("warroom-worker.js", "utf8").trimEnd();
 
+/* ESPN live finals sit IN PLACE, just above the near-close archive, not at the end of the
+ * file: the Bozo grade tests run that region of the hand-written half in a sandbox, and the
+ * score job they exercise (runBozoLiveScores) lives in this block. */
+const E_START = "/* ===== DD-BOZO-ESPN-SCORES START — generated from work/bozo-espn-scores.js; edit THERE ===== */";
+const E_END = "/* ===== DD-BOZO-ESPN-SCORES END ===== */";
+const E_ANCHOR = "/* ======================= near-close archive: every game";
+const espnScores = readFileSync("bozo-espn-scores.js", "utf8").trimEnd();
+
 const BM_START = "/* ===== DD-BOZO-MENU START — generated from bozo-menu.mjs ===== */";
 const BM_END = "/* ===== DD-BOZO-MENU END ===== */";
 const bozoMenu = "const BOZO_MENU = (() => {\n" + readFileSync("../bozo-menu.mjs", "utf8").replace(/^export /gm, "") + "\nreturn {runMenu, menuSchema, getPublicMenu, publishMenu, publicMenuSchema, renderPublicMenu};\n})();";
@@ -110,6 +118,12 @@ const yahoo = readFileSync("yahoo-parse.js", "utf8").replace(/\s+$/, "")
 /* ---- the whole pipeline, so the build and its idempotency proof cannot diverge ---- */
 function transform(input) {
   let t = input;
+  const es = t.indexOf(E_START), ee = t.indexOf(E_END);
+  if (es >= 0 && ee > es) t = t.slice(0, es) + t.slice(ee + E_END.length).replace(/^\n\n/, "");
+  if (t.includes("async function runBozoLiveScores("))
+    fail("runBozoLiveScores is generated from work/bozo-espn-scores.js — remove the hand-written copy");
+  if (t.split(E_ANCHOR).length - 1 !== 1) fail("ESPN scores anchor must appear exactly once");
+  t = t.replace(E_ANCHOR, E_START + "\n" + espnScores + "\n" + E_END + "\n\n" + E_ANCHOR);
   const abs = t.indexOf(AB_START), abe = t.indexOf(AB_END);
   if (abs >= 0 && abe > abs) t = t.slice(0,abs) + t.slice(abe + AB_END.length);
   const afs = t.indexOf(AF_START), afe = t.indexOf(AF_END);
@@ -202,6 +216,12 @@ const once = (needle, what) => {
   const n = out.split(needle).length - 1;
   if (n !== 1) fail(`${what}: expected exactly 1, found ${n}`);
 };
+once(E_START, "ESPN scores block start");
+once(E_END, "ESPN scores block end");
+once("async function runBozoLiveScores(", "live score job");
+once("async function bozoEspnRefresh(", "ESPN refresh");
+if (!(out.indexOf(E_START) < out.indexOf(E_ANCHOR) && out.indexOf(E_START) > out.indexOf("function bozoScheduledTeamSide")))
+  fail("the ESPN scores block must sit inside the Bozo grade region, above the near-close archive");
 once(AB_START, "agent board block start");
 once(AB_END, "agent board block end");
 once("async function handleAgentBoard(", "agent board handler");
