@@ -146,3 +146,57 @@ test('goal parameters clamp to their published ranges and sweeps cover every set
  assert.equal(G.sweep(engine.calculate({...browns,seconds:20}),null,{goal:'above'},clock,[{}])[0].best,null);
  for(const g of Object.values(G.GOALS)){assert.ok(g.label&&g.blurb&&typeof g.score==='function'&&typeof g.describe==='function');if(g.path)assert.ok(['time','outcome'].includes(g.weigh));}
 });
+
+// ---- Game and play picker: what the page opens on, and how plays are described ----
+const P=require('../fourth-down-picker.js');
+const mk=(id,qtr,seconds,actual,wps,extra={})=>({id,offense:'DAL',clock:'1:00',actual,description:'x',input:{qtr,seconds,yardline:40,toGo:3,diff:0,home:1},
+ result:{best:['go','fg','punt'].filter((_,i)=>wps[i]!=null).sort((a,b)=>wps[['go','fg','punt'].indexOf(b)]-wps[['go','fg','punt'].indexOf(a)])[0],edge:1,choices:['go','fg','punt'].map((c,i)=>({id:c,wp:wps[i]}))},...extra});
+const env=(week,games)=>({as_of:'2026-10-10',source:'t',data:{season:2026,week,refreshed_at:'2026-10-10T00:00:00Z',games}});
+test('previous-week archive is a valid, scored, frozen snapshot',()=>{
+ const prev=require('../data/fourth-down-previous.json');
+ for(const k of ['as_of','source','note','tier','tier_meaning','canonical_url'])assert.ok(prev[k],k);assert.equal(prev.graded,false);
+ assert.ok(prev.data.archived_at&&prev.data.refreshed_at&&Number.isInteger(prev.data.week));
+ const live=require('../data/fourth-down.json');assert.ok(prev.data.season<live.data.season||(prev.data.season===live.data.season&&prev.data.week<live.data.week),'archive must be an earlier week');
+ let n=0;for(const g of prev.data.games)for(const d of g.decisions){if(!d.result)continue;n++;assert.ok(d.result.edge>=0);for(const c of d.result.choices)if(c.wp!==null)assert.ok(c.wp>=0&&c.wp<=1);}
+ assert.ok(n>0);
+});
+test('picker phases, spots, downs and scores read like a broadcast',()=>{
+ assert.equal(P.phase({status:'Final'}),'final');assert.equal(P.phase({status:'Final/OT'}),'final');assert.equal(P.phase({status:'Scheduled'}),'scheduled');
+ assert.equal(P.phase({status:'In Progress',decisions:[1]}),'live');assert.equal(P.phase({status:'Halftime',captured_at:'x',decisions:[]}),'live');
+ assert.equal(P.phase({status:'Feed unavailable',refresh_error:'boom',decisions:[]}),'error');assert.equal(P.phase({status:'In Progress',refresh_error:'boom',decisions:[1]}),'live');
+ assert.equal(P.spot({yardline:56},'DAL','TB'),'DAL 44');assert.equal(P.spot({yardline:1},'TB','DAL'),'DAL 1');assert.equal(P.spot({yardline:50},'TB','DAL'),'midfield');
+ assert.equal(P.down({toGo:3,yardline:3}),'4th & goal');assert.equal(P.down({toGo:1,yardline:15}),'4th & 1');
+ assert.equal(P.score(7,'TB'),'TB up 7');assert.equal(P.score(-3,'TB'),'TB down 3');assert.equal(P.score(0,'TB'),'tied');
+});
+test('decision cost and verdict match the old board arithmetic',()=>{
+ const d=mk('1',2,600,'punt',[.70,null,.68]);near(P.cost(d),2,1e-9);assert.deepEqual(Object.keys(P.verdict(d)).sort(),['bot','coach','cost','edge','kind']);assert.equal(P.verdict(d).kind,'miss');
+ assert.equal(P.verdict(mk('2',2,600,'go',[.70,null,.68])).kind,'agree');assert.equal(P.cost(mk('2',2,600,'go',[.70,null,.68])),0);
+ assert.equal(P.verdict(mk('3',2,600,'punt',[.70,null,.695])).kind,'close');
+ assert.equal(P.verdict(mk('4',2,600,null,[.7,null,.6])).kind,'unknown');assert.equal(P.cost(mk('5',2,600,'fg',[.7,null,.6])),null);
+ assert.equal(P.verdict({id:'6',actual:'go'}).kind,'none');
+ const real=require('../data/fourth-down-previous.json');for(const g of real.data.games)for(const d of g.decisions){const c=P.cost(d);if(c!==null)assert.ok(c>=0&&c<=100);}
+});
+test('plays list in game order or by biggest coach-versus-model gap',()=>{
+ const g={id:'g',home:'DAL',away:'TB',status:'Final',decisions:[mk('late',4,30,'go',[.9,.8,null]),mk('early',1,800,'punt',[.6,null,.55]),mk('mid',2,100,'punt',[.6,null,.59])]};
+ const e=env(5,[g]),rows=P.rows(e,'g');
+ assert.deepEqual(P.order(rows,'game').map(x=>x.d.id),['early','mid','late']);
+ assert.deepEqual(P.order(rows,'miss').map(x=>x.d.id),['early','mid','late']);
+ assert.equal(P.rows(e,'nope').length,0);assert.equal(P.rows(e,'all').length,3);
+});
+test('the page opens on a live game’s latest play, else the week’s biggest miss, else the previous week',()=>{
+ const fin={id:'a',home:'DAL',away:'TB',date:'2026-10-08',status:'Final',decisions:[mk('small',2,600,'punt',[.6,null,.59]),mk('big',3,300,'punt',[.6,null,.5])]};
+ const live={id:'b',home:'GB',away:'CHI',date:'2026-10-11',status:'In Progress',decisions:[mk('l1',1,700,'go',[.5,null,.4]),mk('l2',2,100,'go',[.5,null,.4])]};
+ const sched={id:'c',home:'NE',away:'LV',date:'2026-10-11',status:'Scheduled',decisions:[]};
+ assert.deepEqual(P.defaultPick([['current',env(5,[sched,fin])]]),{week:'current',gameId:'a',playId:'big'});
+ assert.deepEqual(P.defaultPick([['current',env(5,[fin,live,sched])]]),{week:'current',gameId:'b',playId:'l2'});
+ assert.deepEqual(P.defaultPick([['current',env(6,[sched])],['previous',env(5,[fin])]]),{week:'previous',gameId:'a',playId:'big'});
+ assert.equal(P.defaultPick([['current',env(6,[sched])]]),null);
+ assert.deepEqual(P.games(env(5,[sched,fin,live])).map(g=>g.id),['b','a','c']);
+ assert.deepEqual(P.find([['current',env(5,[fin])],['previous',env(4,[live])]],'l1'),{week:'previous',gameId:'b',playId:'l1'});assert.equal(P.find([['current',env(5,[fin])]],'zzz'),null);
+ const today=require('../data/fourth-down.json'),prev=require('../data/fourth-down-previous.json'),pick=P.defaultPick([['current',today],['previous',prev]]);
+ assert.ok(pick&&P.find([['current',today],['previous',prev]],pick.playId));
+});
+test('mini field puts the ball and line to gain where the yardage says',()=>{
+ const s=P.field({yardline:15,toGo:1});assert.match(s,/cx="95"/);assert.match(s,/x1="96"/);
+ assert.match(P.field({yardline:75,toGo:10}),/cx="35"/);assert.match(P.field({yardline:3,toGo:3}),/x1="110"/);
+});

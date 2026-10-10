@@ -75,6 +75,11 @@ unavailable rows. A failed game's previous dated snapshot is retained with an
 error. A completely failed refresh exits without writing data. Scheduled games
 are not mislabeled as feed failures. ESPN can revise historical plays.
 
+`tools/fourth-down-refresh.py` freezes the outgoing week into
+`data/fourth-down-previous.json` when the week rolls forward (`archive()`; never
+for an earlier hand-run week, never with an empty week). `tools/fourth-down-score.cjs`
+scores both files and the workflow carries both across its reset to latest main.
+
 `fourth-down.yml` runs verification on relevant PRs and refreshes the current
 regular-season week every 15 minutes, best effort, on NFL game weekdays during
 September–February. It fetches latest main before committing only snapshot and
@@ -185,3 +190,23 @@ Deliberately not built: a lens column on the weekly board (62 ms per decision in
 the browser is too slow to recompute a slate; it belongs in
 `tools/fourth-down-score.cjs` as stored per-goal calls), a fit of goals to
 observed coach decisions, a two-point calculator, and any score-based goal.
+
+## Game and play picker (2026-10-10)
+
+The page opens on a real fourth down instead of hand-picked preset cards.
+`fourth-down-picker.js` renders step 1 (week tabs, game chips) and step 2 (the
+game's fourth downs, in game order or by coach-versus-model gap), and replaces the
+weekly board that used to sit at the bottom: same rows, same decision cost. Its
+pure helpers (`phase`, `spot`, `cost`, `verdict`, `order`, `games`, `defaultPick`,
+`find`, `field`) are exported for the node suite.
+
+The form survives as the "Edit the situation" tab. Selecting a play fills it;
+editing any field marks the result as a custom situation and drops the game
+attribution (`DDFourthState.play` becomes null). Reset returns to the last real
+play. The three hypothetical presets moved into that tab; the Browns case is the
+fallback when no feed loads. Share links carry `play=<ESPN play id>` plus the full
+situation, so a link still opens (as a custom situation) after the play rolls out
+of both files. On phones the plays are a horizontal swipe strip and tapping one
+scrolls to the call; on desktop they are a scrolling list beside it.
+
+Page wiring is applied by the idempotent `work/patch-fourth-down-picker.py`.

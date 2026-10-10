@@ -11,4 +11,19 @@ class FeedTests(unittest.TestCase):
         payload=dict(header={'competitions':[dict(competitors=[dict(team={'id':'5','abbreviation':'CLE'}),dict(team={'id':'29','abbreviation':'CAR'})],status={'type':{'description':'Final'}})]},drives={'previous':[{'team':{'abbreviation':'CLE'},'plays':plays}],'current':{'team':{'abbreviation':'CLE'},'plays':[plays[-1]]}})
         result=feed.parse_game(payload,game);self.assertEqual(len(result['decisions']),1)
         s=result['decisions'][0]['input'];self.assertEqual(s['diff'],3);self.assertEqual(s['defTO'],0);self.assertEqual(s['yardline'],75);self.assertEqual(s['homeKickoff'],1)
+    def test_rollover_freezes_the_outgoing_week_only(self):
+        game=dict(id='2026_05_TB_DAL',home='DAL',away='TB',status='Final',decisions=[dict(id='1')])
+        old=dict(source='ESPN',data=dict(season=2026,week=5,refreshed_at='2026-10-13T04:00:00+00:00',games=[game]))
+        frozen=feed.archive(old,2026,6,'2026-10-15T12:00:00+00:00')
+        self.assertEqual((frozen['data']['season'],frozen['data']['week']),(2026,5))
+        self.assertEqual(frozen['data']['games'],[game]);self.assertEqual(frozen['as_of'],'2026-10-13')
+        self.assertEqual(frozen['data']['archived_at'],'2026-10-15T12:00:00+00:00')
+        for key in ('as_of','source','tier','tier_meaning','canonical_url','note'):self.assertTrue(frozen[key])
+        self.assertIs(frozen['graded'],False)
+        self.assertIsNone(feed.archive(old,2026,5,'x'))                      # same week: nothing to freeze
+        self.assertIsNone(feed.archive(old,2026,4,'x'))                      # a hand-run earlier week never overwrites
+        self.assertEqual(feed.archive(old,2027,1,'x')['data']['week'],5)     # season rollover
+        empty=dict(data=dict(season=2026,week=5,games=[dict(id='g',decisions=[])]))
+        self.assertIsNone(feed.archive(empty,2026,6,'x'))                    # never replace an archive with nothing
+        self.assertIsNone(feed.archive(None,2026,6,'x'));self.assertIsNone(feed.archive({},2026,6,'x'))
 if __name__=='__main__':unittest.main()
