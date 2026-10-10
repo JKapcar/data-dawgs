@@ -17,6 +17,7 @@ time-critical workflows itself through `workflow_dispatch`:
 | `guillotine-refresh.yml` | daily 14:15; Tue/Wed 08:15 and 11:15 |
 | `nfelo-refresh.yml` | 02:45, 08:45, 14:45, 20:45 (the upstream publishes at no fixed hour) |
 | `survivor-receipt.yml` | daily 15:00 |
+| `bozo-menu-ledger.yml` | daily 06:20 and 13:20 |
 
 The GitHub crons stay as the backup. A duplicate run is a no-op (each job exits clean on
 unchanged data), and each workflow's concurrency group queues rather than overlaps. Each

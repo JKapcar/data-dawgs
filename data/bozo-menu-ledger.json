@@ -1,0 +1,3563 @@
+{
+ "as_of": "2026-10-10",
+ "source": "Data Dawgs public Bozo Menu (Worker /bozo/menu.json) graded against Worker /scores finals and DraftKings near-closes (SportsGameOdds).",
+ "tier": "labs",
+ "graded": true,
+ "note": "One row per published candidate per week, graded at its published line only. Results are pending until a final exists; a push is a push. Closes are NEAR-CLOSE (SportsGameOdds free tier, about 10 minutes behind DraftKings). Entry probability CLV stays null because the menu saves one entry side; no juice is assumed. Simulation-free; not a recommendation.",
+ "data": {
+  "weeks": [
+   "2026-10-05"
+  ],
+  "rows": [
+   {
+    "id": "cfb-2026-w6-fiu",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "New Mexico State Aggies at Florida International Panthers",
+    "kickoff": "2026-10-07T23:30:00.000Z",
+    "market": "spread",
+    "status": "scratch",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "FIU −4.5 (base; shop a more favorable alternate spread)",
+     "side": "FIU",
+     "line": -4.5,
+     "team": "FIU",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 4.6,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-05T00:02:25Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-05T00:02:25Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 9.1,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401871066",
+     "matched_by": "espn-id",
+     "final": true,
+     "score_source": "the-odds-api",
+     "score_observed_at": "2026-10-08T08:56:44Z"
+    },
+    "result": "win",
+    "actual": {
+     "side_margin": 19,
+     "total": 25
+    },
+    "close": null,
+    "clv": null,
+    "grade_note": null
+   },
+   {
+    "id": "cfb-2026-w6-liberty",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Sam Houston Bearkats at Liberty Flames",
+    "kickoff": "2026-10-08T23:00:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Liberty −13.5 (base; shop a more favorable alternate spread)",
+     "side": "Liberty",
+     "line": -13.5,
+     "team": "LIB",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 6.3,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-05T02:30:37Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-05T02:30:37Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 19.8,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401870766",
+     "matched_by": "espn-id",
+     "final": true,
+     "score_source": "the-odds-api",
+     "score_observed_at": "2026-10-09T02:39:51Z"
+    },
+    "result": "win",
+    "actual": {
+     "side_margin": 32,
+     "total": 38
+    },
+    "close": null,
+    "clv": null,
+    "grade_note": null
+   },
+   {
+    "id": "cfb-2026-w6-usf",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "South Florida Bulls at UTSA Roadrunners",
+    "kickoff": "2026-10-08T23:30:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "USF +7 (base; shop a more favorable alternate spread)",
+     "side": "USF",
+     "line": 7,
+     "team": "USF",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 7.2,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 0.2,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401862794",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-usf-utsa-total-over",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "South Florida Bulls at UTSA Roadrunners",
+    "kickoff": "2026-10-08T23:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "South Florida Bulls / UTSA Roadrunners: over research hold",
+     "side": "over",
+     "line": 52,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 3.2,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 55.2 versus observed base-market reference 52, favoring over. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 55.2
+     }
+    ],
+    "game": {
+     "id": "401862794",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "nfl-202610-tb-dal-total-over",
+    "week": "2026-10-05",
+    "sport": "nfl",
+    "event": "Tampa Bay Buccaneers at Dallas Cowboys",
+    "kickoff": "2026-10-09T00:15:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Tampa Bay Buccaneers / Dallas Cowboys: over research hold",
+     "side": "over",
+     "line": 47.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings via DK Network (jurisdiction may differ)",
+     "quoted_at": "2026-10-05T15:00:54Z"
+    },
+    "edge": {
+     "value": 3.2,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 50.7 versus observed base-market reference 47.5, favoring over. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     },
+     {
+      "name": "DraftKings Network public board",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 50.7
+     }
+    ],
+    "game": {
+     "id": "401872980",
+     "matched_by": "teams+kickoff",
+     "final": true,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-10T01:09:10.000Z"
+    },
+    "result": "loss",
+    "actual": {
+     "total": 40
+    },
+    "close": null,
+    "clv": null,
+    "grade_note": null
+   },
+   {
+    "id": "cfb-2026-w6-washington-state",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Washington State Cougars at Utah State Aggies",
+    "kickoff": "2026-10-10T01:00:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Washington State +3.5 (base; shop a more favorable alternate spread)",
+     "side": "Washington State",
+     "line": 3.5,
+     "team": "WSU",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T18:31:24Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T18:31:24Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -1.5,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401860922",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-wyoming",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Wyoming Cowboys at San José State Spartans",
+    "kickoff": "2026-10-10T01:00:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Wyoming +6.5 (base; shop a more favorable alternate spread)",
+     "side": "Wyoming",
+     "line": 6.5,
+     "team": "WYO",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 4.7,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T20:26:03Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T20:26:03Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -1.8,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401864519",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-wsu-usu-total-over",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Washington State Cougars at Utah State Aggies",
+    "kickoff": "2026-10-10T01:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Washington State Cougars / Utah State Aggies: over research hold",
+     "side": "over",
+     "line": 43.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 3.3,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 46.8 versus observed base-market reference 43.5, favoring over. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 46.8
+     }
+    ],
+    "game": {
+     "id": "401860922",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-byu",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Iowa State Cyclones at BYU Cougars",
+    "kickoff": "2026-10-10T02:15:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "BYU −10.5 (base; shop a more favorable alternate spread)",
+     "side": "BYU",
+     "line": -10.5,
+     "team": "BYU",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 5.1,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T18:31:24Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T18:31:24Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 15.6,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401856826",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-arizona",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Arizona Wildcats at West Virginia Mountaineers",
+    "kickoff": "2026-10-10T16:00:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Arizona −3 (base; shop a more favorable alternate spread)",
+     "side": "Arizona",
+     "line": -3,
+     "team": "ARIZ",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 4.8,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T18:21:42Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T18:21:42Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 7.8,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401856823",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-indiana",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Indiana Hoosiers at Nebraska Cornhuskers",
+    "kickoff": "2026-10-10T16:00:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Indiana −7.5 (base; shop a more favorable alternate spread)",
+     "side": "Indiana",
+     "line": -7.5,
+     "team": "IU",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 3.8,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-05T03:05:35Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-05T03:05:35Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 11.3,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401858481",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-pitt",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "North Carolina Tar Heels at Pittsburgh Panthers",
+    "kickoff": "2026-10-10T16:00:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Pitt −4 (base; shop a more favorable alternate spread)",
+     "side": "Pitt",
+     "line": -4,
+     "team": "PITT",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 6.8,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T18:21:42Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T18:21:42Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 10.8,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401858256",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-ucf",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "UCF Knights at Oklahoma State Cowboys",
+    "kickoff": "2026-10-10T16:00:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "UCF +9.5 (base; shop a more favorable alternate spread)",
+     "side": "UCF",
+     "line": 9.5,
+     "team": "UCF",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 5.4,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T18:27:10Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T18:27:10Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -4.1,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401856824",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-arizona-wvu-total-under",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Arizona Wildcats at West Virginia Mountaineers",
+    "kickoff": "2026-10-10T16:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Arizona Wildcats / West Virginia Mountaineers: under research hold",
+     "side": "under",
+     "line": 61,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.9,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 58.1 versus observed base-market reference 61, favoring under. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 58.1
+     }
+    ],
+    "game": {
+     "id": "401856823",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-bgsu-sac-moneyline",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Sacramento State Hornets at Bowling Green Falcons",
+    "kickoff": "2026-10-10T16:00:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Bowling Green moneyline — research hold",
+     "side": "Bowling Green",
+     "line": null,
+     "team": "BGSU",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 4.07,
+     "unit": "percentage_points",
+     "definition": "Data Dawgs arithmetic: DRatings win estimate minus break-even probability at observed -275. Unadjusted single-model screen, not ROI. Aggregator book identity unverified; shopping reference only."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "probability",
+      "value": 0.774,
+      "derived": "edge (pp) + break-even at -275"
+     }
+    ],
+    "game": {
+     "id": "401866436",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-ind-neb-moneyline",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Indiana Hoosiers at Nebraska Cornhuskers",
+    "kickoff": "2026-10-10T16:00:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Indiana moneyline — research hold",
+     "side": "Indiana",
+     "line": null,
+     "team": "IU",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.54,
+     "unit": "percentage_points",
+     "definition": "Data Dawgs arithmetic: DRatings win estimate minus break-even probability at observed -290. Unadjusted single-model screen, not ROI. Aggregator book identity unverified; shopping reference only."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "probability",
+      "value": 0.769,
+      "derived": "edge (pp) + break-even at -290"
+     }
+    ],
+    "game": {
+     "id": "401858481",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-sac-bgsu-total-over",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Sacramento State Hornets at Bowling Green Falcons",
+    "kickoff": "2026-10-10T16:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Sacramento State Hornets / Bowling Green Falcons: over research hold",
+     "side": "over",
+     "line": 42.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 44.5 versus observed base-market reference 42.5, favoring over. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 44.5
+     }
+    ],
+    "game": {
+     "id": "401866436",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-wake-ncsu-total-under",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Wake Forest Demon Deacons at NC State Wolfpack",
+    "kickoff": "2026-10-10T16:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Wake Forest Demon Deacons / NC State Wolfpack: under research hold",
+     "side": "under",
+     "line": 60,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.2,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 57.8 versus observed base-market reference 60, favoring under. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 57.8
+     }
+    ],
+    "game": {
+     "id": "401858260",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-ball-state",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Ball State Cardinals at Northwestern Wildcats",
+    "kickoff": "2026-10-10T16:30:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Ball State +36 (base; shop a more favorable alternate spread)",
+     "side": "Ball State",
+     "line": 36,
+     "team": "BALL",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 8.2,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-05T01:46:01Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-05T01:46:01Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -27.8,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401858482",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-ball-nw-total-under",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Ball State Cardinals at Northwestern Wildcats",
+    "kickoff": "2026-10-10T16:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Ball State Cardinals / Northwestern Wildcats: under research hold",
+     "side": "under",
+     "line": 53,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.6,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 50.4 versus observed base-market reference 53, favoring under. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 50.4
+     }
+    ],
+    "game": {
+     "id": "401858482",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-south-carolina",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "South Carolina Gamecocks at Florida Gators",
+    "kickoff": "2026-10-10T16:45:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "South Carolina +14 (base; shop a more favorable alternate spread)",
+     "side": "South Carolina",
+     "line": 14,
+     "team": "SC",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T23:51:36Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T23:51:36Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -12,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401856714",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-sc-florida-total-under",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "South Carolina Gamecocks at Florida Gators",
+    "kickoff": "2026-10-10T16:45:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "South Carolina Gamecocks / Florida Gators: under research hold",
+     "side": "under",
+     "line": 62.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.6,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 59.9 versus observed base-market reference 62.5, favoring under. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 59.9
+     }
+    ],
+    "game": {
+     "id": "401856714",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-old-dominion",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Old Dominion Monarchs at App State Mountaineers",
+    "kickoff": "2026-10-10T17:00:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Old Dominion +9.5 (base; shop a more favorable alternate spread)",
+     "side": "Old Dominion",
+     "line": 9.5,
+     "team": "ODU",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 4.5,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-05T02:30:37Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-05T02:30:37Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -5,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401869843",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-buffalo",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Buffalo Bulls at Toledo Rockets",
+    "kickoff": "2026-10-10T19:30:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Buffalo +19.5 (base; shop a more favorable alternate spread)",
+     "side": "Buffalo",
+     "line": 19.5,
+     "team": "BUFF",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.7,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T19:46:45Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T19:46:45Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -16.8,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401866437",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-charlotte",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Charlotte 49ers at North Texas Mean Green",
+    "kickoff": "2026-10-10T19:30:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Charlotte +27.5 (base; shop a more favorable alternate spread)",
+     "side": "Charlotte",
+     "line": 27.5,
+     "team": "CLT",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.2,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T23:06:39Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T23:06:39Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -25.3,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401862796",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-navy",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Tulsa Golden Hurricane at Navy Midshipmen",
+    "kickoff": "2026-10-10T19:30:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Navy −2.5 (base; shop a more favorable alternate spread)",
+     "side": "Navy",
+     "line": -2.5,
+     "team": "NAVY",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.6,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-05T02:53:00Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-05T02:53:00Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 5.1,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401862799",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-stanford",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Stanford Cardinal at Notre Dame Fighting Irish",
+    "kickoff": "2026-10-10T19:30:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Stanford +37.5 (base; shop a more favorable alternate spread)",
+     "side": "Stanford",
+     "line": 37.5,
+     "team": "STAN",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 4.6,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-05T01:30:23Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-05T01:30:23Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -32.9,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401858257",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-texas",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Texas Longhorns vs. Oklahoma Sooners (Cotton Bowl, neutral site)",
+    "kickoff": "2026-10-10T19:30:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Texas −8 (base; shop a more favorable alternate spread)",
+     "side": "Texas",
+     "line": -8,
+     "team": "TEX",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.6,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T23:06:39Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T23:06:39Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 10.6,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401856717",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-vanderbilt",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Ole Miss Rebels at Vanderbilt Commodores",
+    "kickoff": "2026-10-10T19:30:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Vanderbilt +10.5 (base; shop a more favorable alternate spread)",
+     "side": "Vanderbilt",
+     "line": 10.5,
+     "team": "VAN",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 7.1,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-05T00:26:31Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-05T00:26:31Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -3.4,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401856718",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-buffalo-toledo-total-under",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Buffalo Bulls at Toledo Rockets",
+    "kickoff": "2026-10-10T19:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Buffalo Bulls / Toledo Rockets: under research hold",
+     "side": "under",
+     "line": 55,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 3.4,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 51.6 versus observed base-market reference 55, favoring under. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 51.6
+     }
+    ],
+    "game": {
+     "id": "401866437",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-duke-gt-total-over",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Duke Blue Devils at Georgia Tech Yellow Jackets",
+    "kickoff": "2026-10-10T19:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Duke Blue Devils / Georgia Tech Yellow Jackets: over research hold",
+     "side": "over",
+     "line": 49.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.1,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 51.6 versus observed base-market reference 49.5, favoring over. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 51.6
+     }
+    ],
+    "game": {
+     "id": "401858255",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-houston-ksu-total-under",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Houston Cougars at Kansas State Wildcats",
+    "kickoff": "2026-10-10T19:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Houston Cougars / Kansas State Wildcats: under research hold",
+     "side": "under",
+     "line": 56.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.4,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 54.1 versus observed base-market reference 56.5, favoring under. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 54.1
+     }
+    ],
+    "game": {
+     "id": "401856825",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-ore-ucla-moneyline",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "UCLA Bruins at Oregon Ducks",
+    "kickoff": "2026-10-10T19:30:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Oregon moneyline — research hold",
+     "side": "Oregon",
+     "line": null,
+     "team": "ORE",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 0.93,
+     "unit": "percentage_points",
+     "definition": "Data Dawgs arithmetic: DRatings win estimate minus break-even probability at observed -420. Unadjusted single-model screen, not ROI. Aggregator book identity unverified; shopping reference only."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "probability",
+      "value": 0.817,
+      "derived": "edge (pp) + break-even at -420"
+     }
+    ],
+    "game": {
+     "id": "401858484",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-texas-ou-total-over",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Texas Longhorns vs Oklahoma Sooners (Cotton Bowl, neutral site)",
+    "kickoff": "2026-10-10T19:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Texas Longhorns vs Oklahoma Sooners (Cotton Bowl, neutral site): over research hold",
+     "side": "over",
+     "line": 39,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.5,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 41.5 versus observed base-market reference 39, favoring over. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 41.5
+     }
+    ],
+    "game": {
+     "id": "401856717",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-tulsa-navy-total-over",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Tulsa Golden Hurricane at Navy Midshipmen",
+    "kickoff": "2026-10-10T19:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Tulsa Golden Hurricane / Navy Midshipmen: over research hold",
+     "side": "over",
+     "line": 48.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.9,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 51.4 versus observed base-market reference 48.5, favoring over. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 51.4
+     }
+    ],
+    "game": {
+     "id": "401862799",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-uconn",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "UConn Huskies at Temple Owls",
+    "kickoff": "2026-10-10T19:45:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "UConn +3.5 (base; shop a more favorable alternate spread)",
+     "side": "UConn",
+     "line": 3.5,
+     "team": "CONN",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 3.4,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T20:31:28Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T20:31:28Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -0.1,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401861964",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-east-carolina",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Rice Owls at East Carolina Pirates",
+    "kickoff": "2026-10-10T20:00:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "East Carolina −10 (base; shop a more favorable alternate spread)",
+     "side": "East Carolina",
+     "line": -10,
+     "team": "ECU",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 3.5,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-05T00:41:53Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-05T00:41:53Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 13.5,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401862797",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-ecu-rice-moneyline",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Rice Owls at East Carolina Pirates",
+    "kickoff": "2026-10-10T20:00:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "East Carolina moneyline — research hold",
+     "side": "East Carolina",
+     "line": null,
+     "team": "ECU",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 0.94,
+     "unit": "percentage_points",
+     "definition": "Data Dawgs arithmetic: DRatings win estimate minus break-even probability at observed -360. Unadjusted single-model screen, not ROI. Aggregator book identity unverified; shopping reference only."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "probability",
+      "value": 0.792,
+      "derived": "edge (pp) + break-even at -360"
+     }
+    ],
+    "game": {
+     "id": "401862797",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-maryland",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Maryland Terrapins at Ohio State Buckeyes",
+    "kickoff": "2026-10-10T20:15:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Maryland +35 (base; shop a more favorable alternate spread)",
+     "side": "Maryland",
+     "line": 35,
+     "team": "MD",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 6,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T22:08:07Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T22:08:07Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -29,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401858483",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-tenn-ark-total-over",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Tennessee Volunteers at Arkansas Razorbacks",
+    "kickoff": "2026-10-10T20:15:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Tennessee Volunteers / Arkansas Razorbacks: over research hold",
+     "side": "over",
+     "line": 51,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 4,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 55 versus observed base-market reference 51, favoring over. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 55
+     }
+    ],
+    "game": {
+     "id": "401856713",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-san-diego-state",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "San Diego State Aztecs at Oregon State Beavers",
+    "kickoff": "2026-10-10T22:00:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "San Diego State +13.5 (base; shop a more favorable alternate spread)",
+     "side": "San Diego State",
+     "line": 13.5,
+     "team": "SDSU",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 6.1,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-05T02:41:17Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-05T02:41:17Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -7.4,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401860902",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-sdsu-osu-total-under",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "San Diego State Aztecs at Oregon State Beavers",
+    "kickoff": "2026-10-10T22:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "San Diego State Aztecs / Oregon State Beavers: under research hold",
+     "side": "under",
+     "line": 56,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.2,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 53.8 versus observed base-market reference 56, favoring under. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 53.8
+     }
+    ],
+    "game": {
+     "id": "401860902",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-marshall",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Coastal Carolina Chanticleers at Marshall Thundering Herd",
+    "kickoff": "2026-10-10T23:00:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Marshall −2.5 (base; shop a more favorable alternate spread)",
+     "side": "Marshall",
+     "line": -2.5,
+     "team": "MRSH",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 3.2,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T23:48:26Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T23:48:26Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 5.7,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401869943",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-unlv",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "North Dakota State Bison at UNLV Rebels",
+    "kickoff": "2026-10-10T23:00:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "UNLV +3.5 (base; shop a more favorable alternate spread)",
+     "side": "UNLV",
+     "line": 3.5,
+     "team": "UNLV",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.6,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -0.9,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401864518",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-utep",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Nevada Wolf Pack at UTEP Miners",
+    "kickoff": "2026-10-10T23:00:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "UTEP +9.5 (base; shop a more favorable alternate spread)",
+     "side": "UTEP",
+     "line": 9.5,
+     "team": "UTEP",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.4,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T21:36:44Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T21:36:44Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -7.1,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401864517",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-ndsu-unlv-total-over",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "North Dakota State Bison at UNLV Rebels",
+    "kickoff": "2026-10-10T23:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "North Dakota State Bison / UNLV Rebels: over research hold",
+     "side": "over",
+     "line": 49,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.2,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 51.2 versus observed base-market reference 49, favoring over. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 51.2
+     }
+    ],
+    "game": {
+     "id": "401864518",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-georgia",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Georgia Bulldogs at Alabama Crimson Tide",
+    "kickoff": "2026-10-10T23:30:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Georgia +1.5 (base; shop a more favorable alternate spread)",
+     "side": "Georgia",
+     "line": 1.5,
+     "team": "UGA",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 3.4,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T23:06:53Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T23:06:53Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 1.9,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401856712",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-james-madison",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "James Madison Dukes at Georgia Southern Eagles",
+    "kickoff": "2026-10-10T23:30:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "James Madison −8.5 (base; shop a more favorable alternate spread)",
+     "side": "James Madison",
+     "line": -8.5,
+     "team": "JMU",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 6.3,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-05T00:32:01Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-05T00:32:01Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 14.8,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401869949",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-louisiana-ull",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Louisiana Ragin' Cajuns at Louisiana Tech Bulldogs",
+    "kickoff": "2026-10-10T23:30:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Louisiana (ULL) +1.5 (base; shop a more favorable alternate spread)",
+     "side": "Louisiana",
+     "line": 1.5,
+     "team": "UL",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 4.4,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T23:30:30Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T23:30:30Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 2.9,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401869965",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-usc",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "USC Trojans at Penn State Nittany Lions",
+    "kickoff": "2026-10-10T23:30:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "USC +1.5 (base; shop a more favorable alternate spread)",
+     "side": "USC",
+     "line": 1.5,
+     "team": "USC",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.2,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-05T00:06:07Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-05T00:06:07Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 0.7,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401858485",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-virginia",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Syracuse Orange at Virginia Cavaliers",
+    "kickoff": "2026-10-10T23:30:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Virginia −9.5 (base; shop a more favorable alternate spread)",
+     "side": "Virginia",
+     "line": -9.5,
+     "team": "UVA",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.5,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-05T02:53:00Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-05T02:53:00Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 12,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401858258",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-jmu-gsu-total-under",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "James Madison Dukes at Georgia Southern Eagles",
+    "kickoff": "2026-10-10T23:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "James Madison Dukes / Georgia Southern Eagles: under research hold",
+     "side": "under",
+     "line": 55,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.3,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 52.7 versus observed base-market reference 55, favoring under. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 52.7
+     }
+    ],
+    "game": {
+     "id": "401869949",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-202610-ull-latech-total-over",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Louisiana Ragin' Cajuns at Louisiana Tech Bulldogs",
+    "kickoff": "2026-10-10T23:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Louisiana Ragin' Cajuns / Louisiana Tech Bulldogs: over research hold",
+     "side": "over",
+     "line": 48,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.3,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 50.3 versus observed base-market reference 48, favoring over. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 50.3
+     }
+    ],
+    "game": {
+     "id": "401869965",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-minnesota",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Minnesota Golden Gophers at Purdue Boilermakers",
+    "kickoff": "2026-10-11T00:00:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Minnesota −2.5 (base; shop a more favorable alternate spread)",
+     "side": "Minnesota",
+     "line": -2.5,
+     "team": "MINN",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 3.8,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-05T02:45:40Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-05T02:45:40Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 6.3,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401858486",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-utah",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Kansas Jayhawks at Utah Utes",
+    "kickoff": "2026-10-11T02:15:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Utah −15 (base; shop a more favorable alternate spread)",
+     "side": "Utah",
+     "line": -15,
+     "team": "UTAH",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 5.8,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T18:31:24Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T18:31:24Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": 20.8,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401856827",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-fresno-state",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Boise State Broncos at Fresno State Bulldogs",
+    "kickoff": "2026-10-11T02:30:00.000Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T04:05:00Z",
+    "selection": {
+     "text": "Fresno State +6 (base; shop a more favorable alternate spread)",
+     "side": "Fresno State",
+     "line": 6,
+     "team": "FRES",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 2.8,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-05T02:57:04Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-05T02:57:04Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -3.2,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401860901",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "cfb-2026-w6-hawaii",
+    "week": "2026-10-05",
+    "sport": "cfb",
+    "event": "Hawai'i Rainbow Warriors at Arizona State Sun Devils",
+    "kickoff": "2026-10-11T02:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Hawaii +21.5 (base; shop a more favorable alternate spread)",
+     "side": "Hawaii",
+     "line": 21.5,
+     "team": "HAW",
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 7.1,
+     "unit": "points",
+     "definition": "Reported Data Dawgs poster blend versus listed spread, Oct 4 evening snapshot. 1/3 PFF + 1/3 SP+ + 1/3 DRatings. Imported, not recomputed; not ROI, hit probability, or an alternate-line edge."
+    },
+    "sources": [
+     {
+      "name": "ESPN current event / venue",
+      "as_of": "2026-10-05T04:05:00Z"
+     },
+     {
+      "name": "NWS hourly forecast",
+      "as_of": "2026-10-04T22:53:11Z"
+     },
+     {
+      "name": "NWS grid wind gust forecast",
+      "as_of": "2026-10-04T22:53:11Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
+      "kind": "margin",
+      "value": -14.4,
+      "derived": "published line and edge: side margin = -line + edge"
+     }
+    ],
+    "game": {
+     "id": "401856808",
+     "matched_by": "espn-id",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-05T16:09:17.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "nfl-202610-cin-mia-moneyline",
+    "week": "2026-10-05",
+    "sport": "nfl",
+    "event": "Cincinnati Bengals at Miami Dolphins",
+    "kickoff": "2026-10-11T17:00:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Cincinnati moneyline — research hold",
+     "side": "Cincinnati",
+     "line": null,
+     "team": "CIN",
+     "odds": -355,
+     "book": "DraftKings via DK Network (jurisdiction may differ)",
+     "quoted_at": "2026-10-05T15:00:54Z"
+    },
+    "edge": {
+     "value": 1.18,
+     "unit": "percentage_points",
+     "definition": "Data Dawgs arithmetic: DRatings win estimate minus break-even probability at observed -355. Unadjusted single-model screen, not ROI. DraftKings Network quote requires direct-book refresh."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     },
+     {
+      "name": "DraftKings Network public moneyline quote",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "probability",
+      "value": 0.792,
+      "derived": "edge (pp) + break-even at -355"
+     }
+    ],
+    "game": {
+     "id": "401872982",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-10T01:09:10.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "nfl-202610-cin-mia-total-over",
+    "week": "2026-10-05",
+    "sport": "nfl",
+    "event": "Cincinnati Bengals at Miami Dolphins",
+    "kickoff": "2026-10-11T17:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Cincinnati Bengals / Miami Dolphins: over research hold",
+     "side": "over",
+     "line": 41.5,
+     "team": null,
+     "odds": -115,
+     "book": "DraftKings via DK Network (jurisdiction may differ)",
+     "quoted_at": "2026-10-05T15:00:54Z"
+    },
+    "edge": {
+     "value": 6.3,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 47.8 versus observed base-market reference 41.5, favoring over. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     },
+     {
+      "name": "DraftKings Network public board",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 47.8
+     }
+    ],
+    "game": {
+     "id": "401872982",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-10T01:09:10.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "nfl-202610-det-ari-moneyline",
+    "week": "2026-10-05",
+    "sport": "nfl",
+    "event": "Detroit Lions at Arizona Cardinals",
+    "kickoff": "2026-10-11T20:25:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Detroit moneyline — research hold",
+     "side": "Detroit",
+     "line": null,
+     "team": "DET",
+     "odds": -218,
+     "book": "DraftKings via DK Network (jurisdiction may differ)",
+     "quoted_at": "2026-10-05T15:00:54Z"
+    },
+    "edge": {
+     "value": 5.85,
+     "unit": "percentage_points",
+     "definition": "Data Dawgs arithmetic: DRatings win estimate minus break-even probability at observed -218. Unadjusted single-model screen, not ROI. DraftKings Network quote requires direct-book refresh."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     },
+     {
+      "name": "DraftKings Network public moneyline quote",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "probability",
+      "value": 0.744,
+      "derived": "edge (pp) + break-even at -218"
+     }
+    ],
+    "game": {
+     "id": "401872991",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-10T01:09:10.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "nfl-202610-det-ari-total-under",
+    "week": "2026-10-05",
+    "sport": "nfl",
+    "event": "Detroit Lions at Arizona Cardinals",
+    "kickoff": "2026-10-11T20:25:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Detroit Lions / Arizona Cardinals: under research hold",
+     "side": "under",
+     "line": 53.5,
+     "team": null,
+     "odds": -105,
+     "book": "DraftKings via DK Network (jurisdiction may differ)",
+     "quoted_at": "2026-10-05T15:00:54Z"
+    },
+    "edge": {
+     "value": 4.3,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 49.2 versus observed base-market reference 53.5, favoring under. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     },
+     {
+      "name": "DraftKings Network public board",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 49.2
+     }
+    ],
+    "game": {
+     "id": "401872991",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-10T01:09:10.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "nfl-202610-sf-sea-total-under",
+    "week": "2026-10-05",
+    "sport": "nfl",
+    "event": "San Francisco 49ers at Seattle Seahawks",
+    "kickoff": "2026-10-11T20:25:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "San Francisco 49ers / Seattle Seahawks: under research hold",
+     "side": "under",
+     "line": 47.5,
+     "team": null,
+     "odds": -115,
+     "book": "DraftKings via DK Network (jurisdiction may differ)",
+     "quoted_at": "2026-10-05T15:00:54Z"
+    },
+    "edge": {
+     "value": 2.8,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 44.7 versus observed base-market reference 47.5, favoring under. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     },
+     {
+      "name": "DraftKings Network public board",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 44.7
+     }
+    ],
+    "game": {
+     "id": "401872992",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-10T01:09:10.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "nfl-202610-bal-atl-moneyline",
+    "week": "2026-10-05",
+    "sport": "nfl",
+    "event": "Baltimore Ravens at Atlanta Falcons",
+    "kickoff": "2026-10-12T00:20:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Baltimore moneyline — research hold",
+     "side": "Baltimore",
+     "line": null,
+     "team": "BAL",
+     "odds": -205,
+     "book": "DraftKings via DK Network (jurisdiction may differ)",
+     "quoted_at": "2026-10-05T15:00:54Z"
+    },
+    "edge": {
+     "value": 0.79,
+     "unit": "percentage_points",
+     "definition": "Data Dawgs arithmetic: DRatings win estimate minus break-even probability at observed -205. Unadjusted single-model screen, not ROI. DraftKings Network quote requires direct-book refresh."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     },
+     {
+      "name": "DraftKings Network public moneyline quote",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "probability",
+      "value": 0.68,
+      "derived": "edge (pp) + break-even at -205"
+     }
+    ],
+    "game": {
+     "id": "401872993",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-10T01:09:10.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "nfl-202610-buf-lar-total-under",
+    "week": "2026-10-05",
+    "sport": "nfl",
+    "event": "Buffalo Bills at Los Angeles Rams",
+    "kickoff": "2026-10-13T00:15:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-05T15:04:51.808Z",
+    "screened_at": "2026-10-05T15:00:54Z",
+    "selection": {
+     "text": "Buffalo Bills / Los Angeles Rams: under research hold",
+     "side": "under",
+     "line": 53.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": {
+     "value": 6.7,
+     "unit": "points",
+     "definition": "Data Dawgs arithmetic: public DRatings total 46.8 versus observed base-market reference 53.5, favoring under. Not ROI, hit probability, or alternate-line value. Market reference is not a verified alternate offer."
+    },
+    "sources": [
+     {
+      "name": "DRatings public projection; retrieval time only",
+      "as_of": "2026-10-05T15:00:54Z"
+     },
+     {
+      "name": "DraftKings Network public board",
+      "as_of": "2026-10-05T15:00:54Z"
+     }
+    ],
+    "claims": [
+     {
+      "source": "DRatings",
+      "kind": "total",
+      "value": 46.8
+     }
+    ],
+    "game": {
+     "id": "401872994",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-10T01:09:10.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   }
+  ]
+ },
+ "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
+ "built": "2026-10-10T01:21:35.124Z",
+ "canonical_url": "https://datadawgs216.com/data/bozo-menu-ledger.json"
+}

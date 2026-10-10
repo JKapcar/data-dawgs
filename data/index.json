@@ -360,9 +360,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 38642,
-    "as_of": "2026-10-05",
-    "sha256": "00358d1bb416d9d73deafecff51ac22edf6a84f90b107ba751f28597bd020def",
+    "bytes": 46397,
+    "as_of": "2026-10-10",
+    "sha256": "afef40f19567aed0b5347c557ebe345da119d4bd2d8d89ba141314d6922846e8",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -428,6 +428,22 @@
     "as_of": "2026-10-10",
     "sha256": "e06594a929d249c144b3ce2608088c9b06088d0a721cd375fb5217db7afcf910",
     "note": "Observed comparable team rates. Fourth-down distance + field zone; field goals by 10-yard distance band + open/closed roof. Not a matchup forecast or calibration of nfl4th."
+   },
+   {
+    "path": "/data/bozo-menu-ledger.json",
+    "url": "https://datadawgs216.com/data/bozo-menu-ledger.json",
+    "bytes": 106468,
+    "as_of": "2026-10-10",
+    "sha256": "283fd531e60a558d76486ab240d6113063d45abdda90fe10a4bad77a14b236ac",
+    "note": "One row per published candidate per week, graded at its published line only. Results are pending until a final exists; a push is a push. Closes are NEAR-CLOSE (SportsGameOdds free tier, about 10 minutes behind DraftKings). Entry probability CLV stays null because the menu saves one entry side; no juice is assumed. Simulation-free; not a recommendation."
+   },
+   {
+    "path": "/data/bozo-menu-scorecard.json",
+    "url": "https://datadawgs216.com/data/bozo-menu-scorecard.json",
+    "bytes": 5363,
+    "as_of": "2026-10-10",
+    "sha256": "ad92f728347c8d67dbe4e9ceb3dff0cb44142fb0bf02823735bcbdfac11fa330",
+    "note": "Source scorecard for the Bozo Menu. Every number carries its n; nothing is ranked below 30 graded rows. Benchmarks: 50% at the line, 52.38% break-even at -110, and the near-close."
    },
    {
     "path": "/data/leagues/pepperoninipples.json",

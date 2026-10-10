@@ -10213,6 +10213,9 @@ const GH_PACER_DAILY = [
   ["nfelo-refresh.yml", "14:45", {}, null],
   ["nfelo-refresh.yml", "20:45", {}, null],
   ["survivor-receipt.yml", "15:00", {}, null],
+  // After the late Sunday/Monday finals, and after the morning schedule refreshes.
+  ["bozo-menu-ledger.yml", "06:20", {}, null],
+  ["bozo-menu-ledger.yml", "13:20", {}, null],
 ];
 
 // Every dispatch this tick owes, as {workflow, slot, inputs}. Pure: the tests drive it.

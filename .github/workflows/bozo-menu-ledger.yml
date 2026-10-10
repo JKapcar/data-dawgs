@@ -1,0 +1,82 @@
+name: Bozo Menu ledger
+
+# Grades every PUBLISHED Bozo Menu candidate at its published line against the Worker's
+# public /scores finals and DraftKings near-closes, and refreshes the source scorecard:
+#   data/bozo-menu-ledger.json, data/bozo-menu-scorecard.json
+# Only public feeds are read (/bozo/menu.json, /scores?closes=1): never the private menu
+# library, never source evidence.
+#
+# Commits straight to main, like the nfelo mirror: the ledger is a derived, dated record of
+# public inputs, validated before every write, and each row carries its score source and
+# observation time, so a bad day is diffable and revertable.
+#
+# The Worker's GitHub pacer dispatches this on time (docs/github-pacer.md); the crons below
+# are the backup and GitHub may run them hours late.
+
+on:
+  schedule:
+    - cron: "20 6 * * *"
+    - cron: "20 13 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/bozo-menu-ledger.yml"
+      - "tools/bozo-menu-ledger.mjs"
+      - "tests/bozo-menu-ledger.test.mjs"
+      - "tests/fixtures/bozo-menu-ledger/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bozo-menu-ledger-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'refresh' }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: node --test tests/bozo-menu-ledger.test.mjs
+      - run: node tools/validate-data.js
+
+  refresh:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Build, validate and commit
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          node --test tests/bozo-menu-ledger.test.mjs
+          # Other jobs commit to main too. A rejected push re-syncs and rebuilds from the new
+          # main rather than merging data files by hand.
+          for attempt in 1 2 3; do
+            node tools/bozo-menu-ledger.mjs
+            node tools/data-manifest.js
+            node tools/validate-data.js
+            # status, not diff: the first run creates the files, and diff ignores untracked files.
+            if [ -z "$(git status --porcelain -- data/bozo-menu-ledger.json data/bozo-menu-scorecard.json)" ]; then
+              echo "Ledger unchanged."
+              exit 0
+            fi
+            git add data/bozo-menu-ledger.json data/bozo-menu-scorecard.json data/index.json
+            git commit -m "Bozo Menu ledger: $(node -e "const s=require('./data/bozo-menu-scorecard.json').data.menu;console.log(s.n_graded+' graded ('+s.wins+'-'+s.losses+'-'+s.pushes+')')")"
+            if git push origin HEAD:main; then exit 0; fi
+            git fetch origin main
+            git reset --hard origin/main
+          done
+          echo "::error::main kept moving; three attempts failed"
+          exit 1
