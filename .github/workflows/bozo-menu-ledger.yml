@@ -48,6 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pages: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -56,6 +57,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
       - name: Build, validate and commit
+        id: publish
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -74,9 +76,16 @@ jobs:
             fi
             git add data/bozo-menu-ledger.json data/bozo-menu-scorecard.json data/index.json
             git commit -m "Bozo Menu ledger: $(node -e "const s=require('./data/bozo-menu-scorecard.json').data.menu;console.log(s.n_graded+' graded ('+s.wins+'-'+s.losses+'-'+s.pushes+')')")"
-            if git push origin HEAD:main; then exit 0; fi
+            if git push origin HEAD:main; then echo "pushed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
             git fetch origin main
             git reset --hard origin/main
           done
           echo "::error::main kept moving; three attempts failed"
           exit 1
+      # A GITHUB_TOKEN push does not trigger the branch-source Pages build; ask for one, as the
+      # other data jobs do (work/request-survivor-pages-build.sh).
+      - name: Request Pages publication
+        if: steps.publish.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash work/request-survivor-pages-build.sh

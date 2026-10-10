@@ -1,0 +1,80 @@
+name: Dog Track grades mirror
+
+# Copies the Worker's public GET /rankings/grades into data/rankings-grades.json, which the spec
+# asks for "at each grade run" (claude/dog-track-rankings-spec.md). The Worker cannot commit, so
+# this job does the copying. It needs no secret, and it reads only what rankings.html already
+# reads. Grading itself stays the manual admin run (POST /rankings/grade), as the spec's
+# architecture section says. An unchanged document is not a commit, so a daily run is cheap
+# and catches a grade run on any day.
+
+on:
+  schedule:
+    - cron: "40 15 * * *"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/rankings-mirror.yml"
+      - "tools/rankings-mirror.mjs"
+      - "tests/rankings-mirror.test.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rankings-mirror-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'refresh' }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: node --test tests/rankings-mirror.test.mjs
+
+  mirror:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Copy, validate and commit
+        id: publish
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          node --test tests/rankings-mirror.test.mjs
+          # Other jobs commit to main too. A rejected push re-syncs and copies again onto the new
+          # main rather than merging data/index.json by hand.
+          for attempt in 1 2 3; do
+            node tools/rankings-mirror.mjs
+            if git diff --quiet -- data/rankings-grades.json; then
+              echo "Grades unchanged."
+              exit 0
+            fi
+            node tools/data-manifest.js
+            node tools/validate-data.js
+            git add data/rankings-grades.json data/index.json
+            git commit -m "Dog Track grades mirror: $(node -e "console.log(require('./data/rankings-grades.json').data.weeks_graded)") week(s) graded"
+            if git push origin HEAD:main; then echo "pushed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            git fetch origin main
+            git reset --hard origin/main
+          done
+          echo "::error::main kept moving; three attempts failed"
+          exit 1
+      # A GITHUB_TOKEN push does not trigger the branch-source Pages build; ask for one.
+      - name: Request Pages publication
+        if: steps.publish.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash work/request-survivor-pages-build.sh
