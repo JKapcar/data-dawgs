@@ -50,7 +50,14 @@ vm.runInContext(sliceBetween('const ROYALE_SD = {', 'function rExpected(')   // 
   + `\nthis.api={bozoCsvTable,bozoEasternKickoff,bozoNormalizeNflSchedule,bozoNormalizeCfbSchedule,
       bozoRefreshOneSchedule,bozoPublicScheduleGames,bozoScheduledOutcome,bozoGradeFromScheduleKv,
       bozoGradeConfirmCode,readBozoGradeConfirm,bozoGrade,bozoNormalizeOddsScores,bozoFallbackScores,
-      bozoFinalsIndex,bozoAttachFinal,bozoPickAsGame,runBozoLiveScores};`, context);
+      bozoFinalsIndex,bozoAttachFinal,bozoPickAsGame,runBozoLiveScores,
+      bozoNearCloseMarket,bozoNearCloseRecord,runBozoNearCloses,bozoNearCloseForGame,bozoNearCloseIndexFor};`, context);
+// The near-close archive reads SGO's oddID grammar and American prices, and builds URLs.
+context.URL = URL;
+vm.runInContext('const BOZO_CLOSE_BOOK = "draftkings"; const BOZO_CLOSE_API = "https://api.sportsgameodds.com/v2/events";' +
+  'const BOZO_SGO_LEAGUE = { nfl: "NFL", cfb: "NCAAF" };\n' +
+  sliceBetween('const bozoOddIds =', '// "UAB ML') + '\n' +
+  sliceBetween('const bzAmerican =', '// One DraftKings outcome can have'), context);
 const api = context.api;
 const byEspn = (games, id) => games.find(game => game.espnEventId === id);
 
@@ -482,4 +489,91 @@ test('live scores: long-overdue games poll hourly, and the daily cap holds', asy
   assert.equal(out.cfb.skipped, 'daily_cap'); assert.equal(r.calls.length, 2);
   const gone = await api.runBozoLiveScores(r.env, scoreNow + 80 * 3600_000, 2026);
   assert.equal(gone.cfb.due, 0, 'past the provider horizon nothing is due');
+});
+
+/* ---- near-close archive: every NFL/FBS game, DraftKings, both sides, before kickoff ---- */
+const dkRow = (odds, extra = {}) => ({ odds: String(odds), lastUpdatedAt: new Date(scoreNow - 600_000).toISOString(), available: true, ...extra });
+function sgoEvent(id, away, home, startsAt) {
+  return { eventID: id, leagueID: 'NCAAF', status: { startsAt },
+    teams: { home: { names: { long: home } }, away: { names: { long: away } } },
+    odds: {
+      'points-home-game-sp-home': { byBookmaker: { draftkings: dkRow(-110, { spread: '-4.5',
+        altLines: [dkRow(-150, { spread: '-2.5' }), dkRow(+120, { spread: '-7.5' }), dkRow(+400, { spread: '-20.5' })] }) } },
+      'points-away-game-sp-away': { byBookmaker: { draftkings: dkRow(-110, { spread: '4.5',
+        altLines: [dkRow(+125, { spread: '2.5' }), dkRow(-145, { spread: '7.5' }), dkRow(-600, { spread: '20.5' })] }) } },
+      'points-all-game-ou-over': { byBookmaker: { draftkings: dkRow(-105, { overUnder: '52.5', altLines: [dkRow(-200, { overUnder: '48.5' })] }) } },
+      'points-all-game-ou-under': { byBookmaker: { draftkings: dkRow(-115, { overUnder: '52.5', altLines: [dkRow(+160, { overUnder: '48.5' })] }) } },
+      'points-home-game-ml-home': { byBookmaker: { draftkings: dkRow(-200) } },
+      'points-away-game-ml-away': { byBookmaker: { draftkings: dkRow(+170) } },
+    } };
+}
+
+test('near-close keeps both sides of the same number, alternates in a band, and refuses a half', () => {
+  const e = sgoEvent('sgo-lib', 'Sam Houston Bearkats', 'Liberty Flames', new Date(scoreNow + 5 * 60_000).toISOString());
+  const spread = api.bozoNearCloseMarket(e.odds, 'spread');
+  assert.equal(spread.home_line, -4.5); assert.equal(spread.home_price, -110); assert.equal(spread.away_price, -110);
+  assert.equal(spread.alternates.map(a => a.home_line).join(','), '-7.5,-2.5', 'within 7 points, sorted; -20.5 dropped');
+  assert.equal(spread.alternates[0].away_price, -145);
+  const total = api.bozoNearCloseMarket(e.odds, 'total');
+  assert.equal(total.line, 52.5); assert.equal(total.over_price, -105); assert.equal(total.under_price, -115);
+  assert.equal(total.alternates[0].line, 48.5);
+  assert.equal(JSON.stringify(api.bozoNearCloseMarket(e.odds, 'ml')),
+    JSON.stringify({ home_price: -200, away_price: 170, updated_at: e.odds['points-home-game-ml-home'].byBookmaker.draftkings.lastUpdatedAt }));
+  const oneSided = structuredClone(e); delete oneSided.odds['points-away-game-ml-away'];
+  assert.equal(api.bozoNearCloseMarket(oneSided.odds, 'ml'), null);
+  const mispaired = structuredClone(e); mispaired.odds['points-away-game-sp-away'].byBookmaker.draftkings.spread = '3.5';
+  assert.equal(api.bozoNearCloseMarket(mispaired.odds, 'spread'), null, 'the two sides must be the same number');
+  const pulled = structuredClone(e); pulled.odds['points-all-game-ou-under'].byBookmaker.draftkings.available = false;
+  assert.equal(api.bozoNearCloseMarket(pulled.odds, 'total'), null);
+  assert.equal(api.bozoNearCloseRecord(e, 'cfb', scoreNow + 5 * 60_000), null, 'never written at or after kickoff');
+});
+
+test('near-close runs only near a kickoff, keeps the latest pre-kick capture, and reads back oriented', async () => {
+  const kick = scoreNow + 6 * 60_000;
+  const store = new Map(), calls = [];
+  const env = { SGO_KEY: 'test-only', RL: { async get(k) { return store.get(k) || null; }, async put(k, v) { store.set(k, JSON.parse(v)); } } };
+  const ev = sgoEvent('sgo-lib', 'Sam Houston Bearkats', 'Liberty Flames', new Date(kick).toISOString());
+  context.bozoSgoRequest = async (_env, url) => { calls.push(String(url)); return [ev]; };
+  store.set('schedule:nfl:2026', { games: [] });
+  store.set('schedule:cfb:2026', { games: [{ ...libRow, startsAt: new Date(scoreNow + 3 * 3600_000).toISOString() }] });
+  let out = await api.runBozoNearCloses(env, scoreNow, 2026);
+  assert.equal(calls.length, 0, 'no kickoff inside the gate: no request'); assert.equal(out.cfb.skipped, 'no_kickoff_in_gate');
+
+  const game = { ...libRow, startsAt: new Date(kick).toISOString() };
+  store.set('schedule:cfb:2026', { games: [game] });
+  out = await api.runBozoNearCloses(env, scoreNow, 2026);
+  assert.equal(calls.length, 1); assert.equal(out.cfb.stored, 1);
+  assert.match(calls[0], /leagueID=NCAAF/); assert.match(calls[0], /includeAltLines=true/);
+  const key = 'bozo:nearclose:cfb:' +
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(kick));
+  assert.equal(store.get(key).events['sgo-lib'].label, 'near-close');
+
+  ev.odds['points-home-game-ml-home'].byBookmaker.draftkings.odds = '-240';
+  await api.runBozoNearCloses(env, scoreNow + 3 * 60_000, 2026);
+  assert.equal(store.get(key).events['sgo-lib'].markets.moneyline.home_price, -240, 'the later pre-kick capture wins');
+  assert.equal(store.get(key).events['sgo-lib'].captures, 2);
+  ev.odds['points-home-game-ml-home'].byBookmaker.draftkings.odds = '-900';
+  await api.runBozoNearCloses(env, kick + 60_000, 2026);
+  assert.equal(store.get(key).events['sgo-lib'].markets.moneyline.home_price, -240, 'an in-play quote is never a close');
+
+  // A refusal for one sport is recorded by code and does not throw away the other's run.
+  store.set('schedule:nfl:2026', { games: [{ ...game, espnEventId: 'nfl-x' }] });
+  context.bozoSgoRequest = async (_env, url) => {
+    if (/leagueID=NFL/.test(String(url))) throw Object.assign(new Error('secret detail'), { code: 'quota_exceeded' });
+    calls.push(String(url)); return [];
+  };
+  const split = await api.runBozoNearCloses(env, scoreNow + 4 * 60_000, 2026);
+  assert.equal(split.nfl.error, 'quota_exceeded'); assert.equal(split.cfb.events, 0);
+  assert.ok(!JSON.stringify(store.get('bozo:nearclose:last-run')).includes('secret detail'));
+
+  const index = await api.bozoNearCloseIndexFor(env, 'cfb', [game]);
+  const close = api.bozoNearCloseForGame(index, game);
+  assert.equal(close.label, 'near-close'); assert.equal(close.moneyline.home_price, -240);
+  assert.equal(close.spread.home_line, -4.5);
+  // The same game listed the other way round by the provider reads back in the schedule's orientation.
+  const swapped = { ...game, home: game.away, away: game.home };
+  const flip = api.bozoNearCloseForGame(index, swapped);
+  assert.equal(flip.spread.home_line, 4.5); assert.equal(flip.moneyline.home_price, 170);
+  assert.equal(flip.spread.alternates.map(a => a.home_line).join(','), '2.5,7.5');
+  assert.equal(flip.total.line, 52.5);
 });

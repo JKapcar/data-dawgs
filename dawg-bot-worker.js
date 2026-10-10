@@ -1689,6 +1689,15 @@ export default {
         return { error: String((e && e.message) || e) };
       });
       if (ctx && ctx.waitUntil) ctx.waitUntil(scoresRun);
+      // Near-close archive for every NFL/FBS game: own failure domain and lasterror key, so
+      // a provider hiccup here can never cost a league leg its close, or the reverse.
+      const nearCloseRun = runBozoNearCloses(env, tickMs).catch(async e => {
+        const kv = cfbMarketKV(env);
+        if (kv) await kv.put("bozo:nearclose:lasterror",
+          JSON.stringify({ at: new Date().toISOString(), error: String((e && e.message) || e) }));
+        return { error: String((e && e.message) || e) };
+      });
+      if (ctx && ctx.waitUntil) ctx.waitUntil(nearCloseRun);
       /* Automatic grading rides the same five-minute tick, in its OWN failure domain.
          It is the tick that already knows about games starting and finishing, so it is
          the right one to notice them ending — and a close-capture outage must not stop
@@ -1704,7 +1713,8 @@ export default {
       if (ctx && ctx.waitUntil) ctx.waitUntil(gradeRun);
       try {
         const bozo = await runBozoCloseCapture(env, tickMs);
-        return { ...bozo, forecast: await forecastRun, scores: await scoresRun, autograde: await gradeRun };
+        return { ...bozo, forecast: await forecastRun, scores: await scoresRun,
+          nearCloses: await nearCloseRun, autograde: await gradeRun };
       } catch (e) {
         const kv = cfbMarketKV(env);
         if (kv) await kv.put("bozo:close:lasterror",
@@ -2235,6 +2245,19 @@ async function handleScores(url, env, cors) {
         ? bozoPublicScheduleGames(doc, dates, { week, matchWeek: true })
         : bozoPublicScheduleGames(doc, dates, { window }))
     : bozoPublicScheduleGames(doc, dates);
+  // Opt-in (closes=1): the DraftKings near-close per game, in the scheduled orientation.
+  // The page's game picker never asks for it, so its request stays one KV read.
+  if (url.searchParams.get("closes") === "1") {
+    try {
+      const internal = new Map(doc.games.map(g => [String(g.espnEventId), g]));
+      const rows = games.map(p => internal.get(p.id)).filter(Boolean);
+      const index = await bozoNearCloseIndexFor(env, sport, rows);
+      for (const p of games) {
+        const g = internal.get(p.id);
+        p.close = g ? bozoNearCloseForGame(index, g) : null;
+      }
+    } catch { for (const p of games) if (!("close" in p)) p.close = null; }
+  }
   return new Response(JSON.stringify({
     sport, games, via: doc.source, fetched: doc.fetchedAt,
     week: Number.isFinite(week) && week > 0 ? week : null,
@@ -9831,19 +9854,30 @@ function bozoNormalizeOddsScores(sport, rows, fetchedAt) {
    good candidates is ambiguity, and ambiguity is null — never a guess. The game returned
    keeps the SCHEDULED names and orientation, so grading resolves a side against the
    schedule's own spelling, never the provider's. */
-function bozoFinalsIndex(finals, sport, registry = bozoBuildTeamRegistry(sport).aliases) {
+// Index provider rows (finals, near-closes) by normalized teams and kickoff.
+function bozoTeamIndex(rows, sport, facts, registry = bozoBuildTeamRegistry(sport).aliases) {
   const known = new Set(Object.values(registry));
   const norm = v => bozoTeamNorm(v, registry);
   const entries = [];
-  for (const f of (finals && finals.games) || []) {
-    const t = Date.parse((f && f.startsAt) || "");
-    if (!f || f.completed !== true || f.homeScore == null || f.awayScore == null || !Number.isFinite(t)) continue;
-    entries.push({ f, t, home: norm(f.home && f.home.name), away: norm(f.away && f.away.name) });
+  for (const row of rows || []) {
+    const x = row && facts(row);
+    const t = Date.parse((x && x.startsAt) || "");
+    if (!x || !Number.isFinite(t)) continue;
+    entries.push({ f: row, t, home: norm(x.home), away: norm(x.away) });
   }
   return { known, norm, entries };
 }
 
-function bozoAttachFinal(index, game) {
+function bozoFinalsIndex(finals, sport, registry = bozoBuildTeamRegistry(sport).aliases) {
+  const done = ((finals && finals.games) || []).filter(f =>
+    f && f.completed === true && f.homeScore != null && f.awayScore != null);
+  return bozoTeamIndex(done, sport,
+    f => ({ startsAt: f.startsAt, home: f.home && f.home.name, away: f.away && f.away.name }), registry);
+}
+
+// The one provider row for a scheduled game, and whether the provider lists it the other
+// way round. Null on no candidate or on a tie.
+function bozoNearestByTeams(index, game) {
   if (!index || !game) return null;
   const { known, norm } = index;
   const resolve = team => [team && team.name, team && team.abbr].map(norm).find(k => known.has(k))
@@ -9867,7 +9901,12 @@ function bozoAttachFinal(index, game) {
       } else if (score === best.score && delta === best.delta && e !== best.e) tied = true;
     }
   }
-  if (!best || tied) return null;
+  return best && !tied ? best : null;
+}
+
+function bozoAttachFinal(index, game) {
+  const best = bozoNearestByTeams(index, game);
+  if (!best) return null;
   const f = best.e.f;
   return { ...game, completed: true,
     homeScore: best.swapped ? f.awayScore : f.homeScore,
@@ -9967,6 +10006,166 @@ async function runBozoLiveScores(env, nowMs = Date.now(), season = SEASON) {
       error: archive.errorCode || archive.error || null };
   }
   return out;
+}
+
+/* ======================= near-close archive: every game ======================
+   The league close capture prices only the legs on a board. Grading anything else —
+   the Bozo Menu, a model's lean, a source's CLV — needs the market at kickoff for EVERY
+   NFL/FBS game, under the same rules: DraftKings, both sides of the same number, before
+   kickoff, never back-filled from an entry price. SportsGameOdds' free tier trails the
+   book by about ten minutes (docs/bozo-workplan.md D5), so these are labelled
+   NEAR-CLOSE, never close: the last pre-kickoff DraftKings quote this tier can see,
+   captured inside BOZO_NEARCLOSE_LEAD_MS of kickoff.
+   One request per sport per tick, and only while a scheduled game kicks off inside the
+   gate, so an idle tick spends nothing. Each game costs one or two SGO objects (about a
+   hundred a week across NFL and FBS, against 2,500 a month).
+     bozo:nearclose:<sport>:<eastern-date>  — { events: { <sgo event id>: record } }
+   A later pre-kickoff capture replaces an earlier one, because it is closer to the
+   close; a capture at or after kickoff is never written. */
+const BOZO_NEARCLOSE_PREFIX = "bozo:nearclose:";
+const BOZO_NEARCLOSE_LEAD_MS = 7 * 60 * 1000;
+const BOZO_NEARCLOSE_GATE_MS = 20 * 60 * 1000;
+const BOZO_NEARCLOSE_ALT_BAND = 7;   // points either side of the main line
+const bozoNearCloseKey = (sport, date) => `${BOZO_NEARCLOSE_PREFIX}${sport}:${date}`;
+
+// DraftKings' two sides of one game market, main number first, alternates in a band.
+// Spreads pair home x with away -x; totals pair over x with under x. Null unless both
+// sides of the main number are priced.
+function bozoNearCloseMarket(odds, mkt) {
+  const [homeId, awayId] = bozoOddIds(mkt, "game");
+  const a = odds && odds[homeId] && odds[homeId].byBookmaker && odds[homeId].byBookmaker[BOZO_CLOSE_BOOK];
+  const b = odds && odds[awayId] && odds[awayId].byBookmaker && odds[awayId].byBookmaker[BOZO_CLOSE_BOOK];
+  if (!a || !b) return null;
+  const field = mkt === "spread" ? "spread" : mkt === "total" ? "overUnder" : null;
+  const usable = r => !!r && r.available !== false && bzAmerican(r.odds) !== null &&
+    (field === null || Number.isFinite(Number(r[field])));
+  if (!usable(a) || !usable(b)) return null;
+  const stamp = rows => rows.map(r => r.lastUpdatedAt).filter(x => !isNaN(Date.parse(x || ""))).sort().pop() || null;
+  if (mkt === "ml") return { home_price: bzAmerican(a.odds), away_price: bzAmerican(b.odds), updated_at: stamp([a, b]) };
+  const opposite = x => mkt === "spread" ? -x : x;
+  const main = Number(a[field]);
+  if (Math.abs(Number(b[field]) - opposite(main)) > 0.001) return null;
+  const pair = (ra, rb) => mkt === "spread"
+    ? { home_line: Number(ra.spread), home_price: bzAmerican(ra.odds), away_price: bzAmerican(rb.odds) }
+    : { line: Number(ra.overUnder), over_price: bzAmerican(ra.odds), under_price: bzAmerican(rb.odds) };
+  const alternates = [];
+  for (const ra of a.altLines || []) {
+    if (!usable(ra)) continue;
+    const x = Number(ra[field]);
+    if (Math.abs(x - main) < 0.001 || Math.abs(x - main) > BOZO_NEARCLOSE_ALT_BAND) continue;
+    const rb = (b.altLines || []).find(r => usable(r) && Math.abs(Number(r[field]) - opposite(x)) < 0.001);
+    if (rb) alternates.push({ ...pair(ra, rb), updated_at: stamp([ra, rb]) });
+  }
+  alternates.sort((p, q) => (field === "spread" ? p.home_line - q.home_line : p.line - q.line));
+  return { ...pair(a, b), updated_at: stamp([a, b]), alternates };
+}
+
+function bozoNearCloseRecord(event, sport, capturedMs) {
+  const kickoff = Date.parse((event && event.status && event.status.startsAt) || "");
+  const eventId = String((event && event.eventID) || "");
+  if (!eventId || eventId.length > 200 || !Number.isFinite(kickoff) || kickoff <= capturedMs) return null;
+  const team = t => { const n = (t && t.names) || {}; return { name: String(n.long || n.medium || n.short || ""), abbr: String(n.short || "") }; };
+  const teams = { home: team(event.teams && event.teams.home), away: team(event.teams && event.teams.away) };
+  if (!teams.home.name || !teams.away.name) return null;
+  const markets = {};
+  for (const [name, mkt] of [["spread", "spread"], ["total", "total"], ["moneyline", "ml"]]) {
+    const m = bozoNearCloseMarket(event.odds || {}, mkt);
+    if (m) markets[name] = m;
+  }
+  if (!Object.keys(markets).length) return null;
+  return { schema_version: 1, sport, event_id: eventId, kickoff: new Date(kickoff).toISOString(),
+    captured_at: new Date(capturedMs).toISOString(), lead_seconds: Math.round((kickoff - capturedMs) / 1000),
+    label: "near-close", book: BOZO_CLOSE_BOOK, source: "SportsGameOdds", teams, markets };
+}
+
+async function runBozoNearCloses(env, nowMs = Date.now(), season = SEASON) {
+  const kv = env && env.RL;
+  if (!kv) throw new Error("no KV binding for near-close captures");
+  if (!env.SGO_KEY) return { skipped: "sgo_unconfigured" };
+  const out = {};
+  for (const sport of ["nfl", "cfb"]) {
+    let doc = null;
+    try { doc = await bozoScheduleDoc(env, sport, season); } catch { doc = null; }
+    const soon = ((doc && doc.games) || []).some(g => {
+      const t = Date.parse((g && g.startsAt) || "");
+      return Number.isFinite(t) && t > nowMs && t - nowMs <= BOZO_NEARCLOSE_GATE_MS;
+    });
+    if (!soon) { out[sport] = { skipped: "no_kickoff_in_gate" }; continue; }
+    const url = new URL(BOZO_CLOSE_API);
+    url.searchParams.set("leagueID", BOZO_SGO_LEAGUE[sport]);
+    url.searchParams.set("startsAfter", new Date(nowMs).toISOString());
+    url.searchParams.set("startsBefore", new Date(nowMs + BOZO_NEARCLOSE_LEAD_MS).toISOString());
+    url.searchParams.set("oddID", ["ml", "spread", "total"].flatMap(m => bozoOddIds(m, "game")).join(","));
+    url.searchParams.set("includeOpposingOdds", "true");
+    url.searchParams.set("includeAltLines", "true");
+    url.searchParams.set("limit", "100");
+    let events;
+    try { events = await bozoSgoRequest(env, url, { sport, needProps: false, caller: "near-close" }); }
+    catch (e) {
+      // One sport's refusal must not cost the other its closes. Fixed codes only: provider
+      // detail text stays out of KV.
+      out[sport] = { error: ["quota_exceeded", "rate_limited", "timeout", "provider_rejected", "invalid_response"]
+        .includes(e && e.code) ? e.code : "provider_error" };
+      continue;
+    }
+    const byDate = new Map();
+    let unpriced = 0;
+    for (const event of events || []) {
+      const record = bozoNearCloseRecord(event, sport, nowMs);
+      if (!record) { unpriced++; continue; }
+      const date = bozoEasternDate(record.kickoff);
+      if (!byDate.has(date)) byDate.set(date, []);
+      byDate.get(date).push(record);
+    }
+    let stored = 0;
+    for (const [date, records] of byDate) {
+      const key = bozoNearCloseKey(sport, date);
+      let day = null;
+      try { day = await kv.get(key, "json"); } catch { day = null; }
+      if (!day || typeof day.events !== "object" || !day.events) day = { schema_version: 1, sport, date, events: {} };
+      for (const record of records) {
+        const prior = day.events[record.event_id];
+        if (prior && Date.parse(prior.captured_at) >= Date.parse(record.captured_at)) continue;
+        day.events[record.event_id] = { ...record, captures: ((prior && prior.captures) || 0) + 1 };
+        stored++;
+      }
+      await kv.put(key, JSON.stringify(day));
+    }
+    out[sport] = { events: (events || []).length, stored, unpriced };
+  }
+  try { await kv.put(BOZO_NEARCLOSE_PREFIX + "last-run", JSON.stringify({ at: new Date(nowMs).toISOString(), ...out })); } catch {}
+  return out;
+}
+
+// A near-close record in the SCHEDULED orientation: home means the schedule's home team,
+// even when the provider lists a neutral-site game the other way round.
+function bozoNearCloseForGame(index, game) {
+  const best = bozoNearestByTeams(index, game);
+  if (!best) return null;
+  const r = best.e.f, m = r.markets || {};
+  const flipSpread = s => s && ({ home_line: -s.home_line, home_price: s.away_price, away_price: s.home_price,
+    updated_at: s.updated_at || null });
+  const spread = !m.spread ? null : best.swapped
+    ? { ...flipSpread(m.spread), alternates: (m.spread.alternates || []).map(flipSpread).sort((p, q) => p.home_line - q.home_line) }
+    : m.spread;
+  const moneyline = !m.moneyline ? null : best.swapped
+    ? { home_price: m.moneyline.away_price, away_price: m.moneyline.home_price, updated_at: m.moneyline.updated_at || null }
+    : m.moneyline;
+  return { label: r.label, book: r.book, source: r.source, event_id: r.event_id, provider_kickoff: r.kickoff,
+    captured_at: r.captured_at, lead_seconds: r.lead_seconds,
+    spread, total: m.total || null, moneyline };
+}
+
+async function bozoNearCloseIndexFor(env, sport, games) {
+  const dates = [...new Set(games.map(g => bozoEasternDate(g.startsAt)).filter(Boolean))].slice(0, 16);
+  const records = [];
+  for (const date of dates) {
+    let day = null;
+    try { day = await env.RL.get(bozoNearCloseKey(sport, date), "json"); } catch { day = null; }
+    if (day && day.events && typeof day.events === "object") records.push(...Object.values(day.events));
+  }
+  return bozoTeamIndex(records, sport, r => ({ startsAt: r.kickoff,
+    home: r.teams && r.teams.home && r.teams.home.name, away: r.teams && r.teams.away && r.teams.away.name }));
 }
 
 async function bozoGradeFromScheduleKv(env, state, supplied) {
@@ -21772,6 +21971,7 @@ const MCP_TOOLS = [
       properties: {
         sport: { type: "string", enum: ["nfl", "cfb", "nba", "cbb", "mlb", "nhl"], description: "Sport key" },
         dates: { type: "string", description: "YYYYMMDD or YYYYMMDD-YYYYMMDD (optional)" },
+        closes: { type: "boolean", description: "Attach each game's DraftKings NEAR-CLOSE (spread, total, moneyline, both sides, alternates within 7 points), captured inside 7 minutes of kickoff from SportsGameOdds' free tier, which trails the book by about 10 minutes. Labelled near-close, never close." },
       },
       required: ["sport"],
       additionalProperties: false,
@@ -21782,6 +21982,7 @@ const MCP_TOOLS = [
       const u = new URL("https://mcp.internal/scores");
       u.searchParams.set("sport", args.sport);
       if (args.dates) u.searchParams.set("dates", args.dates);
+      if (args.closes === true) u.searchParams.set("closes", "1");
       const resp = await handleScores(u, env, {});
       const data = await resp.json();
       if (!resp.ok) return toolErr("Scores unavailable from this Worker's schedule cache (" + (data.detail || data.error || resp.status) + ").");

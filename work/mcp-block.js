@@ -5100,6 +5100,7 @@ const MCP_TOOLS = [
       properties: {
         sport: { type: "string", enum: ["nfl", "cfb", "nba", "cbb", "mlb", "nhl"], description: "Sport key" },
         dates: { type: "string", description: "YYYYMMDD or YYYYMMDD-YYYYMMDD (optional)" },
+        closes: { type: "boolean", description: "Attach each game's DraftKings NEAR-CLOSE (spread, total, moneyline, both sides, alternates within 7 points), captured inside 7 minutes of kickoff from SportsGameOdds' free tier, which trails the book by about 10 minutes. Labelled near-close, never close." },
       },
       required: ["sport"],
       additionalProperties: false,
@@ -5110,6 +5111,7 @@ const MCP_TOOLS = [
       const u = new URL("https://mcp.internal/scores");
       u.searchParams.set("sport", args.sport);
       if (args.dates) u.searchParams.set("dates", args.dates);
+      if (args.closes === true) u.searchParams.set("closes", "1");
       const resp = await handleScores(u, env, {});
       const data = await resp.json();
       if (!resp.ok) return toolErr("Scores unavailable from this Worker's schedule cache (" + (data.detail || data.error || resp.status) + ").");
