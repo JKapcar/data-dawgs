@@ -33,6 +33,8 @@ on:
       - "work/test-bozo-menu-ui.mjs"
       - "tests/bozo-form-spread.test.cjs"
       - "tests/bozo-disclosures.test.cjs"
+      - "tests/bozo-diagnostics.test.cjs"
+      - "work/test-bozo-diagnostics-ui.mjs"
       - "work/test-bozo-disclosures-ui.mjs"
       - "tests/service-worker.test.js"
       - "tests/live-state.test.js"
@@ -68,6 +70,8 @@ on:
       - "work/test-bozo-menu-ui.mjs"
       - "tests/bozo-form-spread.test.cjs"
       - "tests/bozo-disclosures.test.cjs"
+      - "tests/bozo-diagnostics.test.cjs"
+      - "work/test-bozo-diagnostics-ui.mjs"
       - "work/test-bozo-disclosures-ui.mjs"
       - "tests/service-worker.test.js"
       - "tests/live-state.test.js"
@@ -94,13 +98,20 @@ jobs:
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-agent-feedback-ui.mjs
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-agent-board-ui.mjs
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-disclosures-ui.mjs
+      - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-diagnostics-ui.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bozo-diagnostics-screenshots
+          path: work/artifacts/bozo-diagnostics/*.png
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: bozo-disclosure-screenshots
           path: work/artifacts/bozo-disclosures/*.png
           if-no-files-found: ignore
-      - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node --test tests/bozo-form-spread.test.cjs tests/bozo-spread-sign.test.js tests/bozo-price-sign.test.js tests/bozo-disclosures.test.cjs
+      - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node --test tests/bozo-form-spread.test.cjs tests/bozo-spread-sign.test.js tests/bozo-price-sign.test.js tests/bozo-disclosures.test.cjs tests/bozo-diagnostics.test.cjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-bozo-menu-ui.mjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-autoload-ui.cjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-workspace-ui.cjs

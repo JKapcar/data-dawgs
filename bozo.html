@@ -1927,6 +1927,36 @@ body.pb-hub{background:#120b05}
   margin:7px 0;color:var(--ink-1)}
 @media(max-width:640px){ .ros{grid-template-columns:1fr auto;row-gap:6px} .ros .who{grid-column:1/-1} }
 
+/* Diagnostics: compact evidence-led plates, native SVG and native disclosures. */
+#diagExploreCard{--dx-teal:#147b78;--dx-red:#c54119;--dx-gold:#927014;--dx-muted:#8c887e}
+html[data-theme="dark"] #diagExploreCard{--dx-teal:#66d4cb;--dx-red:#ff9870;--dx-gold:#e5c46c;--dx-muted:#9e9b92}
+#diagExploreCard .stat-grid{grid-template-columns:repeat(3,minmax(0,1fr));border-block:1px solid var(--grid);padding:16px 0}
+#diagExploreCard .stat-grid .big{font-size:clamp(22px,4vw,38px)}
+#diagExploreCard .stat-grid .tm{font-size:11px;line-height:1.5}
+.dx-scope{font:11px/1.6 ui-monospace,monospace;color:var(--ink-2);margin:14px 0}
+#dxChart{gap:18px;min-width:0}.dx-primary,.dx-secondary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.dx-viz{min-width:0;padding:22px;border:1px solid var(--grid);border-top:3px solid var(--dx-teal);border-radius:12px;background:var(--surface-1)}
+.dx-kicker{font:750 10px/1.4 ui-monospace,monospace;letter-spacing:.14em;color:var(--dx-teal);margin-bottom:10px}
+.dx-viz h3{font-size:clamp(19px,2vw,25px);line-height:1.2;margin:0 0 7px;letter-spacing:-.025em;color:var(--ink)}
+.dx-sub{font:11px/1.5 ui-monospace,monospace;color:var(--ink-2);margin:0 0 15px}
+.dx-plot{display:block;width:100%;height:auto;overflow:visible}.dx-plot text{fill:var(--ink-2);font:17px ui-monospace,monospace}
+.dx-gridline{stroke:var(--grid);stroke-width:1}.dx-zero{stroke:var(--ink-3);stroke-width:1.5}
+.dx-line{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}.dx-actual{stroke:var(--dx-teal)}.dx-expected{stroke:var(--dx-gold);stroke-dasharray:7 5}.dx-dot{fill:var(--surface-1);stroke-width:3}
+.dx-cal-reference{stroke:var(--dx-gold);stroke-width:2;stroke-dasharray:6 5}
+.dx-result{display:grid;gap:2px;margin:18px 0 22px}.dx-result b{font-size:clamp(44px,7vw,72px);line-height:1;color:var(--dx-teal);letter-spacing:-.06em}.dx-result span{font:11px ui-monospace,monospace;color:var(--ink-2)}
+.dx-stack{display:flex;gap:3px;height:22px;border-radius:4px;overflow:hidden;background:var(--grid)}.dx-stack span{min-width:0}
+.dx-win{background:var(--dx-teal)}.dx-loss{background:var(--dx-red)}.dx-neutral,.dx-expect{background:var(--dx-gold)}.dx-pending{background:repeating-linear-gradient(135deg,var(--dx-muted) 0 2px,transparent 2px 5px)}
+.dx-legend{display:flex;gap:10px 18px;flex-wrap:wrap;font:11px/1.5 ui-monospace,monospace;color:var(--ink-2);margin:15px 0}.dx-legend span{display:flex;align-items:center;gap:6px}.dx-legend i{width:10px;height:10px;border-radius:2px}.dx-legend b{color:var(--ink)}
+.dx-viz>.bz-help{border-top:1px solid var(--grid);margin:16px 0 0;padding-top:4px}.dx-viz>.bz-help>summary{font-size:12px}.dx-viz details p{font-size:12px;line-height:1.6}.dx-viz table{font-size:11px}
+.dx-metric{display:flex;align-items:center;gap:12px;font:11px ui-monospace,monospace;margin:12px 0}.dx-metric select{min-height:44px;max-width:100%;color:var(--ink);background:var(--surface-1)}
+.dx-axis-labels{display:flex;justify-content:space-between;color:var(--ink-3);font:10px ui-monospace,monospace;margin:18px 0 8px}.dx-comparisons{display:grid;gap:15px}
+.dx-row-label{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:12px;margin-bottom:6px;overflow-wrap:anywhere}.dx-row-label span{font:10px/1.5 ui-monospace,monospace;color:var(--ink-2);text-align:right}
+.dx-diverge{position:relative;height:19px;background:color-mix(in srgb,var(--ink) 4%,transparent);border-radius:3px}.dx-diverge:before{content:"";position:absolute;left:50%;height:100%;width:1px;background:var(--ink-3)}.dx-diverge>i{position:absolute;height:100%;border-radius:2px}.dx-zero-dot{position:absolute;left:calc(50% - 3px);top:6px;width:7px;height:7px;border-radius:50%;background:var(--dx-teal)}.dx-missing{position:absolute;inset:0;text-align:center;background:var(--surface-1);font:10px/19px ui-monospace,monospace;color:var(--ink-3)}
+.dx-more{border:1px solid var(--grid);border-radius:12px;padding:6px 16px}.dx-more>summary{gap:10px;font-size:14px}.dx-more>summary span{font:10px ui-monospace,monospace;color:var(--ink-3);margin-left:auto}.dx-secondary{margin:12px 0}.dx-secondary .dx-viz:last-child{grid-column:1/-1}
+.dx-coverage{display:grid;gap:18px;padding:8px 0}.dx-coverage>div{display:grid;grid-template-columns:1fr auto;gap:7px;font:12px ui-monospace,monospace}.dx-cover-track{grid-column:1/-1;height:10px;background:var(--grid);border-radius:3px;overflow:hidden}.dx-cover-track i{display:block;height:100%}
+.dx-unmeasured{display:grid;place-items:center;min-height:160px;padding:24px;border:1px dashed var(--grid);font:13px/1.6 ui-monospace,monospace;color:var(--ink-2);text-align:center}.dx-ledger{margin-top:16px}
+@media(max-width:640px){.dx-primary,.dx-secondary{grid-template-columns:1fr;gap:14px}.dx-viz{padding:16px}.dx-more{padding:6px 10px}.dx-secondary .dx-viz:last-child{grid-column:auto}.dx-result{margin:14px 0 18px}.dx-result b{font-size:54px}.dx-row-label{font-size:12px}.dx-row-label span{max-width:50%}.dx-more>summary span{display:none}#diagExploreCard .stat-grid{gap:10px}#diagExploreCard .stat-grid .lil{font-size:9px}}
+
 /* ---- streamlined Bozo sheets ---- */
 #bozoApp{display:flex;flex-direction:column}
 #bozoApp>.playbill{order:0}
@@ -3694,10 +3724,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <label>Break down by<select id="dxGroup"><option value="player">Player</option><option value="sport">Sport</option><option value="market">Market</option><option value="week">Week</option></select></label>
   </div>
   <div class="stat-grid" id="dxTiles"></div>
-  <h3 style="font-size:13px;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-3);margin:20px 0 8px">Results vs. the closing line</h3>
+  <p class="dx-scope" id="dxScope" aria-live="polite"></p>
   <div class="dash-chart" id="dxChart"></div>
-  <div class="tscroll"><table class="bz" id="dxTable"><tbody></tbody></table></div>
-  <p class="note" id="dxNote"></p>
+  <details class="bz-help dx-ledger"><summary>Full breakdown &amp; methodology</summary><div class="tscroll"><table class="bz" id="dxTable"><tbody></tbody></table></div><p class="note" id="dxNote"></p></details>
 </div>
 
 <!-- ---------- the hub: THE BILL ----------
@@ -6162,6 +6191,7 @@ function render(){
   else if(onDiagnostics){
     document.getElementById('dxMeta').textContent='loading ledger…';
     document.getElementById('dxTiles').innerHTML='';
+    document.getElementById('dxScope').textContent='';
     document.getElementById('dxChart').innerHTML='<div class="dash-empty">Loading the season ledger…</div>';
     document.querySelector('#dxTable tbody').innerHTML='';
     document.getElementById('dxNote').textContent='';
@@ -7217,39 +7247,104 @@ function dxRows(){
   if(win==='last24') rows=rows.slice(-24);
   return rows;
 }
+// Presentation-only measurements: never compare unpriced wins with priced expectations.
+// Invalid manual implied probabilities are omitted, not clipped into evidence.
+function dxPair(l){
+  const p=clvPair(l);
+  return p && Number.isFinite(p.pE) && p.pE>=0 && p.pE<=1 && Number.isFinite(p.pC) && p.pC>=0 && p.pC<=1 && Number.isFinite(p.clv) ? p : null;
+}
 function dxSummary(rows){
   const graded=rows.filter(l=>l.result==='win'||l.result==='loss');
-  const measurable=graded.filter(clvGraded);
+  const measurable=graded.filter(l=>dxPair(l));
   const wins=graded.filter(l=>l.result==='win').length;
-  const expected=measurable.reduce((s,l)=>s+clvPair(l).pC,0);
-  const clv=measurable.reduce((s,l)=>s+clvPair(l).clv,0);
-  const overridden=measurable.filter(l=>clvPair(l).manual).length;
+  const matchedWins=measurable.filter(l=>l.result==='win').length;
+  const expected=measurable.reduce((v,l)=>v+dxPair(l).pC,0);
+  const clv=measurable.reduce((v,l)=>v+dxPair(l).clv,0);
+  const overridden=measurable.filter(l=>dxPair(l).manual).length;
   return {picks:rows.length,graded,wins,losses:graded.length-wins,measurable,overridden,
-    expected,delta:wins-expected,clv:measurable.length?clv/measurable.length:null};
+    matchedWins,expected,delta:matchedWins-expected,clv:measurable.length?clv/measurable.length:null};
+}
+const dxSigned=(v,n=1)=>(v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(n);
+function dxData(headers,rows){
+  return `<div class="tscroll"><table class="bz"><thead><tr>${headers.map(h=>`<th scope="col">${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<${i?'td':'th'}${i?'':' scope="row"'}>${esc(c)}</${i?'td':'th'}>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+function dxCard(id,kicker,title,sub,chart,help,headers,data){
+  return `<section class="dx-viz" data-chart="${id}"><div class="dx-kicker">${kicker}</div><h3>${title}</h3><p class="dx-sub">${sub}</p>${chart}<details class="bz-help"><summary>Read chart &amp; data</summary><p>${help}</p>${dxData(headers,data)}</details></section>`;
+}
+const dxEmpty=message=>`<div class="dx-unmeasured">${message}</div>`;
+function dxSvg(label,body){return `<svg class="dx-plot" viewBox="0 0 460 240" role="img" aria-label="${esc(label)}">${body}</svg>`;}
+function dxLinePlot(points,series,domain,label,format){
+  const x=i=>48+(points.length===1?174:i*348/(points.length-1)), y=v=>190-(v-domain[0])/(domain[1]-domain[0])*162;
+  let body='';
+  for(let i=0;i<=4;i++){
+    const v=domain[0]+(domain[1]-domain[0])*i/4;
+    body+=`<line x1="48" x2="410" y1="${y(v)}" y2="${y(v)}" class="dx-gridline"/><text x="40" y="${y(v)+4}" text-anchor="end">${format(v)}</text>`;
+  }
+  if(domain[0]<0&&domain[1]>0)body+=`<line x1="48" x2="410" y1="${y(0)}" y2="${y(0)}" class="dx-zero"/>`;
+  points.forEach((p,i)=>{if(points.length<=8||i===0||i===points.length-1||i%Math.ceil(points.length/6)===0)body+=`<text x="${x(i)}" y="214" text-anchor="middle">W${esc(p.week)}</text>`;});
+  series.forEach(ser=>{
+    let segment=[];
+    const flush=()=>{if(segment.length>1)body+=`<polyline points="${segment.join(' ')}" class="dx-line ${ser.cls}"/>`;segment=[];};
+    points.forEach((p,i)=>{const v=p[ser.key];if(v==null){flush();return;}segment.push(`${x(i)},${y(v)}`);});flush();
+    points.forEach((p,i)=>{const v=p[ser.key];if(v!=null)body+=`<circle cx="${x(i)}" cy="${y(v)}" r="4.5" class="dx-dot ${ser.cls}"><title>Week ${esc(p.week)}: ${esc(ser.label)} ${format(v)}; ${p.n} measured picks</title></circle>`;});
+  });
+  return dxSvg(label,body);
+}
+function dxVisuals(rows,s,sums,group,metric){
+  const counts=[['Wins',s.wins,'win'],['Losses',s.losses,'loss'],['Push / void',rows.filter(l=>l.result==='push'||l.result==='void').length,'neutral']];
+  counts.push(['Pending / other',s.picks-counts.reduce((v,x)=>v+x[1],0),'pending']);
+  const outcome=`<div class="dx-outcome"><div class="dx-result"><b>${s.graded.length?Math.round(s.wins/s.graded.length*100)+'%':'—'}</b><span>win rate · ${s.graded.length} decisions</span></div><div class="dx-stack" role="img" aria-label="${esc(counts.map(x=>x[0]+': '+x[1]).join(', '))}">${counts.filter(x=>x[1]).map(x=>`<span class="dx-${x[2]}" style="width:${x[1]/s.picks*100}%"></span>`).join('')}</div><div class="dx-legend">${counts.map(x=>`<span><i class="dx-${x[2]}"></i>${x[0]} <b>${x[1]}</b></span>`).join('')}</div></div>`;
+  const outcomes=dxCard('outcomes','01 / THE RESULTS','How the picks landed',`${s.picks} picks in the selected slice`,outcome,'Win rate uses wins and losses only. Pushes, voids and pending or other statuses remain separate. Results alone do not establish skill.',['Outcome','Picks'],counts.map(x=>x.slice(0,2)));
+  const byWeek=new Map();rows.forEach(l=>{const w=Number(l.week);if(Number.isFinite(w)){if(!byWeek.has(w))byWeek.set(w,[]);byWeek.get(w).push(l);}});
+  const observedWeeks=[...byWeek.keys()];
+  if(observedWeeks.length){for(let w=Math.min(...observedWeeks);w<=Math.max(...observedWeeks);w++){if(!byWeek.has(w))byWeek.set(w,[]);}}
+  let cumulativeW=0,cumulativeE=0;
+  const weeks=[...byWeek].sort((a,b)=>a[0]-b[0]).map(([week,rs])=>{const t=dxSummary(rs);cumulativeW+=t.matchedWins;cumulativeE+=t.expected;return {week,n:t.measurable.length,wins:t.measurable.length?cumulativeW:null,expected:t.measurable.length?cumulativeE:null,clv:t.clv==null?null:t.clv*100};});
+  const trend=s.measurable.length?dxLinePlot(weeks,[{key:'wins',label:'Cumulative wins',cls:'dx-actual'},{key:'expected',label:'Cumulative expected wins',cls:'dx-expected'}],[0,Math.max(1,cumulativeW,cumulativeE)*1.12],'Cumulative actual and expected wins, matched measured picks',v=>v.toFixed(1)):dxEmpty('Waiting for graded picks with usable prices.');
+  const trendCard=dxCard('trend','02 / THE SEASON PATH','Results meet expectation',s.measurable.length?`${s.matchedWins} wins vs ${s.expected.toFixed(1)} expected · same ${s.measurable.length} measured picks`:'No measured win/loss decisions',trend+`<div class="dx-legend"><span><i class="dx-win"></i>Actual wins</span><span><i class="dx-expect"></i>Closing-line expectation (dashed)</span></div>`,'Cumulative totals start at the first week in this filter, using only graded wins/losses with usable paired probabilities. Weeks with no measured picks are gaps. Expectation is a benchmark, not a forecast or evidence of skill.',['Week','Measured n','Cumulative wins','Cumulative expected'],weeks.map(p=>['Week '+p.week,p.n,p.wins??'Unmeasured',p.expected==null?'Unmeasured':p.expected.toFixed(2)]));
+  const value=x=>x.measurable.length?(metric==='clv'?x.clv*100:x.delta):null;
+  const limit=Math.max(metric==='clv'?.1:1,...sums.map(x=>Math.abs(value(x)||0)));
+  const compare=`<label class="dx-metric">Compare<select id="dxMetric"><option value="delta"${metric==='delta'?' selected':''}>Wins vs expected</option><option value="clv"${metric==='clv'?' selected':''}>Average CLV</option></select></label><div class="dx-axis-labels"><span>−${limit.toFixed(1)}</span><span>0</span><span>+${limit.toFixed(1)}${metric==='clv'?' pp':' wins'}</span></div><div class="dx-comparisons">${sums.map(x=>{const v=value(x);return `<div class="dx-compare"><div class="dx-row-label"><b>${esc(x.k)}</b><span>${v==null?'Unmeasured':dxSigned(v,metric==='clv'?2:1)+(metric==='clv'?' pp':' wins')} · n=${x.measurable.length}</span></div><div class="dx-diverge" role="img" aria-label="${esc(x.k+': '+(v==null?'unmeasured':dxSigned(v)+(metric==='clv'?' percentage points':' wins')))}">${v==null?'<span class="dx-missing">No measured decisions</span>':`<i class="${v<0?'dx-loss':'dx-win'}" style="left:${v<0?50+v/limit*50:50}%;width:${Math.abs(v)/limit*50}%"></i>${v===0?'<b class="dx-zero-dot"></b>':''}`}</div></div>`;}).join('')}</div>`;
+  const comparison=dxCard('comparison','03 / SIDE BY SIDE','Compare the '+(group==='player'?'players':group==='sport'?'sports':group==='market'?'markets':'weeks'),`Shared zero baseline · grouped by ${esc(group)}`,compare,'Bars extend left for negative values and right for positive values. A zero is a real zero; unmeasured rows have no bar. Both metrics use the same measured graded picks within each row. Different sample sizes are not rankings of skill.',['Group','Measured n','Matched wins','Expected wins','Delta wins','Average CLV (pp)'],sums.map(x=>[x.k,x.measurable.length,x.matchedWins,x.measurable.length?x.expected.toFixed(2):'Unmeasured',x.measurable.length?dxSigned(x.delta):'Unmeasured',x.clv==null?'Unmeasured':dxSigned(x.clv*100,2)]));
+  const clvLimit=Math.max(.5,...weeks.map(w=>Math.abs(w.clv||0)))*1.2;
+  const clvChart=dxCard('clv','04 / PRICE QUALITY','Did the market move with you?',`${s.measurable.length} measured decisions · ${s.overridden} manager-set CLV`,s.measurable.length?dxLinePlot(weeks,[{key:'clv',label:'Average CLV (pp)',cls:'dx-actual'}],[-clvLimit,clvLimit],'Weekly average closing-line value in percentage points',v=>dxSigned(v,1)):dxEmpty('No measurable graded CLV in this slice.'),'Weekly mean of closing probability minus entry probability, in percentage points. Positive means the market moved toward the selected side. Missing weeks are gaps, never zero; manager-set CLV is included and counted above.',['Week','Measured n','Average CLV (pp)'],weeks.map(w=>['Week '+w.week,w.n,w.clv==null?'Unmeasured':dxSigned(w.clv,2)]));
+  const bands=Array.from({length:5},(_,i)=>({lo:i*.2,hi:(i+1)*.2,rows:[]}));
+  s.measurable.forEach(l=>bands[Math.min(4,Math.floor(dxPair(l).pC*5))].rows.push(l));
+  const calibrated=bands.map(b=>{const n=b.rows.length;return {...b,n,p:n?b.rows.reduce((v,l)=>v+dxPair(l).pC,0)/n:null,rate:n?b.rows.filter(l=>l.result==='win').length/n:null};});
+  let cal='<line x1="48" y1="190" x2="410" y2="28" class="dx-cal-reference"/>';
+  for(let t=0;t<=100;t+=25){const xx=48+t/100*362,yy=190-t/100*162;cal+=`<line x1="48" x2="410" y1="${yy}" y2="${yy}" class="dx-gridline"/><text x="40" y="${yy+4}" text-anchor="end">${t}%</text><text x="${xx}" y="210" text-anchor="middle">${t}%</text>`;}
+  calibrated.filter(b=>b.n).forEach(b=>{cal+=`<circle cx="${48+b.p*362}" cy="${190-b.rate*162}" r="${5+Math.min(7,Math.sqrt(b.n))}" class="dx-dot dx-actual"><title>Closing probability ${(b.p*100).toFixed(1)}%; win rate ${(b.rate*100).toFixed(1)}%; n=${b.n}</title></circle>`;});
+  cal+='<text x="229" y="235" text-anchor="middle">Closing probability →</text><text x="48" y="16">Observed win rate</text>';
+  const calibration=dxCard('calibration','05 / EXPECTATION CHECK','Price vs. observed win rate',`${s.measurable.length} measured decisions · descriptive, small samples are noisy`,s.measurable.length?dxSvg('Calibration: closing probability against observed win rate by 20-point probability band',cal):dxEmpty('No priced, graded decisions to compare.'),'Each dot is a 20-percentage-point closing-probability band; larger dots have more picks. The diagonal is equality, not a fitted model. Shared games may be correlated. These small samples cannot establish calibration or skill; no confidence band is implied.',['Closing band','Picks','Mean closing probability','Observed win rate'],calibrated.map(b=>[`${Math.round(b.lo*100)}–${Math.round(b.hi*100)}%`,b.n,b.p==null?'No data':(b.p*100).toFixed(1)+'%',b.rate==null?'No data':(b.rate*100).toFixed(1)+'%']));
+  const coverageRows=[['Captured pairs',s.measurable.length-s.overridden,'win'],['Manager-set CLV',s.overridden,'expect'],['Graded, not measured',s.graded.length-s.measurable.length,'loss'],['No win/loss decision',s.picks-s.graded.length,'pending']];
+  const coverage=dxCard('coverage','06 / THE EVIDENCE','Know what is measured',`${s.measurable.length} of ${s.picks} picks used in price comparisons`, `<div class="dx-coverage">${coverageRows.map(r=>`<div><span>${r[0]}</span><b>${r[1]}</b><div class="dx-cover-track"><i class="dx-${r[2]}" style="width:${r[1]/s.picks*100}%"></i></div></div>`).join('')}</div>`,'Captured pairs pass the existing verification checks. Manager-set CLV uses the existing manual override and is shown separately. Unverified, missing or invalid prices are excluded. Pushes, voids and pending picks stay outside the win/loss comparison.',['Evidence','Picks'],coverageRows.map(r=>r.slice(0,2)));
+  return `<div class="dx-primary">${outcomes}${trendCard}</div>${comparison}<details class="bz-help dx-more" id="dxMore"><summary>Price quality &amp; data coverage <span>3 more views</span></summary><div class="dx-secondary">${clvChart}${calibration}${coverage}</div></details>`;
 }
 function paintDiagnosticsExplorer(){
   if(!CLV.data || view()!=='diagnostics') return;
   dxInit();
+  const host=document.getElementById('dxChart');
+  const metric=document.getElementById('dxMetric')?.value||'delta';
+  const opened=[...host.querySelectorAll('[data-chart] details[open]')].map(d=>d.closest('[data-chart]').dataset.chart);
+  const moreOpen=document.getElementById('dxMore')?.open;
   const rows=dxRows(), s=dxSummary(rows), tile=(l,b,sub)=>`<div><div class="lil">${l}</div><div class="big">${b}</div><div class="tm">${sub||''}</div></div>`;
   document.getElementById('dxMeta').textContent=`${rows.length} pick${rows.length===1?'':'s'} in this slice`;
+  document.getElementById('dxScope').textContent=(CLV.data.synthetic?'SIMULATED LEAGUE · ':'')+(rows.length?`Weeks ${Math.min(...rows.map(l=>+l.week))}–${Math.max(...rows.map(l=>+l.week))} · ${s.measurable.length} measured of ${s.graded.length} win/loss decisions · descriptive, not proof of skill`:'No picks in the selected slice.');
   document.getElementById('dxTiles').innerHTML=
-    tile('Picks',s.picks,`${s.graded.length} graded`)+tile('Record',`${s.wins}–${s.losses}`,s.graded.length?`${(s.wins/s.graded.length*100).toFixed(1)}% won`:'nothing graded')+
-    tile('Expected wins',s.measurable.length?s.expected.toFixed(1):'—',`${s.measurable.length} with usable closes`)+
-    tile('Over / under expected',s.measurable.length?`${s.delta>=0?'+':''}${s.delta.toFixed(1)}`:'—','wins minus closing-line expectation')+
-    tile('Average CLV',s.clv==null?'—':`${s.clv>=0?'+':''}${(s.clv*100).toFixed(2)}pp`,'de-vigged close minus entry')+
-    tile('CLV coverage',s.picks?`${s.measurable.length} / ${s.picks}`:'—',
-      s.overridden?`${s.overridden} set by the manager`:'missing data is never filled as zero');
-  if(!rows.length){ document.getElementById('dxChart').innerHTML='<div class="dash-empty">No picks match these filters.</div>'; document.querySelector('#dxTable tbody').innerHTML=''; return; }
+    tile('Record',`${s.wins}–${s.losses}`,`${s.picks} total picks`)+
+    tile('Vs expectation',s.measurable.length?dxSigned(s.delta):'—',`${s.measurable.length} matched decisions`)+
+    tile('Average CLV',s.clv==null?'—':`${dxSigned(s.clv*100,2)} pp`,`${s.overridden} manager-set · ${s.measurable.length} measured`);
+  if(!rows.length){host.innerHTML='<div class="dash-empty">No picks match these filters.</div>';document.querySelector('#dxTable tbody').innerHTML='';document.getElementById('dxNote').textContent='';return;}
   const group=document.getElementById('dxGroup').value;
   const key=l=>group==='player'?teamOf(l.player):group==='sport'?String(l.sport||'Unknown').toUpperCase():group==='market'?String(l.mkt||'other').toUpperCase():'Week '+l.week;
-  const buckets=new Map(); rows.forEach(l=>{ const k=key(l); if(!buckets.has(k)) buckets.set(k,[]); buckets.get(k).push(l); });
-  const sums=[...buckets].map(([k,v])=>({k,...dxSummary(v)})).sort((a,b)=>b.picks-a.picks||a.k.localeCompare(b.k));
-  const maxDelta=Math.max(1,...sums.map(x=>Math.abs(x.delta)));
-  document.getElementById('dxChart').innerHTML=sums.map(x=>`<div class="dash-bar${x.delta<0?' bad':''}"><span>${esc(x.k)}</span><span class="track"><i style="width:${Math.max(3,Math.abs(x.delta)/maxDelta*100).toFixed(1)}%"></i></span><span class="val">${x.measurable.length?(x.delta>=0?'+':'')+x.delta.toFixed(1):'—'}</span></div>`).join('');
-  document.querySelector('#dxTable tbody').innerHTML=`<tr><th>${esc(group)}</th><th>Picks</th><th>W–L</th><th>Expected W</th><th>vs expected</th><th>Avg CLV</th><th>CLV n</th></tr>`+
-    sums.map(x=>`<tr><td class="who">${esc(x.k)}</td><td>${x.picks}</td><td>${x.wins}–${x.losses}</td><td>${x.measurable.length?x.expected.toFixed(1):'—'}</td><td class="px">${x.measurable.length?(x.delta>=0?'+':'')+x.delta.toFixed(1):'—'}</td><td class="px ${x.clv==null?'':x.clv>=0?'clvup':'clvdn'}">${x.clv==null?'—':(x.clv>=0?'+':'')+(x.clv*100).toFixed(2)+'pp'}</td><td>${x.measurable.length}</td></tr>`).join('');
-  const losers=rows.filter(l=>l.result==='loss'), badClv=losers.filter(l=>clvGraded(l)&&clvPair(l).clv<0).length;
-  document.getElementById('dxNote').innerHTML=`${losers.length} loss${losers.length===1?'':'es'} in this slice${losers.length?`; ${badClv} also had negative measured CLV`:''}. Positive result delta with flat CLV is more consistent with good luck than proven skill; positive CLV with ordinary results is the stronger price-quality signal. Measured CLV uses automatically captured or manually verified entry prices and closing prices. Unverified entries await review.`;
+  const buckets=new Map();rows.forEach(l=>{const k=key(l);if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(l);});
+  const sums=[...buckets].map(([k,v])=>({k,...dxSummary(v)})).sort((a,b)=>group==='week'?Number(a.k.slice(5))-Number(b.k.slice(5)):b.picks-a.picks||a.k.localeCompare(b.k));
+  host.innerHTML=dxVisuals(rows,s,sums,group,metric);
+  for(const id of opened){const d=host.querySelector(`[data-chart="${id}"] details`);if(d)d.open=true;}
+  document.getElementById('dxMore').open=!!moreOpen;
+  document.getElementById('dxMetric').addEventListener('change',()=>{paintDiagnosticsExplorer();document.getElementById('dxMetric').focus({preventScroll:true});});
+  document.querySelector('#dxTable tbody').innerHTML=`<tr><th>${esc(group)}</th><th>Picks</th><th>W–L (all)</th><th>Measured n</th><th>W (matched)</th><th>Expected W</th><th>vs expected</th><th>Avg CLV</th></tr>`+sums.map(x=>`<tr><td class="who">${esc(x.k)}</td><td>${x.picks}</td><td>${x.wins}–${x.losses}</td><td>${x.measurable.length}</td><td>${x.matchedWins}</td><td>${x.measurable.length?x.expected.toFixed(1):'—'}</td><td>${x.measurable.length?dxSigned(x.delta):'—'}</td><td>${x.clv==null?'—':dxSigned(x.clv*100,2)+' pp'}</td></tr>`).join('');
+  document.getElementById('dxNote').textContent='Expected wins, result delta and average CLV use only the same measured win/loss decisions. All-record W–L includes unmeasured decisions. Manager-set CLV follows the existing league override; implied probabilities outside 0–100% are excluded. Missing prices are never filled as zero. Positive CLV describes price movement, not proven skill; outcomes and expectation are noisy and picks may share games.';
 }
 
 function paintDiag(live, players, status){
@@ -9631,6 +9726,10 @@ async function clvLoad(force){
     card.style.display='none';
     if(view()==='diagnostics'){
       document.getElementById('dxMeta').textContent='ledger unavailable';
+      document.getElementById('dxTiles').innerHTML='';
+      document.getElementById('dxScope').textContent='';
+      document.querySelector('#dxTable tbody').innerHTML='';
+      document.getElementById('dxNote').textContent='';
       document.getElementById('dxChart').innerHTML='<div class="dash-empty">The diagnostics ledger could not be reached. Try this sheet again in a moment.</div>';
     }
   }finally{ CLV.loading=false; }
