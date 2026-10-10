@@ -892,6 +892,7 @@ tr.bz-loser td{background:color-mix(in srgb, var(--bad) 12%, transparent)}
 .bz-help .note{margin:0 0 12px}
 .flag .bz-help{margin:0}
 .flag .bz-help>summary{padding-left:0}
+#dgTitle:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
 .diag-caption{margin:12px 0;font-size:12px;color:var(--ink-2)}
 #diagCard.empty .diag-caption{display:none}
 /* ---- diagnostics ---- */
@@ -4215,7 +4216,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
 <!-- ---------- diagnostics ---------- -->
 <div class="card bz-carnival" id="diagCard" style="display:none">
-  <div class="bz-hdr"><h2 class="bz" style="margin:0">Diagnostics</h2><span class="tm" id="dgMeta"></span></div>
+  <div class="bz-hdr"><h2 class="bz" id="dgTitle" tabindex="-1" style="margin:0">Diagnostics</h2><span class="tm" id="dgMeta"></span></div>
   <div class="stat-grid" id="dgTiles"></div>
   <div id="dgFlags"></div>
   <div class="tscroll"><table class="bz" id="dgTable"><tbody></tbody></table></div>
@@ -7256,6 +7257,10 @@ function paintDiag(live, players, status){
   const clvHelpOpen = document.getElementById('dgClvHelp')?.open || false;
   const focusedHelp = document.activeElement?.matches('#dgHelp > summary, #dgClvHelp > summary')
     ? document.activeElement.parentElement.id : null;
+  const restoreHelpFocus = () => {
+    if(focusedHelp) (document.getElementById(focusedHelp)?.querySelector('summary')
+      || document.getElementById('dgTitle')).focus({preventScroll:true});
+  };
   const card=document.getElementById('diagCard');
   if(!live.length){
     card.style.display='';
@@ -7266,6 +7271,7 @@ function paintDiag(live, players, status){
     document.querySelector('#dgTable tbody').innerHTML='';
     document.getElementById('dgNote').textContent =
       'Nothing to measure yet. The first leg in turns this on.';
+    restoreHelpFocus();
     return;
   }
   card.style.display='';
@@ -7470,7 +7476,7 @@ function paintDiag(live, players, status){
      a close with both sides at both ends. Both stay in the draw and pass while they cannot measure, which is
      dormant, not absent.</div></details>`;
   // Live updates must not knock a keyboard reader off the disclosure they are using.
-  if(focusedHelp) document.getElementById(focusedHelp)?.querySelector('summary')?.focus({preventScroll:true});
+  restoreHelpFocus();
 }
 
 /* ---------------- where the levers stand, per leg ----------------

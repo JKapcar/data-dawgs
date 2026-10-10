@@ -108,3 +108,16 @@ test('drawn and undrawn methodology both retain their original explanations',()=
   for(const text of ['Killed it alone','Review flags','no close','Shortest odds','Last in','Worst beat','Worst CLV'])
     assert.ok(d.getElementById('dgHelp').textContent.includes(text),text);
 });
+
+
+test('when a focused disclosure disappears, focus moves to the stable Diagnostics heading',()=>{
+  const {document:d,render,live}=fixture();
+  d.querySelector('#dgClvHelp > summary').focus();
+  live[1].clv=.01;render();
+  assert.equal(d.getElementById('dgClvHelp'),null);
+  assert.equal(d.activeElement,d.getElementById('dgTitle'));
+  d.querySelector('#dgHelp > summary').focus();
+  render([]);
+  assert.equal(d.getElementById('dgHelp'),null);
+  assert.equal(d.activeElement,d.getElementById('dgTitle'));
+});
