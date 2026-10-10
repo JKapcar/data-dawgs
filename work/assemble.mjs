@@ -22,6 +22,9 @@
 import { readFileSync, writeFileSync } from "fs";
 import { execFileSync } from "child_process";
 
+const AF_START = "/* ===== DD-AGENT-FEEDBACK START — generated from work/agent-feedback.js ===== */";
+const AF_END = "/* ===== DD-AGENT-FEEDBACK END ===== */";
+const agentFeedback = readFileSync("agent-feedback.js", "utf8").trimEnd();
 const TARGET = "../dawg-bot-worker.js";
 const START = "/* ===== DD-MCP-BLOCK START — generated from work/mcp-block.js; edit THERE ===== */";
 const END   = "/* ===== DD-MCP-BLOCK END ===== */";
@@ -104,6 +107,8 @@ const yahoo = readFileSync("yahoo-parse.js", "utf8").replace(/\s+$/, "")
 /* ---- the whole pipeline, so the build and its idempotency proof cannot diverge ---- */
 function transform(input) {
   let t = input;
+  const afs = t.indexOf(AF_START), afe = t.indexOf(AF_END);
+  if (afs >= 0 && afe > afs) t = t.slice(0,afs) + t.slice(afe + AF_END.length);
   const bmStart = t.indexOf(BM_START), bmEnd = t.indexOf(BM_END);
   if (bmStart >= 0 && bmEnd > bmStart) t = t.slice(0,bmStart) + t.slice(bmEnd + BM_END.length);
 
@@ -174,6 +179,7 @@ function transform(input) {
 
   /* 7. inject the blocks, Yahoo and rankings before MCP's write-scope boundary */
   return t.replace(/\s+$/, "")
+    + "\n\n" + AF_START + "\n" + agentFeedback + "\n" + AF_END
     + "\n\n" + Y_START + "\n" + yahoo + "\n" + Y_END
     + "\n\n" + R_START + "\n" + rankings + "\n" + R_END
     + "\n\n" + W_START + "\n" + warroom + "\n" + W_END
@@ -190,6 +196,10 @@ const once = (needle, what) => {
   const n = out.split(needle).length - 1;
   if (n !== 1) fail(`${what}: expected exactly 1, found ${n}`);
 };
+once(AF_START, "agent feedback block start");
+once(AF_END, "agent feedback block end");
+once("async function handleAgentFeedback(", "agent feedback handler");
+if (out.indexOf(AF_START) > out.indexOf(START)) fail("agent feedback must remain above MCP write-scope boundary");
 once(BM_START, "Bozo Menu block start");
 once(BM_END, "Bozo Menu block end");
 once("const BOZO_MENU =", "Bozo Menu shared implementation");

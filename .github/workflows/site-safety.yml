@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
     paths:
+      - "feedback-inbox.html"
+      - "work/test-agent-feedback-dom.mjs"
+      - "work/test-agent-feedback-ui.mjs"
       - "sw.js"
       - "dfs.html"
       - "work/dfs-engine.js"
@@ -31,6 +34,9 @@ on:
       - ".github/workflows/site-safety.yml"
   pull_request:
     paths:
+      - "feedback-inbox.html"
+      - "work/test-agent-feedback-dom.mjs"
+      - "work/test-agent-feedback-ui.mjs"
       - "sw.js"
       - "dfs.html"
       - "work/dfs-engine.js"
@@ -71,6 +77,10 @@ jobs:
       - run: node work/test-dfs-page.js
       - run: node work/test-dfs-main-slate.cjs
       - run: npm install --prefix /tmp/dd-dfs-test jsdom@30.0.1 --no-audit --no-fund
+      - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-agent-feedback-dom.mjs
+      - run: npm install --prefix /tmp/dd-feedback-pw playwright@1.56.1 --no-audit --no-fund
+      - run: /tmp/dd-feedback-pw/node_modules/.bin/playwright install --with-deps chromium
+      - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-agent-feedback-ui.mjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node --test tests/bozo-form-spread.test.cjs tests/bozo-spread-sign.test.js tests/bozo-price-sign.test.js
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-bozo-menu-ui.mjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-autoload-ui.cjs
