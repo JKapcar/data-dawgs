@@ -25,6 +25,9 @@ import { execFileSync } from "child_process";
 const AF_START = "/* ===== DD-AGENT-FEEDBACK START — generated from work/agent-feedback.js ===== */";
 const AF_END = "/* ===== DD-AGENT-FEEDBACK END ===== */";
 const agentFeedback = readFileSync("agent-feedback.js", "utf8").trimEnd();
+const AB_START = "/* ===== DD-AGENT-BOARD START — generated from work/agent-board.js ===== */";
+const AB_END = "/* ===== DD-AGENT-BOARD END ===== */";
+const agentBoard = readFileSync("agent-board.js", "utf8").trimEnd();
 const TARGET = "../dawg-bot-worker.js";
 const START = "/* ===== DD-MCP-BLOCK START — generated from work/mcp-block.js; edit THERE ===== */";
 const END   = "/* ===== DD-MCP-BLOCK END ===== */";
@@ -107,6 +110,8 @@ const yahoo = readFileSync("yahoo-parse.js", "utf8").replace(/\s+$/, "")
 /* ---- the whole pipeline, so the build and its idempotency proof cannot diverge ---- */
 function transform(input) {
   let t = input;
+  const abs = t.indexOf(AB_START), abe = t.indexOf(AB_END);
+  if (abs >= 0 && abe > abs) t = t.slice(0,abs) + t.slice(abe + AB_END.length);
   const afs = t.indexOf(AF_START), afe = t.indexOf(AF_END);
   if (afs >= 0 && afe > afs) t = t.slice(0,afs) + t.slice(afe + AF_END.length);
   const bmStart = t.indexOf(BM_START), bmEnd = t.indexOf(BM_END);
@@ -179,6 +184,7 @@ function transform(input) {
 
   /* 7. inject the blocks, Yahoo and rankings before MCP's write-scope boundary */
   return t.replace(/\s+$/, "")
+    + "\n\n" + AB_START + "\n" + agentBoard + "\n" + AB_END
     + "\n\n" + AF_START + "\n" + agentFeedback + "\n" + AF_END
     + "\n\n" + Y_START + "\n" + yahoo + "\n" + Y_END
     + "\n\n" + R_START + "\n" + rankings + "\n" + R_END
@@ -196,6 +202,10 @@ const once = (needle, what) => {
   const n = out.split(needle).length - 1;
   if (n !== 1) fail(`${what}: expected exactly 1, found ${n}`);
 };
+once(AB_START, "agent board block start");
+once(AB_END, "agent board block end");
+once("async function handleAgentBoard(", "agent board handler");
+if (out.indexOf(AB_START) > out.indexOf(START)) fail("agent board must remain above MCP write-scope boundary");
 once(AF_START, "agent feedback block start");
 once(AF_END, "agent feedback block end");
 once("async function handleAgentFeedback(", "agent feedback handler");
