@@ -27,8 +27,8 @@ Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHous
 - [DateDawg](/datedawg.html): local ZIP/JSON reciprocal-acceptance dashboard; no upload, backend memory or observed Hinge cohort.
 - [Arena](/arena.html): games played against other people — Bozo, Guillotine, Survivor, DFS,
 the live draft rig, a [32-team wins pool](/teamdraft.html).
-- [Library](/data.html): every file in index.json, shelved by the surface that owns it, plus
-the sources we read and do not republish. Owns no data file either.
+- [Library](/data.html): each index.json file under its owning surface, plus sources read, not republished; owns no data.
+- [Data Explorer](/explore.html): browser SQL + charts over /data; cites file + as_of.
 - [NFL](/nfl.html): EPA, nfelo, calculators, blocked NFL work with its blockers.
 - [NFL Weather](/weather.html) + [stadiums](/data/nfl-stadiums.json) + [method](/data/weather-method.md): NWS hourly at kickoff (Pup; not impact model).
 

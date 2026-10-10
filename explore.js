@@ -13,7 +13,8 @@
 (function(){
   "use strict";
   const DUCKDB_VERSION = "1.32.0";
-  const CDN = "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@" + DUCKDB_VERSION + "/";
+  // Vendored, same origin: no runtime CDN. See assets/duckdb-wasm/README.md.
+  const DUCK_DIR = "/assets/duckdb-wasm/";
   const INIT_TIMEOUT_MS = 30000;
   const T0 = performance.now();
   const timings = {};
@@ -252,24 +253,22 @@ ORDER BY week;` },
       .finally(() => clearTimeout(t));
   }
   async function initDuck() {
-    duck = await import(CDN + "+esm");
-    const bundles = {
-      mvp: { mainModule: CDN + "dist/duckdb-mvp.wasm", mainWorker: CDN + "dist/duckdb-browser-mvp.worker.js" },
-      eh:  { mainModule: CDN + "dist/duckdb-eh.wasm",  mainWorker: CDN + "dist/duckdb-browser-eh.worker.js" },
-    };
-    const bundle = await duck.selectBundle(bundles);
     if (typeof WebAssembly !== "object") throw new Error("this browser has no WebAssembly");
+    duck = await import(DUCK_DIR + "duckdb-browser.mjs");
+    // Only the eh bundle is vendored. A browser without wasm exception handling gets
+    // the plain fallback instead of a second 39 MB mvp download.
+    const features = await duck.getPlatformFeatures();
+    if (!features.wasmExceptions) throw new Error("this browser lacks WebAssembly exception handling, which the vendored DuckDB bundle needs");
+    const bundle = { mainModule: DUCK_DIR + "duckdb-eh.wasm", mainWorker: DUCK_DIR + "duckdb-browser-eh.worker.js", pthreadWorker: null };
     // A blocked or missing .wasm makes instantiate() hang inside the worker rather than
     // reject, so check the asset is reachable first and fall back at once if it is not.
     const probe = await fetch(bundle.mainModule, { method: "HEAD" }).catch(e => ({ ok: false, status: e.message }));
     if (!probe.ok) throw new Error("the DuckDB .wasm could not be fetched (" + probe.status + ")");
-    const workerUrl = URL.createObjectURL(new Blob(['importScripts("' + bundle.mainWorker + '");'], { type: "text/javascript" }));
-    const worker = new Worker(workerUrl);
+    const worker = new Worker(bundle.mainWorker);
     // A failed wasm fetch inside the worker can surface only as a worker error event.
     const workerFailed = new Promise((_, rej) => worker.addEventListener("error", e => rej(new Error("DuckDB worker failed: " + (e.message || "error")))));
     const d = new duck.AsyncDuckDB(new duck.VoidLogger(), worker);
     await Promise.race([d.instantiate(bundle.mainModule, bundle.pthreadWorker), workerFailed]);
-    URL.revokeObjectURL(workerUrl);
     db = d;
     conn = await db.connect();
     await conn.query("SELECT 1");
@@ -279,8 +278,23 @@ ORDER BY week;` },
     if (loaded.has(name)) return;
     const t = TABLE[name];
     const rows = await tableRows(t);
-    await db.registerFileText(name + ".json", JSON.stringify(rows));
-    await conn.query(`CREATE OR REPLACE TABLE ${name} AS SELECT * FROM read_json('${name}.json', format='array', sample_size=-1)`);
+    /* ⚠️ Types are set HERE from the JSON values, not inferred by DuckDB. DuckDB's JSON
+       readers either autoload the json extension from extensions.duckdb.org (a runtime
+       third-party fetch) or guess, e.g. turning "2026-09-13" into a TIMESTAMP and
+       re-printing it. An explicit Arrow table keeps strings as the exact published
+       strings, keeps file column order, and keeps null as NULL. */
+    const A = duck.arrow, vectors = {};
+    for (const c of t.meta.columns) {
+      let vals = rows.map(r => r[c]);
+      const nn = vals.filter(v => v !== null);
+      let type;
+      if (!nn.length) type = new A.Utf8();
+      else if (nn.every(v => typeof v === "boolean")) type = new A.Bool();
+      else if (nn.every(v => typeof v === "number")) type = nn.every(v => Number.isInteger(v) && Math.abs(v) < 2 ** 31) ? new A.Int32() : new A.Float64();
+      else { type = new A.Utf8(); vals = vals.map(v => v === null ? null : String(v)); }
+      vectors[c] = A.vectorFromArray(vals, type);
+    }
+    await conn.insertArrowTable(new A.Table(vectors), { name, create: true });
     loaded.add(name);
   }
   const referencedTables = sql => {

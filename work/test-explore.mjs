@@ -7,7 +7,8 @@
    same query; the chart canvas is painted; and with the .wasm blocked the page falls back
    to plain file links, previews and a static chart instead of breaking.
 
-   ⚠️ NEEDS NETWORK: the page loads DuckDB-Wasm 1.32.0 from cdn.jsdelivr.net.
+   DuckDB-Wasm 1.32.0 is vendored under /assets/duckdb-wasm/, so this needs no network:
+   the suite also asserts that no request leaves the local server.
 
      node work/test-explore.mjs            # PLAYWRIGHT_CHROMIUM=/path/to/chrome if needed
      DD_EXPLORE_JSON=/tmp/x.json node ...  # also write the timings/results as JSON */
@@ -22,7 +23,7 @@ const { chromium } = loadPlaywright();
 let pass = 0, failN = 0;
 const ok = (name, cond, extra = "") => { if (cond) { pass++; console.log("  ok   " + name); } else { failN++; console.log("  FAIL " + name + (extra ? " — " + extra : "")); } };
 
-const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".json": "application/json", ".css": "text/css", ".png": "image/png", ".md": "text/markdown", ".webmanifest": "application/manifest+json" };
+const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".mjs": "text/javascript", ".wasm": "application/wasm", ".json": "application/json", ".css": "text/css", ".png": "image/png", ".md": "text/markdown", ".webmanifest": "application/manifest+json" };
 const server = http.createServer((req, res) => {
   const p = decodeURIComponent(new URL(req.url, "http://x").pathname);
   const file = path.join(ROOT, p === "/" ? "index.html" : p);
@@ -34,6 +35,17 @@ await new Promise(r => server.listen(0, "127.0.0.1", r));
 const BASE = `http://127.0.0.1:${server.address().port}`;
 const env = f => JSON.parse(fs.readFileSync(path.join(ROOT, "data", f), "utf8"));
 
+/* sw.js must never precache or runtime-cache the vendored engine (34 MB). Read the
+   service worker's own public-path patterns and prove they reject every vendored file. */
+{
+  const sw = fs.readFileSync(path.join(ROOT, "sw.js"), "utf8");
+  ok("sw.js names no duckdb asset (nothing precached)", !/duckdb/i.test(sw));
+  ok("sw.js VERSION keeps double quotes", /const VERSION = "[0-9a-f]{10}";/.test(sw));
+  const pats = [...sw.matchAll(/^\s*(\/\^\\\/.*?\$\/i)/gm)].map(m => eval(m[1]));
+  const vendored = fs.readdirSync(path.join(ROOT, "assets", "duckdb-wasm")).map(f => "/assets/duckdb-wasm/" + f);
+  ok("sw.js public-path patterns found (guards the next check)", pats.length >= 2, String(pats.length));
+  ok("no vendored DuckDB file matches a service-worker cache pattern", vendored.every(u => !pats.some(re => re.test(u))), vendored.filter(u => pats.some(re => re.test(u))).join(","));
+}
 const browser = await chromium.launch({ executablePath: chromiumExecutable(chromium), headless: true });
 const report = { conditions: {}, starters: [], fallback: {} };
 try {
@@ -42,6 +54,8 @@ try {
   const page = await ctx.newPage();
   const errors = [];
   page.on("pageerror", e => errors.push(e.message));
+  const external = [];
+  page.on("request", r => { const u = new URL(r.url()); if (!/^(127\.0\.0\.1|localhost)$/.test(u.hostname) && !/^(data|blob):/.test(r.url())) external.push(r.url()); });
   const t0 = Date.now();
   await page.goto(BASE + "/explore.html", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(() => window.DDExplore && (window.DDExplore.state.mode !== "loading") && (window.DDExplore.timings.first_result || window.DDExplore.state.mode === "fallback"), null, { timeout: 120000 });
@@ -113,6 +127,7 @@ try {
   const orig = await page.evaluate(() => document.getElementById("dx-sql").value.trim());
   ok("share link re-runs the same query with the same chart type", shared.sql === orig && shared.type === "bar", JSON.stringify(shared.type));
   ok("no page errors on the normal path", errors.length === 0, errors.join(" | "));
+  ok("self-sufficient: DuckDB loads from /assets/duckdb-wasm and no request left the local server", external.length === 0, external.slice(0, 5).join(" | "));
   await page.screenshot({ path: "/tmp/dd-explore-page.png", fullPage: false });
   await ctx.close();
 
@@ -137,15 +152,15 @@ try {
   await fp.screenshot({ path: "/tmp/dd-explore-fallback.png" });
   await fctx.close();
 
-  /* the whole CDN unreachable (module import itself fails) → same fallback */
+  /* the engine module itself unreachable (import fails before any wasm) → same fallback */
   const cctx = await browser.newContext({ serviceWorkers: "block" });
-  await cctx.route(/cdn\.jsdelivr\.net/, r => r.abort());
+  await cctx.route(/duckdb-browser\.mjs(\?.*)?$/, r => r.abort());
   const cp = await cctx.newPage();
   await cp.goto(BASE + "/explore.html", { waitUntil: "domcontentloaded" });
   await cp.waitForFunction(() => window.DDExplore && window.DDExplore.state.mode === "fallback" && window.DDExplore.timings.fallback_ready, null, { timeout: 90000 });
   const cdn = await cp.evaluate(() => ({ t: window.DDExplore.timings.fallback_ready, links: document.querySelectorAll("#dx-fb-files a[href^='/data/']").length }));
-  report.fallback_cdn_blocked = cdn;
-  ok("CDN blocked entirely → same fallback, file links intact", cdn.links >= 15, JSON.stringify(cdn));
+  report.fallback_module_blocked = cdn;
+  ok("engine module blocked → same fallback, file links intact", cdn.links >= 15, JSON.stringify(cdn));
   await cctx.close();
 } finally {
   await browser.close();
