@@ -1698,6 +1698,14 @@ export default {
         return { error: String((e && e.message) || e) };
       });
       if (ctx && ctx.waitUntil) ctx.waitUntil(nearCloseRun);
+      // On-time GitHub workflow dispatch (inert until GH_DISPATCH_TOKEN is set).
+      const pacerRun = runGithubPacer(env, tickMs).catch(async e => {
+        const kv = cfbMarketKV(env);
+        if (kv) await kv.put("gh:pacer:lasterror",
+          JSON.stringify({ at: new Date().toISOString(), error: String((e && e.message) || e) }));
+        return { error: String((e && e.message) || e) };
+      });
+      if (ctx && ctx.waitUntil) ctx.waitUntil(pacerRun);
       /* Automatic grading rides the same five-minute tick, in its OWN failure domain.
          It is the tick that already knows about games starting and finishing, so it is
          the right one to notice them ending — and a close-capture outage must not stop
@@ -1714,7 +1722,7 @@ export default {
       try {
         const bozo = await runBozoCloseCapture(env, tickMs);
         return { ...bozo, forecast: await forecastRun, scores: await scoresRun,
-          nearCloses: await nearCloseRun, autograde: await gradeRun };
+          nearCloses: await nearCloseRun, pacer: await pacerRun, autograde: await gradeRun };
       } catch (e) {
         const kv = cfbMarketKV(env);
         if (kv) await kv.put("bozo:close:lasterror",
@@ -10166,6 +10174,127 @@ async function bozoNearCloseIndexFor(env, sport, games) {
   }
   return bozoTeamIndex(records, sport, r => ({ startsAt: r.kickoff,
     home: r.teams && r.teams.home && r.teams.home.name, away: r.teams && r.teams.away && r.teams.away.name }));
+}
+
+/* ==================== GitHub pacer: workflows dispatched on time ====================
+   GitHub's scheduled workflows are best-effort, and on this repository they have been
+   landing four to seven hours late (2026-10-09: nfelo 14:45 -> 19:43, nfl-data 10:17 ->
+   16:59), which made the Fourth Down Lab's "every 15 minutes on game days" about four
+   runs a day and left finals waiting for the next morning. Cloudflare's cron is not late,
+   so the Worker dispatches the time-critical workflows itself, through workflow_dispatch,
+   at the times their own crons intend, plus two rules no fixed cron can express:
+     - Fourth Down Lab every 15 minutes while an NFL game is live (kickoff-20m .. +4h30m)
+     - NFL results banking whenever nflverse has a final the published schedule lacks
+   The GitHub crons stay as the backup. A duplicate run is a no-op (each job exits clean on
+   unchanged data) and each workflow's concurrency group queues rather than overlaps.
+   ⚠️ Inert until the secret GH_DISPATCH_TOKEN is set: a fine-grained token on
+   JKapcar/data-dawgs with Actions: read and write. It is deliberately NOT in
+   wrangler.jsonc's required list, so deploys never depend on it.
+     gh:pacer:<workflow>:<slot>  — that slot's dispatch succeeded (2-day TTL)
+     gh:pacer:last-run           — what the last tick did */
+const GH_PACER_REPO = "JKapcar/data-dawgs";
+const GH_PACER_SITE = "https://datadawgs216.com";
+const GH_PACER_GRACE_MS = 15 * 60 * 1000;   // a slot stays dispatchable for three ticks
+// [workflow, "HH:MM" UTC, inputs, weekdays (0 = Sunday) or null for every day]
+const GH_PACER_DAILY = [
+  ["nfl-data.yml", "10:17", { mode: "full" }, null],
+  ["cfb-data.yml", "11:41", {}, null],
+  ["epa-daily.yml", "11:43", {}, null],
+  ["fourth-down.yml", "12:17", {}, [2, 3]],
+  ["fourth-down-rates.yml", "12:23", {}, null],
+  ["draft-picks.yml", "12:40", {}, null],
+  ["guillotine-refresh.yml", "08:15", {}, [2, 3]],
+  ["guillotine-refresh.yml", "11:15", {}, [2, 3]],
+  ["guillotine-refresh.yml", "14:15", {}, null],
+  // nfelo's upstream publishes at no fixed hour (01:40Z one day, 19:40Z another); the
+  // mirror is a no-op when nothing moved, so four looks a day catch it within six hours.
+  ["nfelo-refresh.yml", "02:45", {}, null],
+  ["nfelo-refresh.yml", "08:45", {}, null],
+  ["nfelo-refresh.yml", "14:45", {}, null],
+  ["nfelo-refresh.yml", "20:45", {}, null],
+  ["survivor-receipt.yml", "15:00", {}, null],
+];
+
+// Every dispatch this tick owes, as {workflow, slot, inputs}. Pure: the tests drive it.
+function ghPacerDue(nowMs, nflGames, siteGames) {
+  const due = [];
+  const now = new Date(nowMs), day = now.toISOString().slice(0, 10);
+  for (const [workflow, hhmm, inputs, weekdays] of GH_PACER_DAILY) {
+    const [h, m] = hhmm.split(":").map(Number);
+    const at = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h, m);
+    if (weekdays && !weekdays.includes(new Date(at).getUTCDay())) continue;
+    if (nowMs >= at && nowMs - at < GH_PACER_GRACE_MS) due.push({ workflow, slot: `${day}T${hhmm}`, inputs });
+  }
+  const games = Array.isArray(nflGames) ? nflGames : [];
+  const live = games.some(g => {
+    const t = Date.parse((g && g.startsAt) || "");
+    return Number.isFinite(t) && nowMs >= t - 20 * 60 * 1000 && nowMs <= t + 4.5 * 3600 * 1000;
+  });
+  if (live) {
+    const q = Math.floor(nowMs / (15 * 60 * 1000));
+    due.push({ workflow: "fourth-down.yml", slot: `live-${q}`, inputs: {} });
+  }
+  // A final nflverse already has (the Worker's hourly copy) that /data/nfl-schedule.json
+  // does not: bank it now rather than at the next morning's full refresh.
+  const key = (week, away, home) => `${week}|${away}|${home}`;
+  const published = new Map((Array.isArray(siteGames) ? siteGames : [])
+    .map(s => [key(s.week, s.away_team, s.home_team), s]));
+  const unbanked = games.filter(g => {
+    if (!g || g.completed !== true) return false;
+    const t = Date.parse(g.startsAt || "");
+    if (!Number.isFinite(t) || nowMs - t > 3 * 86400 * 1000) return false;
+    const site = published.get(key(g.week, ghPacerTeam(g.away && g.away.abbr), ghPacerTeam(g.home && g.home.abbr)));
+    return !!site && site.status !== "final";
+  });
+  if (unbanked.length) {
+    const half = Math.floor(nowMs / (30 * 60 * 1000));
+    due.push({ workflow: "nfl-data.yml", slot: `results-${half}`, inputs: { mode: "results" },
+      reason: unbanked.map(g => `${g.away.abbr}@${g.home.abbr}`).join(",") });
+  }
+  return due;
+}
+// nflverse's old franchise codes onto the published schedule's (as fclTeam maps them).
+const ghPacerTeam = t => ({ LA: "LAR", OAK: "LV", JAC: "JAX", WSH: "WAS" })[t] || t;
+
+async function ghPacerDispatch(env, workflow, inputs) {
+  const response = await fetch(`https://api.github.com/repos/${GH_PACER_REPO}/actions/workflows/${encodeURIComponent(workflow)}/dispatches`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.GH_DISPATCH_TOKEN}`, Accept: "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "data-dawgs-toto-worker", "Content-Type": "application/json" },
+    body: JSON.stringify({ ref: "main", inputs: inputs || {} }),
+  });
+  // Status only: a GitHub error body can echo the request, and the request carries the token.
+  if (response.status !== 204) throw Object.assign(new Error(`GitHub dispatch HTTP ${response.status}`), { status: response.status });
+}
+
+async function runGithubPacer(env, nowMs = Date.now(), season = SEASON) {
+  if (!env || !env.GH_DISPATCH_TOKEN) return { skipped: "token_unset" };
+  const kv = env.RL;
+  if (!kv) throw new Error("no KV binding for the GitHub pacer");
+  let doc = null, site = null;
+  try { doc = await bozoScheduleDoc(env, "nfl", season); } catch { doc = null; }
+  try {
+    const r = await fetch(GH_PACER_SITE + "/data/nfl-schedule.json", { cf: { cacheTtl: 60, cacheEverything: true } });
+    if (r.ok) site = ((await r.json()) || {}).data || null;
+  } catch { site = null; }
+  const due = ghPacerDue(nowMs, doc && doc.games, site && site.games);
+  const done = [], failed = [];
+  for (const item of due) {
+    const key = `gh:pacer:${item.workflow}:${item.slot}`;
+    let seen = null;
+    try { seen = await kv.get(key); } catch { seen = null; }
+    if (seen) continue;
+    try {
+      await ghPacerDispatch(env, item.workflow, item.inputs);
+      await kv.put(key, new Date(nowMs).toISOString(), { expirationTtl: 2 * 86400 });
+      done.push(item.workflow + (item.reason ? ` (${item.reason})` : ""));
+    } catch (e) {
+      failed.push({ workflow: item.workflow, status: (e && e.status) || null });
+    }
+  }
+  const summary = { at: new Date(nowMs).toISOString(), due: due.length, dispatched: done, failed };
+  try { await kv.put("gh:pacer:last-run", JSON.stringify(summary)); } catch {}
+  return summary;
 }
 
 async function bozoGradeFromScheduleKv(env, state, supplied) {
