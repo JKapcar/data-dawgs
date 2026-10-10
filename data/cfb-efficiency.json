@@ -1,21 +1,21 @@
 {
- "as_of": "2026-10-09",
- "source": "cfbfastR 3.0 / SportsDataverse espn_cfb_team_summaries release asset for 2026: https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_cfb_team_summaries/cfb_team_summaries_2026.csv (sha256:366c2b2d65718e5cf59965e3e1451707f1a97ed5f317f4f9448d42ea97dc648f).",
+ "as_of": "2026-10-10",
+ "source": "cfbfastR 3.0 / SportsDataverse espn_cfb_team_summaries release asset for 2026: https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_cfb_team_summaries/cfb_team_summaries_2026.csv (sha256:2527bf863d99d0a39fd97675eeb106f3691fc5c2d2da0f6f2348bb3d159b7c45).",
  "tier": "labs",
  "graded": false,
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
  "note": "MODELLED, DESCRIPTIVE SEASON SNAPSHOT. EPA/WPA play values and opponent adjustments are produced upstream by cfbfastR/SportsDataverse. Data Dawgs selects and labels fields but does not refit or independently validate those models here. This is not a forecast, betting line, poll or Data Dawgs power rating. Early-season samples can be very small; use games and plays with every comparison.",
- "built": "2026-10-09T17:32:36Z",
+ "built": "2026-10-10T16:22:09Z",
  "canonical_url": "https://datadawgs216.com/data/cfb-efficiency.json",
  "provenance": {
   "generator": "scripts/cfb_efficiency_backbone.py",
   "source_url": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/espn_cfb_team_summaries/cfb_team_summaries_2026.csv",
-  "source_sha256": "sha256:366c2b2d65718e5cf59965e3e1451707f1a97ed5f317f4f9448d42ea97dc648f",
+  "source_sha256": "sha256:2527bf863d99d0a39fd97675eeb106f3691fc5c2d2da0f6f2348bb3d159b7c45",
   "source_package": "cfbfastR 3.0",
   "upstream_model_ownership": "SportsDataverse/cfbfastR"
  },
  "integrity": {
-  "snapshot_id": "sha256:1a588ec063d05fb4ef17c59b12b5bf5d1eebf3f9063b2fc644ee7c8634814d4b",
+  "snapshot_id": "sha256:7ef7fb6d5878e4fb15f3bc4a587cc2ae12debeb1047c4bf0a6c9679d7c419448",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for the data object (sorted object keys, no insignificant whitespace).",
   "rows": 138
  },
@@ -41,10 +41,10 @@
     "games": 5,
     "plays": 321,
     "adjusted": {
-     "off_epa_play": 0.166737,
-     "def_epa_play_allowed": -0.256699,
-     "net_epa_play": 0.423436,
-     "off_rank": 15,
+     "off_epa_play": 0.167521,
+     "def_epa_play_allowed": -0.256364,
+     "net_epa_play": 0.423885,
+     "off_rank": 16,
      "def_rank": 6,
      "net_rank": 1
     },
@@ -56,28 +56,6 @@
     }
    },
    {
-    "team_id": "333",
-    "team": "Alabama",
-    "conference": "SEC",
-    "season": 2026,
-    "games": 5,
-    "plays": 322,
-    "adjusted": {
-     "off_epa_play": 0.171135,
-     "def_epa_play_allowed": -0.237596,
-     "net_epa_play": 0.40873,
-     "off_rank": 14,
-     "def_rank": 9,
-     "net_rank": 2
-    },
-    "raw": {
-     "off_epa_play": 0.230953,
-     "def_epa_play_allowed": -0.109021,
-     "off_success_rate": 0.540373,
-     "def_success_rate_allowed": 0.379421
-    }
-   },
-   {
     "team_id": "77",
     "team": "Northwestern",
     "conference": "Big Ten",
@@ -85,12 +63,12 @@
     "games": 3,
     "plays": 192,
     "adjusted": {
-     "off_epa_play": 0.336074,
-     "def_epa_play_allowed": -0.070622,
-     "net_epa_play": 0.406697,
+     "off_epa_play": 0.336004,
+     "def_epa_play_allowed": -0.070242,
+     "net_epa_play": 0.406246,
      "off_rank": 1,
-     "def_rank": 45,
-     "net_rank": 3
+     "def_rank": 44,
+     "net_rank": 2
     },
     "raw": {
      "off_epa_play": 0.178559,
@@ -100,25 +78,25 @@
     }
    },
    {
-    "team_id": "275",
-    "team": "Wisconsin",
-    "conference": "Big Ten",
+    "team_id": "333",
+    "team": "Alabama",
+    "conference": "SEC",
     "season": 2026,
-    "games": 4,
-    "plays": 252,
+    "games": 5,
+    "plays": 322,
     "adjusted": {
-     "off_epa_play": 0.143331,
-     "def_epa_play_allowed": -0.239024,
-     "net_epa_play": 0.382356,
-     "off_rank": 25,
+     "off_epa_play": 0.168423,
+     "def_epa_play_allowed": -0.235519,
+     "net_epa_play": 0.403942,
+     "off_rank": 15,
      "def_rank": 8,
-     "net_rank": 4
+     "net_rank": 3
     },
     "raw": {
-     "off_epa_play": 0.077322,
-     "def_epa_play_allowed": -0.16714,
-     "off_success_rate": 0.416667,
-     "def_success_rate_allowed": 0.367424
+     "off_epa_play": 0.230953,
+     "def_epa_play_allowed": -0.109021,
+     "off_success_rate": 0.540373,
+     "def_success_rate_allowed": 0.379421
     }
    },
    {
@@ -129,18 +107,40 @@
     "games": 5,
     "plays": 340,
     "adjusted": {
-     "off_epa_play": 0.202429,
-     "def_epa_play_allowed": -0.177453,
-     "net_epa_play": 0.379882,
-     "off_rank": 8,
-     "def_rank": 17,
-     "net_rank": 5
+     "off_epa_play": 0.211782,
+     "def_epa_play_allowed": -0.188436,
+     "net_epa_play": 0.400218,
+     "off_rank": 6,
+     "def_rank": 13,
+     "net_rank": 4
     },
     "raw": {
      "off_epa_play": 0.259868,
      "def_epa_play_allowed": -0.139238,
      "off_success_rate": 0.520588,
      "def_success_rate_allowed": 0.377778
+    }
+   },
+   {
+    "team_id": "275",
+    "team": "Wisconsin",
+    "conference": "Big Ten",
+    "season": 2026,
+    "games": 4,
+    "plays": 252,
+    "adjusted": {
+     "off_epa_play": 0.14136,
+     "def_epa_play_allowed": -0.236717,
+     "net_epa_play": 0.378077,
+     "off_rank": 26,
+     "def_rank": 7,
+     "net_rank": 5
+    },
+    "raw": {
+     "off_epa_play": 0.077322,
+     "def_epa_play_allowed": -0.16714,
+     "off_success_rate": 0.416667,
+     "def_success_rate_allowed": 0.367424
     }
    },
    {
@@ -151,11 +151,11 @@
     "games": 4,
     "plays": 260,
     "adjusted": {
-     "off_epa_play": 0.222735,
-     "def_epa_play_allowed": -0.143512,
-     "net_epa_play": 0.366247,
+     "off_epa_play": 0.22566,
+     "def_epa_play_allowed": -0.146408,
+     "net_epa_play": 0.372068,
      "off_rank": 5,
-     "def_rank": 25,
+     "def_rank": 24,
      "net_rank": 6
     },
     "raw": {
@@ -173,9 +173,9 @@
     "games": 4,
     "plays": 315,
     "adjusted": {
-     "off_epa_play": 0.050792,
-     "def_epa_play_allowed": -0.304508,
-     "net_epa_play": 0.3553,
+     "off_epa_play": 0.05209,
+     "def_epa_play_allowed": -0.305458,
+     "net_epa_play": 0.357548,
      "off_rank": 45,
      "def_rank": 3,
      "net_rank": 7
@@ -188,28 +188,6 @@
     }
    },
    {
-    "team_id": "254",
-    "team": "Utah",
-    "conference": "Big 12",
-    "season": 2026,
-    "games": 3,
-    "plays": 191,
-    "adjusted": {
-     "off_epa_play": 0.160102,
-     "def_epa_play_allowed": -0.185963,
-     "net_epa_play": 0.346065,
-     "off_rank": 18,
-     "def_rank": 14,
-     "net_rank": 8
-    },
-    "raw": {
-     "off_epa_play": 0.197415,
-     "def_epa_play_allowed": -0.166916,
-     "off_success_rate": 0.486911,
-     "def_success_rate_allowed": 0.356098
-    }
-   },
-   {
     "team_id": "251",
     "team": "Texas",
     "conference": "SEC",
@@ -217,12 +195,12 @@
     "games": 4,
     "plays": 288,
     "adjusted": {
-     "off_epa_play": 0.019945,
-     "def_epa_play_allowed": -0.312067,
-     "net_epa_play": 0.332011,
+     "off_epa_play": 0.024275,
+     "def_epa_play_allowed": -0.31556,
+     "net_epa_play": 0.339834,
      "off_rank": 53,
      "def_rank": 2,
-     "net_rank": 9
+     "net_rank": 8
     },
     "raw": {
      "off_epa_play": 0.031749,
@@ -239,18 +217,40 @@
     "games": 4,
     "plays": 244,
     "adjusted": {
-     "off_epa_play": -0.06532,
-     "def_epa_play_allowed": -0.383573,
-     "net_epa_play": 0.318253,
-     "off_rank": 95,
+     "off_epa_play": -0.062075,
+     "def_epa_play_allowed": -0.386848,
+     "net_epa_play": 0.324773,
+     "off_rank": 96,
      "def_rank": 1,
-     "net_rank": 10
+     "net_rank": 9
     },
     "raw": {
      "off_epa_play": -0.028048,
      "def_epa_play_allowed": -0.273947,
      "off_success_rate": 0.389344,
      "def_success_rate_allowed": 0.309417
+    }
+   },
+   {
+    "team_id": "254",
+    "team": "Utah",
+    "conference": "Big 12",
+    "season": 2026,
+    "games": 3,
+    "plays": 191,
+    "adjusted": {
+     "off_epa_play": 0.152383,
+     "def_epa_play_allowed": -0.157424,
+     "net_epa_play": 0.309808,
+     "off_rank": 21,
+     "def_rank": 19,
+     "net_rank": 10
+    },
+    "raw": {
+     "off_epa_play": 0.197415,
+     "def_epa_play_allowed": -0.166916,
+     "off_success_rate": 0.486911,
+     "def_success_rate_allowed": 0.356098
     }
    },
    {
@@ -261,11 +261,11 @@
     "games": 4,
     "plays": 246,
     "adjusted": {
-     "off_epa_play": 0.206394,
-     "def_epa_play_allowed": -0.09574,
-     "net_epa_play": 0.302134,
+     "off_epa_play": 0.205183,
+     "def_epa_play_allowed": -0.094134,
+     "net_epa_play": 0.299318,
      "off_rank": 7,
-     "def_rank": 40,
+     "def_rank": 38,
      "net_rank": 11
     },
     "raw": {
@@ -283,11 +283,11 @@
     "games": 4,
     "plays": 282,
     "adjusted": {
-     "off_epa_play": 0.162999,
-     "def_epa_play_allowed": -0.133915,
-     "net_epa_play": 0.296914,
-     "off_rank": 16,
-     "def_rank": 28,
+     "off_epa_play": 0.162657,
+     "def_epa_play_allowed": -0.133947,
+     "net_epa_play": 0.296604,
+     "off_rank": 18,
+     "def_rank": 27,
      "net_rank": 12
     },
     "raw": {
@@ -305,11 +305,11 @@
     "games": 4,
     "plays": 257,
     "adjusted": {
-     "off_epa_play": 0.073951,
-     "def_epa_play_allowed": -0.219812,
-     "net_epa_play": 0.293763,
-     "off_rank": 41,
-     "def_rank": 10,
+     "off_epa_play": 0.069189,
+     "def_epa_play_allowed": -0.216276,
+     "net_epa_play": 0.285465,
+     "off_rank": 42,
+     "def_rank": 9,
      "net_rank": 13
     },
     "raw": {
@@ -327,11 +327,11 @@
     "games": 4,
     "plays": 258,
     "adjusted": {
-     "off_epa_play": 0.176766,
-     "def_epa_play_allowed": -0.097389,
-     "net_epa_play": 0.274155,
-     "off_rank": 13,
-     "def_rank": 38,
+     "off_epa_play": 0.17756,
+     "def_epa_play_allowed": -0.097748,
+     "net_epa_play": 0.275308,
+     "off_rank": 12,
+     "def_rank": 36,
      "net_rank": 14
     },
     "raw": {
@@ -342,6 +342,28 @@
     }
    },
    {
+    "team_id": "252",
+    "team": "BYU",
+    "conference": "Big 12",
+    "season": 2026,
+    "games": 4,
+    "plays": 228,
+    "adjusted": {
+     "off_epa_play": 0.120187,
+     "def_epa_play_allowed": -0.131578,
+     "net_epa_play": 0.251765,
+     "off_rank": 30,
+     "def_rank": 29,
+     "net_rank": 15
+    },
+    "raw": {
+     "off_epa_play": 0.192711,
+     "def_epa_play_allowed": -0.025158,
+     "off_success_rate": 0.508772,
+     "def_success_rate_allowed": 0.403361
+    }
+   },
+   {
     "team_id": "154",
     "team": "Wake Forest",
     "conference": "ACC",
@@ -349,18 +371,40 @@
     "games": 5,
     "plays": 322,
     "adjusted": {
-     "off_epa_play": 0.161744,
-     "def_epa_play_allowed": -0.063375,
-     "net_epa_play": 0.225119,
+     "off_epa_play": 0.163979,
+     "def_epa_play_allowed": -0.066091,
+     "net_epa_play": 0.230071,
      "off_rank": 17,
-     "def_rank": 47,
-     "net_rank": 15
+     "def_rank": 46,
+     "net_rank": 16
     },
     "raw": {
      "off_epa_play": 0.28233,
      "def_epa_play_allowed": 0.068254,
      "off_success_rate": 0.509317,
      "def_success_rate_allowed": 0.485876
+    }
+   },
+   {
+    "team_id": "97",
+    "team": "Louisville",
+    "conference": "ACC",
+    "season": 2026,
+    "games": 5,
+    "plays": 310,
+    "adjusted": {
+     "off_epa_play": 0.145955,
+     "def_epa_play_allowed": -0.083062,
+     "net_epa_play": 0.229017,
+     "off_rank": 23,
+     "def_rank": 41,
+     "net_rank": 17
+    },
+    "raw": {
+     "off_epa_play": 0.219697,
+     "def_epa_play_allowed": 0.075279,
+     "off_success_rate": 0.477419,
+     "def_success_rate_allowed": 0.445623
     }
    },
    {
@@ -371,106 +415,18 @@
     "games": 5,
     "plays": 331,
     "adjusted": {
-     "off_epa_play": -0.054358,
-     "def_epa_play_allowed": -0.257903,
-     "net_epa_play": 0.203544,
-     "off_rank": 91,
+     "off_epa_play": -0.054628,
+     "def_epa_play_allowed": -0.257097,
+     "net_epa_play": 0.202468,
+     "off_rank": 93,
      "def_rank": 5,
-     "net_rank": 16
+     "net_rank": 18
     },
     "raw": {
      "off_epa_play": 0.058185,
      "def_epa_play_allowed": -0.120262,
      "off_success_rate": 0.444109,
      "def_success_rate_allowed": 0.39934
-    }
-   },
-   {
-    "team_id": "2483",
-    "team": "Oregon",
-    "conference": "Big Ten",
-    "season": 2026,
-    "games": 3,
-    "plays": 191,
-    "adjusted": {
-     "off_epa_play": 0.101269,
-     "def_epa_play_allowed": -0.101917,
-     "net_epa_play": 0.203186,
-     "off_rank": 35,
-     "def_rank": 36,
-     "net_rank": 17
-    },
-    "raw": {
-     "off_epa_play": 0.151972,
-     "def_epa_play_allowed": 0.047254,
-     "off_success_rate": 0.429319,
-     "def_success_rate_allowed": 0.440909
-    }
-   },
-   {
-    "team_id": "68",
-    "team": "Boise State",
-    "conference": "Pac-12",
-    "season": 2026,
-    "games": 4,
-    "plays": 263,
-    "adjusted": {
-     "off_epa_play": 0.116723,
-     "def_epa_play_allowed": -0.086262,
-     "net_epa_play": 0.202986,
-     "off_rank": 28,
-     "def_rank": 43,
-     "net_rank": 18
-    },
-    "raw": {
-     "off_epa_play": 0.149185,
-     "def_epa_play_allowed": 0.00504,
-     "off_success_rate": 0.479087,
-     "def_success_rate_allowed": 0.392857
-    }
-   },
-   {
-    "team_id": "252",
-    "team": "BYU",
-    "conference": "Big 12",
-    "season": 2026,
-    "games": 3,
-    "plays": 169,
-    "adjusted": {
-     "off_epa_play": 0.107756,
-     "def_epa_play_allowed": -0.093929,
-     "net_epa_play": 0.201685,
-     "off_rank": 33,
-     "def_rank": 41,
-     "net_rank": 19
-    },
-    "raw": {
-     "off_epa_play": 0.189463,
-     "def_epa_play_allowed": 0.007641,
-     "off_success_rate": 0.502959,
-     "def_success_rate_allowed": 0.434066
-    }
-   },
-   {
-    "team_id": "344",
-    "team": "Mississippi State",
-    "conference": "SEC",
-    "season": 2026,
-    "games": 5,
-    "plays": 351,
-    "adjusted": {
-     "off_epa_play": 0.182914,
-     "def_epa_play_allowed": -0.013095,
-     "net_epa_play": 0.196009,
-     "off_rank": 12,
-     "def_rank": 65,
-     "net_rank": 20
-    },
-    "raw": {
-     "off_epa_play": 0.199706,
-     "def_epa_play_allowed": 0.080228,
-     "off_success_rate": 0.498575,
-     "def_success_rate_allowed": 0.465116
     }
    },
    {
@@ -481,18 +437,84 @@
     "games": 4,
     "plays": 256,
     "adjusted": {
-     "off_epa_play": 0.055048,
-     "def_epa_play_allowed": -0.13613,
-     "net_epa_play": 0.191178,
+     "off_epa_play": 0.057969,
+     "def_epa_play_allowed": -0.138506,
+     "net_epa_play": 0.196475,
      "off_rank": 44,
-     "def_rank": 27,
-     "net_rank": 21
+     "def_rank": 26,
+     "net_rank": 19
     },
     "raw": {
      "off_epa_play": 0.116016,
      "def_epa_play_allowed": -0.124811,
      "off_success_rate": 0.4375,
      "def_success_rate_allowed": 0.345133
+    }
+   },
+   {
+    "team_id": "344",
+    "team": "Mississippi State",
+    "conference": "SEC",
+    "season": 2026,
+    "games": 5,
+    "plays": 351,
+    "adjusted": {
+     "off_epa_play": 0.180659,
+     "def_epa_play_allowed": -0.009393,
+     "net_epa_play": 0.190052,
+     "off_rank": 10,
+     "def_rank": 70,
+     "net_rank": 20
+    },
+    "raw": {
+     "off_epa_play": 0.199706,
+     "def_epa_play_allowed": 0.080228,
+     "off_success_rate": 0.498575,
+     "def_success_rate_allowed": 0.465116
+    }
+   },
+   {
+    "team_id": "130",
+    "team": "Michigan",
+    "conference": "Big Ten",
+    "season": 2026,
+    "games": 5,
+    "plays": 291,
+    "adjusted": {
+     "off_epa_play": 0.009718,
+     "def_epa_play_allowed": -0.180146,
+     "net_epa_play": 0.189864,
+     "off_rank": 55,
+     "def_rank": 16,
+     "net_rank": 21
+    },
+    "raw": {
+     "off_epa_play": 0.052614,
+     "def_epa_play_allowed": -0.172729,
+     "off_success_rate": 0.450172,
+     "def_success_rate_allowed": 0.361486
+    }
+   },
+   {
+    "team_id": "2483",
+    "team": "Oregon",
+    "conference": "Big Ten",
+    "season": 2026,
+    "games": 3,
+    "plays": 191,
+    "adjusted": {
+     "off_epa_play": 0.094971,
+     "def_epa_play_allowed": -0.09299,
+     "net_epa_play": 0.187961,
+     "off_rank": 35,
+     "def_rank": 39,
+     "net_rank": 22
+    },
+    "raw": {
+     "off_epa_play": 0.151972,
+     "def_epa_play_allowed": 0.047254,
+     "off_success_rate": 0.429319,
+     "def_success_rate_allowed": 0.440909
     }
    },
    {
@@ -503,40 +525,18 @@
     "games": 3,
     "plays": 222,
     "adjusted": {
-     "off_epa_play": -0.012604,
-     "def_epa_play_allowed": -0.202429,
-     "net_epa_play": 0.189825,
-     "off_rank": 70,
-     "def_rank": 11,
-     "net_rank": 22
+     "off_epa_play": -0.01375,
+     "def_epa_play_allowed": -0.2007,
+     "net_epa_play": 0.186949,
+     "off_rank": 67,
+     "def_rank": 10,
+     "net_rank": 23
     },
     "raw": {
      "off_epa_play": 0.031235,
      "def_epa_play_allowed": -0.140123,
      "off_success_rate": 0.436937,
      "def_success_rate_allowed": 0.331429
-    }
-   },
-   {
-    "team_id": "2294",
-    "team": "Iowa",
-    "conference": "Big Ten",
-    "season": 2026,
-    "games": 4,
-    "plays": 248,
-    "adjusted": {
-     "off_epa_play": -0.053627,
-     "def_epa_play_allowed": -0.242276,
-     "net_epa_play": 0.188649,
-     "off_rank": 90,
-     "def_rank": 7,
-     "net_rank": 23
-    },
-    "raw": {
-     "off_epa_play": -0.014788,
-     "def_epa_play_allowed": -0.05605,
-     "off_success_rate": 0.407258,
-     "def_success_rate_allowed": 0.403226
     }
    },
    {
@@ -547,11 +547,11 @@
     "games": 4,
     "plays": 262,
     "adjusted": {
-     "off_epa_play": 0.024818,
-     "def_epa_play_allowed": -0.163054,
-     "net_epa_play": 0.187872,
-     "off_rank": 50,
-     "def_rank": 20,
+     "off_epa_play": 0.024415,
+     "def_epa_play_allowed": -0.162099,
+     "net_epa_play": 0.186514,
+     "off_rank": 52,
+     "def_rank": 18,
      "net_rank": 24
     },
     "raw": {
@@ -569,11 +569,11 @@
     "games": 4,
     "plays": 261,
     "adjusted": {
-     "off_epa_play": -0.00463,
-     "def_epa_play_allowed": -0.192086,
-     "net_epa_play": 0.187456,
-     "off_rank": 60,
-     "def_rank": 12,
+     "off_epa_play": -0.005071,
+     "def_epa_play_allowed": -0.191209,
+     "net_epa_play": 0.186139,
+     "off_rank": 62,
+     "def_rank": 11,
      "net_rank": 25
     },
     "raw": {
@@ -584,25 +584,25 @@
     }
    },
    {
-    "team_id": "97",
-    "team": "Louisville",
-    "conference": "ACC",
+    "team_id": "2294",
+    "team": "Iowa",
+    "conference": "Big Ten",
     "season": 2026,
-    "games": 4,
-    "plays": 255,
+    "games": 5,
+    "plays": 305,
     "adjusted": {
-     "off_epa_play": 0.116486,
-     "def_epa_play_allowed": -0.066823,
-     "net_epa_play": 0.183309,
-     "off_rank": 29,
-     "def_rank": 46,
+     "off_epa_play": 0.025325,
+     "def_epa_play_allowed": -0.153381,
+     "net_epa_play": 0.178707,
+     "off_rank": 51,
+     "def_rank": 20,
      "net_rank": 26
     },
     "raw": {
-     "off_epa_play": 0.171818,
-     "def_epa_play_allowed": 0.089411,
-     "off_success_rate": 0.458824,
-     "def_success_rate_allowed": 0.443333
+     "off_epa_play": 0.046349,
+     "def_epa_play_allowed": -0.018645,
+     "off_success_rate": 0.436066,
+     "def_success_rate_allowed": 0.407407
     }
    },
    {
@@ -613,10 +613,10 @@
     "games": 4,
     "plays": 235,
     "adjusted": {
-     "off_epa_play": 0.151504,
-     "def_epa_play_allowed": -0.026349,
-     "net_epa_play": 0.177853,
-     "off_rank": 21,
+     "off_epa_play": 0.152563,
+     "def_epa_play_allowed": -0.026041,
+     "net_epa_play": 0.178604,
+     "off_rank": 20,
      "def_rank": 64,
      "net_rank": 27
     },
@@ -628,6 +628,28 @@
     }
    },
    {
+    "team_id": "68",
+    "team": "Boise State",
+    "conference": "Pac-12",
+    "season": 2026,
+    "games": 4,
+    "plays": 263,
+    "adjusted": {
+     "off_epa_play": 0.105278,
+     "def_epa_play_allowed": -0.068047,
+     "net_epa_play": 0.173325,
+     "off_rank": 34,
+     "def_rank": 45,
+     "net_rank": 28
+    },
+    "raw": {
+     "off_epa_play": 0.149185,
+     "def_epa_play_allowed": 0.00504,
+     "off_success_rate": 0.479087,
+     "def_success_rate_allowed": 0.392857
+    }
+   },
+   {
     "team_id": "2579",
     "team": "South Carolina",
     "conference": "SEC",
@@ -635,40 +657,18 @@
     "games": 4,
     "plays": 297,
     "adjusted": {
-     "off_epa_play": 0.23552,
-     "def_epa_play_allowed": 0.061156,
-     "net_epa_play": 0.174364,
+     "off_epa_play": 0.234596,
+     "def_epa_play_allowed": 0.062327,
+     "net_epa_play": 0.172269,
      "off_rank": 2,
-     "def_rank": 93,
-     "net_rank": 28
+     "def_rank": 94,
+     "net_rank": 29
     },
     "raw": {
      "off_epa_play": 0.170024,
      "def_epa_play_allowed": 0.200873,
      "off_success_rate": 0.498316,
      "def_success_rate_allowed": 0.476987
-    }
-   },
-   {
-    "team_id": "130",
-    "team": "Michigan",
-    "conference": "Big Ten",
-    "season": 2026,
-    "games": 5,
-    "plays": 291,
-    "adjusted": {
-     "off_epa_play": 0.002065,
-     "def_epa_play_allowed": -0.171917,
-     "net_epa_play": 0.173982,
-     "off_rank": 56,
-     "def_rank": 18,
-     "net_rank": 29
-    },
-    "raw": {
-     "off_epa_play": 0.052614,
-     "def_epa_play_allowed": -0.172729,
-     "off_success_rate": 0.450172,
-     "def_success_rate_allowed": 0.361486
     }
    },
    {
@@ -679,11 +679,11 @@
     "games": 3,
     "plays": 233,
     "adjusted": {
-     "off_epa_play": -0.012529,
-     "def_epa_play_allowed": -0.184084,
-     "net_epa_play": 0.171555,
-     "off_rank": 69,
-     "def_rank": 15,
+     "off_epa_play": -0.018129,
+     "def_epa_play_allowed": -0.182421,
+     "net_epa_play": 0.164292,
+     "off_rank": 73,
+     "def_rank": 14,
      "net_rank": 30
     },
     "raw": {
@@ -701,11 +701,11 @@
     "games": 4,
     "plays": 283,
     "adjusted": {
-     "off_epa_play": 0.227627,
-     "def_epa_play_allowed": 0.064738,
-     "net_epa_play": 0.162889,
+     "off_epa_play": 0.228757,
+     "def_epa_play_allowed": 0.064567,
+     "net_epa_play": 0.16419,
      "off_rank": 4,
-     "def_rank": 97,
+     "def_rank": 96,
      "net_rank": 31
     },
     "raw": {
@@ -723,11 +723,11 @@
     "games": 3,
     "plays": 199,
     "adjusted": {
-     "off_epa_play": -0.018513,
-     "def_epa_play_allowed": -0.168689,
-     "net_epa_play": 0.150177,
-     "off_rank": 72,
-     "def_rank": 19,
+     "off_epa_play": -0.01648,
+     "def_epa_play_allowed": -0.170216,
+     "net_epa_play": 0.153737,
+     "off_rank": 70,
+     "def_rank": 17,
      "net_rank": 32
     },
     "raw": {
@@ -745,11 +745,11 @@
     "games": 4,
     "plays": 263,
     "adjusted": {
-     "off_epa_play": 0.026521,
-     "def_epa_play_allowed": -0.121748,
-     "net_epa_play": 0.148269,
+     "off_epa_play": 0.027844,
+     "def_epa_play_allowed": -0.122099,
+     "net_epa_play": 0.149943,
      "off_rank": 49,
-     "def_rank": 31,
+     "def_rank": 32,
      "net_rank": 33
     },
     "raw": {
@@ -767,11 +767,11 @@
     "games": 4,
     "plays": 281,
     "adjusted": {
-     "off_epa_play": 0.230638,
-     "def_epa_play_allowed": 0.084685,
-     "net_epa_play": 0.145953,
+     "off_epa_play": 0.230979,
+     "def_epa_play_allowed": 0.085115,
+     "net_epa_play": 0.145864,
      "off_rank": 3,
-     "def_rank": 103,
+     "def_rank": 102,
      "net_rank": 34
     },
     "raw": {
@@ -782,28 +782,6 @@
     }
    },
    {
-    "team_id": "52",
-    "team": "Florida State",
-    "conference": "ACC",
-    "season": 2026,
-    "games": 4,
-    "plays": 258,
-    "adjusted": {
-     "off_epa_play": 0.211949,
-     "def_epa_play_allowed": 0.069533,
-     "net_epa_play": 0.142417,
-     "off_rank": 6,
-     "def_rank": 98,
-     "net_rank": 35
-    },
-    "raw": {
-     "off_epa_play": 0.183896,
-     "def_epa_play_allowed": 0.109142,
-     "off_success_rate": 0.46124,
-     "def_success_rate_allowed": 0.458647
-    }
-   },
-   {
     "team_id": "204",
     "team": "Oregon State",
     "conference": "Pac-12",
@@ -811,12 +789,12 @@
     "games": 4,
     "plays": 277,
     "adjusted": {
-     "off_epa_play": 0.080202,
-     "def_epa_play_allowed": -0.057479,
-     "net_epa_play": 0.137681,
+     "off_epa_play": 0.083303,
+     "def_epa_play_allowed": -0.060962,
+     "net_epa_play": 0.144265,
      "off_rank": 39,
-     "def_rank": 51,
-     "net_rank": 36
+     "def_rank": 48,
+     "net_rank": 35
     },
     "raw": {
      "off_epa_play": 0.216782,
@@ -833,12 +811,12 @@
     "games": 4,
     "plays": 276,
     "adjusted": {
-     "off_epa_play": 0.036187,
-     "def_epa_play_allowed": -0.101158,
-     "net_epa_play": 0.137344,
+     "off_epa_play": 0.037983,
+     "def_epa_play_allowed": -0.102821,
+     "net_epa_play": 0.140804,
      "off_rank": 46,
-     "def_rank": 37,
-     "net_rank": 37
+     "def_rank": 34,
+     "net_rank": 36
     },
     "raw": {
      "off_epa_play": 0.068837,
@@ -855,12 +833,12 @@
     "games": 3,
     "plays": 220,
     "adjusted": {
-     "off_epa_play": 0.127964,
-     "def_epa_play_allowed": -0.008525,
-     "net_epa_play": 0.136489,
-     "off_rank": 27,
+     "off_epa_play": 0.129734,
+     "def_epa_play_allowed": -0.009813,
+     "net_epa_play": 0.139548,
+     "off_rank": 29,
      "def_rank": 69,
-     "net_rank": 38
+     "net_rank": 37
     },
     "raw": {
      "off_epa_play": 0.130565,
@@ -877,40 +855,18 @@
     "games": 4,
     "plays": 263,
     "adjusted": {
-     "off_epa_play": 0.003673,
-     "def_epa_play_allowed": -0.130081,
-     "net_epa_play": 0.133754,
-     "off_rank": 55,
-     "def_rank": 30,
-     "net_rank": 39
+     "off_epa_play": 0.001675,
+     "def_epa_play_allowed": -0.125959,
+     "net_epa_play": 0.127634,
+     "off_rank": 58,
+     "def_rank": 31,
+     "net_rank": 38
     },
     "raw": {
      "off_epa_play": 0.1228,
      "def_epa_play_allowed": -0.064507,
      "off_success_rate": 0.467681,
      "def_success_rate_allowed": 0.412281
-    }
-   },
-   {
-    "team_id": "235",
-    "team": "Memphis",
-    "conference": "American Athletic",
-    "season": 2026,
-    "games": 4,
-    "plays": 258,
-    "adjusted": {
-     "off_epa_play": 0.146224,
-     "def_epa_play_allowed": 0.03607,
-     "net_epa_play": 0.110155,
-     "off_rank": 24,
-     "def_rank": 81,
-     "net_rank": 40
-    },
-    "raw": {
-     "off_epa_play": 0.226445,
-     "def_epa_play_allowed": 0.058638,
-     "off_success_rate": 0.484496,
-     "def_success_rate_allowed": 0.448
     }
    },
    {
@@ -921,106 +877,18 @@
     "games": 3,
     "plays": 216,
     "adjusted": {
-     "off_epa_play": 0.101928,
-     "def_epa_play_allowed": -0.001425,
-     "net_epa_play": 0.103352,
-     "off_rank": 34,
-     "def_rank": 74,
-     "net_rank": 41
+     "off_epa_play": 0.113869,
+     "def_epa_play_allowed": -0.006411,
+     "net_epa_play": 0.120279,
+     "off_rank": 31,
+     "def_rank": 72,
+     "net_rank": 39
     },
     "raw": {
      "off_epa_play": 0.159673,
      "def_epa_play_allowed": -0.052991,
      "off_success_rate": 0.476852,
      "def_success_rate_allowed": 0.354037
-    }
-   },
-   {
-    "team_id": "2335",
-    "team": "Liberty",
-    "conference": "Conference USA",
-    "season": 2026,
-    "games": 5,
-    "plays": 316,
-    "adjusted": {
-     "off_epa_play": 0.070416,
-     "def_epa_play_allowed": -0.028886,
-     "net_epa_play": 0.099302,
-     "off_rank": 42,
-     "def_rank": 63,
-     "net_rank": 42
-    },
-    "raw": {
-     "off_epa_play": 0.188574,
-     "def_epa_play_allowed": -0.058023,
-     "off_success_rate": 0.493671,
-     "def_success_rate_allowed": 0.381944
-    }
-   },
-   {
-    "team_id": "38",
-    "team": "Colorado",
-    "conference": "Big 12",
-    "season": 2026,
-    "games": 4,
-    "plays": 298,
-    "adjusted": {
-     "off_epa_play": -0.175585,
-     "def_epa_play_allowed": -0.270261,
-     "net_epa_play": 0.094676,
-     "off_rank": 124,
-     "def_rank": 4,
-     "net_rank": 43
-    },
-    "raw": {
-     "off_epa_play": -0.160569,
-     "def_epa_play_allowed": -0.150227,
-     "off_success_rate": 0.402685,
-     "def_success_rate_allowed": 0.403846
-    }
-   },
-   {
-    "team_id": "145",
-    "team": "Ole Miss",
-    "conference": "SEC",
-    "season": 2026,
-    "games": 4,
-    "plays": 268,
-    "adjusted": {
-     "off_epa_play": 0.18437,
-     "def_epa_play_allowed": 0.092103,
-     "net_epa_play": 0.092267,
-     "off_rank": 11,
-     "def_rank": 107,
-     "net_rank": 44
-    },
-    "raw": {
-     "off_epa_play": 0.192805,
-     "def_epa_play_allowed": 0.158623,
-     "off_success_rate": 0.514925,
-     "def_success_rate_allowed": 0.463504
-    }
-   },
-   {
-    "team_id": "245",
-    "team": "Texas A&M",
-    "conference": "SEC",
-    "season": 2026,
-    "games": 5,
-    "plays": 354,
-    "adjusted": {
-     "off_epa_play": -0.011164,
-     "def_epa_play_allowed": -0.096295,
-     "net_epa_play": 0.085132,
-     "off_rank": 68,
-     "def_rank": 39,
-     "net_rank": 45
-    },
-    "raw": {
-     "off_epa_play": 0.002434,
-     "def_epa_play_allowed": -0.076968,
-     "off_success_rate": 0.457627,
-     "def_success_rate_allowed": 0.389513
     }
    },
    {
@@ -1031,18 +899,150 @@
     "games": 4,
     "plays": 273,
     "adjusted": {
-     "off_epa_play": 0.112041,
-     "def_epa_play_allowed": 0.027574,
-     "net_epa_play": 0.084467,
-     "off_rank": 30,
-     "def_rank": 79,
-     "net_rank": 46
+     "off_epa_play": 0.13261,
+     "def_epa_play_allowed": 0.022823,
+     "net_epa_play": 0.109787,
+     "off_rank": 27,
+     "def_rank": 80,
+     "net_rank": 40
     },
     "raw": {
      "off_epa_play": 0.184378,
      "def_epa_play_allowed": 0.075747,
      "off_success_rate": 0.47619,
      "def_success_rate_allowed": 0.412955
+    }
+   },
+   {
+    "team_id": "235",
+    "team": "Memphis",
+    "conference": "American Athletic",
+    "season": 2026,
+    "games": 4,
+    "plays": 258,
+    "adjusted": {
+     "off_epa_play": 0.144407,
+     "def_epa_play_allowed": 0.038765,
+     "net_epa_play": 0.105643,
+     "off_rank": 25,
+     "def_rank": 83,
+     "net_rank": 41
+    },
+    "raw": {
+     "off_epa_play": 0.226445,
+     "def_epa_play_allowed": 0.058638,
+     "off_success_rate": 0.484496,
+     "def_success_rate_allowed": 0.448
+    }
+   },
+   {
+    "team_id": "2335",
+    "team": "Liberty",
+    "conference": "Conference USA",
+    "season": 2026,
+    "games": 5,
+    "plays": 316,
+    "adjusted": {
+     "off_epa_play": 0.069851,
+     "def_epa_play_allowed": -0.027445,
+     "net_epa_play": 0.097297,
+     "off_rank": 41,
+     "def_rank": 62,
+     "net_rank": 42
+    },
+    "raw": {
+     "off_epa_play": 0.188574,
+     "def_epa_play_allowed": -0.058023,
+     "off_success_rate": 0.493671,
+     "def_success_rate_allowed": 0.381944
+    }
+   },
+   {
+    "team_id": "145",
+    "team": "Ole Miss",
+    "conference": "SEC",
+    "season": 2026,
+    "games": 4,
+    "plays": 268,
+    "adjusted": {
+     "off_epa_play": 0.186554,
+     "def_epa_play_allowed": 0.089396,
+     "net_epa_play": 0.097157,
+     "off_rank": 9,
+     "def_rank": 105,
+     "net_rank": 43
+    },
+    "raw": {
+     "off_epa_play": 0.192805,
+     "def_epa_play_allowed": 0.158623,
+     "off_success_rate": 0.514925,
+     "def_success_rate_allowed": 0.463504
+    }
+   },
+   {
+    "team_id": "38",
+    "team": "Colorado",
+    "conference": "Big 12",
+    "season": 2026,
+    "games": 4,
+    "plays": 298,
+    "adjusted": {
+     "off_epa_play": -0.175,
+     "def_epa_play_allowed": -0.270411,
+     "net_epa_play": 0.095412,
+     "off_rank": 123,
+     "def_rank": 4,
+     "net_rank": 44
+    },
+    "raw": {
+     "off_epa_play": -0.160569,
+     "def_epa_play_allowed": -0.150227,
+     "off_success_rate": 0.402685,
+     "def_success_rate_allowed": 0.403846
+    }
+   },
+   {
+    "team_id": "2628",
+    "team": "TCU",
+    "conference": "Big 12",
+    "season": 2026,
+    "games": 4,
+    "plays": 260,
+    "adjusted": {
+     "off_epa_play": -0.097204,
+     "def_epa_play_allowed": -0.182253,
+     "net_epa_play": 0.085049,
+     "off_rank": 103,
+     "def_rank": 15,
+     "net_rank": 45
+    },
+    "raw": {
+     "off_epa_play": -0.049049,
+     "def_epa_play_allowed": -0.090907,
+     "off_success_rate": 0.403846,
+     "def_success_rate_allowed": 0.417778
+    }
+   },
+   {
+    "team_id": "245",
+    "team": "Texas A&M",
+    "conference": "SEC",
+    "season": 2026,
+    "games": 5,
+    "plays": 354,
+    "adjusted": {
+     "off_epa_play": -0.011111,
+     "def_epa_play_allowed": -0.095547,
+     "net_epa_play": 0.084436,
+     "off_rank": 66,
+     "def_rank": 37,
+     "net_rank": 46
+    },
+    "raw": {
+     "off_epa_play": 0.002434,
+     "def_epa_play_allowed": -0.076968,
+     "off_success_rate": 0.457627,
+     "def_success_rate_allowed": 0.389513
     }
    },
    {
@@ -1053,9 +1053,9 @@
     "games": 5,
     "plays": 345,
     "adjusted": {
-     "off_epa_play": -0.025919,
-     "def_epa_play_allowed": -0.102113,
-     "net_epa_play": 0.076194,
+     "off_epa_play": -0.025438,
+     "def_epa_play_allowed": -0.10218,
+     "net_epa_play": 0.076742,
      "off_rank": 80,
      "def_rank": 35,
      "net_rank": 47
@@ -1068,28 +1068,6 @@
     }
    },
    {
-    "team_id": "2628",
-    "team": "TCU",
-    "conference": "Big 12",
-    "season": 2026,
-    "games": 4,
-    "plays": 260,
-    "adjusted": {
-     "off_epa_play": -0.108444,
-     "def_epa_play_allowed": -0.181974,
-     "net_epa_play": 0.07353,
-     "off_rank": 106,
-     "def_rank": 16,
-     "net_rank": 48
-    },
-    "raw": {
-     "off_epa_play": -0.049049,
-     "def_epa_play_allowed": -0.090907,
-     "off_success_rate": 0.403846,
-     "def_success_rate_allowed": 0.417778
-    }
-   },
-   {
     "team_id": "2116",
     "team": "UCF",
     "conference": "Big 12",
@@ -1097,12 +1075,12 @@
     "games": 4,
     "plays": 222,
     "adjusted": {
-     "off_epa_play": -0.058073,
-     "def_epa_play_allowed": -0.130472,
-     "net_epa_play": 0.072399,
-     "off_rank": 93,
-     "def_rank": 29,
-     "net_rank": 49
+     "off_epa_play": -0.05727,
+     "def_epa_play_allowed": -0.133638,
+     "net_epa_play": 0.076368,
+     "off_rank": 94,
+     "def_rank": 28,
+     "net_rank": 48
     },
     "raw": {
      "off_epa_play": -0.057603,
@@ -1119,40 +1097,18 @@
     "games": 4,
     "plays": 318,
     "adjusted": {
-     "off_epa_play": 0.034821,
-     "def_epa_play_allowed": -0.030966,
-     "net_epa_play": 0.065788,
+     "off_epa_play": 0.035277,
+     "def_epa_play_allowed": -0.030982,
+     "net_epa_play": 0.066259,
      "off_rank": 47,
-     "def_rank": 62,
-     "net_rank": 50
+     "def_rank": 61,
+     "net_rank": 49
     },
     "raw": {
      "off_epa_play": -0.01276,
      "def_epa_play_allowed": -0.095391,
      "off_success_rate": 0.40566,
      "def_success_rate_allowed": 0.407166
-    }
-   },
-   {
-    "team_id": "256",
-    "team": "James Madison",
-    "conference": "Sun Belt",
-    "season": 2026,
-    "games": 4,
-    "plays": 266,
-    "adjusted": {
-     "off_epa_play": 0.0224,
-     "def_epa_play_allowed": -0.03825,
-     "net_epa_play": 0.06065,
-     "off_rank": 52,
-     "def_rank": 56,
-     "net_rank": 51
-    },
-    "raw": {
-     "off_epa_play": 0.108109,
-     "def_epa_play_allowed": -0.08158,
-     "off_success_rate": 0.432331,
-     "def_success_rate_allowed": 0.376712
     }
    },
    {
@@ -1163,18 +1119,62 @@
     "games": 3,
     "plays": 177,
     "adjusted": {
-     "off_epa_play": 0.091982,
-     "def_epa_play_allowed": 0.031546,
-     "net_epa_play": 0.060436,
+     "off_epa_play": 0.092511,
+     "def_epa_play_allowed": 0.028455,
+     "net_epa_play": 0.064056,
      "off_rank": 37,
-     "def_rank": 80,
-     "net_rank": 52
+     "def_rank": 81,
+     "net_rank": 50
     },
     "raw": {
      "off_epa_play": -0.026911,
      "def_epa_play_allowed": 0.067411,
      "off_success_rate": 0.429379,
      "def_success_rate_allowed": 0.471429
+    }
+   },
+   {
+    "team_id": "256",
+    "team": "James Madison",
+    "conference": "Sun Belt",
+    "season": 2026,
+    "games": 4,
+    "plays": 266,
+    "adjusted": {
+     "off_epa_play": 0.022351,
+     "def_epa_play_allowed": -0.037773,
+     "net_epa_play": 0.060124,
+     "off_rank": 54,
+     "def_rank": 57,
+     "net_rank": 51
+    },
+    "raw": {
+     "off_epa_play": 0.108109,
+     "def_epa_play_allowed": -0.08158,
+     "off_success_rate": 0.432331,
+     "def_success_rate_allowed": 0.376712
+    }
+   },
+   {
+    "team_id": "52",
+    "team": "Florida State",
+    "conference": "ACC",
+    "season": 2026,
+    "games": 5,
+    "plays": 335,
+    "adjusted": {
+     "off_epa_play": 0.173657,
+     "def_epa_play_allowed": 0.117806,
+     "net_epa_play": 0.055851,
+     "off_rank": 14,
+     "def_rank": 115,
+     "net_rank": 52
+    },
+    "raw": {
+     "off_epa_play": 0.146274,
+     "def_epa_play_allowed": 0.166119,
+     "off_success_rate": 0.459701,
+     "def_success_rate_allowed": 0.476636
     }
    },
    {
@@ -1185,11 +1185,11 @@
     "games": 4,
     "plays": 266,
     "adjusted": {
-     "off_epa_play": 0.153544,
-     "def_epa_play_allowed": 0.102393,
-     "net_epa_play": 0.051151,
-     "off_rank": 20,
-     "def_rank": 113,
+     "off_epa_play": 0.155254,
+     "def_epa_play_allowed": 0.100967,
+     "net_epa_play": 0.054286,
+     "off_rank": 19,
+     "def_rank": 110,
      "net_rank": 53
     },
     "raw": {
@@ -1207,11 +1207,11 @@
     "games": 4,
     "plays": 243,
     "adjusted": {
-     "off_epa_play": 0.031555,
-     "def_epa_play_allowed": -0.011097,
-     "net_epa_play": 0.042651,
+     "off_epa_play": 0.033834,
+     "def_epa_play_allowed": -0.018263,
+     "net_epa_play": 0.052097,
      "off_rank": 48,
-     "def_rank": 68,
+     "def_rank": 65,
      "net_rank": 54
     },
     "raw": {
@@ -1222,72 +1222,6 @@
     }
    },
    {
-    "team_id": "135",
-    "team": "Minnesota",
-    "conference": "Big Ten",
-    "season": 2026,
-    "games": 4,
-    "plays": 251,
-    "adjusted": {
-     "off_epa_play": -0.113961,
-     "def_epa_play_allowed": -0.155628,
-     "net_epa_play": 0.041667,
-     "off_rank": 107,
-     "def_rank": 21,
-     "net_rank": 55
-    },
-    "raw": {
-     "off_epa_play": -0.069232,
-     "def_epa_play_allowed": -0.104233,
-     "off_success_rate": 0.418327,
-     "def_success_rate_allowed": 0.408696
-    }
-   },
-   {
-    "team_id": "66",
-    "team": "Iowa State",
-    "conference": "Big 12",
-    "season": 2026,
-    "games": 4,
-    "plays": 265,
-    "adjusted": {
-     "off_epa_play": -0.007378,
-     "def_epa_play_allowed": -0.04612,
-     "net_epa_play": 0.038741,
-     "off_rank": 65,
-     "def_rank": 54,
-     "net_rank": 56
-    },
-    "raw": {
-     "off_epa_play": 0.071495,
-     "def_epa_play_allowed": 0.076356,
-     "off_success_rate": 0.445283,
-     "def_success_rate_allowed": 0.424242
-    }
-   },
-   {
-    "team_id": "264",
-    "team": "Washington",
-    "conference": "Big Ten",
-    "season": 2026,
-    "games": 4,
-    "plays": 250,
-    "adjusted": {
-     "off_epa_play": -0.101515,
-     "def_epa_play_allowed": -0.139565,
-     "net_epa_play": 0.03805,
-     "off_rank": 105,
-     "def_rank": 26,
-     "net_rank": 57
-    },
-    "raw": {
-     "off_epa_play": -0.03563,
-     "def_epa_play_allowed": -0.147912,
-     "off_success_rate": 0.428,
-     "def_success_rate_allowed": 0.381148
-    }
-   },
-   {
     "team_id": "326",
     "team": "Texas State",
     "conference": "Pac-12",
@@ -1295,12 +1229,12 @@
     "games": 4,
     "plays": 320,
     "adjusted": {
-     "off_epa_play": 0.112002,
-     "def_epa_play_allowed": 0.074074,
-     "net_epa_play": 0.037929,
-     "off_rank": 31,
-     "def_rank": 101,
-     "net_rank": 58
+     "off_epa_play": 0.113684,
+     "def_epa_play_allowed": 0.072866,
+     "net_epa_play": 0.040818,
+     "off_rank": 32,
+     "def_rank": 99,
+     "net_rank": 55
     },
     "raw": {
      "off_epa_play": 0.085415,
@@ -1317,18 +1251,84 @@
     "games": 5,
     "plays": 332,
     "adjusted": {
-     "off_epa_play": 0.024644,
-     "def_epa_play_allowed": -0.006904,
-     "net_epa_play": 0.031548,
-     "off_rank": 51,
-     "def_rank": 70,
-     "net_rank": 59
+     "off_epa_play": 0.027641,
+     "def_epa_play_allowed": -0.010144,
+     "net_epa_play": 0.037786,
+     "off_rank": 50,
+     "def_rank": 68,
+     "net_rank": 56
     },
     "raw": {
      "off_epa_play": 0.142162,
      "def_epa_play_allowed": 0.075168,
      "off_success_rate": 0.466867,
      "def_success_rate_allowed": 0.447514
+    }
+   },
+   {
+    "team_id": "2449",
+    "team": "North Dakota State",
+    "conference": "Mountain West",
+    "season": 2026,
+    "games": 4,
+    "plays": 252,
+    "adjusted": {
+     "off_epa_play": -0.092572,
+     "def_epa_play_allowed": -0.127185,
+     "net_epa_play": 0.034614,
+     "off_rank": 102,
+     "def_rank": 30,
+     "net_rank": 57
+    },
+    "raw": {
+     "off_epa_play": 0.042741,
+     "def_epa_play_allowed": -0.137956,
+     "off_success_rate": 0.420635,
+     "def_success_rate_allowed": 0.433476
+    }
+   },
+   {
+    "team_id": "66",
+    "team": "Iowa State",
+    "conference": "Big 12",
+    "season": 2026,
+    "games": 5,
+    "plays": 321,
+    "adjusted": {
+     "off_epa_play": -0.017775,
+     "def_epa_play_allowed": -0.048704,
+     "net_epa_play": 0.030929,
+     "off_rank": 71,
+     "def_rank": 53,
+     "net_rank": 58
+    },
+    "raw": {
+     "off_epa_play": 0.036037,
+     "def_epa_play_allowed": 0.101921,
+     "off_success_rate": 0.420561,
+     "def_success_rate_allowed": 0.444828
+    }
+   },
+   {
+    "team_id": "135",
+    "team": "Minnesota",
+    "conference": "Big Ten",
+    "season": 2026,
+    "games": 4,
+    "plays": 251,
+    "adjusted": {
+     "off_epa_play": -0.123577,
+     "def_epa_play_allowed": -0.148789,
+     "net_epa_play": 0.025211,
+     "off_rank": 108,
+     "def_rank": 23,
+     "net_rank": 59
+    },
+    "raw": {
+     "off_epa_play": -0.069232,
+     "def_epa_play_allowed": -0.104233,
+     "off_success_rate": 0.418327,
+     "def_success_rate_allowed": 0.408696
     }
    },
    {
@@ -1339,10 +1339,10 @@
     "games": 4,
     "plays": 301,
     "adjusted": {
-     "off_epa_play": 0.1463,
-     "def_epa_play_allowed": 0.124068,
-     "net_epa_play": 0.022232,
-     "off_rank": 23,
+     "off_epa_play": 0.14573,
+     "def_epa_play_allowed": 0.124513,
+     "net_epa_play": 0.021217,
+     "off_rank": 24,
      "def_rank": 117,
      "net_rank": 60
     },
@@ -1354,28 +1354,6 @@
     }
    },
    {
-    "team_id": "2449",
-    "team": "North Dakota State",
-    "conference": "Mountain West",
-    "season": 2026,
-    "games": 4,
-    "plays": 252,
-    "adjusted": {
-     "off_epa_play": -0.098477,
-     "def_epa_play_allowed": -0.120098,
-     "net_epa_play": 0.021621,
-     "off_rank": 102,
-     "def_rank": 32,
-     "net_rank": 61
-    },
-    "raw": {
-     "off_epa_play": 0.042741,
-     "def_epa_play_allowed": -0.137956,
-     "off_success_rate": 0.420635,
-     "def_success_rate_allowed": 0.433476
-    }
-   },
-   {
     "team_id": "127",
     "team": "Michigan State",
     "conference": "Big Ten",
@@ -1383,12 +1361,12 @@
     "games": 5,
     "plays": 337,
     "adjusted": {
-     "off_epa_play": -0.03269,
-     "def_epa_play_allowed": -0.053495,
-     "net_epa_play": 0.020805,
-     "off_rank": 82,
-     "def_rank": 53,
-     "net_rank": 62
+     "off_epa_play": -0.034222,
+     "def_epa_play_allowed": -0.051693,
+     "net_epa_play": 0.017471,
+     "off_rank": 84,
+     "def_rank": 52,
+     "net_rank": 61
     },
     "raw": {
      "off_epa_play": -0.080081,
@@ -1405,12 +1383,12 @@
     "games": 4,
     "plays": 271,
     "adjusted": {
-     "off_epa_play": 0.07664,
-     "def_epa_play_allowed": 0.060671,
-     "net_epa_play": 0.015969,
+     "off_epa_play": 0.076949,
+     "def_epa_play_allowed": 0.060963,
+     "net_epa_play": 0.015986,
      "off_rank": 40,
      "def_rank": 92,
-     "net_rank": 63
+     "net_rank": 62
     },
     "raw": {
      "off_epa_play": 0.162076,
@@ -1427,40 +1405,18 @@
     "games": 5,
     "plays": 285,
     "adjusted": {
-     "off_epa_play": -0.032704,
-     "def_epa_play_allowed": -0.045444,
-     "net_epa_play": 0.01274,
+     "off_epa_play": -0.032547,
+     "def_epa_play_allowed": -0.045833,
+     "net_epa_play": 0.013285,
      "off_rank": 83,
      "def_rank": 55,
-     "net_rank": 64
+     "net_rank": 63
     },
     "raw": {
      "off_epa_play": 0.061697,
      "def_epa_play_allowed": 0.009967,
      "off_success_rate": 0.459649,
      "def_success_rate_allowed": 0.431677
-    }
-   },
-   {
-    "team_id": "218",
-    "team": "Temple",
-    "conference": "American Athletic",
-    "season": 2026,
-    "games": 4,
-    "plays": 228,
-    "adjusted": {
-     "off_epa_play": 0.08967,
-     "def_epa_play_allowed": 0.078721,
-     "net_epa_play": 0.010949,
-     "off_rank": 38,
-     "def_rank": 102,
-     "net_rank": 65
-    },
-    "raw": {
-     "off_epa_play": 0.162579,
-     "def_epa_play_allowed": 0.200647,
-     "off_success_rate": 0.425439,
-     "def_success_rate_allowed": 0.492481
     }
    },
    {
@@ -1471,18 +1427,40 @@
     "games": 4,
     "plays": 247,
     "adjusted": {
-     "off_epa_play": 0.008634,
-     "def_epa_play_allowed": -0.001964,
-     "net_epa_play": 0.010599,
-     "off_rank": 54,
-     "def_rank": 73,
-     "net_rank": 66
+     "off_epa_play": 0.00958,
+     "def_epa_play_allowed": -0.00293,
+     "net_epa_play": 0.01251,
+     "off_rank": 56,
+     "def_rank": 75,
+     "net_rank": 64
     },
     "raw": {
      "off_epa_play": 0.075598,
      "def_epa_play_allowed": 0.092898,
      "off_success_rate": 0.441296,
      "def_success_rate_allowed": 0.418251
+    }
+   },
+   {
+    "team_id": "218",
+    "team": "Temple",
+    "conference": "American Athletic",
+    "season": 2026,
+    "games": 4,
+    "plays": 228,
+    "adjusted": {
+     "off_epa_play": 0.089589,
+     "def_epa_play_allowed": 0.079083,
+     "net_epa_play": 0.010506,
+     "off_rank": 38,
+     "def_rank": 101,
+     "net_rank": 65
+    },
+    "raw": {
+     "off_epa_play": 0.162579,
+     "def_epa_play_allowed": 0.200647,
+     "off_success_rate": 0.425439,
+     "def_success_rate_allowed": 0.492481
     }
    },
    {
@@ -1493,40 +1471,18 @@
     "games": 5,
     "plays": 326,
     "adjusted": {
-     "off_epa_play": -0.141629,
-     "def_epa_play_allowed": -0.150668,
-     "net_epa_play": 0.009039,
-     "off_rank": 113,
-     "def_rank": 22,
-     "net_rank": 67
+     "off_epa_play": -0.140478,
+     "def_epa_play_allowed": -0.150957,
+     "net_epa_play": 0.010479,
+     "off_rank": 115,
+     "def_rank": 21,
+     "net_rank": 66
     },
     "raw": {
      "off_epa_play": -0.132257,
      "def_epa_play_allowed": -0.044141,
      "off_success_rate": 0.398773,
      "def_success_rate_allowed": 0.433908
-    }
-   },
-   {
-    "team_id": "30",
-    "team": "USC",
-    "conference": "Big Ten",
-    "season": 2026,
-    "games": 6,
-    "plays": 418,
-    "adjusted": {
-     "off_epa_play": 0.193564,
-     "def_epa_play_allowed": 0.197585,
-     "net_epa_play": -0.004021,
-     "off_rank": 10,
-     "def_rank": 133,
-     "net_rank": 68
-    },
-    "raw": {
-     "off_epa_play": 0.217612,
-     "def_epa_play_allowed": 0.232285,
-     "off_success_rate": 0.526316,
-     "def_success_rate_allowed": 0.478134
     }
    },
    {
@@ -1537,18 +1493,40 @@
     "games": 4,
     "plays": 305,
     "adjusted": {
-     "off_epa_play": 0.092328,
-     "def_epa_play_allowed": 0.096916,
-     "net_epa_play": -0.004588,
+     "off_epa_play": 0.09277,
+     "def_epa_play_allowed": 0.096411,
+     "net_epa_play": -0.003641,
      "off_rank": 36,
-     "def_rank": 110,
-     "net_rank": 69
+     "def_rank": 108,
+     "net_rank": 67
     },
     "raw": {
      "off_epa_play": 0.089501,
      "def_epa_play_allowed": 0.024128,
      "off_success_rate": 0.459016,
      "def_success_rate_allowed": 0.393162
+    }
+   },
+   {
+    "team_id": "264",
+    "team": "Washington",
+    "conference": "Big Ten",
+    "season": 2026,
+    "games": 5,
+    "plays": 326,
+    "adjusted": {
+     "off_epa_play": -0.051779,
+     "def_epa_play_allowed": -0.047773,
+     "net_epa_play": -0.004006,
+     "off_rank": 90,
+     "def_rank": 54,
+     "net_rank": 68
+    },
+    "raw": {
+     "off_epa_play": -0.003215,
+     "def_epa_play_allowed": -0.060754,
+     "off_success_rate": 0.42638,
+     "def_success_rate_allowed": 0.415282
     }
    },
    {
@@ -1559,40 +1537,18 @@
     "games": 4,
     "plays": 246,
     "adjusted": {
-     "off_epa_play": 0.147275,
-     "def_epa_play_allowed": 0.158437,
-     "net_epa_play": -0.011162,
+     "off_epa_play": 0.150936,
+     "def_epa_play_allowed": 0.155492,
+     "net_epa_play": -0.004556,
      "off_rank": 22,
      "def_rank": 123,
-     "net_rank": 70
+     "net_rank": 69
     },
     "raw": {
      "off_epa_play": 0.147515,
      "def_epa_play_allowed": 0.322916,
      "off_success_rate": 0.479675,
      "def_success_rate_allowed": 0.53125
-    }
-   },
-   {
-    "team_id": "2426",
-    "team": "Navy",
-    "conference": "American Athletic",
-    "season": 2026,
-    "games": 3,
-    "plays": 176,
-    "adjusted": {
-     "off_epa_play": -0.08239,
-     "def_epa_play_allowed": -0.063296,
-     "net_epa_play": -0.019094,
-     "off_rank": 98,
-     "def_rank": 48,
-     "net_rank": 71
-    },
-    "raw": {
-     "off_epa_play": 0.042167,
-     "def_epa_play_allowed": 0.024968,
-     "off_success_rate": 0.414773,
-     "def_success_rate_allowed": 0.425
     }
    },
    {
@@ -1603,12 +1559,12 @@
     "games": 4,
     "plays": 223,
     "adjusted": {
-     "off_epa_play": -0.024839,
-     "def_epa_play_allowed": -0.000259,
-     "net_epa_play": -0.02458,
-     "off_rank": 78,
-     "def_rank": 75,
-     "net_rank": 72
+     "off_epa_play": -0.018189,
+     "def_epa_play_allowed": -0.008557,
+     "net_epa_play": -0.009632,
+     "off_rank": 74,
+     "def_rank": 71,
+     "net_rank": 70
     },
     "raw": {
      "off_epa_play": 0.063255,
@@ -1618,25 +1574,91 @@
     }
    },
    {
-    "team_id": "328",
-    "team": "Utah State",
+    "team_id": "36",
+    "team": "Colorado State",
     "conference": "Pac-12",
     "season": 2026,
     "games": 4,
-    "plays": 226,
+    "plays": 273,
     "adjusted": {
-     "off_epa_play": -0.142913,
-     "def_epa_play_allowed": -0.112425,
-     "net_epa_play": -0.030488,
-     "off_rank": 117,
-     "def_rank": 34,
+     "off_epa_play": 0.174991,
+     "def_epa_play_allowed": 0.191892,
+     "net_epa_play": -0.016901,
+     "off_rank": 13,
+     "def_rank": 133,
+     "net_rank": 71
+    },
+    "raw": {
+     "off_epa_play": 0.209855,
+     "def_epa_play_allowed": 0.332719,
+     "off_success_rate": 0.483516,
+     "def_success_rate_allowed": 0.58498
+    }
+   },
+   {
+    "team_id": "2426",
+    "team": "Navy",
+    "conference": "American Athletic",
+    "season": 2026,
+    "games": 3,
+    "plays": 176,
+    "adjusted": {
+     "off_epa_play": -0.081748,
+     "def_epa_play_allowed": -0.062909,
+     "net_epa_play": -0.018839,
+     "off_rank": 99,
+     "def_rank": 47,
+     "net_rank": 72
+    },
+    "raw": {
+     "off_epa_play": 0.042167,
+     "def_epa_play_allowed": 0.024968,
+     "off_success_rate": 0.414773,
+     "def_success_rate_allowed": 0.425
+    }
+   },
+   {
+    "team_id": "30",
+    "team": "USC",
+    "conference": "Big Ten",
+    "season": 2026,
+    "games": 6,
+    "plays": 418,
+    "adjusted": {
+     "off_epa_play": 0.178971,
+     "def_epa_play_allowed": 0.208488,
+     "net_epa_play": -0.029517,
+     "off_rank": 11,
+     "def_rank": 134,
      "net_rank": 73
     },
     "raw": {
-     "off_epa_play": -0.168682,
-     "def_epa_play_allowed": -0.0126,
-     "off_success_rate": 0.331858,
-     "def_success_rate_allowed": 0.429553
+     "off_epa_play": 0.217612,
+     "def_epa_play_allowed": 0.232285,
+     "off_success_rate": 0.526316,
+     "def_success_rate_allowed": 0.478134
+    }
+   },
+   {
+    "team_id": "2247",
+    "team": "Georgia State",
+    "conference": "Sun Belt",
+    "season": 2026,
+    "games": 4,
+    "plays": 273,
+    "adjusted": {
+     "off_epa_play": -0.001326,
+     "def_epa_play_allowed": 0.036027,
+     "net_epa_play": -0.037353,
+     "off_rank": 61,
+     "def_rank": 82,
+     "net_rank": 74
+    },
+    "raw": {
+     "off_epa_play": 0.092151,
+     "def_epa_play_allowed": -0.002656,
+     "off_success_rate": 0.417582,
+     "def_success_rate_allowed": 0.413655
     }
    },
    {
@@ -1647,12 +1669,12 @@
     "games": 4,
     "plays": 261,
     "adjusted": {
-     "off_epa_play": -0.024987,
-     "def_epa_play_allowed": 0.007413,
-     "net_epa_play": -0.0324,
-     "off_rank": 79,
+     "off_epa_play": -0.02641,
+     "def_epa_play_allowed": 0.011444,
+     "net_epa_play": -0.037853,
+     "off_rank": 81,
      "def_rank": 76,
-     "net_rank": 74
+     "net_rank": 75
     },
     "raw": {
      "off_epa_play": 0.019099,
@@ -1669,84 +1691,18 @@
     "games": 4,
     "plays": 299,
     "adjusted": {
-     "off_epa_play": -0.228479,
-     "def_epa_play_allowed": -0.191536,
-     "net_epa_play": -0.036943,
+     "off_epa_play": -0.228669,
+     "def_epa_play_allowed": -0.190538,
+     "net_epa_play": -0.038131,
      "off_rank": 130,
-     "def_rank": 13,
-     "net_rank": 75
+     "def_rank": 12,
+     "net_rank": 76
     },
     "raw": {
      "off_epa_play": -0.102409,
      "def_epa_play_allowed": -0.170117,
      "off_success_rate": 0.394649,
      "def_success_rate_allowed": 0.352
-    }
-   },
-   {
-    "team_id": "278",
-    "team": "Fresno State",
-    "conference": "Pac-12",
-    "season": 2026,
-    "games": 5,
-    "plays": 302,
-    "adjusted": {
-     "off_epa_play": -0.078717,
-     "def_epa_play_allowed": -0.037708,
-     "net_epa_play": -0.041009,
-     "off_rank": 96,
-     "def_rank": 58,
-     "net_rank": 76
-    },
-    "raw": {
-     "off_epa_play": 0.06303,
-     "def_epa_play_allowed": -0.082221,
-     "off_success_rate": 0.430464,
-     "def_success_rate_allowed": 0.441358
-    }
-   },
-   {
-    "team_id": "2247",
-    "team": "Georgia State",
-    "conference": "Sun Belt",
-    "season": 2026,
-    "games": 4,
-    "plays": 273,
-    "adjusted": {
-     "off_epa_play": -0.004993,
-     "def_epa_play_allowed": 0.036783,
-     "net_epa_play": -0.041776,
-     "off_rank": 61,
-     "def_rank": 82,
-     "net_rank": 77
-    },
-    "raw": {
-     "off_epa_play": 0.092151,
-     "def_epa_play_allowed": -0.002656,
-     "off_success_rate": 0.417582,
-     "def_success_rate_allowed": 0.413655
-    }
-   },
-   {
-    "team_id": "36",
-    "team": "Colorado State",
-    "conference": "Pac-12",
-    "season": 2026,
-    "games": 4,
-    "plays": 273,
-    "adjusted": {
-     "off_epa_play": 0.158333,
-     "def_epa_play_allowed": 0.201061,
-     "net_epa_play": -0.042728,
-     "off_rank": 19,
-     "def_rank": 134,
-     "net_rank": 78
-    },
-    "raw": {
-     "off_epa_play": 0.209855,
-     "def_epa_play_allowed": 0.332719,
-     "off_success_rate": 0.483516,
-     "def_success_rate_allowed": 0.58498
     }
    },
    {
@@ -1757,18 +1713,40 @@
     "games": 4,
     "plays": 256,
     "adjusted": {
-     "off_epa_play": -0.133846,
-     "def_epa_play_allowed": -0.089456,
-     "net_epa_play": -0.04439,
+     "off_epa_play": -0.132687,
+     "def_epa_play_allowed": -0.088916,
+     "net_epa_play": -0.043772,
      "off_rank": 111,
-     "def_rank": 42,
-     "net_rank": 79
+     "def_rank": 40,
+     "net_rank": 77
     },
     "raw": {
      "off_epa_play": -0.047555,
      "def_epa_play_allowed": -0.035857,
      "off_success_rate": 0.402344,
      "def_success_rate_allowed": 0.435115
+    }
+   },
+   {
+    "team_id": "278",
+    "team": "Fresno State",
+    "conference": "Pac-12",
+    "season": 2026,
+    "games": 5,
+    "plays": 302,
+    "adjusted": {
+     "off_epa_play": -0.080442,
+     "def_epa_play_allowed": -0.032489,
+     "net_epa_play": -0.047953,
+     "off_rank": 98,
+     "def_rank": 60,
+     "net_rank": 78
+    },
+    "raw": {
+     "off_epa_play": 0.06303,
+     "def_epa_play_allowed": -0.082221,
+     "off_success_rate": 0.430464,
+     "def_success_rate_allowed": 0.441358
     }
    },
    {
@@ -1779,12 +1757,12 @@
     "games": 4,
     "plays": 293,
     "adjusted": {
-     "off_epa_play": -0.16817,
-     "def_epa_play_allowed": -0.117193,
-     "net_epa_play": -0.050977,
-     "off_rank": 123,
+     "off_epa_play": -0.171906,
+     "def_epa_play_allowed": -0.116598,
+     "net_epa_play": -0.055308,
+     "off_rank": 122,
      "def_rank": 33,
-     "net_rank": 80
+     "net_rank": 79
     },
     "raw": {
      "off_epa_play": 0.028141,
@@ -1801,40 +1779,18 @@
     "games": 4,
     "plays": 284,
     "adjusted": {
-     "off_epa_play": -0.005536,
-     "def_epa_play_allowed": 0.049814,
-     "net_epa_play": -0.05535,
-     "off_rank": 62,
+     "off_epa_play": -0.006696,
+     "def_epa_play_allowed": 0.04912,
+     "net_epa_play": -0.055816,
+     "off_rank": 64,
      "def_rank": 88,
-     "net_rank": 81
+     "net_rank": 80
     },
     "raw": {
      "off_epa_play": 0.078232,
      "def_epa_play_allowed": 0.063829,
      "off_success_rate": 0.489437,
      "def_success_rate_allowed": 0.414343
-    }
-   },
-   {
-    "team_id": "23",
-    "team": "San José State",
-    "conference": "Mountain West",
-    "season": 2026,
-    "games": 4,
-    "plays": 262,
-    "adjusted": {
-     "off_epa_play": -0.093501,
-     "def_epa_play_allowed": -0.038125,
-     "net_epa_play": -0.055376,
-     "off_rank": 101,
-     "def_rank": 57,
-     "net_rank": 82
-    },
-    "raw": {
-     "off_epa_play": -0.010156,
-     "def_epa_play_allowed": 0.026242,
-     "off_success_rate": 0.416031,
-     "def_success_rate_allowed": 0.452206
     }
    },
    {
@@ -1845,12 +1801,12 @@
     "games": 4,
     "plays": 256,
     "adjusted": {
-     "off_epa_play": -0.019302,
-     "def_epa_play_allowed": 0.039702,
-     "net_epa_play": -0.059003,
-     "off_rank": 74,
-     "def_rank": 83,
-     "net_rank": 83
+     "off_epa_play": -0.019552,
+     "def_epa_play_allowed": 0.039445,
+     "net_epa_play": -0.058997,
+     "off_rank": 75,
+     "def_rank": 84,
+     "net_rank": 81
     },
     "raw": {
      "off_epa_play": 0.098558,
@@ -1867,18 +1823,62 @@
     "games": 4,
     "plays": 258,
     "adjusted": {
-     "off_epa_play": -0.007184,
-     "def_epa_play_allowed": 0.056538,
-     "net_epa_play": -0.063722,
-     "off_rank": 64,
+     "off_epa_play": -0.006649,
+     "def_epa_play_allowed": 0.056344,
+     "net_epa_play": -0.062993,
+     "off_rank": 63,
      "def_rank": 89,
-     "net_rank": 84
+     "net_rank": 82
     },
     "raw": {
      "off_epa_play": 0.076614,
      "def_epa_play_allowed": 0.062384,
      "off_success_rate": 0.426357,
      "def_success_rate_allowed": 0.48
+    }
+   },
+   {
+    "team_id": "242",
+    "team": "Rice",
+    "conference": "American Athletic",
+    "season": 2026,
+    "games": 4,
+    "plays": 230,
+    "adjusted": {
+     "off_epa_play": -0.022901,
+     "def_epa_play_allowed": 0.047753,
+     "net_epa_play": -0.070654,
+     "off_rank": 78,
+     "def_rank": 86,
+     "net_rank": 83
+    },
+    "raw": {
+     "off_epa_play": -0.014421,
+     "def_epa_play_allowed": 0.130899,
+     "off_success_rate": 0.413043,
+     "def_success_rate_allowed": 0.469466
+    }
+   },
+   {
+    "team_id": "2439",
+    "team": "UNLV",
+    "conference": "Mountain West",
+    "season": 2026,
+    "games": 5,
+    "plays": 330,
+    "adjusted": {
+     "off_epa_play": -0.124703,
+     "def_epa_play_allowed": -0.053599,
+     "net_epa_play": -0.071104,
+     "off_rank": 110,
+     "def_rank": 51,
+     "net_rank": 84
+    },
+    "raw": {
+     "off_epa_play": -0.00764,
+     "def_epa_play_allowed": -0.017985,
+     "off_success_rate": 0.390909,
+     "def_success_rate_allowed": 0.383721
     }
    },
    {
@@ -1889,10 +1889,10 @@
     "games": 4,
     "plays": 264,
     "adjusted": {
-     "off_epa_play": -0.08191,
-     "def_epa_play_allowed": -0.012257,
-     "net_epa_play": -0.069653,
-     "off_rank": 97,
+     "off_epa_play": -0.085567,
+     "def_epa_play_allowed": -0.011651,
+     "net_epa_play": -0.073915,
+     "off_rank": 100,
      "def_rank": 67,
      "net_rank": 85
     },
@@ -1904,50 +1904,6 @@
     }
    },
    {
-    "team_id": "2439",
-    "team": "UNLV",
-    "conference": "Mountain West",
-    "season": 2026,
-    "games": 5,
-    "plays": 330,
-    "adjusted": {
-     "off_epa_play": -0.124406,
-     "def_epa_play_allowed": -0.054668,
-     "net_epa_play": -0.069739,
-     "off_rank": 109,
-     "def_rank": 52,
-     "net_rank": 86
-    },
-    "raw": {
-     "off_epa_play": -0.00764,
-     "def_epa_play_allowed": -0.017985,
-     "off_success_rate": 0.390909,
-     "def_success_rate_allowed": 0.383721
-    }
-   },
-   {
-    "team_id": "242",
-    "team": "Rice",
-    "conference": "American Athletic",
-    "season": 2026,
-    "games": 4,
-    "plays": 230,
-    "adjusted": {
-     "off_epa_play": -0.02222,
-     "def_epa_play_allowed": 0.048165,
-     "net_epa_play": -0.070386,
-     "off_rank": 75,
-     "def_rank": 87,
-     "net_rank": 87
-    },
-    "raw": {
-     "off_epa_play": -0.014421,
-     "def_epa_play_allowed": 0.130899,
-     "off_success_rate": 0.413043,
-     "def_success_rate_allowed": 0.469466
-    }
-   },
-   {
     "team_id": "151",
     "team": "East Carolina",
     "conference": "American Athletic",
@@ -1955,40 +1911,18 @@
     "games": 3,
     "plays": 178,
     "adjusted": {
-     "off_epa_play": -0.152527,
-     "def_epa_play_allowed": -0.073595,
-     "net_epa_play": -0.078932,
+     "off_epa_play": -0.152869,
+     "def_epa_play_allowed": -0.072549,
+     "net_epa_play": -0.08032,
      "off_rank": 119,
-     "def_rank": 44,
-     "net_rank": 88
+     "def_rank": 42,
+     "net_rank": 86
     },
     "raw": {
      "off_epa_play": -0.153596,
      "def_epa_play_allowed": -0.051282,
      "off_success_rate": 0.382022,
      "def_success_rate_allowed": 0.399061
-    }
-   },
-   {
-    "team_id": "164",
-    "team": "Rutgers",
-    "conference": "Big Ten",
-    "season": 2026,
-    "games": 4,
-    "plays": 253,
-    "adjusted": {
-     "off_epa_play": -0.018853,
-     "def_epa_play_allowed": 0.062676,
-     "net_epa_play": -0.081529,
-     "off_rank": 73,
-     "def_rank": 96,
-     "net_rank": 89
-    },
-    "raw": {
-     "off_epa_play": 0.040425,
-     "def_epa_play_allowed": 0.198082,
-     "off_success_rate": 0.438735,
-     "def_success_rate_allowed": 0.474104
     }
    },
    {
@@ -1999,12 +1933,12 @@
     "games": 5,
     "plays": 309,
     "adjusted": {
-     "off_epa_play": -0.02227,
-     "def_epa_play_allowed": 0.062641,
-     "net_epa_play": -0.08491,
+     "off_epa_play": -0.02103,
+     "def_epa_play_allowed": 0.061973,
+     "net_epa_play": -0.083003,
      "off_rank": 76,
-     "def_rank": 95,
-     "net_rank": 90
+     "def_rank": 93,
+     "net_rank": 87
     },
     "raw": {
      "off_epa_play": 0.053424,
@@ -2014,25 +1948,69 @@
     }
    },
    {
-    "team_id": "166",
-    "team": "New Mexico State",
-    "conference": "Conference USA",
+    "team_id": "23",
+    "team": "San José State",
+    "conference": "Mountain West",
     "season": 2026,
     "games": 5,
-    "plays": 317,
+    "plays": 328,
     "adjusted": {
-     "off_epa_play": -0.101285,
-     "def_epa_play_allowed": -0.004746,
-     "net_epa_play": -0.096539,
-     "off_rank": 104,
-     "def_rank": 71,
-     "net_rank": 91
+     "off_epa_play": -0.109665,
+     "def_epa_play_allowed": -0.026629,
+     "net_epa_play": -0.083036,
+     "off_rank": 106,
+     "def_rank": 63,
+     "net_rank": 88
     },
     "raw": {
-     "off_epa_play": -0.055487,
-     "def_epa_play_allowed": -0.005611,
-     "off_success_rate": 0.403785,
-     "def_success_rate_allowed": 0.44868
+     "off_epa_play": -0.012107,
+     "def_epa_play_allowed": 0.012414,
+     "off_success_rate": 0.426829,
+     "def_success_rate_allowed": 0.449857
+    }
+   },
+   {
+    "team_id": "164",
+    "team": "Rutgers",
+    "conference": "Big Ten",
+    "season": 2026,
+    "games": 4,
+    "plays": 253,
+    "adjusted": {
+     "off_epa_play": -0.022171,
+     "def_epa_play_allowed": 0.06695,
+     "net_epa_play": -0.089121,
+     "off_rank": 77,
+     "def_rank": 98,
+     "net_rank": 89
+    },
+    "raw": {
+     "off_epa_play": 0.040425,
+     "def_epa_play_allowed": 0.198082,
+     "off_success_rate": 0.438735,
+     "def_success_rate_allowed": 0.474104
+    }
+   },
+   {
+    "team_id": "2459",
+    "team": "Northern Illinois",
+    "conference": "Mountain West",
+    "season": 2026,
+    "games": 3,
+    "plays": 194,
+    "adjusted": {
+     "off_epa_play": -0.072768,
+     "def_epa_play_allowed": 0.021763,
+     "net_epa_play": -0.094531,
+     "off_rank": 97,
+     "def_rank": 79,
+     "net_rank": 90
+    },
+    "raw": {
+     "off_epa_play": -0.017853,
+     "def_epa_play_allowed": 0.15721,
+     "off_success_rate": 0.412371,
+     "def_success_rate_allowed": 0.454082
     }
    },
    {
@@ -2043,18 +2021,40 @@
     "games": 3,
     "plays": 188,
     "adjusted": {
-     "off_epa_play": -0.156688,
-     "def_epa_play_allowed": -0.059173,
-     "net_epa_play": -0.097515,
-     "off_rank": 121,
+     "off_epa_play": -0.156065,
+     "def_epa_play_allowed": -0.059569,
+     "net_epa_play": -0.096496,
+     "off_rank": 120,
      "def_rank": 49,
-     "net_rank": 92
+     "net_rank": 91
     },
     "raw": {
      "off_epa_play": -0.09915,
      "def_epa_play_allowed": 0.069727,
      "off_success_rate": 0.351064,
      "def_success_rate_allowed": 0.443946
+    }
+   },
+   {
+    "team_id": "166",
+    "team": "New Mexico State",
+    "conference": "Conference USA",
+    "season": 2026,
+    "games": 5,
+    "plays": 317,
+    "adjusted": {
+     "off_epa_play": -0.103217,
+     "def_epa_play_allowed": -0.003068,
+     "net_epa_play": -0.100149,
+     "off_rank": 105,
+     "def_rank": 74,
+     "net_rank": 92
+    },
+    "raw": {
+     "off_epa_play": -0.055487,
+     "def_epa_play_allowed": -0.005611,
+     "off_success_rate": 0.403785,
+     "def_success_rate_allowed": 0.44868
     }
    },
    {
@@ -2065,9 +2065,9 @@
     "games": 4,
     "plays": 320,
     "adjusted": {
-     "off_epa_play": 0.068407,
-     "def_epa_play_allowed": 0.168927,
-     "net_epa_play": -0.10052,
+     "off_epa_play": 0.067855,
+     "def_epa_play_allowed": 0.169456,
+     "net_epa_play": -0.101601,
      "off_rank": 43,
      "def_rank": 124,
      "net_rank": 93
@@ -2087,11 +2087,11 @@
     "games": 3,
     "plays": 241,
     "adjusted": {
-     "off_epa_play": -0.060703,
-     "def_epa_play_allowed": 0.042566,
-     "net_epa_play": -0.103269,
-     "off_rank": 94,
-     "def_rank": 84,
+     "off_epa_play": -0.06019,
+     "def_epa_play_allowed": 0.042194,
+     "net_epa_play": -0.102384,
+     "off_rank": 95,
+     "def_rank": 85,
      "net_rank": 94
     },
     "raw": {
@@ -2102,28 +2102,6 @@
     }
    },
    {
-    "team_id": "2653",
-    "team": "Troy",
-    "conference": "Sun Belt",
-    "season": 2026,
-    "games": 4,
-    "plays": 299,
-    "adjusted": {
-     "off_epa_play": -0.006645,
-     "def_epa_play_allowed": 0.098144,
-     "net_epa_play": -0.104789,
-     "off_rank": 63,
-     "def_rank": 111,
-     "net_rank": 95
-    },
-    "raw": {
-     "off_epa_play": 0.04432,
-     "def_epa_play_allowed": 0.093275,
-     "off_success_rate": 0.441472,
-     "def_success_rate_allowed": 0.441667
-    }
-   },
-   {
     "team_id": "16",
     "team": "Sacramento State",
     "conference": "Mid-American",
@@ -2131,12 +2109,12 @@
     "games": 4,
     "plays": 270,
     "adjusted": {
-     "off_epa_play": -0.142237,
-     "def_epa_play_allowed": -0.035902,
-     "net_epa_play": -0.106335,
-     "off_rank": 116,
+     "off_epa_play": -0.144571,
+     "def_epa_play_allowed": -0.034,
+     "net_epa_play": -0.110571,
+     "off_rank": 117,
      "def_rank": 59,
-     "net_rank": 96
+     "net_rank": 95
     },
     "raw": {
      "off_epa_play": -0.144868,
@@ -2146,47 +2124,25 @@
     }
    },
    {
-    "team_id": "113",
-    "team": "Massachusetts",
-    "conference": "Mid-American",
-    "season": 2026,
-    "games": 3,
-    "plays": 167,
-    "adjusted": {
-     "off_epa_play": -0.010723,
-     "def_epa_play_allowed": 0.101649,
-     "net_epa_play": -0.112372,
-     "off_rank": 67,
-     "def_rank": 112,
-     "net_rank": 97
-    },
-    "raw": {
-     "off_epa_play": 0.136923,
-     "def_epa_play_allowed": 0.002012,
-     "off_success_rate": 0.473054,
-     "def_success_rate_allowed": 0.456311
-    }
-   },
-   {
-    "team_id": "21",
-    "team": "San Diego State",
+    "team_id": "328",
+    "team": "Utah State",
     "conference": "Pac-12",
     "season": 2026,
-    "games": 4,
-    "plays": 252,
+    "games": 5,
+    "plays": 285,
     "adjusted": {
-     "off_epa_play": -0.267886,
-     "def_epa_play_allowed": -0.149634,
-     "net_epa_play": -0.118252,
-     "off_rank": 134,
-     "def_rank": 23,
-     "net_rank": 98
+     "off_epa_play": -0.18616,
+     "def_epa_play_allowed": -0.070716,
+     "net_epa_play": -0.115444,
+     "off_rank": 126,
+     "def_rank": 43,
+     "net_rank": 96
     },
     "raw": {
-     "off_epa_play": -0.193868,
-     "def_epa_play_allowed": 0.015458,
-     "off_success_rate": 0.349206,
-     "def_success_rate_allowed": 0.454545
+     "off_epa_play": -0.177633,
+     "def_epa_play_allowed": -0.0368,
+     "off_success_rate": 0.326316,
+     "def_success_rate_allowed": 0.412256
     }
    },
    {
@@ -2197,18 +2153,62 @@
     "games": 4,
     "plays": 286,
     "adjusted": {
-     "off_epa_play": 0.000686,
-     "def_epa_play_allowed": 0.121985,
-     "net_epa_play": -0.1213,
+     "off_epa_play": 0.002728,
+     "def_epa_play_allowed": 0.120324,
+     "net_epa_play": -0.117595,
      "off_rank": 57,
      "def_rank": 116,
-     "net_rank": 99
+     "net_rank": 97
     },
     "raw": {
      "off_epa_play": 0.066988,
      "def_epa_play_allowed": 0.17439,
      "off_success_rate": 0.433566,
      "def_success_rate_allowed": 0.489712
+    }
+   },
+   {
+    "team_id": "21",
+    "team": "San Diego State",
+    "conference": "Pac-12",
+    "season": 2026,
+    "games": 4,
+    "plays": 252,
+    "adjusted": {
+     "off_epa_play": -0.267511,
+     "def_epa_play_allowed": -0.149907,
+     "net_epa_play": -0.117604,
+     "off_rank": 134,
+     "def_rank": 22,
+     "net_rank": 98
+    },
+    "raw": {
+     "off_epa_play": -0.193868,
+     "def_epa_play_allowed": 0.015458,
+     "off_success_rate": 0.349206,
+     "def_success_rate_allowed": 0.454545
+    }
+   },
+   {
+    "team_id": "113",
+    "team": "Massachusetts",
+    "conference": "Mid-American",
+    "season": 2026,
+    "games": 3,
+    "plays": 167,
+    "adjusted": {
+     "off_epa_play": -0.014949,
+     "def_epa_play_allowed": 0.106262,
+     "net_epa_play": -0.121211,
+     "off_rank": 68,
+     "def_rank": 111,
+     "net_rank": 99
+    },
+    "raw": {
+     "off_epa_play": 0.136923,
+     "def_epa_play_allowed": 0.002012,
+     "off_success_rate": 0.473054,
+     "def_success_rate_allowed": 0.456311
     }
    },
    {
@@ -2219,10 +2219,10 @@
     "games": 4,
     "plays": 280,
     "adjusted": {
-     "off_epa_play": -0.184135,
-     "def_epa_play_allowed": -0.058306,
-     "net_epa_play": -0.125829,
-     "off_rank": 126,
+     "off_epa_play": -0.18362,
+     "def_epa_play_allowed": -0.058453,
+     "net_epa_play": -0.125166,
+     "off_rank": 124,
      "def_rank": 50,
      "net_rank": 100
     },
@@ -2234,50 +2234,6 @@
     }
    },
    {
-    "team_id": "277",
-    "team": "West Virginia",
-    "conference": "Big 12",
-    "season": 2026,
-    "games": 4,
-    "plays": 291,
-    "adjusted": {
-     "off_epa_play": 0.12976,
-     "def_epa_play_allowed": 0.259849,
-     "net_epa_play": -0.130089,
-     "off_rank": 26,
-     "def_rank": 136,
-     "net_rank": 101
-    },
-    "raw": {
-     "off_epa_play": 0.172302,
-     "def_epa_play_allowed": 0.257883,
-     "off_success_rate": 0.429553,
-     "def_success_rate_allowed": 0.49635
-    }
-   },
-   {
-    "team_id": "2459",
-    "team": "Northern Illinois",
-    "conference": "Mountain West",
-    "season": 2026,
-    "games": 3,
-    "plays": 194,
-    "adjusted": {
-     "off_epa_play": -0.087046,
-     "def_epa_play_allowed": 0.044104,
-     "net_epa_play": -0.13115,
-     "off_rank": 99,
-     "def_rank": 85,
-     "net_rank": 102
-    },
-    "raw": {
-     "off_epa_play": -0.017853,
-     "def_epa_play_allowed": 0.15721,
-     "off_success_rate": 0.412371,
-     "def_success_rate_allowed": 0.454082
-    }
-   },
-   {
     "team_id": "195",
     "team": "Ohio",
     "conference": "Mid-American",
@@ -2285,18 +2241,40 @@
     "games": 4,
     "plays": 244,
     "adjusted": {
-     "off_epa_play": -0.024834,
-     "def_epa_play_allowed": 0.107703,
-     "net_epa_play": -0.132537,
-     "off_rank": 77,
-     "def_rank": 114,
-     "net_rank": 103
+     "off_epa_play": -0.024408,
+     "def_epa_play_allowed": 0.107425,
+     "net_epa_play": -0.131833,
+     "off_rank": 79,
+     "def_rank": 112,
+     "net_rank": 101
     },
     "raw": {
      "off_epa_play": 0.077765,
      "def_epa_play_allowed": 0.191985,
      "off_success_rate": 0.430328,
      "def_success_rate_allowed": 0.464286
+    }
+   },
+   {
+    "team_id": "277",
+    "team": "West Virginia",
+    "conference": "Big 12",
+    "season": 2026,
+    "games": 4,
+    "plays": 291,
+    "adjusted": {
+     "off_epa_play": 0.132596,
+     "def_epa_play_allowed": 0.26671,
+     "net_epa_play": -0.134115,
+     "off_rank": 28,
+     "def_rank": 136,
+     "net_rank": 102
+    },
+    "raw": {
+     "off_epa_play": 0.172302,
+     "def_epa_play_allowed": 0.257883,
+     "off_success_rate": 0.429553,
+     "def_success_rate_allowed": 0.49635
     }
    },
    {
@@ -2307,18 +2285,40 @@
     "games": 4,
     "plays": 247,
     "adjusted": {
-     "off_epa_play": -0.043606,
-     "def_epa_play_allowed": 0.092742,
-     "net_epa_play": -0.136348,
-     "off_rank": 86,
-     "def_rank": 109,
-     "net_rank": 104
+     "off_epa_play": -0.042394,
+     "def_epa_play_allowed": 0.091939,
+     "net_epa_play": -0.134334,
+     "off_rank": 87,
+     "def_rank": 107,
+     "net_rank": 103
     },
     "raw": {
      "off_epa_play": 0.049752,
      "def_epa_play_allowed": 0.156178,
      "off_success_rate": 0.437247,
      "def_success_rate_allowed": 0.496241
+    }
+   },
+   {
+    "team_id": "2653",
+    "team": "Troy",
+    "conference": "Sun Belt",
+    "season": 2026,
+    "games": 4,
+    "plays": 299,
+    "adjusted": {
+     "off_epa_play": -0.017884,
+     "def_epa_play_allowed": 0.117636,
+     "net_epa_play": -0.13552,
+     "off_rank": 72,
+     "def_rank": 114,
+     "net_rank": 104
+    },
+    "raw": {
+     "off_epa_play": 0.04432,
+     "def_epa_play_allowed": 0.093275,
+     "off_success_rate": 0.441472,
+     "def_success_rate_allowed": 0.441667
     }
    },
    {
@@ -2329,10 +2329,10 @@
     "games": 5,
     "plays": 296,
     "adjusted": {
-     "off_epa_play": 0.000145,
-     "def_epa_play_allowed": 0.138423,
-     "net_epa_play": -0.138278,
-     "off_rank": 59,
+     "off_epa_play": -0.000686,
+     "def_epa_play_allowed": 0.13724,
+     "net_epa_play": -0.137926,
+     "off_rank": 60,
      "def_rank": 119,
      "net_rank": 105
     },
@@ -2351,11 +2351,11 @@
     "games": 5,
     "plays": 354,
     "adjusted": {
-     "off_epa_play": -0.051545,
-     "def_epa_play_allowed": 0.088604,
-     "net_epa_play": -0.140149,
-     "off_rank": 88,
-     "def_rank": 105,
+     "off_epa_play": -0.051812,
+     "def_epa_play_allowed": 0.087051,
+     "net_epa_play": -0.138863,
+     "off_rank": 91,
+     "def_rank": 104,
      "net_rank": 106
     },
     "raw": {
@@ -2373,10 +2373,10 @@
     "games": 3,
     "plays": 193,
     "adjusted": {
-     "off_epa_play": 0.201403,
-     "def_epa_play_allowed": 0.345486,
-     "net_epa_play": -0.144083,
-     "off_rank": 9,
+     "off_epa_play": 0.201629,
+     "def_epa_play_allowed": 0.34584,
+     "net_epa_play": -0.144211,
+     "off_rank": 8,
      "def_rank": 138,
      "net_rank": 107
     },
@@ -2395,9 +2395,9 @@
     "games": 3,
     "plays": 205,
     "adjusted": {
-     "off_epa_play": -0.054942,
-     "def_epa_play_allowed": 0.09115,
-     "net_epa_play": -0.146092,
+     "off_epa_play": -0.054058,
+     "def_epa_play_allowed": 0.090791,
+     "net_epa_play": -0.14485,
      "off_rank": 92,
      "def_rank": 106,
      "net_rank": 108
@@ -2410,28 +2410,6 @@
     }
    },
    {
-    "team_id": "2534",
-    "team": "Sam Houston",
-    "conference": "Conference USA",
-    "season": 2026,
-    "games": 4,
-    "plays": 258,
-    "adjusted": {
-     "off_epa_play": -0.132552,
-     "def_epa_play_allowed": 0.015263,
-     "net_epa_play": -0.147815,
-     "off_rank": 110,
-     "def_rank": 78,
-     "net_rank": 109
-    },
-    "raw": {
-     "off_epa_play": -0.123509,
-     "def_epa_play_allowed": 0.076073,
-     "off_success_rate": 0.418605,
-     "def_success_rate_allowed": 0.438735
-    }
-   },
-   {
     "team_id": "2655",
     "team": "Tulane",
     "conference": "American Athletic",
@@ -2439,18 +2417,40 @@
     "games": 4,
     "plays": 236,
     "adjusted": {
-     "off_epa_play": -0.089059,
-     "def_epa_play_allowed": 0.06222,
-     "net_epa_play": -0.151279,
-     "off_rank": 100,
-     "def_rank": 94,
-     "net_rank": 110
+     "off_epa_play": -0.08858,
+     "def_epa_play_allowed": 0.060532,
+     "net_epa_play": -0.149112,
+     "off_rank": 101,
+     "def_rank": 90,
+     "net_rank": 109
     },
     "raw": {
      "off_epa_play": 0.030477,
      "def_epa_play_allowed": 0.145469,
      "off_success_rate": 0.372881,
      "def_success_rate_allowed": 0.417582
+    }
+   },
+   {
+    "team_id": "2534",
+    "team": "Sam Houston",
+    "conference": "Conference USA",
+    "season": 2026,
+    "games": 4,
+    "plays": 258,
+    "adjusted": {
+     "off_epa_play": -0.137557,
+     "def_epa_play_allowed": 0.019035,
+     "net_epa_play": -0.156592,
+     "off_rank": 113,
+     "def_rank": 78,
+     "net_rank": 110
+    },
+    "raw": {
+     "off_epa_play": -0.123509,
+     "def_epa_play_allowed": 0.076073,
+     "off_success_rate": 0.418605,
+     "def_success_rate_allowed": 0.438735
     }
    },
    {
@@ -2461,11 +2461,11 @@
     "games": 4,
     "plays": 243,
     "adjusted": {
-     "off_epa_play": -0.303449,
-     "def_epa_play_allowed": -0.144798,
-     "net_epa_play": -0.158651,
+     "off_epa_play": -0.303125,
+     "def_epa_play_allowed": -0.145231,
+     "net_epa_play": -0.157894,
      "off_rank": 137,
-     "def_rank": 24,
+     "def_rank": 25,
      "net_rank": 111
     },
     "raw": {
@@ -2476,28 +2476,6 @@
     }
    },
    {
-    "team_id": "2433",
-    "team": "UL Monroe",
-    "conference": "Sun Belt",
-    "season": 2026,
-    "games": 4,
-    "plays": 255,
-    "adjusted": {
-     "off_epa_play": -0.040087,
-     "def_epa_play_allowed": 0.128205,
-     "net_epa_play": -0.168291,
-     "off_rank": 85,
-     "def_rank": 118,
-     "net_rank": 112
-    },
-    "raw": {
-     "off_epa_play": 0.08292,
-     "def_epa_play_allowed": 0.314917,
-     "off_success_rate": 0.439216,
-     "def_success_rate_allowed": 0.518519
-    }
-   },
-   {
     "team_id": "9",
     "team": "Arizona State",
     "conference": "Big 12",
@@ -2505,12 +2483,12 @@
     "games": 3,
     "plays": 199,
     "adjusted": {
-     "off_epa_play": -0.204645,
-     "def_epa_play_allowed": -0.035509,
-     "net_epa_play": -0.169137,
+     "off_epa_play": -0.204392,
+     "def_epa_play_allowed": -0.035603,
+     "net_epa_play": -0.168789,
      "off_rank": 128,
-     "def_rank": 60,
-     "net_rank": 113
+     "def_rank": 58,
+     "net_rank": 112
     },
     "raw": {
      "off_epa_play": -0.153207,
@@ -2520,25 +2498,25 @@
     }
    },
    {
-    "team_id": "2199",
-    "team": "Eastern Michigan",
-    "conference": "Mid-American",
+    "team_id": "2433",
+    "team": "UL Monroe",
+    "conference": "Sun Belt",
     "season": 2026,
-    "games": 5,
-    "plays": 312,
+    "games": 4,
+    "plays": 255,
     "adjusted": {
-     "off_epa_play": -0.114547,
-     "def_epa_play_allowed": 0.058919,
-     "net_epa_play": -0.173466,
-     "off_rank": 108,
-     "def_rank": 90,
-     "net_rank": 114
+     "off_epa_play": -0.040812,
+     "def_epa_play_allowed": 0.129083,
+     "net_epa_play": -0.169895,
+     "off_rank": 86,
+     "def_rank": 118,
+     "net_rank": 113
     },
     "raw": {
-     "off_epa_play": -0.070083,
-     "def_epa_play_allowed": 0.079828,
-     "off_success_rate": 0.397436,
-     "def_success_rate_allowed": 0.468944
+     "off_epa_play": 0.08292,
+     "def_epa_play_allowed": 0.314917,
+     "off_success_rate": 0.439216,
+     "def_success_rate_allowed": 0.518519
     }
    },
    {
@@ -2549,18 +2527,62 @@
     "games": 4,
     "plays": 233,
     "adjusted": {
-     "off_epa_play": -0.009989,
-     "def_epa_play_allowed": 0.177504,
-     "net_epa_play": -0.187493,
-     "off_rank": 66,
+     "off_epa_play": -0.008237,
+     "def_epa_play_allowed": 0.176227,
+     "net_epa_play": -0.184464,
+     "off_rank": 65,
      "def_rank": 125,
-     "net_rank": 115
+     "net_rank": 114
     },
     "raw": {
      "off_epa_play": 0.062303,
      "def_epa_play_allowed": 0.197628,
      "off_success_rate": 0.386266,
      "def_success_rate_allowed": 0.475836
+    }
+   },
+   {
+    "team_id": "2199",
+    "team": "Eastern Michigan",
+    "conference": "Mid-American",
+    "season": 2026,
+    "games": 5,
+    "plays": 312,
+    "adjusted": {
+     "off_epa_play": -0.121047,
+     "def_epa_play_allowed": 0.065108,
+     "net_epa_play": -0.186155,
+     "off_rank": 107,
+     "def_rank": 97,
+     "net_rank": 115
+    },
+    "raw": {
+     "off_epa_play": -0.070083,
+     "def_epa_play_allowed": 0.079828,
+     "off_success_rate": 0.397436,
+     "def_success_rate_allowed": 0.468944
+    }
+   },
+   {
+    "team_id": "2751",
+    "team": "Wyoming",
+    "conference": "Mountain West",
+    "season": 2026,
+    "games": 5,
+    "plays": 297,
+    "adjusted": {
+     "off_epa_play": -0.123685,
+     "def_epa_play_allowed": 0.063839,
+     "net_epa_play": -0.187525,
+     "off_rank": 109,
+     "def_rank": 95,
+     "net_rank": 116
+    },
+    "raw": {
+     "off_epa_play": -0.071238,
+     "def_epa_play_allowed": 0.106914,
+     "off_success_rate": 0.427609,
+     "def_success_rate_allowed": 0.493976
     }
    },
    {
@@ -2571,12 +2593,12 @@
     "games": 3,
     "plays": 181,
     "adjusted": {
-     "off_epa_play": -0.015107,
-     "def_epa_play_allowed": 0.17805,
-     "net_epa_play": -0.193157,
-     "off_rank": 71,
-     "def_rank": 128,
-     "net_rank": 116
+     "off_epa_play": -0.015046,
+     "def_epa_play_allowed": 0.178729,
+     "net_epa_play": -0.193775,
+     "off_rank": 69,
+     "def_rank": 127,
+     "net_rank": 117
     },
     "raw": {
      "off_epa_play": 0.112961,
@@ -2593,12 +2615,12 @@
     "games": 3,
     "plays": 197,
     "adjusted": {
-     "off_epa_play": -0.047186,
-     "def_epa_play_allowed": 0.146928,
-     "net_epa_play": -0.194114,
-     "off_rank": 87,
+     "off_epa_play": -0.047532,
+     "def_epa_play_allowed": 0.147226,
+     "net_epa_play": -0.194758,
+     "off_rank": 88,
      "def_rank": 121,
-     "net_rank": 117
+     "net_rank": 118
     },
     "raw": {
      "off_epa_play": -0.146459,
@@ -2615,12 +2637,12 @@
     "games": 4,
     "plays": 283,
     "adjusted": {
-     "off_epa_play": -0.184041,
-     "def_epa_play_allowed": 0.012842,
-     "net_epa_play": -0.196883,
+     "off_epa_play": -0.183811,
+     "def_epa_play_allowed": 0.012675,
+     "net_epa_play": -0.196486,
      "off_rank": 125,
      "def_rank": 77,
-     "net_rank": 118
+     "net_rank": 119
     },
     "raw": {
      "off_epa_play": -0.165671,
@@ -2637,12 +2659,12 @@
     "games": 5,
     "plays": 332,
     "adjusted": {
-     "off_epa_play": -0.053021,
-     "def_epa_play_allowed": 0.150049,
-     "net_epa_play": -0.20307,
+     "off_epa_play": -0.051251,
+     "def_epa_play_allowed": 0.149177,
+     "net_epa_play": -0.200428,
      "off_rank": 89,
      "def_rank": 122,
-     "net_rank": 119
+     "net_rank": 120
     },
     "raw": {
      "off_epa_play": -0.003523,
@@ -2659,40 +2681,18 @@
     "games": 3,
     "plays": 195,
     "adjusted": {
-     "off_epa_play": -0.030209,
-     "def_epa_play_allowed": 0.181209,
-     "net_epa_play": -0.211418,
-     "off_rank": 81,
-     "def_rank": 130,
-     "net_rank": 120
+     "off_epa_play": -0.029022,
+     "def_epa_play_allowed": 0.18017,
+     "net_epa_play": -0.209191,
+     "off_rank": 82,
+     "def_rank": 129,
+     "net_rank": 121
     },
     "raw": {
      "off_epa_play": -0.015546,
      "def_epa_play_allowed": 0.166066,
      "off_success_rate": 0.466667,
      "def_success_rate_allowed": 0.419811
-    }
-   },
-   {
-    "team_id": "48",
-    "team": "Delaware",
-    "conference": "Conference USA",
-    "season": 2026,
-    "games": 4,
-    "plays": 246,
-    "adjusted": {
-     "off_epa_play": -0.152545,
-     "def_epa_play_allowed": 0.059106,
-     "net_epa_play": -0.211651,
-     "off_rank": 120,
-     "def_rank": 91,
-     "net_rank": 121
-    },
-    "raw": {
-     "off_epa_play": -0.067226,
-     "def_epa_play_allowed": 0.096584,
-     "off_success_rate": 0.373984,
-     "def_success_rate_allowed": 0.450355
     }
    },
    {
@@ -2703,11 +2703,11 @@
     "games": 4,
     "plays": 240,
     "adjusted": {
-     "off_epa_play": -0.164017,
-     "def_epa_play_allowed": 0.04816,
-     "net_epa_play": -0.212177,
-     "off_rank": 122,
-     "def_rank": 86,
+     "off_epa_play": -0.163613,
+     "def_epa_play_allowed": 0.048157,
+     "net_epa_play": -0.21177,
+     "off_rank": 121,
+     "def_rank": 87,
      "net_rank": 122
     },
     "raw": {
@@ -2725,10 +2725,10 @@
     "games": 5,
     "plays": 339,
     "adjusted": {
-     "off_epa_play": 0.110383,
-     "def_epa_play_allowed": 0.322919,
-     "net_epa_play": -0.212535,
-     "off_rank": 32,
+     "off_epa_play": 0.110679,
+     "def_epa_play_allowed": 0.323573,
+     "net_epa_play": -0.212894,
+     "off_rank": 33,
      "def_rank": 137,
      "net_rank": 123
     },
@@ -2740,47 +2740,25 @@
     }
    },
    {
-    "team_id": "2572",
-    "team": "Southern Miss",
-    "conference": "Sun Belt",
+    "team_id": "48",
+    "team": "Delaware",
+    "conference": "Conference USA",
     "season": 2026,
     "games": 4,
-    "plays": 265,
+    "plays": 246,
     "adjusted": {
-     "off_epa_play": -0.034312,
-     "def_epa_play_allowed": 0.182512,
-     "net_epa_play": -0.216824,
-     "off_rank": 84,
-     "def_rank": 131,
+     "off_epa_play": -0.152518,
+     "def_epa_play_allowed": 0.060542,
+     "net_epa_play": -0.21306,
+     "off_rank": 118,
+     "def_rank": 91,
      "net_rank": 124
     },
     "raw": {
-     "off_epa_play": 0.062983,
-     "def_epa_play_allowed": 0.196024,
-     "off_success_rate": 0.430189,
-     "def_success_rate_allowed": 0.488746
-    }
-   },
-   {
-    "team_id": "2751",
-    "team": "Wyoming",
-    "conference": "Mountain West",
-    "season": 2026,
-    "games": 4,
-    "plays": 220,
-    "adjusted": {
-     "off_epa_play": -0.146718,
-     "def_epa_play_allowed": 0.073617,
-     "net_epa_play": -0.220334,
-     "off_rank": 118,
-     "def_rank": 100,
-     "net_rank": 125
-    },
-    "raw": {
-     "off_epa_play": -0.08342,
-     "def_epa_play_allowed": 0.138368,
-     "off_success_rate": 0.422727,
-     "def_success_rate_allowed": 0.5
+     "off_epa_play": -0.067226,
+     "def_epa_play_allowed": 0.096584,
+     "off_success_rate": 0.373984,
+     "def_success_rate_allowed": 0.450355
     }
    },
    {
@@ -2791,18 +2769,40 @@
     "games": 4,
     "plays": 259,
     "adjusted": {
-     "off_epa_play": 0.000304,
-     "def_epa_play_allowed": 0.221597,
-     "net_epa_play": -0.221293,
-     "off_rank": 58,
+     "off_epa_play": -0.000129,
+     "def_epa_play_allowed": 0.222274,
+     "net_epa_play": -0.222404,
+     "off_rank": 59,
      "def_rank": 135,
-     "net_rank": 126
+     "net_rank": 125
     },
     "raw": {
      "off_epa_play": 0.037658,
      "def_epa_play_allowed": 0.23961,
      "off_success_rate": 0.46332,
      "def_success_rate_allowed": 0.507353
+    }
+   },
+   {
+    "team_id": "2572",
+    "team": "Southern Miss",
+    "conference": "Sun Belt",
+    "season": 2026,
+    "games": 4,
+    "plays": 265,
+    "adjusted": {
+     "off_epa_play": -0.037528,
+     "def_epa_play_allowed": 0.18534,
+     "net_epa_play": -0.222868,
+     "off_rank": 85,
+     "def_rank": 131,
+     "net_rank": 126
+    },
+    "raw": {
+     "off_epa_play": 0.062983,
+     "def_epa_play_allowed": 0.196024,
+     "off_success_rate": 0.430189,
+     "def_success_rate_allowed": 0.488746
     }
    },
    {
@@ -2813,11 +2813,11 @@
     "games": 4,
     "plays": 258,
     "adjusted": {
-     "off_epa_play": -0.142095,
-     "def_epa_play_allowed": 0.08592,
-     "net_epa_play": -0.228016,
-     "off_rank": 114,
-     "def_rank": 104,
+     "off_epa_play": -0.144284,
+     "def_epa_play_allowed": 0.085747,
+     "net_epa_play": -0.230031,
+     "off_rank": 116,
+     "def_rank": 103,
      "net_rank": 127
     },
     "raw": {
@@ -2835,11 +2835,11 @@
     "games": 4,
     "plays": 229,
     "adjusted": {
-     "off_epa_play": -0.142223,
-     "def_epa_play_allowed": 0.113498,
-     "net_epa_play": -0.255721,
-     "off_rank": 115,
-     "def_rank": 115,
+     "off_epa_play": -0.139494,
+     "def_epa_play_allowed": 0.111193,
+     "net_epa_play": -0.250687,
+     "off_rank": 114,
+     "def_rank": 113,
      "net_rank": 128
     },
     "raw": {
@@ -2857,11 +2857,11 @@
     "games": 4,
     "plays": 235,
     "adjusted": {
-     "off_epa_play": -0.269557,
-     "def_epa_play_allowed": -0.003387,
-     "net_epa_play": -0.26617,
-     "off_rank": 135,
-     "def_rank": 72,
+     "off_epa_play": -0.266447,
+     "def_epa_play_allowed": -0.005546,
+     "net_epa_play": -0.260902,
+     "off_rank": 133,
+     "def_rank": 73,
      "net_rank": 129
     },
     "raw": {
@@ -2879,11 +2879,11 @@
     "games": 5,
     "plays": 365,
     "adjusted": {
-     "off_epa_play": -0.199092,
-     "def_epa_play_allowed": 0.073269,
-     "net_epa_play": -0.272361,
+     "off_epa_play": -0.199421,
+     "def_epa_play_allowed": 0.073777,
+     "net_epa_play": -0.273197,
      "off_rank": 127,
-     "def_rank": 99,
+     "def_rank": 100,
      "net_rank": 130
     },
     "raw": {
@@ -2894,6 +2894,28 @@
     }
    },
    {
+    "team_id": "265",
+    "team": "Washington State",
+    "conference": "Pac-12",
+    "season": 2026,
+    "games": 5,
+    "plays": 302,
+    "adjusted": {
+     "off_epa_play": -0.317049,
+     "def_epa_play_allowed": -0.041037,
+     "net_epa_play": -0.276012,
+     "off_rank": 138,
+     "def_rank": 56,
+     "net_rank": 131
+    },
+    "raw": {
+     "off_epa_play": -0.262337,
+     "def_epa_play_allowed": 0.007934,
+     "off_success_rate": 0.337748,
+     "def_success_rate_allowed": 0.423881
+    }
+   },
+   {
     "team_id": "2429",
     "team": "Charlotte",
     "conference": "American Athletic",
@@ -2901,12 +2923,12 @@
     "games": 4,
     "plays": 205,
     "adjusted": {
-     "off_epa_play": -0.288602,
-     "def_epa_play_allowed": -0.012853,
-     "net_epa_play": -0.275749,
+     "off_epa_play": -0.288989,
+     "def_epa_play_allowed": -0.012836,
+     "net_epa_play": -0.276153,
      "off_rank": 136,
      "def_rank": 66,
-     "net_rank": 131
+     "net_rank": 132
     },
     "raw": {
      "off_epa_play": -0.215059,
@@ -2923,40 +2945,18 @@
     "games": 4,
     "plays": 259,
     "adjusted": {
-     "off_epa_play": -0.099335,
-     "def_epa_play_allowed": 0.17989,
-     "net_epa_play": -0.279224,
-     "off_rank": 103,
-     "def_rank": 129,
-     "net_rank": 132
+     "off_epa_play": -0.0994,
+     "def_epa_play_allowed": 0.18032,
+     "net_epa_play": -0.27972,
+     "off_rank": 104,
+     "def_rank": 130,
+     "net_rank": 133
     },
     "raw": {
      "off_epa_play": 0.063998,
      "def_epa_play_allowed": 0.139008,
      "off_success_rate": 0.3861,
      "def_success_rate_allowed": 0.48
-    }
-   },
-   {
-    "team_id": "265",
-    "team": "Washington State",
-    "conference": "Pac-12",
-    "season": 2026,
-    "games": 4,
-    "plays": 234,
-    "adjusted": {
-     "off_epa_play": -0.336283,
-     "def_epa_play_allowed": -0.031802,
-     "net_epa_play": -0.304481,
-     "off_rank": 138,
-     "def_rank": 61,
-     "net_rank": 133
-    },
-    "raw": {
-     "off_epa_play": -0.297783,
-     "def_epa_play_allowed": 0.054932,
-     "off_success_rate": 0.337607,
-     "def_success_rate_allowed": 0.449275
     }
    },
    {
@@ -2967,9 +2967,9 @@
     "games": 4,
     "plays": 253,
     "adjusted": {
-     "off_epa_play": -0.134416,
-     "def_epa_play_allowed": 0.177608,
-     "net_epa_play": -0.312023,
+     "off_epa_play": -0.133599,
+     "def_epa_play_allowed": 0.178045,
+     "net_epa_play": -0.311644,
      "off_rank": 112,
      "def_rank": 126,
      "net_rank": 134
@@ -2989,11 +2989,11 @@
     "games": 4,
     "plays": 218,
     "adjusted": {
-     "off_epa_play": -0.238424,
-     "def_epa_play_allowed": 0.09263,
-     "net_epa_play": -0.331054,
+     "off_epa_play": -0.234697,
+     "def_epa_play_allowed": 0.096613,
+     "net_epa_play": -0.33131,
      "off_rank": 131,
-     "def_rank": 108,
+     "def_rank": 109,
      "net_rank": 135
     },
     "raw": {
@@ -3011,9 +3011,9 @@
     "games": 4,
     "plays": 232,
     "adjusted": {
-     "off_epa_play": -0.226768,
-     "def_epa_play_allowed": 0.142648,
-     "net_epa_play": -0.369416,
+     "off_epa_play": -0.226858,
+     "def_epa_play_allowed": 0.14305,
+     "net_epa_play": -0.369908,
      "off_rank": 129,
      "def_rank": 120,
      "net_rank": 136
@@ -3026,28 +3026,6 @@
     }
    },
    {
-    "team_id": "2623",
-    "team": "Missouri State",
-    "conference": "Conference USA",
-    "season": 2026,
-    "games": 4,
-    "plays": 234,
-    "adjusted": {
-     "off_epa_play": -0.267738,
-     "def_epa_play_allowed": 0.177967,
-     "net_epa_play": -0.445705,
-     "off_rank": 133,
-     "def_rank": 127,
-     "net_rank": 137
-    },
-    "raw": {
-     "off_epa_play": -0.044309,
-     "def_epa_play_allowed": 0.190395,
-     "off_success_rate": 0.393162,
-     "def_success_rate_allowed": 0.536184
-    }
-   },
-   {
     "team_id": "2638",
     "team": "UTEP",
     "conference": "Mountain West",
@@ -3055,18 +3033,40 @@
     "games": 4,
     "plays": 221,
     "adjusted": {
-     "off_epa_play": -0.258932,
-     "def_epa_play_allowed": 0.193796,
-     "net_epa_play": -0.452729,
+     "off_epa_play": -0.255355,
+     "def_epa_play_allowed": 0.190148,
+     "net_epa_play": -0.445503,
      "off_rank": 132,
      "def_rank": 132,
-     "net_rank": 138
+     "net_rank": 137
     },
     "raw": {
      "off_epa_play": -0.314214,
      "def_epa_play_allowed": 0.286802,
      "off_success_rate": 0.357466,
      "def_success_rate_allowed": 0.522088
+    }
+   },
+   {
+    "team_id": "2623",
+    "team": "Missouri State",
+    "conference": "Conference USA",
+    "season": 2026,
+    "games": 4,
+    "plays": 234,
+    "adjusted": {
+     "off_epa_play": -0.267787,
+     "def_epa_play_allowed": 0.178786,
+     "net_epa_play": -0.446573,
+     "off_rank": 135,
+     "def_rank": 128,
+     "net_rank": 138
+    },
+    "raw": {
+     "off_epa_play": -0.044309,
+     "def_epa_play_allowed": 0.190395,
+     "off_success_rate": 0.393162,
+     "def_success_rate_allowed": 0.536184
     }
    }
   ]
