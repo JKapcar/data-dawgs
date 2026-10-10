@@ -915,7 +915,7 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
       ["challenge.html","NFL Forecasting Challenge","challenge"],
       ["teamdraft.html","NFL Team Draft","teamdraft"],
       ["#","Tools","nav-section"],
-      ["dfs.html","DFS Solver","dfs"],
+      ["dfs.html","DFS Labs","dfs"],
       ["fantasy-warroom.html","Fantasy League War Room","fantasy-warroom"],
       ["guillotine.html","Last Dawg Standing","guillotine"],
       ["survivor.html","Survivor","survivor"],
@@ -1696,7 +1696,7 @@ arena.html — the hub for games played against other people; links to all of th
 bozo.html — the weekly one-leg parlay game with four sheets: Overview (season Bozo Count, CLV chart, current-week diagnostics and weekly hierarchy grid), This Week (hierarchy machine, ticket and personal entry), Diagnostics (filterable league ledger), and League Settings (roster, rules, shared league password, member cap and public/private visibility).
 challenge.html — the NFL Forecasting Challenge: put a probability on a game before kickoff, get graded after.
 survivor.html — survivor pool: this week's board, pick popularity, an optimal path, a season simulation, model settings.
-guillotine.html — guillotine league companion. dfs.html — DFS Labs: This week dashboard, slate, solver, simulator, exposure, bankroll, screener, standings (post-lock results ledger: joins DK contest-standings CSVs to the saved pre-lock workspace, audit CSV), method (keys 1–9). The projections there are the USER'S OWN.
+guillotine.html — guillotine league companion. dfs.html — DFS Labs: Run the demo opens an isolated synthetic experiment with Cancel; it never saves over a personal workspace; data, workspace and guides are in disclosures. This week dashboard, slate, solver, simulator, exposure, bankroll, screener, standings (post-lock results ledger: joins DK contest-standings CSVs to the saved pre-lock workspace, audit CSV), method (keys 1–9). The projections there are the USER'S OWN.
 teamdraft.html — the 32-team wins pool: spin wheel, board, eight rosters, Monte Carlo season sim.
 The draft rig: dashboard.html (a drafter's view), auction.html (the operator), board.html (read-only room view), bigboard.html (the projector), dataviz.html and report.html (afterwards), master.html (the player pool and scouting).
 datadawg-dollars.html — DataDawg$: our OWN converted auction dollars for one league room (Target $, conversion-sensitivity bands, delta vs the source price). It is NOT MV: MV is the dated market snapshot, DataDawg$ is this site's conversion of it. The league cheat sheet on board.html shows the same DataDawg$ alongside ESPN and PFF, all renormalized to that room's $2,800 — but ESPN and PFF are budget-only, with no custom-scoring shift, so they are not equivalent columns. Machine surfaces: /data/datadawg-dollars-values.json, /data/datadawg-dollars-method.json, /data/datadawg-dollars-method.md.
@@ -2376,7 +2376,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <header class="p-hero">
     <div class="p-kicker">Arena · the games played against other people · a directory, not a grade</div>
     <h1>Where you play against other people. <a class="tierchip" data-tier="labs" href="index.html#tiers" title="Why this page is a Pup">Pup</a></h1>
-    <p class="p-lead">Bozo, the Guillotine companion, NFL Survivor, the DFS solver and the live draft rig
+    <p class="p-lead">Bozo, the Guillotine companion, NFL Survivor, DFS Labs and the live draft rig
     all put you across from a person rather than across from a number. This page is the directory to
     them and nothing more: it lists them, links them, and shows each one's own tier and machine
     surfaces read live from <a href="/data/surfaces.json"><code>/data/surfaces.json</code></a>.
@@ -2540,7 +2540,7 @@ window.DD_BOTCTX = {
     ['Which game should I start with?','Where to start'],
     ['What is actually live versus planned here?','Live vs planned'],
     ['How do I get into a league?','Getting in']]},
-  sys: `RIGHT NOW you are on Arena — the directory of games played against other people: Bozo, the Guillotine companion, NFL Survivor, the DFS solver, the live draft rig and the 32-team wins pool. It is a directory and nothing more.
+  sys: `RIGHT NOW you are on Arena — the directory of games played against other people: Bozo, the Guillotine companion, NFL Survivor, DFS Labs, the live draft rig and the 32-team wins pool. It is a directory and nothing more.
 - BEING LISTED HERE IS AN ADDRESS, NOT A VERDICT. Each card carries that surface's own tier chip; this page makes no claim of its own. A collar means the surface earned one against criteria written down in receipts-method.md.
 - ⚠️ NO ORACLE LIVES HERE. Every game linked from this page runs on dated 2026 inputs. Nothing has established betting profitability, and a tool being live is not the same as a tool being right.
 - THE "UNDER CONSTRUCTION" CARDS ARE ROWS THE DATA ITSELF NAMES AS PLANNED — written down and NOT callable. Never promise one exists or describe how to use it.
