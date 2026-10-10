@@ -8,6 +8,8 @@ import {loadPlaywright,chromiumExecutable} from './playwright-loader.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const output=path.join(root,'work/artifacts/bozo-diagnostics');
 fs.mkdirSync(output,{recursive:true});
+// Capture-only styling: keep the real interactive/overflow checks untouched.
+const screenshotStyle='body::after,.pb-stub-bar,#ddbLaunch,#ddmeChip,.playbill .snav{visibility:hidden!important}';
 const players=['Fixture One','Fixture Two'];
 const picks=Object.fromEntries(players.map((name,i)=>[encodeURIComponent(name),{
   price:-150,entryPriceOpp:130,sport:'nfl',mkt:'spread',line:-3.5,side:'KC',label:'KC -3.5',
@@ -27,6 +29,18 @@ try{
     const context=await browser.newContext({viewport:{width,height:1000},isMobile:width===390,hasTouch:width===390,reducedMotion:'reduce',serviceWorkers:'block'});
     const page=await context.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));
+    let step='page setup';
+    const waitDisclosure=async(selector,open,label)=>{
+      step=label;
+      // Native summary activation completes asynchronously after keyup. Observe its
+      // final state without retrying the input or replacing the native interaction.
+      try{
+        await page.locator(selector+(open?'[open]':':not([open])')).waitFor({state:'attached',timeout:5000});
+      }catch(error){
+        throw new Error(`${width}px ${theme}: ${label}; expected disclosure ${open?'open':'closed'}`,{cause:error});
+      }
+    };
+    try{
     await context.addInitScript(t=>{localStorage.setItem('dd-theme3',t);localStorage.setItem('dd-theme3-bozo',t);},theme);
     // Deny all non-local network by default. More specific fixture routes win below.
     await page.route('**/*',async route=>{
@@ -53,24 +67,30 @@ try{
     assert.deepEqual(errors,[],'no page errors');
     const overflow=async()=>assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no page-level overflow');
     await overflow();
-    await card.screenshot({path:path.join(output,`${width}-${theme}-primary.png`)});
+    await card.screenshot({style:screenshotStyle,path:path.join(output,`${width}-${theme}-primary.png`)});
     await page.locator('#dxMore > summary').click();
+    await waitDisclosure('#dxMore',true,'additional charts after click');
     for(const chart of ['outcomes','trend','comparison','clv','calibration','coverage']){
       const section=card.locator(`[data-chart="${chart}"]`);
       if(chart!=='coverage'){assert.ok(await section.locator('[role="img"]').count()>=1);assert.ok(await section.locator('[role="img"]').first().getAttribute('aria-label'));}
+      const selector=`#dxChart [data-chart="${chart}"] details.bz-help`;
       const detail=section.locator('details.bz-help'), summary=detail.locator(':scope > summary');
-      assert.equal(await detail.getAttribute('open'),null);
+      await waitDisclosure(selector,false,`${chart}: initially closed`);
       const box=await summary.boundingBox();assert.ok(box.height>=44,'44px disclosure target');
       if(width===390)await summary.tap();else await summary.click();
-      assert.equal(await detail.getAttribute('open'),'');
-      assert.ok(await detail.locator('table').isVisible());
-      await summary.press('Space');assert.equal(await detail.getAttribute('open'),null);
+      await waitDisclosure(selector,true,`${chart}: opened by ${width===390?'touch':'click'}`);
+      await detail.locator('table').waitFor({state:'visible'});
+      await summary.press('Space');
+      await waitDisclosure(selector,false,`${chart}: closed by Space`);
       assert.ok(await summary.evaluate(el=>getComputedStyle(el).outlineStyle!=='none'),'visible keyboard focus');
-      await summary.press('Enter');assert.equal(await detail.getAttribute('open'),'');
-      await summary.press('Enter');assert.equal(await detail.getAttribute('open'),null);
+      await summary.press('Enter');
+      await waitDisclosure(selector,true,`${chart}: reopened by Enter`);
+      await summary.press('Enter');
+      await waitDisclosure(selector,false,`${chart}: closed again by Enter`);
     }
+    step='chart data and filter checks';
     await overflow();
-    await card.screenshot({path:path.join(output,`${width}-${theme}-all-charts.png`)});
+    await card.screenshot({style:screenshotStyle,path:path.join(output,`${width}-${theme}-all-charts.png`)});
     const tiles=await page.locator('#dxTiles').innerText();
     assert.match(tiles,/6 total picks/);assert.match(tiles,/3–1/);assert.match(tiles,/2 matched decisions/);
     assert.match(await card.locator('[data-chart="trend"]').innerText(),/1 wins vs 1\.0 expected/);
@@ -82,13 +102,13 @@ try{
     await page.locator('#dxSport').selectOption('nba');
     assert.match(await page.locator('#dxMeta').innerText(),/1 pick/);
     assert.doesNotMatch(await card.innerHTML(),/NaN|Infinity/);
-    await card.screenshot({path:path.join(output,`${width}-${theme}-pending.png`)});
+    await card.screenshot({style:screenshotStyle,path:path.join(output,`${width}-${theme}-pending.png`)});
     await page.locator('#dxPlayer').selectOption(players[1]);
     assert.match(await page.locator('#dxChart').innerText(),/No picks match/);
-    await card.screenshot({path:path.join(output,`${width}-${theme}-empty.png`)});
+    await card.screenshot({style:screenshotStyle,path:path.join(output,`${width}-${theme}-empty.png`)});
     await page.locator('#dxSport').selectOption('all');
     assert.match(await page.locator('#dxMeta').innerText(),/1 pick/);
-    await card.screenshot({path:path.join(output,`${width}-${theme}-small-sample.png`)});
+    await card.screenshot({style:screenshotStyle,path:path.join(output,`${width}-${theme}-small-sample.png`)});
     await page.locator('#dxPlayer').selectOption('all');
     await page.locator('#dxFrom').selectOption('3');
     await page.locator('#dxTo').selectOption('4');
@@ -96,7 +116,13 @@ try{
     assert.match(await page.locator('#dxMeta').innerText(),/3 picks/);
     await overflow();assert.deepEqual(errors,[]);
     console.log(`PASS ${width}px ${theme}: six charts, labels, disclosures, exact sample, filters, missing/pending/empty/small states, no overflow`);
-    await context.close();
+    }catch(error){
+      await page.screenshot({path:path.join(output,`${width}-${theme}-failure.png`),fullPage:true}).catch(()=>{});
+      console.error(`FAIL ${width}px ${theme} at ${step}; page errors: ${JSON.stringify(errors)}`);
+      throw error;
+    }finally{
+      await context.close();
+    }
   }
 }finally{
   await browser?.close();
