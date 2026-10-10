@@ -1,17 +1,17 @@
 {
- "as_of": "2026-10-09",
+ "as_of": "2026-10-10",
  "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
  "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
  "site": "https://datadawgs216.com",
- "built": "2026-10-09",
+ "built": "2026-10-10",
  "data": {
   "files": [
    {
     "path": "/data/538-classic.json",
     "url": "https://datadawgs216.com/data/538-classic.json",
     "bytes": 72977,
-    "as_of": "2026-10-09",
-    "sha256": "10d8c86777c43d63a8c1d96aea07ad0295a7af192275a3e93f5cf785c6f87581",
+    "as_of": "2026-10-10",
+    "sha256": "baf0ee3c3ac72b23123fcb99eaae17d2c2477c0cf008862c7f7e98520c99c49b",
     "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority."
    },
    {
@@ -33,9 +33,9 @@
    {
     "path": "/data/cfb-efficiency.json",
     "url": "https://datadawgs216.com/data/cfb-efficiency.json",
-    "bytes": 70526,
-    "as_of": "2026-08-06",
-    "sha256": "208adda93d0a0b06c56d8683de837b975d7dc741a478307434511b6893e3b24f",
+    "bytes": 71372,
+    "as_of": "2026-10-09",
+    "sha256": "e3ef4175d1b18b14179a20c83486bf01034a408c60db7181fa7043a432df0937",
     "note": "MODELLED, DESCRIPTIVE SEASON SNAPSHOT. EPA/WPA play values and opponent adjustments are produced upstream by cfbfastR/SportsDataverse. Data Dawgs selects and labels fields but does not refit or independently validate those models here. This is not a forecast, betting line, poll or Data Dawgs power rating. Early-season samples can be very small; use games and plays with every comparison."
    },
    {
@@ -185,9 +185,9 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 168438,
-    "as_of": "2026-10-09",
-    "sha256": "d9cb2c51e1ce83727bb85d42b2954f9d170a694b396baaa88eaa239f058b3ee6",
+    "bytes": 168429,
+    "as_of": "2026-10-10",
+    "sha256": "15c21650e7992bc287d363b306c5a6d9f8a58979fe415e62f8eb479805af00e3",
     "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 65/272 regular-season games are settled and banked in wins_tracker; 207 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    },
    {
@@ -289,24 +289,24 @@
     "path": "/data/models.json",
     "url": "https://datadawgs216.com/data/models.json",
     "bytes": 3183,
-    "as_of": "2026-10-09",
-    "sha256": "a6a3424a690bc823a3326acf974a4590c4b697cd35d056384b9c03ea417b27e1",
+    "as_of": "2026-10-10",
+    "sha256": "9719ad594ea353b737f082f223a24534e23214cb4598d4a010ff9a7117a40671",
     "note": "Survivor uses nfelo published probabilities or nfelo-season-v1, not the legacy margin model below. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
     "path": "/data/nfelo.json",
     "url": "https://datadawgs216.com/data/nfelo.json",
-    "bytes": 123118,
-    "as_of": "2026-10-09",
-    "sha256": "cf7360c314615d63d0c392f74fff1ac64b8e2b3fa5fb47e88c21a9238bc93198",
+    "bytes": 123120,
+    "as_of": "2026-10-10",
+    "sha256": "5680ad4739229de68edd2d93cd274f09390b8f4164937062e169ffbe980a75dd",
     "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp)."
    },
    {
     "path": "/data/nfl-schedule.json",
     "url": "https://datadawgs216.com/data/nfl-schedule.json",
     "bytes": 113642,
-    "as_of": "2026-10-09",
-    "sha256": "1c8ec95953a0bb637086506dcecaf4f5c59ff2b45eec31cd40196f1ee3b9089a",
+    "as_of": "2026-10-10",
+    "sha256": "b85bd1fd5e4cc090b14e0d5369fd0e1a5da6103d0e7657032a91880d0d645ec4",
     "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts."
    },
    {
@@ -345,8 +345,8 @@
     "path": "/data/receipts-inventory.json",
     "url": "https://datadawgs216.com/data/receipts-inventory.json",
     "bytes": 3415,
-    "as_of": "2026-10-09",
-    "sha256": "512d6f16de3e680392761d60fbe41e7f5b8238348e93c432b1da89123692cd0a",
+    "as_of": "2026-10-10",
+    "sha256": "8b7222b82ddede260a7b9decc776c66f2ec3f9531c08a630723d3c1b076ef97b",
     "note": "An INVENTORY, not a scoreboard. There is no honest Brier across domains, so this file counts what has been registered and settled and never scores it. The ledgers OVERLAP: receipts.json and the nfelo half of model-receipts.json are the same forecasts, as are 538-classic.json and its half. aggregate is therefore computed from aggregate.counted_from alone; aggregate.naive_sum is what summing the registered column would wrongly give, published so it can be named and corrected rather than quietly reproduced."
    },
    {
@@ -360,9 +360,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 39479,
-    "as_of": "2026-10-09",
-    "sha256": "33271156f11b1756969d495cf27f160340464b6e2437908d5ea21ec12e014872",
+    "bytes": 47320,
+    "as_of": "2026-10-10",
+    "sha256": "52bfc327a84815d70b02b2afdb5439476717d2ab9fc1bd0e7f20f71d480aef7a",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -384,9 +384,9 @@
    {
     "path": "/data/survivor.json",
     "url": "https://datadawgs216.com/data/survivor.json",
-    "bytes": 115033,
-    "as_of": "2026-10-09",
-    "sha256": "168d2be86c26fe7ceaea0ab91d3e91ec122c1c51ca4ae31f45a25a0182ac35c0",
+    "bytes": 115036,
+    "as_of": "2026-10-10",
+    "sha256": "47ed1ed4b729580a98ff08ec7e1f94c6edf58a28c5ee184e46ac9a839e549ce4",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"nfelo\" = published nfelo forecast without an extra blend; \"nfelo-season\" = nfelo pre-market calculation with current team/QB strength and game-specific HFA. Ownership is modelled, not observed."
    },
    {
@@ -418,16 +418,32 @@
     "url": "https://datadawgs216.com/data/fourth-down.json",
     "bytes": 14807,
     "as_of": "2026-10-09",
-    "sha256": "d6ded00d3e3ed1d2a6c4bed1142c86568eae4ef196b65b613a5570a6aa9e2593",
+    "sha256": "1fd6e08b8abaf67e85efe6ea1202eaf268c3777189098bf143eb24e6fecf4271",
     "note": "Delayed game-decision snapshot. Check per-game capture time and refresh_error. No overtime recommendations. Pregame lines, not live betting prices."
    },
    {
     "path": "/data/fourth-down-rates.json",
     "url": "https://datadawgs216.com/data/fourth-down-rates.json",
-    "bytes": 31567,
-    "as_of": "2026-09-30",
-    "sha256": "633797fb0c5f3be6c45ebd38ce9a26684a1a35e7f517f8d85f18a5b600bbe3bd",
+    "bytes": 32602,
+    "as_of": "2026-10-10",
+    "sha256": "e06594a929d249c144b3ce2608088c9b06088d0a721cd375fb5217db7afcf910",
     "note": "Observed comparable team rates. Fourth-down distance + field zone; field goals by 10-yard distance band + open/closed roof. Not a matchup forecast or calibration of nfl4th."
+   },
+   {
+    "path": "/data/bozo-menu-ledger.json",
+    "url": "https://datadawgs216.com/data/bozo-menu-ledger.json",
+    "bytes": 106468,
+    "as_of": "2026-10-10",
+    "sha256": "283fd531e60a558d76486ab240d6113063d45abdda90fe10a4bad77a14b236ac",
+    "note": "One row per published candidate per week, graded at its published line only. Results are pending until a final exists; a push is a push. Closes are NEAR-CLOSE (SportsGameOdds free tier, about 10 minutes behind DraftKings). Entry probability CLV stays null because the menu saves one entry side; no juice is assumed. Simulation-free; not a recommendation."
+   },
+   {
+    "path": "/data/bozo-menu-scorecard.json",
+    "url": "https://datadawgs216.com/data/bozo-menu-scorecard.json",
+    "bytes": 5363,
+    "as_of": "2026-10-10",
+    "sha256": "ad92f728347c8d67dbe4e9ceb3dff0cb44142fb0bf02823735bcbdfac11fa330",
+    "note": "Source scorecard for the Bozo Menu. Every number carries its n; nothing is ranked below 30 graded rows. Benchmarks: 50% at the line, 52.38% break-even at -110, and the near-close."
    },
    {
     "path": "/data/leagues/pepperoninipples.json",

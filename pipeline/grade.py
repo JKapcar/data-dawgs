@@ -24,5 +24,5 @@ def main():
     snapshots=[]
     from pathlib import Path
     for f in Path(root,"snapshots").glob("*.json"): snapshots.extend(read_json(f).get("snapshots",[]))
-    write_json(root+"/grades.json", stamped({"aggregates":grade_cells(forecasts.get("cells",[]),outcomes,snapshots)},dry_run=a.dry_run))
+    write_json(root+"/grades.json", stamped({"aggregates":grade_cells(forecasts.get("cells",[]),outcomes,snapshots)},dry_run=a.dry_run,source="this cohort's forecasts.json, resolutions.json and snapshots"))
 if __name__ == "__main__": main()

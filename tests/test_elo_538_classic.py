@@ -1,3 +1,4 @@
+import copy
 import importlib.util
 import json
 import math
@@ -158,6 +159,69 @@ class PublishedClassicTests(unittest.TestCase):
             self.assertTrue(math.isfinite(row["home_win_probability"]))
             self.assertGreaterEqual(row["home_win_probability"], 0)
             self.assertLessEqual(row["home_win_probability"], 1)
+
+
+class MovedKickoffTests(unittest.TestCase):
+    """CHI@GB (2026 week 5) moved 20:25Z -> 17:00Z upstream after the 2026-08-06 lock.
+
+    Every full-source refresh from 9/30 died with "locked legacy prediction changed"
+    because the locked nfelo row was compared against today's kickoff. A moved game is a
+    schedule fact, not a changed prediction: the row keeps the kickoff it was captured
+    against, and must still be prospective under the new one.
+    """
+
+    FORECAST_ID = "nfelo-4-3-0-2026-05-chi-gb-locked-20260806"
+
+    @classmethod
+    def setUpClass(cls):
+        cls.schedule = json.loads((ROOT / "data" / "nfl-schedule.json").read_text(encoding="utf-8"))
+        cls.model = json.loads((ROOT / "data" / "538-classic.json").read_text(encoding="utf-8"))
+        cls.ledger = json.loads((ROOT / "data" / "model-receipts.json").read_text(encoding="utf-8"))
+        cls.legacy = json.loads((ROOT / "data" / "receipts.json").read_text(encoding="utf-8"))
+
+    def moved(self, kickoff):
+        schedule = copy.deepcopy(self.schedule)
+        game = next(g for g in schedule["data"]["games"] if g["game_id"] == "2026_05_CHI_GB")
+        game["kickoff_at"] = kickoff
+        schedule["integrity"]["snapshot_id"] = elo.backbone.sha256_id(schedule["data"]["games"])
+        return schedule
+
+    def rebuilt_model(self, schedule):
+        # What the refresh produces after a schedule change: the input snapshot names the
+        # new schedule, so the forecast ids are new and the kickoff is the new one.
+        model = copy.deepcopy(self.model)
+        model["integrity"]["input_snapshot_id"] = "sha256:" + "ab" * 32
+        model["provenance"]["schedule_snapshot_id"] = schedule["integrity"]["snapshot_id"]
+        kickoffs = {g["game_id"]: g["kickoff_at"] for g in schedule["data"]["games"]}
+        for forecast in model["data"]["forecasts"]:
+            forecast["kickoff_at"] = kickoffs[forecast["game_id"]]
+        return model
+
+    def test_locked_row_keeps_its_captured_kickoff(self):
+        schedule = self.moved("2026-10-11T17:00:00Z")
+        prior = next(r for r in self.ledger["data"] if r["forecast_id"] == self.FORECAST_ID)
+        expected = next(r for r in elo.migrate_nfelo_receipts(self.legacy, schedule)
+                        if r["forecast_id"] == self.FORECAST_ID)
+        self.assertEqual(expected["kickoff_at"], "2026-10-11T17:00:00Z")
+        self.assertEqual(elo.locked_legacy_view(expected, prior), prior)
+
+    def test_refresh_survives_the_move_without_rewriting_history(self):
+        schedule = self.moved("2026-10-11T17:00:00Z")
+        updated = elo.update_ledger(self.ledger, self.legacy, self.rebuilt_model(schedule), schedule)
+        self.assertEqual(updated["data"][:len(self.ledger["data"])], self.ledger["data"])
+
+    def test_a_move_before_the_capture_is_refused(self):
+        schedule = self.moved("2026-08-01T17:00:00Z")
+        with self.assertRaisesRegex(elo.ModelError, "not prospective under the moved kickoff"):
+            elo.update_ledger(self.ledger, self.legacy, self.rebuilt_model(schedule), schedule)
+
+    def test_the_prediction_itself_is_still_compared(self):
+        schedule = self.moved("2026-10-11T17:00:00Z")
+        prior = next(r for r in self.ledger["data"] if r["forecast_id"] == self.FORECAST_ID)
+        expected = next(r for r in elo.migrate_nfelo_receipts(self.legacy, schedule)
+                        if r["forecast_id"] == self.FORECAST_ID)
+        doctored = {**expected, "home_win_probability": expected["home_win_probability"] + 0.01}
+        self.assertNotEqual(elo.locked_legacy_view(doctored, prior), prior)
 
 
 if __name__ == "__main__":

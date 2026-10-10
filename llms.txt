@@ -5,7 +5,7 @@
 
 Start with [`/data/index.json`](/data/index.json): dates and hashes. Cite `as_of` with numbers.
 
-[`/data/surfaces.json`](/data/surfaces.json): pages and tool availability; `planned` is unavailable. `dd_submit_bozo_leg` uses two phases, own leg or commissioner proxy, never backdated. [Sign in](/signon.html) · [instructions](/data/dawg-project-instructions.md).
+[`/data/surfaces.json`](/data/surfaces.json): pages and tool availability; `planned` is unavailable. `dd_submit_bozo_leg` is two-phase, own leg or commissioner proxy, never backdated. [Sign in](/signon.html) · [instructions](/data/dawg-project-instructions.md).
 
 Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHouse, stopped.
 
@@ -18,14 +18,14 @@ Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHous
 - [538 Classic Elo](/data/538-classic.json) ([method](/data/538-classic-methodology.md)): 32 ratings, 272 ungraded forecasts.
 - [Normalized model receipts](/data/model-receipts.json): 1,088 append-only prospective forecasts, 4 model lines, 2 independent.
 
-- [Calculators](/calculators.html): deterministic betting and forecast maths; inputs not stored.
+- [Calculators](/calculators.html): deterministic betting + forecast maths; inputs not stored.
 
 - [Fourth Down Lab](/fourth-down.html): go/kick/punt. [Data](/data/fourth-down.json).
 
 ## Hubs
 
 - [DateDawg](/datedawg.html): local ZIP/JSON reciprocal-acceptance dashboard; no upload, backend memory or observed Hinge cohort.
-- [Arena](/arena.html): games played against other people — Bozo, Guillotine, Survivor, DFS,
+- [Arena](/arena.html): games against other people: Bozo, Guillotine, Survivor, DFS,
 the live draft rig, a [32-team wins pool](/teamdraft.html).
 - [Library](/data.html): each index.json file under its owning surface, plus sources read, not republished; owns no data.
 - [Data Explorer](/explore.html): browser SQL + charts over /data; cites file + as_of.
@@ -35,7 +35,7 @@ the live draft rig, a [32-team wins pool](/teamdraft.html).
 ## College football
 
 - [CFB Lab](/cfb.html): efficiency, results, Elo, matchup, divergence, roadmap.
-- [Efficiency](/data/cfb-efficiency.json): 2025 cfbfastR 3.0 FBS summary; modelled, ungraded, not a forecast/DD rating.
+- [Efficiency](/data/cfb-efficiency.json): latest cfbfastR 3.0 FBS season summary (file states season); modelled, ungraded, not a forecast/DD rating.
 - [2025 results](/data/cfb-schedule.json), [latest games](/data/cfb-games-latest.json), [latest periods](/data/cfb-team-week-latest.json), [ratings](/data/cfb-teams.json).
 - [Book market](/data/cfb-market.json): timestamp unknown; not closing lines, so no CLV.
 - [CFB Elo](/data/cfb-elo.json), [registry](/data/cfb-ratings.json) and [card](/data/cfb-model-cards.json): end-2025; retrodictive, modelled, ungraded, not consensus/forecast.
@@ -45,17 +45,17 @@ the live draft rig, a [32-team wins pool](/teamdraft.html).
 ## Draft
 
 - [Player pool + MV](/data/pool.json): 613 players; 8 formats; `half14` derived, SF Half hybrid; `2026-08-24`.
-- [Dynasty ranks](/data/dynasty-ranks.json): 334 players/picks; 1QB and SF/TE-premium ranks and values, not observed prices.
+- [Dynasty ranks](/data/dynasty-ranks.json): 334 players/picks; 1QB + SF/TE-premium ranks and values, not observed prices.
 - [League](/data/league.json): 14 teams, $200, 15 spots, derived `half14`, no kicker.
-- [2026 strategy](/data/strategy.md): positional curves and format playbooks; testable structure kept apart from analyst priors.
-- [War Room](/fantasy-warroom.html): private Yahoo/ESPN/Sleeper league context, DataDawg$ and replacement levels. Deployed `dd_war_room` and `dd_fantasy_leagues` let personal AI connections discover and select saved leagues. No public account data.
+- [2026 strategy](/data/strategy.md): positional curves + format playbooks; testable structure apart from analyst priors.
+- [War Room](/fantasy-warroom.html): private Yahoo/ESPN/Sleeper league context, DataDawg$ + replacement levels. Deployed `dd_war_room` and `dd_fantasy_leagues` let personal AIs pick saved leagues. No public account data.
 
 ## Models and data
 
 - [Team + QB EPA](/data/epa-teams.json): nflverse pbp 2023-2025 + 2026 Wk1-2; descriptive, not predictive.
-- [nfelo](/data/nfelo.json): ratings, current-season lines and backtest; mirrored daily from greerreNFL/nfelo (meta.captured_at, meta.sha). Backtest is in-sample; ratings move only after games are played.
-- [Schedule + win probabilities](/data/survivor.json): 272 games; market-derived where available, model-derived otherwise.
-- [Parameters](/data/models.json): margin, Bozo and survivor assumptions and limitations.
+- [nfelo](/data/nfelo.json): ratings, current-season lines, backtest; mirrored daily from greerreNFL/nfelo (meta.captured_at, meta.sha). Backtest is in-sample; ratings move only after games are played.
+- [Schedule + win probabilities](/data/survivor.json): 272 games; market-derived if available, else model-derived.
+- [Parameters](/data/models.json): margin, Bozo, survivor assumptions + limitations.
 
 ## Receipts and method
 
@@ -70,7 +70,7 @@ the live draft rig, a [32-team wins pool](/teamdraft.html).
 
 ## Agent notes
 
-- If a dated number is stale enough to affect the answer, say so.
+- If a dated number is stale enough to matter, say so.
 - `def_epa_play` is EPA allowed: lower is better.
 - Simulation and modelled output are labelled; never present either as observation.
 - Nothing here is betting advice.

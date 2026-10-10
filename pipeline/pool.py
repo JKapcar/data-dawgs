@@ -17,5 +17,5 @@ def main():
             if not(outcomes==["Yes","No"] and m.get("active") and not m.get("closed") and not m.get("archived") and not m.get("restricted") and m.get("enableOrderBook") and float(m["volumeNum"])>=cfg["volume_floor_usd"] and now+timedelta(days=min_days)<=end<=now+timedelta(days=max_days) and low<=float(prices[0])<=high):continue
             tokens=json.loads(m["clobTokenIds"]); kept.append({"id":str(m["id"]),"question":m["question"],"slug":m.get("slug"),"conditionId":m.get("conditionId"),"yes_token_id":tokens[0],"no_token_id":tokens[1],"end_date":m["endDate"],"volume_num":float(m["volumeNum"]),"price_at_pool":float(prices[0])})
         except (KeyError,ValueError,TypeError,json.JSONDecodeError): continue
-    kept.sort(key=lambda x:int(x["id"])); write_json(f"data/cohorts/{a.cohort}/pool.json",stamped({"filter_version":"v2","markets":kept},dry_run=a.dry_run))
+    kept.sort(key=lambda x:int(x["id"])); write_json(f"data/cohorts/{a.cohort}/pool.json",stamped({"filter_version":"v2","markets":kept},dry_run=a.dry_run,source=GAMMA+"/markets/keyset"))
 if __name__=="__main__":main()

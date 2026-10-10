@@ -582,19 +582,42 @@ def model_receipts(envelope: dict[str, Any]) -> list[dict[str, Any]]:
     return receipts
 
 
+def locked_legacy_view(expected: dict[str, Any], prior: dict[str, Any]) -> dict[str, Any]:
+    """A re-migrated legacy nfelo row, held to the schedule facts it was locked against.
+
+    Legacy receipt IDs are fixed, so re-migration must not rebind the original schedule
+    snapshot when new finals change today's schedule hash — and, for the same reason, must
+    not rebind the original kickoff when the league later moves a game. CHI@GB (2026 week
+    5) moved from 20:25Z to 17:00Z after the 2026-08-06 lock; comparing the locked row with
+    today's kickoff raised "locked legacy prediction changed" on every full-source refresh
+    from 9/30, so the schedule on main could not take the move and Sunday's final could not
+    land. The receipt keeps its captured kickoff (append-only); the prediction it carries
+    must still be prospective under the NEW kickoff, or the lock proves nothing.
+    """
+    held = {**expected, "schedule_snapshot_id": prior["schedule_snapshot_id"]}
+    if expected["kickoff_at"] != prior.get("kickoff_at"):
+        captured = backbone.parse_timestamp(expected["captured_at"], "captured_at")
+        kickoff = backbone.parse_timestamp(expected["kickoff_at"], "kickoff_at")
+        if captured >= kickoff:
+            raise ModelError(
+                f"locked legacy prediction is not prospective under the moved kickoff: "
+                f"{expected['forecast_id']}"
+            )
+        held["kickoff_at"] = prior.get("kickoff_at")
+    return held
+
+
 def update_ledger(
     ledger: dict[str, Any],
     legacy: dict[str, Any],
     model: dict[str, Any],
     schedule: dict[str, Any],
 ) -> dict[str, Any]:
-    # Legacy receipt IDs are fixed, so re-migration must not rebind their original
-    # schedule snapshot when new final scores change today's schedule hash.
     existing = {r["forecast_id"]: r for r in ledger["data"]}
     migrated = migrate_nfelo_receipts(legacy, schedule)
     for expected in migrated:
         prior = existing.get(expected["forecast_id"])
-        if prior and {**expected, "schedule_snapshot_id": prior["schedule_snapshot_id"]} != prior:
+        if prior and locked_legacy_view(expected, prior) != prior:
             raise ModelError(f"locked legacy prediction changed: {expected['forecast_id']}")
     additions = [r for r in migrated if r["forecast_id"] not in existing] + model_receipts(model)
     updated = backbone.append_receipts(ledger, additions, schedule)
@@ -634,7 +657,7 @@ def validate_public(
     for expected in expected_nfelo + expected_538:
         prior = by_id.get(expected["forecast_id"])
         if prior is not None and expected["model_id"] == "nfelo":
-            expected = {**expected, "schedule_snapshot_id": prior["schedule_snapshot_id"]}
+            expected = locked_legacy_view(expected, prior)
         if prior is not None:
             if prior != expected:
                 raise ModelError(f"normalized receipt changed: {expected['forecast_id']}")

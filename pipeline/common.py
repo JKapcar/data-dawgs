@@ -26,7 +26,10 @@ def write_json(path, payload, *, api_key=None):
 
 def read_json(path): return json.loads(Path(path).read_text(encoding="utf-8"))
 
-def stamped(payload, *, dry_run=False):
+def stamped(payload, *, dry_run=False, source=None):
+    """Every file under data/ is an envelope (AGENTS.md): it carries as_of and source."""
     body = dict(payload); body["generated_at"] = utcnow(); body["dry_run"] = dry_run
+    body["as_of"] = body["generated_at"][:10]; body["source"] = source or body.get("source")
+    if not body["source"]: raise ValueError("stamped() needs a source")
     body["sha256"] = sha256({k:v for k,v in body.items() if k != "sha256"})
     return body

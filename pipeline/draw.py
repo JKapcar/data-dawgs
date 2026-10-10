@@ -17,5 +17,5 @@ def main():
     selection = [{"market_id": m["id"], "key": hashlib.sha256((a.randomness + ":" + m["id"]).encode()).hexdigest()} for m in rows]
     body = {"cohort_id": a.cohort, "randomness": a.randomness, "selection": selection,
             "markets": rows[:cfg["n_per_cohort"]]}
-    write_json(f"data/cohorts/{a.cohort}/cohort.json", stamped(body, dry_run=a.dry_run))
+    write_json(f"data/cohorts/{a.cohort}/cohort.json", stamped(body, dry_run=a.dry_run, source="pool.json ordered by sha256(drand randomness:market id)"))
 if __name__ == "__main__": main()

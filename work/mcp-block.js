@@ -5094,12 +5094,13 @@ const MCP_TOOLS = [
     title: "Live scores",
     catalog: "core",
     readOnlyHint: true,
-    description: "NFL/CFB schedule and scores from the Worker's scheduled nflverse/cfbfastR cache (sport + optional YYYYMMDD dates). Other sports fail until an adapter exists.",
+    description: "NFL/CFB schedule and scores (sport + optional YYYYMMDD dates). The schedule is the Worker's nflverse/cfbfastR cache; finals are overlaid from the Odds API scores archive, refreshed every 10 minutes while a game is due, so a final usually lands within minutes even when cfbfastR (published Sat/Sun/Mon only) has not caught up. Each game names its scoreSource and scoreObservedAt; `feeds` reports both feeds' freshness and any refresh error. Other sports fail until an adapter exists.",
     inputSchema: {
       type: "object",
       properties: {
         sport: { type: "string", enum: ["nfl", "cfb", "nba", "cbb", "mlb", "nhl"], description: "Sport key" },
         dates: { type: "string", description: "YYYYMMDD or YYYYMMDD-YYYYMMDD (optional)" },
+        closes: { type: "boolean", description: "Attach each game's DraftKings NEAR-CLOSE (spread, total, moneyline, both sides, alternates within 7 points), captured inside 7 minutes of kickoff from SportsGameOdds' free tier, which trails the book by about 10 minutes. Labelled near-close, never close." },
       },
       required: ["sport"],
       additionalProperties: false,
@@ -5110,6 +5111,7 @@ const MCP_TOOLS = [
       const u = new URL("https://mcp.internal/scores");
       u.searchParams.set("sport", args.sport);
       if (args.dates) u.searchParams.set("dates", args.dates);
+      if (args.closes === true) u.searchParams.set("closes", "1");
       const resp = await handleScores(u, env, {});
       const data = await resp.json();
       if (!resp.ok) return toolErr("Scores unavailable from this Worker's schedule cache (" + (data.detail || data.error || resp.status) + ").");
