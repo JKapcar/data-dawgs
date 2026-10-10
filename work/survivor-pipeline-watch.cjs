@@ -46,10 +46,18 @@ const FRESH_EVENTS = new Set(['schedule', 'workflow_dispatch', 'workflow_run', '
 const HOLD_MS = 60 * 6e4;
 // A deploy that has not landed this long after its commit is a problem, not a deploy in flight.
 const LIVE_SETTLE_MS = 60 * 6e4;
+/* The Worker's own job health (dawg-bot-worker.js, GET /ops/health): which scheduled jobs are
+   failing since when, and when each cron last fired. PULLED, so a failure stays listed until
+   the job itself succeeds. Only names and timestamps cross over: the route never carries error
+   text, and nothing here would echo it if it did. */
+const WORKER_HEALTH = 'https://toto.jkapcar4.workers.dev/ops/health';
 
 const sha = s => crypto.createHash('sha256').update(s).digest('hex');
 const iso = t => new Date(t).toISOString().replace(/\.\d{3}Z$/, 'Z');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+/* ⚠️ The issue is public: a problem names WHAT failed in a fixed vocabulary, never an error's
+   own text, which can carry a URL or a response body. */
+const kindOf = error => (error && Number.isInteger(error.status) ? `HTTP ${error.status}` : (error && error.name) || 'error');
 
 // When the row's window opened (ms), or null while it is shut. A missing success is news only
 // once the window has been open longer than max_age, so a season's first day is not judged
@@ -103,6 +111,33 @@ async function checkRow(github, repo, row, now, eventRun) {
   return { found, line };
 }
 
+// How long a cron's heartbeat may be quiet before the cron counts as silent: its own period,
+// plus the hour the heartbeat may lag (it is written at most hourly), plus half an hour.
+function cronSilentAfterMs(cron) {
+  const [minute, hour] = String(cron).split(/\s+/);
+  const period = /^\*\/\d+$/.test(minute) && hour === '*' ? Number(minute.slice(2)) * 6e4
+    : /^\d+$/.test(minute) && hour === '*' ? 60 * 6e4
+    : 24 * H;
+  return period + 90 * 6e4;
+}
+
+// A blip is retried; three failures are one problem, worded from a fixed vocabulary.
+async function readWorkerHealth() {
+  let why = 'no response';
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response = await fetch(WORKER_HEALTH, { signal: AbortSignal.timeout(20000), cache: 'no-store' });
+      if (response.ok) {
+        const body = await response.json();
+        if (Array.isArray(body.jobs) && Array.isArray(body.crons)) return body;
+        why = 'unexpected shape';
+      } else why = `HTTP ${response.status}`;
+    } catch { why = 'network error'; }
+    if (attempt < 3) await sleep(5000 * attempt);
+  }
+  throw Object.assign(new Error(why), { why });
+}
+
 // The previous run's problems, carried in the issue body so the hold-down survives between runs.
 function readState(body) {
   const m = String(body || '').match(/<!-- watch-state: (.*?) -->/s);
@@ -128,9 +163,31 @@ module.exports = async ({ github, context, core }) => {
       for (const p of found) add(p.key, p.text);
       core.info('  ' + line);
     } catch (error) {
-      add(`watchdog:${row.file}`, `Watchdog could not read ${row.file} runs: ${error.message}`);
-      core.info(`  ${row.file} [${row.name}] → check failed: ${error.message}`);
+      add(`watchdog:${row.file}`, `Watchdog could not read ${row.file} runs (${kindOf(error)}).`);
+      core.info(`  ${row.file} [${row.name}] → check failed (${kindOf(error)})`);
     }
+  }
+
+  // Year-round, outside the NFL season gate, in its own try: a failed read is one problem
+  // line and never skips the GitHub checks above or the NFL checks below.
+  try {
+    const health = await readWorkerHealth();
+    const when = v => (typeof v === 'string' && Number.isFinite(Date.parse(v)) ? v : null);
+    for (const j of health.jobs) {
+      const job = String(j.job || '').replace(/[^\w:.-]/g, '');
+      core.info(`  worker ${job}: ${j.failing === true ? `failing since ${when(j.since) || 'an unrecorded time'}` : 'ok'}`);
+      if (job && j.failing === true) add(`worker:job:${job}`, `Worker ${job} failing since ${when(j.since) || 'an unrecorded time'}`);
+    }
+    for (const c of health.crons) {
+      const cron = String(c.cron || '').replace(/[^\w*\/ ,-]/g, '');
+      const last = when(c.last_fired_at);
+      const silent = last !== null && now - Date.parse(last) > cronSilentAfterMs(cron);
+      core.info(`  worker cron ${cron}: ${last ? `last fired ${last}` : 'no heartbeat yet'}${silent ? ' → silent' : ''}`);
+      if (cron && silent) add(`worker:cron:${cron}`, `Worker cron ${cron} silent since ${last}`);
+    }
+  } catch (error) {
+    add('worker:health', `Worker health unreadable (${error.why || 'error'}): ${WORKER_HEALTH}`);
+    core.info(`  worker health unreadable (${error.why || 'error'})`);
   }
 
   let schedule, games, inSeason = false;
@@ -139,7 +196,7 @@ module.exports = async ({ github, context, core }) => {
     games = schedule.games.filter(g => g.season === schedule.season && g.season_type === 'REG');
     const starts = games.map(g => Date.parse(g.kickoff_at));
     inSeason = now >= Math.min(...starts) - 7 * 864e5 && now <= Math.max(...starts) + 7 * 864e5;
-  } catch (error) { add('watchdog:nfl-schedule', `Watchdog check failed: ${error.message}`); }
+  } catch (error) { add('watchdog:nfl-schedule', `Watchdog could not read data/nfl-schedule.json (${kindOf(error)}).`); }
   core.info(`NFL survivor checks: ${inSeason ? 'in season' : 'out of season, skipped'}.`);
   if (inSeason) {
     try {
@@ -159,7 +216,7 @@ module.exports = async ({ github, context, core }) => {
         if (legs.length && now > Math.max(...legs.map(g => Date.parse(g.kickoff_at))) + 48 * H)
           add(`receipt:${r.receipt_id}`, `${r.receipt_id}: still prospective 48 hours after its latest leg. Check schedule PR and resolver.`);
       }
-    } catch (error) { add('watchdog:nfl', `Watchdog check failed: ${error.message}`); }
+    } catch (error) { add('watchdog:nfl', `Watchdog NFL survivor checks failed (${kindOf(error)}).`); }
     for (const name of ['nfelo', 'survivor', 'survivor-receipts']) {
       try {
         // A blip is retried here rather than reported: one failed fetch is not a broken site.
@@ -171,14 +228,18 @@ module.exports = async ({ github, context, core }) => {
           } catch (error) { if (attempt === 3) throw error; }
           await sleep(5000 * attempt);
         }
-        if (!response.ok) throw new Error(`live ${name}: HTTP ${response.status}`);
+        if (!response.ok) throw Object.assign(new Error('live fetch refused'), { liveStatus: response.status });
         if (sha(Buffer.from(await response.arrayBuffer())) !== sha(fs.readFileSync(`data/${name}.json`))) {
           // Allow a deploy to settle; compare age of the repository's last change.
           const { data: commits } = await github.rest.repos.listCommits({ ...repo, sha: 'main', path: `data/${name}.json`, per_page: 1 });
           if (now - Date.parse(commits[0]?.commit.committer.date) > LIVE_SETTLE_MS)
             add(`live:${name}`, `Live ${name}.json differs from main more than ${LIVE_SETTLE_MS / 6e4} minutes after its commit.`);
         }
-      } catch (error) { add(`watchdog:live-${name}`, `Watchdog check failed: ${error.message}`); }
+      } catch (error) {
+        add(`watchdog:live-${name}`, error.liveStatus ? `Live ${name}.json unreadable (HTTP ${error.liveStatus}).`
+          : Number.isInteger(error.status) ? `Watchdog could not read the history of data/${name}.json (HTTP ${error.status}).`
+          : `Live ${name}.json unreadable (network error).`);
+      }
     }
   }
 
