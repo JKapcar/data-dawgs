@@ -129,7 +129,7 @@ refresh cadence, not a redesign. Worth noting because it is the cheapest promoti
   checks it against a book. The simulation draws legs independently, which is knowably false
   for two legs on the same game. Worst CLV is unmeasured. The *game* is well designed; the
   *numbers* are not validated.
-- **DFS Solver.** Built 2026-08-06, zero graded slates. The solver is deterministic, which is
+- **DFS Labs.** Built 2026-08-06, zero graded slates. The solver is deterministic, which is
   a genuine strength, but determinism is not validation — an optimiser is exactly as good as
   the projections it is fed, and those are the untested part.
 - **Guillotine Companion.** Nothing graded, nothing claimed.
