@@ -1674,14 +1674,27 @@ export default {
     // Bozo closes: fires every five minutes and does nothing on a tick with no game
     // about to start, which is the overwhelming majority of them. One RTDB read.
     if (cron === BOZO_CLOSE_CRON) {
-      // Independent failure domains: forecast problems never suppress Bozo capture.
-      const forecastRun = runForecastLive(env).catch(e => ({ error: String(e.message || e) }));
+      const tickMs = (controller && controller.scheduledTime) || Date.now();
+      /* Ops bookkeeping (opsHeartbeat, opsTrack) is its own failure domain: it observes each
+         job's promise on a branch under waitUntil and never touches a result or a lasterror
+         key. See the ops-health block. */
+      opsHeartbeat(ctx, env, cron, tickMs);
+      // Independent failure domains: forecast problems never suppress Bozo capture. Its
+      // lasterror write is guarded, so a KV fault cannot turn this catch into a rejection.
+      const forecastRun = runForecastLive(env).catch(async e => {
+        try {
+          const kv = cfbMarketKV(env);
+          if (kv) await kv.put("forecast:live:lasterror",
+            JSON.stringify({ at: new Date().toISOString(), error: String((e && e.message) || e) }));
+        } catch { /* the trail is best-effort; the result below is not */ }
+        return { error: String(e.message || e) };
+      });
       if (ctx && ctx.waitUntil) ctx.waitUntil(forecastRun);
+      opsTrack(ctx, env, "forecast:live", tickMs, forecastRun);
       /* Live finals: refresh the provider score archive while any scheduled game is due.
          Own failure domain and lasterror key. Grading is chained AFTER it (never in place
          of it — the catch below always resolves), so a final that lands on this tick
          settles a leg on this tick, and the two callers share one provider request. */
-      const tickMs = (controller && controller.scheduledTime) || Date.now();
       const scoresRun = runBozoLiveScores(env, tickMs).catch(async e => {
         const kv = cfbMarketKV(env);
         if (kv) await kv.put("bozo:scores:lasterror",
@@ -1689,6 +1702,7 @@ export default {
         return { error: String((e && e.message) || e) };
       });
       if (ctx && ctx.waitUntil) ctx.waitUntil(scoresRun);
+      opsTrack(ctx, env, "bozo:scores", tickMs, scoresRun);
       // Near-close archive for every NFL/FBS game: own failure domain and lasterror key, so
       // a provider hiccup here can never cost a league leg its close, or the reverse.
       const nearCloseRun = runBozoNearCloses(env, tickMs).catch(async e => {
@@ -1698,6 +1712,7 @@ export default {
         return { error: String((e && e.message) || e) };
       });
       if (ctx && ctx.waitUntil) ctx.waitUntil(nearCloseRun);
+      opsTrack(ctx, env, "bozo:nearclose", tickMs, nearCloseRun);
       // On-time GitHub workflow dispatch (inert until GH_DISPATCH_TOKEN is set).
       const pacerRun = runGithubPacer(env, tickMs).catch(async e => {
         const kv = cfbMarketKV(env);
@@ -1706,6 +1721,7 @@ export default {
         return { error: String((e && e.message) || e) };
       });
       if (ctx && ctx.waitUntil) ctx.waitUntil(pacerRun);
+      opsTrack(ctx, env, "gh:pacer", tickMs, pacerRun);
       /* Automatic grading rides the same five-minute tick, in its OWN failure domain.
          It is the tick that already knows about games starting and finishing, so it is
          the right one to notice them ending — and a close-capture outage must not stop
@@ -1719,8 +1735,11 @@ export default {
           return { error: String((e && e.message) || e) };
         });
       if (ctx && ctx.waitUntil) ctx.waitUntil(gradeRun);
+      opsTrack(ctx, env, "bozo:autograde", tickMs, gradeRun);
       try {
-        const bozo = await runBozoCloseCapture(env, tickMs);
+        const closeRun = runBozoCloseCapture(env, tickMs);
+        opsTrack(ctx, env, "bozo:close", tickMs, closeRun);
+        const bozo = await closeRun;
         return { ...bozo, forecast: await forecastRun, scores: await scoresRun,
           nearCloses: await nearCloseRun, pacer: await pacerRun, autograde: await gradeRun };
       } catch (e) {
@@ -1732,6 +1751,7 @@ export default {
     }
     if (cron === CFB_MARKET_CRON) {
       const scheduledTime = (controller && controller.scheduledTime) || Date.now();
+      opsHeartbeat(ctx, env, cron, scheduledTime);
       const marketRun = runCfbMarketCapture(env, scheduledTime).catch(async e => {
         const kv = cfbMarketKV(env);
         if (kv) await kv.put(CFB_MARKET_PREFIX + "lasterror",
@@ -1748,9 +1768,10 @@ export default {
          allSettled changes only WHEN the throw happens, never whether: a market failure
          still fails this tick and still reaches the cron log, but it can no longer cut
          short the write that grading depends on. */
-      const [marketOut, scheduleOut] = await Promise.allSettled([
-        marketRun, runBozoScheduleRefresh(env, scheduledTime),
-      ]);
+      const scheduleRun = runBozoScheduleRefresh(env, scheduledTime);
+      opsTrack(ctx, env, "cfb:market:24h", scheduledTime, marketRun);
+      opsTrack(ctx, env, "bozo:schedule", scheduledTime, scheduleRun);
+      const [marketOut, scheduleOut] = await Promise.allSettled([marketRun, scheduleRun]);
       if (scheduleOut.status === "rejected") {
         const kv = cfbMarketKV(env);
         if (kv) await kv.put("bozo:schedule:lasterror", JSON.stringify({
@@ -1766,8 +1787,12 @@ export default {
     // Missing cron preserves the local test/manual-call contract. Production names
     // the daily trigger explicitly, and an unknown configured cron fails closed.
     if (cron && cron !== BACKUP_CRON) throw new Error("unknown scheduled trigger: " + cron);
+    const backupMs = (controller && controller.scheduledTime) || Date.now();
+    opsHeartbeat(ctx, env, cron, backupMs);
     try {
-      await runBackup(env, (controller && controller.scheduledTime) || Date.now());
+      const backupRun = runBackup(env, backupMs);
+      opsTrack(ctx, env, "backup", backupMs, backupRun);
+      await backupRun;
     } catch (e) {
       const kv = backupKV(env);
       if (kv) await kv.put("backup:lasterror",
@@ -1789,6 +1814,7 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
 
     if (url.pathname === "/scores")       return handleScores(url, env, cors);
+    if (url.pathname === "/ops/health")   return handleOpsHealth(request, env, cors);
     if (url.pathname === "/dk/lobby")     return handleDkLobby(request, url, cors);
     if (url.pathname === "/dk/draftables") return handleDkDraftables(request, url, cors);
     if (url.pathname === "/dk/contests")  return handleDkContests(request, url, cors);
@@ -10299,6 +10325,150 @@ async function runGithubPacer(env, nowMs = Date.now(), season = SEASON) {
   const summary = { at: new Date(nowMs).toISOString(), due: due.length, dispatched: done, failed };
   try { await kv.put("gh:pacer:last-run", JSON.stringify(summary)); } catch {}
   return summary;
+}
+
+/* ======================= ops health: pulled by the watchdog ======================
+   Every scheduled job already leaves a post-mortem trail in `<job>:lasterror`, and nothing
+   read it. This is the read side, and it is PULL, NOT PUSH: a failure pushed into the GitHub
+   watchdog as an input disappears on the watchdog's next run and closes the issue while the
+   job is still broken. Health that the watchdog reads stays failing until the job succeeds.
+
+   - ops:health:<job> = {failing, since, last_ok_at}. failing = the last error is newer than
+     the last REAL success. A no-op tick (no game near kickoff, nothing due, nothing fetched)
+     is neither, and never clears a failure. Written ONLY when `failing` flips, so `since` is
+     exact and a healthy job writes nothing: its last_ok_at is the real success that last made
+     it healthy, not the latest one.
+   - ops:cron:<cron> = {last_fired_at}, at most one write per cron per hour, so a cron that
+     stops firing reads as silent instead of healthy.
+   - GET /ops/health serves those and nothing else. Never error text: it can carry provider
+     URLs, keys or league data — the reason ghPacerDispatch throws a status only.
+   - ⚠️ ITS OWN FAILURE DOMAIN. Bookkeeping runs on a branch of each job's promise, after the
+     job settles, under ctx.waitUntil; every KV error in it is swallowed. It never throws into,
+     delays or changes a job's result, and the lasterror keys are untouched. */
+const OPS_HEALTH_PREFIX = "ops:health:";
+const OPS_CRON_PREFIX = "ops:cron:";
+const OPS_HEARTBEAT_MS = 3600 * 1000;
+const OPS_ROUTE_TTL_MS = 60 * 1000;
+// Functions, not constants: tests run slices of this region in sandboxes that never declare
+// the cron constants, and a top-level reference would fail there.
+const opsJobs = () => [
+  ["bozo:close", BOZO_CLOSE_CRON], ["bozo:scores", BOZO_CLOSE_CRON], ["bozo:nearclose", BOZO_CLOSE_CRON],
+  ["bozo:autograde", BOZO_CLOSE_CRON], ["gh:pacer", BOZO_CLOSE_CRON], ["forecast:live", BOZO_CLOSE_CRON],
+  ["cfb:market:24h", CFB_MARKET_CRON], ["bozo:schedule", CFB_MARKET_CRON], ["backup", BACKUP_CRON],
+];
+const opsCrons = () => [BOZO_CLOSE_CRON, CFB_MARKET_CRON, BACKUP_CRON];
+
+/* What a settled result says: "ok" (real work succeeded), "fail" (the job threw, or its own
+   result records a failure) or "noop" (nothing to do this tick). Several jobs record a
+   provider failure in their result instead of throwing — the Odds API refusal lands in the
+   score archive's errorCode, a near-close refusal in its per-sport code, a failed dispatch in
+   the pacer summary — so a lasterror-only view would call them healthy. */
+function opsOutcome(job, r) {
+  if (!r || typeof r !== "object") return "noop";
+  // The catches in scheduled() turn a thrown job into exactly { error }; no job returns that
+  // shape itself.
+  if (Object.keys(r).length === 1 && typeof r.error === "string") return "fail";
+  const sports = ["nfl", "cfb"].map(s => r[s]).filter(x => x && typeof x === "object");
+  switch (job) {
+    case "bozo:close":
+      // A provider outage is counted as a skip, not an error, so it can only read as a no-op.
+      return r.captured > 0 ? "ok" : "noop";
+    case "bozo:scores": {
+      const tried = sports.filter(x => x.refreshed === true);
+      return tried.some(x => x.error) ? "fail" : tried.length ? "ok" : "noop";
+    }
+    case "bozo:nearclose":
+      return sports.some(x => x.error) ? "fail" : sports.some(x => Number.isFinite(x.events)) ? "ok" : "noop";
+    case "bozo:autograde": {
+      const leagues = Array.isArray(r.leagues) ? r.leagues.filter(Boolean) : [];
+      return leagues.some(x => x.error) ? "fail" : leagues.some(x => !x.skipped) ? "ok" : "noop";
+    }
+    case "gh:pacer":
+      return (r.failed || []).length ? "fail" : (r.dispatched || []).length ? "ok" : "noop";
+    case "forecast:live":
+      return r.status === "already_running" ? "noop" : "ok";
+    default:            // cfb:market:24h, bozo:schedule, backup: returning at all is succeeding
+      return "ok";
+  }
+}
+
+async function opsReadJson(kv, key) {
+  const raw = await kv.get(key);
+  return raw ? JSON.parse(raw) : null;
+}
+
+// One write when `failing` flips, none otherwise. An unreadable prior state writes nothing.
+async function opsRecord(env, job, outcome, atMs) {
+  if (outcome !== "ok" && outcome !== "fail") return null;
+  const kv = env && env.RL;
+  if (!kv) return null;
+  const key = OPS_HEALTH_PREFIX + job;
+  let prior;
+  try { prior = await opsReadJson(kv, key); } catch { return null; }
+  const failing = outcome === "fail";
+  if (prior && prior.failing === failing) return null;
+  const at = new Date(atMs).toISOString();
+  const next = failing ? { failing: true, since: at, last_ok_at: (prior && prior.last_ok_at) || null }
+    : { failing: false, since: null, last_ok_at: at };
+  await kv.put(key, JSON.stringify(next));
+  return next;
+}
+
+/* Observes a job's promise on a branch of its own: the job's callers see exactly the result
+   or rejection they saw before. A rejection here is a failure; so is the { error } its catch
+   returns. */
+function opsTrack(ctx, env, job, atMs, promise) {
+  const book = promise.then(r => opsOutcome(job, r), () => "fail")
+    .then(outcome => opsRecord(env, job, outcome, atMs))
+    .catch(() => null);
+  if (ctx && ctx.waitUntil) ctx.waitUntil(book);
+  return book;
+}
+
+function opsHeartbeat(ctx, env, cron, atMs) {
+  const beat = (async () => {
+    const kv = env && env.RL;
+    if (!kv || !cron) return null;
+    const key = OPS_CRON_PREFIX + cron;
+    let prior;
+    try { prior = await opsReadJson(kv, key); } catch { return null; }
+    if (prior && atMs - Date.parse(prior.last_fired_at) < OPS_HEARTBEAT_MS) return null;
+    await kv.put(key, JSON.stringify({ last_fired_at: new Date(atMs).toISOString() }));
+    return true;
+  })().catch(() => null);
+  if (ctx && ctx.waitUntil) ctx.waitUntil(beat);
+  return beat;
+}
+
+/* GET /ops/health — public: job names and timestamps only. One isolate-local copy for a
+   minute (the Cache API is a no-op on workers.dev), plus the same max-age downstream. */
+let opsHealthMemo = null;
+async function handleOpsHealth(request, env, cors) {
+  if (request.method !== "GET") return json({ error: "GET only" }, 405, cors);
+  const headers = { ...cors, "Content-Type": "application/json", "Cache-Control": "public, max-age=60" };
+  const now = Date.now();
+  if (opsHealthMemo && now - opsHealthMemo.at < OPS_ROUTE_TTL_MS) return new Response(opsHealthMemo.body, { headers });
+  const kv = env && env.RL;
+  if (!kv) return json({ error: "ops health storage is unavailable" }, 503, cors);
+  const str = v => (typeof v === "string" && Number.isFinite(Date.parse(v)) ? v : null);
+  let jobs, crons;
+  try {
+    jobs = await Promise.all(opsJobs().map(async ([job, cron]) => {
+      const h = (await opsReadJson(kv, OPS_HEALTH_PREFIX + job)) || {};
+      return { job, cron, failing: h.failing === true, since: str(h.since), last_ok_at: str(h.last_ok_at) };
+    }));
+    crons = await Promise.all(opsCrons().map(async cron => {
+      const c = (await opsReadJson(kv, OPS_CRON_PREFIX + cron)) || {};
+      return { cron, last_fired_at: str(c.last_fired_at) };
+    }));
+  } catch { return json({ error: "ops health is unreadable" }, 503, cors); }
+  const body = JSON.stringify({
+    as_of: new Date(now).toISOString(),
+    note: "Scheduled-job health for the GitHub watchdog: failing means the last error is newer than the last real success. last_ok_at is the success that last made a job healthy; last_fired_at is written at most hourly. Error text is never served; post-mortems stay in each job's lasterror key.",
+    jobs, crons,
+  });
+  opsHealthMemo = { at: now, body };
+  return new Response(body, { headers });
 }
 
 async function bozoGradeFromScheduleKv(env, state, supplied) {
