@@ -85,11 +85,21 @@
       const missState=after(initial,{flip:true,y:Math.max(1,Math.min(80,100-s.yardline-8))});
       const makeWP=possessionWin(makeState),missWP=possessionWin(missState);
       const fgWP=fgMake*makeWP+(1-fgMake)*missWP;
+      // Outcome lots: every modelled result of each choice, with its probability, the
+      // win probability after it and the game clock left. They are the same terms the
+      // averages below are built from, kept so other objectives can be scored on them.
+      const lots={go:[],fg:fgMake>0?[{p:fgMake,wp:makeWP,t:makeState.game,ok:true},{p:1-fgMake,wp:missWP,t:missState.game,ok:false}]:null,punt:null};
       const twoProb=model.two_pt([0,0,1,...roof,offSpread,s.total,offTotal]);
       const patProb=fgProbability(15,s.roof);
       function touchdownWP(st){
         const points=[0,1,2].map(n=>win(halfFlip({...st,home:1-st.home,diff:-st.diff-n,y:100-s.touchback,down:1,toGo:10})));
         return Math.max(patProb*points[1]+(1-patProb)*points[0],twoProb*points[2]+(1-twoProb)*points[0]);
+      }
+      function touchdownLots(st){
+        const next=n=>halfFlip({...st,home:1-st.home,diff:-st.diff-n,y:100-s.touchback,down:1,toGo:10});
+        const points=[0,1,2].map(n=>win(next(n))),kick=patProb*points[1]+(1-patProb)*points[0],two=twoProb*points[2]+(1-twoProb)*points[0];
+        // Same try the win-probability average assumes: whichever has the higher WP.
+        return kick>=two?[{q:patProb,wp:points[1],t:next(1).game},{q:1-patProb,wp:points[0],t:next(0).game}]:[{q:twoProb,wp:points[2],t:next(2).game},{q:1-twoProb,wp:points[0],t:next(0).game}];
       }
       const gains=model.fd([4,s.toGo,s.yardline,0,1,...roof,offSpread,s.total,offTotal]);
       let goWP=0,conversion=0,successWP=0,failWP=0;
@@ -101,16 +111,19 @@
         st.toGo=Math.min(10,st.y);
         const run=6+(success&&!td?s.runoff:0);st.half=Math.max(0,half-run);st.game=Math.max(0,game-run);
         const wp=td?touchdownWP(st):possessionWin(halfFlip(st));
+        if(td)for(const part of touchdownLots(st))lots.go.push({p:p*part.q,wp:part.wp,t:part.t,ok:true});
+        else lots.go.push({p,wp,t:halfFlip(st).game,ok:success});
         goWP+=p*wp;if(success){conversion+=p;successWP+=p*wp;}else failWP+=p*wp;
       }
       successWP/=conversion;failWP/=(1-conversion);
       let puntWP=null;
       if(punts.has(s.yardline)){
-        puntWP=0;for(const r of punts.get(s.yardline)){
+        puntWP=0;lots.punt=[];for(const r of punts.get(s.yardline)){
           let st=after(initial,{flip:true,y:100-r.yardline_after});
           if(r.muff)st=after(initial,{y:r.yardline_after});
           if(r.yardline_after===100)st=after(initial,{y:100-s.touchback,diff:s.diff-7});
-          puntWP+=r.pct*possessionWin(st);
+          const wp=possessionWin(st);lots.punt.push({p:r.pct,wp,t:st.game,ok:true});
+          puntWP+=r.pct*wp;
         }
       }
       const choices=[{id:'go',label:labels.go,wp:goWP},{id:'fg',label:labels.fg,wp:fgMake>0?fgWP:null},{id:'punt',label:labels.punt,wp:puntWP}];
@@ -122,7 +135,10 @@
       if(s.qtr===4&&s.seconds<=120)warnings.push('Late-game estimates are sensitive to clock management. Successful in-bounds conversions that permit kneeling are handled explicitly.');
       if(s.runoff)warnings.push(`Scenario assumes ${s.runoff} additional seconds run off after every successful non-touchdown conversion.`);
       if(s.touchback===25)warnings.push('Bot comparison mode uses the upstream 25-yard kickoff assumption. Select 35 yards to examine a modern touchback scenario.');
-      return {input:s,choices,best:ranked[0].id,edge,strength:edge>5?'Very strong':edge>2.5?'Strong':edge>1?'Medium':'Close call',conversion,successWP,failWP,fgMake,makeWP,missWP,goWP,fgWP,puntWP,breakEven,twoProb,patProb,warnings,model:'nfl4th browser port · 2026-09-28',computedAt:new Date().toISOString()};
+      const out={input:s,choices,best:ranked[0].id,edge,strength:edge>5?'Very strong':edge>2.5?'Strong':edge>1?'Medium':'Close call',conversion,successWP,failWP,fgMake,makeWP,missWP,goWP,fgWP,puntWP,breakEven,twoProb,patProb,warnings,model:'nfl4th browser port · 2026-09-28',computedAt:new Date().toISOString()};
+      // Not enumerable: lots stay out of JSON snapshots, spreads and Toto's context.
+      Object.defineProperty(out,'lots',{value:lots});Object.defineProperty(out,'secondsLeft',{value:game});
+      return out;
     }
     return {calculate,fgProbability,model};
   }
