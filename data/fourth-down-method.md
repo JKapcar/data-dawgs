@@ -1,6 +1,6 @@
 ---
-as_of: 2026-09-28
-source: nflverse/nfl4th, nflverse/nflfastR, nflverse/fastrmodels; ESPN public play-by-play; nflverse schedules
+as_of: 2026-10-10
+source: nflverse/nfl4th, nflverse/nflfastR, nflverse/fastrmodels; ESPN public play-by-play; nflverse schedules; nflverse play-by-play 2016-2025
 ---
 
 # Fourth Down Lab
@@ -57,6 +57,76 @@ parametric tail or precise latent offense-strength percentile is fabricated.
 
 Small samples, roster turnover and different attempted-play mixes limit these
 comparisons. They are not independently calibrated team-specific forecasts.
+
+## Goal lens
+
+The calculator's recommendation maximises win probability and nothing else. The
+goal lens scores the **same outcome lots** (each modelled result of each choice,
+with its probability, the win probability after it and the clock left) against a
+different objective. It changes no probability and no win probability, and it is
+never the recommendation.
+
+Every time-based goal reduces to one function: the expected share of the next
+H seconds with win probability above a line x, starting from win probability p
+with T seconds left. The time-average of any u(WP) is u(0) plus the integral of
+u'(x) times that share, so a new goal is a new u, not a new model.
+
+| Goal | What is scored | Unit |
+|---|---|---|
+| Win the game | win probability after each outcome | win probability |
+| Average win probability | time-average of win probability, rest of game | win probability |
+| Time above a line | share of the horizon with WP above x (5–95%) | share of clock |
+| Keep it a game | share of the horizon with WP between 50−w and 50+w | share of clock |
+| Hate falling behind | WP change, with time below the reference counted k× (1–4) | felt points |
+
+**Average win probability cannot change a call.** A win probability is a
+forecast of the final result, so its expected value at any later moment equals
+its value now, and averaging over the rest of the game returns the same number.
+Checked on 955,892 play-sides, 2016–2025: within each tenth of starting win
+probability, the realised time-average of win probability over the rest of the
+game was within 0.4 points of the starting value. The lens shows this goal with
+the standard numbers and says so.
+
+**The path is modelled.** nfl4th prices one play; it does not say how win
+probability travels afterwards. `/data/fourth-down-paths.json` holds a diffusion
+in probit space on a measured information clock V(t), the share of the game's
+remaining uncertainty still unresolved with t seconds left:
+WP at clock b given p at clock a is `Φ(Φ⁻¹(p)·√(V(a)/V(b)) + √(V(a)/V(b) − 1)·Z)`.
+It is a martingale by construction. V was fitted to nflfastR spread-adjusted home
+win probability in 1,906 games from 2016–2022 and every error below is from the
+855 games of 2023–2025, which the fit never saw:
+
+- Clock shares miss by 1.0 points (RMSE) outside the final 30 seconds; the
+  median cell misses by 0.6, the 99th percentile by 7.6, the worst by 8.9.
+- Inside the final 30 seconds the miss is 9.9 points. **The lens does not answer
+  there.**
+- On fourth downs from the offence's side, outside that window: 1.2 points.
+- Shorter horizons, never used in the fit: 1.2 points over the next five
+  minutes, 1.1 over the next fifteen.
+- A plain random walk (V linear in the clock) misses by 4.2 points; a
+  one-parameter power clock by 2.0.
+
+The measured clock is not linear: 7% of the game's uncertainty is still
+unresolved with 15 seconds left and 21% with five minutes left. The published
+file carries the knots, a 70-cell observed-versus-modelled calibration table,
+per-season source hashes and reference integrals the browser is tested against.
+
+Limits. The path model was fitted to nflfastR's win probability, not the nfl4th
+blend the calculator uses for outcomes. It sees only win probability and the
+clock, not possession, field position or timeouts, so it describes typical
+paths, not this game's. Regulation only. A lens edge smaller than the 1.0-point
+held-out error is shown as too close to call, not as a winner. Horizon "the
+moment after this play" uses no path model: it is the chance the play itself
+leaves win probability on the right side of the line. Clock shares are weighted
+by the seconds each outcome leaves, so an outcome that ends the game adds no
+time. "Hate falling behind" measures drops against the win probability of the
+best available call; its multiplier is the reader's assumption, not a measured
+preference. Touchdown outcomes keep nfl4th's extra-point or two-point choice.
+
+Nothing here estimates what coaches or fans actually optimise: no goal is fitted
+to observed decisions. Score-based goals (margin, cover) are not offered because
+there is no score-path model. The lens has not been prospectively graded.
+Rebuild with `python tools/fourth-down-paths.py`; it is not on a schedule.
 
 ## Inputs and assumptions
 
@@ -116,5 +186,6 @@ prospectively graded this model. Tier: **Pup**.
 - https://rbsdm.com/stats/fourth_weekly/
 - https://github.com/nflverse/nfldata/blob/master/data/games.csv
 
-Scenario calculations stay in the browser. Dated public snapshots are available
-at `/data/fourth-down.json`. There is no fourth-down MCP tool or REST calculator.
+Scenario and goal-lens calculations stay in the browser. Dated public snapshots
+are available at `/data/fourth-down.json`; the path model at
+`/data/fourth-down-paths.json`. There is no fourth-down MCP tool or REST calculator.

@@ -148,3 +148,40 @@ WP implementation, post-training validation, or empirical estimate of the
 frequency of true conversion probabilities below a cutoff. Model agreement is
 not statistical independence. Source and limits appear in the panel and Toto
 system instructions; preview values are in `scenario.publishedComparison`.
+
+## Goal lens (2026-10-10)
+
+`fourth-down-objectives.js` is a pure registry of objectives; `fourth-down-lens.js`
+renders the panel. The nfl4th numbers are unchanged: `calculate()` now also returns
+`lots` (every modelled outcome of each choice: probability, win probability after
+it, game seconds left, success flag) and `secondsLeft`. Both are **non-enumerable**
+so they stay out of `data/fourth-down.json`, object spreads and Toto's context.
+Touchdown lots split on the same extra-point/two-point choice the average assumes.
+
+All time-based goals are built from `share(clock, p, x, T, H)`. Adding a goal is
+an entry in `GOALS`: `{label, blurb, unit, path, weigh, params, score(lot, P, path,
+ref), describe(P)}`. `path.share(x)` and `path.shortfall(ref)` are the only two
+primitives a score needs. `weigh: 'time'` combines lots by the seconds they leave
+(occupancy goals); `'outcome'` by probability. `evaluate()` returns
+`available: false` with a reason instead of a number when the clock is missing or
+fewer than `abstain_below_seconds` remain, and `tooClose` when the edge is inside
+the held-out error.
+
+`tools/fourth-down-paths.py` measures realised clock shares from nflverse
+play-by-play, fits the information clock on 2016–2022, tests on 2023–2025 and
+writes `data/fourth-down-paths.json` (envelope, knots, errors by clock, horizon
+tests, calibration table, source hashes, reference integrals). It needs numpy,
+pandas and scipy, downloads about 185 MB, and is not scheduled or run in CI.
+`tests/test_fourth_down_paths.py` checks the measurement on a synthetic game and
+skips when those packages are absent. The node suite checks the JS integrals
+against the Python references to 1e-4.
+
+Page wiring is applied by the idempotent `work/patch-fourth-down-goal-lens.py`,
+which also restamps the page's asset keys, updates the css link pinned in
+`work/build_explore.py`, and rewrites the Fourth Down sentence in Toto's pasted
+MAP on every page that carries it. Shared links carry `goal`, `gp` and `gh`.
+
+Deliberately not built: a lens column on the weekly board (62 ms per decision in
+the browser is too slow to recompute a slate; it belongs in
+`tools/fourth-down-score.cjs` as stored per-goal calls), a fit of goals to
+observed coach decisions, a two-point calculator, and any score-based goal.
