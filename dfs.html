@@ -1084,6 +1084,8 @@ details.gear[open]>summary::before,#rarityCard[open]>summary::before,#legacyOwnF
 :root[data-theme="dark"] .labs-track{background:#344c54}:root[data-theme="dark"] .labs-track>span{background:#73cabc}
 @media(prefers-reduced-motion:reduce){.labs-welcome *,.labs-demo-session *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 </style>
+<link rel="stylesheet" href="dfs-atlas.css">
+<script src="dfs-atlas.js"></script>
 </head>
 
 
@@ -2730,11 +2732,31 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <p class="lab-sub">Explore a slate. Compare lineups. Understand the tradeoffs. Bring your projections or start with invented players; every simulation is a model, not a promise.</p>
 
 <section id="labsWelcome" class="card labs-welcome" aria-labelledby="labsWelcomeTitle">
-  <div><span class="labs-eyebrow">YOUR FIRST EXPERIMENT</span><h2 id="labsWelcomeTitle">From a slate to a clearer decision.</h2>
-  <p>Run a small experiment: build three lineups and compare simulated outcomes. No upload or account needed.</p>
-  <div class="btnrow"><button class="btn" id="labsDemo" type="button">Run the demo</button><button class="btn ghost" id="labsUpload" type="button">Use my CSV</button></div>
-  <p class="note" id="labsDemoStatus" role="status">Synthetic players and modelled outcomes. No real entries.</p></div>
-  <ol class="labs-path"><li><b>01 · Explore</b><span>Check players and assumptions</span></li><li><b>02 · Build</b><span>See what your constraints change</span></li><li><b>03 · Compare</b><span>Read probabilities, not promises</span></li></ol>
+  <div class="atlas-intro">
+    <div><div class="atlas-kicker"><span class="atlas-mark" aria-hidden="true"></span> DataDawgs / Field Notes 01</div>
+    <h2 id="labsWelcomeTitle">Find your angle.<br><em>Know the tradeoff.</em></h2></div>
+    <div class="atlas-intro-right"><p>Projection. Salary. Popularity. Put your lineup decisions in perspective. Every dot is a lineup you can inspect.</p>
+    <div class="btnrow"><button class="btn" id="labsDemo" type="button">Run the demo ↗</button><button class="btn ghost" id="labsUpload" type="button">Use my CSV</button></div>
+    <p id="labsDemoStatus" role="status">Synthetic players. Real calculations. No entries.</p></div>
+  </div>
+  <div class="atlas-workbench">
+    <div class="atlas-main">
+      <div class="atlas-topline"><span class="atlas-source" id="atlasSource">SYNTHETIC • INTERACTIVE SAMPLE</span><span class="atlas-count"><strong id="atlasCount">00</strong>lineups<br>in view</span></div>
+      <div class="atlas-chart-title"><h3>The lineup landscape</h3><div class="atlas-axis-switch" role="group" aria-label="Horizontal chart axis"><button id="atlasOwn" type="button" aria-pressed="true">Ownership</button><button id="atlasSalary" type="button" aria-pressed="false">Salary</button></div></div>
+      <div id="atlasPlot"></div>
+      <div class="atlas-legend"><span>Candidate lineup</span><span>Tradeoff boundary in this sample</span></div>
+      <p class="atlas-caption" id="atlasCaption"></p>
+      <div class="atlas-navigation"><button type="button" id="atlasPrev" aria-label="Previous lineup">←</button><label for="atlasSelect" class="atlas-sr">Inspect lineup</label><select id="atlasSelect"></select><button type="button" id="atlasNext" aria-label="Next lineup">→</button></div>
+      <span id="atlasSelectionStatus" class="atlas-sr" role="status" aria-live="polite"></span>
+    </div>
+    <aside class="atlas-inspector" aria-label="Selected lineup">
+      <header><div class="atlas-eyebrow">Under the hood / 01</div><h3 id="atlasLineup">Lineup 01</h3></header>
+      <div class="atlas-metric"><strong id="atlasProjection">—</strong><span>projected points</span></div>
+      <div class="atlas-secondary"><div><b id="atlasCost">—</b><span>Salary used</span></div><div><b id="atlasOwnership">—</b><span>Summed own.</span></div></div>
+      <div class="atlas-roster-wrap"><div class="atlas-eyebrow">Point contributions</div><ol id="atlasRoster"></ol></div>
+    </aside>
+  </div>
+  <details class="atlas-method"><summary>Read the chart · sources, limits &amp; the tradeoff boundary</summary><p id="atlasMethodNote"></p><p>Up is more projected points; left is less salary or lower summed ownership. The dashed segments are a visual guide, not additional feasible lineups. The boundary joins candidates for which no displayed lineup has both a higher projection and a lower horizontal value. It is only a boundary within this sample, not proof of an optimal lineup. Summed ownership is the sum of player ownership percentages, measured in percentage points (pp), and can exceed 100. It is a construction descriptor, not a probability, duplication estimate or measure of profit. Captain scoring uses the supplied captain projection, or 1.5× FLEX projection when absent; ownership is summed without a captain multiplier. Roster bars start at zero and share one scale within the selected lineup. Projections do not describe the full range of possible outcomes.</p></details>
 </section>
 <section class="card labs-demo-session" id="labsDemoSession" hidden aria-labelledby="labsDemoHeading">
   <h2 id="labsDemoHeading">Synthetic demo · nothing is saved</h2>
@@ -8014,6 +8036,7 @@ function renderStrip() {
 }
 
 function renderPool() {
+  if(window.DDFSAtlas) queueMicrotask(()=>DDFSAtlas.refresh());
   const t = $("poolTab"), empty = $("poolEmpty");
   if (!S.players.length) { t.innerHTML = ""; empty.hidden = false; return; }
   empty.hidden = true;
@@ -8064,6 +8087,7 @@ function finishDemo(message) {
   $("labsCancel").hidden = true; $("labsRestart").hidden = false;
   for (const el of document.querySelectorAll(".sheet")) el.inert = false;
   $("labsRestart").focus({preventScroll:true});
+  if(window.DDFSAtlas) DDFSAtlas.refresh();
 }
 function runDemo() {
   if (!DEMO_MODE || demoRunning) return;
@@ -8216,6 +8240,7 @@ function lineupSlots(l) {
 }
 
 function renderLineups() {
+  if(window.DDFSAtlas) queueMicrotask(()=>DDFSAtlas.refresh());
   const card = $("luCard"), list = $("luList");
   if (!S.lineups.length) { card.hidden = true; return; }
   card.hidden = false;
@@ -9311,11 +9336,11 @@ function show(name) {
   const btn = $("fsTabs").querySelector(`button[data-s="${name}"]`);
   if (btn && btn.disabled) name = "week";
   S.sheet = name; save();
-  $("labsWelcome").hidden = DEMO_MODE || name !== "week";
-  if (name === "week") renderWeekDash();
+  $("labsWelcome").hidden = !DEMO_MODE && name !== "week";
+  if (name === "week") { renderWeekDash(); if(window.DDFSAtlas) DDFSAtlas.refresh(); }
   SHEETS.forEach(s => { const n = $("sh-" + s); if (n) n.hidden = s !== name; });
   for (const b of $("fsTabs").querySelectorAll("button[data-s]")) { b.classList.toggle("on", b.dataset.s === name); b.setAttribute("aria-pressed", String(b.dataset.s === name)); }
-  $("labsDemoStatus").textContent = S.demo && S.lineups.length ? `${S.lineups.length} synthetic lineups built. Open Simulator to compare modelled outcomes.` : "Synthetic players and modelled outcomes. No real entries.";
+  $("labsDemoStatus").textContent = S.demo && S.lineups.length ? `${S.lineups.length} synthetic lineups built. Open Simulator to compare modelled outcomes.` : "Synthetic inputs. Run the demo for simulation.";
   if (location.hash.slice(1) !== (anchor || name)) history.replaceState(null, "", "#" + (anchor || name));
   if (anchor) requestAnimationFrame(() => $(anchor).scrollIntoView({block:"start"}));
   if (name === "exposure") renderExposure();
@@ -9330,6 +9355,7 @@ function show(name) {
 /* ---------------------------------------------------------------- wiring */
 
 function boot() {
+  if(window.DDFSAtlas) DDFSAtlas.connect(()=>({players:S.players,lineups:S.lineups,synthetic:!!S.demo,loading:demoRunning}));
   writeCfg();
   renderStrip(); renderPool(); renderSolveStats(); renderLineups();
   ensureSlateMeta();
@@ -9403,7 +9429,7 @@ function boot() {
   if (DEMO_MODE) {
     $("labsDemoSession").hidden = false;
     $("labsSetup").hidden = true;
-    $("labsWelcome").hidden = true;
+    $("labsWelcome").hidden = false;
     setTimeout(runDemo, 0);
   }
   $("dkLobbyGo").addEventListener("click", () => refreshDkLobby());

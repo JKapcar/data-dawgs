@@ -1,0 +1,37 @@
+const {chromium}=require(process.env.DD_NODE_MODULES?require('path').join(process.env.DD_NODE_MODULES,'playwright'):'playwright');
+const fs=require('fs'),http=require('http'),path=require('path'),assert=require('assert/strict');
+const root=path.resolve(__dirname,'..'),output=process.env.DDFS_SCREENSHOTS||path.join(require('os').tmpdir(),'dfs-atlas-qa');
+const server=http.createServer((req,res)=>{const p=path.resolve(root,'.'+decodeURIComponent(req.url.split('?')[0]));if(!p.startsWith(root+path.sep)||!fs.existsSync(p)){res.writeHead(404);return res.end();}res.setHeader('Content-Type',p.endsWith('.css')?'text/css':p.endsWith('.js')?'text/javascript':p.endsWith('.html')?'text/html':'application/octet-stream');res.end(fs.readFileSync(p));});
+(async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;const browser=await chromium.launch({headless:true,executablePath:process.env.DD_CHROMIUM||undefined});fs.mkdirSync(output,{recursive:true});
+for(const [size,width,height] of [['desktop',1440,1050],['mobile',390,844],['small',360,800]])for(const theme of ['light','dark']){const name=size+'-'+theme;
+ const c=await browser.newContext({viewport:{width,height},isMobile:width<700,hasTouch:width<700,serviceWorkers:'block',reducedMotion:'reduce'}),page=await c.newPage(),errors=[];
+ await c.addInitScript(theme=>{localStorage.setItem('dd-theme3-dfs',theme);localStorage.setItem('dd-theme3',theme);},theme);page.on('pageerror',e=>errors.push(e.message));await page.route('**/*',r=>r.request().url().startsWith(base+'/')?r.continue():r.fulfill({status:503,body:'{}',contentType:'application/json'}));
+ await page.goto(base+'/dfs.html?resume=1');await page.waitForSelector('#atlasPlot svg');
+ await page.screenshot({path:path.join(output,`${name}-overview.png`),fullPage:false});
+ await page.locator('#labsWelcome').screenshot({path:path.join(output,`${name}-atlas.png`)});
+ await page.locator('[data-atlas-point]').last().locator('.atlas-hit').click();assert.equal(await page.locator('#atlasLineup').innerText(),'Lineup 29');const first=await page.locator('#atlasLineup').innerText();await page.locator('#atlasNext').click();assert.notEqual(await page.locator('#atlasLineup').innerText(),first);
+ await page.locator('#atlasSalary').click();assert.equal(await page.locator('#atlasSalary').getAttribute('aria-pressed'),'true');
+ await page.locator('#atlasSelect').selectOption('3');assert.equal(await page.locator('#atlasLineup').innerText(),'Lineup 04');
+ await page.locator('#atlasOwn').click();await page.locator('#atlasNext').focus();await page.keyboard.press('Enter');assert.equal(await page.locator('#atlasLineup').innerText(),'Lineup 05');
+ const sum=await page.locator('#atlasRoster b').allTextContents(),total=Number(await page.locator('#atlasProjection').innerText());assert.ok(Math.abs(sum.reduce((a,b)=>a+Number(b),0)-total)<.11);
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);
+ console.log(name,JSON.stringify({count:await page.locator('#atlasCount').innerText(),errors,contributionSum:total,overflow:false}));await c.close();
+}
+const c=await browser.newContext({serviceWorkers:'block'}),page=await c.newPage();
+await page.route('**/*',r=>r.request().url().startsWith(base+'/')?r.continue():r.fulfill({status:503,body:'{}',contentType:'application/json'}));
+await page.goto(base+'/dfs.html?resume=1');await page.waitForSelector('#atlasPlot svg');await page.waitForFunction(()=>localStorage.getItem('dd-dfs-v1'));
+const players=Array.from({length:6},(_,i)=>({name:i?'Synthetic '+i:'<img src=x onerror=alert(1)>',pos:'WR',team:i%2?'AAA':'BBB',proj:10,sal:6000,own:10,...(i?{}:{cptProj:30,cptSal:9000})}));
+await page.evaluate(players=>{const s=JSON.parse(localStorage.getItem('dd-dfs-v1'));Object.assign(s,{players,lineups:[{ids:[0,1,2,3,4,5],cpt:0,proj:80,sal:39000}],site:'dk_showdown',sheet:'week'});localStorage.setItem('dd-dfs-v1',JSON.stringify(s));},players);
+await page.reload();assert.equal(await page.locator('#atlasProjection').innerText(),'80.0');assert.equal(await page.locator('#atlasCost').innerText(),'$39,000');assert.equal(await page.locator('#atlasOwnership').innerText(),'60 pp');assert.equal(await page.locator('#atlasRoster img').count(),0);
+assert.match(await page.locator('#atlasSource').innerText(),/YOUR WORKSPACE/);
+await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('dd-dfs-v1'));s.players[0].own=null;localStorage.setItem('dd-dfs-v1',JSON.stringify(s));});await page.reload();assert.equal(await page.locator('#atlasOwn').isDisabled(),true);assert.equal(await page.locator('#atlasSalary').getAttribute('aria-pressed'),'true');
+await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('dd-dfs-v1'));s.players[1].proj=null;localStorage.setItem('dd-dfs-v1',JSON.stringify(s));});await page.reload();assert.match(await page.locator('#atlasPlot').innerText(),/Complete player projections/);assert.equal(await page.locator('#atlasNext').isDisabled(),true);assert.equal(await page.locator('#atlasProjection').innerText(),'—');
+// Hand-calculated candidates: B dominates A and D on ownership; C dominates all on salary.
+await page.evaluate(()=>{const players=Array.from({length:5},()=>({name:'Synthetic base',pos:'WR',proj:10,sal:6000,own:10}));players.push(...[{proj:10,sal:6000,own:10},{proj:12,sal:5000,own:8},{proj:14,sal:3400,own:20},{proj:12,sal:5500,own:9}].map((p,i)=>({name:'Synthetic '+i,pos:'WR',...p})));const lineups=[5,6,7,8].map(i=>({ids:[0,1,2,3,4,i]}));window.DDFSAtlas.connect(()=>({players,lineups,synthetic:true}));});
+await page.locator('#atlasOwn').click();
+const boundary=()=>page.locator('.atlas-front').getAttribute('d');
+assert.equal(((await boundary()).match(/L/g)||[]).length,1,'B and C are the two ownership nondominated vertices');
+assert.deepEqual(await page.evaluate(()=>{const d=document.querySelector('.atlas-front').getAttribute('d').match(/[-\d.]+/g).map(Number);return [1,2].map((i,k)=>{const dot=document.querySelector(`[data-atlas-point="${i}"] .atlas-dot`);return Math.abs(d[2*k]-Number(dot.getAttribute('cx')))<1e-8&&Math.abs(d[2*k+1]-Number(dot.getAttribute('cy')))<1e-8;});}),[true,true]);
+await page.locator('#atlasSalary').click();assert.equal(((await boundary()).match(/L/g)||[]).length,0,'C alone is salary nondominated');
+console.log('PASS: hand-calculated ownership and salary nondominance');
+console.log('PASS: captain overrides, exact aggregate metrics, inert names, missing ownership, missing projections');await c.close();await browser.close();server.close();})().catch(e=>{console.error(e);server.close();process.exit(1)});
