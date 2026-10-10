@@ -55,5 +55,6 @@ jobs:
       - run: node work/test-bozo-sim.mjs
       - run: node work/test-bozo-clv-pipes.mjs
       - run: node work/test-bozo-override.mjs
+      - run: node work/test-ops-health.mjs
       - run: node work/test-survivor-pipeline.mjs
       - run: node tools/validate-data.js
