@@ -289,9 +289,9 @@
   }
  },
  "counts": {
-  "surfaces": 24,
+  "surfaces": 25,
   "with_live_machine_access": 19,
-  "with_no_machine_access": 5,
+  "with_no_machine_access": 6,
   "mcp_tools_registered": 68,
   "mcp_tools_live": 68,
   "mcp_tools_staged": 0,
@@ -1243,6 +1243,23 @@
     }
    ],
    "planned": [],
+   "tier": "labs"
+  },
+  {
+   "id": "data-explorer",
+   "domain": "data",
+   "name": "Data Explorer — SQL + charts over /data",
+   "page": "/explore.html",
+   "machine": [],
+   "reading": [
+    {
+     "url": "/explore.html",
+     "title": "Data Explorer (DuckDB-Wasm SQL + chart builder)",
+     "covers": "In-browser DuckDB-Wasm SQL over the public /data JSON (EPA, nfelo, schedule, receipts, 538 Classic, CFB efficiency and teams, player pool, dynasty ranks), with starter queries, CSV/JSON export, and a chart builder (sorted bar, horizontal bar, line, scatter, table) with PNG and share-link output. Every result and chart cites its file and as_of. Pure query: no forecasts, no blends. No public closing-market line exists for an nfelo-vs-close query."
+    }
+   ],
+   "planned": [],
+   "gap": "No machine surface of its own, by design: an agent should fetch the cited /data/*.json files directly. No MCP query tool.",
    "tier": "labs"
   },
   {
