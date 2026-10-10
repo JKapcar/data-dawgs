@@ -577,3 +577,80 @@ test('near-close runs only near a kickoff, keeps the latest pre-kick capture, an
   assert.equal(flip.spread.alternates.map(a => a.home_line).join(','), '2.5,7.5');
   assert.equal(flip.total.line, 52.5);
 });
+
+test('score diagnostics survive throttled reads, preserve finals, and clear on real recovery', async()=>{
+ const r=scoreRig([clemsonFinal]);
+ const first=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow);
+ const fetchedAt=first.fetchedAt, games=JSON.stringify(first.games);
+ context.bozoOddsApiRequest=async()=>{throw Object.assign(Error('private apiKey fixture'),{
+  code:'provider_error',failureKind:'http_error',httpStatus:401,quota:{'x-requests-remaining':0},body:'private provider body'});};
+ const failed=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow+86400_000);
+ assert.deepEqual(JSON.parse(JSON.stringify(failed.diagnostic)),{kind:'http_error',httpStatus:401});
+ assert.equal(failed.fetchedAt,fetchedAt);assert.equal(JSON.stringify(failed.games),games);
+ assert.equal(failed.quotaRemaining,0);assert.ok(!JSON.stringify(failed).includes('private'));
+ const cached=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow+86400_000+300_000);
+ assert.equal(cached.diagnostic.httpStatus,401);
+ context.bozoOddsApiRequest=async()=>({data:[],fetchedAt:new Date(scoreNow+2*86400_000).toISOString(),quota:{'x-requests-remaining':2000}});
+ const recovered=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow+2*86400_000);
+ assert.equal(recovered.diagnostic,null);assert.equal(recovered.error,null);assert.equal(recovered.errorCode,null);
+ assert.equal(JSON.stringify(recovered.games),games);
+});
+test('score schema errors retain safe diagnostics and successful-response quota without inventing finals', async()=>{
+ const r=scoreRig([]);
+ context.bozoOddsApiRequest=async()=>({data:{error:'secret provider body'},httpStatus:200,fetchedAt:new Date(scoreNow).toISOString(),quota:{'x-requests-remaining':125}});
+ const out=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow);
+ assert.equal(out.errorCode,'provider_error');assert.equal(out.diagnostic.kind,'invalid_response');
+ assert.equal(out.diagnostic.httpStatus,200);assert.equal(out.quotaRemaining,125);
+ assert.equal(out.games.length,0);assert.equal(out.fetchedAt,null);assert.ok(!JSON.stringify(out).includes('secret'));
+});
+test('public score diagnostics are allowlisted, omit quotas and do not guess legacy causes', async()=>{
+ context.SEASON=2026;context.json=(body,status,headers)=>Response.json(body,{status,headers});
+ vm.runInContext(sliceBetween('async function handleScores(', '/* ================================== /tts')+'this.publicScores=handleScores;',context);
+ const r=scoreRig([]);
+ r.store.set('schedule:cfb:2026',{source:'fixture',fetchedAt:new Date(scoreNow).toISOString(),games:[]});
+ for(const diagnostic of [undefined,{kind:'http_error',httpStatus:503,secret:'not-public'},
+   {kind:'private provider URL',httpStatus:401},{kind:'network_error',httpStatus:'private status'}]) {
+  r.store.set('bozo:score-finals:cfb:2026',{games:[],errorCode:'provider_error',quotaRemaining:4321,diagnostic});
+  const out=await (await context.publicScores(new URL('https://fixture.invalid/scores?sport=cfb'),r.env,{})).json();
+  const serialized=JSON.stringify(out.feeds);
+  assert.ok(!serialized.includes('4321'));assert.ok(!serialized.includes('private'));assert.ok(!serialized.includes('secret'));
+  if(diagnostic?.kind==='http_error')assert.deepEqual(out.feeds.finals.diagnostic,{kind:'http_error',httpStatus:503});
+  else if(diagnostic?.kind==='network_error')assert.deepEqual(out.feeds.finals.diagnostic,{kind:'network_error',httpStatus:null});
+  else assert.equal(out.feeds.finals.diagnostic,null);
+ }
+});
+
+test('direct grading fallback obeys the same daily score cap and resumes on the next UTC day', async()=>{
+ const r=scoreRig([clemsonFinal]);
+ const key='bozo:score-finals:cfb:2026', day=new Date(scoreNow).toISOString().slice(0,10);
+ const previous={games:[],checkedAt:null,fetchedAt:null,calls:{day,n:150},error:'score_fallback_unavailable',errorCode:'provider_error',
+  diagnostic:{kind:'http_error',httpStatus:503}};
+ r.store.set(key,previous);
+ const skipped=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow);
+ assert.equal(r.calls.length,0);assert.equal(skipped.calls.n,150);assert.equal(skipped.checkedAt,null);
+ assert.equal(skipped.errorCode,'provider_error');assert.equal(skipped.diagnostic.httpStatus,503);
+ assert.equal(r.store.get(key),previous,'a capped read writes no false success or new attempt');
+ const nextDay=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow+86400_000);
+ assert.equal(r.calls.length,1);assert.equal(nextDay.calls.n,1);assert.equal(nextDay.errorCode,null);
+});
+
+test('an exhausted daily score cap still grades verified archived finals and leaves new finals pending', async()=>{
+ const r=scoreRig([]), day=new Date(scoreNow).toISOString().slice(0,10);
+ const finals=api.bozoNormalizeOddsScores('cfb',[clemsonFinal],new Date(scoreNow).toISOString());
+ r.store.set('bozo:score-finals:cfb:2026',{games:finals,checkedAt:null,calls:{day,n:150},fetchedAt:new Date(scoreNow).toISOString()});
+ const out=await api.bozoGradeFromScheduleKv(r.env,{season:2026,picks:{
+  A:finalPick('CLEM @ CAL','ml','CLEM'),B:finalPick('NU @ IU','total','over',45.5)}});
+ assert.equal(out.results.A.result,'won');assert.equal(out.results.A.gradeSource,'the-odds-api');
+ assert.equal(out.results.B,undefined);assert.equal(out.pending.length,1);assert.equal(out.pending[0].key,'B');
+ assert.equal(r.calls.length,0);assert.equal(r.store.get('bozo:score-finals:cfb:2026').games.length,1);
+});
+
+test('malformed score arrays preserve response metadata and do not invent a missing HTTP status', async()=>{
+ for(const httpStatus of [undefined,201]) {
+  const r=scoreRig([]);
+  context.bozoOddsApiRequest=async()=>({data:[null],httpStatus,quota:{'x-requests-remaining':0},fetchedAt:new Date(scoreNow).toISOString()});
+  const out=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow);
+  assert.equal(out.diagnostic.kind,'invalid_response');assert.equal(out.diagnostic.httpStatus,httpStatus??null);
+  assert.equal(out.quotaRemaining,0);assert.equal(out.games.length,0);assert.equal(out.fetchedAt,null);
+ }
+});

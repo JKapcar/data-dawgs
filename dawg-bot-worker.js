@@ -2304,6 +2304,7 @@ async function handleScores(url, env, cors) {
       schedule: { source: doc.source, changedAt: doc.fetchedAt || null },
       finals: finals ? { source: "the-odds-api", checkedAt: finals.checkedAt || null,
         fetchedAt: finals.fetchedAt || null, error: finals.errorCode || finals.error || null,
+        diagnostic: bozoScoreDiagnostic(finals.diagnostic),
         games: Array.isArray(finals.games) ? finals.games.length : 0 } : null,
     },
   }), {
@@ -8690,7 +8691,7 @@ function bozoOddsApiQuote(ev, p, registry) {
   return {reason:"exact two-sided DraftKings line missing",code:"market_missing"};
 }
 async function bozoOddsApiRequest(env, path, params, options = {}) {
-  const fault = (code,message)=>Object.assign(new Error(message),{code});
+  const fault = (code,message,diagnostic = {})=>Object.assign(new Error(message),{code, ...diagnostic});
   const url = new URL("https://api.the-odds-api.com/v4/" + path);
   for (const [k,v] of Object.entries(params)) url.searchParams.set(k,String(v));
   // Cache keys never contain the credential. Keep provider timestamps on cache hits.
@@ -8700,7 +8701,7 @@ async function bozoOddsApiRequest(env, path, params, options = {}) {
   url.searchParams.set("apiKey",env.ODDS_API_KEY);
   const controller = new AbortController();
   const remaining = Math.min(4000, (options.deadline || Date.now()+4000)-Date.now());
-  if (remaining <= 0) throw fault("timeout","Odds API capture timed out");
+  if (remaining <= 0) throw fault("timeout","Odds API capture timed out",{failureKind:"timeout"});
   let timer;
   try {
     const result = await Promise.race([(async()=>{
@@ -8712,12 +8713,24 @@ async function bozoOddsApiRequest(env, path, params, options = {}) {
       }
       console.log("bozo-odds-api",JSON.stringify({status:response.status,...quota}));
       // The quota rides on a refusal too: an exhausted account still reports what is left.
-      if (!response.ok) throw Object.assign(fault(response.status===429?"rate_limited":"provider_error","Odds API HTTP "+response.status),{quota});
-      return {data:await response.json(),fetchedAt:new Date().toISOString(),quota};
-    })(),new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(fault("timeout","Odds API capture timed out"));},remaining);})]);
+      if (!response.ok) throw fault(response.status===429?"rate_limited":"provider_error","Odds API HTTP "+response.status,
+        {quota, httpStatus:response.status, failureKind:"http_error"});
+      let data;
+      try { data = await response.json(); }
+      catch { throw fault("provider_error","Odds API returned invalid JSON",
+        {quota, httpStatus:response.status, failureKind:"invalid_response"}); }
+      return {data,fetchedAt:new Date().toISOString(),quota,httpStatus:response.status};
+    })(),new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(fault("timeout","Odds API capture timed out",{failureKind:"timeout"}));},remaining);})]);
     if(cache) { try { await cache.put(cacheKey,new Response(JSON.stringify(result),{headers:{"content-type":"application/json","cache-control":"public, max-age="+(options.ttl || 30)}})); } catch {} }
     return result;
-  } catch(e) { throw e.code ? e : fault("provider_error","Odds API request failed"); }
+  } catch(e) {
+    // Fetch errors can carry the credential-bearing request URL. Only our fixed faults
+    // cross this boundary; neither native messages nor provider response bodies escape.
+    if (["http_error","invalid_response","timeout"].includes(e && e.failureKind) &&
+        ["provider_error","rate_limited","timeout"].includes(e && e.code)) throw e;
+    throw controller.signal.aborted ? fault("timeout","Odds API capture timed out",{failureKind:"timeout"})
+      : fault("provider_error","Odds API request failed",{failureKind:"network_error"});
+  }
   finally { clearTimeout(timer); }
 }
 async function bozoOddsApiCapture(env,p,registry,options = {}) {
@@ -9810,6 +9823,14 @@ function bozoScheduledOutcome(pick, game) {
 // Independent of the research CSVs: the existing Odds API account carries NFL/CFB
 // finals. Keep a season archive because its endpoint only returns the last three days.
 const bozoScoreArchiveKey = (sport, season) => `bozo:score-finals:${sport}:${season}`;
+// An allowlist at both storage and public output: no raw message, URL, provider body,
+// account details or credit balance. Legacy archives have no diagnostic, not a guessed cause.
+function bozoScoreDiagnostic(value) {
+  if (!value || !["http_error", "network_error", "invalid_response", "timeout"].includes(value.kind)) return null;
+  const httpStatus = Number.isInteger(value.httpStatus) && value.httpStatus >= 100 && value.httpStatus <= 599
+    ? value.httpStatus : null;
+  return { kind: value.kind, httpStatus };
+}
 /* ⚠️ THIS IS THE LIVE HALF OF THE SCORE FEED, NOT A BACKUP. cfbfastR-data publishes its
    schedule CSV from four cron slots a week (Sat 16:00 and 20:15 UTC, Sun and Mon 06:30 UTC,
    Sep–Dec — its .github/workflows/daily_cfb.yml), so a Tuesday–Friday game has no score
@@ -9971,17 +9992,24 @@ async function bozoFallbackScores(env, sport, season, nowMs = Date.now(), option
     : bozoScoreRefreshInterval(previous) - 60000;
   const saved = { source: "the-odds-api", fetchedAt: previous?.fetchedAt || null,
     checkedAt: previous?.checkedAt || null, games: previous?.games || [],
-    quotaRemaining: previous?.quotaRemaining ?? null, calls: previous?.calls || null };
+    quotaRemaining: previous?.quotaRemaining ?? null, calls: previous?.calls || null,
+    diagnostic: bozoScoreDiagnostic(previous?.diagnostic) };
   const age = nowMs - Date.parse(previous?.checkedAt || "");
-  if (!env.ODDS_API_KEY || (age >= 0 && age < minAgeMs))
-    return { ...saved, error: previous?.error || null, errorCode: previous?.errorCode || null };
   const day = new Date(nowMs).toISOString().slice(0, 10);
+  // The grader also calls this shared function: enforcing the cap only in the cron
+  // lets grading spend beyond it. A skipped call never advances the attempt timestamp.
+  const capped = saved.calls && saved.calls.day === day && Number(saved.calls.n) >= BOZO_SCORE_DAILY_CAP;
+  if (!env.ODDS_API_KEY || capped || (age >= 0 && age < minAgeMs))
+    return { ...saved, error: previous?.error || null, errorCode: previous?.errorCode || null };
   const calls = { day, n: (saved.calls && saved.calls.day === day ? Number(saved.calls.n) || 0 : 0) + 1 };
   let next;
   try {
     const response = await bozoOddsApiRequest(env, `sports/${BOZO_ODDS_API_SPORT[sport]}/scores`,
       { daysFrom: 3, dateFormat: "iso" }, { ttl: 60 });
-    const games = bozoNormalizeOddsScores(sport, response.data, response.fetchedAt);
+    let games;
+    try { games = bozoNormalizeOddsScores(sport, response.data, response.fetchedAt); }
+    catch { throw Object.assign(new Error("Score provider returned an invalid scores response"),
+      {code:"provider_error", failureKind:"invalid_response", httpStatus:response.httpStatus, quota:response.quota}); }
     // Identity is the provider's event id: canonicalKey embeds the registry, which changes.
     const id = g => g.providerEventId || g.canonicalKey;
     const merged = new Map(saved.games.map(g => [id(g), g]));
@@ -9992,7 +10020,7 @@ async function bozoFallbackScores(env, sport, season, nowMs = Date.now(), option
     }
     const remaining = response.quota && response.quota["x-requests-remaining"];
     next = { ...saved, fetchedAt: response.fetchedAt, checkedAt: new Date(nowMs).toISOString(),
-      games: [...merged.values()], error: null, errorCode: null, calls,
+      games: [...merged.values()], error: null, errorCode: null, diagnostic: null, calls,
       quotaRemaining: Number.isFinite(remaining) ? remaining : saved.quotaRemaining };
   } catch (e) {
     // Never store provider error bodies/URLs, which can contain credentials. The code is
@@ -10001,6 +10029,7 @@ async function bozoFallbackScores(env, sport, season, nowMs = Date.now(), option
     next = { ...saved, checkedAt: new Date(nowMs).toISOString(), calls,
       error: "score_fallback_unavailable",
       errorCode: ["rate_limited", "timeout"].includes(e && e.code) ? e.code : "provider_error",
+      diagnostic: bozoScoreDiagnostic({kind:e && e.failureKind, httpStatus:e && e.httpStatus}),
       quotaRemaining: Number.isFinite(remaining) ? remaining : saved.quotaRemaining };
   }
   try { await env.RL?.put(key, JSON.stringify(next)); } catch {}
