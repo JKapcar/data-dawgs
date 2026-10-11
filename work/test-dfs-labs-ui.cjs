@@ -6,7 +6,7 @@ const root=path.resolve(__dirname,'..'),screenshots=process.env.DDFS_SCREENSHOTS
 const server=http.createServer((req,res)=>{
  const file=path.resolve(root,'.'+decodeURIComponent(req.url.split('?')[0]));
  if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.writeHead(404);res.end();return;}
- res.setHeader('Content-Type',file.endsWith('.js')?'text/javascript':file.endsWith('.html')?'text/html':'application/json');res.end(fs.readFileSync(file));
+ res.setHeader('Content-Type',file.endsWith('.css')?'text/css':file.endsWith('.js')?'text/javascript':file.endsWith('.html')?'text/html':'application/json');res.end(fs.readFileSync(file));
 });
 const classic=()=>['QB','QB','RB','RB','RB','RB','WR','WR','WR','WR','WR','WR','TE','TE','TE','TE','DST','DST'].map((pos,i)=>({name:'Synthetic Player '+i,pos,team:i%2?'AAA':'BBB',opp:i%2?'BBB':'AAA',gid:i<9?'AAA@BBB':'CCC@DDD',sal:5400,proj:10+i/3,ceil:20+i,own:10,dkId:'D'+i}));
 const showdown=()=>Array.from({length:12},(_,i)=>({name:'Synthetic Showdown '+i,pos:['QB','WR','RB','TE','K','DST'][i%6],team:i<6?'AAA':'BBB',opp:i<6?'BBB':'AAA',gid:'AAA@BBB',sal:6000+i*100,proj:10+i/2,ceil:25+i,own:50,cptOwn:100/12,flexOwn:500/12,dkId:'D'+i,cptId:'C'+i}));
