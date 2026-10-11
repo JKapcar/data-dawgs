@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-10",
+ "as_of": "2026-10-11",
  "source": "Data Dawgs public Bozo Menu (Worker /bozo/menu.json) graded against Worker /scores finals and DraftKings near-closes (SportsGameOdds).",
  "tier": "labs",
  "graded": true,
@@ -15,24 +15,24 @@
    "close": "clv_points and close MAE are measured against the DraftKings near-close"
   },
   "menu": {
-   "n_graded": 7,
-   "wins": 5,
-   "losses": 2,
+   "n_graded": 55,
+   "wins": 33,
+   "losses": 22,
    "pushes": 1,
-   "hit_rate": 0.7143,
+   "hit_rate": 0.6,
    "hit_wilson90": [
-    0.4087,
-    0.9004
+    0.4891,
+    0.7015
    ],
    "clv_points": {
-    "n": 13,
-    "mean": 0.962
+    "n": 42,
+    "mean": 0.5
    },
    "close_fair_prob_at_line": {
-    "n": 9,
-    "mean": 0.5904
+    "n": 29,
+    "mean": 0.5417
    },
-   "verdict": "insufficient (n=7 < 30)"
+   "verdict": "rankable"
   },
   "scratched_for_the_record": {
    "n_graded": 1,
@@ -58,88 +58,91 @@
    {
     "source": "blend (1/3 PFF + 1/3 SP+ + 1/3 DRatings)",
     "claims": 34,
-    "n_graded": 4,
-    "wins": 4,
-    "losses": 0,
+    "n_graded": 33,
+    "wins": 19,
+    "losses": 14,
     "pushes": 1,
-    "hit_rate": 1,
+    "hit_rate": 0.5758,
     "hit_wilson90": [
-     0.5965,
-     1
+     0.4338,
+     0.7062
     ],
     "clv_points": {
-     "n": 8,
-     "mean": 0.75
+     "n": 28,
+     "mean": 0.482
     },
     "close_fair_prob_at_line": {
-     "n": 4,
-     "mean": 0.4986
+     "n": 20,
+     "mean": 0.511
     },
-    "verdict": "insufficient (n=4 < 30)",
+    "verdict": "rankable",
     "margin": {
-     "n": 5,
-     "mae": 5.26,
-     "bias": -1.74,
+     "n": 34,
+     "mae": 11.756,
+     "bias": 3.503,
      "close_mae_same_games": {
-      "n": 0,
-      "mae": null
+      "n": 28,
+      "mae": 11.821
      }
     }
    },
    {
     "source": "DRatings totals",
     "claims": 22,
-    "n_graded": 3,
-    "wins": 1,
-    "losses": 2,
+    "n_graded": 18,
+    "wins": 11,
+    "losses": 7,
     "pushes": 0,
-    "hit_rate": 0.3333,
+    "hit_rate": 0.6111,
     "hit_wilson90": [
-     0.0783,
-     0.7465
+     0.4198,
+     0.7734
     ],
     "clv_points": {
-     "n": 5,
-     "mean": 1.3
+     "n": 14,
+     "mean": 0.536
     },
     "close_fair_prob_at_line": {
-     "n": 2,
-     "mean": 0.5424
+     "n": 5,
+     "mean": 0.4968
     },
-    "verdict": "insufficient (n=3 < 30)",
+    "verdict": "insufficient (n=18 < 30)",
     "total": {
-     "n": 3,
-     "mae": 8.233,
-     "bias": 8.233,
+     "n": 18,
+     "mae": 11.078,
+     "bias": 0.478,
      "close_mae_same_games": {
-      "n": 0,
-      "mae": null
+      "n": 14,
+      "mae": 12.643
      }
     }
    },
    {
     "source": "DRatings win probability",
     "claims": 7,
-    "n_graded": 0,
-    "wins": 0,
-    "losses": 0,
+    "n_graded": 4,
+    "wins": 3,
+    "losses": 1,
     "pushes": 0,
-    "hit_rate": null,
-    "hit_wilson90": null,
+    "hit_rate": 0.75,
+    "hit_wilson90": [
+     0.3562,
+     0.9421
+    ],
     "clv_points": {
      "n": 0,
      "mean": null
     },
     "close_fair_prob_at_line": {
-     "n": 3,
-     "mean": 0.7448
+     "n": 4,
+     "mean": 0.7515
     },
-    "verdict": "insufficient (n=0 < 30)",
+    "verdict": "insufficient (n=4 < 30)",
     "probability": {
-     "n": 0,
-     "brier": null,
-     "log_loss": null,
-     "calibration": "insufficient (n=0 < 30)"
+     "n": 4,
+     "brier": 0.2038,
+     "log_loss": 0.6126,
+     "calibration": "insufficient (n=4 < 30)"
     }
    },
    {
@@ -155,12 +158,15 @@
   ],
   "edge_buckets": {
    "percentage_points: 3-5": {
-    "n_graded": 0,
-    "wins": 0,
+    "n_graded": 1,
+    "wins": 1,
     "losses": 0,
     "pushes": 0,
-    "hit_rate": null,
-    "hit_wilson90": null,
+    "hit_rate": 1,
+    "hit_wilson90": [
+     0.2699,
+     1
+    ],
     "clv_points": {
      "n": 0,
      "mean": null
@@ -169,7 +175,7 @@
      "n": 1,
      "mean": 0.7335
     },
-    "verdict": "insufficient (n=0 < 30)"
+    "verdict": "insufficient (n=1 < 30)"
    },
    "percentage_points: 5+": {
     "n_graded": 0,
@@ -189,85 +195,88 @@
     "verdict": "insufficient (n=0 < 30)"
    },
    "percentage_points: <3": {
-    "n_graded": 0,
-    "wins": 0,
-    "losses": 0,
+    "n_graded": 3,
+    "wins": 2,
+    "losses": 1,
     "pushes": 0,
-    "hit_rate": null,
-    "hit_wilson90": null,
+    "hit_rate": 0.6667,
+    "hit_wilson90": [
+     0.2535,
+     0.9217
+    ],
     "clv_points": {
      "n": 0,
      "mean": null
     },
     "close_fair_prob_at_line": {
-     "n": 2,
-     "mean": 0.7505
+     "n": 3,
+     "mean": 0.7575
     },
-    "verdict": "insufficient (n=0 < 30)"
+    "verdict": "insufficient (n=3 < 30)"
    },
    "points: 3-5": {
-    "n_graded": 4,
-    "wins": 2,
-    "losses": 2,
+    "n_graded": 16,
+    "wins": 9,
+    "losses": 7,
     "pushes": 0,
-    "hit_rate": 0.5,
+    "hit_rate": 0.5625,
     "hit_wilson90": [
-     0.1824,
-     0.8176
+     0.3646,
+     0.7423
     ],
     "clv_points": {
-     "n": 4,
-     "mean": 0.625
-    },
-    "close_fair_prob_at_line": {
-     "n": 3,
-     "mean": 0.5121
-    },
-    "verdict": "insufficient (n=4 < 30)"
-   },
-   "points: 5+": {
-    "n_graded": 2,
-    "wins": 2,
-    "losses": 0,
-    "pushes": 1,
-    "hit_rate": 1,
-    "hit_wilson90": [
-     0.425,
-     1
-    ],
-    "clv_points": {
-     "n": 3,
+     "n": 12,
      "mean": 0
     },
     "close_fair_prob_at_line": {
-     "n": 1,
-     "mean": 0.4581
+     "n": 9,
+     "mean": 0.499
     },
-    "verdict": "insufficient (n=2 < 30)"
+    "verdict": "insufficient (n=16 < 30)"
    },
-   "points: <3": {
-    "n_graded": 1,
-    "wins": 1,
-    "losses": 0,
-    "pushes": 0,
-    "hit_rate": 1,
+   "points: 5+": {
+    "n_graded": 11,
+    "wins": 6,
+    "losses": 5,
+    "pushes": 1,
+    "hit_rate": 0.5455,
     "hit_wilson90": [
-     0.2699,
-     1
+     0.3151,
+     0.7579
     ],
     "clv_points": {
-     "n": 6,
-     "mean": 1.667
+     "n": 8,
+     "mean": 0.625
     },
     "close_fair_prob_at_line": {
-     "n": 2,
-     "mean": 0.5424
+     "n": 4,
+     "mean": 0.4997
     },
-    "verdict": "insufficient (n=1 < 30)"
+    "verdict": "insufficient (n=11 < 30)"
+   },
+   "points: <3": {
+    "n_graded": 24,
+    "wins": 15,
+    "losses": 9,
+    "pushes": 0,
+    "hit_rate": 0.625,
+    "hit_wilson90": [
+     0.4577,
+     0.7669
+    ],
+    "clv_points": {
+     "n": 22,
+     "mean": 0.727
+    },
+    "close_fair_prob_at_line": {
+     "n": 12,
+     "mean": 0.5179
+    },
+    "verdict": "insufficient (n=24 < 30)"
    }
   }
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-10T17:52:32.009Z",
+ "built": "2026-10-11T12:54:51.175Z",
  "canonical_url": "https://datadawgs216.com/data/bozo-menu-scorecard.json"
 }

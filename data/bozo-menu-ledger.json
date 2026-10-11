@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-10",
+ "as_of": "2026-10-11",
  "source": "Data Dawgs public Bozo Menu (Worker /bozo/menu.json) graded against Worker /scores finals and DraftKings near-closes (SportsGameOdds).",
  "tier": "labs",
  "graded": true,
@@ -59,8 +59,8 @@
      "id": "401871066",
      "matched_by": "espn-id",
      "final": true,
-     "score_source": "the-odds-api",
-     "score_observed_at": "2026-10-08T08:56:44Z"
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
     "result": "win",
     "actual": {
@@ -121,8 +121,8 @@
      "id": "401870766",
      "matched_by": "espn-id",
      "final": true,
-     "score_source": "espn",
-     "score_observed_at": "2026-10-10T14:25:25.000Z"
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
     "result": "win",
     "actual": {
@@ -175,8 +175,8 @@
      "id": "401862794",
      "matched_by": "espn-id",
      "final": true,
-     "score_source": "espn",
-     "score_observed_at": "2026-10-10T14:25:25.000Z"
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
     "result": "push",
     "actual": {
@@ -228,8 +228,8 @@
      "id": "401862794",
      "matched_by": "teams+kickoff",
      "final": true,
-     "score_source": "espn",
-     "score_observed_at": "2026-10-10T14:25:25.000Z"
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
     "result": "win",
     "actual": {
@@ -285,7 +285,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-10T16:09:25.000Z"
+     "score_observed_at": "2026-10-11T12:09:25.000Z"
     },
     "result": "loss",
     "actual": {
@@ -345,8 +345,8 @@
      "id": "401860922",
      "matched_by": "espn-id",
      "final": true,
-     "score_source": "espn",
-     "score_observed_at": "2026-10-10T14:25:25.000Z"
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
     "result": "win",
     "actual": {
@@ -407,8 +407,8 @@
      "id": "401864519",
      "matched_by": "espn-id",
      "final": true,
-     "score_source": "espn",
-     "score_observed_at": "2026-10-10T14:25:25.000Z"
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
     "result": "win",
     "actual": {
@@ -460,8 +460,8 @@
      "id": "401860922",
      "matched_by": "teams+kickoff",
      "final": true,
-     "score_source": "espn",
-     "score_observed_at": "2026-10-10T14:25:25.000Z"
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
     "result": "loss",
     "actual": {
@@ -521,8 +521,8 @@
      "id": "401856826",
      "matched_by": "espn-id",
      "final": true,
-     "score_source": "espn",
-     "score_observed_at": "2026-10-10T14:25:25.000Z"
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
     "result": "win",
     "actual": {
@@ -582,12 +582,15 @@
     "game": {
      "id": "401856823",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "side_margin": 21,
+     "total": 83
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -603,7 +606,7 @@
      "close_fair_prob_at_published_line": null,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-indiana",
@@ -654,12 +657,15 @@
     "game": {
      "id": "401858481",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "loss",
+    "actual": {
+     "side_margin": 3,
+     "total": 37
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -678,7 +684,7 @@
      "close_fair_prob_at_published_line": 0.5212,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-pitt",
@@ -729,12 +735,15 @@
     "game": {
      "id": "401858256",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "loss",
+    "actual": {
+     "side_margin": -4,
+     "total": 38
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -750,7 +759,7 @@
      "close_fair_prob_at_published_line": null,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-ucf",
@@ -801,12 +810,15 @@
     "game": {
      "id": "401856824",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "loss",
+    "actual": {
+     "side_margin": -14,
+     "total": 70
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -825,7 +837,7 @@
      "close_fair_prob_at_published_line": 0.4581,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-202610-arizona-wvu-total-under",
@@ -867,12 +879,14 @@
     "game": {
      "id": "401856823",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "loss",
+    "actual": {
+     "total": 83
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -888,7 +902,7 @@
      "close_fair_prob_at_published_line": null,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-202610-bgsu-sac-moneyline",
@@ -931,12 +945,15 @@
     "game": {
      "id": "401866436",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "side_margin": 28,
+     "total": 48
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -955,7 +972,7 @@
      "close_fair_prob_at_published_line": 0.7335,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-202610-ind-neb-moneyline",
@@ -998,12 +1015,15 @@
     "game": {
      "id": "401858481",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "side_margin": 3,
+     "total": 37
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -1022,7 +1042,7 @@
      "close_fair_prob_at_published_line": 0.7409,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-202610-sac-bgsu-total-over",
@@ -1064,12 +1084,14 @@
     "game": {
      "id": "401866436",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "total": 48
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -1088,7 +1110,7 @@
      "close_fair_prob_at_published_line": 0.5171,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-202610-wake-ncsu-total-under",
@@ -1130,12 +1152,14 @@
     "game": {
      "id": "401858260",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "total": 52
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -1151,7 +1175,7 @@
      "close_fair_prob_at_published_line": null,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-ball-state",
@@ -1202,12 +1226,15 @@
     "game": {
      "id": "401858482",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "side_margin": -31,
+     "total": 59
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -1223,7 +1250,7 @@
      "close_fair_prob_at_published_line": null,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-202610-ball-nw-total-under",
@@ -1265,12 +1292,14 @@
     "game": {
      "id": "401858482",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "loss",
+    "actual": {
+     "total": 59
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -1286,7 +1315,7 @@
      "close_fair_prob_at_published_line": null,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-south-carolina",
@@ -1337,12 +1366,15 @@
     "game": {
      "id": "401856714",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "side_margin": 19,
+     "total": 57
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -1358,7 +1390,7 @@
      "close_fair_prob_at_published_line": null,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-202610-sc-florida-total-under",
@@ -1400,12 +1432,14 @@
     "game": {
      "id": "401856714",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "total": 57
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -1424,7 +1458,7 @@
      "close_fair_prob_at_published_line": 0.5677,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-old-dominion",
@@ -1475,12 +1509,15 @@
     "game": {
      "id": "401869843",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "side_margin": 7,
+     "total": 13
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -1499,7 +1536,7 @@
      "close_fair_prob_at_published_line": 0.5151,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-buffalo",
@@ -1550,15 +1587,34 @@
     "game": {
      "id": "401866437",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "side_margin": 15,
+     "total": 31
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T19:25:25.000Z",
+     "line": 18.5,
+     "price": -108,
+     "opp": -112,
+     "price_at_published_line": {
+      "mine": -124,
+      "theirs": -107
+     }
+    },
+    "clv": {
+     "points": 1,
+     "close_fair_prob_at_published_line": 0.5171,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-charlotte",
@@ -1609,15 +1665,34 @@
     "game": {
      "id": "401862796",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "side_margin": -40,
+     "total": 60
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T19:25:25.000Z",
+     "line": 27.5,
+     "price": -110,
+     "opp": -110,
+     "price_at_published_line": {
+      "mine": -110,
+      "theirs": -110
+     }
+    },
+    "clv": {
+     "points": 0,
+     "close_fair_prob_at_published_line": 0.5,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-navy",
@@ -1668,15 +1743,34 @@
     "game": {
      "id": "401862799",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "side_margin": 8,
+     "total": 60
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T19:25:25.000Z",
+     "line": -3,
+     "price": -112,
+     "opp": -108,
+     "price_at_published_line": {
+      "mine": -135,
+      "theirs": 102
+     }
+    },
+    "clv": {
+     "points": 0.5,
+     "close_fair_prob_at_published_line": 0.5371,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-stanford",
@@ -1727,15 +1821,34 @@
     "game": {
      "id": "401858257",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "side_margin": -51,
+     "total": 65
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T19:25:25.000Z",
+     "line": 40.5,
+     "price": -110,
+     "opp": -110,
+     "price_at_published_line": {
+      "mine": 115,
+      "theirs": -153
+     }
+    },
+    "clv": {
+     "points": -3,
+     "close_fair_prob_at_published_line": 0.4347,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-texas",
@@ -1786,15 +1899,31 @@
     "game": {
      "id": "401856717",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "side_margin": -3,
+     "total": 51
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T19:25:25.000Z",
+     "line": -7.5,
+     "price": -110,
+     "opp": -110,
+     "price_at_published_line": null
+    },
+    "clv": {
+     "points": -0.5,
+     "close_fair_prob_at_published_line": null,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-vanderbilt",
@@ -1845,15 +1974,34 @@
     "game": {
      "id": "401856718",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "side_margin": -35,
+     "total": 69
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T19:25:25.000Z",
+     "line": 9.5,
+     "price": -112,
+     "opp": -108,
+     "price_at_published_line": {
+      "mine": -138,
+      "theirs": 104
+     }
+    },
+    "clv": {
+     "points": 1,
+     "close_fair_prob_at_published_line": 0.5419,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-202610-buffalo-toledo-total-under",
@@ -1895,15 +2043,30 @@
     "game": {
      "id": "401866437",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "total": 31
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T19:25:25.000Z",
+     "line": 54.5,
+     "price": -102,
+     "opp": -118,
+     "price_at_published_line": null
+    },
+    "clv": {
+     "points": 0.5,
+     "close_fair_prob_at_published_line": null,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-202610-duke-gt-total-over",
@@ -1945,15 +2108,33 @@
     "game": {
      "id": "401858255",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "total": 53
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T19:25:25.000Z",
+     "line": 45.5,
+     "price": -105,
+     "opp": -115,
+     "price_at_published_line": {
+      "mine": 135,
+      "theirs": -181
+     }
+    },
+    "clv": {
+     "points": -4,
+     "close_fair_prob_at_published_line": 0.3978,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-202610-houston-ksu-total-under",
@@ -1995,15 +2176,33 @@
     "game": {
      "id": "401856825",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "total": 51
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T19:25:25.000Z",
+     "line": 55.5,
+     "price": -115,
+     "opp": -105,
+     "price_at_published_line": {
+      "mine": -132,
+      "theirs": 100
+     }
+    },
+    "clv": {
+     "points": 1,
+     "close_fair_prob_at_published_line": 0.5323,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-202610-ore-ucla-moneyline",
@@ -2046,15 +2245,34 @@
     "game": {
      "id": "401858484",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "side_margin": -2,
+     "total": 32
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T19:25:25.000Z",
+     "line": null,
+     "price": -410,
+     "opp": 320,
+     "price_at_published_line": {
+      "mine": -410,
+      "theirs": 320
+     }
+    },
+    "clv": {
+     "points": null,
+     "close_fair_prob_at_published_line": 0.7715,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-202610-texas-ou-total-over",
@@ -2096,15 +2314,30 @@
     "game": {
      "id": "401856717",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "total": 51
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T19:25:25.000Z",
+     "line": 40.5,
+     "price": -120,
+     "opp": 100,
+     "price_at_published_line": null
+    },
+    "clv": {
+     "points": 1.5,
+     "close_fair_prob_at_published_line": null,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-202610-tulsa-navy-total-over",
@@ -2146,15 +2379,33 @@
     "game": {
      "id": "401862799",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "total": 60
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T19:25:25.000Z",
+     "line": 47.5,
+     "price": -110,
+     "opp": -110,
+     "price_at_published_line": {
+      "mine": -101,
+      "theirs": -132
+     }
+    },
+    "clv": {
+     "points": -1,
+     "close_fair_prob_at_published_line": 0.469,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-uconn",
@@ -2205,15 +2456,34 @@
     "game": {
      "id": "401861964",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "side_margin": 14,
+     "total": 54
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T19:40:25.000Z",
+     "line": 3.5,
+     "price": -108,
+     "opp": -112,
+     "price_at_published_line": {
+      "mine": -108,
+      "theirs": -112
+     }
+    },
+    "clv": {
+     "points": 0,
+     "close_fair_prob_at_published_line": 0.4957,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-east-carolina",
@@ -2264,12 +2534,15 @@
     "game": {
      "id": "401862797",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "side_margin": 16,
+     "total": 40
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -2288,7 +2561,7 @@
      "close_fair_prob_at_published_line": 0.5,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-202610-ecu-rice-moneyline",
@@ -2331,12 +2604,15 @@
     "game": {
      "id": "401862797",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "side_margin": 16,
+     "total": 40
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -2355,7 +2631,7 @@
      "close_fair_prob_at_published_line": 0.76,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-maryland",
@@ -2406,15 +2682,31 @@
     "game": {
      "id": "401858483",
      "matched_by": "espn-id",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "side_margin": -29,
+     "total": 61
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T20:10:25.000Z",
+     "line": 31.5,
+     "price": -115,
+     "opp": -105,
+     "price_at_published_line": null
+    },
+    "clv": {
+     "points": 3.5,
+     "close_fair_prob_at_published_line": null,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-202610-tenn-ark-total-over",
@@ -2456,15 +2748,30 @@
     "game": {
      "id": "401856713",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "score_observed_at": "2026-10-11T01:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "total": 41
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T20:10:25.000Z",
+     "line": 51.5,
+     "price": -105,
+     "opp": -115,
+     "price_at_published_line": null
+    },
+    "clv": {
+     "points": 0.5,
+     "close_fair_prob_at_published_line": null,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-san-diego-state",
@@ -2515,15 +2822,34 @@
     "game": {
      "id": "401860902",
      "matched_by": "espn-id",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "side_margin": -52,
+     "total": 80
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T21:55:25.000Z",
+     "line": 14.5,
+     "price": -110,
+     "opp": -110,
+     "price_at_published_line": {
+      "mine": 102,
+      "theirs": -135
+     }
+    },
+    "clv": {
+     "points": -1,
+     "close_fair_prob_at_published_line": 0.4629,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-202610-sdsu-osu-total-under",
@@ -2565,15 +2891,30 @@
     "game": {
      "id": "401860902",
      "matched_by": "teams+kickoff",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "total": 80
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T21:55:25.000Z",
+     "line": 52.5,
+     "price": -115,
+     "opp": -105,
+     "price_at_published_line": null
+    },
+    "clv": {
+     "points": 3.5,
+     "close_fair_prob_at_published_line": null,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-marshall",
@@ -2624,15 +2965,34 @@
     "game": {
      "id": "401869943",
      "matched_by": "espn-id",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "side_margin": -6,
+     "total": 48
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T22:55:25.000Z",
+     "line": -4.5,
+     "price": -108,
+     "opp": -112,
+     "price_at_published_line": {
+      "mine": -169,
+      "theirs": 126
+     }
+    },
+    "clv": {
+     "points": 2,
+     "close_fair_prob_at_published_line": 0.5868,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-unlv",
@@ -2675,15 +3035,34 @@
     "game": {
      "id": "401864518",
      "matched_by": "espn-id",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "side_margin": 6,
+     "total": 20
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T22:55:25.000Z",
+     "line": 3,
+     "price": -120,
+     "opp": 100,
+     "price_at_published_line": {
+      "mine": -146,
+      "theirs": 109
+     }
+    },
+    "clv": {
+     "points": 0.5,
+     "close_fair_prob_at_published_line": 0.5537,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-utep",
@@ -2734,15 +3113,34 @@
     "game": {
      "id": "401864517",
      "matched_by": "espn-id",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "side_margin": -17,
+     "total": 43
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T22:55:25.000Z",
+     "line": 10,
+     "price": -112,
+     "opp": -108,
+     "price_at_published_line": {
+      "mine": -108,
+      "theirs": -123
+     }
+    },
+    "clv": {
+     "points": -0.5,
+     "close_fair_prob_at_published_line": 0.4849,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-202610-ndsu-unlv-total-over",
@@ -2784,15 +3182,30 @@
     "game": {
      "id": "401864518",
      "matched_by": "teams+kickoff",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "total": 20
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T22:55:25.000Z",
+     "line": 47.5,
+     "price": -110,
+     "opp": -110,
+     "price_at_published_line": null
+    },
+    "clv": {
+     "points": -1.5,
+     "close_fair_prob_at_published_line": null,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-georgia",
@@ -2843,15 +3256,34 @@
     "game": {
      "id": "401856712",
      "matched_by": "espn-id",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "side_margin": 3,
+     "total": 37
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T23:25:25.000Z",
+     "line": 2.5,
+     "price": -108,
+     "opp": -112,
+     "price_at_published_line": {
+      "mine": -107,
+      "theirs": -125
+     }
+    },
+    "clv": {
+     "points": -1,
+     "close_fair_prob_at_published_line": 0.482,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-james-madison",
@@ -2902,15 +3334,18 @@
     "game": {
      "id": "401869949",
      "matched_by": "espn-id",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "loss",
+    "actual": {
+     "side_margin": 3,
+     "total": 51
+    },
     "close": null,
     "clv": null,
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-louisiana-ull",
@@ -2961,15 +3396,34 @@
     "game": {
      "id": "401869965",
      "matched_by": "espn-id",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "side_margin": -1,
+     "total": 63
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T23:25:25.000Z",
+     "line": 3,
+     "price": -108,
+     "opp": -112,
+     "price_at_published_line": {
+      "mine": 113,
+      "theirs": -151
+     }
+    },
+    "clv": {
+     "points": -1.5,
+     "close_fair_prob_at_published_line": 0.4383,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-usc",
@@ -3020,15 +3474,34 @@
     "game": {
      "id": "401858485",
      "matched_by": "espn-id",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "side_margin": 8,
+     "total": 54
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T23:25:25.000Z",
+     "line": -1.5,
+     "price": -108,
+     "opp": -112,
+     "price_at_published_line": {
+      "mine": -131,
+      "theirs": -102
+     }
+    },
+    "clv": {
+     "points": 3,
+     "close_fair_prob_at_published_line": 0.529,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-virginia",
@@ -3079,15 +3552,34 @@
     "game": {
      "id": "401858258",
      "matched_by": "espn-id",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "side_margin": 3,
+     "total": 53
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T23:25:25.000Z",
+     "line": -14,
+     "price": -112,
+     "opp": -108,
+     "price_at_published_line": {
+      "mine": -187,
+      "theirs": 139
+     }
+    },
+    "clv": {
+     "points": 4.5,
+     "close_fair_prob_at_published_line": 0.609,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-202610-jmu-gsu-total-under",
@@ -3129,15 +3621,17 @@
     "game": {
      "id": "401869949",
      "matched_by": "teams+kickoff",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "total": 51
+    },
     "close": null,
     "clv": null,
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "cfb-202610-ull-latech-total-over",
@@ -3179,15 +3673,30 @@
     "game": {
      "id": "401869965",
      "matched_by": "teams+kickoff",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "total": 63
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T23:25:25.000Z",
+     "line": 48.5,
+     "price": -102,
+     "opp": -118,
+     "price_at_published_line": null
+    },
+    "clv": {
+     "points": 0.5,
+     "close_fair_prob_at_published_line": null,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-minnesota",
@@ -3238,15 +3747,34 @@
     "game": {
      "id": "401858486",
      "matched_by": "espn-id",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "side_margin": -28,
+     "total": 54
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T23:55:25.000Z",
+     "line": -2.5,
+     "price": -118,
+     "opp": -102,
+     "price_at_published_line": {
+      "mine": -118,
+      "theirs": -102
+     }
+    },
+    "clv": {
+     "points": 0,
+     "close_fair_prob_at_published_line": 0.5174,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-utah",
@@ -3297,15 +3825,31 @@
     "game": {
      "id": "401856827",
      "matched_by": "espn-id",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "side_margin": 17,
+     "total": 65
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-10T23:55:25.000Z",
+     "line": -15.5,
+     "price": -110,
+     "opp": -110,
+     "price_at_published_line": null
+    },
+    "clv": {
+     "points": 0.5,
+     "close_fair_prob_at_published_line": null,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-fresno-state",
@@ -3356,15 +3900,31 @@
     "game": {
      "id": "401860901",
      "matched_by": "espn-id",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "side_margin": -7,
+     "total": 69
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-11T02:25:25.000Z",
+     "line": 8.5,
+     "price": -110,
+     "opp": -110,
+     "price_at_published_line": null
+    },
+    "clv": {
+     "points": -2.5,
+     "close_fair_prob_at_published_line": null,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "cfb-2026-w6-hawaii",
@@ -3415,15 +3975,34 @@
     "game": {
      "id": "401856808",
      "matched_by": "espn-id",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-05T16:09:17.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-11T06:35:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "side_margin": -18,
+     "total": 42
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-11T02:25:25.000Z",
+     "line": 20.5,
+     "price": -108,
+     "opp": -112,
+     "price_at_published_line": {
+      "mine": -135,
+      "theirs": 101
+     }
+    },
+    "clv": {
+     "points": 1,
+     "close_fair_prob_at_published_line": 0.5359,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "nfl-202610-cin-mia-moneyline",
@@ -3472,7 +4051,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-10T16:09:25.000Z"
+     "score_observed_at": "2026-10-11T12:09:25.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -3526,7 +4105,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-10T16:09:25.000Z"
+     "score_observed_at": "2026-10-11T12:09:25.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -3581,7 +4160,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-10T16:09:25.000Z"
+     "score_observed_at": "2026-10-11T12:09:25.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -3635,7 +4214,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-10T16:09:25.000Z"
+     "score_observed_at": "2026-10-11T12:09:25.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -3689,7 +4268,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-10T16:09:25.000Z"
+     "score_observed_at": "2026-10-11T12:09:25.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -3744,7 +4323,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-10T16:09:25.000Z"
+     "score_observed_at": "2026-10-11T12:09:25.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -3798,7 +4377,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-10T16:09:25.000Z"
+     "score_observed_at": "2026-10-11T12:09:25.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -3809,6 +4388,6 @@
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-10T17:52:32.009Z",
+ "built": "2026-10-11T12:54:51.175Z",
  "canonical_url": "https://datadawgs216.com/data/bozo-menu-ledger.json"
 }
