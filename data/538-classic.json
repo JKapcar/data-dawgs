@@ -1,6 +1,6 @@
 {
  "as_of": "2026-10-11",
- "source": "Data Dawgs reimplementation of FiveThirtyEight 538 Classic Elo at commit fbec1afa38ece5befe24fb21be8ddba8eb160fe6; state extended with nflverse/nfldata at 365a14293c1b2a1a6482060c0c4159d77534f37e.",
+ "source": "Data Dawgs reimplementation of FiveThirtyEight 538 Classic Elo at commit fbec1afa38ece5befe24fb21be8ddba8eb160fe6; state extended with nflverse/nfldata at 954add87b130c8049379538db735aa2a774e4f70.",
  "tier": "labs",
  "graded": false,
  "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority.",
@@ -14,7 +14,7 @@
   "methodology_url": "https://datadawgs216.com/data/538-classic-methodology.md"
  },
  "provenance": {
-  "generated_at": "2026-10-11T20:25:03.204607Z",
+  "generated_at": "2026-10-11T20:55:17.320966Z",
   "official_reference": {
    "repository": "fivethirtyeight/nfl-elo-game",
    "commit": "fbec1afa38ece5befe24fb21be8ddba8eb160fe6",
@@ -24,15 +24,15 @@
   },
   "modern_history": {
    "repository": "nflverse/nfldata",
-   "commit": "365a14293c1b2a1a6482060c0c4159d77534f37e",
+   "commit": "954add87b130c8049379538db735aa2a774e4f70",
    "source_data_license": "not-verified-for-nfldata-repository",
-   "games_sha256": "1d32c849f27b42337776295bf889c3815ba8acfd14715b7801d48bcb2c03f86d",
+   "games_sha256": "1c17abc640cb4ffcc8af0beba354713e8ba9334084c90067366069de1f5c6d81",
    "games_replayed": 1424,
    "first_game": "2021_01_DAL_TB",
    "last_game": "2025_22_SEA_NE",
    "last_game_date": "2026-02-08"
   },
-  "schedule_snapshot_id": "sha256:ffc82f2f998adcc810a3030309363d0aca28027c3211eeee7da25e1e46a1dd66",
+  "schedule_snapshot_id": "sha256:54ed6542944037e0fa730b6ddcf5e1b46eac0e6d4eff08e614ad58be4d5145d4",
   "input_material": {
    "model": {
     "id": "538-classic",
@@ -50,11 +50,11 @@
    },
    "modern_history": {
     "repository": "nflverse/nfldata",
-    "commit": "365a14293c1b2a1a6482060c0c4159d77534f37e",
-    "games_sha256": "1d32c849f27b42337776295bf889c3815ba8acfd14715b7801d48bcb2c03f86d",
+    "commit": "954add87b130c8049379538db735aa2a774e4f70",
+    "games_sha256": "1c17abc640cb4ffcc8af0beba354713e8ba9334084c90067366069de1f5c6d81",
     "games_replayed": 1424
    },
-   "schedule_snapshot_id": "sha256:ffc82f2f998adcc810a3030309363d0aca28027c3211eeee7da25e1e46a1dd66",
+   "schedule_snapshot_id": "sha256:54ed6542944037e0fa730b6ddcf5e1b46eac0e6d4eff08e614ad58be4d5145d4",
    "target_season_ratings": [
     {
      "team": "ARI",
@@ -196,7 +196,7 @@
   "note": "This proves the published mathematics were reproduced; it does not establish current predictive skill or betting profitability."
  },
  "integrity": {
-  "input_snapshot_id": "sha256:cab4577f9eb563faa7f82ec7cfa9218f1603d0654f556e599492a50025653131",
+  "input_snapshot_id": "sha256:221f11cf19c27b1488ce3b4efca04bf167a1861d50767dd3cd46cd15ec627775",
   "snapshot_id": "sha256:6bff47344564b0b5f3bee3af386098308e8ca5fe2dfb8459c8ebba933e6830ea",
   "forecast_rows": 195,
   "team_rows": 32
