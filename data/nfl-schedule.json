@@ -1,6 +1,6 @@
 {
  "as_of": "2026-10-11",
- "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 9a437dfb667230bf3942571067b148a3ad6dd538.",
+ "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 9c7047ed1eebe6ed29f20f99eb4b994799598607.",
  "tier": "labs",
  "graded": false,
  "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts.",
@@ -10,13 +10,13 @@
   "loader_license": "MIT",
   "source_repository": "nflverse/nfldata",
   "source_url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-  "source_commit": "9a437dfb667230bf3942571067b148a3ad6dd538",
-  "source_committed_at": "2026-10-11T19:58:21Z",
+  "source_commit": "9c7047ed1eebe6ed29f20f99eb4b994799598607",
+  "source_committed_at": "2026-10-11T20:17:21Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-10-11T20:04:14.949996Z"
+  "captured_at": "2026-10-11T20:18:13.127591Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:f6232aee17ea563e6db28a739e08223b0c27c24e37f9b7534a5de9f50867f7d5",
+  "snapshot_id": "sha256:6798f77711cb5ef402a323df22e28477c6a141131f9d89e842991a4bfa9e3c1b",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -1159,9 +1159,9 @@
     "divisional": true,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 7,
+    "home_score": 31
    },
    {
     "game_id": "2026_05_CIN_MIA",
@@ -1193,9 +1193,9 @@
     "divisional": false,
     "away_rest_days": 10,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 12,
+    "home_score": 17
    },
    {
     "game_id": "2026_05_HOU_TEN",
@@ -1227,9 +1227,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 10,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 22,
+    "home_score": 34
    },
    {
     "game_id": "2026_05_LV_NE",
@@ -1244,9 +1244,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 17,
+    "home_score": 45
    },
    {
     "game_id": "2026_05_MIN_NO",
