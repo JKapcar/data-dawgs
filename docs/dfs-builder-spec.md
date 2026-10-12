@@ -1,6 +1,6 @@
 # DFS Labs manual lineup builder
 
-Local review implementation, 2026-10-12. No publication authorized.
+Release specification, 2026-10-12. Jason approved v3 and publication at 19:58 UTC.
 
 ## Verified baseline
 
@@ -155,7 +155,7 @@ player projections and highlights rostered players; it is not an outcome curve.
 Slot placement uses a brief settling animation, disabled for reduced motion.
 No sound, urgency, winning zones or reward mechanics are added. Browser QA covers
 360/390px and desktop widths, light/dark, range keyboard control, axis taps and
-unchanged base arithmetic. The visual revision still needs Jason's review.
+unchanged base arithmetic. V2 was superseded by the approved V3 treatment below.
 
 ### Local visual revision 3: SwoleDawg reference
 
@@ -177,10 +177,12 @@ review image retains that context. Checked text contrast pairs range from 5.34:1
 to 10.06:1; dark/light plot axes exceed 4.8:1. This is targeted visual QA, not an
 accessibility certification. Browser QA covers selected-state cancellation,
 touch, keyboard, drag interruption, and dark/light at 360/390px and desktop.
-The v3 visual direction remains a local review proposal. The simulation module
-and all previous commits are preserved. At this pass's fetch, main advanced to
-`e1823c6` only in unrelated Fourth Down data files; no DFS/reference file changed.
-No merge, rebase or publication was performed.
+Jason approved V3 and proceeding with publication on 2026-10-12. The release
+branch starts at current main `e1823c6`, preserving the concurrent Fourth Down
+data refresh, and carries only the approved builder/visual commits. The separate
+experimental field-simulation module stays on the local development branch; it
+is neither shipped nor connected to this builder. Original review commits remain
+intact. Unsupported forecast metrics remain unavailable.
 
 `node --test tests/dfs-builder.test.js tests/dfs-simulation-contract.test.js`
 tests importer/roster arithmetic and mechanical behavior of the unchanged
@@ -192,7 +194,7 @@ and parent-frame privacy. `PLAYWRIGHT_MODULE`, `CHROMIUM_PATH`, and `QA_OUTPUT`
 can point at local installations/output folders.
 
 Keep screenshots under ignored `work/artifacts/dfs-builder` or a private output
-folder. Never commit uploaded projection data. User visual review is required
-before any push, merge, deployment or publication. The current design remains
-a local proposal. No separate master prompt is needed: this specification is
-the reusable handoff for Claude or another contributor.
+folder. Never commit uploaded projection data. The approved release uses the
+repository PR/CI/merge workflow and requires verifying deployed asset hashes and
+live desktop/mobile behavior. No separate master prompt is needed: this
+specification is the reusable handoff for Claude or another contributor.
