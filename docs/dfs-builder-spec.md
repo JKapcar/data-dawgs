@@ -144,6 +144,19 @@ It is not enough to wire directly into this CSV-only builder:
 
 ## Review and validation
 
+### Local visual revision 2
+
+Keep the approved section order and private iframe boundary. The revised skin
+uses charcoal, orange and cream with violet reserved for a projection sensitivity
+scenario. The keyboard/touch range changes only that labeled scenario; it never
+changes source projections, lineup legality or probabilities. The chart can switch
+between salary and summed ownership. The adjacent histogram counts actual loaded
+player projections and highlights rostered players; it is not an outcome curve.
+Slot placement uses a brief settling animation, disabled for reduced motion.
+No sound, urgency, winning zones or reward mechanics are added. Browser QA covers
+360/390px and desktop widths, light/dark, range keyboard control, axis taps and
+unchanged base arithmetic. The visual revision still needs Jason's review.
+
 `node --test tests/dfs-builder.test.js tests/dfs-simulation-contract.test.js`
 tests importer/roster arithmetic and mechanical behavior of the unchanged
 legacy simulator. The latter proves no model calibration.
