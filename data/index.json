@@ -9,9 +9,9 @@
    {
     "path": "/data/538-classic.json",
     "url": "https://datadawgs216.com/data/538-classic.json",
-    "bytes": 69173,
-    "as_of": "2026-10-11",
-    "sha256": "60f632b8242c48efc19b66ed6259b48b35e2f68ad68d26a5da6d806035c136ed",
+    "bytes": 68856,
+    "as_of": "2026-10-12",
+    "sha256": "d7b2797bd0fece1076f6d97f28f6c6668d7862fd9313607a26ed1ccddb6cd180",
     "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority."
    },
    {
@@ -185,10 +185,10 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 167454,
-    "as_of": "2026-10-11",
-    "sha256": "553040e63bef61ea42f8a1941a24897b53f302f64d036628f010694f54d2e8a3",
-    "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 77/272 regular-season games are settled and banked in wins_tracker; 195 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
+    "bytes": 167573,
+    "as_of": "2026-10-12",
+    "sha256": "23cf8899a6fcca8865972cc4f42f231d52646e4307f483a2f09eda417b60ad80",
+    "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 78/272 regular-season games are settled and banked in wins_tracker; 194 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    },
    {
     "path": "/data/dynasty-ranks.json",
@@ -304,9 +304,9 @@
    {
     "path": "/data/nfl-schedule.json",
     "url": "https://datadawgs216.com/data/nfl-schedule.json",
-    "bytes": 113543,
-    "as_of": "2026-10-11",
-    "sha256": "12bf73d7b052fc8f3c9104a8e480a07abae1da9870294a46419c9189d65eff9b",
+    "bytes": 113535,
+    "as_of": "2026-10-12",
+    "sha256": "4cd8ffffe699d6fb35afe6b389c93319a42a79b111bd178b0ff7283743132878",
     "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts."
    },
    {
@@ -345,8 +345,8 @@
     "path": "/data/receipts-inventory.json",
     "url": "https://datadawgs216.com/data/receipts-inventory.json",
     "bytes": 3415,
-    "as_of": "2026-10-11",
-    "sha256": "2de0bb494404eb5067a6d51438be4577bcd992fedc7ca4af37223ca64e7fdc66",
+    "as_of": "2026-10-12",
+    "sha256": "4a305cec60a93844e595e2d4994e9e8c28b417bcf103c4451ee0ff622e887220",
     "note": "An INVENTORY, not a scoreboard. There is no honest Brier across domains, so this file counts what has been registered and settled and never scores it. The ledgers OVERLAP: receipts.json and the nfelo half of model-receipts.json are the same forecasts, as are 538-classic.json and its half. aggregate is therefore computed from aggregate.counted_from alone; aggregate.naive_sum is what summing the registered column would wrongly give, published so it can be named and corrected rather than quietly reproduced."
    },
    {
