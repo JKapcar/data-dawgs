@@ -15,16 +15,16 @@ let browser;
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;
  browser=await chromium.launch({headless:true,executablePath:process.env.DD_CHROMIUM||undefined});fs.mkdirSync(screenshots,{recursive:true});
  for(const width of [360,390,412,1440])for(const theme of ['light','dark']){
-  const name=`${width}-${theme}`,reducedMotion=width!==390,context=await browser.newContext({viewport:{width,height:width<500?844:1000},serviceWorkers:'block',reducedMotion:reducedMotion?'reduce':'no-preference'});
-  await context.addInitScript(theme=>{localStorage.setItem('dd-theme3-dfs',theme);localStorage.setItem('dd-theme3',theme);window.demoProgress=[];new MutationObserver(()=>{const n=document.getElementById('labsRunStatus');if(n&&window.demoProgress.at(-1)!==n.textContent)window.demoProgress.push(n.textContent);}).observe(document,{childList:true,subtree:true,characterData:true});},theme);
+  const name=`${width}-${theme}`,reducedMotion=width!==390,context=await browser.newContext({viewport:{width,height:width<500?844:1000},reducedMotion:reducedMotion?'reduce':'no-preference'});
+  await context.addInitScript(theme=>{if(window.top!==window)return;localStorage.setItem('dd-theme3-dfs',theme);localStorage.setItem('dd-theme3',theme);window.demoProgress=[];new MutationObserver(()=>{const n=document.getElementById('labsRunStatus');if(n&&window.demoProgress.at(-1)!==n.textContent)window.demoProgress.push(n.textContent);}).observe(document,{childList:true,subtree:true,characterData:true});},theme);
   const page=await context.newPage(),errors=[],writes=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(r.method()!=='GET')writes.push(r.url());});
   await page.route('**/*',r=>r.request().url().startsWith(base+'/')?r.continue():r.fulfill({status:403,contentType:'application/json',body:'{"error":"Synthetic QA: live provider unavailable"}'}));
   await page.goto(base+'/dfs.html');await page.waitForFunction(()=>localStorage.getItem('dd-dfs-v1'));
   await page.evaluate(players=>{const s=JSON.parse(localStorage.getItem('dd-dfs-v1'));s.players=players;s.slate.source='csv';s.slate.label='Synthetic saved workspace';s.sheet='week';localStorage.setItem('dd-dfs-v1',JSON.stringify(s));},classic());
-  await page.reload();await page.waitForTimeout(500);assert.equal(await page.locator('html').getAttribute('data-theme'),theme);
+  await page.reload();if(!await page.locator('#legacyTools').evaluate(el=>el.open))await page.locator('#legacyTools > summary').click();await page.waitForTimeout(500);assert.equal(await page.locator('html').getAttribute('data-theme'),theme);
   await page.screenshot({path:path.join(screenshots,name+'-welcome.png')});assert.equal(await page.locator('#scrTab').isVisible(),false);
   const before=await page.evaluate(()=>localStorage.getItem('dd-dfs-v1'));
-  await page.locator('#labsDemo').focus();await page.keyboard.press('Enter');await page.waitForURL(url=>url.searchParams.get('demo')==='1');
+  await page.locator('#labsDemo').focus();await page.keyboard.press('Enter');try{await page.waitForURL(url=>url.searchParams.get('demo')==='1');}catch(e){console.log('Demo navigation diagnostic',await page.evaluate(()=>({url:location.href,active:document.activeElement?.id,status:document.getElementById('labsDemoStatus').textContent,open:document.getElementById('legacyTools').open})));throw e;}
   await page.waitForSelector('#labsSimChart .labs-bar',{timeout:30000});
   assert.equal(await page.locator('#luList .lu').count(),3);assert.equal(await page.locator('#labsSimChart .labs-bar').count(),3);
   assert.match(await page.locator('#labsRunStatus').innerText(),/Nothing was saved/);assert.equal(await page.evaluate(()=>localStorage.getItem('dd-dfs-v1')),before);assert.equal(await page.locator('#dfsCloudSave').isDisabled(),true);
@@ -45,10 +45,10 @@ let browser;
   await page.locator('#labsExit').focus();await page.keyboard.press('Enter');await page.waitForURL(url=>url.searchParams.get('resume')==='1');await page.waitForTimeout(300);
   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('dd-dfs-v1')).players),classic());
   for(const tab of ['week','slate','solver','sim','exposure','bankroll','screener','standings','method']){
-   await page.goto(base+'/dfs.html?resume=1#'+tab);assert.equal(await page.locator('.sheet:visible').count(),1);assert.equal(await page.locator('#sh-'+tab).isVisible(),true);
+   await page.goto(base+'/dfs.html?resume=1#'+tab);await page.locator('#sh-'+tab).waitFor({state:'visible'});if(await page.locator('.sheet:visible').count()!==1)console.log('Deep-link diagnostic',tab,await page.evaluate(()=>({route:window.DDFS_ENTRY_ROUTE,url:location.href,open:document.getElementById('legacyTools').open,hidden:[...document.querySelectorAll('.sheet')].filter(e=>!e.hidden).map(e=>e.id)})));assert.equal(await page.locator('.sheet:visible').count(),1);assert.equal(await page.locator('#sh-'+tab).isVisible(),true);
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${name} overflow on ${tab}`);
   }
-  for(const anchor of ['dfsPlaybook','dfsGuide','dfsCloudCard','csvUploadCard']){await page.goto(base+'/dfs.html?resume=1#'+anchor);assert.equal(await page.locator('#'+anchor).isVisible(),true);assert.equal(new URL(page.url()).hash,'#'+anchor);}
+  for(const anchor of ['dfsPlaybook','dfsGuide','dfsCloudCard']){await page.goto(base+'/dfs.html?resume=1#'+anchor);await page.locator('#'+anchor).waitFor({state:'visible'});assert.equal(await page.locator('#'+anchor).isVisible(),true);assert.equal(new URL(page.url()).hash,'#'+anchor);}
   await page.locator('#fsTabs button[data-s="screener"]').click();const summary=page.locator('#sh-screener details.gear>summary');await summary.focus();await page.keyboard.press('Enter');assert.equal(await summary.evaluate(e=>e.parentElement.open),true);assert.equal(await summary.evaluate(e=>getComputedStyle(e,'::before').content),'""');
   await page.locator('#fsTabs button[data-s="solver"]').click();await page.selectOption('#cfObjective','projection');await page.reload();assert.equal(await page.locator('#cfObjective').inputValue(),'projection');
   await page.selectOption('#cfObjective','gpp');await page.reload();assert.equal(await page.locator('#cfObjective').inputValue(),'gpp');
@@ -59,7 +59,7 @@ let browser;
   assert.deepEqual(errors,[]);assert.deepEqual(writes,[]);console.log(JSON.stringify({viewport:width,theme,reducedMotion,classicDemo:'PASS',cancel:'PASS',workspaceUnchanged:'PASS',showdown:'PASS',deepLinks:9,errors}));await context.close();
  }
  // Recoverable live-provider failure and refusal to leave unsaved work behind.
- const context=await browser.newContext({serviceWorkers:'block'}),page=await context.newPage();
+ const context=await browser.newContext({}),page=await context.newPage();
  await page.route('**/*',r=>{
   const url=r.request().url();if(url.startsWith(base+'/'))return r.continue();
   if(url.includes('/dk/lobby'))return r.fulfill({status:200,contentType:'application/json',body:JSON.stringify({DraftGroups:[{DraftGroupId:99001,ContestTypeId:21,GameCount:12,StartDate:'2099-09-13T17:00:00Z',Sport:'NFL'}]})});

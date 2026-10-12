@@ -15187,6 +15187,41 @@ async function forecastLiveRoute(request,url,env,cors) {
 /* ===== DD-DFS-WORKSPACE START ===== */
 const dfsModules = {};
 (function(globalThis, self, module, require){
+/* Versioned private draft shared by browser and authenticated workspace API.
+   Pure validation: no network, storage, account identity or implicit save. */
+(function(root){'use strict';
+const presets={cash:{fieldSize:100,paidFraction:.5,ownershipSource:'cash',salaryFloor:0,stackRate:.3},small:{fieldSize:100,paidFraction:.2,ownershipSource:'small',salaryFloor:0,stackRate:.6},large:{fieldSize:10000,paidFraction:.2,ownershipSource:'large',salaryFloor:0,stackRate:.6}};
+const defaults={distribution:'lognormal',variance:'historical',correlation:'historical',customCV:.6,kickerCV:.5,sdFloor:2,varianceScale:1,correlationScale:1,ownershipFloor:.25,stackRate:.6,salaryFloor:0,seed:216,iterations:400,fieldSize:100,paidFraction:.2,ownershipSource:'general',ceilingQuantile:null};
+const fields=['id','uid','name','pos','team','opp','gid','sal','proj','ceil','own','generalOwn','smallOwn','largeOwn','cashOwn','cptOwn','flexOwn','cptSal','cptProj','dkId','cptId','kickoff','injury','lock','excl','maxExp'];
+const poolFields=['site','players','slate','source','filename','synthetic','importedAt','units','convention','matchupEvidence','warnings','mapping'];
+const slots={dk_classic:['QB','RB','RB','WR','WR','WR','TE','FLEX','DST'],dk_showdown:['CPT','FLEX','FLEX','FLEX','FLEX','FLEX']};
+function need(ok,msg){if(!ok)throw Error(msg);}
+function obj(v,keys,label){need(v&&typeof v==='object'&&!Array.isArray(v),label+' must be an object');need(Object.keys(v).every(k=>keys.includes(k)),label+' has unsupported fields');}
+function str(v,max,label,optional=false){if(optional&&v==null)return null;need(typeof v==='string'&&v.length<=max&&(optional||v.trim()),'Invalid '+label);return v;}
+function number(v,min,max,label,integer=false){need(Number.isFinite(v)&&v>=min&&v<=max&&(!integer||Number.isInteger(v)),'Invalid '+label);return v;}
+function stamp(v,label){if(v==null||v==='')return null;str(v,40,label);need(/(Z|[+-]\d\d:\d\d)$/.test(v)&&Number.isFinite(Date.parse(v)),'Invalid '+label);return v;}
+function settings(raw={}){obj(raw,Object.keys(defaults),'settings');const c={...defaults,...raw};for(const [k,lo,hi,int]of [['fieldSize',2,20000,true],['paidFraction',0,1],['salaryFloor',0,50000,true],['stackRate',0,1],['customCV',.05,2],['kickerCV',.05,2],['sdFloor',0,20],['varianceScale',.25,3],['correlationScale',0,1],['ownershipFloor',0,5],['seed',0,4294967295,true],['iterations',200,5000,true]])number(c[k],lo,hi,k,int);
+need(['general','small','large','cash','none'].includes(c.ownershipSource),'Invalid ownershipSource');need(['normal','lognormal'].includes(c.distribution),'Invalid distribution');need(['historical','custom','ceiling'].includes(c.variance),'Invalid variance');need(['historical','independent'].includes(c.correlation),'Invalid correlation');if(c.ceilingQuantile!=null)need([.75,.85,.9,.95,.975].includes(c.ceilingQuantile),'Invalid ceilingQuantile');return c;}
+function validate(input){
+ obj(input,['version','pool','roster','preset','settings'],'draft');need(input.version===1,'Unsupported draft version');
+ const x=JSON.parse(JSON.stringify(input)),p=x.pool;obj(p,poolFields,'pool');need(slots[p.site],'Unsupported site/format');need(Array.isArray(p.players)&&p.players.length>0&&p.players.length<=220,'Supply 1-220 players');
+ const ids=new Set(),names=new Set();p.players=p.players.map((raw,i)=>{obj(raw,fields,'player '+i);const q={...raw};for(const k of ['name','team','pos'])str(q[k],160,k);need(/^[A-Z0-9]{2,4}$/.test(q.team),'Invalid team');q.opp=q.opp||'';need(!q.opp||/^[A-Z0-9]{2,4}$/.test(q.opp)&&q.opp!==q.team,'Invalid opponent');need(q.pos.split('/').every(pos=>(p.site==='dk_showdown'?['QB','RB','WR','TE','K','DST']:['QB','RB','WR','TE','DST']).includes(pos)),'Invalid player position');
+ q.uid=q.uid||q.id||q.name.trim().toLowerCase()+'|'+q.team;str(q.uid,200,'player identity');q.id=q.id||q.uid;str(q.id,200,'player id');const identity=q.name.trim().toLowerCase()+'|'+q.team;need(!ids.has(q.id)&&!names.has(identity),'Duplicate player');ids.add(q.id);names.add(identity);
+ for(const k of ['sal','cptSal'])if(q[k]!=null)number(q[k],1,75000,k,true);for(const k of ['proj','ceil','cptProj'])if(q[k]!=null)number(q[k],-100,300,k);for(const k of ['own','generalOwn','smallOwn','largeOwn','cashOwn','cptOwn','flexOwn'])if(q[k]!=null)number(q[k],0,100,k);if(q.generalOwn===undefined)q.generalOwn=x.settings?.ownershipSource&&x.settings.ownershipSource!=='general'?null:q.own??null;
+ for(const k of ['dkId','cptId'])if(q[k]!=null){str(q[k],30,k);need(/^\d+$/.test(q[k]),'Invalid official ID');}if(q.gid!=null)str(q.gid,100,'game ID');q.kickoff=stamp(q.kickoff,'kickoff');if(q.injury!=null){obj(q.injury,['status','source','asOf'],'injury');str(q.injury.status,80,'injury status');str(q.injury.source,200,'injury source',true);stamp(q.injury.asOf,'injury time');}for(const k of ['lock','excl'])if(q[k]!=null)need(typeof q[k]==='boolean','Invalid '+k);if(q.maxExp!=null)number(q.maxExp,0,1,'maxExp');return q;});
+ p.slate=str(p.slate||'',160,'slate',true);p.filename=str(p.filename,200,'filename',true);p.matchupEvidence=str(p.matchupEvidence,200,'matchup evidence',true);p.importedAt=stamp(p.importedAt,'import time');obj(p.source||{},['name','asOf','version'],'source');p.source={name:str(p.source?.name,200,'source name',true),asOf:stamp(p.source?.asOf,'source time'),version:str(p.source?.version,80,'source version',true)};
+ need(p.synthetic==null||typeof p.synthetic==='boolean','Invalid synthetic flag');need(p.units==null||['pp','fraction'].includes(p.units),'Invalid ownership units');need(p.convention==null||['total','flex','unknown'].includes(p.convention),'Invalid ownership convention');p.warnings=p.warnings||[];need(Array.isArray(p.warnings)&&p.warnings.length<=100,'Invalid warnings');p.warnings.forEach(s=>str(s,500,'warning'));if(p.mapping!=null){need(typeof p.mapping==='object'&&!Array.isArray(p.mapping)&&Object.keys(p.mapping).length<=40,'Invalid mapping');for(const [k,v]of Object.entries(p.mapping)){str(k,40,'mapping key');str(v,100,'mapping header',true);}}
+ need(Array.isArray(x.roster)&&x.roster.length===slots[p.site].length,'Wrong roster slot count');const selected=new Set();x.roster.forEach((id,i)=>{if(id==null){x.roster[i]=null;return;}number(id,0,p.players.length-1,'roster index',true);need(!selected.has(id),'Roster contains duplicate player');selected.add(id);const slot=slots[p.site][i];need(p.site==='dk_showdown'||p.players[id].pos.split('/').some(pos=>slot==='FLEX'?['RB','WR','TE'].includes(pos):pos===slot),'Player is in an ineligible slot');});
+ need(['unset','cash','small','large'].includes(x.preset),'Invalid preset');x.settings=settings(x.settings||{});ownership(p,x.settings.ownershipSource);return x;
+}
+function ownership(pool,source){if(pool.site==='dk_showdown')return pool;for(const p of pool.players){if(p.generalOwn===undefined)p.generalOwn=p.own??null;p.own=source==='general'?p.generalOwn:source==='none'?null:p[source+'Own']??null;}return pool;}
+function fromWorkspace(w){if(w.draft)return validate(w.draft);return validate({version:1,pool:{site:w.site,players:w.players,slate:'',source:{name:w.source||null,asOf:w.as_of||null},warnings:['Loaded an older workspace. Verify slate and ownership source.']},roster:slots[w.site].map(()=>null),preset:'unset',settings:{}});}
+const api={validate,settings,presets,defaults,slots,fields,ownership,fromWorkspace};if(typeof module!=='undefined'&&module.exports)module.exports=api;root.DDFSDraft=api;
+})(typeof self!=='undefined'?self:globalThis);
+
+})(dfsModules, dfsModules, undefined, undefined);
+
+(function(globalThis, self, module, require){
 /**
  * DFS slate ingest — DK salary CSV + ETR-shaped projection paste.
  * Source of truth for parsers used by dfs.html (keep page copy in sync via
@@ -16065,7 +16100,7 @@ const api={config,defaults,profiles,traits,matches,story,view,select};if(typeof 
 /* Private DFS workspaces. Browser and MCP share this boundary and the existing engines.
    No paid inputs are public. ETag + revision makes every mutation compare-and-swap. */
 const DFS_LIMITS = {players:220, lineups:5000, solveMs:5000, worlds:16000, sample:10000, work:32000000, bytes:2000000};
-const DFS_PLAYER_FIELDS = ['id','name','pos','team','opp','gid','sal','proj','own','cptOwn','flexOwn','cptProj','cptSal','ceil','dkId','cptId','kickoff','lock','excl','maxExp'];
+const DFS_PLAYER_FIELDS = ['id','name','pos','team','opp','gid','sal','proj','own','cptOwn','flexOwn','cptProj','cptSal','ceil','dkId','cptId','kickoff','lock','excl','maxExp','uid','generalOwn','smallOwn','largeOwn','cashOwn','injury'];
 const DFS_SOLVER_DEFAULT = {count:20,minSalary:0,maxSalary:50000,uniques:1,randomness:0,seed:216,maxPerTeam:5,maxPerGame:9,timeLimitMs:3000,acoCap:null,objective:null,stack:{qbMin:0,qbPos:['WR','TE'],bringBack:0,noRbVsDst:false,noOppDst:false,noQbVsDst:false},groups:[]};
 const DFS_SIM_DEFAULT = {mode:'contest',sims:1600,fieldSize:5300,entryFee:1,fieldSample:2000,seed:216,fieldMinSalary:48000,fieldStackRate:.6,ownershipFloor:.0025,payout:{kind:'param',paidFrac:.2,alpha:1.15,rake:.15}};
 const DFS_LAB_DEFAULT = {minSalary:44000,maxSalary:50000,maxPerTeam:5,ownershipFloor:.0025,count:5000,cloud:1000,maxBand:500,bandPts:3,seed:216,timeLimitMs:3000};
@@ -16134,6 +16169,7 @@ function dfsAudit(w){
  if(missing.length)warnings.push('Missing projections are excluded from compute; they are not zero projections.');
  if(active.some(p=>p.own==null))warnings.push('Missing ownership: simulations are unavailable until supplied.');
  if(w.site==='dk_showdown'&&active.some(p=>p.cptOwn==null))warnings.push('Missing captain ownership: Showdown simulations are unavailable until supplied.');
+ if(!w.as_of)warnings.push('Source freshness unknown. Imported or saved time is not source time.');
  if(Date.now()-Date.parse(w.as_of)>6*3600000)warnings.push('Source timestamp is more than six hours old; verify slate freshness.');
  if(w.site==='dk_showdown'&&active.some(p=>p.cptProj!=null&&Math.abs(p.cptProj-1.5*p.proj)>.15))warnings.push('Captain projections disagree with 1.5× FLEX scoring.');
  return {players:w.players.length,missing_projections:missing,warnings,source:w.source,as_of:w.as_of,revision:w.revision};
@@ -16162,16 +16198,30 @@ async function dfsCommit(env,r,w,revision){
 }
 async function dfsRun(op,a,env,caller){
  dfsUid(caller);
- const allowed={compare:['workspace_id','expected_revision','indices','profiles','script'],sync:['workspace_id','expected_revision','players','lineups','settings','source','as_of'],list:[],get:['workspace_id','offset','limit','include_results'],create:['workspace_id','site','source','as_of'],upload:['workspace_id','expected_revision','csv','source','as_of','commit'],players:['workspace_id','expected_revision','players'],settings:['workspace_id','expected_revision','section','patch'],solve:['workspace_id','expected_revision'],explore:['workspace_id','expected_revision'],simulate:['workspace_id','expected_revision','indices'],exposure:['workspace_id'],select:['workspace_id','expected_revision','indices'],export:['workspace_id'],delete:['workspace_id','expected_revision'],schema:[]};
+ const allowed={draft:['workspace_id','expected_revision','draft'],compare:['workspace_id','expected_revision','indices','profiles','script'],sync:['workspace_id','expected_revision','players','lineups','settings','source','as_of'],list:[],get:['workspace_id','offset','limit','include_results'],create:['workspace_id','site','source','as_of'],upload:['workspace_id','expected_revision','csv','source','as_of','commit'],players:['workspace_id','expected_revision','players'],settings:['workspace_id','expected_revision','section','patch'],solve:['workspace_id','expected_revision'],explore:['workspace_id','expected_revision'],simulate:['workspace_id','expected_revision','indices'],exposure:['workspace_id'],select:['workspace_id','expected_revision','indices'],export:['workspace_id'],delete:['workspace_id','expected_revision'],schema:[]};
  dfsAssert(allowed[op],'Unknown DFS operation');dfsObj(a,allowed[op],'arguments');
- if(op==='schema')return {version:1,guide:{url:'https://datadawgs216.com/docs/dfs-playbook.md',app_url:'https://datadawgs216.com/dfs.html#dfsPlaybook',updated:'2026-10-09',instruction:'Read the public playbook before constructing entries. It covers evidence ranking, tool sequence, actual-lobby settings, model limits, final checks and the post-slate ledger.',contest_inputs:['contest ID/name','field capacity/current entrants','entry fee','max entries per person','user entry count','payout table','slate/lock time'],required_checks:['Verify source time, format, imports and ownership units before solving.','Use actual contest settings; compare profiles are illustrative, not arbitrary lobby payouts.','Solver changes clear candidates; solve/explore replace the pool; select invalidates simulations. Preserve roster contents and receipts before mutations.','Audit final exposure, legality and official slot IDs; export does not submit entries.','Disclose partial search and model uncertainty; do not invent unresolved first-place EV.']},limits:DFS_LIMITS,player_fields:DFS_PLAYER_FIELDS,required_player_fields:['name','pos','team','opp','gid','sal'],field_notes:{proj:'Nullable FLEX points; missing projections are excluded.',own:'Total player ownership percent; Classic position or Showdown total across slots.',cptOwn:'Showdown captain ownership percent; must not exceed total.',maxExp:'Sequential solver cap fraction; final violations are reported.',dkId:'Official FLEX ID required for entry CSV.',cptId:'Official captain ID required for Showdown entry CSV.',gid:'Shared stable game identifier; never guess missing games.'},defaults:{solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT},units:{own:'percent 0–100',cptOwn:'percent 0–100',flexOwn:'percent 0–100',maxExp:'fraction 0–1',randomness:'fraction 0–0.6'},workflow:['create','upload (commit=false to preview)','upload (commit=true)','players/settings','solve or explore','simulate','exposure','select','export'],notes:['Every write requires expected_revision.','Read get with include_results=true for simulations.','Use player IDs in groups; lineup ids are indexes into the saved players array.','Results are model-conditional; no guarantee of profitability.']};
+ if(op==='schema')return {version:2,draft_schema:{version:1,tool:'dd_dfs_draft',required:['version','pool','roster','preset','settings'],pool_fields:['site','players','slate','source','filename','synthetic','importedAt','units','convention','matchupEvidence','warnings','mapping'],roster:'Nullable zero-based indexes in official slot order. Unique players and slot eligibility enforced; incomplete/over-budget drafts may be saved, not submitted.',presets:['unset','cash','small','large'],settings:dfsModules.DDFSDraft.defaults,notes:['Call get; edit its draft; save with the returned expected_revision. Zero creates a new named workspace only.','One player array is shared by draft, solver and AI. Replacing it invalidates computed results.','Unknown slate/date and freshness are allowed for exploration; never invent source time.','Ownership columns remain separate. Cash/small must not silently reuse large-field ownership.','Preset fields are explicit assumptions, not verified lobby settings. Browser load is explicit; no background account writes.']},guide:{url:'https://datadawgs216.com/docs/dfs-playbook.md',app_url:'https://datadawgs216.com/dfs.html#dfsPlaybook',updated:'2026-10-09',instruction:'Read the public playbook before constructing entries. It covers evidence ranking, tool sequence, actual-lobby settings, model limits, final checks and the post-slate ledger.',contest_inputs:['contest ID/name','field capacity/current entrants','entry fee','max entries per person','user entry count','payout table','slate/lock time'],required_checks:['Verify source time, format, imports and ownership units before solving.','Use actual contest settings; compare profiles are illustrative, not arbitrary lobby payouts.','Solver changes clear candidates; solve/explore replace the pool; select invalidates simulations. Preserve roster contents and receipts before mutations.','Audit final exposure, legality and official slot IDs; export does not submit entries.','Disclose partial search and model uncertainty; do not invent unresolved first-place EV.']},limits:DFS_LIMITS,player_fields:DFS_PLAYER_FIELDS,required_player_fields:['name','pos','team','opp','gid','sal'],field_notes:{proj:'Nullable FLEX points; missing projections are excluded.',own:'Total player ownership percent; Classic position or Showdown total across slots.',cptOwn:'Showdown captain ownership percent; must not exceed total.',maxExp:'Sequential solver cap fraction; final violations are reported.',dkId:'Official FLEX ID required for entry CSV.',cptId:'Official captain ID required for Showdown entry CSV.',gid:'Shared stable game identifier; never guess missing games.'},defaults:{solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT},units:{own:'percent 0–100',cptOwn:'percent 0–100',flexOwn:'percent 0–100',maxExp:'fraction 0–1',randomness:'fraction 0–0.6'},workflow:['create','upload (commit=false to preview)','upload (commit=true)','players/settings','solve or explore','simulate','exposure','select','export'],notes:['Every write requires expected_revision.','Read get with include_results=true for simulations.','Use player IDs in groups; lineup ids are indexes into the saved players array.','Results are model-conditional; no guarantee of profitability.']};
  if(op==='list'){const r=await fbGet(env,'/users/'+dfsUid(caller)+'/dfsWorkspaces');return {workspaces:Object.values(r.data||{}).map(w=>({workspace_id:w.id,site:w.site,source:w.source,as_of:w.as_of,revision:w.revision,players:(w.players||[]).length,lineups:(w.lineups||[]).length,updated_at:w.updated_at}))};}
+ if(op==='draft'){
+  dfsNum(a.expected_revision,0,2147483647,'expected_revision',true);
+  const path=dfsPath(caller,a.workspace_id),r={...await fbGet(env,path,true),path};
+  dfsAssert((r.data?.revision||0)===a.expected_revision,'Revision conflict. Load the saved workspace before replacing it.');
+  const d=dfsModules.DDFSDraft.validate(a.draft),p=d.pool;
+  const w=r.data?dfsClone(r.data):{id:a.workspace_id,revision:0,settings:dfsClone({solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT})};
+  const rosterKeys=['id','name','pos','team','opp','sal','proj','ceil','own','cptOwn','flexOwn','cptSal','cptProj','lock','excl','maxExp'];
+  const rosterInputs=ps=>JSON.stringify((ps||[]).map(q=>rosterKeys.map(k=>q[k]??null)));
+  const sameRosterInputs=w.site===p.site&&rosterInputs(w.players)===rosterInputs(p.players);
+  w.site=p.site;w.source=p.source.name||'User-supplied CSV';w.as_of=p.source.asOf;w.players=p.players.map(q=>({...q,gid:q.opp?[q.team,q.opp].sort().join('@'):''}));
+  const {players,...meta}=p;w.builder={version:1,pool:meta,rosterIds:d.roster.map(i=>i==null?null:w.players[i].id),preset:d.preset,settings:d.settings};
+  if(!sameRosterInputs){w.lineups=[];delete w.compute;}delete w.simulation;delete w.comparison;
+  return {...await dfsCommit(env,r,w,a.expected_revision),draft:dfsDraftRead(w)};
+ }
  if(op==='create'){
   const path=dfsPath(caller,a.workspace_id),r={...await fbGet(env,path,true),path};dfsAssert(!r.data,'Workspace already exists');dfsAssert(['dk_classic','dk_showdown'].includes(a.site),'Choose dk_classic or dk_showdown');
   const w={id:a.workspace_id,site:a.site,source:mcpDfsString(a.source,'source',200),as_of:dfsDate(a.as_of),players:[],lineups:[],settings:dfsClone({solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT}),revision:0};if(a.site==='dk_classic')Object.assign(w.settings.solver,{minSalary:48500,uniques:3,maxPerTeam:4,objective:{proj:.3,ceil:.7,own:-.05},stack:{qbMin:2,qbPos:['WR','TE'],bringBack:1,noRbVsDst:true,noOppDst:false,noQbVsDst:true}});return dfsCommit(env,r,w,0);
  }
  const r=await dfsLoad(env,caller,a.workspace_id),w=dfsClone(r.data);w.lineups=w.lineups||[];w.players=w.players||[];w.settings={solver:{...dfsClone(DFS_SOLVER_DEFAULT),...w.settings.solver},simulation:{...dfsClone(DFS_SIM_DEFAULT),...w.settings.simulation},lab:{...dfsClone(DFS_LAB_DEFAULT),...w.settings.lab}};
- if(op==='get'){const offset=a.offset??0,limit=a.limit??100;dfsNum(offset,0,5000,'offset',true);dfsNum(limit,1,500,'limit',true);if(a.include_results!=null)dfsAssert(typeof a.include_results==='boolean','include_results must be boolean');const {lineups,simulation,...rest}=w;return {...rest,lineups:lineups.slice(offset,offset+limit),total_lineups:lineups.length,simulation:a.include_results?simulation||null:undefined,audit:dfsAudit(w)};}
+ if(op==='get'){const offset=a.offset??0,limit=a.limit??100;dfsNum(offset,0,5000,'offset',true);dfsNum(limit,1,500,'limit',true);if(a.include_results!=null)dfsAssert(typeof a.include_results==='boolean','include_results must be boolean');const {lineups,simulation,...rest}=w;return {...rest,draft:dfsDraftRead(w),lineups:lineups.slice(offset,offset+limit),total_lineups:lineups.length,simulation:a.include_results?simulation||null:undefined,audit:dfsAudit(w)};}
  if(op==='exposure')return dfsExposure(w);
  if(op==='export')return dfsExport(w);
  dfsNum(a.expected_revision,1,2147483647,'expected_revision',true);dfsAssert(a.expected_revision===w.revision,'Revision conflict. Read workspace first.');
@@ -16181,20 +16231,20 @@ async function dfsRun(op,a,env,caller){
   dfsAssert(typeof a.csv==='string'&&a.csv.length>0&&a.csv.length<=500000,'CSV must be 1–500000 characters');dfsAssert(typeof a.commit==='boolean','Set commit=false to preview or true to save');
   const parsed=dfsModules.DDFSIngest.readUpload(a.csv,w.players);dfsAssert(!parsed.error,parsed.error);
   // Parser may retain metadata fields irrelevant to the shared engine. Normalize explicitly.
-  w.players=dfsPlayers(parsed.players.map(p=>Object.fromEntries(DFS_PLAYER_FIELDS.filter(k=>p[k]!==undefined).map(k=>[k,p[k]]))),w.site);
+  delete w.builder;w.players=dfsPlayers(parsed.players.map(p=>Object.fromEntries(DFS_PLAYER_FIELDS.filter(k=>p[k]!==undefined).map(k=>[k,p[k]]))),w.site);
   w.source=mcpDfsString(a.source,'source',200);w.as_of=dfsDate(a.as_of);result={warnings:parsed.warnings,projectionInfo:parsed.projectionInfo||null,dropped:parsed.dropped||{},audit:dfsAudit(w)};
   if(!a.commit)return {preview:true,...result,players:w.players};w.lineups=[];delete w.simulation;delete w.comparison;delete w.compute;
  }else if(op==='sync'){
-  w.players=dfsPlayers(a.players,w.site);dfsObj(a.settings,['solver','simulation','lab'],'settings');
+  delete w.builder;w.players=dfsPlayers(a.players,w.site);dfsObj(a.settings,['solver','simulation','lab'],'settings');
   for(const section of Object.keys(a.settings))w.settings[section]=dfsSettings(w,section,a.settings[section]);
   w.lineups=dfsValidateLineups(w,a.lineups);w.lineup_rules=w.settings.solver;w.source=mcpDfsString(a.source,'source',200);w.as_of=dfsDate(a.as_of);delete w.simulation;delete w.comparison;delete w.compute;
  }else if(op==='players'){
-  w.players=dfsPlayers(a.players,w.site);w.lineups=[];delete w.simulation;delete w.comparison;delete w.compute;
+  delete w.builder;w.players=dfsPlayers(a.players,w.site);w.lineups=[];delete w.simulation;delete w.comparison;delete w.compute;
  }else if(op==='settings'){
   w.settings[a.section]=dfsSettings(w,a.section,a.patch);delete w.simulation;delete w.comparison;
   if(a.section==='solver'){w.lineups=[];delete w.compute;}
  }else if(op==='solve'||op==='explore'){
-  dfsAssert(w.players.length,'Upload a slate first');const {players,cfg}=dfsEngineInput(w);
+  dfsAssert(w.players.length,'Upload a slate first');dfsPlayers(w.players,w.site);const {players,cfg}=dfsEngineInput(w);
   dfsAssert(players.some(p=>!p.excl&&p.proj>0),'Supply usable projections');
   if(w.site==='dk_showdown')for(const p of players)dfsAssert(p.cptSal==null||p.cptSal===Math.round(p.sal*1.5),'Reconcile captain salary with 1.5× FLEX before computing');
   if(op==='explore')dfsAssert(!cfg.groups.length,'Exploration does not support player groups; clear groups or use solve');
@@ -16229,6 +16279,7 @@ async function dfsRun(op,a,env,caller){
  }
  return {...await dfsCommit(env,r,w,a.expected_revision),...result};
 }
+function dfsDraftRead(w){if(!w.builder)return null;const b=w.builder;return {version:1,pool:{...b.pool,players:w.players},roster:dfsModules.DDFSDraft.slots[w.site].map((slot,i)=>{const id=b.rosterIds?.[i];return id==null?null:(w.players.findIndex(p=>p.id===id)<0?null:w.players.findIndex(p=>p.id===id));}),preset:b.preset,settings:b.settings};}
 function dfsDate(s){dfsAssert(typeof s==='string'&&Number.isFinite(Date.parse(s)),'as_of must be a source timestamp');return new Date(s).toISOString();}
 function dfsIndices(v,n){const ids=v===undefined?Array.from({length:n},(_,i)=>i):v;dfsAssert(Array.isArray(ids)&&ids.length>0&&new Set(ids).size===ids.length&&ids.every(i=>Number.isInteger(i)&&i>=0&&i<n),'indices must be unique in-range lineup indexes');return ids;}
 function dfsExport(w){
@@ -16244,7 +16295,7 @@ async function handleDfsWorkspace(request,url,env,cors){
 function dfsToolSchema(op){
  const s={type:'string'},num={type:'integer'},id={type:'string',pattern:'^[A-Za-z0-9_-]{1,80}$'},obj={type:'object'};
  const common={workspace_id:id,expected_revision:{type:'integer',minimum:1}};
- const props={compare:{...common,indices:{type:'array',items:num,maxItems:200},profiles:obj,script:{type:'string',enum:['any','pass','back','run']}},sync:{...common,players:{type:'array',items:obj},lineups:{type:'array',items:obj},settings:obj,source:s,as_of:s},schema:{},list:{},get:{workspace_id:id,offset:num,limit:num,include_results:{type:'boolean'}},create:{workspace_id:id,site:{enum:['dk_classic','dk_showdown'],type:'string'},source:s,as_of:s},upload:{...common,csv:{type:'string',maxLength:500000},source:s,as_of:s,commit:{type:'boolean'}},players:{...common,players:{type:'array',items:obj,minItems:1,maxItems:220}},settings:{...common,section:{type:'string',enum:['solver','simulation','lab']},patch:obj},solve:common,explore:common,simulate:{...common,indices:{type:'array',items:num,maxItems:200}},select:{...common,indices:{type:'array',items:num}},exposure:{workspace_id:id},export:{workspace_id:id},delete:common};
+ const props={draft:{workspace_id:id,expected_revision:{type:'integer',minimum:0},draft:obj},compare:{...common,indices:{type:'array',items:num,maxItems:200},profiles:obj,script:{type:'string',enum:['any','pass','back','run']}},sync:{...common,players:{type:'array',items:obj},lineups:{type:'array',items:obj},settings:obj,source:s,as_of:s},schema:{},list:{},get:{workspace_id:id,offset:num,limit:num,include_results:{type:'boolean'}},create:{workspace_id:id,site:{enum:['dk_classic','dk_showdown'],type:'string'},source:s,as_of:s},upload:{...common,csv:{type:'string',maxLength:500000},source:s,as_of:s,commit:{type:'boolean'}},players:{...common,players:{type:'array',items:obj,minItems:1,maxItems:220}},settings:{...common,section:{type:'string',enum:['solver','simulation','lab']},patch:obj},solve:common,explore:common,simulate:{...common,indices:{type:'array',items:num,maxItems:200}},select:{...common,indices:{type:'array',items:num}},exposure:{workspace_id:id},export:{workspace_id:id},delete:common};
  const optional={get:['offset','limit','include_results'],simulate:['indices'],compare:['indices','profiles','script']};return {type:'object',properties:props[op],required:Object.keys(props[op]).filter(k=>!(optional[op]||[]).includes(k)),additionalProperties:false};
 }
 
@@ -17663,6 +17714,8 @@ root.DDFS.CORR = CORR;
 root.DDFS.assignRoles = assignRoles;
 root.DDFS.payoutFn = payoutFn;
 root.DDFS.tieOutcome=tieOutcome;root.DDFS.wilson=wilson;root.DDFS.lineupKey=lineupKey;
+// Shared historical tables and legal samplers for explicit conditional draft models.
+root.DDFS.modelHelpers={assignRoles,corrBetween,cholesky,cvFor,sampleClassic,sampleShowdown,rng};
 
 })(mcpDdfsRoot);
 
@@ -20087,6 +20140,16 @@ const MCP_NO_ARGS = { type: "object", properties: {}, additionalProperties: fals
 const SWOLE_NEEDS_USER = "SwoleDawg needs to know who you are, and the shared league connector cannot tell. Mint a personal URL at " + SITE + "/connect.html and this works.";
 
 const MCP_TOOLS = [
+  {
+    name: "dd_dfs_draft",
+    title: "Save private DFS manual draft",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Save the shared player pool, partial manual roster, Cash/Small/Large preset and conditional-model settings. Read dd_dfs_schema and dd_dfs_get first. Pass get.draft with changes and the exact expected_revision; zero creates a new workspace only. Unknown source date is allowed. Explicit private save; never submits an entry. Replacing inputs clears computed candidates/results.",
+    inputSchema: dfsToolSchema("draft"),
+    async run(args, env, caller) { return toolText(await dfsRun("draft", args, env, caller)); },
+  },
   {
     name: "dd_dfs_sync",
     title: "Save browser DFS workspace",

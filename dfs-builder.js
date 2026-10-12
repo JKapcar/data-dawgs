@@ -7,12 +7,13 @@ const finite=Number.isFinite;
 const fields={
  name:['Player','Name','Player Name'],pos:['DK Pos','Position','Pos'],team:['Team','TeamAbbrev'],opp:['Opp','Opponent'],
  sal:['DK Salary','Salary','FLEX Salary'],proj:['DK Proj','Projection','Proj','Fpts','FLEX Projection'],
- own:['Large Field','Ownership','Own','Total Own','Small Field'],cptSal:['CPT Salary','Captain Salary'],
+ own:['Ownership','Own','Total Own'],smallOwn:['Small Field'],largeOwn:['Large Field'],cashOwn:['Cash Own','Cash Ownership'],ceil:['DK Ceiling','Ceiling'],cptSal:['CPT Salary','Captain Salary'],
  cptProj:['CPT Projection','Captain Projection','CPT Proj'],cptOwn:['CPT Own','Captain Own','CPT Ownership'],
  flexOwn:['FLEX Own','FLEX Ownership'],status:['Injury Status','Status'],kickoff:['Kickoff','Start Time']
 };
 const labels={name:'Player name *',pos:'Position *',team:'Team *',opp:'Opponent',sal:'FLEX / base salary *',proj:'FLEX / base projection *',own:'Ownership (choose contest column)',cptSal:'CPT salary (already multiplied)',cptProj:'CPT projection (already multiplied)',cptOwn:'CPT ownership',flexOwn:'FLEX ownership',status:'Injury designation',kickoff:'Kickoff (ISO with timezone)'};
-const norm=s=>String(s??'').trim().toLowerCase();
+Object.assign(labels,{smallOwn:'Small-field ownership',largeOwn:'Large-field ownership',cashOwn:'Cash ownership',ceil:'Ceiling (percentile not assumed)'});
+const norm=s=>String(s??'').trim().toLowerCase().replace(/[ _-]/g,'');
 const stamp=s=>typeof s==='string'&&/(Z|[+-]\d\d:\d\d)$/.test(s)&&finite(Date.parse(s));
 function inspect(text){
  if(typeof text!=='string'||text.length>2000000)throw Error('CSV must be text, at most 2 MB.');
@@ -32,10 +33,18 @@ function inspect(text){
  if(headers.length>80||new Set(headers.map(norm)).size!==headers.length)throw Error('Headers must be unique (maximum 80 columns).');
  if(rows.some(r=>r.length!==headers.length))throw Error('Every row must have the same number of columns as the header.');
  const map={};for(const [key,aliases]of Object.entries(fields))map[key]=aliases.map(a=>headers.findIndex(h=>norm(h)===norm(a))).find(i=>i>=0)??-1;
- const detected=map.cptSal>=0||map.cptProj>=0||map.cptOwn>=0?'dk_showdown':headers.some(h=>/^dk /i.test(h))?'dk_classic':null;
+ const dkHeaders=headers.some(h=>/^dk(?:pos|salary|proj)/i.test(norm(h)));
+ const detected=map.cptSal>=0||map.cptProj>=0||map.cptOwn>=0?'dk_showdown':dkHeaders?'dk_classic':null;
  const siteColumn=headers.findIndex(h=>norm(h)==='site');
- const foreignSite=siteColumn>=0&&rows.some(row=>row[siteColumn].trim()&&!/^(?:dk|draftkings)$/i.test(row[siteColumn].trim()))||!headers.some(h=>/^dk /i.test(h))&&headers.some(h=>/^(?:fd |fanduel|yahoo)/i.test(h));
- return {headers,rows,map,detected,foreignSite};
+ const foreignSite=siteColumn>=0&&rows.some(row=>row[siteColumn].trim()&&!/^(?:dk|draftkings)$/i.test(row[siteColumn].trim()))||headers.some(h=>/^(?:fd(?:pos|salary|proj)|fanduel|yahoo)/i.test(norm(h)));
+ const ownKeys=['own','smallOwn','largeOwn','cashOwn','cptOwn','flexOwn'],ownCells=ownKeys.filter(k=>map[k]>=0).flatMap(k=>rows.map(r=>String(r[map[k]]).trim())).filter(v=>v&&!/^(na|n\/a|null|--|-)$/i.test(v));
+ // A percent sign is explicit evidence. Bare decimals alone cannot establish units.
+ const units=!ownCells.length?'pp':ownCells.every(v=>v.endsWith('%'))?'pp':null;
+ const teams=[...new Set(rows.map(r=>String(r[map.team]||'').trim().toUpperCase()))];
+ const knownEtrSD=detected==='dk_showdown'&&map.own>=0&&norm(headers[map.own])==='totalown';
+ const convention=knownEtrSD?'total':map.flexOwn>=0&&map.own<0?'unknown':null;
+ const slateColumn=headers.findIndex(h=>norm(h)==='slate'),slates=slateColumn<0?[]:[...new Set(rows.map(r=>r[slateColumn].trim()).filter(Boolean))];
+ return {headers,rows,map,detected:foreignSite?null:detected,foreignSite,defaults:{site:foreignSite?'':detected||'',units:units||'',convention:convention||'',slate:slates.length===1?slates[0]:'',matchup:knownEtrSD&&teams.length===2&&teams.every(t=>/^[A-Z0-9]{2,4}$/.test(t))?teams.join(' @ '):'',source:knownEtrSD||dkHeaders?'ETR-compatible CSV':''}};
 }
 function numeric(v,label,{ownership=false,units='pp',salary=false}={}){
  const raw=String(v??'').trim();if(!raw||/^(?:na|n\/a|null|--|-)$/i.test(raw))return null;
@@ -50,15 +59,14 @@ function numeric(v,label,{ownership=false,units='pp',salary=false}={}){
 }
 function importPool(preview,opts){
  const {site,map=preview.map,units,convention,slate,source,asOf}=opts;
- if(preview.foreignSite)throw Error('This file explicitly names another site. Use its existing workspace importer; DK builder rules cannot validate it.');
+ if(preview.foreignSite)throw Error('This file explicitly names another site. Choose a DraftKings NFL Classic or Showdown export; this builder cannot validate that platform.');
  if(!D.rules[site])throw Error('Confirm DK NFL Classic or Showdown. Other formats stay in the existing workspace.');
  if(preview.detected==='dk_showdown'&&site!=='dk_showdown')throw Error('Captain columns indicate Showdown; Classic would discard that meaning.');
- if(!String(slate||'').trim())throw Error('Name the exact slate / game and date before importing.');
  if(asOf&&!stamp(asOf))throw Error('Source time must be ISO with a timezone; leave blank if unknown.');
  for(const key of ['name','pos','team','sal','proj'])if(!Number.isInteger(map[key])||map[key]<0)throw Error('Map '+labels[key]+'.');
  const chosen=Object.values(map).filter(i=>i>=0);
  if(chosen.some(i=>!Number.isInteger(i)||i>=preview.headers.length)||new Set(chosen).size!==chosen.length)throw Error('Map each column only once.');
- if(['own','cptOwn','flexOwn'].some(k=>map[k]>=0)&&!['pp','fraction'].includes(units))throw Error('Confirm ownership units for the whole file.');
+ if(['own','smallOwn','largeOwn','cashOwn','cptOwn','flexOwn'].some(k=>map[k]>=0)&&!['pp','fraction'].includes(units))throw Error('Are ownership values percentage points (18 = 18%) or fractions (0.18 = 18%)?');
  const sd=site==='dk_showdown';
  const matchup=String(opts.matchup||'').trim().toUpperCase().split(/\s*(?:@|\bVS\.?\b)\s*/);
  if(opts.matchup&&(!sd||matchup.length!==2||matchup[0]===matchup[1]||matchup.some(t=>!/^[A-Z0-9]{2,4}$/.test(t))))throw Error('Confirmed matchup must be two Showdown teams, for example AAA @ BBB.');
@@ -73,8 +81,8 @@ function importPool(preview,opts){
   const positions=p.pos.split('/');if(!positions.every(x=>(sd?['QB','RB','WR','TE','K','DST']:['QB','RB','WR','TE','DST']).includes(x)))throw Error(label('position')+': not eligible in this format.');
   const identity=I.normName(p.name)+'|'+p.team;
   if(seen.has(identity))throw Error(label('player')+': duplicate name/team. Supply one base row per player; CPT belongs in separate columns.');seen.add(identity);p.uid=identity;
-  for(const k of ['sal','proj','cptSal','cptProj'])p[k]=numeric(val(k),label(k),{salary:k.endsWith('Sal')||k==='sal'});
-  for(const k of ['own','cptOwn','flexOwn'])p[k]=numeric(val(k),label(k),{ownership:true,units});
+  for(const k of ['sal','proj','ceil','cptSal','cptProj'])p[k]=numeric(val(k),label(k),{salary:k.endsWith('Sal')||k==='sal'});
+  for(const k of ['own','smallOwn','largeOwn','cashOwn','cptOwn','flexOwn'])p[k]=numeric(val(k),label(k),{ownership:true,units});
   if(sd){
    if(p.cptSal==null&&finite(p.sal))p.cptSal=p.sal*1.5;
    if(p.cptProj==null&&finite(p.proj))p.cptProj=p.proj*1.5;
@@ -92,7 +100,9 @@ function importPool(preview,opts){
  if(players.some(p=>!p.opp))warnings.push('Opponent missing: matchup legality and interactions remain unknown.');
  if(players.some(p=>p.sal==null||p.proj==null))warnings.push('Missing salary or projection stays unknown, never zero.');
  if(sd)warnings.push('CPT columns are used once; absent CPT salary / projection uses base × 1.5.');
- return {site,players,slate:String(slate).trim(),source:{name:source||null,asOf:asOf||null,version:'local-csv-v1'},importedAt:new Date().toISOString(),units:units||null,convention:convention||null,matchupEvidence:opts.matchup?'User confirmed '+matchup.join(' @ '):null,warnings,mapping:Object.fromEntries(Object.entries(map).map(([k,v])=>[k,v>=0?preview.headers[v]:null]))};
+ if(!asOf)warnings.push('Source freshness unknown. Import time is not source time.');
+ if(!/\b\d{4}-\d{2}-\d{2}\b/.test(String(slate||'')))warnings.push('Calendar date unknown: exploratory build; verify the actual contest before entry export or lock decisions.');
+ return {site,players,slate:String(slate||'').trim(),filename:opts.filename||null,source:{name:source||null,asOf:asOf||null,version:'local-csv-v2'},importedAt:new Date().toISOString(),units:units||null,convention:convention||null,matchupEvidence:opts.matchup?(opts.matchupDetected?'Two teams in the detected Showdown file: ':'User confirmed ')+matchup.join(' @ '):null,warnings,mapping:Object.fromEntries(Object.entries(map).map(([k,v])=>[k,v>=0?preview.headers[v]:null]))};
 }
 function empty(pool){return D.rules[pool.site].slots.map(()=>null);}
 function eligible(p,slot,site){return !!p&&(site==='dk_showdown'||p.pos.split('/').some(pos=>slot==='FLEX'?['RB','WR','TE'].includes(pos):slot===pos));}

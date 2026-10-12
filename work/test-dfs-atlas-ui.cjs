@@ -4,9 +4,9 @@ const root=path.resolve(__dirname,'..'),output=process.env.DDFS_SCREENSHOTS||pat
 const server=http.createServer((req,res)=>{const p=path.resolve(root,'.'+decodeURIComponent(req.url.split('?')[0]));if(!p.startsWith(root+path.sep)||!fs.existsSync(p)){res.writeHead(404);return res.end();}res.setHeader('Content-Type',p.endsWith('.css')?'text/css':p.endsWith('.js')?'text/javascript':p.endsWith('.html')?'text/html':'application/octet-stream');res.end(fs.readFileSync(p));});
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port;const browser=await chromium.launch({headless:true,executablePath:process.env.DD_CHROMIUM||undefined});fs.mkdirSync(output,{recursive:true});
 for(const [size,width,height] of [['desktop',1440,1050],['mobile',390,844],['small',360,800]])for(const theme of ['light','dark']){const name=size+'-'+theme;
- const c=await browser.newContext({viewport:{width,height},isMobile:width<700,hasTouch:width<700,serviceWorkers:'block',reducedMotion:'reduce'}),page=await c.newPage(),errors=[];
- await c.addInitScript(theme=>{localStorage.setItem('dd-theme3-dfs',theme);localStorage.setItem('dd-theme3',theme);},theme);page.on('pageerror',e=>errors.push(e.message));await page.route('**/*',r=>r.request().url().startsWith(base+'/')?r.continue():r.fulfill({status:503,body:'{}',contentType:'application/json'}));
- await page.goto(base+'/dfs.html?resume=1');await page.waitForSelector('#atlasPlot svg');
+ const c=await browser.newContext({viewport:{width,height},isMobile:width<700,hasTouch:width<700,reducedMotion:'reduce'}),page=await c.newPage(),errors=[];
+ await c.addInitScript(theme=>{if(window.top!==window)return;localStorage.setItem('dd-theme3-dfs',theme);localStorage.setItem('dd-theme3',theme);},theme);page.on('pageerror',e=>errors.push(e.message));await page.route('**/*',r=>r.request().url().startsWith(base+'/')?r.continue():r.fulfill({status:503,body:'{}',contentType:'application/json'}));
+ await page.goto(base+'/dfs.html?resume=1#week');await page.waitForSelector('#atlasPlot svg');
  await page.screenshot({path:path.join(output,`${name}-overview.png`),fullPage:false});
  await page.locator('#labsWelcome').screenshot({path:path.join(output,`${name}-atlas.png`)});
  await page.locator('[data-atlas-point]').last().locator('.atlas-hit').click();assert.equal(await page.locator('#atlasLineup').innerText(),'Lineup 29');const first=await page.locator('#atlasLineup').innerText();await page.locator('#atlasNext').click();assert.notEqual(await page.locator('#atlasLineup').innerText(),first);
@@ -17,9 +17,9 @@ for(const [size,width,height] of [['desktop',1440,1050],['mobile',390,844],['sma
  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);
  console.log(name,JSON.stringify({count:await page.locator('#atlasCount').innerText(),errors,contributionSum:total,overflow:false}));await c.close();
 }
-const c=await browser.newContext({serviceWorkers:'block'}),page=await c.newPage();
+const c=await browser.newContext({}),page=await c.newPage();
 await page.route('**/*',r=>r.request().url().startsWith(base+'/')?r.continue():r.fulfill({status:503,body:'{}',contentType:'application/json'}));
-await page.goto(base+'/dfs.html?resume=1');await page.waitForSelector('#atlasPlot svg');await page.waitForFunction(()=>localStorage.getItem('dd-dfs-v1'));
+await page.goto(base+'/dfs.html?resume=1#week');await page.waitForSelector('#atlasPlot svg');await page.waitForFunction(()=>localStorage.getItem('dd-dfs-v1'));
 const players=Array.from({length:6},(_,i)=>({name:i?'Synthetic '+i:'<img src=x onerror=alert(1)>',pos:'WR',team:i%2?'AAA':'BBB',proj:10,sal:6000,own:10,...(i?{}:{cptProj:30,cptSal:9000})}));
 await page.evaluate(players=>{const s=JSON.parse(localStorage.getItem('dd-dfs-v1'));Object.assign(s,{players,lineups:[{ids:[0,1,2,3,4,5],cpt:0,proj:80,sal:39000}],site:'dk_showdown',sheet:'week'});localStorage.setItem('dd-dfs-v1',JSON.stringify(s));},players);
 await page.reload();assert.equal(await page.locator('#atlasProjection').innerText(),'80.0');assert.equal(await page.locator('#atlasCost').innerText(),'$39,000');assert.equal(await page.locator('#atlasOwnership').innerText(),'60 pp');assert.equal(await page.locator('#atlasRoster img').count(),0);
