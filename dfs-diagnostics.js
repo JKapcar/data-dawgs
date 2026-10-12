@@ -20,7 +20,7 @@ function parse(text){
  if(a.players.some(p=>['name','team','opp','pos'].some(k=>p[k]!=null&&typeof p[k]!=='string')))throw Error('Player names, positions and matchups must be text.');
  return a;
 }
-function eligible(p,slot,sd){return sd?true:slot==='FLEX'?['RB','WR','TE'].includes(p.pos):p.pos===slot;}
+function eligible(p,slot,sd){const positions=String(p?.pos||'').split('/');return !!p&&(sd?positions.every(pos=>['QB','RB','WR','TE','K','DST'].includes(pos)):positions.some(pos=>slot==='FLEX'?['RB','WR','TE'].includes(pos):pos===slot));}
 function game(p){return p&&p.team&&p.opp&&p.team!==p.opp?[p.team,p.opp].sort().join(' / '):null;}
 function roster(a,e){
  const r=rules[a.site],ps=e.ids.map(i=>a.players[i]),out=[];
@@ -35,8 +35,8 @@ function roster(a,e){
  const mapped=ps.length>0&&ps.every(p=>game(p));
  if(sd)out.push(check(!mapped?'unknown':new Set(ps.map(game)).size===1?'pass':'warning','Showdown matchup',mapped?`${new Set(ps.map(game)).size} matchups; exactly one required.`:'Explicit matchup data is missing.','Use only the two opposing teams from this contest’s game.'));
  if(!sd)out.push(check(!mapped?'unknown':new Set(ps.map(game)).size>=2?'pass':'warning','Classic game count',mapped?`${new Set(ps.map(game)).size} games; at least two required.`:'Cannot verify the two-game rule without matchups.','Verify official matchup mapping.'));
- const inconsistent=ps.some(p=>p?.gid&&ps.some(q=>q?.gid===p.gid&&game(p)!==game(q)));
- out.push(check(!mapped?'unknown':inconsistent?'warning':'pass','Team / opponent mapping',!mapped?'Missing team or explicit opponent; game IDs alone do not verify opponents.':inconsistent?'A shared game ID has conflicting opponents.':`Explicit matchups: ${[...new Set(ps.map(game))].join('; ')}. Source accuracy still requires verification.`,'Reconcile against the official slate schedule.'));
+ const inconsistent=ps.some(p=>p&&ps.some(q=>q&&((p.gid&&q.gid===p.gid&&game(p)!==game(q))||(p.team===q.team&&p.opp&&q.opp&&p.opp!==q.opp)||(p.opp===q.team&&q.opp&&q.opp!==p.team))));
+ out.push(check(!mapped?'unknown':inconsistent?'warning':'pass','Team / opponent mapping',!mapped?'Missing team or explicit opponent; game IDs alone do not verify opponents.':inconsistent?'Team/opponent or shared-game mappings conflict.':`Explicit matchups: ${[...new Set(ps.map(game))].join('; ')}. Source accuracy still requires verification.`,'Reconcile against the official slate schedule.'));
  const qbs=ps.filter(p=>p?.pos==='QB');
  out.push(check(!mapped?'unknown':'pass','Stacks & bring-backs',mapped?qbs.map(q=>`${q.name}: ${ps.filter(p=>p.team===q.team&&['WR','TE'].includes(p.pos)).length} WR/TE stack; ${ps.filter(p=>p.team===q.opp&&p.pos!=='DST').length} offensive bring-backs`).join('; ')||'No QB in this roster.':'Cannot establish stacks without explicit matchup data.','Choose correlation for the contest and scenario. A bring-back is contextual, not mandatory.'));
  const conflict=mapped&&ps.some(d=>d.pos==='DST'&&ps.some(p=>p.pos!=='DST'&&p.team===d.opp));

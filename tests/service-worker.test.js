@@ -38,7 +38,7 @@ test('unknown providers, APIs, data, private objects, and non-GET requests bypas
   for(const url of ['/data/index.json','/llms.txt','/api/profile','/api/private.js','/uploads/receipt.png',
     'https://new-api.example/profile','https://toto.jkapcar4.workers.dev/status',
     'https://project.firebaseio.com/state.json','https://api.sleeper.app/v1/state/nfl',
-    'https://example.com/board.html','/movie.mp4']){
+    'https://example.com/board.html','/movie.mp4','/work/private-projections.js']){
     assert.equal(await h.dispatch(url),undefined,url);
   }
   assert.equal(await h.dispatch('/board.html',{method:'POST'}),undefined);
@@ -81,6 +81,10 @@ test('cache denied does not stop network HTML, scripts or images',async()=>{
   for(const url of ['/board.html','/dd-live-state.js','/assets/icon-192.png']){
     assert.equal((await h.dispatch(url,{headers:{accept:url.endsWith('html')?'text/html':'*/*'}})).status,200);
   }
+});
+test('the exact shared builder CSV parser supports offline loading without caching other work files',async()=>{
+ const h=harness();await h.cache.put('/work/dfs-slate-ingest.js',publicResponse('shared parser',{headers:{'content-type':'application/javascript'}}));h.setNet(async()=>{throw Error('offline');});
+ assert.equal(await (await h.dispatch('/work/dfs-slate-ingest.js')).text(),'shared parser');assert.equal(await h.dispatch('/work/private-projections.js'),undefined);
 });
 test('saved HTML is labelled, never silently replaced by the homepage, and fallback is not cached',async()=>{
   const h=harness();await h.cache.put('/board.html',publicResponse('<html><body>saved board</body></html>'));
