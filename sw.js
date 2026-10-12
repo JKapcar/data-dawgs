@@ -6,8 +6,8 @@
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
 const VERSION = "93b9eeabc6";
-// A policy revision also invalidates old caches when only this file changes.
-const CACHE = "dd-" + VERSION + "-public-v2";
+// A cache revision also invalidates old images when only precached artwork changes.
+const CACHE = "dd-" + VERSION + "-public-v3";
 
 // the pages that must survive a network drop (stats.html is 2MB — cached on first visit instead)
 const CORE = [
@@ -24,7 +24,8 @@ const CORE = [
   // the weekly game and the sign-on helper are opened on phones like everything else
   "/bozo.html", "/dawg-slate.js", "/dd-live-state.js",
   // installed to a home screen, these are what the launcher asks for
-  "/manifest.webmanifest", "/assets/icon-192.png", "/assets/icon-512.png", "/assets/icon-180.png"
+  "/manifest.webmanifest", "/assets/icon-192.png", "/assets/icon-512.png", "/assets/icon-180.png",
+  "/assets/icon-maskable-512.png", "/assets/data-dawgs-site-logo-560.png"
 ];
 // the horn is precached, not left to cache-first on first play: draft night is the
 // first time it ever fires, and a venue wifi hiccup at that exact moment would eat it
@@ -45,7 +46,9 @@ self.addEventListener("install", e=>{
     // Per-URL adds mean a typo costs one page instead of the whole offline story.
     const misses = [];
     await Promise.all(CORE.concat(CORE_MEDIA).map(u =>
-      fetch(u).then(async r=>{
+      // These icon URLs existed before the branding change. Refill them from the
+      // network instead of copying a still-fresh cartoon icon from HTTP cache.
+      fetch(u, {cache:u.startsWith("/assets/icon-") ? "reload" : "default"}).then(async r=>{
         if(!canStore(r)) throw new Error("not_public");
         await c.put(u, r);
       }).catch(()=>{ misses.push(u); })
