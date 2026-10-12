@@ -157,6 +157,31 @@ No sound, urgency, winning zones or reward mechanics are added. Browser QA cover
 360/390px and desktop widths, light/dark, range keyboard control, axis taps and
 unchanged base arithmetic. The visual revision still needs Jason's review.
 
+### Local visual revision 3: SwoleDawg reference
+
+Read the actual `swoledawg.html` Molten Foundry layer (tokens `--molten-x`,
+`--heat`, `.twk`, KPI `.mini-fill`) and inspected the public page at
+https://datadawgs216.com/swoledawg.html in a fresh Chrome context. Public HTML
+and the repository file matched SHA-256
+`25e1d6f1dd46db1ebce271a1257e04e0967e54e2fb78685afc6e9b412f422cbf`.
+The reference uses burnt orange through amber and cream, a warm workout banner,
+bright bar tips and beveled plates. V3 selectively carries those gradients and
+edge highlights into the hero, chart surround, salary/projection cards, buttons,
+rostered players and selection state. Labels remain solid ink on calm surfaces;
+the plot's axes, domains, values and the sensitivity meaning are unchanged.
+Selection also uses an underline and explicit text, not color alone. No sparks,
+pulses, sound or reward mechanics are copied. Reduced-motion behavior remains.
+
+The preview's synthetic-data label now appears within the dashboard so a cropped
+review image retains that context. Checked text contrast pairs range from 5.34:1
+to 10.06:1; dark/light plot axes exceed 4.8:1. This is targeted visual QA, not an
+accessibility certification. Browser QA covers selected-state cancellation,
+touch, keyboard, drag interruption, and dark/light at 360/390px and desktop.
+The v3 visual direction remains a local review proposal. The simulation module
+and all previous commits are preserved. At this pass's fetch, main advanced to
+`e1823c6` only in unrelated Fourth Down data files; no DFS/reference file changed.
+No merge, rebase or publication was performed.
+
 `node --test tests/dfs-builder.test.js tests/dfs-simulation-contract.test.js`
 tests importer/roster arithmetic and mechanical behavior of the unchanged
 legacy simulator. The latter proves no model calibration.
