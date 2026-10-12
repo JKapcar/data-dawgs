@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
+<script>window.DDFS_ENTRY_ROUTE=location.hash;</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -2729,9 +2730,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   <div class="lab-hd"><span class="lab-chip">Labs</span></div>
   <h1 style="margin:10px 0 0;font-size:27px;font-weight:800;letter-spacing:-.01em">DFS Labs</h1>
-  <p class="lab-sub">Explore a slate. Compare lineups. Understand the tradeoffs. Bring your projections or start with invented players; every simulation is a model, not a promise.</p>
+  <p class="lab-sub">Your projections. Your lineup. One private workspace.</p>
 
-<section id="labsWelcome" class="card labs-welcome" aria-labelledby="labsWelcomeTitle">
+<section id="diagnosticsDesk" data-ddb-skip><iframe id="diagnosticsFrame" title="Private DFS decision desk" src="dfs-diagnostics.html#builder" sandbox="allow-scripts allow-downloads" referrerpolicy="no-referrer" loading="eager" style="width:100%;height:1100px;border:0;border-radius:4px"></iframe></section>
+<details id="legacyTools" class="labs-drawer" data-ddb-skip><summary>Previous workspaces, solver &amp; reference tools</summary><p class="note">These tools retain your previous saved workspace and history. The session above stays private until you explicitly save it. Load that same workspace here to use the existing solver.</p><section id="labsWelcome" class="card labs-welcome" aria-labelledby="labsWelcomeTitle">
   <div class="atlas-intro">
     <div><div class="atlas-kicker"><span class="atlas-mark" aria-hidden="true"></span> DataDawgs / Field Notes 01</div>
     <h2 id="labsWelcomeTitle">Find your angle.<br><em>Know the tradeoff.</em></h2></div>
@@ -2758,7 +2760,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   </div>
   <details class="atlas-method"><summary>Read the chart · sources, limits &amp; the tradeoff boundary</summary><p id="atlasMethodNote"></p><p>Up is more projected points; left is less salary or lower summed ownership. The dashed segments are a visual guide, not additional feasible lineups. The boundary joins candidates for which no displayed lineup has both a higher projection and a lower horizontal value. It is only a boundary within this sample, not proof of an optimal lineup. Summed ownership is the sum of player ownership percentages, measured in percentage points (pp), and can exceed 100. It is a construction descriptor, not a probability, duplication estimate or measure of profit. Captain scoring uses the supplied captain projection, or 1.5× FLEX projection when absent; ownership is summed without a captain multiplier. Roster bars start at zero and share one scale within the selected lineup. Projections do not describe the full range of possible outcomes.</p></details>
 </section>
-<details class="labs-drawer" id="diagnosticsDesk" data-ddb-skip><summary>Decision desk · lineup builder, diagnostics &amp; audit</summary><p class="note">Capture the current workspace inside this isolated desk. Session-only audit data is excluded from Toto; export privately to retain it. This does not save audit attachments to your account.</p><iframe id="diagnosticsFrame" title="Private DFS decision desk" src="dfs-diagnostics.html" sandbox="allow-scripts allow-downloads" referrerpolicy="no-referrer" loading="lazy" style="width:100%;height:1100px;border:0;border-radius:4px"></iframe></details>
+
 <section class="card labs-demo-session" id="labsDemoSession" hidden aria-labelledby="labsDemoHeading">
   <h2 id="labsDemoHeading">Synthetic demo · nothing is saved</h2>
   <p id="labsRunStatus" role="status" aria-live="polite" aria-atomic="true">Preparing invented players.</p>
@@ -2774,9 +2776,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <p class="note" id="dfsStarterStatus" role="status" aria-live="polite">Give your AI your workspace name and contest screenshots with this starter.</p>
   <label id="dfsStarterFallback" hidden>Copy this instruction<textarea class="fi" id="dfsStarterText" readonly rows="6" data-ddb-skip>Read https://datadawgs216.com/docs/dfs-playbook.md, discover my Data Dawgs tools, and call dd_dfs_schema. Use my saved DFS workspace and contest screenshots to build and compare lineups for each actual contest. Check the data before solving, use the actual field and payout settings, and give me a short menu of defensible game-script choices. Show the cost of weaker choices. I choose how many entries to play. Audit my combined exposure, refresh availability before lock, and provide a contest-to-lineup table. Ask only for missing inputs. Rank evidence by section 0 of the playbook and label anything else as a hypothesis. Do not claim a simulation ran unless it did, invent unavailable EV, or submit paid entries.</textarea></label>
   <details id="dfsGuide"><summary>Read the full playbook · tools, contest strategy and final checks</summary>
-  <p>Updated October 9, 2026. Operating instructions for DraftKings NFL Classic and Showdown, for people and personal AIs. This guide describes the implemented workflow; simulation outputs remain model estimates. Read the live <code>dd_dfs_schema</code> for current fields and limits. The older DFS Labs Bible is a research archive, not proof of calibration or a list of shipped features.</p>
+  <p>Updated October 12, 2026. Operating instructions for DraftKings NFL Classic and Showdown, for people and personal AIs. This guide describes the implemented workflow; simulation outputs remain model estimates. Read the live <code>dd_dfs_schema</code> for current fields and limits. The older DFS Labs Bible is a research archive, not proof of calibration or a list of shipped features.</p>
 <h3>Start here</h3>
-<p>Sign in with your own account, upload your projections, name the workspace, and choose Save privately. Connect your own AI through the site's Connect your AI link. Give it the workspace name and your contest screenshots or entry list. The AI can then do the import checks, candidate generation, contest comparisons and exposure audit. Load saved brings its changes back to this device. Uploading alone does not share a slate with your AI.</p>
+<p>Upload your DFS CSV in the main builder. Known DraftKings Classic and Showdown exports load automatically; answer only any unresolved format or ownership-unit question. The success receipt retains the filename, player count and source-time status. An unknown slate date or source time does not prevent exploratory building. Tap Add, drag a player, or use Move then Place with the keyboard. Charts and checks are below the roster.</p>
+<p>The upload stays in isolated session memory. Under Saved work &amp; tools, sign in on the main page, name a workspace and choose Save privately. Your existing personal AI connection can then read that same pool and draft. Load saved / AI changes brings its edits back explicitly. A save does not submit an entry. Reloading an unsaved session discards it. Previous workspaces, solver and reference tools remain in a separate collapsed historical area; no new upload is copied there automatically.</p>
+<p>For manual drafts, call dd_dfs_schema, then dd_dfs_get. Edit the returned draft object and call dd_dfs_draft with the exact returned expected_revision. A revision of zero creates a new named workspace only; never replace an existing workspace by guessing its revision. The draft contains one pool, nullable roster indexes in official slot order, preset (unset/cash/small/large) and conditional-model settings. The account comes from the authenticated caller, never a supplied UID. Partial and over-budget drafts can be saved for exploration; uniqueness and position eligibility are enforced. Replacing player inputs invalidates computed candidates; changing only the manual roster preserves compatible saved candidates. Old pool-replacement APIs invalidate the manual draft metadata rather than maintaining a second pool.</p>
+<p>Cash / Small field / Large field are illustrative presets, not verified lobby settings or strategy recommendations. Fine-tune exposes assumed field size, paid fraction, ownership source, score variance, correlation, salary floor and seed. Small-field, large-field and cash ownership stay separate. Missing ownership is unknown; a zero is known. Showdown general ownership has no contest-type label, so choose it explicitly when applicable. Conditional cash/top-1% rates require a complete legal roster and an acknowledged score/opponent model. They are uncalibrated estimates conditional on one generated full field; intervals cover score-world Monte Carlo error only. EV/ROI remain unavailable without a fee and full payout ladder. The conditional draft model runs locally in the browser. dd_dfs_simulate remains the existing workspace engine and must not be described as running this draft model. An AI may edit the draft settings, but must not claim the browser simulation ran without its receipt.</p>
+
 <p>Each person uses their own account and authorized projection files. A public guide gives an AI instructions, not access to someone else's private workspace. Never paste the personal connector URL into a chat, report or public page. A connected tool is not the same as a link the AI can only read.</p>
 <h3>The short instruction to give your AI</h3>
 <p>Read <a href="https://datadawgs216.com/docs/dfs-playbook.md,">https://datadawgs216.com/docs/dfs-playbook.md,</a> discover my Data Dawgs tools, and call dd_dfs_schema. Use my saved DFS workspace and contest screenshots to build and compare lineups for each actual contest. Check the data before solving, use the actual field and payout settings, and give me a short menu of defensible game-script choices. Show the cost of weaker choices. I choose how many entries to play. Audit my combined exposure, refresh availability before lock, and provide a contest-to-lineup table. Ask only for missing inputs. Rank evidence by section 0 of the playbook and label anything else as a hypothesis. Do not claim a simulation ran unless it did, invent unavailable EV, or submit paid entries.</p>
@@ -2832,7 +2838,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <p class="note" id="dfsCloudNote" role="status">Uploads stay on this device until you choose Save privately. Load replaces the local slate and keeps a device backup.</p>
 </div>
 </details>
-<details class="labs-drawer" id="labsUploadDrawer"><summary>Upload your data</summary>
+<details class="labs-drawer" id="labsUploadDrawer" hidden><summary>Upload your data</summary>
 <div class="card" id="csvUploadCard">
     <label class="fld" for="salFile"><span><b>Upload or replace your CSV</b></span></label>
     <input class="fi" type="file" id="salFile" accept=".csv,.tsv,text/csv,text/tab-separated-values,text/plain,application/vnd.ms-excel">
@@ -3402,6 +3408,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   </div>
 </section>
 
+</details>
   <footer>
     Data Dawgs · Play-by-play data from <a href="https://github.com/nflverse" target="_blank" rel="noopener">nflverse</a> · Strategy synthesized from Establish The Run's 2026 Draft Kit (subscriber content, personal use) · Stats format inspired by <a href="https://rbsdm.com/stats/stats/" target="_blank" rel="noopener">rbsdm.com</a><br><a class="udmach" href="/llms.txt">🤖 For machines</a> · This site is mirrored for machines. 🙃 shows you the other side.
   </footer>
@@ -4689,10 +4696,10 @@ root.DDFS.CORR = CORR;
 root.DDFS.assignRoles = assignRoles;
 root.DDFS.payoutFn = payoutFn;
 root.DDFS.tieOutcome=tieOutcome;root.DDFS.wilson=wilson;root.DDFS.lineupKey=lineupKey;
+// Shared historical tables and legal samplers for explicit conditional draft models.
+root.DDFS.modelHelpers={assignRoles,corrBetween,cholesky,cvFor,sampleClassic,sampleShowdown,rng};
 
 })(typeof module !== "undefined" && module.exports ? module.exports : (typeof self !== "undefined" ? self : this));
-
-
 </script>
 
 <script src="dfs-lab-audit.js?v=20260910-contests"></script>
@@ -10497,5 +10504,6 @@ else boot();
 
 })();
 </script>
+<script src="dfs-entry-bridge.js"></script>
 </body>
 </html>

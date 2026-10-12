@@ -1,5 +1,5 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),B=require('../dfs-builder.js'),D=require('../dfs-diagnostics.js');
-const header='Player,DK Pos,Team,Opp,DK Salary,DK Proj,Large Field';
+const header='Player,DK Pos,Team,Opp,DK Salary,DK Proj,Ownership';
 const rows=[['Ash','QB','AAA','BBB',6500,22,18],['Birch','RB','AAA','BBB',6000,18,24],['Cedar','RB','CCC','DDD',5800,17,0],['Dune','WR','AAA','BBB',5700,16,22],['Elm','WR','BBB','AAA',5200,15,12],['Fern','WR','CCC','DDD',4600,12,''],['Grove','TE','AAA','BBB',3900,11,7],['Heath','WR','DDD','CCC',4300,10,8],['Iris','DST','EEE','FFF',3200,8,6]];
 const csv=header+'\n'+rows.map(r=>r.join(',')).join('\n');
 const options={site:'dk_classic',units:'pp',slate:'Synthetic 2026-10-12',source:'Test',asOf:'2026-10-12T12:00:00Z'};
@@ -9,8 +9,8 @@ test('shared CSV parser preserves BOM, commas, quoted newlines and escapes; reje
  for(const t of [header+'\n"unclosed',header+'\n"closed"oops,QB,AAA,BBB,1,2,3',header+'\nx,QB',header+',Player\nx,QB,AAA,BBB,1,2,3,y'])assert.throws(()=>B.inspect(t));
  assert.throws(()=>B.inspect('x'.repeat(2000001)));assert.throws(()=>B.inspect(header+'\n'+Array(221).fill(rows[0].join(',')).join('\n')));
 });
-test('format, slate, units and column mapping are explicit; ambiguity is retained',()=>{
- const p=B.inspect(csv);assert.equal(p.detected,'dk_classic');assert.throws(()=>B.importPool(p,{...options,site:''}),/Confirm DK/);assert.throws(()=>load(csv,{slate:''}),/Name the exact/);assert.throws(()=>load(csv,{units:''}),/units/);
+test('format/units ambiguity is retained; unknown slate permits exploratory builds',()=>{
+ const p=B.inspect(csv);assert.equal(p.detected,'dk_classic');assert.throws(()=>B.importPool(p,{...options,site:''}),/Confirm DK/);assert.equal(load(csv,{slate:''}).slate,'');assert.throws(()=>load(csv,{units:''}),/percentage points/);
  assert.equal(B.inspect(csv.replaceAll('DK ','')).detected,null);assert.throws(()=>load(csv,{map:{...p.map,proj:p.map.sal}}),/only once/);
  const unknown=B.inspect(csv.replace('Player','Athlete'));assert.equal(unknown.map.name,-1);assert.equal(B.importPool(unknown,{...options,map:{...unknown.map,name:0}}).players[0].name,'Ash');
 });

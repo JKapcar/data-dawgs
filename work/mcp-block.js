@@ -2206,6 +2206,16 @@ const SWOLE_NEEDS_USER = "SwoleDawg needs to know who you are, and the shared le
 
 const MCP_TOOLS = [
   {
+    name: "dd_dfs_draft",
+    title: "Save private DFS manual draft",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Save the shared player pool, partial manual roster, Cash/Small/Large preset and conditional-model settings. Read dd_dfs_schema and dd_dfs_get first. Pass get.draft with changes and the exact expected_revision; zero creates a new workspace only. Unknown source date is allowed. Explicit private save; never submits an entry. Replacing inputs clears computed candidates/results.",
+    inputSchema: dfsToolSchema("draft"),
+    async run(args, env, caller) { return toolText(await dfsRun("draft", args, env, caller)); },
+  },
+  {
     name: "dd_dfs_sync",
     title: "Save browser DFS workspace",
     catalog: "core",

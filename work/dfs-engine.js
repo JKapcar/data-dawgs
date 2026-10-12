@@ -1275,6 +1275,8 @@ root.DDFS.CORR = CORR;
 root.DDFS.assignRoles = assignRoles;
 root.DDFS.payoutFn = payoutFn;
 root.DDFS.tieOutcome=tieOutcome;root.DDFS.wilson=wilson;root.DDFS.lineupKey=lineupKey;
+// Shared historical tables and legal samplers for explicit conditional draft models.
+root.DDFS.modelHelpers={assignRoles,corrBetween,cholesky,cvFor,sampleClassic,sampleShowdown,rng};
 
 })(typeof module !== "undefined" && module.exports ? module.exports : (typeof self !== "undefined" ? self : this));
 
