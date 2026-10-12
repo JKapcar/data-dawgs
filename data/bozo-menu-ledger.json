@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-11",
+ "as_of": "2026-10-12",
  "source": "Data Dawgs public Bozo Menu (Worker /bozo/menu.json) graded against Worker /scores finals and DraftKings near-closes (SportsGameOdds).",
  "tier": "labs",
  "graded": true,
@@ -285,7 +285,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-11T17:50:26.040Z"
+     "score_observed_at": "2026-10-12T15:09:25.000Z"
     },
     "result": "loss",
     "actual": {
@@ -4049,12 +4049,15 @@
     "game": {
      "id": "401872982",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-11T17:50:26.040Z"
+     "score_observed_at": "2026-10-12T15:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "side_margin": 7,
+     "total": 55
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -4073,7 +4076,7 @@
      "close_fair_prob_at_published_line": 0.7441,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "nfl-202610-cin-mia-total-over",
@@ -4119,12 +4122,14 @@
     "game": {
      "id": "401872982",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-11T17:50:26.040Z"
+     "score_observed_at": "2026-10-12T15:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "total": 55
+    },
     "close": {
      "label": "near-close",
      "book": "draftkings",
@@ -4143,7 +4148,7 @@
      "close_fair_prob_at_published_line": 0.5987,
      "prob_pp": null
     },
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "nfl-202610-det-ari-moneyline",
@@ -4190,15 +4195,34 @@
     "game": {
      "id": "401872991",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-11T17:50:26.040Z"
+     "score_observed_at": "2026-10-12T15:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "side_margin": 24,
+     "total": 66
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-11T20:20:25.000Z",
+     "line": null,
+     "price": -265,
+     "opp": 215,
+     "price_at_published_line": {
+      "mine": -265,
+      "theirs": 215
+     }
+    },
+    "clv": {
+     "points": null,
+     "close_fair_prob_at_published_line": 0.6958,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "nfl-202610-det-ari-total-under",
@@ -4244,15 +4268,33 @@
     "game": {
      "id": "401872991",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-11T17:50:26.040Z"
+     "score_observed_at": "2026-10-12T15:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "total": 66
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-11T20:20:25.000Z",
+     "line": 55.5,
+     "price": -112,
+     "opp": -108,
+     "price_at_published_line": {
+      "mine": 113,
+      "theirs": -151
+     }
+    },
+    "clv": {
+     "points": -2,
+     "close_fair_prob_at_published_line": 0.4383,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "nfl-202610-sf-sea-total-under",
@@ -4298,15 +4340,33 @@
     "game": {
      "id": "401872992",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-11T17:50:26.040Z"
+     "score_observed_at": "2026-10-12T15:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "loss",
+    "actual": {
+     "total": 61
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-11T20:20:25.000Z",
+     "line": 46.5,
+     "price": -115,
+     "opp": -105,
+     "price_at_published_line": {
+      "mine": -141,
+      "theirs": 106
+     }
+    },
+    "clv": {
+     "points": 1,
+     "close_fair_prob_at_published_line": 0.5465,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "nfl-202610-bal-atl-moneyline",
@@ -4353,15 +4413,34 @@
     "game": {
      "id": "401872993",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-11T17:50:26.040Z"
+     "score_observed_at": "2026-10-12T15:09:25.000Z"
     },
-    "result": "pending",
-    "actual": null,
-    "close": null,
-    "clv": null,
-    "grade_note": "no final yet"
+    "result": "win",
+    "actual": {
+     "side_margin": 7,
+     "total": 53
+    },
+    "close": {
+     "label": "near-close",
+     "book": "draftkings",
+     "source": "SportsGameOdds",
+     "captured_at": "2026-10-12T00:15:25.000Z",
+     "line": null,
+     "price": 145,
+     "opp": -175,
+     "price_at_published_line": {
+      "mine": 145,
+      "theirs": -175
+     }
+    },
+    "clv": {
+     "points": null,
+     "close_fair_prob_at_published_line": 0.3908,
+     "prob_pp": null
+    },
+    "grade_note": null
    },
    {
     "id": "nfl-202610-buf-lar-total-under",
@@ -4409,7 +4488,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-11T17:50:26.040Z"
+     "score_observed_at": "2026-10-12T15:09:25.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -4420,6 +4499,6 @@
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-11T18:05:44.037Z",
+ "built": "2026-10-12T15:31:53.036Z",
  "canonical_url": "https://datadawgs216.com/data/bozo-menu-ledger.json"
 }
