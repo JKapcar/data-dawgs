@@ -46,7 +46,7 @@ function parsePool(text,platform){
  const salary=num(get('salary'));assert(salary>0&&Number.isInteger(salary)&&salary<=RULES[platform].cap,'Invalid salary');const name=get('name'),team=get('team').toUpperCase();assert(name&&/^[A-Z]{2,4}$/.test(team),'Missing name/team');
  const id=get('id')||platform+':'+team+':'+norm(name);assert(!ids.has(id),'Duplicate player ID');
  const matchup=get('game').match(/\b([A-Z]{2,4})@([A-Z]{2,4})\b/),opp=get('opp').replace(/^@/,'').toUpperCase()||(matchup?(matchup[1]===team?matchup[2]:matchup[2]===team?matchup[1]:''):'');assert(!opp||opp!==team,'Opponent equals team');
- const own=num(get('own'));assert(!get('own')||own!==null,'Invalid ownership number');assert(own===null||own>=0&&own<=100,'Ownership must be percent 0–100');
+ const own=num(get('own'));assert(!get('own')||own!==null,'Invalid ownership number');assert(own===null||own>=0&&own<=100,'Ownership must be percent 0â€“100');
  ids.add(id);players.push({kickoff:kickoff(get('kickoff')||get('game')),id,nhlId:get('nhlId')||null,name,pos,team,opp,salary,own,slateId:get('slateId'),date:get('date'),minutes:num(get('minutes')),playProb:num(get('playProb')),line:get('line'),pp:get('pp'),status:get('status')||'unknown',sourceAt:get('sourceAt')||null,source:get('source'),platform,override:null});
  }catch(e){rejected.push({row:i+1,reason:e.message});}}
  assert(players.length<=600,'Maximum 600 players');return {players,rejected,parsed:players.length,total:rows.length-start-1,mapping:Object.fromEntries(Object.entries(mapping).filter(([,v])=>v>=0).map(([k,v])=>[k,headers[v]])),platform};
@@ -88,11 +88,14 @@ function score(events,platform,goalie=false,expected=false){
  return {components,subtotal:Object.values(components).reduce((a,b)=>a+b,0),total:missing.length?null:Object.values(components).reduce((a,b)=>a+b,0),missing,verified:!!rule.scoringVerified};
 }
 function project(p,model){
+ const target=p.date||(p.kickoff?new Date(p.kickoff).toISOString().slice(0,10):null);
+ if(target&&model.asOf.slice(0,10)>target)return {points:null,subtotal:null,components:{},flags:['Historical slate predates model as-of; load a pre-slate model to prevent leakage'],match:'As-of conflict'};
+
  const joined=match(p,model),o=p.override||{},base=joined.player,flags=[];if(!base)return {points:null,subtotal:null,flags:[joined.reason],match:joined.method,components:{}};
  const goalie=p.pos.includes('G'),m=o.minutes??p.minutes??base.minutes,prob=o.playProb??p.playProb;
  if(prob===null||prob===undefined)flags.push(goalie?'Starting probability unknown':'Playing probability unknown');if(base.games<PARAMS.minGames)flags.push('Small historical sample');if(!o.at&&!p.sourceAt)flags.push('Role/news timestamp unknown');if(!o.source&&!p.source)flags.push('Role/news source unknown');if(/^(out|scratched|not starting)$/i.test(o.status||p.status||'')&&prob>0)flags.push('Availability conflicts with positive playing probability');
  if(!Number.isFinite(m)||m<0||m>100)return {points:null,subtotal:null,flags:['Invalid projected minutes'],components:{}};
- if(prob!=null&&(!Number.isFinite(prob)||prob<0||prob>1))return {points:null,subtotal:null,flags:['Playing probability must be 0–1'],components:{}};
+ if(prob!=null&&(!Number.isFinite(prob)||prob<0||prob>1))return {points:null,subtotal:null,flags:['Playing probability must be 0â€“1'],components:{}};
  const events=Object.fromEntries(Object.entries(base.rates).map(([k,v])=>[k,v*m]));
  if(goalie){events.wins=o.winProb??null;events.shutouts=o.shutoutProb??null;events.otLoss=o.otLossProb??null;flags.push('Goalie win/shutout inputs require explicit estimates; relief appearances not modeled');}
  else{events.shPoints=o.shPoints??null;events.ppPoints=o.ppPoints??null;events.shootoutGoals=o.shootoutGoals??null;}
