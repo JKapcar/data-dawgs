@@ -820,7 +820,7 @@ footer a{color:var(--accent)}
      ⚠️ Machine values did not move: tier is still "pound" and the keys below keep their
         historical spellings.
      Keep this array identical on every page; the flattened HTML is the source. */
-  const ARENA_ICONS = Object.freeze({arena:"🎪",dashboard:"🏈",bozo:"🤡",challenge:"🔮",teamdraft:"🧢",dfs:"🧩","fantasy-warroom":"🗺️",guillotine:"🪓",survivor:"🏝️",rankings:"🐕"});
+  const ARENA_ICONS = Object.freeze({arena:"🎪",dashboard:"🏈",bozo:"🤡",challenge:"🔮",teamdraft:"🧢",dfs:"🧩","dfs-showdown":"🤠","fantasy-warroom":"🗺️",guillotine:"🪓",survivor:"🏝️",rankings:"🐕"});
   const NAV = [
     /* Every Arena destination gets its own small character badge; section labels stay quiet. */
     {label:"Arena", href:"arena.html", key:"arena", items:[
@@ -832,6 +832,7 @@ footer a{color:var(--accent)}
       ["teamdraft.html","NFL Team Draft","teamdraft"],
       ["#","Tools","nav-section"],
       ["dfs.html","DFS Labs","dfs"],
+      ["dfs-showdown.html","DFS SHOWDOWN","dfs-showdown"],
       ["fantasy-warroom.html","Fantasy League War Room","fantasy-warroom"],
       ["guillotine.html","Last Dawg Standing","guillotine"],
       ["survivor.html","Survivor","survivor"],
@@ -1610,6 +1611,7 @@ bozo.html — the weekly one-leg parlay game with four sheets: Overview (season 
 challenge.html — the NFL Forecasting Challenge: put a probability on a game before kickoff, get graded after.
 survivor.html — survivor pool: this week's board, pick popularity, an optimal path, a season simulation, model settings.
 guillotine.html — guillotine league companion. dfs.html — DFS Labs: Run the demo opens an isolated synthetic experiment with Cancel; it never saves over a personal workspace; data, workspace and guides are in disclosures. This week dashboard, slate, solver, simulator, exposure, bankroll, screener, standings (post-lock results ledger: joins DK contest-standings CSVs to the saved pre-lock workspace, audit CSV), method (keys 1–9). The projections there are the USER'S OWN.
+dfs-showdown.html — DFS SHOWDOWN: grades a signed-in user's DraftKings Showdown entries (their DFS Labs workspace lineups or saved portfolio, or an imported DK entries CSV) against a field sampled from their own ownership, per contest type: single-entry, 5/20-max, max-entry, flagship. The types differ by a field-sharpness preset, which is a hypothesis. Shows a banded contest-fit chart, a grade with reasons, exposure by dollars, captains, game scripts, expected copies and finish odds. Simulation output, ungraded, no ROI. Read-only: never saves, solves or enters. Signed out it runs an invented demo slate. The projections are the USER'S OWN.
 teamdraft.html — the 32-team wins pool: spin wheel, board, eight rosters, Monte Carlo season sim.
 The draft rig: dashboard.html (a drafter's view), auction.html (the operator), board.html (read-only room view), bigboard.html (the projector), dataviz.html and report.html (afterwards), master.html (the player pool and scouting).
 datadawg-dollars.html — DataDawg$: our OWN converted auction dollars for one league room (Target $, conversion-sensitivity bands, delta vs the source price). It is NOT MV: MV is the dated market snapshot, DataDawg$ is this site's conversion of it. The league cheat sheet on board.html shows the same DataDawg$ alongside ESPN and PFF, all renormalized to that room's $2,800 — but ESPN and PFF are budget-only, with no custom-scoring shift, so they are not equivalent columns. Machine surfaces: /data/datadawg-dollars-values.json, /data/datadawg-dollars-method.json, /data/datadawg-dollars-method.md.

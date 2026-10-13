@@ -1499,6 +1499,14 @@ const SURFACES = [
               { kind: 'json', url: '/data/dfs-weeks.json', status: 'live', covers: 'empty week-object receipt ledger (lockedSha256 + realized:null); Kap publishes locked weeks later — aggregates only (I3)' }],
     planned: ['durable compute jobs', 'exact portfolio exposures', 'late swap', 'results calibration'],
     gap: 'Private DFS workspace tools are deployed in core. Browser Save/Load and MCP share account-scoped inputs. Projections and ownership are caller-supplied and stored privately only when explicitly saved. Compute is bounded; exact portfolio caps and durable jobs remain planned. Week objects lock on-device before kickoff; the public ledger starts empty.' },
+  /* DFS SHOWDOWN reads the same private workspaces DFS Labs saves and owns no data file.
+     Everything it shows is computed in the browser from the signed-in user's own inputs, so
+     its machine surface is the two account-scoped workspace reads, not a /data/ payload. */
+  { id: 'dfs-showdown', domain: 'arena', name: 'DFS SHOWDOWN', page: '/dfs-showdown.html',
+    machine: [{ kind: 'mcp', tool: 'dd_dfs_list', status: 'live', covers: 'account-scoped list of the caller’s DFS workspaces; the page keeps the Showdown ones' },
+              { kind: 'mcp', tool: 'dd_dfs_get', status: 'live', covers: 'account-scoped read of one workspace (players, lineups, saved portfolio); grades are computed in the browser and never stored' }],
+    planned: ['field calibration from the user’s own contest standings', 'real payout tables and the duplicate split, so ROI can be shown'],
+    gap: 'Grades, bands, finish odds and expected copies are computed in the browser from the user’s own projections and ownership; nothing is stored and nothing is graded. Contest types differ by a field-sharpness preset that stays a hypothesis until standings calibrate it. No ROI until real payout tables and the duplicate split are applied.' },
   { id: 'guillotine', domain: 'arena', name: 'Last Dawg Standing', page: '/guillotine.html',
     machine: [{ kind: 'json', url: '/data/guillotine-weekly.json', status: 'live', covers: 'daily Sleeper weekly player statistics and descriptive uncertainty; league odds computed privately in browser' },
               { kind: 'json', url: '/data/guillotine-receipts.json', status: 'live', covers: 'prospective pregame forecasts and completed-week grades' },
