@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-12",
+ "as_of": "2026-10-13",
  "source": "Data Dawgs public Bozo Menu (Worker /bozo/menu.json) graded against Worker /scores finals and DraftKings near-closes (SportsGameOdds).",
  "tier": "labs",
  "graded": true,
@@ -285,7 +285,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-12T21:09:25.000Z"
+     "score_observed_at": "2026-10-13T14:09:01.000Z"
     },
     "result": "loss",
     "actual": {
@@ -4051,7 +4051,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-12T21:09:25.000Z"
+     "score_observed_at": "2026-10-13T14:09:01.000Z"
     },
     "result": "win",
     "actual": {
@@ -4124,7 +4124,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-12T21:09:25.000Z"
+     "score_observed_at": "2026-10-13T14:09:01.000Z"
     },
     "result": "win",
     "actual": {
@@ -4197,7 +4197,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-12T21:09:25.000Z"
+     "score_observed_at": "2026-10-13T14:09:01.000Z"
     },
     "result": "win",
     "actual": {
@@ -4270,7 +4270,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-12T21:09:25.000Z"
+     "score_observed_at": "2026-10-13T14:09:01.000Z"
     },
     "result": "loss",
     "actual": {
@@ -4342,7 +4342,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-12T21:09:25.000Z"
+     "score_observed_at": "2026-10-13T14:09:01.000Z"
     },
     "result": "loss",
     "actual": {
@@ -4415,7 +4415,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-12T21:09:25.000Z"
+     "score_observed_at": "2026-10-13T14:09:01.000Z"
     },
     "result": "win",
     "actual": {
@@ -4486,19 +4486,21 @@
     "game": {
      "id": "401872994",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-12T21:09:25.000Z"
+     "score_observed_at": "2026-10-13T14:09:01.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "loss",
+    "actual": {
+     "total": 71
+    },
     "close": null,
     "clv": null,
-    "grade_note": "no final yet"
+    "grade_note": null
    }
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-12T21:44:58.708Z",
+ "built": "2026-10-13T14:15:59.729Z",
  "canonical_url": "https://datadawgs216.com/data/bozo-menu-ledger.json"
 }

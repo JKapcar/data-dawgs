@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-12",
+ "as_of": "2026-10-13",
  "source": "Data Dawgs public Bozo Menu (Worker /bozo/menu.json) graded against Worker /scores finals and DraftKings near-closes (SportsGameOdds).",
  "tier": "labs",
  "graded": true,
@@ -15,14 +15,14 @@
    "close": "clv_points and close MAE are measured against the DraftKings near-close"
   },
   "menu": {
-   "n_graded": 61,
+   "n_graded": 62,
    "wins": 37,
-   "losses": 24,
+   "losses": 25,
    "pushes": 1,
-   "hit_rate": 0.6066,
+   "hit_rate": 0.5968,
    "hit_wilson90": [
-    0.5013,
-    0.7028
+    0.4923,
+    0.6931
    ],
    "clv_points": {
     "n": 45,
@@ -89,14 +89,14 @@
    {
     "source": "DRatings totals",
     "claims": 22,
-    "n_graded": 21,
+    "n_graded": 22,
     "wins": 12,
-    "losses": 9,
+    "losses": 10,
     "pushes": 0,
-    "hit_rate": 0.5714,
+    "hit_rate": 0.5455,
     "hit_wilson90": [
-     0.3959,
-     0.7307
+     0.3756,
+     0.7053
     ],
     "clv_points": {
      "n": 17,
@@ -106,11 +106,11 @@
      "n": 8,
      "mean": 0.5084
     },
-    "verdict": "insufficient (n=21 < 30)",
+    "verdict": "insufficient (n=22 < 30)",
     "total": {
-     "n": 21,
-     "mae": 11.414,
-     "bias": -1.51,
+     "n": 22,
+     "mae": 11.995,
+     "bias": -2.541,
      "close_mae_same_games": {
       "n": 17,
       "mae": 12.5
@@ -238,14 +238,14 @@
     "verdict": "insufficient (n=17 < 30)"
    },
    "points: 5+": {
-    "n_graded": 12,
+    "n_graded": 13,
     "wins": 7,
-    "losses": 5,
+    "losses": 6,
     "pushes": 1,
-    "hit_rate": 0.5833,
+    "hit_rate": 0.5385,
     "hit_wilson90": [
-     0.356,
-     0.78
+     0.3248,
+     0.7389
     ],
     "clv_points": {
      "n": 9,
@@ -255,7 +255,7 @@
      "n": 5,
      "mean": 0.5195
     },
-    "verdict": "insufficient (n=12 < 30)"
+    "verdict": "insufficient (n=13 < 30)"
    },
    "points: <3": {
     "n_graded": 25,
@@ -280,6 +280,6 @@
   }
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-12T15:31:53.036Z",
+ "built": "2026-10-13T14:15:59.729Z",
  "canonical_url": "https://datadawgs216.com/data/bozo-menu-scorecard.json"
 }
