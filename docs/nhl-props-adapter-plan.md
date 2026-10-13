@@ -2,6 +2,16 @@
 
 Historical event rates remain the default. The user supplied a Google Sheet described as FanDuel NHL props; a separate read-only research task is verifying its actual contents. This document does not claim that the sheet has paired odds, complete markets, reliable timestamps, or usable historical coverage. No sheet ingestion or prop-derived projection is implemented in this preview.
 
+## Reported workbook inspection (October 13, 2026)
+
+The parent research task reports `fd_nhl_props_2026-10-13.xlsx`, with Summary, All Props and 16 matchup sheets. The workbook claims an Ohio capture at 13:50:44 EDT and source `sbapi.oh.sportsbook.fanduel.com`; this is workbook-provided provenance, not independently verified live-feed freshness.
+
+Of 11,339 rows, the researcher identified 251 paired over/under markets: 128 shots-on-goal, 110 goals and 13 goalie saves. Assists and points are Yes-only milestones, not clean two-sided markets. There are no block or power-play-point markets. The export lacks NHL/event/market/selection IDs, a team column, per-row source URLs and collection logs. Another 165 rows labeled Player Shots on Goal are Yes-only specials, including multi-player combinations and team shots.
+
+Importer consequence: validate **both market semantics and player identity**; a shots-on-goal label alone is insufficient. Exclude combination/team/milestone specials from single-player O/U fitting. Missing IDs/team evidence must be resolved against the exact historical/slate identity graph, never guessed from a fuzzy name. Preserve the capture claim separately from independently verified quote time. Exact column names and sample fits remain pending, so no blind workbook acceptance is implemented.
+
+The eventual mode must be labeled **partial market-informed projection**: fitted eligible markets can supply individual event components under a named distribution assumption, with historical components retained for absent categories. Preserve each component's origin and fit diagnostics. Any blend of a fitted and historical estimate needs explicit, versioned weights validated out of time; paired prices do not justify a complete projection or calibrated variance on their own.
+
 ## Normalized private evidence
 
 An adapter should emit one record per *paired* market:
