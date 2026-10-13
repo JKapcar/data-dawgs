@@ -15,3 +15,11 @@ test('draft validation rejects invalid rates, overrides, duplicates and prototyp
 test('hockey structure uses roles and goalie/skater opposition, not NFL stacks',()=>{const ps=pool();ps[0].line='1';ps[3].line='1';assert.ok(N.correlations(ps,[0,3,7]).some(x=>x.includes('same even-strength')));assert.ok(N.correlations(ps,[0,3,7]).some(x=>x.includes('goalie versus')));});
 
 test('official DK goalie offensive stats count; absent inputs stay unknown',()=>{const e={saves:35,ga:2,wins:1,shutouts:0,otLoss:0,goals:0,assists:1,sog:0,blocks:0,shPoints:0,shootoutGoals:0};assert.equal(N.score(e,'dk',true).total,31.5);delete e.assists;assert.equal(N.score(e,'dk',true).total,null);assert.equal(N.RULES.dk.scoringVerified,true);assert.equal(N.RULES.dk.verified,false);assert.match(N.RULES.dk.scoringSource,/dknetwork.draftkings.com/);});
+
+test('Classic importer rejects explicit Showdown markers even with normal player positions',()=>{
+ const h='Position,Name,Salary,TeamAbbrev,Roster Position\n';
+ for(const role of ['CPT','FLEX'])assert.throws(()=>N.parsePool(h+'C,Fixture,5000,AAA,'+role,'dk'),/Classic only/);
+ assert.equal(N.parsePool(h+'C,Fixture,5000,AAA,C\/UTIL','dk').parsed,1);
+ assert.throws(()=>N.parsePool('NHL Showdown\n'+h+'C,Fixture,5000,AAA,UTIL','dk'),/Classic only/);
+ assert.equal(N.RULES.dk.capVerified,true);assert.equal(N.RULES.dk.slotsVerified,true);assert.equal(N.RULES.dk.teamConstraintsVerified,false);assert.equal(N.RULES.dk.utilEligibilityVerified,false);assert.equal(N.RULES.dk.verified,false);
+});
