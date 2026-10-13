@@ -1,0 +1,33 @@
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+const source=fs.readFileSync(new URL('../dawg-bot-worker.js',import.meta.url),'utf8').replace(/^import .*;$/m,'const BOZO_ESPN_TEAM_SEED = {};').replace('export default','const worker =');
+const context=vm.createContext({console,Date,URL,Response,Request,Headers,TextEncoder,TextDecoder,crypto:globalThis.crypto,AbortController,AbortSignal,setTimeout,clearTimeout});
+vm.runInContext(source+`\nglobalThis.api={run:dfsRun,tools:MCP_TOOLS,route:handleDfsWorkspace};fbGet=async(e,p)=>({data:e.rows[p]||null,etag:String(e.versions[p]||0)});fbPut=async(e,p,v,t)=>{if(String(e.versions[p]||0)!==t)return false;e.rows[p]=JSON.parse(JSON.stringify(v));e.versions[p]=(e.versions[p]||0)+1;return true;};`,context);
+const env={NHL_PRIVATE_PREVIEW:'enabled',rows:{},versions:{}},caller={kind:'user',uid:'userA'},run=(op,a={},who=caller)=>context.api.run(op,a,env,who),copy=x=>JSON.parse(JSON.stringify(x));let checks=0;
+const draft={sport:'nhl',version:1,platform:'dk',players:[{id:'p1',name:'Fixture',team:'AAA',opp:'BBB',pos:['C'],salary:5000,own:null,nhlId:'1',platform:'dk',slateId:'s',date:'2026-10-13',override:{at:'2026-10-13T12:00:00Z',source:'manual fixture',playProb:.9,minutes:20,line:'1',pp:'1'}}],roster:[0,null,null,null,null,null,null,null,null],slate:{id:'s',date:'2026-10-13',games:['AAA@BBB']},model:null,receipt:{parsed:1,rejected:[]},synthetic:false};
+const args={workspace_id:'nhl-test',expected_revision:0,draft};async function reject(op,a,re,who){await assert.rejects(run(op,a,who),re);checks++;}
+await reject('draft',args,/personal/,{kind:'shared'});await reject('draft',{...args,uid:'other'},/unsupported/);await reject('draft',{...args,workspace_id:'../other'},/workspace_id/);
+delete env.NHL_PRIVATE_PREVIEW;
+await reject('draft',args,/disabled/);await reject('nhl_model',{},/disabled/);assert.equal((await run('schema')).nhl_schema.enabled,false);checks++;
+env.NHL_PRIVATE_PREVIEW='enabled';
+let saved=await run('draft',args);assert.equal(saved.revision,1);checks++;
+let w=await run('get',{workspace_id:args.workspace_id});assert.deepEqual(copy(w.draft),draft);assert.equal(w.draft.players[0].own,null);assert.equal(w.nhl_json,undefined);checks+=3;
+await reject('get',{workspace_id:args.workspace_id},/not found/,{kind:'user',uid:'userB'});await reject('draft',args,/Revision conflict/);
+const edited=copy(w.draft);edited.players[0].override.playProb=.5;await run('draft',{...args,draft:edited,expected_revision:1});w=await run('get',{workspace_id:args.workspace_id});assert.equal(w.draft.players[0].override.playProb,.5);checks++;
+const race=await Promise.allSettled([run('draft',{...args,expected_revision:2}),run('draft',{...args,expected_revision:2})]);assert.equal(race.filter(r=>r.status==='fulfilled').length,1);checks++;
+for(const op of ['solve','simulate','export','exposure','sync','players','settings'])await reject(op,{workspace_id:args.workspace_id,...(['export','exposure'].includes(op)?{}:{expected_revision:3})},/NHL supports/);
+await reject('portfolio',{workspace_id:args.workspace_id,expected_revision:3,portfolio:{}},/NFL portfolios/);await reject('draft',{...args,expected_revision:3,draft:{version:1}},/requires an NHL/);
+await run('create',{workspace_id:'nfl',site:'dk_classic',source:'fixture',as_of:'2026-10-13T12:00:00Z'});await reject('draft',{...args,workspace_id:'nfl',expected_revision:1},/separate NHL/);
+await reject('draft',{...args,workspace_id:'synthetic',draft:{...draft,synthetic:true}},/Synthetic/);
+const lockedDraft=copy(draft);lockedDraft.players[0].kickoff='2000-01-01T00:00:00Z';
+await reject('draft',{workspace_id:'lock-add',expected_revision:0,draft:lockedDraft},/Locked player cannot be added/);
+// Existing locked roster is immutable even if a client strips its time from the new payload.
+env.rows['/users/userA/dfsWorkspaces/lock-existing']={id:'lock-existing',site:'nhl_dk',revision:1,nhl_json:JSON.stringify(lockedDraft)};env.versions['/users/userA/dfsWorkspaces/lock-existing']=1;
+const removed=copy(draft);removed.roster=Array(9).fill(null);await reject('draft',{workspace_id:'lock-existing',expected_revision:1,draft:removed},/Locked player cannot be removed/);
+assert.ok(context.api.tools.find(t=>t.name==='dd_dfs_nhl_model').readOnlyHint);assert.equal((await run('schema')).nhl_schema.draft_sport,'nhl');checks+=2;
+vm.runInContext('sessionAuth=async(r)=>r.headers.get("X-Bozo-Session")==="fixture"?{uid:"userA"}:{err:"unauthorized",code:401};',context);
+const url=new URL('https://worker.invalid/api/dfs/draft');let response=await context.api.route(new Request(url,{method:'POST',body:JSON.stringify(args)}),url,env,{});assert.equal(response.status,401);checks++;
+response=await context.api.route(new Request(url,{method:'POST',headers:{'X-Bozo-Session':'fixture'},body:JSON.stringify({...args,expected_revision:3})}),url,env,{});assert.equal(response.status,200);checks++;
+vm.runInContext(`fetch=async()=>new Response('game_id,player_id,player_name,team_abbrev,position,toi,game_date,goals,assists,shots_on_goal,blocked_shots\\n2026020001,1,Fixture,AAA,C,20:00,2026-10-11,1,0,3,2');`,context);
+const model=await run('nhl_model',{as_of:'2026-10-12T00:00:00Z',season:2027,game_type:'02'});assert.equal(model.model.players.length,1);assert.equal(model.model.receipt.trainingMaxDate,'2026-10-11');checks+=2;
+await reject('nhl_model',{as_of:'2099-01-01T00:00:00Z',season:2027,game_type:'02'},/future/);await reject('nhl_model',{as_of:'2026-10-12T00:00:00Z',season:2027,game_type:'01'},/regular season/);
+console.log('PASS',checks,'NHL private workspace checks: roundtrip/nulls, model, schema, cross-account isolation, revisions, races, authenticated REST, NFL operation guards.');

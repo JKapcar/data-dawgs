@@ -73,3 +73,8 @@ Classic and Showdown must remain separate evaluation populations. Preserve the o
 - Production browser CSV upload → Save privately → Load saved passed for `release-fixture-20260916` revision 2 (12 invented players). The named fixture remains available for inspection; the initial oversized demo save left an empty `release-demo-20260916` workspace.
 - At that 2026-09-16 release the source had 74 MCP tools, 43 core; 16 new DFS workspace tools are in core. (2026-10-13 source: 86 tools — 74 `dd_` + 12 `sd_` — 55 core, 25 with readOnlyHint=false; see `data/surfaces.json` `mcp.annotations.read_only_false`.) Client discovery refresh is separate from deployment and was not performed in this chat.
 - For future release smoke checks, open `dfs.html?dfs_preview=<8-hex-version-prefix>` while signed in and expand Release check. Only version hosts on this same toto Worker are accepted. The button uses invented inputs, leaves the browser slate unchanged, and removes its temporary workspace.
+
+
+## NHL preview extension (unreleased)
+
+The review branch adds `dd_dfs_nhl_model` (read-only authenticated historical derivation) and an NHL variant of `dd_dfs_draft`/`dd_dfs_get` in the existing UID/ETag boundary. No new account grant or unauthenticated endpoint. `draft.sport=nhl` retains a validated JSON snapshot; separate NHL workspaces refuse NFL mutations/compute/export. This is not a deployed capability until a reviewed Worker version is promoted. See [NHL preview](nhl-preview.md).

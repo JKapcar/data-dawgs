@@ -135,3 +135,10 @@ Before export, recheck official inactives, slate, eligibility, salary cap, uniqu
 This is the reusable operating guide; current-slate research belongs in the user's private workspace or dated report. Technical reference: https://datadawgs216.com/docs/dfs-mcp-workspace.md. Historical research: https://datadawgs216.com/docs/DFS_LABS_BIBLE.md. Live schema and deployed behavior take precedence for capabilities. Historical findings do not establish this tool's calibration.
 
 When a tool, workflow or material model limit changes, update this guide, its app rendering, the schema guidance and discovery links in the same release. Source: docs/dfs-playbook.md; render with node tools/sync-dfs-playbook.mjs. Public instructions must never embed subscriber projections, subscriber research figures, user lineups or connector credentials. Evidence rules here stay generic; numbers from subscriber research belong in each user's private notes.
+
+
+## Hockey DFS — separate DraftKings app (preview)
+
+Hockey now lives at dfs-nhl.html with its own site-navigation entry, not inside the football DFS desk. Its first version is DraftKings only: one slate CSV, player pool, status checks, lineup builder and salary/position/slate validation. Projection explanations and provenance are in details. No ownership, contest, portfolio, simulation or market-import controls appear. Current official DraftKings scoring/roster verification is still a release gate; no contest-ready claim is made.
+
+Cloud save/load, history refresh and AI workspace access are disabled. CSV imports and lineup building run locally; projections require a derived local model JSON. Reload clears all work. Download JSON is for records and cannot be re-imported. See docs/nhl-preview.md for instructions.

@@ -2,8 +2,8 @@
  "source_page": "/nfelo.html",
  "tier": "dawg",
  "graded": false,
- "as_of": "2026-10-12",
- "source": "nfelo 4.3.1 (greerreNFL/nfelo) at commit d824d2fa.",
+ "as_of": "2026-10-13",
+ "source": "nfelo 4.3.1 (greerreNFL/nfelo) at commit 1a7f7860.",
  "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp).",
  "data": {
   "headline": {
@@ -226,45 +226,66 @@
   "ratings": [
    {
     "team": "LAR",
-    "base": 1659.9,
-    "qb": -7.3,
-    "nfelo": 1652.6,
-    "pts": 5.7
+    "base": 1652.4,
+    "qb": 5.7,
+    "nfelo": 1658.1,
+    "pts": 5.6
    },
    {
     "team": "BUF",
-    "base": 1626.3,
-    "qb": 12,
-    "nfelo": 1638.3,
-    "pts": 5.13
+    "base": 1634.5,
+    "qb": 17.5,
+    "nfelo": 1651.9,
+    "pts": 5.35
    },
    {
-    "team": "SEA",
-    "base": 1634.9,
-    "qb": -6.4,
-    "nfelo": 1628.6,
-    "pts": 4.74
-   },
-   {
-    "team": "KC",
-    "base": 1596.4,
-    "qb": 20.3,
-    "nfelo": 1616.7,
-    "pts": 4.42
+    "team": "BAL",
+    "base": 1600.7,
+    "qb": 11.8,
+    "nfelo": 1612.5,
+    "pts": 3.77
    },
    {
     "team": "SF",
-    "base": 1586.4,
-    "qb": 28.5,
-    "nfelo": 1614.8,
-    "pts": 4.19
+    "base": 1591,
+    "qb": 21,
+    "nfelo": 1612.1,
+    "pts": 3.75
+   },
+   {
+    "team": "SEA",
+    "base": 1627.9,
+    "qb": -16.7,
+    "nfelo": 1611.2,
+    "pts": 3.72
+   },
+   {
+    "team": "KC",
+    "base": 1591.1,
+    "qb": 13.7,
+    "nfelo": 1604.8,
+    "pts": 3.46
+   },
+   {
+    "team": "NE",
+    "base": 1582.9,
+    "qb": 7,
+    "nfelo": 1589.8,
+    "pts": 2.87
    },
    {
     "team": "JAX",
-    "base": 1579.3,
-    "qb": 3.9,
-    "nfelo": 1583.3,
-    "pts": 2.93
+    "base": 1576.6,
+    "qb": 7.4,
+    "nfelo": 1584,
+    "pts": 2.63
+   },
+   {
+    "team": "HOU",
+    "base": 1572.5,
+    "qb": 9.9,
+    "nfelo": 1582.4,
+    "pts": 2.57
    },
    {
     "team": "CIN",
@@ -281,32 +302,25 @@
     "pts": 2.39
    },
    {
-    "team": "DAL",
-    "base": 1546.8,
-    "qb": 16.4,
-    "nfelo": 1563.1,
-    "pts": 2.12
-   },
-   {
-    "team": "NE",
-    "base": 1570.4,
-    "qb": -10.5,
-    "nfelo": 1559.9,
-    "pts": 1.99
-   },
-   {
-    "team": "HOU",
-    "base": 1549.4,
-    "qb": 4.5,
-    "nfelo": 1553.9,
-    "pts": 1.75
+    "team": "CHI",
+    "base": 1555.3,
+    "qb": 14.3,
+    "nfelo": 1569.7,
+    "pts": 2.06
    },
    {
     "team": "DEN",
-    "base": 1554.5,
-    "qb": -5.6,
-    "nfelo": 1548.9,
-    "pts": 1.55
+    "base": 1570.2,
+    "qb": -8,
+    "nfelo": 1562.2,
+    "pts": 1.76
+   },
+   {
+    "team": "DAL",
+    "base": 1535.3,
+    "qb": 10.2,
+    "nfelo": 1545.5,
+    "pts": 1.09
    },
    {
     "team": "MIN",
@@ -316,130 +330,116 @@
     "pts": 1.25
    },
    {
-    "team": "IND",
-    "base": 1541.7,
-    "qb": -12.4,
-    "nfelo": 1529.3,
-    "pts": 0.77
-   },
-   {
-    "team": "BAL",
-    "base": 1592.9,
-    "qb": -65.8,
-    "nfelo": 1527.1,
-    "pts": 0.68
-   },
-   {
     "team": "PHI",
-    "base": 1535.9,
-    "qb": -13.7,
-    "nfelo": 1522.2,
-    "pts": 0.48
-   },
-   {
-    "team": "LAC",
-    "base": 1514.8,
-    "qb": -16.8,
-    "nfelo": 1498,
-    "pts": -0.48
+    "base": 1537.8,
+    "qb": -15.7,
+    "nfelo": 1522,
+    "pts": 0.15
    },
    {
     "team": "GB",
-    "base": 1503.5,
-    "qb": -7.4,
-    "nfelo": 1496.1,
-    "pts": -0.56
-   },
-   {
-    "team": "CHI",
-    "base": 1567.9,
-    "qb": -74,
-    "nfelo": 1493.9,
-    "pts": -0.65
+    "base": 1515.8,
+    "qb": 2.5,
+    "nfelo": 1518.3,
+    "pts": 0
    },
    {
     "team": "PIT",
-    "base": 1483.5,
-    "qb": -5.1,
-    "nfelo": 1478.5,
-    "pts": -1.27
+    "base": 1517.3,
+    "qb": 0.8,
+    "nfelo": 1518.1,
+    "pts": 0
+   },
+   {
+    "team": "IND",
+    "base": 1509.4,
+    "qb": -12.7,
+    "nfelo": 1496.7,
+    "pts": -0.86
    },
    {
     "team": "CAR",
-    "base": 1456,
-    "qb": 13.8,
-    "nfelo": 1469.8,
-    "pts": -1.45
+    "base": 1464.8,
+    "qb": 18.1,
+    "nfelo": 1482.9,
+    "pts": -1.41
    },
    {
-    "team": "ATL",
-    "base": 1430.9,
-    "qb": 32.4,
-    "nfelo": 1463.3,
-    "pts": -1.87
-   },
-   {
-    "team": "OAK",
-    "base": 1433.4,
-    "qb": 26.2,
-    "nfelo": 1459.6,
-    "pts": -2.02
+    "team": "LAC",
+    "base": 1494.7,
+    "qb": -19.9,
+    "nfelo": 1474.8,
+    "pts": -1.73
    },
    {
     "team": "NYG",
-    "base": 1465.7,
-    "qb": -22.1,
-    "nfelo": 1443.6,
-    "pts": -2.66
+    "base": 1469.2,
+    "qb": -12.5,
+    "nfelo": 1456.7,
+    "pts": -2.46
+   },
+   {
+    "team": "ATL",
+    "base": 1423.2,
+    "qb": 29.4,
+    "nfelo": 1452.5,
+    "pts": -2.63
    },
    {
     "team": "WAS",
-    "base": 1436.7,
-    "qb": 6.3,
-    "nfelo": 1443.1,
-    "pts": -2.68
+    "base": 1433.6,
+    "qb": 12.2,
+    "nfelo": 1445.7,
+    "pts": -2.9
+   },
+   {
+    "team": "OAK",
+    "base": 1421.1,
+    "qb": 24.2,
+    "nfelo": 1445.4,
+    "pts": -2.91
    },
    {
     "team": "NO",
-    "base": 1422.5,
-    "qb": 20.5,
-    "nfelo": 1442.9,
-    "pts": -2.69
-   },
-   {
-    "team": "TEN",
-    "base": 1391.8,
-    "qb": 3.8,
-    "nfelo": 1395.6,
-    "pts": -4.58
-   },
-   {
-    "team": "NYJ",
-    "base": 1389.6,
-    "qb": 3.2,
-    "nfelo": 1392.8,
-    "pts": -4.69
-   },
-   {
-    "team": "CLE",
-    "base": 1376.8,
-    "qb": 11.3,
-    "nfelo": 1388.1,
-    "pts": -4.88
+    "base": 1410.3,
+    "qb": 10.6,
+    "nfelo": 1420.9,
+    "pts": -3.89
    },
    {
     "team": "TB",
-    "base": 1478.6,
-    "qb": -92.6,
-    "nfelo": 1386,
-    "pts": -4.96
+    "base": 1490,
+    "qb": -85.8,
+    "nfelo": 1404.2,
+    "pts": -4.56
+   },
+   {
+    "team": "NYJ",
+    "base": 1397.1,
+    "qb": -0.8,
+    "nfelo": 1396.3,
+    "pts": -4.88
+   },
+   {
+    "team": "CLE",
+    "base": 1366.3,
+    "qb": -0.5,
+    "nfelo": 1365.8,
+    "pts": -6.1
+   },
+   {
+    "team": "TEN",
+    "base": 1368.4,
+    "qb": -2.6,
+    "nfelo": 1365.8,
+    "pts": -6.1
    },
    {
     "team": "ARI",
-    "base": 1388.1,
-    "qb": -8.4,
-    "nfelo": 1379.7,
-    "pts": -5.22
+    "base": 1372.3,
+    "qb": -7.9,
+    "nfelo": 1364.5,
+    "pts": -6.15
    },
    {
     "team": "MIA",
@@ -454,46 +454,64 @@
    "season": 2026,
    "z": 401.62,
    "qb_weight": 1,
-   "nfelo_sha": "d824d2fa633ae8d9db3b5c800882d24fb4344e24",
-   "hfa_sha": "c10519edc958ee4af10d6519bce66517cd6245f1",
-   "hfa_committed_at": "2026-10-11T01:49:37Z",
+   "nfelo_sha": "1a7f78603bad41fc7c39f6c973cbbcb5d6f41b48",
+   "hfa_sha": "0b02565c1542d0b6d0510bc0a3455ab849eef78a",
+   "hfa_committed_at": "2026-10-13T08:05:52Z",
    "hfa_repo": "greerreNFL/nfelohfa",
    "ratings": {
     "LAR": {
-     "base": 1659.929703134159,
-     "qb_adj": -7.2933197021484375,
+     "base": 1652.355024476015,
+     "qb_adj": 5.746713161468506,
      "season": 2026,
-     "week": 5
+     "week": 6
     },
     "BUF": {
-     "base": 1626.2941538043465,
-     "qb_adj": 11.963889122009277,
+     "base": 1634.454008642861,
+     "qb_adj": 17.452346801757812,
      "season": 2026,
-     "week": 5
+     "week": 6
     },
-    "SEA": {
-     "base": 1634.9243602547558,
-     "qb_adj": -6.356987476348877,
+    "BAL": {
+     "base": 1600.7159090721673,
+     "qb_adj": 11.756019592285156,
      "season": 2026,
-     "week": 5
-    },
-    "KC": {
-     "base": 1596.405740300814,
-     "qb_adj": 20.254743576049805,
-     "season": 2026,
-     "week": 4
+     "week": 6
     },
     "SF": {
-     "base": 1586.3916188252063,
-     "qb_adj": 28.455724716186523,
+     "base": 1591.0347180206315,
+     "qb_adj": 21.020824432373047,
      "season": 2026,
-     "week": 5
+     "week": 6
+    },
+    "SEA": {
+     "base": 1627.9083522484354,
+     "qb_adj": -16.69083023071289,
+     "season": 2026,
+     "week": 6
+    },
+    "KC": {
+     "base": 1591.1383290000795,
+     "qb_adj": 13.664254188537598,
+     "season": 2026,
+     "week": 6
+    },
+    "NE": {
+     "base": 1582.8620454440386,
+     "qb_adj": 6.979963302612305,
+     "season": 2026,
+     "week": 6
     },
     "JAX": {
-     "base": 1579.342572628233,
-     "qb_adj": 3.913283586502075,
+     "base": 1576.5979798713154,
+     "qb_adj": 7.436601161956787,
      "season": 2026,
-     "week": 5
+     "week": 6
+    },
+    "HOU": {
+     "base": 1572.5431470506737,
+     "qb_adj": 9.905876159667969,
+     "season": 2026,
+     "week": 6
     },
     "CIN": {
      "base": 1563.9479086250735,
@@ -507,143 +525,125 @@
      "season": 2026,
      "week": 5
     },
-    "DAL": {
-     "base": 1546.7519311536707,
-     "qb_adj": 16.379180908203125,
+    "CHI": {
+     "base": 1555.3368981213025,
+     "qb_adj": 14.337319374084473,
      "season": 2026,
-     "week": 5
-    },
-    "NE": {
-     "base": 1570.4195112707823,
-     "qb_adj": -10.540971755981445,
-     "season": 2026,
-     "week": 5
-    },
-    "HOU": {
-     "base": 1549.40241998476,
-     "qb_adj": 4.5406575202941895,
-     "season": 2026,
-     "week": 5
+     "week": 6
     },
     "DEN": {
-     "base": 1554.5235114605664,
-     "qb_adj": -5.588220119476318,
+     "base": 1570.152100973565,
+     "qb_adj": -7.993374824523926,
      "season": 2026,
-     "week": 5
+     "week": 6
+    },
+    "DAL": {
+     "base": 1535.330468984294,
+     "qb_adj": 10.215582847595215,
+     "season": 2026,
+     "week": 6
     },
     "MIN": {
-     "base": 1530.3556101947665,
+     "base": 1530.3556101947663,
      "qb_adj": 11.07155704498291,
      "season": 2026,
      "week": 5
     },
-    "IND": {
-     "base": 1541.7274609457636,
-     "qb_adj": -12.426231384277344,
-     "season": 2026,
-     "week": 5
-    },
-    "BAL": {
-     "base": 1592.9248453012335,
-     "qb_adj": -65.7842788696289,
-     "season": 2026,
-     "week": 5
-    },
     "PHI": {
-     "base": 1535.88789968824,
-     "qb_adj": -13.726783752441406,
+     "base": 1537.7528107535195,
+     "qb_adj": -15.744659423828125,
      "season": 2026,
-     "week": 5
-    },
-    "LAC": {
-     "base": 1514.825549387148,
-     "qb_adj": -16.78515625,
-     "season": 2026,
-     "week": 5
+     "week": 6
     },
     "GB": {
-     "base": 1503.4730108350595,
-     "qb_adj": -7.386744499206543,
+     "base": 1515.823247903425,
+     "qb_adj": 2.4682984352111816,
      "season": 2026,
-     "week": 5
-    },
-    "CHI": {
-     "base": 1567.8701831883989,
-     "qb_adj": -73.99925994873047,
-     "season": 2026,
-     "week": 5
+     "week": 6
     },
     "PIT": {
-     "base": 1483.5281371051187,
-     "qb_adj": -5.060536861419678,
+     "base": 1517.290578233005,
+     "qb_adj": 0.8430545926094055,
      "season": 2026,
-     "week": 5
+     "week": 6
+    },
+    "IND": {
+     "base": 1509.3977415310856,
+     "qb_adj": -12.707059860229492,
+     "season": 2026,
+     "week": 6
     },
     "CAR": {
-     "base": 1456.0001267682892,
-     "qb_adj": 13.82936668395996,
+     "base": 1464.7918522038522,
+     "qb_adj": 18.11894989013672,
      "season": 2026,
-     "week": 4
+     "week": 6
     },
-    "ATL": {
-     "base": 1430.8819168403509,
-     "qb_adj": 32.37223434448242,
+    "LAC": {
+     "base": 1494.7307747434404,
+     "qb_adj": -19.882169723510742,
      "season": 2026,
-     "week": 5
-    },
-    "LV": {
-     "base": 1433.38414862267,
-     "qb_adj": 26.172212600708008,
-     "season": 2026,
-     "week": 5
+     "week": 6
     },
     "NYG": {
-     "base": 1465.7170416208005,
-     "qb_adj": -22.095260620117188,
+     "base": 1469.1971931098599,
+     "qb_adj": -12.539912223815918,
      "season": 2026,
-     "week": 5
+     "week": 6
+    },
+    "ATL": {
+     "base": 1423.1758365726705,
+     "qb_adj": 29.366901397705078,
+     "season": 2026,
+     "week": 6
     },
     "WAS": {
-     "base": 1436.7306035290799,
-     "qb_adj": 6.341241359710693,
+     "base": 1433.5548315165843,
+     "qb_adj": 12.192133903503418,
      "season": 2026,
-     "week": 5
+     "week": 6
+    },
+    "LV": {
+     "base": 1421.1228693442638,
+     "qb_adj": 24.24650001525879,
+     "season": 2026,
+     "week": 6
     },
     "NO": {
-     "base": 1422.4721572371398,
-     "qb_adj": 20.458908081054688,
+     "base": 1410.3098073854378,
+     "qb_adj": 10.594990730285645,
      "season": 2026,
-     "week": 5
-    },
-    "TEN": {
-     "base": 1391.7925872525984,
-     "qb_adj": 3.7883658409118652,
-     "season": 2026,
-     "week": 5
-    },
-    "NYJ": {
-     "base": 1389.5554938806874,
-     "qb_adj": 3.231255531311035,
-     "season": 2026,
-     "week": 5
-    },
-    "CLE": {
-     "base": 1376.7907698827967,
-     "qb_adj": 11.283907890319824,
-     "season": 2026,
-     "week": 5
+     "week": 6
     },
     "TB": {
-     "base": 1478.6124474254225,
-     "qb_adj": -92.60739135742188,
+     "base": 1490.0140235550014,
+     "qb_adj": -85.80690002441406,
      "season": 2026,
-     "week": 5
+     "week": 6
+    },
+    "NYJ": {
+     "base": 1397.1036814380725,
+     "qb_adj": -0.7932930588722229,
+     "season": 2026,
+     "week": 6
+    },
+    "CLE": {
+     "base": 1366.3414134406737,
+     "qb_adj": -0.5233774185180664,
+     "season": 2026,
+     "week": 6
+    },
+    "TEN": {
+     "base": 1368.3698624645779,
+     "qb_adj": -2.564521074295044,
+     "season": 2026,
+     "week": 6
     },
     "ARI": {
-     "base": 1388.0760700905241,
-     "qb_adj": -8.425002098083496,
+     "base": 1372.3313903611913,
+     "qb_adj": -7.86233377456665,
      "season": 2026,
-     "week": 5
+     "week": 6
     },
     "MIA": {
      "base": 1336.472699853613,
@@ -1112,8 +1112,8 @@
      "home": "JAX",
      "away": "PHI",
      "week": 5,
-     "hfa_elo": 41.05,
-     "neutral": false
+     "hfa_elo": 0,
+     "neutral": true
     },
     "2026_05_CHI_GB": {
      "home": "GB",
@@ -1126,14 +1126,14 @@
      "home": "MIA",
      "away": "CIN",
      "week": 5,
-     "hfa_elo": 54.55,
+     "hfa_elo": 41.05,
      "neutral": false
     },
     "2026_05_LV_NE": {
      "home": "NE",
      "away": "LV",
      "week": 5,
-     "hfa_elo": 75.725,
+     "hfa_elo": 62.224999999999994,
      "neutral": false
     },
     "2026_05_MIN_NO": {
@@ -1147,112 +1147,112 @@
      "home": "NYJ",
      "away": "CLE",
      "week": 5,
-     "hfa_elo": 54.55,
+     "hfa_elo": 41.05,
      "neutral": false
     },
     "2026_05_IND_PIT": {
      "home": "PIT",
      "away": "IND",
      "week": 5,
-     "hfa_elo": 54.55,
+     "hfa_elo": 41.05,
      "neutral": false
     },
     "2026_05_HOU_TEN": {
      "home": "TEN",
      "away": "HOU",
      "week": 5,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 28.449999999999996,
      "neutral": false
     },
     "2026_05_NYG_WAS": {
      "home": "WAS",
      "away": "NYG",
      "week": 5,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 28.449999999999996,
      "neutral": false
     },
     "2026_05_DEN_LAC": {
      "home": "LAC",
      "away": "DEN",
      "week": 5,
-     "hfa_elo": 34.9,
+     "hfa_elo": 21.375,
      "neutral": false
     },
     "2026_05_DET_ARI": {
      "home": "ARI",
      "away": "DET",
      "week": 5,
-     "hfa_elo": 68.675,
+     "hfa_elo": 55.175,
      "neutral": false
     },
     "2026_05_SF_SEA": {
      "home": "SEA",
      "away": "SF",
      "week": 5,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 28.449999999999996,
      "neutral": false
     },
     "2026_05_BAL_ATL": {
      "home": "ATL",
      "away": "BAL",
      "week": 5,
-     "hfa_elo": 54.55,
+     "hfa_elo": 41.05,
      "neutral": false
     },
     "2026_05_BUF_LAR": {
      "home": "LAR",
      "away": "BUF",
      "week": 5,
-     "hfa_elo": 75.725,
+     "hfa_elo": 62.224999999999994,
      "neutral": false
     },
     "2026_06_SEA_DEN": {
      "home": "DEN",
      "away": "SEA",
      "week": 6,
-     "hfa_elo": 47.5,
+     "hfa_elo": 47.349999999999994,
      "neutral": false
     },
     "2026_06_HOU_JAX": {
      "home": "JAX",
      "away": "HOU",
      "week": 6,
-     "hfa_elo": 7.9750000000000005,
+     "hfa_elo": 7.95,
      "neutral": true
     },
     "2026_06_CHI_ATL": {
      "home": "ATL",
      "away": "CHI",
      "week": 6,
-     "hfa_elo": 61.625,
+     "hfa_elo": 61.425,
      "neutral": false
     },
     "2026_06_BAL_CLE": {
      "home": "CLE",
      "away": "BAL",
      "week": 6,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_06_TEN_IND": {
      "home": "IND",
      "away": "TEN",
      "week": 6,
-     "hfa_elo": 49.025,
+     "hfa_elo": 48.875,
      "neutral": false
     },
     "2026_06_NYJ_NE": {
      "home": "NE",
      "away": "NYJ",
      "week": 6,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_06_NO_NYG": {
      "home": "NYG",
      "away": "NO",
      "week": 6,
-     "hfa_elo": 48.1,
+     "hfa_elo": 47.975,
      "neutral": false
     },
     "2026_06_CAR_PHI": {
@@ -1266,63 +1266,63 @@
      "home": "TB",
      "away": "PIT",
      "week": 6,
-     "hfa_elo": 41.05,
+     "hfa_elo": 40.925,
      "neutral": false
     },
     "2026_06_ARI_LAR": {
      "home": "LAR",
      "away": "ARI",
      "week": 6,
-     "hfa_elo": 34.9,
+     "hfa_elo": 34.775,
      "neutral": false
     },
     "2026_06_LAC_KC": {
      "home": "KC",
      "away": "LAC",
      "week": 6,
-     "hfa_elo": 47.199999999999996,
+     "hfa_elo": 47.075,
      "neutral": false
     },
     "2026_06_BUF_LV": {
      "home": "LV",
      "away": "BUF",
      "week": 6,
-     "hfa_elo": 55.175,
+     "hfa_elo": 55.00000000000001,
      "neutral": false
     },
     "2026_06_DAL_GB": {
      "home": "GB",
      "away": "DAL",
      "week": 6,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_06_WAS_SF": {
      "home": "SF",
      "away": "WAS",
      "week": 6,
-     "hfa_elo": 62.224999999999994,
+     "hfa_elo": 62.050000000000004,
      "neutral": false
     },
     "2026_07_NE_CHI": {
      "home": "CHI",
      "away": "NE",
      "week": 7,
-     "hfa_elo": 61.625,
+     "hfa_elo": 61.425,
      "neutral": false
     },
     "2026_07_PIT_NO": {
      "home": "NO",
      "away": "PIT",
      "week": 7,
-     "hfa_elo": 6.45,
+     "hfa_elo": 6.425,
      "neutral": true
     },
     "2026_07_SF_ATL": {
      "home": "ATL",
      "away": "SF",
      "week": 7,
-     "hfa_elo": 75.725,
+     "hfa_elo": 75.5,
      "neutral": false
     },
     "2026_07_CIN_BAL": {
@@ -1336,21 +1336,21 @@
      "home": "CAR",
      "away": "TB",
      "week": 7,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_07_NYG_HOU": {
      "home": "HOU",
      "away": "NYG",
      "week": 7,
-     "hfa_elo": 34,
+     "hfa_elo": 33.875,
      "neutral": false
     },
     "2026_07_IND_MIN": {
      "home": "MIN",
      "away": "IND",
      "week": 7,
-     "hfa_elo": 46.300000000000004,
+     "hfa_elo": 46.175,
      "neutral": false
     },
     "2026_07_MIA_NYJ": {
@@ -1364,105 +1364,105 @@
      "home": "TEN",
      "away": "CLE",
      "week": 7,
-     "hfa_elo": 34,
+     "hfa_elo": 33.875,
      "neutral": false
     },
     "2026_07_DEN_ARI": {
      "home": "ARI",
      "away": "DEN",
      "week": 7,
-     "hfa_elo": 41.05,
+     "hfa_elo": 40.925,
      "neutral": false
     },
     "2026_07_GB_DET": {
      "home": "DET",
      "away": "GB",
      "week": 7,
-     "hfa_elo": 47.199999999999996,
+     "hfa_elo": 47.075,
      "neutral": false
     },
     "2026_07_LAR_LV": {
      "home": "LV",
      "away": "LAR",
      "week": 7,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_07_KC_SEA": {
      "home": "SEA",
      "away": "KC",
      "week": 7,
-     "hfa_elo": 68.675,
+     "hfa_elo": 68.475,
      "neutral": false
     },
     "2026_07_DAL_PHI": {
      "home": "PHI",
      "away": "DAL",
      "week": 7,
-     "hfa_elo": 34.9,
+     "hfa_elo": 34.775,
      "neutral": false
     },
     "2026_08_CAR_GB": {
      "home": "GB",
      "away": "CAR",
      "week": 8,
-     "hfa_elo": 48.1,
+     "hfa_elo": 47.975,
      "neutral": false
     },
     "2026_08_BAL_BUF": {
      "home": "BUF",
      "away": "BAL",
      "week": 8,
-     "hfa_elo": 53.37499999999999,
+     "hfa_elo": 53.2,
      "neutral": false
     },
     "2026_08_TEN_CIN": {
      "home": "CIN",
      "away": "TEN",
      "week": 8,
-     "hfa_elo": 61.625,
+     "hfa_elo": 61.425,
      "neutral": false
     },
     "2026_08_ARI_DAL": {
      "home": "DAL",
      "away": "ARI",
      "week": 8,
-     "hfa_elo": 61.625,
+     "hfa_elo": 61.425,
      "neutral": false
     },
     "2026_08_MIN_DET": {
      "home": "DET",
      "away": "MIN",
      "week": 8,
-     "hfa_elo": 35.5,
+     "hfa_elo": 35.4,
      "neutral": false
     },
     "2026_08_IND_JAX": {
      "home": "JAX",
      "away": "IND",
      "week": 8,
-     "hfa_elo": 54.275,
+     "hfa_elo": 54.1,
      "neutral": false
     },
     "2026_08_LV_NYJ": {
      "home": "NYJ",
      "away": "LV",
      "week": 8,
-     "hfa_elo": 75.725,
+     "hfa_elo": 75.5,
      "neutral": false
     },
     "2026_08_CLE_PIT": {
      "home": "PIT",
      "away": "CLE",
      "week": 8,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_08_ATL_TB": {
      "home": "TB",
      "away": "ATL",
      "week": 8,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_08_LAC_LAR": {
@@ -1476,35 +1476,35 @@
      "home": "DEN",
      "away": "KC",
      "week": 8,
-     "hfa_elo": 35.5,
+     "hfa_elo": 35.4,
      "neutral": false
     },
     "2026_08_NE_MIA": {
      "home": "MIA",
      "away": "NE",
      "week": 8,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_08_PHI_WAS": {
      "home": "WAS",
      "away": "PHI",
      "week": 8,
-     "hfa_elo": 40.775,
+     "hfa_elo": 40.65,
      "neutral": false
     },
     "2026_08_CHI_SEA": {
      "home": "SEA",
      "away": "CHI",
      "week": 8,
-     "hfa_elo": 68.675,
+     "hfa_elo": 68.475,
      "neutral": false
     },
     "2026_09_JAX_BAL": {
      "home": "BAL",
      "away": "JAX",
      "week": 9,
-     "hfa_elo": 41.05,
+     "hfa_elo": 40.925,
      "neutral": false
     },
     "2026_09_CIN_ATL": {
@@ -1518,35 +1518,35 @@
      "home": "CAR",
      "away": "DEN",
      "week": 9,
-     "hfa_elo": 55.175,
+     "hfa_elo": 55.00000000000001,
      "neutral": false
     },
     "2026_09_DAL_IND": {
      "home": "IND",
      "away": "DAL",
      "week": 9,
-     "hfa_elo": 48.1,
+     "hfa_elo": 47.975,
      "neutral": false
     },
     "2026_09_NYJ_KC": {
      "home": "KC",
      "away": "NYJ",
      "week": 9,
-     "hfa_elo": 47.5,
+     "hfa_elo": 47.349999999999994,
      "neutral": false
     },
     "2026_09_DET_MIA": {
      "home": "MIA",
      "away": "DET",
      "week": 9,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_09_CLE_NO": {
      "home": "NO",
      "away": "CLE",
      "week": 9,
-     "hfa_elo": 59.8,
+     "hfa_elo": 59.62499999999999,
      "neutral": false
     },
     "2026_09_NYG_PHI": {
@@ -1560,7 +1560,7 @@
      "home": "WAS",
      "away": "LAR",
      "week": 9,
-     "hfa_elo": 75.725,
+     "hfa_elo": 75.5,
      "neutral": false
     },
     "2026_09_HOU_LAC": {
@@ -1574,42 +1574,42 @@
      "home": "SF",
      "away": "LV",
      "week": 9,
-     "hfa_elo": 53.37499999999999,
+     "hfa_elo": 53.2,
      "neutral": false
     },
     "2026_09_GB_NE": {
      "home": "NE",
      "away": "GB",
      "week": 9,
-     "hfa_elo": 47.5,
+     "hfa_elo": 47.349999999999994,
      "neutral": false
     },
     "2026_09_ARI_SEA": {
      "home": "SEA",
      "away": "ARI",
      "week": 9,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_09_TB_CHI": {
      "home": "CHI",
      "away": "TB",
      "week": 9,
-     "hfa_elo": 48.1,
+     "hfa_elo": 47.975,
      "neutral": false
     },
     "2026_09_BUF_MIN": {
      "home": "MIN",
      "away": "BUF",
      "week": 9,
-     "hfa_elo": 61.625,
+     "hfa_elo": 61.425,
      "neutral": false
     },
     "2026_10_WAS_NYG": {
      "home": "NYG",
      "away": "WAS",
      "week": 10,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_10_NE_DET": {
@@ -1623,70 +1623,70 @@
      "home": "ATL",
      "away": "KC",
      "week": 10,
-     "hfa_elo": 61.625,
+     "hfa_elo": 61.425,
      "neutral": false
     },
     "2026_10_HOU_CLE": {
      "home": "CLE",
      "away": "HOU",
      "week": 10,
-     "hfa_elo": 61.625,
+     "hfa_elo": 61.425,
      "neutral": false
     },
     "2026_10_MIN_GB": {
      "home": "GB",
      "away": "MIN",
      "week": 10,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_10_MIA_IND": {
      "home": "IND",
      "away": "MIA",
      "week": 10,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_10_CAR_NO": {
      "home": "NO",
      "away": "CAR",
      "week": 10,
-     "hfa_elo": 34.9,
+     "hfa_elo": 34.775,
      "neutral": false
     },
     "2026_10_BUF_NYJ": {
      "home": "NYJ",
      "away": "BUF",
      "week": 10,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_10_JAX_TEN": {
      "home": "TEN",
      "away": "JAX",
      "week": 10,
-     "hfa_elo": 33.7,
+     "hfa_elo": 33.6,
      "neutral": false
     },
     "2026_10_LAR_ARI": {
      "home": "ARI",
      "away": "LAR",
      "week": 10,
-     "hfa_elo": 49.025,
+     "hfa_elo": 48.875,
      "neutral": false
     },
     "2026_10_SEA_LV": {
      "home": "LV",
      "away": "SEA",
      "week": 10,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_10_SF_DAL": {
      "home": "DAL",
      "away": "SF",
      "week": 10,
-     "hfa_elo": 47.5,
+     "hfa_elo": 47.349999999999994,
      "neutral": false
     },
     "2026_10_PIT_CIN": {
@@ -1700,168 +1700,168 @@
      "home": "BAL",
      "away": "LAC",
      "week": 10,
-     "hfa_elo": 33.375,
+     "hfa_elo": 33.275,
      "neutral": false
     },
     "2026_11_IND_HOU": {
      "home": "HOU",
      "away": "IND",
      "week": 11,
-     "hfa_elo": 35.5,
+     "hfa_elo": 35.4,
      "neutral": false
     },
     "2026_11_MIA_BUF": {
      "home": "BUF",
      "away": "MIA",
      "week": 11,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_11_BAL_CAR": {
      "home": "CAR",
      "away": "BAL",
      "week": 11,
-     "hfa_elo": 41.05,
+     "hfa_elo": 40.925,
      "neutral": false
     },
     "2026_11_NO_CHI": {
      "home": "CHI",
      "away": "NO",
      "week": 11,
-     "hfa_elo": 66.875,
+     "hfa_elo": 66.675,
      "neutral": false
     },
     "2026_11_TEN_DAL": {
      "home": "DAL",
      "away": "TEN",
      "week": 11,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_11_TB_DET": {
      "home": "DET",
      "away": "TB",
      "week": 11,
-     "hfa_elo": 13.5,
+     "hfa_elo": 13.475000000000001,
      "neutral": false
     },
     "2026_11_ARI_KC": {
      "home": "KC",
      "away": "ARI",
      "week": 11,
-     "hfa_elo": 48.1,
+     "hfa_elo": 47.975,
      "neutral": false
     },
     "2026_11_JAX_NYG": {
      "home": "NYG",
      "away": "JAX",
      "week": 11,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_11_NYJ_LAC": {
      "home": "LAC",
      "away": "NYJ",
      "week": 11,
-     "hfa_elo": 48.1,
+     "hfa_elo": 47.975,
      "neutral": false
     },
     "2026_11_LV_DEN": {
      "home": "DEN",
      "away": "LV",
      "week": 11,
-     "hfa_elo": 40.775,
+     "hfa_elo": 40.65,
      "neutral": false
     },
     "2026_11_PIT_PHI": {
      "home": "PHI",
      "away": "PIT",
      "week": 11,
-     "hfa_elo": 53.37499999999999,
+     "hfa_elo": 53.2,
      "neutral": false
     },
     "2026_11_MIN_SF": {
      "home": "SF",
      "away": "MIN",
      "week": 11,
-     "hfa_elo": 27.625,
+     "hfa_elo": 27.55,
      "neutral": true
     },
     "2026_11_CIN_WAS": {
      "home": "WAS",
      "away": "CIN",
      "week": 11,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_12_GB_LAR": {
      "home": "LAR",
      "away": "GB",
      "week": 12,
-     "hfa_elo": 39.95,
+     "hfa_elo": 39.825,
      "neutral": false
     },
     "2026_12_CHI_DET": {
      "home": "DET",
      "away": "CHI",
      "week": 12,
-     "hfa_elo": 49.025,
+     "hfa_elo": 48.875,
      "neutral": false
     },
     "2026_12_PHI_DAL": {
      "home": "DAL",
      "away": "PHI",
      "week": 12,
-     "hfa_elo": 49.025,
+     "hfa_elo": 48.875,
      "neutral": false
     },
     "2026_12_KC_BUF": {
      "home": "BUF",
      "away": "KC",
      "week": 12,
-     "hfa_elo": 34,
+     "hfa_elo": 33.875,
      "neutral": false
     },
     "2026_12_DEN_PIT": {
      "home": "PIT",
      "away": "DEN",
      "week": 12,
-     "hfa_elo": 41.05,
+     "hfa_elo": 40.925,
      "neutral": false
     },
     "2026_12_NO_CIN": {
      "home": "CIN",
      "away": "NO",
      "week": 12,
-     "hfa_elo": 48.1,
+     "hfa_elo": 47.975,
      "neutral": false
     },
     "2026_12_LV_CLE": {
      "home": "CLE",
      "away": "LV",
      "week": 12,
-     "hfa_elo": 74.55000000000001,
+     "hfa_elo": 74.325,
      "neutral": false
     },
     "2026_12_BAL_HOU": {
      "home": "HOU",
      "away": "BAL",
      "week": 12,
-     "hfa_elo": 47.5,
+     "hfa_elo": 47.349999999999994,
      "neutral": false
     },
     "2026_12_NYG_IND": {
      "home": "IND",
      "away": "NYG",
      "week": 12,
-     "hfa_elo": 41.05,
+     "hfa_elo": 40.925,
      "neutral": false
     },
     "2026_12_NYJ_MIA": {
      "home": "MIA",
      "away": "NYJ",
      "week": 12,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_12_ATL_MIN": {
@@ -1875,14 +1875,14 @@
      "home": "JAX",
      "away": "TEN",
      "week": 12,
-     "hfa_elo": 21.375,
+     "hfa_elo": 21.325,
      "neutral": false
     },
     "2026_12_WAS_ARI": {
      "home": "ARI",
      "away": "WAS",
      "week": 12,
-     "hfa_elo": 55.175,
+     "hfa_elo": 55.00000000000001,
      "neutral": false
     },
     "2026_12_SEA_SF": {
@@ -1896,301 +1896,301 @@
      "home": "LAC",
      "away": "NE",
      "week": 12,
-     "hfa_elo": 21.175,
+     "hfa_elo": 21.125,
      "neutral": false
     },
     "2026_12_CAR_TB": {
      "home": "TB",
      "away": "CAR",
      "week": 12,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_13_KC_LAR": {
      "home": "LAR",
      "away": "KC",
      "week": 13,
-     "hfa_elo": 68.675,
+     "hfa_elo": 68.475,
      "neutral": false
     },
     "2026_13_DET_ATL": {
      "home": "ATL",
      "away": "DET",
      "week": 13,
-     "hfa_elo": 41.05,
+     "hfa_elo": 40.925,
      "neutral": false
     },
     "2026_13_JAX_CHI": {
      "home": "CHI",
      "away": "JAX",
      "week": 13,
-     "hfa_elo": 34,
+     "hfa_elo": 33.875,
      "neutral": false
     },
     "2026_13_CIN_CLE": {
      "home": "CLE",
      "away": "CIN",
      "week": 13,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_13_GB_NO": {
      "home": "NO",
      "away": "GB",
      "week": 13,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_13_SF_NYG": {
      "home": "NYG",
      "away": "SF",
      "week": 13,
-     "hfa_elo": 75.725,
+     "hfa_elo": 75.5,
      "neutral": false
     },
     "2026_13_LAC_TB": {
      "home": "TB",
      "away": "LAC",
      "week": 13,
-     "hfa_elo": 75.725,
+     "hfa_elo": 75.5,
      "neutral": false
     },
     "2026_13_WAS_TEN": {
      "home": "TEN",
      "away": "WAS",
      "week": 13,
-     "hfa_elo": 34,
+     "hfa_elo": 33.875,
      "neutral": false
     },
     "2026_13_PHI_ARI": {
      "home": "ARI",
      "away": "PHI",
      "week": 13,
-     "hfa_elo": 55.175,
+     "hfa_elo": 55.00000000000001,
      "neutral": false
     },
     "2026_13_MIA_DEN": {
      "home": "DEN",
      "away": "MIA",
      "week": 13,
-     "hfa_elo": 55.175,
+     "hfa_elo": 55.00000000000001,
      "neutral": false
     },
     "2026_13_CAR_MIN": {
      "home": "MIN",
      "away": "CAR",
      "week": 13,
-     "hfa_elo": 61.625,
+     "hfa_elo": 61.425,
      "neutral": false
     },
     "2026_13_BUF_NE": {
      "home": "NE",
      "away": "BUF",
      "week": 13,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_13_HOU_PIT": {
      "home": "PIT",
      "away": "HOU",
      "week": 13,
-     "hfa_elo": 47.5,
+     "hfa_elo": 47.349999999999994,
      "neutral": false
     },
     "2026_13_DAL_SEA": {
      "home": "SEA",
      "away": "DAL",
      "week": 13,
-     "hfa_elo": 55.175,
+     "hfa_elo": 55.00000000000001,
      "neutral": false
     },
     "2026_14_MIN_NE": {
      "home": "NE",
      "away": "MIN",
      "week": 14,
-     "hfa_elo": 34,
+     "hfa_elo": 33.875,
      "neutral": false
     },
     "2026_14_TB_BAL": {
      "home": "BAL",
      "away": "TB",
      "week": 14,
-     "hfa_elo": 53.37499999999999,
+     "hfa_elo": 53.2,
      "neutral": false
     },
     "2026_14_NO_CAR": {
      "home": "CAR",
      "away": "NO",
      "week": 14,
-     "hfa_elo": 49.025,
+     "hfa_elo": 48.875,
      "neutral": false
     },
     "2026_14_ATL_CLE": {
      "home": "CLE",
      "away": "ATL",
      "week": 14,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_14_TEN_DET": {
      "home": "DET",
      "away": "TEN",
      "week": 14,
-     "hfa_elo": 61.625,
+     "hfa_elo": 61.425,
      "neutral": false
     },
     "2026_14_CHI_MIA": {
      "home": "MIA",
      "away": "CHI",
      "week": 14,
-     "hfa_elo": 48.1,
+     "hfa_elo": 47.975,
      "neutral": false
     },
     "2026_14_DEN_NYJ": {
      "home": "NYJ",
      "away": "DEN",
      "week": 14,
-     "hfa_elo": 81,
+     "hfa_elo": 80.75,
      "neutral": false
     },
     "2026_14_IND_PHI": {
      "home": "PHI",
      "away": "IND",
      "week": 14,
-     "hfa_elo": 13.5,
+     "hfa_elo": 13.475000000000001,
      "neutral": false
     },
     "2026_14_HOU_WAS": {
      "home": "WAS",
      "away": "HOU",
      "week": 14,
-     "hfa_elo": 61.625,
+     "hfa_elo": 61.425,
      "neutral": false
     },
     "2026_14_LAC_LV": {
      "home": "LV",
      "away": "LAC",
      "week": 14,
-     "hfa_elo": 54.275,
+     "hfa_elo": 54.1,
      "neutral": false
     },
     "2026_14_KC_CIN": {
      "home": "CIN",
      "away": "KC",
      "week": 14,
-     "hfa_elo": 47.5,
+     "hfa_elo": 47.349999999999994,
      "neutral": false
     },
     "2026_14_NYG_SEA": {
      "home": "SEA",
      "away": "NYG",
      "week": 14,
-     "hfa_elo": 55.175,
+     "hfa_elo": 55.00000000000001,
      "neutral": false
     },
     "2026_14_LAR_SF": {
      "home": "SF",
      "away": "LAR",
      "week": 14,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_14_BUF_GB": {
      "home": "GB",
      "away": "BUF",
      "week": 14,
-     "hfa_elo": 48.1,
+     "hfa_elo": 47.975,
      "neutral": false
     },
     "2026_14_PIT_JAX": {
      "home": "JAX",
      "away": "PIT",
      "week": 14,
-     "hfa_elo": 41.05,
+     "hfa_elo": 40.925,
      "neutral": false
     },
     "2026_15_SF_LAC": {
      "home": "LAC",
      "away": "SF",
      "week": 15,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_15_SEA_PHI": {
      "home": "PHI",
      "away": "SEA",
      "week": 15,
-     "hfa_elo": 33.375,
+     "hfa_elo": 33.275,
      "neutral": false
     },
     "2026_15_CHI_BUF": {
      "home": "BUF",
      "away": "CHI",
      "week": 15,
-     "hfa_elo": 34,
+     "hfa_elo": 33.875,
      "neutral": false
     },
     "2026_15_CIN_CAR": {
      "home": "CAR",
      "away": "CIN",
      "week": 15,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_15_MIA_GB": {
      "home": "GB",
      "away": "MIA",
      "week": 15,
-     "hfa_elo": 34,
+     "hfa_elo": 33.875,
      "neutral": false
     },
     "2026_15_JAX_HOU": {
      "home": "HOU",
      "away": "JAX",
      "week": 15,
-     "hfa_elo": 34.9,
+     "hfa_elo": 34.775,
      "neutral": false
     },
     "2026_15_CLE_NYG": {
      "home": "NYG",
      "away": "CLE",
      "week": 15,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_15_BAL_PIT": {
      "home": "PIT",
      "away": "BAL",
      "week": 15,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_15_NO_TB": {
      "home": "TB",
      "away": "NO",
      "week": 15,
-     "hfa_elo": 49.025,
+     "hfa_elo": 48.875,
      "neutral": false
     },
     "2026_15_IND_TEN": {
      "home": "TEN",
      "away": "IND",
      "week": 15,
-     "hfa_elo": 34.9,
+     "hfa_elo": 34.775,
      "neutral": false
     },
     "2026_15_ATL_WAS": {
      "home": "WAS",
      "away": "ATL",
      "week": 15,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_15_NYJ_ARI": {
      "home": "ARI",
      "away": "NYJ",
      "week": 15,
-     "hfa_elo": 81,
+     "hfa_elo": 80.75,
      "neutral": false
     },
     "2026_15_DAL_LAR": {
@@ -2204,357 +2204,357 @@
      "home": "LV",
      "away": "DEN",
      "week": 15,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_15_DET_MIN": {
      "home": "MIN",
      "away": "DET",
      "week": 15,
-     "hfa_elo": 35.5,
+     "hfa_elo": 35.4,
      "neutral": false
     },
     "2026_15_NE_KC": {
      "home": "KC",
      "away": "NE",
      "week": 15,
-     "hfa_elo": 61.625,
+     "hfa_elo": 61.425,
      "neutral": false
     },
     "2026_16_HOU_PHI": {
      "home": "PHI",
      "away": "HOU",
      "week": 16,
-     "hfa_elo": 47.5,
+     "hfa_elo": 47.349999999999994,
      "neutral": false
     },
     "2026_16_GB_CHI": {
      "home": "CHI",
      "away": "GB",
      "week": 16,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_16_BUF_DEN": {
      "home": "DEN",
      "away": "BUF",
      "week": 16,
-     "hfa_elo": 55.175,
+     "hfa_elo": 55.00000000000001,
      "neutral": false
     },
     "2026_16_LAR_SEA": {
      "home": "SEA",
      "away": "LAR",
      "week": 16,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_16_TB_ATL": {
      "home": "ATL",
      "away": "TB",
      "week": 16,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_16_CLE_BAL": {
      "home": "BAL",
      "away": "CLE",
      "week": 16,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_16_CIN_IND": {
      "home": "IND",
      "away": "CIN",
      "week": 16,
-     "hfa_elo": 41.05,
+     "hfa_elo": 40.925,
      "neutral": false
     },
     "2026_16_LAC_MIA": {
      "home": "MIA",
      "away": "LAC",
      "week": 16,
-     "hfa_elo": 75.725,
+     "hfa_elo": 75.5,
      "neutral": false
     },
     "2026_16_WAS_MIN": {
      "home": "MIN",
      "away": "WAS",
      "week": 16,
-     "hfa_elo": 47.5,
+     "hfa_elo": 47.349999999999994,
      "neutral": false
     },
     "2026_16_ARI_NO": {
      "home": "NO",
      "away": "ARI",
      "week": 16,
-     "hfa_elo": 61.625,
+     "hfa_elo": 61.425,
      "neutral": false
     },
     "2026_16_NE_NYJ": {
      "home": "NYJ",
      "away": "NE",
      "week": 16,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_16_CAR_PIT": {
      "home": "PIT",
      "away": "CAR",
      "week": 16,
-     "hfa_elo": 41.05,
+     "hfa_elo": 40.925,
      "neutral": false
     },
     "2026_16_TEN_LV": {
      "home": "LV",
      "away": "TEN",
      "week": 16,
-     "hfa_elo": 41.05,
+     "hfa_elo": 40.925,
      "neutral": false
     },
     "2026_16_SF_KC": {
      "home": "KC",
      "away": "SF",
      "week": 16,
-     "hfa_elo": 34,
+     "hfa_elo": 33.875,
      "neutral": false
     },
     "2026_16_JAX_DAL": {
      "home": "DAL",
      "away": "JAX",
      "week": 16,
-     "hfa_elo": 61.625,
+     "hfa_elo": 61.425,
      "neutral": false
     },
     "2026_16_NYG_DET": {
      "home": "DET",
      "away": "NYG",
      "week": 16,
-     "hfa_elo": 41.05,
+     "hfa_elo": 40.925,
      "neutral": false
     },
     "2026_17_BAL_CIN": {
      "home": "CIN",
      "away": "BAL",
      "week": 17,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_17_NO_ATL": {
      "home": "ATL",
      "away": "NO",
      "week": 17,
-     "hfa_elo": 35.5,
+     "hfa_elo": 35.4,
      "neutral": false
     },
     "2026_17_SEA_CAR": {
      "home": "CAR",
      "away": "SEA",
      "week": 17,
-     "hfa_elo": 75.725,
+     "hfa_elo": 75.5,
      "neutral": false
     },
     "2026_17_IND_CLE": {
      "home": "CLE",
      "away": "IND",
      "week": 17,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_17_NYG_DAL": {
      "home": "DAL",
      "away": "NYG",
      "week": 17,
-     "hfa_elo": 21.375,
+     "hfa_elo": 21.325,
      "neutral": false
     },
     "2026_17_WAS_JAX": {
      "home": "JAX",
      "away": "WAS",
      "week": 17,
-     "hfa_elo": 41.05,
+     "hfa_elo": 40.925,
      "neutral": false
     },
     "2026_17_KC_LAC": {
      "home": "LAC",
      "away": "KC",
      "week": 17,
-     "hfa_elo": 27.825,
+     "hfa_elo": 27.750000000000004,
      "neutral": false
     },
     "2026_17_BUF_MIA": {
      "home": "MIA",
      "away": "BUF",
      "week": 17,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_17_DEN_NE": {
      "home": "NE",
      "away": "DEN",
      "week": 17,
-     "hfa_elo": 68.675,
+     "hfa_elo": 68.475,
      "neutral": false
     },
     "2026_17_MIN_NYJ": {
      "home": "NYJ",
      "away": "MIN",
      "week": 17,
-     "hfa_elo": 48.1,
+     "hfa_elo": 47.975,
      "neutral": false
     },
     "2026_17_LAR_TB": {
      "home": "TB",
      "away": "LAR",
      "week": 17,
-     "hfa_elo": 75.725,
+     "hfa_elo": 75.5,
      "neutral": false
     },
     "2026_17_PIT_TEN": {
      "home": "TEN",
      "away": "PIT",
      "week": 17,
-     "hfa_elo": 34,
+     "hfa_elo": 33.875,
      "neutral": false
     },
     "2026_17_LV_ARI": {
      "home": "ARI",
      "away": "LV",
      "week": 17,
-     "hfa_elo": 48.1,
+     "hfa_elo": 47.975,
      "neutral": false
     },
     "2026_17_DET_CHI": {
      "home": "CHI",
      "away": "DET",
      "week": 17,
-     "hfa_elo": 49.025,
+     "hfa_elo": 48.875,
      "neutral": false
     },
     "2026_17_PHI_SF": {
      "home": "SF",
      "away": "PHI",
      "week": 17,
-     "hfa_elo": 62.224999999999994,
+     "hfa_elo": 62.050000000000004,
      "neutral": false
     },
     "2026_17_HOU_GB": {
      "home": "GB",
      "away": "HOU",
      "week": 17,
-     "hfa_elo": 54.55,
+     "hfa_elo": 54.400000000000006,
      "neutral": false
     },
     "2026_18_SF_ARI": {
      "home": "ARI",
      "away": "SF",
      "week": 18,
-     "hfa_elo": 35.5,
+     "hfa_elo": 35.4,
      "neutral": false
     },
     "2026_18_PIT_BAL": {
      "home": "BAL",
      "away": "PIT",
      "week": 18,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_18_NYJ_BUF": {
      "home": "BUF",
      "away": "NYJ",
      "week": 18,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_18_ATL_CAR": {
      "home": "CAR",
      "away": "ATL",
      "week": 18,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_18_CLE_CIN": {
      "home": "CIN",
      "away": "CLE",
      "week": 18,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_18_LAC_DEN": {
      "home": "DEN",
      "away": "LAC",
      "week": 18,
-     "hfa_elo": 49.025,
+     "hfa_elo": 48.875,
      "neutral": false
     },
     "2026_18_DET_GB": {
      "home": "GB",
      "away": "DET",
      "week": 18,
-     "hfa_elo": 34.9,
+     "hfa_elo": 34.775,
      "neutral": false
     },
     "2026_18_TEN_HOU": {
      "home": "HOU",
      "away": "TEN",
      "week": 18,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_18_JAX_IND": {
      "home": "IND",
      "away": "JAX",
      "week": 18,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_18_LV_KC": {
      "home": "KC",
      "away": "LV",
      "week": 18,
-     "hfa_elo": 42.575,
+     "hfa_elo": 42.449999999999996,
      "neutral": false
     },
     "2026_18_SEA_LAR": {
      "home": "LAR",
      "away": "SEA",
      "week": 18,
-     "hfa_elo": 28.449999999999996,
+     "hfa_elo": 28.349999999999998,
      "neutral": false
     },
     "2026_18_CHI_MIN": {
      "home": "MIN",
      "away": "CHI",
      "week": 18,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_18_MIA_NE": {
      "home": "NE",
      "away": "MIA",
      "week": 18,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_18_TB_NO": {
      "home": "NO",
      "away": "TB",
      "week": 18,
-     "hfa_elo": 34.9,
+     "hfa_elo": 34.775,
      "neutral": false
     },
     "2026_18_PHI_NYG": {
      "home": "NYG",
      "away": "PHI",
      "week": 18,
-     "hfa_elo": 41.949999999999996,
+     "hfa_elo": 41.825,
      "neutral": false
     },
     "2026_18_DAL_WAS": {
      "home": "WAS",
      "away": "DAL",
      "week": 18,
-     "hfa_elo": 49.025,
+     "hfa_elo": 48.875,
      "neutral": false
     }
    },
@@ -2562,532 +2562,497 @@
   },
   "week1": [
    {
-    "id": "2026_05_TB_DAL",
-    "week": 5,
-    "h": "DAL",
-    "a": "TB",
-    "spread": -9.5,
-    "hwp": 0.8111,
-    "pick": "DAL",
-    "p": 0.8111,
+    "id": "2026_06_ARI_LAR",
+    "week": 6,
+    "h": "LAR",
+    "a": "ARI",
+    "spread": -12.5,
+    "hwp": 0.8718,
+    "pick": "LAR",
+    "p": 0.8718,
     "nfelo": {
-     "line_open": -9.5,
-     "line_close": -9.5,
-     "p_home_open": 0.8111,
-     "p_home_close": 0.8111,
+     "line_open": -13.5,
+     "line_close": -12.5,
+     "p_home_open": 0.888,
+     "p_home_close": 0.8718,
      "cover_home_close": 0.5
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": -9.5,
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -13.5,
      "line_open_price": [
       -105,
       -115
      ],
-     "line_close": -9.5,
+     "line_close": -12.5,
      "line_close_price": [
-      -110,
-      -110
+      -114,
+      -106
      ],
-     "total_open": 47.5,
-     "total_close": 49.5,
-     "p_home_implied_open": 0.8111,
-     "p_home_implied_close": 0.8111
+     "total_open": 52.5,
+     "total_close": 52.5,
+     "p_home_implied_open": 0.888,
+     "p_home_implied_close": 0.8718
     }
    },
    {
-    "id": "2026_05_CIN_MIA",
-    "week": 5,
-    "h": "MIA",
-    "a": "CIN",
-    "spread": 7,
-    "hwp": 0.2547,
-    "pick": "CIN",
-    "p": 0.7453,
-    "nfelo": {
-     "line_open": 7,
-     "line_close": 7,
-     "p_home_open": 0.2547,
-     "p_home_close": 0.2547,
-     "cover_home_close": 0.461
-    },
-    "market": {
-     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": 7,
-     "line_open_price": [
-      -108,
-      -112
-     ],
-     "line_close": 7,
-     "line_close_price": [
-      -108,
-      -112
-     ],
-     "total_open": 42.5,
-     "total_close": 44.5,
-     "p_home_implied_open": 0.2547,
-     "p_home_implied_close": 0.2547
-    }
-   },
-   {
-    "id": "2026_05_PHI_JAX",
-    "week": 5,
-    "h": "JAX",
-    "a": "PHI",
+    "id": "2026_06_NYJ_NE",
+    "week": 6,
+    "h": "NE",
+    "a": "NYJ",
     "spread": -7.5,
-    "hwp": 0.7245,
-    "pick": "JAX",
-    "p": 0.7245,
+    "hwp": 0.7596,
+    "pick": "NE",
+    "p": 0.7596,
     "nfelo": {
-     "line_open": -5,
-     "line_close": -6.5,
-     "p_home_open": 0.6795,
-     "p_home_close": 0.7245,
-     "cover_home_close": 0.4209
+     "line_open": -7.5,
+     "line_close": -7.5,
+     "p_home_open": 0.7596,
+     "p_home_close": 0.7596,
+     "cover_home_close": 0.5
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": -6.5,
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -7.5,
+     "line_open_price": [
+      -105,
+      -115
+     ],
+     "line_close": -7.5,
+     "line_close_price": [
+      -103,
+      -116
+     ],
+     "total_open": 43.5,
+     "total_close": 43.5,
+     "p_home_implied_open": 0.7596,
+     "p_home_implied_close": 0.7596
+    }
+   },
+   {
+    "id": "2026_06_WAS_SF",
+    "week": 6,
+    "h": "SF",
+    "a": "WAS",
+    "spread": -7.5,
+    "hwp": 0.7596,
+    "pick": "SF",
+    "p": 0.7596,
+    "nfelo": {
+     "line_open": -7.5,
+     "line_close": -7.5,
+     "p_home_open": 0.7596,
+     "p_home_close": 0.7596,
+     "cover_home_close": 0.5
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -7.5,
      "line_open_price": [
       -108,
       -112
      ],
      "line_close": -7.5,
      "line_close_price": [
-      -114,
-      -105
+      -108,
+      -112
      ],
-     "total_open": 42.5,
-     "total_close": 41.5,
-     "p_home_implied_open": 0.7305,
+     "total_open": 50.5,
+     "total_close": 50.5,
+     "p_home_implied_open": 0.7596,
      "p_home_implied_close": 0.7596
     }
    },
    {
-    "id": "2026_05_DET_ARI",
-    "week": 5,
-    "h": "ARI",
-    "a": "DET",
-    "spread": 5.5,
-    "hwp": 0.3008,
-    "pick": "DET",
-    "p": 0.6992,
+    "id": "2026_06_LAC_KC",
+    "week": 6,
+    "h": "KC",
+    "a": "LAC",
+    "spread": -8.5,
+    "hwp": 0.757,
+    "pick": "KC",
+    "p": 0.757,
     "nfelo": {
-     "line_open": 4.5,
-     "line_close": 5.5,
-     "p_home_open": 0.334,
-     "p_home_close": 0.3008,
-     "cover_home_close": 0.5
+     "line_open": -7.5,
+     "line_close": -7.5,
+     "p_home_open": 0.757,
+     "p_home_close": 0.757,
+     "cover_home_close": 0.4587
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": 4.5,
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -8.5,
      "line_open_price": [
-      -115,
-      -105
-     ],
-     "line_close": 5.5,
-     "line_close_price": [
-      -111,
-      -108
-     ],
-     "total_open": 54.5,
-     "total_close": 55,
-     "p_home_implied_open": 0.334,
-     "p_home_implied_close": 0.3008
-    }
-   },
-   {
-    "id": "2026_05_OAK_NE",
-    "week": 5,
-    "h": "NE",
-    "a": "OAK",
-    "spread": -3.5,
-    "hwp": 0.6948,
-    "pick": "NE",
-    "p": 0.6948,
-    "nfelo": {
-     "line_open": -5.5,
-     "line_close": -5.5,
-     "p_home_open": 0.6948,
-     "p_home_close": 0.6948,
-     "cover_home_close": 0.5601
-    },
-    "market": {
-     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": -3.5,
-     "line_open_price": [
-      -110,
-      -110
-     ],
-     "line_close": -3.5,
-     "line_close_price": [
       -105,
       -115
      ],
-     "total_open": 45.5,
-     "total_close": 45.5,
-     "p_home_implied_open": 0.6311,
-     "p_home_implied_close": 0.6311
-    }
-   },
-   {
-    "id": "2026_05_HOU_TEN",
-    "week": 5,
-    "h": "TEN",
-    "a": "HOU",
-    "spread": 6.5,
-    "hwp": 0.3212,
-    "pick": "HOU",
-    "p": 0.6788,
-    "nfelo": {
-     "line_open": 5.5,
-     "line_close": 5,
-     "p_home_open": 0.3033,
-     "p_home_close": 0.3212,
-     "cover_home_close": 0.5683
-    },
-    "market": {
-     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": 7,
-     "line_open_price": [
-      -115,
-      -105
-     ],
-     "line_close": 6.5,
+     "line_close": -8.5,
      "line_close_price": [
-      -105,
-      -115
-     ],
-     "total_open": 39.5,
-     "total_close": 37.5,
-     "p_home_implied_open": 0.2547,
-     "p_home_implied_close": 0.2695
-    }
-   },
-   {
-    "id": "2026_05_NYG_WAS",
-    "week": 5,
-    "h": "WAS",
-    "a": "NYG",
-    "spread": -3.5,
-    "hwp": 0.6311,
-    "pick": "WAS",
-    "p": 0.6311,
-    "nfelo": {
-     "line_open": -3,
-     "line_close": -3.5,
-     "p_home_open": 0.613,
-     "p_home_close": 0.6311,
-     "cover_home_close": 0.5
-    },
-    "market": {
-     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": -3,
-     "line_open_price": [
-      -115,
-      -105
-     ],
-     "line_close": -3.5,
-     "line_close_price": [
-      -105,
-      -114
-     ],
-     "total_open": 43.5,
-     "total_close": 41.5,
-     "p_home_implied_open": 0.613,
-     "p_home_implied_close": 0.6311
-    }
-   },
-   {
-    "id": "2026_05_BUF_LAR",
-    "week": 5,
-    "h": "LAR",
-    "a": "BUF",
-    "spread": -3.5,
-    "hwp": 0.6311,
-    "pick": "LAR",
-    "p": 0.6311,
-    "nfelo": {
-     "line_open": -2.5,
-     "line_close": -3.5,
-     "p_home_open": 0.5947,
-     "p_home_close": 0.6311,
-     "cover_home_close": 0.5
-    },
-    "market": {
-     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": -2.5,
-     "line_open_price": [
-      -118,
-      -102
-     ],
-     "line_close": -3.5,
-     "line_close_price": [
-      -102,
-      -118
-     ],
-     "total_open": 54.5,
-     "total_close": 54.5,
-     "p_home_implied_open": 0.5947,
-     "p_home_implied_close": 0.6311
-    }
-   },
-   {
-    "id": "2026_05_SF_SEA",
-    "week": 5,
-    "h": "SEA",
-    "a": "SF",
-    "spread": -3,
-    "hwp": 0.613,
-    "pick": "SEA",
-    "p": 0.613,
-    "nfelo": {
-     "line_open": -2.5,
-     "line_close": -3,
-     "p_home_open": 0.5947,
-     "p_home_close": 0.613,
-     "cover_home_close": 0.4452
-    },
-    "market": {
-     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": -2.5,
-     "line_open_price": [
-      -120,
-      100
-     ],
-     "line_close": -3,
-     "line_close_price": [
-      -105,
-      -112
-     ],
-     "total_open": 47.5,
-     "total_close": 47,
-     "p_home_implied_open": 0.5947,
-     "p_home_implied_close": 0.613
-    }
-   },
-   {
-    "id": "2026_05_BAL_ATL",
-    "week": 5,
-    "h": "ATL",
-    "a": "BAL",
-    "spread": -3.5,
-    "hwp": 0.609,
-    "pick": "ATL",
-    "p": 0.609,
-    "nfelo": {
-     "line_open": 1,
-     "line_close": -3,
-     "p_home_open": 0.4537,
-     "p_home_close": 0.609,
-     "cover_home_close": 0.4455
-    },
-    "market": {
-     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": 2.5,
-     "line_open_price": [
-      -112,
-      -108
-     ],
-     "line_close": -3.5,
-     "line_close_price": [
-      103,
-      -121
-     ],
-     "total_open": 45.5,
-     "total_close": 44,
-     "p_home_implied_open": 0.4053,
-     "p_home_implied_close": 0.6311
-    }
-   },
-   {
-    "id": "2026_05_MIN_NO",
-    "week": 5,
-    "h": "NO",
-    "a": "MIN",
-    "spread": 2.5,
-    "hwp": 0.4053,
-    "pick": "MIN",
-    "p": 0.5947,
-    "nfelo": {
-     "line_open": 1.5,
-     "line_close": 2.5,
-     "p_home_open": 0.4427,
-     "p_home_close": 0.4053,
-     "cover_home_close": 0.5
-    },
-    "market": {
-     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": 1.5,
-     "line_open_price": [
-      -110,
-      -110
-     ],
-     "line_close": 2.5,
-     "line_close_price": [
-      -110,
-      -110
+      -108,
+      -111
      ],
      "total_open": 42.5,
-     "total_close": 41.5,
-     "p_home_implied_open": 0.4427,
-     "p_home_implied_close": 0.4053
+     "total_close": 42.5,
+     "p_home_implied_open": 0.7865,
+     "p_home_implied_close": 0.7865
     }
    },
    {
-    "id": "2026_05_CLE_NYJ",
-    "week": 5,
-    "h": "NYJ",
-    "a": "CLE",
-    "spread": -2.5,
-    "hwp": 0.5947,
-    "pick": "NYJ",
-    "p": 0.5947,
+    "id": "2026_06_TEN_IND",
+    "week": 6,
+    "h": "IND",
+    "a": "TEN",
+    "spread": -7,
+    "hwp": 0.7453,
+    "pick": "IND",
+    "p": 0.7453,
     "nfelo": {
-     "line_open": -1.5,
-     "line_close": -2.5,
-     "p_home_open": 0.5573,
-     "p_home_close": 0.5947,
-     "cover_home_close": 0.5
+     "line_open": -7,
+     "line_close": -7,
+     "p_home_open": 0.7453,
+     "p_home_close": 0.7453,
+     "cover_home_close": 0.461
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": -1.5,
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -7,
      "line_open_price": [
-      -115,
-      -105
+      -108,
+      -112
      ],
-     "line_close": -2.5,
-     "line_close_price": [
-      -115,
-      -105
-     ],
-     "total_open": 40.5,
-     "total_close": 38.5,
-     "p_home_implied_open": 0.5573,
-     "p_home_implied_close": 0.5947
-    }
-   },
-   {
-    "id": "2026_05_IND_PIT",
-    "week": 5,
-    "h": "PIT",
-    "a": "IND",
-    "spread": -3,
-    "hwp": 0.5673,
-    "pick": "PIT",
-    "p": 0.5673,
-    "nfelo": {
-     "line_open": -1,
-     "line_close": -2,
-     "p_home_open": 0.5415,
-     "p_home_close": 0.5673,
-     "cover_home_close": 0.3904
-    },
-    "market": {
-     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": -2.5,
-     "line_open_price": [
-      -110,
-      -110
-     ],
-     "line_close": -3,
+     "line_close": -7,
      "line_close_price": [
       -108,
       -111
      ],
      "total_open": 44.5,
-     "total_close": 41.5,
-     "p_home_implied_open": 0.5947,
-     "p_home_implied_close": 0.613
+     "total_close": 44,
+     "p_home_implied_open": 0.7453,
+     "p_home_implied_close": 0.7453
     }
    },
    {
-    "id": "2026_05_DEN_LAC",
-    "week": 5,
-    "h": "LAC",
-    "a": "DEN",
-    "spread": 3.5,
-    "hwp": 0.4329,
-    "pick": "DEN",
-    "p": 0.5671,
+    "id": "2026_06_BAL_CLE",
+    "week": 6,
+    "h": "CLE",
+    "a": "BAL",
+    "spread": 4.5,
+    "hwp": 0.2631,
+    "pick": "BAL",
+    "p": 0.7369,
     "nfelo": {
-     "line_open": 2,
-     "line_close": 2,
-     "p_home_open": 0.4329,
-     "p_home_close": 0.4329,
-     "cover_home_close": 0.6096
+     "line_open": 6.5,
+     "line_close": 6.5,
+     "p_home_open": 0.2631,
+     "p_home_close": 0.2631,
+     "cover_home_close": 0.4245
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": 3.5,
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": 4.5,
      "line_open_price": [
       -115,
       -105
      ],
-     "line_close": 3.5,
+     "line_close": 4.5,
      "line_close_price": [
-      -110,
-      -108
+      -108,
+      -110
      ],
-     "total_open": 42.5,
-     "total_close": 42.5,
-     "p_home_implied_open": 0.3689,
-     "p_home_implied_close": 0.3689
+     "total_open": 40.5,
+     "total_close": 41.5,
+     "p_home_implied_open": 0.334,
+     "p_home_implied_close": 0.334
     }
    },
    {
-    "id": "2026_05_CHI_GB",
-    "week": 5,
-    "h": "GB",
-    "a": "CHI",
-    "spread": 1.5,
-    "hwp": 0.5308,
-    "pick": "GB",
-    "p": 0.5308,
+    "id": "2026_06_BUF_OAK",
+    "week": 6,
+    "h": "OAK",
+    "a": "BUF",
+    "spread": 5,
+    "hwp": 0.3172,
+    "pick": "BUF",
+    "p": 0.6828,
     "nfelo": {
-     "line_open": 0.5,
-     "line_close": -1,
-     "p_home_open": 0.4764,
-     "p_home_close": 0.5308,
-     "cover_home_close": 0.5599
+     "line_open": 6,
+     "line_close": 5,
+     "p_home_open": 0.2849,
+     "p_home_close": 0.3172,
+     "cover_home_close": 0.4843
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": 3,
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": 6,
      "line_open_price": [
-      -115,
-      -105
+      -110,
+      -110
      ],
-     "line_close": 1.5,
+     "line_close": 5,
      "line_close_price": [
       -110,
       -109
      ],
-     "total_open": 45.5,
-     "total_close": 47,
+     "total_open": 53.5,
+     "total_close": 53.5,
+     "p_home_implied_open": 0.2849,
+     "p_home_implied_close": 0.3172
+    }
+   },
+   {
+    "id": "2026_06_CHI_ATL",
+    "week": 6,
+    "h": "ATL",
+    "a": "CHI",
+    "spread": 3,
+    "hwp": 0.387,
+    "pick": "CHI",
+    "p": 0.613,
+    "nfelo": {
+     "line_open": 3,
+     "line_close": 3,
+     "p_home_open": 0.387,
+     "p_home_close": 0.387,
+     "cover_home_close": 0.4452
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": 3,
+     "line_open_price": [
+      100,
+      -120
+     ],
+     "line_close": 3,
+     "line_close_price": [
+      -105,
+      -116
+     ],
+     "total_open": 49.5,
+     "total_close": 49.5,
      "p_home_implied_open": 0.387,
+     "p_home_implied_close": 0.387
+    }
+   },
+   {
+    "id": "2026_06_PIT_TB",
+    "week": 6,
+    "h": "TB",
+    "a": "PIT",
+    "spread": 2.5,
+    "hwp": 0.4053,
+    "pick": "PIT",
+    "p": 0.5947,
+    "nfelo": {
+     "line_open": 3,
+     "line_close": 2.5,
+     "p_home_open": 0.387,
+     "p_home_close": 0.4053,
+     "cover_home_close": 0.5
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": 3,
+     "line_open_price": [
+      -118,
+      -102
+     ],
+     "line_close": 2.5,
+     "line_close_price": [
+      -108,
+      -109
+     ],
+     "total_open": 40.5,
+     "total_close": 40.5,
+     "p_home_implied_open": 0.387,
+     "p_home_implied_close": 0.4053
+    }
+   },
+   {
+    "id": "2026_06_CAR_PHI",
+    "week": 6,
+    "h": "PHI",
+    "a": "CAR",
+    "spread": -1.5,
+    "hwp": 0.5573,
+    "pick": "PHI",
+    "p": 0.5573,
+    "nfelo": {
+     "line_open": -1.5,
+     "line_close": -1.5,
+     "p_home_open": 0.5573,
+     "p_home_close": 0.5573,
+     "cover_home_close": 0.5
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -1.5,
+     "line_open_price": [
+      -105,
+      -115
+     ],
+     "line_close": -1.5,
+     "line_close_price": [
+      -105,
+      -115
+     ],
+     "total_open": 41.5,
+     "total_close": 41.5,
+     "p_home_implied_open": 0.5573,
+     "p_home_implied_close": 0.5573
+    }
+   },
+   {
+    "id": "2026_06_DAL_GB",
+    "week": 6,
+    "h": "GB",
+    "a": "DAL",
+    "spread": -1.5,
+    "hwp": 0.5573,
+    "pick": "GB",
+    "p": 0.5573,
+    "nfelo": {
+     "line_open": -1.5,
+     "line_close": -1.5,
+     "p_home_open": 0.5573,
+     "p_home_close": 0.5573,
+     "cover_home_close": 0.5
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -1.5,
+     "line_open_price": [
+      -102,
+      -118
+     ],
+     "line_close": -1.5,
+     "line_close_price": [
+      -101,
+      -119
+     ],
+     "total_open": 52.5,
+     "total_close": 52.5,
+     "p_home_implied_open": 0.5573,
+     "p_home_implied_close": 0.5573
+    }
+   },
+   {
+    "id": "2026_06_NO_NYG",
+    "week": 6,
+    "h": "NYG",
+    "a": "NO",
+    "spread": 1.5,
+    "hwp": 0.4429,
+    "pick": "NO",
+    "p": 0.5571,
+    "nfelo": {
+     "line_open": -1.5,
+     "line_close": 1.5,
+     "p_home_open": 0.5593,
+     "p_home_close": 0.4429,
+     "cover_home_close": 0.5
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -1.5,
+     "line_open_price": [
+      100,
+      -120
+     ],
+     "line_close": 1.5,
+     "line_close_price": [
+      -119,
+      102
+     ],
+     "total_open": 45.5,
+     "total_close": 45.5,
+     "p_home_implied_open": 0.5573,
      "p_home_implied_close": 0.4427
+    }
+   },
+   {
+    "id": "2026_06_SEA_DEN",
+    "week": 6,
+    "h": "DEN",
+    "a": "SEA",
+    "spread": 3,
+    "hwp": 0.4526,
+    "pick": "SEA",
+    "p": 0.5474,
+    "nfelo": {
+     "line_open": 1,
+     "line_close": 1,
+     "p_home_open": 0.4526,
+     "p_home_close": 0.4526,
+     "cover_home_close": 0.5711
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": 3,
+     "line_open_price": [
+      -118,
+      -102
+     ],
+     "line_close": 3,
+     "line_close_price": [
+      -115,
+      -104
+     ],
+     "total_open": 40.5,
+     "total_close": 40.5,
+     "p_home_implied_open": 0.387,
+     "p_home_implied_close": 0.387
+    }
+   },
+   {
+    "id": "2026_06_HOU_JAX",
+    "week": 6,
+    "h": "JAX",
+    "a": "HOU",
+    "spread": -2.5,
+    "hwp": 0.5334,
+    "pick": "JAX",
+    "p": 0.5334,
+    "nfelo": {
+     "line_open": -1.5,
+     "line_close": -1,
+     "p_home_open": 0.554,
+     "p_home_close": 0.5334,
+     "cover_home_close": 0.44
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -3,
+     "line_open_price": [
+      100,
+      -120
+     ],
+     "line_close": -2.5,
+     "line_close_price": [
+      -115,
+      -105
+     ],
+     "total_open": 42.5,
+     "total_close": 42.5,
+     "p_home_implied_open": 0.613,
+     "p_home_implied_close": 0.5947
     }
    }
   ],
-  "upcoming_week": 5,
+  "upcoming_week": 6,
   "games": [
    {
     "id": "2026_01_CLE_JAX",
@@ -3107,7 +3072,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -8.5,
      "line_open_price": [
       -109,
@@ -3142,7 +3107,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -10,
      "line_open_price": [
       -105,
@@ -3177,7 +3142,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -7,
      "line_open_price": [
       -113,
@@ -3212,7 +3177,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -3.5,
      "line_open_price": [
       -102,
@@ -3247,7 +3212,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -5.5,
      "line_open_price": [
       -108,
@@ -3282,7 +3247,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -3.5,
      "line_open_price": [
       -101,
@@ -3317,7 +3282,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -3.5,
      "line_open_price": [
       -110,
@@ -3352,7 +3317,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -3.5,
      "line_open_price": [
       -113,
@@ -3387,7 +3352,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 2.5,
      "line_open_price": [
       101,
@@ -3422,7 +3387,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 3.5,
      "line_open_price": [
       -115,
@@ -3457,7 +3422,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -3.5,
      "line_open_price": [
       -105,
@@ -3492,7 +3457,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 3,
      "line_open_price": [
       -112,
@@ -3527,7 +3492,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -3,
      "line_open_price": [
       -107,
@@ -3562,7 +3527,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 1.5,
      "line_open_price": [
       -118,
@@ -3597,7 +3562,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -1.5,
      "line_open_price": [
       -110,
@@ -3632,7 +3597,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -1.5,
      "line_open_price": [
       -111,
@@ -3667,7 +3632,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -13.5,
      "line_open_price": [
       -105,
@@ -3702,7 +3667,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -8.5,
      "line_open_price": [
       -110,
@@ -3737,7 +3702,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -8.5,
      "line_open_price": [
       -112,
@@ -3772,7 +3737,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 7,
      "line_open_price": [
       -110,
@@ -3807,7 +3772,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -7,
      "line_open_price": [
       -115,
@@ -3842,7 +3807,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -7,
      "line_open_price": [
       -105,
@@ -3877,7 +3842,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 4.5,
      "line_open_price": [
       -115,
@@ -3912,7 +3877,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -4.5,
      "line_open_price": [
       -108,
@@ -3947,7 +3912,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -6.5,
      "line_open_price": [
       -120,
@@ -3982,7 +3947,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -5.5,
      "line_open_price": [
       -110,
@@ -4017,7 +3982,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -5.5,
      "line_open_price": [
       -110,
@@ -4052,7 +4017,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -3.5,
      "line_open_price": [
       -112,
@@ -4087,7 +4052,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 4.5,
      "line_open_price": [
       -118,
@@ -4122,7 +4087,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -3,
      "line_open_price": [
       -105,
@@ -4157,7 +4122,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 1.5,
      "line_open_price": [
       -112,
@@ -4192,7 +4157,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -2.5,
      "line_open_price": [
       -110,
@@ -4227,7 +4192,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 11.5,
      "line_open_price": [
       -112,
@@ -4262,7 +4227,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -6.5,
      "line_open_price": [
       -110,
@@ -4297,7 +4262,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -7,
      "line_open_price": [
       -112,
@@ -4332,7 +4297,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 7,
      "line_open_price": [
       -115,
@@ -4367,7 +4332,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -8.5,
      "line_open_price": [
       -105,
@@ -4402,7 +4367,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -6,
      "line_open_price": [
       -112,
@@ -4437,7 +4402,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 3,
      "line_open_price": [
       -112,
@@ -4472,7 +4437,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -3,
      "line_open_price": [
       -120,
@@ -4501,13 +4466,13 @@
     "nfelo": {
      "line_open": 2,
      "line_close": 2.5,
-     "p_home_open": 0.4299,
+     "p_home_open": 0.4298,
      "p_home_close": 0.4041,
      "cover_home_close": 0.5961
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 3,
      "line_open_price": [
       -102,
@@ -4542,7 +4507,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 2.5,
      "line_open_price": [
       100,
@@ -4577,7 +4542,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -3.5,
      "line_open_price": [
       -115,
@@ -4612,7 +4577,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 3.5,
      "line_open_price": [
       -105,
@@ -4647,7 +4612,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 1.5,
      "line_open_price": [
       -110,
@@ -4682,7 +4647,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 2.5,
      "line_open_price": [
       -115,
@@ -4717,7 +4682,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 2.5,
      "line_open_price": [
       -105,
@@ -4752,7 +4717,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -3,
      "line_open_price": [
       -108,
@@ -4787,7 +4752,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -11.5,
      "line_open_price": [
       -110,
@@ -4822,7 +4787,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -10.5,
      "line_open_price": [
       -110,
@@ -4857,7 +4822,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -6.5,
      "line_open_price": [
       -115,
@@ -4892,7 +4857,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -7,
      "line_open_price": [
       -111,
@@ -4927,7 +4892,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 3.5,
      "line_open_price": [
       -110,
@@ -4962,7 +4927,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 4.5,
      "line_open_price": [
       -110,
@@ -4997,7 +4962,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 3.5,
      "line_open_price": [
       -110,
@@ -5032,7 +4997,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -3.5,
      "line_open_price": [
       -107,
@@ -5067,7 +5032,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -2.5,
      "line_open_price": [
       -113,
@@ -5102,7 +5067,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -3,
      "line_open_price": [
       -110,
@@ -5137,7 +5102,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 2.5,
      "line_open_price": [
       -100,
@@ -5172,7 +5137,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 2.5,
      "line_open_price": [
       -100,
@@ -5207,7 +5172,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -2.5,
      "line_open_price": [
       -113,
@@ -5242,7 +5207,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 3.5,
      "line_open_price": [
       -107,
@@ -5277,7 +5242,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -2.5,
      "line_open_price": [
       -119,
@@ -5312,7 +5277,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 1.5,
      "line_open_price": [
       -115,
@@ -5347,7 +5312,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -9.5,
      "line_open_price": [
       -105,
@@ -5382,7 +5347,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 7,
      "line_open_price": [
       -108,
@@ -5405,19 +5370,19 @@
     "h": "JAX",
     "a": "PHI",
     "spread": -7.5,
-    "hwp": 0.7245,
+    "hwp": 0.6999,
     "pick": "JAX",
-    "p": 0.7245,
+    "p": 0.6999,
     "nfelo": {
-     "line_open": -5,
-     "line_close": -6.5,
-     "p_home_open": 0.6795,
-     "p_home_close": 0.7245,
-     "cover_home_close": 0.4209
+     "line_open": -4,
+     "line_close": -5.5,
+     "p_home_open": 0.6528,
+     "p_home_close": 0.6999,
+     "cover_home_close": 0.3747
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -6.5,
      "line_open_price": [
       -108,
@@ -5452,7 +5417,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 4.5,
      "line_open_price": [
       -115,
@@ -5470,59 +5435,24 @@
     }
    },
    {
-    "id": "2026_05_OAK_NE",
-    "week": 5,
-    "h": "NE",
-    "a": "OAK",
-    "spread": -3.5,
-    "hwp": 0.6948,
-    "pick": "NE",
-    "p": 0.6948,
-    "nfelo": {
-     "line_open": -5.5,
-     "line_close": -5.5,
-     "p_home_open": 0.6948,
-     "p_home_close": 0.6948,
-     "cover_home_close": 0.5601
-    },
-    "market": {
-     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": -3.5,
-     "line_open_price": [
-      -110,
-      -110
-     ],
-     "line_close": -3.5,
-     "line_close_price": [
-      -105,
-      -115
-     ],
-     "total_open": 45.5,
-     "total_close": 45.5,
-     "p_home_implied_open": 0.6311,
-     "p_home_implied_close": 0.6311
-    }
-   },
-   {
     "id": "2026_05_HOU_TEN",
     "week": 5,
     "h": "TEN",
     "a": "HOU",
     "spread": 6.5,
-    "hwp": 0.3212,
+    "hwp": 0.3103,
     "pick": "HOU",
-    "p": 0.6788,
+    "p": 0.6897,
     "nfelo": {
      "line_open": 5.5,
      "line_close": 5,
-     "p_home_open": 0.3033,
-     "p_home_close": 0.3212,
-     "cover_home_close": 0.5683
+     "p_home_open": 0.2936,
+     "p_home_close": 0.3103,
+     "cover_home_close": 0.5681
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 7,
      "line_open_price": [
       -115,
@@ -5540,37 +5470,37 @@
     }
    },
    {
-    "id": "2026_05_NYG_WAS",
+    "id": "2026_05_OAK_NE",
     "week": 5,
-    "h": "WAS",
-    "a": "NYG",
+    "h": "NE",
+    "a": "OAK",
     "spread": -3.5,
-    "hwp": 0.6311,
-    "pick": "WAS",
-    "p": 0.6311,
+    "hwp": 0.6848,
+    "pick": "NE",
+    "p": 0.6848,
     "nfelo": {
-     "line_open": -3,
-     "line_close": -3.5,
-     "p_home_open": 0.613,
-     "p_home_close": 0.6311,
-     "cover_home_close": 0.5
+     "line_open": -5,
+     "line_close": -5,
+     "p_home_open": 0.6848,
+     "p_home_close": 0.6848,
+     "cover_home_close": 0.5487
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": -3,
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -3.5,
      "line_open_price": [
-      -115,
-      -105
+      -110,
+      -110
      ],
      "line_close": -3.5,
      "line_close_price": [
       -105,
-      -114
+      -115
      ],
-     "total_open": 43.5,
-     "total_close": 41.5,
-     "p_home_implied_open": 0.613,
+     "total_open": 45.5,
+     "total_close": 45.5,
+     "p_home_implied_open": 0.6311,
      "p_home_implied_close": 0.6311
     }
    },
@@ -5592,7 +5522,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -2.5,
      "line_open_price": [
       -118,
@@ -5600,12 +5530,47 @@
      ],
      "line_close": -3.5,
      "line_close_price": [
-      -102,
-      -118
+      -105,
+      -115
      ],
      "total_open": 54.5,
-     "total_close": 54.5,
+     "total_close": 55.5,
      "p_home_implied_open": 0.5947,
+     "p_home_implied_close": 0.6311
+    }
+   },
+   {
+    "id": "2026_05_BAL_ATL",
+    "week": 5,
+    "h": "ATL",
+    "a": "BAL",
+    "spread": -3.5,
+    "hwp": 0.631,
+    "pick": "ATL",
+    "p": 0.631,
+    "nfelo": {
+     "line_open": 2.5,
+     "line_close": -3.5,
+     "p_home_open": 0.4061,
+     "p_home_close": 0.631,
+     "cover_home_close": 0.5
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": 2.5,
+     "line_open_price": [
+      -112,
+      -108
+     ],
+     "line_close": -3.5,
+     "line_close_price": [
+      103,
+      -121
+     ],
+     "total_open": 45.5,
+     "total_close": 44,
+     "p_home_implied_open": 0.4053,
      "p_home_implied_close": 0.6311
     }
    },
@@ -5627,7 +5592,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -2.5,
      "line_open_price": [
       -120,
@@ -5645,37 +5610,37 @@
     }
    },
    {
-    "id": "2026_05_BAL_ATL",
+    "id": "2026_05_NYG_WAS",
     "week": 5,
-    "h": "ATL",
-    "a": "BAL",
+    "h": "WAS",
+    "a": "NYG",
     "spread": -3.5,
-    "hwp": 0.609,
-    "pick": "ATL",
-    "p": 0.609,
+    "hwp": 0.5954,
+    "pick": "WAS",
+    "p": 0.5954,
     "nfelo": {
-     "line_open": 1,
-     "line_close": -3,
-     "p_home_open": 0.4537,
-     "p_home_close": 0.609,
-     "cover_home_close": 0.4455
+     "line_open": -2,
+     "line_close": -2.5,
+     "p_home_open": 0.5697,
+     "p_home_close": 0.5954,
+     "cover_home_close": 0.4039
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": 2.5,
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -3,
      "line_open_price": [
-      -112,
-      -108
+      -115,
+      -105
      ],
      "line_close": -3.5,
      "line_close_price": [
-      103,
-      -121
+      -105,
+      -114
      ],
-     "total_open": 45.5,
-     "total_close": 44,
-     "p_home_implied_open": 0.4053,
+     "total_open": 43.5,
+     "total_close": 41.5,
+     "p_home_implied_open": 0.613,
      "p_home_implied_close": 0.6311
     }
    },
@@ -5697,7 +5662,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 1.5,
      "line_open_price": [
       -110,
@@ -5732,7 +5697,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": -1.5,
      "line_open_price": [
       -115,
@@ -5750,59 +5715,24 @@
     }
    },
    {
-    "id": "2026_05_IND_PIT",
-    "week": 5,
-    "h": "PIT",
-    "a": "IND",
-    "spread": -3,
-    "hwp": 0.5673,
-    "pick": "PIT",
-    "p": 0.5673,
-    "nfelo": {
-     "line_open": -1,
-     "line_close": -2,
-     "p_home_open": 0.5415,
-     "p_home_close": 0.5673,
-     "cover_home_close": 0.3904
-    },
-    "market": {
-     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
-     "line_open": -2.5,
-     "line_open_price": [
-      -110,
-      -110
-     ],
-     "line_close": -3,
-     "line_close_price": [
-      -108,
-      -111
-     ],
-     "total_open": 44.5,
-     "total_close": 41.5,
-     "p_home_implied_open": 0.5947,
-     "p_home_implied_close": 0.613
-    }
-   },
-   {
     "id": "2026_05_DEN_LAC",
     "week": 5,
     "h": "LAC",
     "a": "DEN",
     "spread": 3.5,
-    "hwp": 0.4329,
+    "hwp": 0.4215,
     "pick": "DEN",
-    "p": 0.5671,
+    "p": 0.5785,
     "nfelo": {
      "line_open": 2,
      "line_close": 2,
-     "p_home_open": 0.4329,
-     "p_home_close": 0.4329,
-     "cover_home_close": 0.6096
+     "p_home_open": 0.4215,
+     "p_home_close": 0.4215,
+     "cover_home_close": 0.6094
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 3.5,
      "line_open_price": [
       -115,
@@ -5817,6 +5747,41 @@
      "total_close": 42.5,
      "p_home_implied_open": 0.3689,
      "p_home_implied_close": 0.3689
+    }
+   },
+   {
+    "id": "2026_05_IND_PIT",
+    "week": 5,
+    "h": "PIT",
+    "a": "IND",
+    "spread": -3,
+    "hwp": 0.5556,
+    "pick": "PIT",
+    "p": 0.5556,
+    "nfelo": {
+     "line_open": -1,
+     "line_close": -1.5,
+     "p_home_open": 0.5299,
+     "p_home_close": 0.5556,
+     "cover_home_close": 0.3799
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -2.5,
+     "line_open_price": [
+      -110,
+      -110
+     ],
+     "line_close": -3,
+     "line_close_price": [
+      -108,
+      -111
+     ],
+     "total_open": 44.5,
+     "total_close": 41.5,
+     "p_home_implied_open": 0.5947,
+     "p_home_implied_close": 0.613
     }
    },
    {
@@ -5837,7 +5802,7 @@
     },
     "market": {
      "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
-     "observed_at": "2026-10-12T19:40:53.000Z",
+     "observed_at": "2026-10-13T16:40:50.000Z",
      "line_open": 3,
      "line_open_price": [
       -115,
@@ -5853,25 +5818,515 @@
      "p_home_implied_open": 0.387,
      "p_home_implied_close": 0.4427
     }
+   },
+   {
+    "id": "2026_06_ARI_LAR",
+    "week": 6,
+    "h": "LAR",
+    "a": "ARI",
+    "spread": -12.5,
+    "hwp": 0.8718,
+    "pick": "LAR",
+    "p": 0.8718,
+    "nfelo": {
+     "line_open": -13.5,
+     "line_close": -12.5,
+     "p_home_open": 0.888,
+     "p_home_close": 0.8718,
+     "cover_home_close": 0.5
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -13.5,
+     "line_open_price": [
+      -105,
+      -115
+     ],
+     "line_close": -12.5,
+     "line_close_price": [
+      -114,
+      -106
+     ],
+     "total_open": 52.5,
+     "total_close": 52.5,
+     "p_home_implied_open": 0.888,
+     "p_home_implied_close": 0.8718
+    }
+   },
+   {
+    "id": "2026_06_NYJ_NE",
+    "week": 6,
+    "h": "NE",
+    "a": "NYJ",
+    "spread": -7.5,
+    "hwp": 0.7596,
+    "pick": "NE",
+    "p": 0.7596,
+    "nfelo": {
+     "line_open": -7.5,
+     "line_close": -7.5,
+     "p_home_open": 0.7596,
+     "p_home_close": 0.7596,
+     "cover_home_close": 0.5
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -7.5,
+     "line_open_price": [
+      -105,
+      -115
+     ],
+     "line_close": -7.5,
+     "line_close_price": [
+      -103,
+      -116
+     ],
+     "total_open": 43.5,
+     "total_close": 43.5,
+     "p_home_implied_open": 0.7596,
+     "p_home_implied_close": 0.7596
+    }
+   },
+   {
+    "id": "2026_06_WAS_SF",
+    "week": 6,
+    "h": "SF",
+    "a": "WAS",
+    "spread": -7.5,
+    "hwp": 0.7596,
+    "pick": "SF",
+    "p": 0.7596,
+    "nfelo": {
+     "line_open": -7.5,
+     "line_close": -7.5,
+     "p_home_open": 0.7596,
+     "p_home_close": 0.7596,
+     "cover_home_close": 0.5
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -7.5,
+     "line_open_price": [
+      -108,
+      -112
+     ],
+     "line_close": -7.5,
+     "line_close_price": [
+      -108,
+      -112
+     ],
+     "total_open": 50.5,
+     "total_close": 50.5,
+     "p_home_implied_open": 0.7596,
+     "p_home_implied_close": 0.7596
+    }
+   },
+   {
+    "id": "2026_06_LAC_KC",
+    "week": 6,
+    "h": "KC",
+    "a": "LAC",
+    "spread": -8.5,
+    "hwp": 0.757,
+    "pick": "KC",
+    "p": 0.757,
+    "nfelo": {
+     "line_open": -7.5,
+     "line_close": -7.5,
+     "p_home_open": 0.757,
+     "p_home_close": 0.757,
+     "cover_home_close": 0.4587
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -8.5,
+     "line_open_price": [
+      -105,
+      -115
+     ],
+     "line_close": -8.5,
+     "line_close_price": [
+      -108,
+      -111
+     ],
+     "total_open": 42.5,
+     "total_close": 42.5,
+     "p_home_implied_open": 0.7865,
+     "p_home_implied_close": 0.7865
+    }
+   },
+   {
+    "id": "2026_06_TEN_IND",
+    "week": 6,
+    "h": "IND",
+    "a": "TEN",
+    "spread": -7,
+    "hwp": 0.7453,
+    "pick": "IND",
+    "p": 0.7453,
+    "nfelo": {
+     "line_open": -7,
+     "line_close": -7,
+     "p_home_open": 0.7453,
+     "p_home_close": 0.7453,
+     "cover_home_close": 0.461
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -7,
+     "line_open_price": [
+      -108,
+      -112
+     ],
+     "line_close": -7,
+     "line_close_price": [
+      -108,
+      -111
+     ],
+     "total_open": 44.5,
+     "total_close": 44,
+     "p_home_implied_open": 0.7453,
+     "p_home_implied_close": 0.7453
+    }
+   },
+   {
+    "id": "2026_06_BAL_CLE",
+    "week": 6,
+    "h": "CLE",
+    "a": "BAL",
+    "spread": 4.5,
+    "hwp": 0.2631,
+    "pick": "BAL",
+    "p": 0.7369,
+    "nfelo": {
+     "line_open": 6.5,
+     "line_close": 6.5,
+     "p_home_open": 0.2631,
+     "p_home_close": 0.2631,
+     "cover_home_close": 0.4245
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": 4.5,
+     "line_open_price": [
+      -115,
+      -105
+     ],
+     "line_close": 4.5,
+     "line_close_price": [
+      -108,
+      -110
+     ],
+     "total_open": 40.5,
+     "total_close": 41.5,
+     "p_home_implied_open": 0.334,
+     "p_home_implied_close": 0.334
+    }
+   },
+   {
+    "id": "2026_06_BUF_OAK",
+    "week": 6,
+    "h": "OAK",
+    "a": "BUF",
+    "spread": 5,
+    "hwp": 0.3172,
+    "pick": "BUF",
+    "p": 0.6828,
+    "nfelo": {
+     "line_open": 6,
+     "line_close": 5,
+     "p_home_open": 0.2849,
+     "p_home_close": 0.3172,
+     "cover_home_close": 0.4843
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": 6,
+     "line_open_price": [
+      -110,
+      -110
+     ],
+     "line_close": 5,
+     "line_close_price": [
+      -110,
+      -109
+     ],
+     "total_open": 53.5,
+     "total_close": 53.5,
+     "p_home_implied_open": 0.2849,
+     "p_home_implied_close": 0.3172
+    }
+   },
+   {
+    "id": "2026_06_CHI_ATL",
+    "week": 6,
+    "h": "ATL",
+    "a": "CHI",
+    "spread": 3,
+    "hwp": 0.387,
+    "pick": "CHI",
+    "p": 0.613,
+    "nfelo": {
+     "line_open": 3,
+     "line_close": 3,
+     "p_home_open": 0.387,
+     "p_home_close": 0.387,
+     "cover_home_close": 0.4452
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": 3,
+     "line_open_price": [
+      100,
+      -120
+     ],
+     "line_close": 3,
+     "line_close_price": [
+      -105,
+      -116
+     ],
+     "total_open": 49.5,
+     "total_close": 49.5,
+     "p_home_implied_open": 0.387,
+     "p_home_implied_close": 0.387
+    }
+   },
+   {
+    "id": "2026_06_PIT_TB",
+    "week": 6,
+    "h": "TB",
+    "a": "PIT",
+    "spread": 2.5,
+    "hwp": 0.4053,
+    "pick": "PIT",
+    "p": 0.5947,
+    "nfelo": {
+     "line_open": 3,
+     "line_close": 2.5,
+     "p_home_open": 0.387,
+     "p_home_close": 0.4053,
+     "cover_home_close": 0.5
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": 3,
+     "line_open_price": [
+      -118,
+      -102
+     ],
+     "line_close": 2.5,
+     "line_close_price": [
+      -108,
+      -109
+     ],
+     "total_open": 40.5,
+     "total_close": 40.5,
+     "p_home_implied_open": 0.387,
+     "p_home_implied_close": 0.4053
+    }
+   },
+   {
+    "id": "2026_06_CAR_PHI",
+    "week": 6,
+    "h": "PHI",
+    "a": "CAR",
+    "spread": -1.5,
+    "hwp": 0.5573,
+    "pick": "PHI",
+    "p": 0.5573,
+    "nfelo": {
+     "line_open": -1.5,
+     "line_close": -1.5,
+     "p_home_open": 0.5573,
+     "p_home_close": 0.5573,
+     "cover_home_close": 0.5
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -1.5,
+     "line_open_price": [
+      -105,
+      -115
+     ],
+     "line_close": -1.5,
+     "line_close_price": [
+      -105,
+      -115
+     ],
+     "total_open": 41.5,
+     "total_close": 41.5,
+     "p_home_implied_open": 0.5573,
+     "p_home_implied_close": 0.5573
+    }
+   },
+   {
+    "id": "2026_06_DAL_GB",
+    "week": 6,
+    "h": "GB",
+    "a": "DAL",
+    "spread": -1.5,
+    "hwp": 0.5573,
+    "pick": "GB",
+    "p": 0.5573,
+    "nfelo": {
+     "line_open": -1.5,
+     "line_close": -1.5,
+     "p_home_open": 0.5573,
+     "p_home_close": 0.5573,
+     "cover_home_close": 0.5
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -1.5,
+     "line_open_price": [
+      -102,
+      -118
+     ],
+     "line_close": -1.5,
+     "line_close_price": [
+      -101,
+      -119
+     ],
+     "total_open": 52.5,
+     "total_close": 52.5,
+     "p_home_implied_open": 0.5573,
+     "p_home_implied_close": 0.5573
+    }
+   },
+   {
+    "id": "2026_06_NO_NYG",
+    "week": 6,
+    "h": "NYG",
+    "a": "NO",
+    "spread": 1.5,
+    "hwp": 0.4429,
+    "pick": "NO",
+    "p": 0.5571,
+    "nfelo": {
+     "line_open": -1.5,
+     "line_close": 1.5,
+     "p_home_open": 0.5593,
+     "p_home_close": 0.4429,
+     "cover_home_close": 0.5
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -1.5,
+     "line_open_price": [
+      100,
+      -120
+     ],
+     "line_close": 1.5,
+     "line_close_price": [
+      -119,
+      102
+     ],
+     "total_open": 45.5,
+     "total_close": 45.5,
+     "p_home_implied_open": 0.5573,
+     "p_home_implied_close": 0.4427
+    }
+   },
+   {
+    "id": "2026_06_SEA_DEN",
+    "week": 6,
+    "h": "DEN",
+    "a": "SEA",
+    "spread": 3,
+    "hwp": 0.4526,
+    "pick": "SEA",
+    "p": 0.5474,
+    "nfelo": {
+     "line_open": 1,
+     "line_close": 1,
+     "p_home_open": 0.4526,
+     "p_home_close": 0.4526,
+     "cover_home_close": 0.5711
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": 3,
+     "line_open_price": [
+      -118,
+      -102
+     ],
+     "line_close": 3,
+     "line_close_price": [
+      -115,
+      -104
+     ],
+     "total_open": 40.5,
+     "total_close": 40.5,
+     "p_home_implied_open": 0.387,
+     "p_home_implied_close": 0.387
+    }
+   },
+   {
+    "id": "2026_06_HOU_JAX",
+    "week": 6,
+    "h": "JAX",
+    "a": "HOU",
+    "spread": -2.5,
+    "hwp": 0.5334,
+    "pick": "JAX",
+    "p": 0.5334,
+    "nfelo": {
+     "line_open": -1.5,
+     "line_close": -1,
+     "p_home_open": 0.554,
+     "p_home_close": 0.5334,
+     "cover_home_close": 0.44
+    },
+    "market": {
+     "source": "as republished by greerreNFL/nfelo output_data/nfelo_games.csv; book not identified upstream",
+     "observed_at": "2026-10-13T16:40:50.000Z",
+     "line_open": -3,
+     "line_open_price": [
+      100,
+      -120
+     ],
+     "line_close": -2.5,
+     "line_close_price": [
+      -115,
+      -105
+     ],
+     "total_open": 42.5,
+     "total_close": 42.5,
+     "p_home_implied_open": 0.613,
+     "p_home_implied_close": 0.5947
+    }
    }
   ],
   "meta": {
-   "sha": "d824d2fa",
-   "sha_full": "d824d2fa633ae8d9db3b5c800882d24fb4344e24",
+   "sha": "1a7f7860",
+   "sha_full": "1a7f78603bad41fc7c39f6c973cbbcb5d6f41b48",
    "repo": "greerreNFL/nfelo",
-   "captured": "2026-10-12",
-   "captured_at": "2026-10-12T22:13:51.763Z",
-   "upstream_committed_at": "2026-10-12T19:40:53.000Z",
+   "captured": "2026-10-13",
+   "captured_at": "2026-10-13T19:34:54.022Z",
+   "upstream_committed_at": "2026-10-13T16:40:50.000Z",
    "model_version": "4.3.1",
    "ratings_as_of": {
     "season": 2026,
-    "week": 5
+    "week": 6
    },
    "backtest_captured": "2026-08-06",
    "refresh": "tools/nfelo-refresh.mjs, scheduled daily at 14:45 UTC by .github/workflows/nfelo-refresh.yml"
   }
  },
  "tier_meaning": "Working Dawg — earned its collar. Evidence survived validation: receipts against a benchmark chosen in advance for forecasters, named sources and reproducible maths for measurement tools.",
- "built": "2026-10-12",
+ "built": "2026-10-13",
  "canonical_url": "https://datadawgs216.com/data/nfelo.json"
 }

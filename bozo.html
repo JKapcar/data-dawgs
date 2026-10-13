@@ -2208,6 +2208,7 @@ html[data-theme="dark"] #diagExploreCard{--dx-teal:#66d4cb;--dx-red:#ff9870;--dx
       ["#","Tools","nav-section"],
       ["dfs.html","DFS Labs","dfs"],
       ["dfs-showdown.html","DFS SHOWDOWN","dfs-showdown"],
+      ["dfs-nhl.html","Hockey DFS","dfs-nhl"],
       ["fantasy-warroom.html","Fantasy League War Room","fantasy-warroom"],
       ["guillotine.html","Last Dawg Standing","guillotine"],
       ["survivor.html","Survivor","survivor"],
@@ -2985,7 +2986,7 @@ arena.html — the hub for games played against other people; links to all of th
 bozo.html — the weekly one-leg parlay game with five sheets: Overview (season Bozo Count, CLV chart, current-week diagnostics and weekly hierarchy grid), This Week (hierarchy machine, ticket and personal entry), Diagnostics (filterable league ledger), Bozo Menu (weekly research, screening and quotes), and League Settings (roster, rules, shared league password, member cap and public/private visibility).
 challenge.html — the NFL Forecasting Challenge: put a probability on a game before kickoff, get graded after.
 survivor.html — survivor pool: this week's board, pick popularity, an optimal path, a season simulation, model settings.
-guillotine.html — guillotine league companion. dfs.html — DFS Labs: Run the demo opens an isolated synthetic experiment with Cancel; it never saves over a personal workspace; data, workspace and guides are in disclosures. This week dashboard, slate, solver, simulator, exposure, bankroll, screener, standings (post-lock results ledger: joins DK contest-standings CSVs to the saved pre-lock workspace, audit CSV), method (keys 1–9). The projections there are the USER'S OWN.
+guillotine.html — guillotine league companion. dfs.html — DFS Labs: Run the demo opens an isolated synthetic experiment with Cancel; it never saves over a personal workspace; data, workspace and guides are in disclosures. This week dashboard, slate, solver, simulator, exposure, bankroll, screener, standings (post-lock results ledger: joins DK contest-standings CSVs to the saved pre-lock workspace, audit CSV), method (keys 1–9). The projections there are the USER'S OWN. dfs-nhl.html - Hockey DFS: a separate DraftKings-only hockey app with CSV import, historical projections, status and lineup checks. Rules remain provisional; no contest-ready or simulation claims.
 dfs-showdown.html — DFS SHOWDOWN: grades a signed-in user's DraftKings Showdown entries (their DFS Labs workspace lineups or saved portfolio, or an imported DK entries CSV) against a field sampled from their own ownership, per contest type: single-entry, 5/20-max, max-entry, flagship. The types differ by a field-sharpness preset, which is a hypothesis. Shows a banded contest-fit chart, a grade with reasons, exposure by dollars, captains, game scripts, expected copies and finish odds. Simulation output, ungraded, no ROI. Read-only: never saves, solves or enters. Signed out it runs an invented demo slate. The projections are the USER'S OWN.
 teamdraft.html — the 32-team wins pool: spin wheel, board, eight rosters, Monte Carlo season sim.
 The draft rig: dashboard.html (a drafter's view), auction.html (the operator), board.html (read-only room view), bigboard.html (the projector), dataviz.html and report.html (afterwards), master.html (the player pool and scouting).
@@ -7336,12 +7337,15 @@ function paintDiagnosticsExplorer(){
     tile('Record',`${s.wins}–${s.losses}`,`${s.picks} total picks`)+
     tile('Vs expectation',s.measurable.length?dxSigned(s.delta):'—',`${s.measurable.length} matched decisions`)+
     tile('Average CLV',s.clv==null?'—':`${dxSigned(s.clv*100,2)} pp`,`${s.overridden} manager-set · ${s.measurable.length} measured`);
-  if(!rows.length){host.innerHTML='<div class="dash-empty">No picks match these filters.</div>';document.querySelector('#dxTable tbody').innerHTML='';document.getElementById('dxNote').textContent='';return;}
+  if(!rows.length){delete host._dxMarkup;host.innerHTML='<div class="dash-empty">No picks match these filters.</div>';document.querySelector('#dxTable tbody').innerHTML='';document.getElementById('dxNote').textContent='';return;}
   const group=document.getElementById('dxGroup').value;
   const key=l=>group==='player'?teamOf(l.player):group==='sport'?String(l.sport||'Unknown').toUpperCase():group==='market'?String(l.mkt||'other').toUpperCase():'Week '+l.week;
   const buckets=new Map();rows.forEach(l=>{const k=key(l);if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(l);});
   const sums=[...buckets].map(([k,v])=>({k,...dxSummary(v)})).sort((a,b)=>group==='week'?Number(a.k.slice(5))-Number(b.k.slice(5)):b.picks-a.picks||a.k.localeCompare(b.k));
-  host.innerHTML=dxVisuals(rows,s,sums,group,metric);
+  // Live refreshes with unchanged chart data must not replace a focused native
+  // summary between keydown and keyup, which cancels its keyboard activation.
+  const markup=dxVisuals(rows,s,sums,group,metric);
+  if(host._dxMarkup!==markup||!host.querySelector('.dx-primary')){host.innerHTML=markup;host._dxMarkup=markup;}
   for(const id of opened){const d=host.querySelector(`[data-chart="${id}"] details`);if(d)d.open=true;}
   document.getElementById('dxMore').open=!!moreOpen;
   document.getElementById('dxMetric').addEventListener('change',()=>{paintDiagnosticsExplorer();document.getElementById('dxMetric').focus({preventScroll:true});});
