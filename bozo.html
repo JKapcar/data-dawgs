@@ -7337,12 +7337,15 @@ function paintDiagnosticsExplorer(){
     tile('Record',`${s.wins}–${s.losses}`,`${s.picks} total picks`)+
     tile('Vs expectation',s.measurable.length?dxSigned(s.delta):'—',`${s.measurable.length} matched decisions`)+
     tile('Average CLV',s.clv==null?'—':`${dxSigned(s.clv*100,2)} pp`,`${s.overridden} manager-set · ${s.measurable.length} measured`);
-  if(!rows.length){host.innerHTML='<div class="dash-empty">No picks match these filters.</div>';document.querySelector('#dxTable tbody').innerHTML='';document.getElementById('dxNote').textContent='';return;}
+  if(!rows.length){delete host._dxMarkup;host.innerHTML='<div class="dash-empty">No picks match these filters.</div>';document.querySelector('#dxTable tbody').innerHTML='';document.getElementById('dxNote').textContent='';return;}
   const group=document.getElementById('dxGroup').value;
   const key=l=>group==='player'?teamOf(l.player):group==='sport'?String(l.sport||'Unknown').toUpperCase():group==='market'?String(l.mkt||'other').toUpperCase():'Week '+l.week;
   const buckets=new Map();rows.forEach(l=>{const k=key(l);if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(l);});
   const sums=[...buckets].map(([k,v])=>({k,...dxSummary(v)})).sort((a,b)=>group==='week'?Number(a.k.slice(5))-Number(b.k.slice(5)):b.picks-a.picks||a.k.localeCompare(b.k));
-  host.innerHTML=dxVisuals(rows,s,sums,group,metric);
+  // Live refreshes with unchanged chart data must not replace a focused native
+  // summary between keydown and keyup, which cancels its keyboard activation.
+  const markup=dxVisuals(rows,s,sums,group,metric);
+  if(host._dxMarkup!==markup||!host.querySelector('.dx-primary')){host.innerHTML=markup;host._dxMarkup=markup;}
   for(const id of opened){const d=host.querySelector(`[data-chart="${id}"] details`);if(d)d.open=true;}
   document.getElementById('dxMore').open=!!moreOpen;
   document.getElementById('dxMetric').addEventListener('change',()=>{paintDiagnosticsExplorer();document.getElementById('dxMetric').focus({preventScroll:true});});

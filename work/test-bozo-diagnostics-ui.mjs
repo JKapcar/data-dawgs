@@ -80,6 +80,9 @@ try{
       if(width===390)await summary.tap();else await summary.click();
       await waitDisclosure(selector,true,`${chart}: opened by ${width===390?'touch':'click'}`);
       await detail.locator('table').waitFor({state:'visible'});
+      // A routine live refresh can land between keydown and keyup. Unchanged
+      // chart data must preserve the native summary node and activation state.
+      await summary.evaluate(el=>el.addEventListener('keydown',()=>paintDiagnosticsExplorer(),{once:true}));
       await summary.press('Space');
       await waitDisclosure(selector,false,`${chart}: closed by Space`);
       assert.ok(await summary.evaluate(el=>getComputedStyle(el).outlineStyle!=='none'),'visible keyboard focus');
