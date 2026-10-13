@@ -15226,6 +15226,129 @@ const api={validate,settings,presets,defaults,slots,fields,ownership,fromWorkspa
 })(dfsModules, dfsModules, undefined, undefined);
 
 (function(globalThis, self, module, require){
+/* Pure diagnostics. No network, storage, solver changes or universal quality score. */
+(function(root){
+'use strict';
+const finite=Number.isFinite, time=v=>typeof v==='string'&&/(Z|[+-]\d\d:\d\d)$/.test(v)?Date.parse(v):NaN;
+const rules={dk_classic:{cap:50000,slots:['QB','RB','RB','WR','WR','WR','TE','FLEX','DST']},dk_showdown:{cap:50000,slots:['CPT','FLEX','FLEX','FLEX','FLEX','FLEX']}};
+const check=(state,title,evidence,action)=>({state,title,evidence,action});
+function parse(text){
+ if(text.length>4000000)throw Error('Audit exceeds the 4 MB device import limit.');
+ const a=JSON.parse(text);
+ if(a.version!==1||!Array.isArray(a.players)||!Array.isArray(a.entries)||a.players.length>220||a.entries.length>600)throw Error('Expected audit version 1, at most 220 players and 600 entries.');
+ if(a.players.some(p=>!p||typeof p!=='object')||a.entries.some(e=>!e||!Array.isArray(e.ids)||e.ids.length>12||e.ids.some(i=>!Number.isInteger(i)||i<0||i>=a.players.length)))throw Error('Invalid player or roster references.');
+ if(a.entries.some(e=>e.fee!=null&&(!finite(e.fee)||e.fee<0)))throw Error('Entry fees must be nonnegative numbers or null.');
+ if(a.scenarios!=null&&(!Array.isArray(a.scenarios)||a.scenarios.length>20||a.scenarios.some(s=>!s||!Array.isArray(s.projections)||s.projections.length!==a.players.length)))throw Error('Scenario projections must match the player pool (maximum 20).');
+ if(a.recommendations!=null&&(!Array.isArray(a.recommendations)||a.recommendations.length>600))throw Error('Invalid recommendation log.');
+ if(a.notes!=null&&(!Array.isArray(a.notes)||a.notes.length>600||a.notes.some(n=>!n||typeof n.text!=='string')))throw Error('Invalid notes.');
+ if(a.contests!=null&&(!Array.isArray(a.contests)||a.contests.length>600))throw Error('Invalid contests.');
+ if(a.entries.some(e=>(e.slots!=null&&(!Array.isArray(e.slots)||e.slots.some(s=>typeof s!=='string')))||(e.lockedSlots!=null&&(!Array.isArray(e.lockedSlots)||e.lockedSlots.some(s=>!Number.isInteger(s)||s<0||s>=e.ids.length)))||(e.lifecycle&&!['proposed','entered','amended','graded'].includes(e.lifecycle))))throw Error('Invalid slots or lifecycle.');
+ if((a.recommendations||[]).some(r=>!r||typeof r!=='object')||(a.contests||[]).some(c=>!c||typeof c!=='object'))throw Error('Invalid evidence record.');
+ if([...a.entries,...(a.recommendations||[])].some(e=>e.history!=null&&!Array.isArray(e.history)))throw Error('History must be an array.');
+ if(a.players.some(p=>['name','team','opp','pos'].some(k=>p[k]!=null&&typeof p[k]!=='string')))throw Error('Player names, positions and matchups must be text.');
+ return a;
+}
+// Private persistence retains the complete JSON snapshot, including extension evidence.
+// Bound untrusted trees before storage; invalid lineups remain auditable, never repaired.
+function privatePortfolio(value){
+ let nodes=0;const seen=new Set();
+ function walk(v,depth){
+  if(depth>24||++nodes>60000)throw Error('Portfolio evidence is too deeply nested or complex.');
+  if(v===null||typeof v==='boolean')return;
+  if(typeof v==='string'){if(v.length>64000)throw Error('Portfolio text exceeds 64,000 characters.');return;}
+  if(typeof v==='number'){if(!finite(v))throw Error('Portfolio numbers must be finite or null.');return;}
+  if(typeof v!=='object'||seen.has(v))throw Error('Portfolio must contain only JSON values.');
+  seen.add(v);
+  for(const [k,x] of Object.entries(v)){if(['__proto__','prototype','constructor'].includes(k))throw Error('Unsupported portfolio field.');walk(x,depth+1);}
+  seen.delete(v);
+ }
+ walk(value,0);const text=JSON.stringify(value);
+ if(new TextEncoder().encode(text).length>450000)throw Error('Private portfolio exceeds the 450 KB save limit. Export it locally instead.');
+ const a=parse(text);if(!rules[a.site])throw Error('Private portfolios support explicit dk_classic or dk_showdown only.');
+ for(const p of a.players){
+  if(Array.isArray(p))throw Error('Players must be objects.');
+  for(const k of ['own','cptOwn','flexOwn'])if(p[k]!=null&&(!finite(p[k])||p[k]<0||p[k]>100))throw Error(k+' must be percentage points from 0 to 100, or null.');
+ }
+ return a;
+}
+function slotOwnership(a,e,i){
+ const p=a.players[e.ids[i]],slot=(e.slots||rules[a.site]?.slots||[])[i];
+ const n=a.site==='dk_showdown'?(slot==='CPT'?p?.cptOwn:slot==='FLEX'?p?.flexOwn:null):p?.own;
+ return finite(n)&&n>=0&&n<=100?n:null;
+}
+function eligible(p,slot,sd){const positions=String(p?.pos||'').split('/');return !!p&&(sd?positions.every(pos=>['QB','RB','WR','TE','K','DST'].includes(pos)):positions.some(pos=>slot==='FLEX'?['RB','WR','TE'].includes(pos):pos===slot));}
+function game(p){return p&&p.team&&p.opp&&p.team!==p.opp?[p.team,p.opp].sort().join(' / '):null;}
+function roster(a,e){
+ const r=rules[a.site],ps=e.ids.map(i=>a.players[i]),out=[];
+ if(!r)return [check('unknown','Roster rules','This format is unsupported.','Use verified DK Classic or Showdown rules; independently validate other formats.')];
+ const sd=a.site==='dk_showdown',slots=e.slots||r.slots;
+ const valid=e.ids.length===r.slots.length&&new Set(e.ids).size===e.ids.length&&ps.every(Boolean)&&slots.length===r.slots.length&&slots.slice().sort().join()===r.slots.slice().sort().join()&&ps.every((p,i)=>eligible(p,slots[i],sd))&&(!sd||e.ids.includes(e.cpt)&&e.ids[slots.indexOf('CPT')]===e.cpt);
+ out.push(check(valid?'pass':'warning','Roster & eligibility',valid?'Unique players fit every required slot.':'Count, duplicate, captain or position mismatch.','Check official slot assignments and player eligibility.'));
+ const salary=ps.length>0&&ps.every(p=>p&&finite(p.sal)&&p.sal>=0)&&(!sd||ps.every((p,i)=>e.ids[i]!==e.cpt||finite(p.cptSal)))?ps.reduce((s,p,i)=>s+(sd&&e.ids[i]===e.cpt?p.cptSal:p.sal),0):null;
+ out.push(check(salary==null?'unknown':salary<=r.cap?'pass':'warning','Salary',salary==null?'Official salary or captain salary missing.':`$${salary} / $${r.cap}; $${r.cap-salary} remaining.`,'Refresh official salaries before entry.'));
+ const teams=new Set(ps.map(p=>p?.team).filter(Boolean));
+ if(sd)out.push(check(ps.some(p=>!p?.team)?'unknown':teams.size===2&&Math.max(...[...teams].map(t=>ps.filter(p=>p.team===t).length))<=5?'pass':'warning','Showdown teams',`${teams.size} named teams. Both teams must be represented, maximum five from one team.`,'Verify the slate has exactly these two teams.'));
+ const mapped=ps.length>0&&ps.every(p=>game(p));
+ if(sd)out.push(check(!mapped?'unknown':new Set(ps.map(game)).size===1?'pass':'warning','Showdown matchup',mapped?`${new Set(ps.map(game)).size} matchups; exactly one required.`:'Explicit matchup data is missing.','Use only the two opposing teams from this contest’s game.'));
+ if(!sd)out.push(check(!mapped?'unknown':new Set(ps.map(game)).size>=2?'pass':'warning','Classic game count',mapped?`${new Set(ps.map(game)).size} games; at least two required.`:'Cannot verify the two-game rule without matchups.','Verify official matchup mapping.'));
+ const inconsistent=ps.some(p=>p&&ps.some(q=>q&&((p.gid&&q.gid===p.gid&&game(p)!==game(q))||(p.team===q.team&&p.opp&&q.opp&&p.opp!==q.opp)||(p.opp===q.team&&q.opp&&q.opp!==p.team))));
+ out.push(check(!mapped?'unknown':inconsistent?'warning':'pass','Team / opponent mapping',!mapped?'Missing team or explicit opponent; game IDs alone do not verify opponents.':inconsistent?'Team/opponent or shared-game mappings conflict.':`Explicit matchups: ${[...new Set(ps.map(game))].join('; ')}. Source accuracy still requires verification.`,'Reconcile against the official slate schedule.'));
+ const qbs=ps.filter(p=>p?.pos==='QB');
+ out.push(check(!mapped?'unknown':'pass','Stacks & bring-backs',mapped?qbs.map(q=>`${q.name}: ${ps.filter(p=>p.team===q.team&&['WR','TE'].includes(p.pos)).length} WR/TE stack; ${ps.filter(p=>p.team===q.opp&&p.pos!=='DST').length} offensive bring-backs`).join('; ')||'No QB in this roster.':'Cannot establish stacks without explicit matchup data.','Choose correlation for the contest and scenario. A bring-back is contextual, not mandatory.'));
+ const conflict=mapped&&ps.some(d=>d.pos==='DST'&&ps.some(p=>p.pos!=='DST'&&p.team===d.opp));
+ out.push(check(!mapped?'unknown':conflict?'warning':'pass','Offense against rostered defense',conflict?'An offensive player faces this lineup’s defense.':mapped?'No offense faces this lineup’s defense.':'Opponents are missing.','Review whether this negative correlation is intentional; do not automatically discard the lineup.'));
+ return out;
+}
+function exposure(a){
+ const n=a.entries.length,feesKnown=n>0&&a.entries.every(e=>finite(e.fee)&&e.fee>=0),total=feesKnown?a.entries.reduce((s,e)=>s+e.fee,0):null;
+ const groups={players:new Map(),pairs:new Map(),games:new Map()};
+ for(const e of a.entries){const ids=[...new Set(e.ids)].sort((a,b)=>a-b);const keys={players:ids.map(String),pairs:ids.flatMap((id,i)=>ids.slice(i+1).map(j=>id+':'+j)),games:[...new Set(ids.map(i=>game(a.players[i])).filter(Boolean))]};
+ for(const type of Object.keys(groups))for(const key of keys[type]){const v=groups[type].get(key)||{key,count:0,fees:0};v.count++;if(feesKnown)v.fees+=e.fee;groups[type].set(key,v);}}
+ const result={n,total,feesKnown,mappingComplete:a.entries.every(e=>e.ids.every(i=>game(a.players[i])))};
+ for(const type of Object.keys(groups))result[type]=[...groups[type].values()].map(v=>({...v,countShare:n?v.count/n:null,feeShare:total>0?v.fees/total:null})).sort((a,b)=>b.count-a.count||a.key.localeCompare(b.key));
+ result.overlap=[];for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){const x=a.entries[i],y=a.entries[j],shared=x.ids.filter(id=>y.ids.includes(id)).length;const gx=new Set(x.ids.map(id=>game(a.players[id])).filter(Boolean)),gy=new Set(y.ids.map(id=>game(a.players[id])).filter(Boolean));result.overlap.push({i,j,shared,games:[...gx].filter(g=>gy.has(g)).length});}
+ return result;
+}
+function swap(a,e,next,now){
+ const r=rules[a.site];if(!r)return check('unknown','Swap feasibility','Unsupported format.','Validate with the contest provider.');
+ if(e.slotEvidence==='inferred')return check('unknown','Swap feasibility','Captured solver slot order is inferred, not a confirmed entered roster.','Attach actual slot assignments and set slotEvidence to supplied after checking the entry.');
+ if(!finite(time(now)))return check('unknown','Swap feasibility','Evaluation time needs an explicit timezone.','Enter an ISO timestamp with Z or an offset.');
+ const oldSlots=e.slots||r.slots,newSlots=next.slots||r.slots;
+ const all=[...e.ids,...next.ids].map(i=>a.players[i]);
+ if(all.some(p=>!p||!finite(time(p.kickoff))))return check('unknown','Swap feasibility','Kickoff is missing or lacks a timezone.','Load official kickoff times for every involved player.');
+ for(let i=0;i<e.ids.length;i++)if((time(a.players[e.ids[i]].kickoff)<=time(now)||(e.lockedSlots||[]).includes(i))&&(next.ids[i]!==e.ids[i]||newSlots[i]!==oldSlots[i]))return check('warning','Swap rejected','A locked slot would change.','Keep locked players in their exact slots.');
+ for(let i=0;i<next.ids.length;i++)if(next.ids[i]!==e.ids[i]&&time(a.players[next.ids[i]].kickoff)<=time(now))return check('warning','Swap rejected','A proposed player already kicked off.','Choose an eligible later player; refresh contest lock rules.');
+ const checks=roster(a,next).filter(c=>['Roster & eligibility','Salary','Showdown teams','Showdown matchup','Classic game count','Team / opponent mapping'].includes(c.title));
+ if(checks.some(c=>c.state!=='pass'))return check(checks.some(c=>c.state==='warning')?'warning':'unknown','Swap not executable',checks.filter(c=>c.state!=='pass').map(c=>c.evidence).join(' '),'Resolve roster and salary checks before swapping.');
+ return check('pass','Swap mechanically feasible','Salary, positions, kickoff and locked slots passed for the supplied snapshot. No entry was submitted.','Verify provider lock state and manually submit before kickoff.');
+}
+function sensitivity(a,e){return (a.scenarios||[]).map(s=>({name:s.name||'Unnamed model',source:s.source||'Unknown source',asOf:s.asOf||'Unknown time',points:e.ids.every(id=>finite(s.projections[id]))?e.ids.reduce((n,id)=>n+s.projections[id]*(a.site==='dk_showdown'&&e.cpt===id?1.5:1),0):null}));}
+function audit(a,now=new Date().toISOString()){
+ const x=exposure(a),checks=[];const used=[...new Set(a.entries.flatMap(e=>e.ids))].map(i=>a.players[i]);
+ checks.push(check(used.length&&used.every(p=>finite(p.proj))?'pass':'unknown','Projection inputs',`${used.filter(p=>finite(p.proj)).length} / ${used.length} used players have numeric projections. No missing value is substituted with zero.`,'Resolve missing projections, then compare credible alternative score models in the lineup lens.'));
+ checks.push(check(a.entries.length?'pass':'unknown','Snapshot scope',`${a.entries.length} entries; ${a.players.length} players. Candidate lineups remain proposals until evidence is recorded.`,'Capture the intended portfolio; assign fees per entry.'));
+ const ownership=a.site==='dk_showdown'?a.entries.flatMap(e=>e.ids.map((id,i)=>slotOwnership(a,e,i))):used.map(p=>p.own);
+ checks.push(check(ownership.length&&ownership.every(n=>finite(n)&&n>=0&&n<=100)?'pass':'unknown','Ownership coverage',`${ownership.filter(n=>finite(n)&&n>=0&&n<=100).length} / ${ownership.length} ${a.site==='dk_showdown'?'roster slots':'used players'} have valid ownership. Showdown uses explicit CPT/FLEX columns. Missing is never zero.`,'Import ownership estimates with source time and convention.'));
+ const s=a.source||{};checks.push(check(s.name&&finite(time(s.asOf))&&s.version?'pass':'unknown','Source provenance',`Source: ${s.name||'unknown'}; source time: ${s.asOf||'unknown'}; version: ${s.version||'unknown'}; captured: ${a.capturedAt||'unknown'}. Capture time is not source time.`,'Refresh the provider snapshot and verify its timestamp before lock.'));
+ const unknown=used.filter(p=>!p.injury||!p.injury.source||!finite(time(p.injury.asOf))||!p.injury.status),injured=used.filter(p=>p.injury&&!['active','healthy'].includes(String(p.injury.status).toLowerCase()));
+ checks.push(check(unknown.length?'unknown':injured.length?'warning':used.length?'pass':'unknown','Availability evidence',`${unknown.length} missing sourced status; ${injured.length} non-active designations. This is a supplied report, not a live injury feed.`,'Verify official inactive reports and source time; stale active status is not clearance.'));
+ const risk=a.risk||{};checks.push(check(!finite(time(risk.confirmedAt))?'unknown':!finite(risk.maxFeeExposure)||risk.maxFeeExposure<0||risk.maxFeeExposure>1?'unknown':!x.feesKnown||x.total<=0?'unknown':x.players.some(p=>p.feeShare>risk.maxFeeExposure)?'warning':'pass','Your fee exposure limit',risk.confirmedAt?`Confirmed ${risk.confirmedAt}; cap ${finite(risk.maxFeeExposure)?(risk.maxFeeExposure*100).toFixed(1)+'%':'unknown'}.`:'No risk preference confirmed. No optimal cap is assumed.','Set and explicitly confirm your own cap. Diversification changes risk; it does not automatically improve EV.'));
+ for(const [key,title,values,available] of [['maxCountExposure','Player count limit',x.players.map(p=>p.countShare),x.n>0],['maxPairFeeExposure','Pair fee limit',x.pairs.map(p=>p.feeShare),x.feesKnown&&x.total>0],['maxGameFeeExposure','Game fee limit',x.games.map(p=>p.feeShare),x.mappingComplete&&x.feesKnown&&x.total>0]])if(risk[key]!=null)checks.push(check(!finite(time(risk.confirmedAt))||!finite(risk[key])||risk[key]<0||risk[key]>1||!available?'unknown':values.some(v=>v>risk[key])?'warning':'pass',title,`User cap ${finite(risk[key])?(risk[key]*100).toFixed(1)+'%':'invalid'}; confirmed ${risk.confirmedAt||'never'}.`,'Review the concentrated entries and scenario tradeoff before changing the portfolio. This preference does not imply EV improvement.'));
+ const sim=a.simulation;checks.push(check('unknown','Simulation & calibration',sim?`Supplied provenance: ${JSON.stringify(sim)}. No independently validated field probabilities or calibration receipt in this dashboard.`:'No simulation receipt attached. Seeds, worlds, model version, assumptions and calibration are unknown.','Retain the run receipt. Score-threshold exceedance is not cash, top-1% or win probability. Monte Carlo noise shrinks with more worlds; model uncertainty does not.'));
+ const cs=a.contests||[];checks.push(check('unknown','Contest economics',cs.length?`${cs.length} supplied contest records; inspect exact field, payouts, fee, entry cap and source. No verified ROI or duplicate splitting is calculated here.`:'Exact field, payouts and entry limits are missing. Cash probability and ROI are unavailable.','Attach exact lobby evidence and a field-model receipt; do not substitute preset contests.'));
+ for(const c of cs){const complete=c.id&&c.source&&finite(time(c.asOf))&&Number.isInteger(c.fieldSize)&&c.fieldSize>0&&Number.isInteger(c.entryLimit)&&c.entryLimit>0&&finite(c.fee)&&c.fee>=0&&Array.isArray(c.payouts)&&c.payouts.length===c.fieldSize&&c.payouts.every(p=>finite(p)&&p>=0);const count=a.entries.filter(e=>e.contestId===c.id).length;checks.push(check(!complete?'unknown':count>c.entryLimit?'warning':'pass','Contest record: '+(c.id||'unnamed'),`${count} assigned entries; field ${c.fieldSize??'unknown'}; entry cap ${c.entryLimit??'unknown'}; fee ${c.fee??'unknown'}. Full per-place payouts ${complete?'supplied':'missing or incomplete'}. Source ${c.source||'unknown'} at ${c.asOf||'unknown'}.`,'Reconcile actual lobby evidence and fees. A complete record is not a calibrated field model.'));}
+ const states=a.entries.map(e=>e.lifecycle||'proposed');const unsupported=a.entries.filter(e=>(e.lifecycle&&e.lifecycle!=='proposed')&&(!e.entryEvidence?.source||!finite(time(e.entryEvidence?.asOf))||!e.entryEvidence?.entryId));
+ const invalidGrade=a.entries.filter(e=>e.lifecycle==='graded'&&(!e.result?.source||!finite(time(e.result?.asOf))||!finite(e.result?.points)||!finite(e.result?.payout)));
+ checks.push(check(unsupported.length||invalidGrade.length?'warning':a.entries.length?'pass':'unknown','Entry lifecycle',`${states.filter(s=>s==='proposed').length} proposed; ${unsupported.length} unsupported status claims; ${invalidGrade.length} unsupported grades. User-supplied evidence is not provider verification.`,'Record entry ID, source and time for entered/amended states; grading needs sourced points and payout. Preserve pregame reasoning regardless of outcome.'));
+ return {checks,exposure:x,entries:a.entries.map(e=>roster(a,e)),evaluatedAt:now};
+}
+function capture(data){return parse(JSON.stringify({version:1,site:data.site,players:data.players,entries:data.lineups.map(l=>{const ids=l.ids.slice(),ordered=[];for(const slot of rules[data.site]?.slots||[]){const at=ids.findIndex(id=>slot==='CPT'?id===l.cpt:slot==='FLEX'?data.site==='dk_showdown'||['RB','WR','TE'].includes(data.players[id]?.pos):data.players[id]?.pos===slot);if(at>=0)ordered.push(ids.splice(at,1)[0]);}return {...l,ids:ordered.length===l.ids.length?ordered:l.ids,slots:rules[data.site]?.slots,slotEvidence:'inferred',fee:null,lifecycle:'proposed'};}),source:{name:data.source||null,asOf:data.asOf||null,version:data.revision||null},originalInputs:data,capturedAt:new Date().toISOString(),settings:data.settings||{},simulation:data.simulation||null,scenarios:[],recommendations:[]}));}
+const api={parse,privatePortfolio,slotOwnership,roster,exposure,swap,sensitivity,audit,capture,game,rules};if(typeof module!=='undefined')module.exports=api;root.DDFSDiagnostics=api;
+})(typeof self!=='undefined'?self:globalThis);
+
+})(dfsModules, dfsModules, undefined, undefined);
+
+(function(globalThis, self, module, require){
 /**
  * DFS slate ingest — DK salary CSV + ETR-shaped projection paste.
  * Source of truth for parsers used by dfs.html (keep page copy in sync via
@@ -16195,17 +16318,35 @@ function dfsExposure(w){
  return {lineups:n,players:players.map(p=>({...p,rate:n?p.total/n:0,captain_rate:n?p.captain/n:0,violates_max:n>0&&p.max!=null&&p.total/n>p.max+1e-9})),teams,games,note:'Team/game counts are lineups containing that team/game. Rates are fractions. Solver exposure caps are sequential heuristics; inspect final violations.'};
 }
 async function dfsLoad(env,caller,id){const path=dfsPath(caller,id),r=await fbGet(env,path,true);dfsAssert(r.data,'Workspace not found');return {path,...r};}
-async function dfsCommit(env,r,w,revision){
+async function dfsCommit(env,r,w,revision,preservePredictionTime=false){
  dfsNum(revision,0,2147483647,'expected_revision',true);dfsAssert((r.data?.revision||0)===revision,'Revision conflict. Read workspace and retry with the current revision.');
- w.revision=revision+1;w.updated_at=new Date().toISOString();const clean=dfsClone(w);dfsAssert(JSON.stringify(clean).length<=DFS_LIMITS.bytes,'Workspace exceeds 2 MB; reduce candidate count');
+ w.revision=revision+1;w.updated_at=new Date().toISOString();
+ if(preservePredictionTime){
+  w.portfolio_saved_at=w.updated_at;
+  // Do not infer historical pre-lock evidence from an old mutable workspace clock.
+  w.prediction_provenance=r.data?.prediction_provenance?dfsClone(r.data.prediction_provenance):{version:1,saved_at:null,workspace_revision:null,basis:r.data?'legacy-unverified':'no-predictions',legacy_workspace_updated_at:r.data?.updated_at||null,legacy_workspace_revision:r.data?.revision??null};
+ }else w.prediction_provenance={version:1,saved_at:w.updated_at,workspace_revision:w.revision,basis:'server-prediction-save',source_as_of:w.as_of??null};
+ const clean=dfsClone(w);dfsAssert(JSON.stringify(clean).length<=DFS_LIMITS.bytes,'Workspace exceeds 2 MB; reduce candidate count');
  dfsAssert(r.etag,'Storage did not return an ETag; refusing an unsafe write');dfsAssert(await fbPut(env,r.path,clean,r.etag),'Revision conflict. No changes saved.');return {workspace_id:w.id,revision:w.revision,updated_at:w.updated_at,audit:dfsAudit(w)};
 }
 async function dfsRun(op,a,env,caller){
  dfsUid(caller);
- const allowed={draft:['workspace_id','expected_revision','draft'],compare:['workspace_id','expected_revision','indices','profiles','script'],sync:['workspace_id','expected_revision','players','lineups','settings','source','as_of'],list:[],get:['workspace_id','offset','limit','include_results'],create:['workspace_id','site','source','as_of'],upload:['workspace_id','expected_revision','csv','source','as_of','commit'],players:['workspace_id','expected_revision','players'],settings:['workspace_id','expected_revision','section','patch'],solve:['workspace_id','expected_revision'],explore:['workspace_id','expected_revision'],simulate:['workspace_id','expected_revision','indices'],exposure:['workspace_id'],select:['workspace_id','expected_revision','indices'],export:['workspace_id'],delete:['workspace_id','expected_revision'],schema:[]};
+ if(op.startsWith("history_"))return dfsHistoryRun(op,a,env,caller);
+ const allowed={portfolio:['workspace_id','expected_revision','portfolio'],draft:['workspace_id','expected_revision','draft'],compare:['workspace_id','expected_revision','indices','profiles','script'],sync:['workspace_id','expected_revision','players','lineups','settings','source','as_of'],list:[],get:['workspace_id','offset','limit','include_results'],create:['workspace_id','site','source','as_of'],upload:['workspace_id','expected_revision','csv','source','as_of','commit'],players:['workspace_id','expected_revision','players'],settings:['workspace_id','expected_revision','section','patch'],solve:['workspace_id','expected_revision'],explore:['workspace_id','expected_revision'],simulate:['workspace_id','expected_revision','indices'],exposure:['workspace_id'],select:['workspace_id','expected_revision','indices'],export:['workspace_id'],delete:['workspace_id','expected_revision'],schema:[]};
  dfsAssert(allowed[op],'Unknown DFS operation');dfsObj(a,allowed[op],'arguments');
- if(op==='schema')return {version:2,draft_schema:{version:1,tool:'dd_dfs_draft',required:['version','pool','roster','preset','settings'],pool_fields:['site','players','slate','source','filename','synthetic','importedAt','units','convention','matchupEvidence','warnings','mapping'],roster:'Nullable zero-based indexes in official slot order. Unique players and slot eligibility enforced; incomplete/over-budget drafts may be saved, not submitted.',presets:['unset','cash','small','large'],settings:dfsModules.DDFSDraft.defaults,notes:['Call get; edit its draft; save with the returned expected_revision. Zero creates a new named workspace only.','One player array is shared by draft, solver and AI. Replacing it invalidates computed results.','Unknown slate/date and freshness are allowed for exploration; never invent source time.','Ownership columns remain separate. Cash/small must not silently reuse large-field ownership.','Preset fields are explicit assumptions, not verified lobby settings. Browser load is explicit; no background account writes.']},guide:{url:'https://datadawgs216.com/docs/dfs-playbook.md',app_url:'https://datadawgs216.com/dfs.html#dfsPlaybook',updated:'2026-10-09',instruction:'Read the public playbook before constructing entries. It covers evidence ranking, tool sequence, actual-lobby settings, model limits, final checks and the post-slate ledger.',contest_inputs:['contest ID/name','field capacity/current entrants','entry fee','max entries per person','user entry count','payout table','slate/lock time'],required_checks:['Verify source time, format, imports and ownership units before solving.','Use actual contest settings; compare profiles are illustrative, not arbitrary lobby payouts.','Solver changes clear candidates; solve/explore replace the pool; select invalidates simulations. Preserve roster contents and receipts before mutations.','Audit final exposure, legality and official slot IDs; export does not submit entries.','Disclose partial search and model uncertainty; do not invent unresolved first-place EV.']},limits:DFS_LIMITS,player_fields:DFS_PLAYER_FIELDS,required_player_fields:['name','pos','team','opp','gid','sal'],field_notes:{proj:'Nullable FLEX points; missing projections are excluded.',own:'Total player ownership percent; Classic position or Showdown total across slots.',cptOwn:'Showdown captain ownership percent; must not exceed total.',maxExp:'Sequential solver cap fraction; final violations are reported.',dkId:'Official FLEX ID required for entry CSV.',cptId:'Official captain ID required for Showdown entry CSV.',gid:'Shared stable game identifier; never guess missing games.'},defaults:{solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT},units:{own:'percent 0–100',cptOwn:'percent 0–100',flexOwn:'percent 0–100',maxExp:'fraction 0–1',randomness:'fraction 0–0.6'},workflow:['create','upload (commit=false to preview)','upload (commit=true)','players/settings','solve or explore','simulate','exposure','select','export'],notes:['Every write requires expected_revision.','Read get with include_results=true for simulations.','Use player IDs in groups; lineup ids are indexes into the saved players array.','Results are model-conditional; no guarantee of profitability.']};
- if(op==='list'){const r=await fbGet(env,'/users/'+dfsUid(caller)+'/dfsWorkspaces');return {workspaces:Object.values(r.data||{}).map(w=>({workspace_id:w.id,site:w.site,source:w.source,as_of:w.as_of,revision:w.revision,players:(w.players||[]).length,lineups:(w.lineups||[]).length,updated_at:w.updated_at}))};}
+ if(op==='schema')return {version:2,history_schema:{version:1,save:'dd_dfs_history_save',archive:'dd_dfs_history_archive',list:'dd_dfs_history_list',get:'dd_dfs_history_get',limit_bytes:8000000,notes:['Explicit immutable account archives; never upload automatically.','Account history and result ledgers retain original JSON evidence; save time never verifies prediction time.','history_archive copies an exact server workspace revision without changing it.','List returns metadata only. Get returns the complete saved payload.','Identical kind and JSON payload are idempotent; corrections create a new archive. No historical records are recovered automatically.']},portfolio_schema:{version:1,tool:'dd_dfs_portfolio',read:'dd_dfs_get returns portfolio; audit remains the computed workspace summary.',limit_bytes:450000,notes:['Read get, edit its full portfolio, then save with exact expected_revision. Zero creates a new named workspace only.','Independent snapshot: preserves solver players, candidates, settings and results exactly.','Retains all version 1 JSON evidence, fees, contests, roles, notes and availability. Missing stays unknown.','Explicit private save only. One current snapshot per workspace; export previous versions if needed. No provider submission or automatic sync.']},draft_schema:{version:1,tool:'dd_dfs_draft',required:['version','pool','roster','preset','settings'],pool_fields:['site','players','slate','source','filename','synthetic','importedAt','units','convention','matchupEvidence','warnings','mapping'],roster:'Nullable zero-based indexes in official slot order. Unique players and slot eligibility enforced; incomplete/over-budget drafts may be saved, not submitted.',presets:['unset','cash','small','large'],settings:dfsModules.DDFSDraft.defaults,notes:['Call get; edit its draft; save with the returned expected_revision. Zero creates a new named workspace only.','One player array is shared by draft, solver and AI. Replacing it invalidates computed results.','Unknown slate/date and freshness are allowed for exploration; never invent source time.','Ownership columns remain separate. Cash/small must not silently reuse large-field ownership.','Preset fields are explicit assumptions, not verified lobby settings. Browser load is explicit; no background account writes.']},guide:{url:'https://datadawgs216.com/docs/dfs-playbook.md',app_url:'https://datadawgs216.com/dfs.html#dfsPlaybook',updated:'2026-10-09',instruction:'Read the public playbook before constructing entries. It covers evidence ranking, tool sequence, actual-lobby settings, model limits, final checks and the post-slate ledger.',contest_inputs:['contest ID/name','field capacity/current entrants','entry fee','max entries per person','user entry count','payout table','slate/lock time'],required_checks:['Verify source time, format, imports and ownership units before solving.','Use actual contest settings; compare profiles are illustrative, not arbitrary lobby payouts.','Solver changes clear candidates; solve/explore replace the pool; select invalidates simulations. Preserve roster contents and receipts before mutations.','Audit final exposure, legality and official slot IDs; export does not submit entries.','Disclose partial search and model uncertainty; do not invent unresolved first-place EV.']},limits:DFS_LIMITS,player_fields:DFS_PLAYER_FIELDS,required_player_fields:['name','pos','team','opp','gid','sal'],field_notes:{proj:'Nullable FLEX points; missing projections are excluded.',own:'Total player ownership percent; Classic position or Showdown total across slots.',cptOwn:'Showdown captain ownership percent; must not exceed total.',maxExp:'Sequential solver cap fraction; final violations are reported.',dkId:'Official FLEX ID required for entry CSV.',cptId:'Official captain ID required for Showdown entry CSV.',gid:'Shared stable game identifier; never guess missing games.'},defaults:{solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT},units:{own:'percent 0–100',cptOwn:'percent 0–100',flexOwn:'percent 0–100',maxExp:'fraction 0–1',randomness:'fraction 0–0.6'},workflow:['create','upload (commit=false to preview)','upload (commit=true)','players/settings','solve or explore','simulate','exposure','select','export'],notes:['Every write requires expected_revision.','Read get with include_results=true for simulations.','Use player IDs in groups; lineup ids are indexes into the saved players array.','Results are model-conditional; no guarantee of profitability.']};
+ if(op==='list'){const r=await fbGet(env,'/users/'+dfsUid(caller)+'/dfsWorkspaces');return {workspaces:Object.values(r.data||{}).map(w=>({workspace_id:w.id,site:w.site,source:w.source,as_of:w.as_of,revision:w.revision,players:(w.players||[]).length,lineups:(w.lineups||[]).length,has_portfolio:typeof w.portfolio_json==='string',updated_at:w.updated_at}))};}
+ if(op==='portfolio'){
+  dfsNum(a.expected_revision,0,2147483647,'expected_revision',true);
+  const path=dfsPath(caller,a.workspace_id),r={...await fbGet(env,path,true),path};
+  dfsAssert((r.data?.revision||0)===a.expected_revision,'Revision conflict. Load portfolio from this workspace before saving.');
+  const p=dfsModules.DDFSDiagnostics.privatePortfolio(a.portfolio);
+  const w=r.data?dfsClone(r.data):{id:a.workspace_id,site:p.site,source:'Private portfolio',as_of:null,players:[],lineups:[],settings:dfsClone({solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT}),revision:0};
+  // JSON string preserves nulls, empty and sparse arrays across Firebase storage.
+  // Do not route through draft/sync: those operations replace solver inputs/candidates.
+  w.portfolio_json=JSON.stringify(p);
+  return {...await dfsCommit(env,r,w,a.expected_revision,true),portfolio_saved:true};
+ }
  if(op==='draft'){
   dfsNum(a.expected_revision,0,2147483647,'expected_revision',true);
   const path=dfsPath(caller,a.workspace_id),r={...await fbGet(env,path,true),path};
@@ -16225,7 +16366,7 @@ async function dfsRun(op,a,env,caller){
   const w={id:a.workspace_id,site:a.site,source:mcpDfsString(a.source,'source',200),as_of:dfsDate(a.as_of),players:[],lineups:[],settings:dfsClone({solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT}),revision:0};if(a.site==='dk_classic')Object.assign(w.settings.solver,{minSalary:48500,uniques:3,maxPerTeam:4,objective:{proj:.3,ceil:.7,own:-.05},stack:{qbMin:2,qbPos:['WR','TE'],bringBack:1,noRbVsDst:true,noOppDst:false,noQbVsDst:true}});return dfsCommit(env,r,w,0);
  }
  const r=await dfsLoad(env,caller,a.workspace_id),w=dfsClone(r.data);w.lineups=w.lineups||[];w.players=w.players||[];w.settings={solver:{...dfsClone(DFS_SOLVER_DEFAULT),...w.settings.solver},simulation:{...dfsClone(DFS_SIM_DEFAULT),...w.settings.simulation},lab:{...dfsClone(DFS_LAB_DEFAULT),...w.settings.lab}};
- if(op==='get'){const offset=a.offset??0,limit=a.limit??100;dfsNum(offset,0,5000,'offset',true);dfsNum(limit,1,500,'limit',true);if(a.include_results!=null)dfsAssert(typeof a.include_results==='boolean','include_results must be boolean');const {lineups,simulation,...rest}=w;return {...rest,draft:dfsDraftRead(w),lineups:lineups.slice(offset,offset+limit),total_lineups:lineups.length,simulation:a.include_results?simulation||null:undefined,audit:dfsAudit(w)};}
+ if(op==='get'){const offset=a.offset??0,limit=a.limit??100;dfsNum(offset,0,5000,'offset',true);dfsNum(limit,1,500,'limit',true);if(a.include_results!=null)dfsAssert(typeof a.include_results==='boolean','include_results must be boolean');const {lineups,simulation,portfolio_json,...rest}=w;return {...rest,portfolio:portfolio_json?dfsModules.DDFSDiagnostics.privatePortfolio(JSON.parse(portfolio_json)):null,draft:dfsDraftRead(w),lineups:lineups.slice(offset,offset+limit),total_lineups:lineups.length,simulation:a.include_results?simulation||null:undefined,audit:dfsAudit(w)};}
  if(op==='exposure')return dfsExposure(w);
  if(op==='export')return dfsExport(w);
  dfsNum(a.expected_revision,1,2147483647,'expected_revision',true);dfsAssert(a.expected_revision===w.revision,'Revision conflict. Read workspace first.');
@@ -16292,15 +16433,86 @@ function dfsExport(w){
  return {filename:w.id+'-draftkings.csv',csv:rows.map(r=>r.join(',')).join('\r\n')+'\r\n',lineups:ls.length,revision:w.revision,note:'Export only. No contest entries were submitted.'};
 }
 async function handleDfsWorkspace(request,url,env,cors){
+ cors={...cors,"Cache-Control":"private, no-store"};
  const auth=await sessionAuth(request,env);if(auth.err)return json({error:auth.err},auth.code||401,cors);
  if(request.method!=='POST')return json({error:'POST only'},405,cors);
- try{const body=await readCappedJson(request,600000);dfsAssert(!body.tooLarge&&!body.malformed,'Invalid or oversized JSON body');return json(await dfsRun(url.pathname.split('/').pop(),body.value,env,{kind:'user',uid:auth.uid}),200,cors);}catch(e){return json({error:e.message},400,cors);}
+ try{const body=await readCappedJson(request,url.pathname.endsWith("/history_save")?8100000:600000);dfsAssert(!body.tooLarge&&!body.malformed,'Invalid or oversized JSON body');return json(await dfsRun(url.pathname.split('/').pop(),body.value,env,{kind:'user',uid:auth.uid}),200,cors);}catch(e){return json({error:e.message},400,cors);}
 }
 function dfsToolSchema(op){
  const s={type:'string'},num={type:'integer'},id={type:'string',pattern:'^[A-Za-z0-9_-]{1,80}$'},obj={type:'object'};
  const common={workspace_id:id,expected_revision:{type:'integer',minimum:1}};
- const props={draft:{workspace_id:id,expected_revision:{type:'integer',minimum:0},draft:obj},compare:{...common,indices:{type:'array',items:num,maxItems:200},profiles:obj,script:{type:'string',enum:['any','pass','back','run']}},sync:{...common,players:{type:'array',items:obj},lineups:{type:'array',items:obj},settings:obj,source:s,as_of:s},schema:{},list:{},get:{workspace_id:id,offset:num,limit:num,include_results:{type:'boolean'}},create:{workspace_id:id,site:{enum:['dk_classic','dk_showdown'],type:'string'},source:s,as_of:s},upload:{...common,csv:{type:'string',maxLength:500000},source:s,as_of:s,commit:{type:'boolean'}},players:{...common,players:{type:'array',items:obj,minItems:1,maxItems:220}},settings:{...common,section:{type:'string',enum:['solver','simulation','lab']},patch:obj},solve:common,explore:common,simulate:{...common,indices:{type:'array',items:num,maxItems:200}},select:{...common,indices:{type:'array',items:num}},exposure:{workspace_id:id},export:{workspace_id:id},delete:common};
+ const props={portfolio:{workspace_id:id,expected_revision:{type:'integer',minimum:0},portfolio:obj},draft:{workspace_id:id,expected_revision:{type:'integer',minimum:0},draft:obj},compare:{...common,indices:{type:'array',items:num,maxItems:200},profiles:obj,script:{type:'string',enum:['any','pass','back','run']}},sync:{...common,players:{type:'array',items:obj},lineups:{type:'array',items:obj},settings:obj,source:s,as_of:s},schema:{},list:{},get:{workspace_id:id,offset:num,limit:num,include_results:{type:'boolean'}},create:{workspace_id:id,site:{enum:['dk_classic','dk_showdown'],type:'string'},source:s,as_of:s},upload:{...common,csv:{type:'string',maxLength:500000},source:s,as_of:s,commit:{type:'boolean'}},players:{...common,players:{type:'array',items:obj,minItems:1,maxItems:220}},settings:{...common,section:{type:'string',enum:['solver','simulation','lab']},patch:obj},solve:common,explore:common,simulate:{...common,indices:{type:'array',items:num,maxItems:200}},select:{...common,indices:{type:'array',items:num}},exposure:{workspace_id:id},export:{workspace_id:id},delete:common};
  const optional={get:['offset','limit','include_results'],simulate:['indices'],compare:['indices','profiles','script']};return {type:'object',properties:props[op],required:Object.keys(props[op]).filter(k=>!(optional[op]||[]).includes(k)),additionalProperties:false};
+}
+
+/* Explicit, immutable private DFS archives. No automatic imports or account writes.
+   Payload JSON preserves nulls, empty arrays and original source evidence in RTDB. */
+const DFS_HISTORY_BYTES=8000000;
+function dfsHistoryPayload(kind,payload){
+ dfsAssert(['account_history','results_ledger','workspace'].includes(kind),'Unknown history kind');
+ let nodes=0;
+ const visit=(v,depth=0)=>{
+  dfsAssert(++nodes<=750000&&depth<=24,'History is too large or deeply nested');
+  if(v===null||typeof v==='boolean')return;
+  if(typeof v==='number'){dfsAssert(Number.isFinite(v),'History numbers must be finite or null');return;}
+  if(typeof v==='string'){dfsAssert(v.length<=4000000,'History text exceeds 4 MB');return;}
+  dfsAssert(v&&typeof v==='object','History must contain JSON values');
+  for(const [k,x] of Object.entries(v)){dfsAssert(!['__proto__','constructor','prototype'].includes(k),'Unsupported history key');visit(x,depth+1);}
+ };
+ visit(payload);dfsAssert(payload&&!Array.isArray(payload),'Supply a history object');
+ const objects=a=>Array.isArray(a)&&a.every(v=>v&&typeof v==='object'&&!Array.isArray(v));
+ if(kind==='account_history'){
+  dfsAssert(payload.version===2&&objects(payload.records)&&Array.isArray(payload.legacy_archives),'Expected version 2 account history with records and legacy_archives');
+  dfsAssert(payload.records.length>0||payload.legacy_archives.length>0,'History has no records to save');
+ }else if(kind==='results_ledger'){
+  dfsAssert(['dfs-ledger/1','dfs-ledger/2'].includes(payload.schema)&&payload.slate&&objects(payload.entries)&&objects(payload.contests)&&objects(payload.ownership),'Expected a complete results ledger');
+  dfsAssert(payload.entries.length>0,'Ledger has no entries to save');
+ }else dfsAssert(payload.version===1&&payload.workspace&&Array.isArray(payload.workspace.players)&&Array.isArray(payload.workspace.lineups),'Expected a saved workspace archive');
+ const json=JSON.stringify(payload),bytes=new TextEncoder().encode(json).length;
+ dfsAssert(bytes<=DFS_HISTORY_BYTES,'History exceeds 8 MB; export it privately and split the source by date');return {json,bytes};
+}
+async function dfsHistoryDigest(kind,json){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(kind+'\n'+json));return Array.from(new Uint8Array(bytes),v=>v.toString(16).padStart(2,'0')).join('');}
+function dfsHistoryRoot(caller){return '/users/'+dfsUid(caller)+'/dfsHistory';}
+function dfsHistoryId(id){dfsAssert(typeof id==='string'&&/^[a-f0-9]{64}$/.test(id),'Invalid history ID');return id;}
+async function dfsHistorySave(env,caller,kind,title,payload,origin){
+ title=mcpDfsString(title,'title',160);const {json,bytes}=dfsHistoryPayload(kind,payload),id=await dfsHistoryDigest(kind,json),base=dfsHistoryRoot(caller),path=base+'/records/'+id;
+ const prior=await fbGet(env,path,true);let record=prior.data;
+ if(!record){
+  const records=kind==='account_history'?payload.records:kind==='results_ledger'?payload.entries:payload.workspace.lineups;
+  const dates=records.map(r=>r.date).filter(v=>typeof v==='string'&&v).sort();
+  const meta={id,kind,title,saved_at:new Date().toISOString(),entries:records.length,bytes,source_start:dates[0]||payload.slate?.date||payload.workspace?.as_of||null,source_end:dates.at(-1)||payload.slate?.date||payload.workspace?.as_of||null,origin};
+  record={meta,payload_json:json};dfsAssert(prior.etag,'Storage did not return an ETag; refusing an unsafe history write');
+  if(!await fbPut(env,path,record,prior.etag)){record=(await fbGet(env,path)).data;dfsAssert(record?.payload_json===json,'Archive conflict; original history retained');}
+ }
+ dfsAssert(record.payload_json===json&&record.meta?.kind===kind,'Archive conflict; original history retained');
+ // A failed index write is repairable by retrying the identical payload. The archive never changes.
+ try{await fbPut(env,base+'/index/'+id,record.meta);}catch{throw Error('Archive stored, but its history listing could not be saved. Retry the same save to finish; no duplicate will be created.');}
+ return {saved:true,existing:!!prior.data,history:record.meta};
+}
+async function dfsHistoryRun(op,a,env,caller){
+ const base=dfsHistoryRoot(caller),allowed={history_save:['kind','title','payload'],history_archive:['workspace_id','expected_revision','title'],history_list:['kind','limit','cursor'],history_get:['history_id']};
+ dfsAssert(allowed[op],'Unknown history operation');dfsObj(a,allowed[op],'arguments');
+ if(op==='history_save'){
+  dfsAssert(['account_history','results_ledger'].includes(a.kind),'Use history_archive for server workspace evidence');
+  return dfsHistorySave(env,caller,a.kind,a.title,a.payload,'user-supplied history; save time is not prediction time');
+ }
+ if(op==='history_archive'){
+  const r=await dfsLoad(env,caller,a.workspace_id);dfsNum(a.expected_revision,1,2147483647,'expected_revision',true);dfsAssert(r.data.revision===a.expected_revision,'Revision conflict. Reload the workspace before archiving.');
+  return dfsHistorySave(env,caller,'workspace',a.title,{version:1,workspace:r.data},'server workspace revision '+r.data.revision+'; original prediction provenance retained');
+ }
+ if(op==='history_get'){
+  const record=(await fbGet(env,base+'/records/'+dfsHistoryId(a.history_id))).data;dfsAssert(record?.payload_json&&record.meta,'History not found');
+  return {history:record.meta,payload:JSON.parse(record.payload_json)};
+ }
+ const limit=a.limit??25;dfsNum(limit,1,100,'limit',true);if(a.kind!=null)dfsAssert(['account_history','results_ledger','workspace'].includes(a.kind),'Unknown history kind');if(a.cursor!=null)dfsHistoryId(a.cursor);
+ const rows=Object.values((await fbGet(env,base+'/index')).data||{}).filter(r=>!a.kind||r.kind===a.kind).sort((x,y)=>String(y.saved_at).localeCompare(String(x.saved_at))||y.id.localeCompare(x.id));
+ const start=a.cursor==null?0:rows.findIndex(r=>r.id===a.cursor)+1;dfsAssert(a.cursor==null||start>0,'History cursor no longer exists; refresh the list');
+ const page=rows.slice(start,start+limit);return {history:page,next_cursor:start+limit<rows.length?page.at(-1).id:null,total:rows.length};
+}
+function dfsHistorySchema(op){
+ const s={type:'string'},k={type:'string',enum:['account_history','results_ledger','workspace']};
+ const properties={history_save:{kind:{type:'string',enum:['account_history','results_ledger']},title:{type:'string',maxLength:160},payload:{type:'object'}},history_archive:{workspace_id:s,expected_revision:{type:'integer',minimum:1},title:{type:'string',maxLength:160}},history_list:{kind:k,limit:{type:'integer',minimum:1,maximum:100},cursor:s},history_get:{history_id:s}}[op];
+ return {type:'object',properties,required:op==='history_list'?[]:Object.keys(properties),additionalProperties:false};
 }
 
 /* ===== DD-DFS-WORKSPACE END ===== */
@@ -20144,6 +20356,56 @@ const MCP_NO_ARGS = { type: "object", properties: {}, additionalProperties: fals
 const SWOLE_NEEDS_USER = "SwoleDawg needs to know who you are, and the shared league connector cannot tell. Mint a personal URL at " + SITE + "/connect.html and this works.";
 
 const MCP_TOOLS = [
+  {
+    name: "dd_dfs_history_save",
+    title: "Save private DFS history",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Explicitly archive account_history (version 2 records and legacy_archives) or a complete results_ledger. Retains original evidence and unknown values. Immutable, account scoped, maximum 8 MB; identical payload retries reuse the archive. Save time does not prove pre-lock prediction timing. Never upload automatically.",
+    inputSchema: dfsHistorySchema("history_save"),
+    async run(args, env, caller) { return toolText(await dfsRun("history_save", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_history_archive",
+    title: "Archive a saved DFS workspace",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Copy an exact current account workspace revision into immutable private history, preserving all players, lineups, model results, portfolio JSON and original prediction provenance. Requires expected_revision. Does not mutate the workspace or backdate legacy predictions.",
+    inputSchema: dfsHistorySchema("history_archive"),
+    async run(args, env, caller) { return toolText(await dfsRun("history_archive", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_history_list",
+    title: "List private DFS history",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "List this account's saved historical audits, result logs and workspace snapshots. Metadata only, optional kind filter and cursor, 25 records by default. Nothing is recovered or saved automatically.",
+    inputSchema: dfsHistorySchema("history_list"),
+    async run(args, env, caller) { return toolText(await dfsRun("history_list", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_history_get",
+    title: "Read private DFS history",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "Read one immutable account archive by history_id. Returns original payload and separate server save metadata. Retain missing values and provenance; cash rate and top1Share do not establish first-place upside.",
+    inputSchema: dfsHistorySchema("history_get"),
+    async run(args, env, caller) { return toolText(await dfsRun("history_get", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_portfolio",
+    title: "Save private DFS portfolio audit",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Explicitly save a complete version 1 portfolio audit under the authenticated account. Read dd_dfs_get first, edit get.portfolio, and pass the exact expected_revision. Zero creates a new named workspace only. Preserves existing player pool, solver candidates and model results. Retains fees, contests, source evidence, notes, availability and CPT/FLEX roles; maximum 450 KB. One current snapshot, no automatic history or provider submission. Never use draft or sync to save an audit.",
+    inputSchema: dfsToolSchema("portfolio"),
+    async run(args, env, caller) { return toolText(await dfsRun("portfolio", args, env, caller)); },
+  },
   {
     name: "dd_dfs_draft",
     title: "Save private DFS manual draft",

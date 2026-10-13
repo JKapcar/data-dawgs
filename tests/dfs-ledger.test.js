@@ -60,7 +60,7 @@ t('missing model outputs stay null, never invented',()=>{
  for(const r of E){assert.strictEqual(r.pred_top10pct,null);assert.strictEqual(r.pred_top0_1pct,null);assert.strictEqual(r.top10pct_residual,null);assert.strictEqual(r.top0_1pct_residual,null);}
  const r=E.find(r=>r.entry_id==='5000102');
  assert.ok(Math.abs(r.pred_dupes_scaled-40*19/20000)<1e-12);assert.strictEqual(r.pred_basis_match,false);
- assert.ok(Math.abs(r.cash_residual-(1-.31))<1e-12);assert.ok(Math.abs(r.top1pct_residual-(0-.02))<1e-12);
+ assert.strictEqual(r.cash_residual,null);assert.strictEqual(r.top1pct_residual,null);assert.strictEqual(r.calibration_eligible,false);assert.strictEqual(ledger.summary.cash.n,0);
 });
 
 t('ownership residuals per player and slot',()=>{

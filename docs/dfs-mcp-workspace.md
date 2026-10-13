@@ -15,6 +15,9 @@ The old integration could solve a transient caller-supplied slate but could not 
 | `dd_dfs_upload` | Preview or commit CSV import; matching/dropped-row diagnostics; source timestamp |
 | `dd_dfs_players`, `dd_dfs_settings` | Player pool and solver/simulation/lab settings; invalidate dependent output |
 | `dd_dfs_sync` | Atomic browser snapshot save |
+| `dd_dfs_portfolio` | Explicit full version 1 audit save, separate from solver state; read back `dd_dfs_get.portfolio`; 450 KB, same UID/revision contract |
+| `dd_dfs_history_save`, `dd_dfs_history_list`, `dd_dfs_history_get` | Explicit immutable results-log/audit archives; metadata listing and complete original JSON retrieval, account scoped, 8 MB per payload |
+| `dd_dfs_history_archive` | Copy an exact server workspace revision into immutable history; retain original prediction provenance and leave the workspace unchanged |
 | `dd_dfs_solve`, `dd_dfs_explore` | Shared optimizer and exploration; partial-search disclosure |
 | `dd_dfs_simulate`, `dd_dfs_compare` | Correlated score worlds, modelled field, held-out metrics, contest comparisons |
 | `dd_dfs_exposure`, `dd_dfs_select` | CPT/FLEX/player/team/game exposure; retain selected candidates |
@@ -42,7 +45,7 @@ Source and as_of accompany saved inputs. Computed results record their input rev
 - Missing projections remain missing; simulations require ownership. Showdown requires captain ownership and reconciled CPT scoring. Ownership product is an uncalibrated independence proxy.
 - Sampling cannot resolve exact first-place probability or top-heavy ROI; shared simulator withholds those metrics. Confidence intervals quantify Monte Carlo sampling error, not model error.
 - Browser import does not support MCP-only player groups; it refuses those workspaces rather than dropping the constraints.
-- This exposes DFS computational settings. Presentation-only chart filters, bankroll history, contest-lobby scraping, actual-results ingestion, and automated contest entry are not new MCP features in this change.
+- History tools explicitly archive and retrieve imported results logs, post-lock audits and saved workspace revisions. They do not recover files, import account history automatically, scrape a contest lobby, or submit entries. Presentation-only chart filters remain outside the workspace API.
 
 ## Evaluation and next priorities
 

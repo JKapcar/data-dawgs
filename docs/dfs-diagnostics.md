@@ -1,20 +1,24 @@
 # DFS decision desk (local audit version 1)
 
-Open **Decision desk** below the existing visual atlas in DFS Labs. Capture workspace takes a frozen copy of the current candidates and settings; later solver changes do not mutate that audit. The solver mathematics and existing workspace API are unchanged. Unsupported or missing evidence is shown as unknown, not an invented performance score.
+Open **Open saved portfolio** from the DFS Labs builder, or **Saved work & tools → Portfolio audit**. Capture workspace takes a frozen copy of the current candidates and settings; later solver changes do not mutate that audit. The solver mathematics and existing workspace API are unchanged. Unsupported or missing evidence is shown as unknown, not an invented performance score.
 
 ## Privacy and retention
 
-The desk runs in an opaque-origin sandboxed iframe with scripts and downloads only. There is no same-origin permission, network connection capability, analytics, storage API, service-worker registration or Toto context hook in the frame. The parent accepts a request only from this exact frame and sends a snapshot only in response to the user's Capture action. The parent container is also marked `data-ddb-skip`. There is no reverse import into the solver, account save or automatic upload. A static HTML/JS/CSS shell can be cached by the existing service worker; private values never become HTTP requests or cache keys.
+The desk runs in an opaque-origin sandboxed iframe with scripts and downloads only. It has no direct network, account credentials, browser storage or Toto access. The host container is marked `data-ddb-skip`. A host bridge accepts only the exact child frame, opaque origin, session nonce and bounded explicit operations; it keeps the existing account token outside the frame. Imports remain in session memory until the user explicitly saves or exports.
 
-The existing DFS page's own workspace and AI behavior is unchanged. Isolation applies to the new audit, not retroactively to data already present in that page. Capturing does not copy a credential, connector URL or auth token. The new frame has no access to parent storage.
+**Save portfolio / Load portfolio** stores one complete audit snapshot on a named owned workspace, independent of its manual builder draft, player pool, solver candidates, settings and computed results. To attach an audit to an existing workspace, load that name first. If no portfolio exists there, loading binds its current revision and retains the local audit, ready to save. A new name can be saved directly. Load replaces the local audit only if it has not changed during the request. Edits during a successful save remain unsaved and can be saved again. Account changes reset revision tracking. Nothing submits provider entries.
 
-Records live in session memory. Reload, Clear audit, or closing loses them. Capture, example and successful import replace the current audit: export first to retain it. Invalid imports retain the previous audit. Clear reloads the frame to discard its JS and DOM state. Downloads are private files on the user's device; users must keep them out of public repositories, shared folders and screenshots. Imported evidence is user-supplied, editable and not a cryptographic or independently verified receipt.
+The shared browser/MCP contract is POST `/api/dfs/portfolio` / `dd_dfs_portfolio` with `{workspace_id, expected_revision, portfolio}`. `dd_dfs_get` returns `portfolio`; its existing `audit` field remains the computed workspace summary. `dd_dfs_list` adds `has_portfolio`. Writes require the authenticated UID and revision/ETag compare-and-swap. Expected revision zero creates a new name only; stale revisions fail without changing storage. Never use `draft` or `sync` to persist an audit.
+
+Private saves support explicit DK Classic/Showdown version 1 records, at most 450,000 UTF-8 bytes, depth 24, 60,000 JSON values, and 64,000 characters per string, within the existing 2 MB workspace limit. All JSON evidence and extensions are preserved, including fees, contests, source, notes, roles, availability and nulls. An internal JSON string avoids Firebase dropping nulls or empty arrays. The API returns the decoded object. Invalid lineups remain auditable warnings rather than being silently repaired. Evidence is supplied and editable, not independently verified or tamper-proof.
+
+There is no automatic upload, continuous sync or automatic version history. Reloading loses unsaved changes. Saved history can explicitly archive an exact saved workspace revision, including its portfolio, as described in [the results-ledger documentation](dfs-results-ledger.md). Export to retain an audit larger than the private-save limit. Clear audit only clears local audit state; it does not delete the saved account snapshot or the separate builder session. Keep private exports outside public repositories and shared assets.
 
 ## Schema and conventions
 
 Import/export is JSON, version `1`, maximum 4 MB, 220 players, 600 entries and 20 alternative score models. Repeated import replaces, never appends. A file has `version`, `site`, `players`, `entries`, `source`, `capturedAt`, optional `settings`, `simulation`, `scenarios`, `contests`, `risk`, `notes`, and `recommendations`. Captures additionally retain `originalInputs` including original solver ordering and provenance. Export includes recalculated `diagnostics` summary and `exportedAt`; imported calculated diagnostics are never trusted for display.
 
-Only `dk_classic` and `dk_showdown` rules are supported. Player references in `entries[].ids` are zero-based indexes into `players`, not provider IDs. Player fields match the existing workspace: `name`, `pos`, `team`, explicit `opp`, `gid`, `sal`, `cptSal`, `proj`, `own` (percentage points), `kickoff`. Optional injury evidence is `{status, source, asOf}`. Times must carry `Z` or an explicit offset. Imported data is not a live status feed.
+Only `dk_classic` and `dk_showdown` rules are supported. Player references in `entries[].ids` are zero-based indexes into `players`, not provider IDs. Player fields match the existing workspace: `name`, `pos`, `team`, explicit `opp`, `gid`, `sal`, `cptSal`, `proj`, `own` (percentage points), `cptOwn`, `flexOwn`, `kickoff`. Showdown roster displays and ownership coverage use only the matching explicit CPT/FLEX value; total ownership is never substituted. Zero is retained and missing stays unknown. Optional injury evidence is `{status, source, asOf}`. Times must carry `Z` or an explicit offset. Imported data is not a live status feed.
 
 An entry can include:
 
@@ -43,7 +47,7 @@ Every finding includes evidence and a next action. Swap recommendations preserve
 
 ## Backend follow-up (not implemented)
 
-Full audit attachment retention/versioning, a verified entry/result import, sourced injury refresh, exact field/payout simulation with duplicate splitting, calibration receipts and shared access controls need separate backend work. Current private workspace storage remains its existing players/lineups/settings/source/as_of schema with the 220-player and 200-character source limits. No credentials or access rights were created. History and Team functionality is not assumed live.
+Automatic audit versioning, provider-verified entry/results, sourced injury refresh, calibrated contest probabilities, calibration receipts and shared access controls need separate backend work. Complete portfolio snapshots and explicit immutable account-history/workspace archives are implemented; each requires an intentional private save. The existing solver state remains separate from the portfolio attachment. No credentials or access rights were created. Team functionality is not assumed live.
 
 ## Validation
 

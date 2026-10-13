@@ -20,6 +20,34 @@ function parse(text){
  if(a.players.some(p=>['name','team','opp','pos'].some(k=>p[k]!=null&&typeof p[k]!=='string')))throw Error('Player names, positions and matchups must be text.');
  return a;
 }
+// Private persistence retains the complete JSON snapshot, including extension evidence.
+// Bound untrusted trees before storage; invalid lineups remain auditable, never repaired.
+function privatePortfolio(value){
+ let nodes=0;const seen=new Set();
+ function walk(v,depth){
+  if(depth>24||++nodes>60000)throw Error('Portfolio evidence is too deeply nested or complex.');
+  if(v===null||typeof v==='boolean')return;
+  if(typeof v==='string'){if(v.length>64000)throw Error('Portfolio text exceeds 64,000 characters.');return;}
+  if(typeof v==='number'){if(!finite(v))throw Error('Portfolio numbers must be finite or null.');return;}
+  if(typeof v!=='object'||seen.has(v))throw Error('Portfolio must contain only JSON values.');
+  seen.add(v);
+  for(const [k,x] of Object.entries(v)){if(['__proto__','prototype','constructor'].includes(k))throw Error('Unsupported portfolio field.');walk(x,depth+1);}
+  seen.delete(v);
+ }
+ walk(value,0);const text=JSON.stringify(value);
+ if(new TextEncoder().encode(text).length>450000)throw Error('Private portfolio exceeds the 450 KB save limit. Export it locally instead.');
+ const a=parse(text);if(!rules[a.site])throw Error('Private portfolios support explicit dk_classic or dk_showdown only.');
+ for(const p of a.players){
+  if(Array.isArray(p))throw Error('Players must be objects.');
+  for(const k of ['own','cptOwn','flexOwn'])if(p[k]!=null&&(!finite(p[k])||p[k]<0||p[k]>100))throw Error(k+' must be percentage points from 0 to 100, or null.');
+ }
+ return a;
+}
+function slotOwnership(a,e,i){
+ const p=a.players[e.ids[i]],slot=(e.slots||rules[a.site]?.slots||[])[i];
+ const n=a.site==='dk_showdown'?(slot==='CPT'?p?.cptOwn:slot==='FLEX'?p?.flexOwn:null):p?.own;
+ return finite(n)&&n>=0&&n<=100?n:null;
+}
 function eligible(p,slot,sd){const positions=String(p?.pos||'').split('/');return !!p&&(sd?positions.every(pos=>['QB','RB','WR','TE','K','DST'].includes(pos)):positions.some(pos=>slot==='FLEX'?['RB','WR','TE'].includes(pos):pos===slot));}
 function game(p){return p&&p.team&&p.opp&&p.team!==p.opp?[p.team,p.opp].sort().join(' / '):null;}
 function roster(a,e){
@@ -71,7 +99,8 @@ function audit(a,now=new Date().toISOString()){
  const x=exposure(a),checks=[];const used=[...new Set(a.entries.flatMap(e=>e.ids))].map(i=>a.players[i]);
  checks.push(check(used.length&&used.every(p=>finite(p.proj))?'pass':'unknown','Projection inputs',`${used.filter(p=>finite(p.proj)).length} / ${used.length} used players have numeric projections. No missing value is substituted with zero.`,'Resolve missing projections, then compare credible alternative score models in the lineup lens.'));
  checks.push(check(a.entries.length?'pass':'unknown','Snapshot scope',`${a.entries.length} entries; ${a.players.length} players. Candidate lineups remain proposals until evidence is recorded.`,'Capture the intended portfolio; assign fees per entry.'));
- checks.push(check(used.length&&used.every(p=>finite(p.own)&&p.own>=0&&p.own<=100)?'pass':'unknown','Ownership coverage',`${used.filter(p=>finite(p.own)&&p.own>=0&&p.own<=100).length} / ${used.length} used players have valid ownership. Missing is never zero.`,'Import ownership estimates with source time and convention.'));
+ const ownership=a.site==='dk_showdown'?a.entries.flatMap(e=>e.ids.map((id,i)=>slotOwnership(a,e,i))):used.map(p=>p.own);
+ checks.push(check(ownership.length&&ownership.every(n=>finite(n)&&n>=0&&n<=100)?'pass':'unknown','Ownership coverage',`${ownership.filter(n=>finite(n)&&n>=0&&n<=100).length} / ${ownership.length} ${a.site==='dk_showdown'?'roster slots':'used players'} have valid ownership. Showdown uses explicit CPT/FLEX columns. Missing is never zero.`,'Import ownership estimates with source time and convention.'));
  const s=a.source||{};checks.push(check(s.name&&finite(time(s.asOf))&&s.version?'pass':'unknown','Source provenance',`Source: ${s.name||'unknown'}; source time: ${s.asOf||'unknown'}; version: ${s.version||'unknown'}; captured: ${a.capturedAt||'unknown'}. Capture time is not source time.`,'Refresh the provider snapshot and verify its timestamp before lock.'));
  const unknown=used.filter(p=>!p.injury||!p.injury.source||!finite(time(p.injury.asOf))||!p.injury.status),injured=used.filter(p=>p.injury&&!['active','healthy'].includes(String(p.injury.status).toLowerCase()));
  checks.push(check(unknown.length?'unknown':injured.length?'warning':used.length?'pass':'unknown','Availability evidence',`${unknown.length} missing sourced status; ${injured.length} non-active designations. This is a supplied report, not a live injury feed.`,'Verify official inactive reports and source time; stale active status is not clearance.'));
@@ -86,5 +115,5 @@ function audit(a,now=new Date().toISOString()){
  return {checks,exposure:x,entries:a.entries.map(e=>roster(a,e)),evaluatedAt:now};
 }
 function capture(data){return parse(JSON.stringify({version:1,site:data.site,players:data.players,entries:data.lineups.map(l=>{const ids=l.ids.slice(),ordered=[];for(const slot of rules[data.site]?.slots||[]){const at=ids.findIndex(id=>slot==='CPT'?id===l.cpt:slot==='FLEX'?data.site==='dk_showdown'||['RB','WR','TE'].includes(data.players[id]?.pos):data.players[id]?.pos===slot);if(at>=0)ordered.push(ids.splice(at,1)[0]);}return {...l,ids:ordered.length===l.ids.length?ordered:l.ids,slots:rules[data.site]?.slots,slotEvidence:'inferred',fee:null,lifecycle:'proposed'};}),source:{name:data.source||null,asOf:data.asOf||null,version:data.revision||null},originalInputs:data,capturedAt:new Date().toISOString(),settings:data.settings||{},simulation:data.simulation||null,scenarios:[],recommendations:[]}));}
-const api={parse,roster,exposure,swap,sensitivity,audit,capture,game,rules};if(typeof module!=='undefined')module.exports=api;root.DDFSDiagnostics=api;
+const api={parse,privatePortfolio,slotOwnership,roster,exposure,swap,sensitivity,audit,capture,game,rules};if(typeof module!=='undefined')module.exports=api;root.DDFSDiagnostics=api;
 })(typeof self!=='undefined'?self:globalThis);
