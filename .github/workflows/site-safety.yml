@@ -23,6 +23,9 @@ on:
       - "work/dfs-field-sim.js"
       - "work/dfs-workspace.js"
       - "work/test-dfs-draft-workspace.mjs"
+      - "work/test-dfs-portfolio-workspace.mjs"
+      - "tests/dfs-portfolio*"
+      - "tests/fixtures/dfs-portfolio.cjs"
       - "tests/dfs-builder*"
       - "tests/dfs-simulation-contract.test.js"
       - "tests/dfs-diagnostics*"
@@ -74,6 +77,9 @@ on:
       - "work/dfs-field-sim.js"
       - "work/dfs-workspace.js"
       - "work/test-dfs-draft-workspace.mjs"
+      - "work/test-dfs-portfolio-workspace.mjs"
+      - "tests/dfs-portfolio*"
+      - "tests/fixtures/dfs-portfolio.cjs"
       - "tests/dfs-builder*"
       - "tests/dfs-simulation-contract.test.js"
       - "tests/dfs-diagnostics*"
@@ -167,3 +173,5 @@ jobs:
       - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-entry.browser.cjs
       - run: node work/test-dfs-workspace.mjs
       - run: node work/test-dfs-draft-workspace.mjs
+      - run: node work/test-dfs-portfolio-workspace.mjs
+      - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-portfolio.browser.cjs

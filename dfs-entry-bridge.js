@@ -16,12 +16,15 @@ window.addEventListener('message',async e=>{
  const reply=(body,n=nonce)=>frame.contentWindow.postMessage({type:'dfs-private-result',nonce:n,requestId:m.requestId,...body},'*');
  if(busy){reply({error:'A private request is already running.'});return;}
  const requestEpoch=epoch,requestNonce=nonce;try{
-  if(!m||typeof m!=='object'||Object.keys(m).some(k=>!['type','nonce','requestId','op','workspace_id','expected_revision','draft'].includes(k)))throw Error('Unsupported private request.');
-  if(typeof m.requestId!=='string'||m.requestId.length>40||!['list','load','save'].includes(m.op)||JSON.stringify(m).length>550000)throw Error('Invalid or oversized private request.');
+  if(!m||typeof m!=='object'||Object.keys(m).some(k=>!['type','nonce','requestId','op','workspace_id','expected_revision','draft','portfolio'].includes(k)))throw Error('Unsupported private request.');
+  if(typeof m.requestId!=='string'||m.requestId.length>40||!['list','load','save','portfolio-load','portfolio-save'].includes(m.op)||JSON.stringify(m).length>550000)throw Error('Invalid or oversized private request.');
   if(m.op!=='list'&&(typeof m.workspace_id!=='string'||!/^[A-Za-z0-9_-]{1,80}$/.test(m.workspace_id)))throw Error('Invalid workspace name.');
   const auth=token();if(!auth)throw Error('Sign in on the main page, then retry. Your local draft is unchanged.');
   if(m.op==='save'&&(!Number.isInteger(m.expected_revision)||m.expected_revision<0||!m.draft||m.draft.version!==1))throw Error('Invalid draft or revision.');
-  busy=true;const result=await call(m.op==='save'?'draft':m.op==='load'?'get':'list',m.op==='save'?{workspace_id:m.workspace_id,expected_revision:m.expected_revision,draft:m.draft}:m.op==='load'?{workspace_id:m.workspace_id,limit:1}:{},auth);
+  if(m.op==='portfolio-save'&&(!Number.isInteger(m.expected_revision)||m.expected_revision<0||!m.portfolio||m.portfolio.version!==1))throw Error('Invalid portfolio or revision.');
+  const portfolio=m.op.startsWith('portfolio-'),save=m.op==='save'||m.op==='portfolio-save',load=m.op==='load'||m.op==='portfolio-load';
+  busy=true;let result=await call(save?(portfolio?'portfolio':'draft'):load?'get':'list',save?{workspace_id:m.workspace_id,expected_revision:m.expected_revision,[portfolio?'portfolio':'draft']:portfolio?m.portfolio:m.draft}:load?{workspace_id:m.workspace_id,limit:1}:{},auth);
+  if(m.op==='portfolio-load')result={workspace_id:result.id,revision:result.revision,portfolio:result.portfolio};
   if(requestEpoch===epoch&&token()===auth)reply({result},requestNonce);
  }catch(err){if(requestEpoch===epoch)reply({error:err.message},requestNonce);}finally{if(requestEpoch===epoch)busy=false;}
 });

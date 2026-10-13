@@ -2206,6 +2206,16 @@ const SWOLE_NEEDS_USER = "SwoleDawg needs to know who you are, and the shared le
 
 const MCP_TOOLS = [
   {
+    name: "dd_dfs_portfolio",
+    title: "Save private DFS portfolio audit",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Explicitly save a complete version 1 portfolio audit under the authenticated account. Read dd_dfs_get first, edit get.portfolio, and pass the exact expected_revision. Zero creates a new named workspace only. Preserves existing player pool, solver candidates and model results. Retains fees, contests, source evidence, notes, availability and CPT/FLEX roles; maximum 450 KB. One current snapshot, no automatic history or provider submission. Never use draft or sync to save an audit.",
+    inputSchema: dfsToolSchema("portfolio"),
+    async run(args, env, caller) { return toolText(await dfsRun("portfolio", args, env, caller)); },
+  },
+  {
     name: "dd_dfs_draft",
     title: "Save private DFS manual draft",
     catalog: "core",

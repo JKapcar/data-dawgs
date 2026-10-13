@@ -7,6 +7,7 @@ const money=n=>Number.isFinite(n)?'$'+Math.round(n).toLocaleString('en-US'):'unk
 function say(s){$('bMessage').textContent=s;}
 function tab(builder){$('builderPanel').hidden=!builder;$('auditPanel').hidden=builder;$('builderTab').setAttribute('aria-pressed',String(builder));$('auditTab').setAttribute('aria-pressed',String(!builder));}
 $('builderTab').onclick=()=>tab(true);$('auditTab').onclick=()=>tab(false);
+$('bOpenPortfolio').onclick=()=>{tab(false);$('bTools').open=true;$('aCloudId').focus();};
 window.addEventListener('message',e=>{if(parent!==window&&e.source===parent&&e.data?.type==='dfs-builder-open')tab(true);});
 if(location.hash==='#builder')tab(true);
 function cancelDrag(){drag=null;document.querySelectorAll('.drop-ready').forEach(el=>el.classList.remove('drop-ready'));}

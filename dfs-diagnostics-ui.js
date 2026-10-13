@@ -1,4 +1,4 @@
-/* Runs only inside the isolated decision desk; deliberately no persistence or network APIs. */
+/* Isolated decision desk. Explicit private actions use the authenticated host bridge. */
 (function(){'use strict';
 const D=DDFSDiagnostics,$=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let record=null,report=null,index=0,requested=false,importVersion=0;
@@ -7,7 +7,7 @@ const signal=c=>`<details class="signal"><summary><span class="badge ${['pass','
 function message(s){$('message').textContent=s;}
 function load(a){const next=D.parse(JSON.stringify(a));record=next;index=0;$('json').value='';$('rationale').value='';$('swapResult').replaceChildren();render();}
 function render(){
- $('content').hidden=!record;$('empty').hidden=!!record;$('export').disabled=!record;if(!record)return;
+ $('content').hidden=!record;$('empty').hidden=!!record;$('export').disabled=!record;$('aCloudSave').disabled=!record;if(!record)return;
  report=D.audit(record);$('readinessSummary').textContent=report.checks.filter(c=>c.state==='warning').length+' warnings · '+report.checks.filter(c=>c.state==='unknown').length+' unknowns. Expand a finding for its evidence and next action. Passes concern supplied inputs only.';$('snapshotTitle').textContent=record.synthetic?'Synthetic / invented players':record.site+' / private audit';$('snapshotTime').textContent='Captured '+(record.capturedAt||'unknown')+' · snapshot '+(record.source?.version||'unversioned');$('entryCount').textContent=record.entries.length;$('totalFee').textContent=money(report.exposure.total);
  $('checks').innerHTML=report.checks.slice().sort((a,b)=>({warning:0,unknown:1,pass:2}[a.state]-{warning:0,unknown:1,pass:2}[b.state])).map(signal).join('');$('entry').innerHTML=record.entries.map((e,i)=>`<option value="${i}">Entry ${i+1} · ${esc(e.lifecycle||'proposed')}</option>`).join('');$('entry').value=index;$('cap').value=Number.isFinite(record.risk?.maxFeeExposure)?record.risk.maxFeeExposure*100:'';$('confirm').checked=false;for(const [id,key] of [['countCap','maxCountExposure'],['pairCap','maxPairFeeExposure'],['gameCap','maxGameFeeExposure']])$(id).value=Number.isFinite(record.risk?.[key])?record.risk[key]*100:'';
  drawExposure();drawEntry();drawNotes();
@@ -22,7 +22,7 @@ function drawEntry(){const e=record.entries[index];$('entry').disabled=!e;$('sav
  if(!e){$('rosterChecks').innerHTML='<p>No entries to validate.</p>';$('roster').replaceChildren();$('swapSlots').replaceChildren();$('sensitivity').textContent='No entry.';return;}
  const r=D.rules[record.site],slots=e.slots||r?.slots||[];
  $('rosterChecks').innerHTML=report.entries[index].map(signal).join('');
- $('roster').innerHTML=e.ids.map((id,i)=>{const p=record.players[id];return `<tr><td>${esc(slots[i]||'?')}</td><td>${esc(p.name)}<small>${esc(D.game(p)||'Matchup unknown')}</small></td><td>${money(slots[i]==='CPT'?p.cptSal:p.sal)}</td><td>${Number.isFinite(p.own)?esc(p.own)+'%':'unknown'}</td><td>${esc(p.kickoff||'Kickoff unknown')}<small>${esc(p.injury?`${p.injury.status||'unknown'} · ${p.injury.source||'source unknown'} · ${p.injury.asOf||'time unknown'}`:'Injury status unknown')}</small></td></tr>`;}).join('');
+ $('roster').innerHTML=e.ids.map((id,i)=>{const p=record.players[id];return `<tr><td>${esc(slots[i]||'?')}</td><td>${esc(p.name)}<small>${esc(D.game(p)||'Matchup unknown')}</small></td><td>${money(slots[i]==='CPT'?p.cptSal:p.sal)}</td><td>${D.slotOwnership(record,e,i)==null?'unknown':D.slotOwnership(record,e,i).toFixed(1)+'%'}</td><td>${esc(p.kickoff||'Kickoff unknown')}<small>${esc(p.injury?`${p.injury.status||'unknown'} · ${p.injury.source||'source unknown'} · ${p.injury.asOf||'time unknown'}`:'Injury status unknown')}</small></td></tr>`;}).join('');
  for(const [id,val]of Object.entries({fee:e.fee,lifecycle:e.lifecycle||'proposed',entryId:e.entryEvidence?.entryId,entrySource:e.entryEvidence?.source,entryTime:e.entryEvidence?.asOf,resultSource:e.result?.source,resultTime:e.result?.asOf,points:e.result?.points,payout:e.result?.payout}))$(id).value=val??'';
  $('resultNote').textContent=e.lifecycle==='graded'&&e.result?.source&&e.result?.asOf&&Number.isFinite(e.result?.points)&&Number.isFinite(e.result?.payout)?`Supplied result: ${e.result.points} points; ${money(e.result.payout)} payout. This does not grade pregame decision quality.`:'Results unavailable without a sourced grade.';
  const scenarios=D.sensitivity(record,e);$('sensitivity').innerHTML=scenarios.length?scenarios.map(s=>`<p><b>${esc(s.name)}: ${s.points==null?'unknown':s.points.toFixed(2)+' projected points'}</b><br>${esc(s.source)} · ${esc(s.asOf)}</p>`).join(''):'<p>Unknown: no alternative score models attached. Add scenario name, source, asOf and projections (one number per player) in advanced inputs.</p>';
@@ -46,8 +46,48 @@ function demo(){const positions=['QB','RB','RB','WR','WR','WR','TE','WR','DST','
  $('saveRisk').onclick=()=>{if(!record)return;const val=$('cap').value.trim(),n=Number(val);if(!val||!Number.isFinite(n)||n<0||n>100||!$('confirm').checked){message('Enter a limit from 0–100% and explicitly confirm your preference.');return;}const extra={};for(const [id,key] of [['countCap','maxCountExposure'],['pairCap','maxPairFeeExposure'],['gameCap','maxGameFeeExposure']]){const v=$(id).value.trim();if(v){const x=Number(v);if(!Number.isFinite(x)||x<0||x>100){message('Every optional cap must be from 0–100%.');return;}extra[key]=x/100;}}record.risk={maxFeeExposure:n/100,...extra,confirmedAt:new Date().toISOString()};render();message('Risk preference confirmed for this audit only; solver settings unchanged.');};
  $('saveEntry').onclick=()=>{const e=record?.entries[index];if(!e)return;const number=id=>$(id).value.trim()===''?null:Number($(id).value);const fee=number('fee'),points=number('points'),payout=number('payout'),state=$('lifecycle').value,ev={entryId:$('entryId').value.trim(),source:$('entrySource').value.trim(),asOf:$('entryTime').value.trim()},result={points,payout,source:$('resultSource').value.trim(),asOf:$('resultTime').value.trim()};if(fee!=null&&(!Number.isFinite(fee)||fee<0)){message('Fee must be nonnegative.');return;}if(state!=='proposed'&&(!ev.entryId||!ev.source||(!Number.isFinite(Date.parse(ev.asOf))||!/(Z|[+-]\d\d:\d\d)$/.test(ev.asOf)))){message('Entered, amended and graded states require entry ID, evidence source and time.');return;}if(state==='graded'&&(!result.source||(!Number.isFinite(Date.parse(result.asOf))||!/(Z|[+-]\d\d:\d\d)$/.test(result.asOf))||points==null||payout==null||payout<0)){message('Grading requires sourced points, payout and time.');return;}e.history=[...(e.history||[]),{at:new Date().toISOString(),previous:{fee:e.fee,lifecycle:e.lifecycle,entryEvidence:e.entryEvidence,result:e.result}}];Object.assign(e,{fee,lifecycle:state,entryEvidence:ev,result:state==='graded'?result:null});render();message('Entry evidence recorded locally. Provider status is user-supplied, not independently verified.');};
  $('checkSwap').onclick=()=>{const e=record?.entries[index];if(!e)return;const ids=[...document.querySelectorAll('[data-slot]')].map(el=>+el.value),slots=e.slots||D.rules[record.site]?.slots,next={...e,ids,cpt:record.site==='dk_showdown'?ids[slots.indexOf('CPT')]:undefined};const result=D.swap(record,e,next,$('swapTime').value);$('swapResult').innerHTML=signal(result);$('swapResult').querySelector('details').open=true;record.recommendations=record.recommendations||[];record.recommendations.push({...result,at:new Date().toISOString(),evaluatedAt:$('swapTime').value,entry:index,before:JSON.parse(JSON.stringify(e)),proposed:next,status:'unapplied'});drawNotes();};
- $('saveNote').onclick=()=>{if(!record||!$('rationale').value.trim())return;record.notes=[...(record.notes||[]),{at:new Date().toISOString(),text:$('rationale').value.trim()}];$('rationale').value='';drawNotes();message('Timestamped note appended. Export to retain it.');};
+ $('saveNote').onclick=()=>{if(!record||!$('rationale').value.trim())return;record.notes=[...(record.notes||[]),{at:new Date().toISOString(),text:$('rationale').value.trim()}];$('rationale').value='';drawNotes();message('Timestamped note appended. Save portfolio or export to retain it.');};
  $('edit').onclick=()=>{if(record)$('json').value=JSON.stringify(record,null,2);};$('apply').onclick=()=>{try{++importVersion;requested=false;load(D.parse($('json').value));message('Validated record replaced locally. No data sent.');}catch(e){message('Record rejected; previous snapshot retained. '+e.message);}};
+ // Separate from the manual builder bridge state: never overwrite its pool/candidates.
+ let portfolioNonce='',portfolioPending=null,portfolioSequence=0,portfolioId='',portfolioRevision=0;
+ const cloudNote=s=>{$('aCloudNote').textContent=s;};
+ const localStamp=()=>JSON.stringify([record,importVersion,[...document.querySelectorAll('#auditPanel input:not(#aCloudId),#auditPanel textarea,#auditPanel select')].map(el=>[el.id,el.value,el.checked])]);
+ function portfolioRequest(op){
+  if(portfolioPending){cloudNote('A portfolio request is already running.');return;}
+  try{
+   if(parent===window||!portfolioNonce)throw Error('Open this desk inside DFS Labs and sign in on the main page.');
+   const id=$('aCloudId').value.trim();if(op!=='list'&&!/^[A-Za-z0-9_-]{1,80}$/.test(id))throw Error('Use 1-80 letters, numbers, underscores or hyphens for the workspace name.');
+   const m={type:'dfs-private-request',nonce:portfolioNonce,requestId:'portfolio-'+(++portfolioSequence),op,workspace_id:id};
+   if(op==='portfolio-save'){if(!record)throw Error('Import or capture an audit first.');m.portfolio=D.privatePortfolio(JSON.parse(JSON.stringify(record)));m.expected_revision=id===portfolioId?portfolioRevision:0;}
+   if(op==='list')delete m.workspace_id;
+   portfolioPending={requestId:m.requestId,op,id,stamp:localStamp()};cloudNote(op==='portfolio-save'?'Saving private portfolio…':'Reading private workspace…');parent.postMessage(m,'*');
+  }catch(e){cloudNote(e.message);}
+ }
+ window.addEventListener('message',e=>{
+  if(e.source!==parent||parent===window)return;const m=e.data;
+  if(m?.type==='dfs-private-ready'){
+   if(portfolioNonce&&portfolioNonce!==m.nonce){portfolioPending=null;portfolioId='';portfolioRevision=0;}
+   portfolioNonce=m.nonce;cloudNote(m.signedIn?'Account connected. Load an existing workspace before saving, or use a new name.':'Sign in on the main page for private save/load. Your local audit is retained.');return;
+  }
+  if(m?.type!=='dfs-private-result'||m.nonce!==portfolioNonce||m.requestId!==portfolioPending?.requestId)return;
+  const pending=portfolioPending;portfolioPending=null;
+  if(m.error){cloudNote(m.error+' Local audit retained.');return;}
+  try{
+   const r=m.result;
+   if(pending.op==='list'){
+    $('aCloudChoices').replaceChildren();for(const w of r.workspaces||[]){const b=document.createElement('button');b.className='secondary';b.textContent=w.workspace_id+(w.has_portfolio?' · saved portfolio':' · no portfolio yet');b.onclick=()=>{$('aCloudId').value=w.workspace_id;cloudNote('Selected '+w.workspace_id+'. Load portfolio to read its current revision.');};$('aCloudChoices').append(b);}cloudNote((r.workspaces||[]).length+' private workspaces. Select one, then Load portfolio.');return;
+   }
+   if(!Number.isInteger(r.revision)||r.revision<1)throw Error('Invalid saved revision.');
+   $('aCloudChoices').replaceChildren();
+   if(pending.id!==$('aCloudId').value.trim()||pending.stamp!==localStamp()){
+    if(pending.op==='portfolio-save'&&pending.id===$('aCloudId').value.trim()){portfolioId=pending.id;portfolioRevision=r.revision;cloudNote('Snapshot saved at revision '+r.revision+'. Local edits made during save remain unsaved; use Save portfolio again.');}else{cloudNote(pending.op==='portfolio-save'?'Snapshot saved to '+pending.id+' at revision '+r.revision+'. Current local audit retained.':'Local session changed while loading. Audit retained; load again when ready.');portfolioId='';portfolioRevision=0;}return;
+   }
+   if(pending.op==='portfolio-load'&&r.portfolio){load(D.privatePortfolio(r.portfolio));++importVersion;requested=false;}
+   portfolioId=pending.id;portfolioRevision=r.revision;
+   cloudNote(pending.op==='portfolio-save'?'Portfolio saved privately at revision '+r.revision+'. Player pool and solver candidates preserved.':r.portfolio?'Portfolio loaded at revision '+r.revision+'. Builder session unchanged.':'Workspace connected at revision '+r.revision+'. No saved portfolio yet; local audit retained. Use Save portfolio.');
+  }catch(e){cloudNote('Portfolio response rejected; local audit retained. '+e.message);}
+ });
+ $('aCloudSave').onclick=()=>portfolioRequest('portfolio-save');$('aCloudLoad').onclick=()=>portfolioRequest('portfolio-load');$('aCloudList').onclick=()=>portfolioRequest('list');
  window.DDFSDesk={snapshot:()=>record?JSON.parse(JSON.stringify(record)):null,addBuild(a){
   const next=D.parse(JSON.stringify(a));++importVersion;requested=false;
   if(!record){load(next);message('Manual build added as a proposal. Fees and entry status remain unconfirmed.');return;}

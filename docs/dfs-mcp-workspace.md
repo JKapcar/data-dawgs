@@ -15,6 +15,7 @@ The old integration could solve a transient caller-supplied slate but could not 
 | `dd_dfs_upload` | Preview or commit CSV import; matching/dropped-row diagnostics; source timestamp |
 | `dd_dfs_players`, `dd_dfs_settings` | Player pool and solver/simulation/lab settings; invalidate dependent output |
 | `dd_dfs_sync` | Atomic browser snapshot save |
+| `dd_dfs_portfolio` | Explicit full version 1 audit save, separate from solver state; read back `dd_dfs_get.portfolio`; 450 KB, same UID/revision contract |
 | `dd_dfs_solve`, `dd_dfs_explore` | Shared optimizer and exploration; partial-search disclosure |
 | `dd_dfs_simulate`, `dd_dfs_compare` | Correlated score worlds, modelled field, held-out metrics, contest comparisons |
 | `dd_dfs_exposure`, `dd_dfs_select` | CPT/FLEX/player/team/game exposure; retain selected candidates |
