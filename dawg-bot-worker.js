@@ -15195,10 +15195,10 @@ const dfsModules = {};
 /* NHL research core. Shared browser/Worker implementation; no network, identity or storage. */
 (function(root){'use strict';
 const VERSION='nhl-rate/0.1',PARAMS={halfLifeDays:30,priorMinutes:180,minGames:3};
-// PROVISIONAL: official pages did not expose current rules in the build environment.
+// DK scoring verified against DraftKings Network on 2026-10-13; roster rules remain provisional.
 // Never describe a roster as provider-verified until this version is source-verified.
 const RULES={
- dk:{cap:50000,slots:['C','C','W','W','W','D','D','G','UTIL'],maxTeam:6,minTeams:3,verified:false,source:'https://www.draftkings.com/help/rules/nhl',weights:{goals:8.5,assists:5,sog:1.5,blocks:1.3,shPoints:2,shootoutGoals:1.5,saves:.7,ga:-3.5,wins:6,shutouts:4,otLoss:2}},
+ dk:{cap:50000,slots:['C','C','W','W','W','D','D','G','UTIL'],maxTeam:6,minTeams:3,verified:false,scoringVerified:true,scoringVerifiedAt:'2026-10-13',scoringSource:'https://dknetwork.draftkings.com/2025/09/30/nhl-daily-fantasy-101-how-to-play-dfs-on-draftkings/',source:'https://www.draftkings.com/help/rules/nhl',weights:{goals:8.5,assists:5,sog:1.5,blocks:1.3,shPoints:2,shootoutGoals:1.5,saves:.7,ga:-3.5,wins:6,shutouts:4,otLoss:2}},
  fd:{cap:55000,slots:['C','C','W','W','D','D','UTIL','UTIL','G'],maxTeam:4,minTeams:3,verified:false,source:'https://www.fanduel.com/rules',weights:{goals:12,assists:8,sog:1.6,blocks:1.6,ppPoints:.5,shPoints:2,saves:.8,ga:-4,wins:12,shutouts:8}}
 };
 const EVENTS=['goals','assists','sog','blocks'],norm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -15258,10 +15258,10 @@ function match(player,model,idMap={}){
 function tail(lambda,k){assert(Number.isFinite(lambda)&&lambda>=0,'Invalid event mean');let p=Math.exp(-lambda),cdf=p;for(let i=1;i<k;i++){p*=lambda/i;cdf+=p;}return Math.max(0,Math.min(1,1-cdf));}
 function score(events,platform,goalie=false,expected=false){
  const rule=RULES[platform];assert(rule,'Unknown scoring platform');const components={},missing=[];
- for(const [k,w] of Object.entries(rule.weights)){if(goalie!==['saves','ga','wins','shutouts','otLoss'].includes(k))continue;const v=events[k];if(!Number.isFinite(v)){missing.push(k);continue;}components[k]=w*v;}
- if(platform==='dk')for(const [key,k,bonus,label] of goalie?[['saves',35,3,'35+ saves']]:[['goals',3,3,'hat trick'],['sog',5,3,'5+ shots'],['blocks',3,3,'3+ blocks']]){if(Number.isFinite(events[key]))components[label]=bonus*(expected?tail(events[key],k):+(events[key]>=k));else missing.push(label);}
- if(platform==='dk'&&!goalie){if(Number.isFinite(events.goals)&&Number.isFinite(events.assists))components['3+ points']=3*(expected?tail(events.goals+events.assists,3):+(events.goals+events.assists>=3));else missing.push('3+ points');}
- return {components,subtotal:Object.values(components).reduce((a,b)=>a+b,0),total:missing.length?null:Object.values(components).reduce((a,b)=>a+b,0),missing,verified:rule.verified};
+ for(const [k,w] of Object.entries(rule.weights)){if(!(goalie&&platform==='dk')&&goalie!==['saves','ga','wins','shutouts','otLoss'].includes(k))continue;const v=events[k];if(!Number.isFinite(v)){missing.push(k);continue;}components[k]=w*v;}
+ if(platform==='dk')for(const [key,k,bonus,label] of [...(goalie?[['saves',35,3,'35+ saves']]:[]),['goals',3,3,'hat trick'],['sog',5,3,'5+ shots'],['blocks',3,3,'3+ blocks']]){if(Number.isFinite(events[key]))components[label]=bonus*(expected?tail(events[key],k):+(events[key]>=k));else missing.push(label);}
+ if(platform==='dk'){if(Number.isFinite(events.goals)&&Number.isFinite(events.assists))components['3+ points']=3*(expected?tail(events.goals+events.assists,3):+(events.goals+events.assists>=3));else missing.push('3+ points');}
+ return {components,subtotal:Object.values(components).reduce((a,b)=>a+b,0),total:missing.length?null:Object.values(components).reduce((a,b)=>a+b,0),missing,verified:!!rule.scoringVerified};
 }
 function project(p,model){
  const joined=match(p,model),o=p.override||{},base=joined.player,flags=[];if(!base)return {points:null,subtotal:null,flags:[joined.reason],match:joined.method,components:{}};
@@ -15273,7 +15273,7 @@ function project(p,model){
  if(goalie){events.wins=o.winProb??null;events.shutouts=o.shutoutProb??null;events.otLoss=o.otLossProb??null;flags.push('Goalie win/shutout inputs require explicit estimates; relief appearances not modeled');}
  else{events.shPoints=o.shPoints??null;events.ppPoints=o.ppPoints??null;events.shootoutGoals=o.shootoutGoals??null;}
  const s=score(events,p.platform,goalie,true),scale=prob??1,components=Object.fromEntries(Object.entries(s.components).map(([k,v])=>[k,v*scale]));
- flags.push(...s.missing.map(k=>'Missing '+k));if(!s.verified)flags.push('Scoring / roster rules provisional');
+ flags.push(...s.missing.map(k=>'Missing '+k));if(!s.verified)flags.push('Scoring rules provisional');if(!RULES[p.platform].verified)flags.push('Roster rules provisional');
  if((o.at||p.sourceAt)&&Date.parse(model.asOf)-Date.parse(o.at||p.sourceAt)>6*3600000)flags.push('Role/news older than six hours');
  if((o.at||p.sourceAt)&&Date.parse(o.at||p.sourceAt)>Date.parse(model.asOf))flags.push('Role evidence is after projection as-of');
  return {points:prob==null||s.total===null?null:s.total*scale,subtotal:s.subtotal*scale,conditional:prob==null,components,events,minutes:m,playProb:prob??null,games:base.games,lastGame:base.lastGame,match:joined.method,flags,model:VERSION,asOf:model.asOf};
