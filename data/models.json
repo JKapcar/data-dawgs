@@ -16,7 +16,7 @@
     "model_straight_up": 0.6575,
     "blend_straight_up": 0.6674,
     "market_straight_up": 0.6677,
-    "caveat": "Backtest, not out-of-sample. The market column is the benchmark that matters."
+    "caveat": "Backtest, not out-of-sample. market_straight_up is a legacy key name: it scores the nfelo line (model) copied from nfelo, not a sportsbook close."
    }
   },
   "bozo_index": {
@@ -73,7 +73,7 @@
     "sims": 3000
    },
    "known_limitation": "Double-pick weeks are recorded but NOT simulated. Every survival number after a double-pick week is too optimistic. Open backlog item.",
-   "ownership_note": "Pool ownership is MODELLED (chalk exponent over market win probability), not observed. No real pick data exists yet."
+   "ownership_note": "Pool ownership is MODELLED (chalk exponent over the nfelo line (model) win probability), not observed. No real pick data exists yet."
   },
   "nfelo_reference": {
    "version": "4.3.1",

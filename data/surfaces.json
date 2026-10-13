@@ -95,7 +95,7 @@
   "tools_staged": [],
   "catalogs": {
    "status": "Catalog arrays describe the current source; tools_staged are not deployed. DFS core promotion deployed 2026-09-16; client catalog refresh is separate. LIVE since 2026-08-09. Both /mcp/core/<credential> and /mcp/full/<credential> answer, and GET /mcp/ advertises them. The bare /mcp/<credential> is unchanged and still full. A leading `core`/`full` is only read as a catalog when a credential follows it, or when the credential arrived in a header — so no passphrase can be stranded by its own name. NOT VERIFIED IN PRODUCTION: the per-catalog tools/list counts, which need a credential.",
-   "why": "Forty-three tool schemas cost 10-25k context tokens in every conversation that connects. core is the everyday league surface; full is everything and stays the default, so the bare /mcp/<credential> URL keeps serving every tool a live connector may already be calling.",
+   "why": "Every tool schema costs context tokens in every conversation that connects (86 tools in the source registry). core is the everyday league surface; full is everything and stays the default, so the bare /mcp/<credential> URL keeps serving every tool a live connector may already be calling.",
    "paths": {
     "core": "/mcp/core/<credential>",
     "full": "/mcp/full/<credential>"
@@ -216,6 +216,34 @@
   },
   "annotations": {
    "status": "LIVE with the catalogs since 2026-08-09, present in the deployed source. Every registered tool carries a display title and a readOnlyHint matching its read/write behavior on tools/list. destructiveHint, idempotentHint and openWorldHint are deliberately absent rather than guessed. NOT VERIFIED ON THE WIRE: reading them back needs a credential.",
+   "not_every_tool_is_read_only": "Source registry (work/mcp-block.js MCP_TOOLS, dd_ and sd_): 86 tools, 25 with readOnlyHint=false, listed in read_only_false.",
+   "read_only_false": [
+    "dd_dfs_history_save",
+    "dd_dfs_history_archive",
+    "dd_dfs_portfolio",
+    "dd_dfs_draft",
+    "dd_dfs_sync",
+    "dd_dfs_compare",
+    "dd_bozo_menu_publish",
+    "dd_bozo_menu_save",
+    "dd_dfs_create",
+    "dd_dfs_upload",
+    "dd_dfs_players",
+    "dd_dfs_settings",
+    "dd_dfs_solve",
+    "dd_dfs_explore",
+    "dd_dfs_simulate",
+    "dd_dfs_select",
+    "dd_dfs_delete",
+    "dd_submit_bozo_leg",
+    "dd_verify_bozo_entry",
+    "sd_start_session",
+    "sd_log_set",
+    "sd_log_sets",
+    "sd_finish_session",
+    "sd_log_measurement",
+    "sd_log_nutrition"
+   ],
    "titles": {
     "dd_dfs_sync": "Save browser DFS workspace",
     "dd_dfs_compare": "Compare DFS contests",

@@ -5,7 +5,7 @@
 
 Start with [`/data/index.json`](/data/index.json): dates and hashes. Cite `as_of` with numbers.
 
-[`/data/surfaces.json`](/data/surfaces.json): pages and tool availability; `planned` is unavailable. `dd_submit_bozo_leg` is two-phase, own leg or commissioner proxy, never backdated. [Sign in](/signon.html) · [instructions](/data/dawg-project-instructions.md).
+[`/data/surfaces.json`](/data/surfaces.json): pages+tools; `planned`=unavailable. Source MCP: 86 tools; 25 not read-only (`read_only_false`). `dd_submit_bozo_leg`: two-phase, own leg or commissioner proxy, never backdated. [Sign in](/signon.html) · [instructions](/data/dawg-project-instructions.md).
 
 Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHouse, stopped.
 
@@ -51,8 +51,8 @@ the live draft rig, a [32-team wins pool](/teamdraft.html).
 ## Models and data
 
 - [Team + QB EPA](/data/epa-teams.json): nflverse pbp 2023-2025 + 2026 Wk1-2; descriptive, not predictive.
-- [nfelo](/data/nfelo.json): ratings, current-season lines, backtest; daily mirror of greerreNFL/nfelo (meta.captured_at, meta.sha). Backtest is in-sample; ratings move only after games are played.
-- [Schedule + win probabilities](/data/survivor.json): 272 games; market-derived if available, else model-derived.
+- [nfelo](/data/nfelo.json): ratings, current-season lines, backtest; daily greerreNFL/nfelo mirror (meta.captured_at, meta.sha). In-sample backtest; ratings move after games.
+- [Survivor](/data/survivor.json): 272 games; `mk`=nfelo line (model), no book; ownership modelled.
 - [Parameters](/data/models.json): margin, Bozo, survivor assumptions + limitations.
 
 ## Receipts and method

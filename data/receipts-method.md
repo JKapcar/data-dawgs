@@ -128,7 +128,7 @@ Finals from ESPN. Call sheet locked 2026-08-06.
 captured on 2026-08-06 used devigged moneyline probabilities. Beginning 2026-09-04, the
 mutable survivor snapshot reads spread-implied home win probabilities from the daily nfelo
 mirror, preferring its close and then its open. This changes the derivation, not the quantity:
-`mk` remains a market-implied home win probability. The mirror records the upstream
+`mk` remains a spread-implied home win probability, labelled "nfelo line (model)" since 2026-10-13: it is copied from nfelo, a model, not quoted by a sportsbook. The mirror records the upstream
 observation time but upstream does not identify the book, so `mk_book` is null rather than
 an invented attribution. The original 51 rows are retained as dated carry-forwards where a
 fresh row is unavailable and are not back-converted. Published receipts and graded rows are
