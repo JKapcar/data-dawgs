@@ -26,6 +26,8 @@ Deduplication uses `(Contest_Key, Entry_Key)`. Separate tied entries survive. Ex
 
 Cash winnings and ticket face values are separate. Tickets never enter cash ROI. Missing fees or cash winnings make the corresponding totals, profit and ROI unknown. Known zero remains zero. The cash-profit chart is unavailable with incomplete economics.
 
+Cash labels require explicit names such as Double Up, 50/50 or Head-to-Head; a prize amount containing 50 is not cash evidence. Unknown Classic contests are Unclassified rather than assumed GPP. These labels are not a strategy grade. If a full import exceeds device storage, the complete log remains visibly available in the current session for account save/export, while the previous device log stays intact. Reloading before either action loses that session-only copy.
+
 The former entry-row bootstrap and its confidence/edge claims are removed. Entries share contests and slates. These descriptive results do not establish profitability or grade a first-place strategy.
 
 ## Explicit legacy migration

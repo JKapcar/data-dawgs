@@ -8894,10 +8894,13 @@ function bar(name, frac, label, mark) {
 
 /* ---------------------------------------------------------------- bankroll */
 
-function brAdd(rec) { S.bankroll.push(rec); S.bankroll.sort((a, b) => (a.date || "").localeCompare(b.date || "")); save(); renderBankroll(); renderStrip(); }
+let BR_SESSION=null;
+function brList(){return BR_SESSION||S.bankroll;}
+function brStore(records){const previous=S.bankroll;S.bankroll=records;if(save(true)){BR_SESSION=null;return true;}S.bankroll=previous;BR_SESSION=records;return false;}
+function brAdd(rec) { brStore([...brList(),rec].sort((a,b)=>(a.date||"").localeCompare(b.date||""))); renderBankroll(); renderStrip(); }
 
 function brImport(text,filename) {
-  try { const result=DDFSLedger.mergeHistory(S.bankroll,DDFSLedger.parseHistory(text,{filename})),previous=S.bankroll;S.bankroll=result.records;if(!save(true)){S.bankroll=previous;throw Error("Device storage failed; the previous log was retained.");}return result; }
+  try { const result=DDFSLedger.mergeHistory(brList(),DDFSLedger.parseHistory(text,{filename}));return {...result,sessionOnly:!brStore(result.records)}; }
   catch(e){return {error:e.message};}
 }
 function brSummary(list) { return DDFSLedger.historySummary(list); }
@@ -8905,7 +8908,7 @@ function brSummary(list) { return DDFSLedger.historySummary(list); }
 function brBootstrap() { return null; }
 
 function renderBankroll() {
-  const L = S.bankroll;
+  const L = brList();
   $("brMeta").textContent = L.length ? `${L.length} records` : "";
   const s = brSummary(L);
   $("brStats").innerHTML = [
@@ -8943,11 +8946,11 @@ function renderBankroll() {
       <td><button class="toggle" data-del="${i}">Delete</button></td></tr>`;
   });
   $("brTab").innerHTML = L.length ? t + "</tbody>" : "";
-  $("brMore").textContent = L.length > CAP ? `Showing the ${CAP} most recent of ${L.length}.` : "";
+  $("brMore").textContent = (L.length > CAP ? `Showing the ${CAP} most recent of ${L.length}. ` : "")+(BR_SESSION?"Full log is held in this session only because device storage is full or blocked. Save log to my account or export before reloading. The previous device log is unchanged.":"");
 }
 
 function drawBrChart() {
-  const box = $("brChart"), L = S.bankroll;
+  const box = $("brChart"), L = brList();
   if (!L.length) { box.innerHTML = `<p class="note">Log or import some contests and the running profit line appears here.</p>`; $("brChartNote").textContent = ""; return; }
   // ⚠️ Size the viewBox to the live container in CSS pixels. A fixed viewBox plus
   // width:100% silently shrinks every label on a phone.
@@ -9603,26 +9606,26 @@ $('paretoStop').addEventListener('click', () => { if(frontWorker)frontWorker.ter
   $("stImport").addEventListener("click", () => doStandingsImport($("stPaste").value));
   $("stRefresh").addEventListener("click", () => renderStandings());
   $("brExport").addEventListener("click", () => {
-    let csv;try{csv=DDFSLedger.historyCSV(S.bankroll);}catch(e){$('brImportNote').textContent=e.message;return;}
+    let csv;try{csv=DDFSLedger.historyCSV(brList());}catch(e){$('brImportNote').textContent=e.message;return;}
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     a.download = "dd-bankroll.csv"; document.body.appendChild(a); a.click(); a.remove();
   });
-  $('brHistorySave').onclick=()=>window.DDFSHistoryUI.save('account_history','DraftKings results · '+S.bankroll.length+' records',{version:2,records:S.bankroll,legacy_archives:S.bankrollArchives||[]});
+  $('brHistorySave').onclick=()=>window.DDFSHistoryUI.save('account_history','DraftKings results · '+brList().length+' records',{version:2,records:brList(),legacy_archives:S.bankrollArchives||[]});
   $('brLegacyArchive').onclick=()=>{
     const legacy=S.bankroll.filter(b=>b.k&&b.history_version!==2);if(!legacy.length)return;const previous=S.bankroll,previousArchives=S.bankrollArchives;
     S.bankrollArchives=[...(S.bankrollArchives||[]),{archived_at:new Date().toISOString(),reason:'Explicit archive before identity-preserving re-import; original legacy values unchanged',records:JSON.parse(JSON.stringify(legacy))}];
     S.bankroll=S.bankroll.filter(b=>!(b.k&&b.history_version!==2));if(!save(true)){S.bankroll=previous;S.bankrollArchives=previousArchives;$('brImportNote').textContent='Archive storage failed; original active log retained. Export the full JSON to keep a private copy.';return;}renderBankroll();renderStrip();
   };
-  $('brArchiveExport').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({version:2,records:S.bankroll,legacy_archives:S.bankrollArchives||[]},null,2)],{type:'application/json'}));a.download='private-dfs-history-with-archives.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+  $('brArchiveExport').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({version:2,records:brList(),legacy_archives:S.bankrollArchives||[]},null,2)],{type:'application/json'}));a.download='private-dfs-history-with-archives.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
   $("brWipe").addEventListener("click", () => {
-    if (!S.bankroll.length) return;
-    if (!confirm(`Delete all ${S.bankroll.length} logged contests from this device? This cannot be undone.`)) return;
-    S.bankroll = []; save(); renderBankroll(); renderStrip();
+    if (!brList().length) return;
+    if (!confirm(`Delete all ${brList().length} logged records from this device/session? This cannot be undone.`)) return;
+    brStore([]); renderBankroll(); renderStrip();
   });
   $("brTab").addEventListener("click", e => {
     const b = e.target.closest("button[data-del]"); if (!b) return;
-    S.bankroll.splice(+b.dataset.del, 1); save(); renderBankroll(); renderStrip();
+    brStore(brList().filter((_,i)=>i!==+b.dataset.del)); renderBankroll(); renderStrip();
   });
 
   // charts follow the container and the theme; an SVG fill baked at load does not
@@ -10059,7 +10062,7 @@ function doBrImport(filename) {
   const r = brImport($("brPaste").value,typeof filename==='string'?filename:null);
   if (r.error) { $("brImportNote").innerHTML = `<span class="bad">${esc(r.error)}</span>`; return; }
   $("brImportNote").innerHTML = `Imported <b>${r.added}</b> of ${r.total} rows` +
-    (r.added < r.total ? ` — the rest were already logged with the same entry and contest IDs.` : ".");
+    (r.added < r.total ? ` — the rest were already logged with the same entry and contest IDs.` : ".")+(r.sessionOnly?" Held in this session only: device storage is full or blocked. Save log to my account or export before reloading; the previous device log is unchanged.":"");
   renderBankroll(); renderStrip();
 }
 
@@ -10353,8 +10356,8 @@ ${S.demo ? "- ⚠️ THE LOADED SLATE IS THE DEMO SLATE. Every player name, sala
         const lev = SIM.perPlayer.slice().sort((a, b) => b.leverage - a.leverage).slice(0, 10);
         L.push("HIGHEST LEVERAGE: " + lev.map(r => `${S.players[r.i].name} ${(r.leverage).toFixed(1)}`).join(", "));
       } else L.push("No simulation has been run in this session.");
-      if (S.bankroll.length) {
-        const s = brSummary(S.bankroll);
+      if (brList().length) {
+        const s = brSummary(brList());
         L.push(`BANKROLL: ${s.n} records, ${s.entries} entries, staked ${money(s.staked)}, cash won ${money(s.won)}, cash net ${money(s.net)}, cash ROI ${s.roi==null?'unknown':pct(s.roi,1)}. Tickets are separate. Unknown values are not zero.`);
         L.push('No confidence band: entry rows are correlated within contests and slates. Do not infer edge or grade a first-place tournament objective from cash rate or this sample alone.');
       } else L.push("Nothing is logged in the bankroll tracker.");

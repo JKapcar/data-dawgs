@@ -261,7 +261,7 @@ function parseHistory(text,opts={}){
   const entry_id=String(get(row,'id')||'').trim(),contest_id=String(get(row,'contest')||'').trim();
   if(!entry_id||!contest_id)throw Error('Missing entry or contest ID on row '+(i+1)+'. No rows imported.');
   const name=String(get(row,'name')||''),dateRaw=String(get(row,'date')||''),date=dateRaw.match(/^\d{4}-\d{2}-\d{2}/)?.[0]||dateRaw.slice(0,10),game=String(get(row,'game')||'');
-  const type=/double|50|fifty|head|h2h|cash/i.test(game+' '+name)?'Cash':/showdown|single game|captain/i.test(game+' '+name)?'Showdown':/satellite|qualifier|ticket/i.test(game+' '+name)?'Satellite':'GPP';
+  const type=/\b(?:double|triple)[\s-]*up\b|\b50\s*\/\s*50\b|\bhead[\s-]*to[\s-]*head\b|\bh2h\b|\bcash\s+(?:game|contest)\b/i.test(name)?'Cash':/\b(?:satellite|qualifier|ticket)\b/i.test(name)?'Satellite':/showdown|single game|captain/i.test(game)?'Showdown':/\b(?:gpp|tournament)\b/i.test(name)?'GPP':'Unclassified';
   const cash=number(get(row,'cash')),ticket=number(get(row,'ticket'));
   records.push({history_version:2,entry_id,contest_id,date,name,type,sport:get(row,'sport'),game_type:get(row,'game'),entries:1,fee:number(get(row,'fee')),win:cash,cash_winnings:cash,ticket_winnings:ticket,place:number(get(row,'place')),points:number(get(row,'points')),size:number(get(row,'size')),prize_pool:number(get(row,'pool')),places_paid:number(get(row,'paid')),
    source:{kind:'DraftKings account history CSV',filename:opts.filename||null,row:i+1,imported_at:opts.importedAt||new Date().toISOString(),headers:headers.slice(),values:row.slice(),date_text:dateRaw,date_column:col.date<0?null:headers[col.date]}});
