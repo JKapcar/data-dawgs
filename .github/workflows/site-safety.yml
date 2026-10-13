@@ -29,6 +29,7 @@ on:
       - "tests/dfs-portfolio*"
       - "tests/fixtures/dfs-portfolio.cjs"
       - "tests/dfs-builder*"
+      - "tests/dfs-relationships*"
       - "tests/dfs-simulation-contract.test.js"
       - "tests/dfs-diagnostics*"
       - "work/dfs-engine.js"
@@ -92,6 +93,7 @@ on:
       - "tests/dfs-portfolio*"
       - "tests/fixtures/dfs-portfolio.cjs"
       - "tests/dfs-builder*"
+      - "tests/dfs-relationships*"
       - "tests/dfs-simulation-contract.test.js"
       - "tests/dfs-diagnostics*"
       - "work/dfs-engine.js"
@@ -183,12 +185,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: node --test tests/dfs-diagnostics.test.js tests/dfs-builder.test.js tests/dfs-draft.test.cjs tests/dfs-builder-sim.test.cjs tests/dfs-field-sim.test.cjs tests/dfs-simulation-contract.test.js tests/dfs-ledger.test.js tests/service-worker.test.js tests/dfs-showdown.test.js
+      - run: node --test tests/dfs-diagnostics.test.js tests/dfs-builder.test.js tests/dfs-draft.test.cjs tests/dfs-builder-sim.test.cjs tests/dfs-relationships.test.cjs tests/dfs-field-sim.test.cjs tests/dfs-simulation-contract.test.js tests/dfs-ledger.test.js tests/service-worker.test.js tests/dfs-showdown.test.js
       - run: npm install --prefix /tmp/dd-diagnostics-pw playwright@1.56.1 --no-audit --no-fund
       - run: /tmp/dd-diagnostics-pw/node_modules/.bin/playwright install --with-deps chromium
       - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-diagnostics.browser.cjs
 
       - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-builder.browser.cjs
+      - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-relationships.browser.cjs
       - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-entry.browser.cjs
       - run: node work/test-dfs-workspace.mjs
       - run: node work/test-dfs-draft-workspace.mjs
