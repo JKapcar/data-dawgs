@@ -2,10 +2,13 @@ import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:asser
 const source=fs.readFileSync(new URL('../dawg-bot-worker.js',import.meta.url),'utf8').replace(/^import .*;$/m,'const BOZO_ESPN_TEAM_SEED = {};').replace('export default','const worker =');
 const context=vm.createContext({console,Date,URL,Response,Request,Headers,TextEncoder,TextDecoder,crypto:globalThis.crypto,AbortController,AbortSignal,setTimeout,clearTimeout});
 vm.runInContext(source+`\nglobalThis.api={run:dfsRun,tools:MCP_TOOLS,route:handleDfsWorkspace};fbGet=async(e,p)=>({data:e.rows[p]||null,etag:String(e.versions[p]||0)});fbPut=async(e,p,v,t)=>{if(String(e.versions[p]||0)!==t)return false;e.rows[p]=JSON.parse(JSON.stringify(v));e.versions[p]=(e.versions[p]||0)+1;return true;};`,context);
-const env={rows:{},versions:{}},caller={kind:'user',uid:'userA'},run=(op,a={},who=caller)=>context.api.run(op,a,env,who),copy=x=>JSON.parse(JSON.stringify(x));let checks=0;
+const env={NHL_PRIVATE_PREVIEW:'enabled',rows:{},versions:{}},caller={kind:'user',uid:'userA'},run=(op,a={},who=caller)=>context.api.run(op,a,env,who),copy=x=>JSON.parse(JSON.stringify(x));let checks=0;
 const draft={sport:'nhl',version:1,platform:'dk',players:[{id:'p1',name:'Fixture',team:'AAA',opp:'BBB',pos:['C'],salary:5000,own:null,nhlId:'1',platform:'dk',slateId:'s',date:'2026-10-13',override:{at:'2026-10-13T12:00:00Z',source:'manual fixture',playProb:.9,minutes:20,line:'1',pp:'1'}}],roster:[0,null,null,null,null,null,null,null,null],slate:{id:'s',date:'2026-10-13',games:['AAA@BBB']},model:null,receipt:{parsed:1,rejected:[]},synthetic:false};
 const args={workspace_id:'nhl-test',expected_revision:0,draft};async function reject(op,a,re,who){await assert.rejects(run(op,a,who),re);checks++;}
 await reject('draft',args,/personal/,{kind:'shared'});await reject('draft',{...args,uid:'other'},/unsupported/);await reject('draft',{...args,workspace_id:'../other'},/workspace_id/);
+delete env.NHL_PRIVATE_PREVIEW;
+await reject('draft',args,/disabled/);await reject('nhl_model',{},/disabled/);assert.equal((await run('schema')).nhl_schema.enabled,false);checks++;
+env.NHL_PRIVATE_PREVIEW='enabled';
 let saved=await run('draft',args);assert.equal(saved.revision,1);checks++;
 let w=await run('get',{workspace_id:args.workspace_id});assert.deepEqual(copy(w.draft),draft);assert.equal(w.draft.players[0].own,null);assert.equal(w.nhl_json,undefined);checks+=3;
 await reject('get',{workspace_id:args.workspace_id},/not found/,{kind:'user',uid:'userB'});await reject('draft',args,/Revision conflict/);

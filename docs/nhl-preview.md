@@ -1,6 +1,6 @@
 # Hockey DFS — standalone DraftKings preview
 
-Review branch only. No merge, production Pages release, Worker promotion, or contest submission is authorized by this build.
+Local research release: static publication authorized October 13, 2026. Cloud save/load, automatic history refresh and AI workspace access are disabled. Reload clears all work. No Worker promotion.
 
 ## Open and review
 
@@ -16,9 +16,12 @@ Select a player to view event components and edit minutes, playing/start probabi
 - DraftKings source-verified event scoring (legacy FD arithmetic remains internal and unexposed), explicit missing components, and Poisson threshold bonus expectations rather than thresholds on means. Full points/value remain unknown while required components are absent; the display clearly labels the available subtotal.
 - Recency-weighted per-minute event rates, with 30-day half-life and 180 minutes of position-level shrinkage. Expected minutes come from pre-as-of appearances or an explicit override. Playing/start probabilities require user input; no unsupported schedule-based availability model is claimed.
 - Goalies identified by populated goalie statistics even when position is blank. Separate saves, shots faced and goals allowed rates. Win/shutout/overtime-loss estimates require explicit inputs; relief appearances and goalie event accuracy are not calibrated.
-- Authenticated historical derivation via the existing `/api/dfs/nhl_model` dispatcher / `dd_dfs_nhl_model`. Fixed upstream URL construction, bounded season/type/input size, no user-controlled URL or raw boxscore response.
-- Existing signed-in UID/ETag/revision storage through `dd_dfs_draft` and `dd_dfs_get`, using `draft.sport=nhl`. Full state retains nulls, overrides, provenance, model, roster and exact-slate target. Separate NHL names protect existing NFL work. NFL solve/simulation/export reject NHL workspaces. Account switching clears the browser state.
-- Standalone account adapter reuses the existing site session and authenticated DFS API. Sign-in remains on signon.html. Explicit save/load only; no new grant, anonymous endpoint, automatic upload, player-data localStorage mirror or football navigation. Account changes discard prior-account inputs. Authorized AI reads saved state through the same personal connector.
+- Local derived-model JSON loading and draft JSON download. No persistence or draft re-import. Salary CSV alone has no historical projections; no model is bundled.
+- Cloud controls are disabled without handlers; CSP forbids connections. The retired adapter rejects all requests. Future NHL Worker writes/history require NHL_PRIVATE_PREVIEW=enabled, absent from deployed config. Existing football operations are unchanged.
+
+### Local projections
+
+Run `node tools/nhl-research.cjs /private/history.csv 2026-10-13T12:00:00Z /private/nhl`, then paste `/private/nhl-model.json` in Local research model. Choose a pre-slate as-of. Verify player identities independently; abbreviated names are not fuzzy-matched. Use verified NHL IDs where needed. Missing availability and scoring components remain unknown.
 
 ## Historical evidence
 
