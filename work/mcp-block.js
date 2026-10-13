@@ -2259,6 +2259,16 @@ const MCP_TOOLS = [
     async run(args, env, caller) { return toolText(await dfsRun("portfolio", args, env, caller)); },
   },
   {
+    name: "dd_dfs_nhl_model",
+    title: "Build private NHL historical research model",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "NHL preview: derive recency-weighted per-minute rates from free boxscores strictly before as_of UTC date. Separate regular season and playoffs. No raw data returned. Scoring provisional, ungraded; no ownership or outcome simulation. Does not save a workspace.",
+    inputSchema: dfsToolSchema("nhl_model"),
+    async run(args, env, caller) { return toolText(await dfsRun("nhl_model", args, env, caller)); },
+  },
+  {
     name: "dd_dfs_draft",
     title: "Save private DFS manual draft",
     catalog: "core",

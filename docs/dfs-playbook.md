@@ -135,3 +135,12 @@ Before export, recheck official inactives, slate, eligibility, salary cap, uniqu
 This is the reusable operating guide; current-slate research belongs in the user's private workspace or dated report. Technical reference: https://datadawgs216.com/docs/dfs-mcp-workspace.md. Historical research: https://datadawgs216.com/docs/DFS_LABS_BIBLE.md. Live schema and deployed behavior take precedence for capabilities. Historical findings do not establish this tool's calibration.
 
 When a tool, workflow or material model limit changes, update this guide, its app rendering, the schema guidance and discovery links in the same release. Source: docs/dfs-playbook.md; render with node tools/sync-dfs-playbook.mjs. Public instructions must never embed subscriber projections, subscriber research figures, user lineups or connector credentials. Evidence rules here stay generic; numbers from subscriber research belong in each user's private notes.
+
+
+## NHL research preview (not production ready)
+
+Open dfs.html?sport=nhl for the NHL desk. Upload one platform salary/player CSV, inspect parsed/rejected rows, and set the exact slate ID/date/games. Choose DK or FD before import. Existing NFL work stays separate. Draft scoring and roster presets are provisional: official pages were not verifiable during this build. Nothing is marked contest-ready.
+
+Refresh free-data model requires a signed-in preview Worker; it derives SportsDataverse boxscores strictly before the as-of UTC date and keeps regular-season/playoff types separate. NHL IDs take precedence; exact name/team matches are guarded, abbreviated/fuzzy matches are not guessed. Edit identity/role/minutes/playing probability with evidence. Missing ownership and rare scoring components remain unknown; charts show a labeled subtotal. No NHL cash/top-1%/ROI engine, field ownership model, automated status feed, export or submission is provided.
+
+For private NHL save/load, use a separate workspace. dd_dfs_schema describes nhl_schema. dd_dfs_nhl_model returns a derived model; dd_dfs_get returns draft.sport=nhl. Send the whole edited draft to dd_dfs_draft with the returned expected_revision; zero creates only. Drafts retain inputs, role overrides, timestamps, model receipt, slate and roster. NFL solve/simulate/export operations reject NHL workspaces. The browser sandbox cannot expose session inputs to Toto. Do not claim remote state changed without a successful response. See docs/nhl-preview.md for evidence and release blockers.

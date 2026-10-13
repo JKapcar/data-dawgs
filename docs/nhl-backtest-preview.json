@@ -1,0 +1,134 @@
+{
+  "version": "nhl-rate/0.1",
+  "receipt": {
+    "asOf": "2026-10-13T12:00:00Z",
+    "gameType": "02",
+    "total": 3560,
+    "accepted": 3392,
+    "rejected": {
+      "future": 0,
+      "type": 0,
+      "invalid": 168,
+      "duplicate": 0
+    },
+    "maxDate": "2026-10-12",
+    "trainingMaxDate": "2026-10-12",
+    "note": "Entire as-of UTC date excluded: boxscores lack completion timestamps. No postgame minutes used as features."
+  },
+  "modelParameters": {
+    "halfLifeDays": 30,
+    "priorMinutes": 180,
+    "minGames": 3
+  },
+  "evaluation": "Retrospective chronological event-count evaluation conditional on recorded appearance. Current historical snapshot, not archived pregame data. No playing/start probability calibration. No fantasy-score or ROI claim; missing special events and unverified scoring prevent full-point evaluation.",
+  "eligiblePlayerGames": 1326,
+  "firstTestDate": "2026-10-04",
+  "lastTestDate": "2026-10-12",
+  "metrics": {
+    "shrinkage:goals": {
+      "n": 1326,
+      "mae": 0.2840508573622483,
+      "rmse": 0.43545239117951395,
+      "bias": 0.0027751329769679306
+    },
+    "season_average:goals": {
+      "n": 1326,
+      "mae": 0.28078179989944685,
+      "rmse": 0.4819715651114715,
+      "bias": 0.003381096028154841
+    },
+    "last10_average:goals": {
+      "n": 1326,
+      "mae": 0.28078179989944685,
+      "rmse": 0.4819715651114715,
+      "bias": 0.003381096028154841
+    },
+    "minutes_times_rate:goals": {
+      "n": 1326,
+      "mae": 0.28078179989944685,
+      "rmse": 0.4819715651114715,
+      "bias": 0.003381096028154842
+    },
+    "shrinkage:assists": {
+      "n": 1326,
+      "mae": 0.43103838622323565,
+      "rmse": 0.5614360801615325,
+      "bias": 0.0024308284054548974
+    },
+    "season_average:assists": {
+      "n": 1326,
+      "mae": 0.41656611362493706,
+      "rmse": 0.6194902947091382,
+      "bias": 0.006837606837606813
+    },
+    "last10_average:assists": {
+      "n": 1326,
+      "mae": 0.41656611362493706,
+      "rmse": 0.6194902947091382,
+      "bias": 0.006837606837606813
+    },
+    "minutes_times_rate:assists": {
+      "n": 1326,
+      "mae": 0.41656611362493706,
+      "rmse": 0.6194902947091382,
+      "bias": 0.006837606837606813
+    },
+    "shrinkage:sog": {
+      "n": 1326,
+      "mae": 1.059759229306154,
+      "rmse": 1.3590906939462066,
+      "bias": 0.028805946949407517
+    },
+    "season_average:sog": {
+      "n": 1326,
+      "mae": 1.1348290598290602,
+      "rmse": 1.4748448660511309,
+      "bias": 0.035708898944193025
+    },
+    "last10_average:sog": {
+      "n": 1326,
+      "mae": 1.1348290598290602,
+      "rmse": 1.4748448660511309,
+      "bias": 0.035708898944193025
+    },
+    "minutes_times_rate:sog": {
+      "n": 1326,
+      "mae": 1.1348290598290602,
+      "rmse": 1.4748448660511309,
+      "bias": 0.035708898944193046
+    },
+    "shrinkage:blocks": {
+      "n": 1326,
+      "mae": 0.7684807236119582,
+      "rmse": 0.9802505637787434,
+      "bias": -0.009379655711187334
+    },
+    "season_average:blocks": {
+      "n": 1326,
+      "mae": 0.7779788838612367,
+      "rmse": 1.0457748551971846,
+      "bias": -0.01611362493715436
+    },
+    "last10_average:blocks": {
+      "n": 1326,
+      "mae": 0.7779788838612367,
+      "rmse": 1.0457748551971846,
+      "bias": -0.01611362493715436
+    },
+    "minutes_times_rate:blocks": {
+      "n": 1326,
+      "mae": 0.7779788838612367,
+      "rmse": 1.0457748551971846,
+      "bias": -0.016113624937154358
+    }
+  },
+  "limitations": [
+    "Small current-season sample",
+    "Source identity/name consistency needs independent roster audit",
+    "No injury, line, PP, starting-goalie or opponent pregame features",
+    "No prospective grading, goalie backtest or calibrated uncertainty",
+    "Season-average and last-10 baselines may coincide in a young season",
+    "Software MIT license does not establish redistribution rights for upstream sports data"
+  ],
+  "input_sha256": "1f8725bc702f39e979352f05e79cb20d21705e99627ffddb0f61ff5e28fc2b3d"
+}

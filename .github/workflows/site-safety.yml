@@ -12,6 +12,9 @@ on:
       - "work/test-agent-feedback-ui.mjs"
       - "sw.js"
       - "dfs.html"
+      - "dfs-nhl*"
+      - "tests/nhl*"
+      - "work/test-nhl*"
       - "dfs-diagnostics*"
       - "dfs-builder*"
       - "dfs-showdown*"
@@ -76,6 +79,9 @@ on:
       - "work/test-agent-feedback-ui.mjs"
       - "sw.js"
       - "dfs.html"
+      - "dfs-nhl*"
+      - "tests/nhl*"
+      - "work/test-nhl*"
       - "dfs-diagnostics*"
       - "dfs-builder*"
       - "dfs-showdown*"
@@ -145,6 +151,7 @@ jobs:
       - run: node work/test-dfs-page.js
       - run: node work/test-dfs-main-slate.cjs
       - run: npm install --prefix /tmp/dd-dfs-test jsdom@30.0.1 --no-audit --no-fund
+      - run: DD_NODE_MODULES=/tmp/dd-dfs-test/node_modules node --test tests/nhl-ui.test.cjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-agent-feedback-dom.mjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-agent-board-dom.mjs
       - run: npm install --prefix /tmp/dd-feedback-pw playwright@1.56.1 --no-audit --no-fund
@@ -188,11 +195,20 @@ jobs:
       - run: node --test tests/dfs-diagnostics.test.js tests/dfs-builder.test.js tests/dfs-draft.test.cjs tests/dfs-builder-sim.test.cjs tests/dfs-relationships.test.cjs tests/dfs-field-sim.test.cjs tests/dfs-simulation-contract.test.js tests/dfs-ledger.test.js tests/service-worker.test.js tests/dfs-showdown.test.js
       - run: npm install --prefix /tmp/dd-diagnostics-pw playwright@1.56.1 --no-audit --no-fund
       - run: /tmp/dd-diagnostics-pw/node_modules/.bin/playwright install --with-deps chromium
+      - run: DD_NODE_MODULES=/tmp/dd-diagnostics-pw/node_modules NHL_QA_OUTPUT=artifacts/nhl node work/test-nhl-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nhl-preview-screenshots
+          path: artifacts/nhl
+          if-no-files-found: ignore
       - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-diagnostics.browser.cjs
 
       - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-builder.browser.cjs
       - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-relationships.browser.cjs
       - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-entry.browser.cjs
+      - run: node --test tests/nhl.test.cjs
+      - run: node work/test-nhl-workspace.mjs
       - run: node work/test-dfs-workspace.mjs
       - run: node work/test-dfs-draft-workspace.mjs
       - run: node work/test-dfs-portfolio-workspace.mjs
