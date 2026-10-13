@@ -70,6 +70,26 @@ function prepare(input){
  return {pool:modelPool,candidate,config:c,margins,roles,correlations};
 }
 function assess(input){try{const p=prepare(input);return {status:'ready',warnings:[...new Set(p.margins.map(m=>m.basis))]};}catch(e){return {status:'unavailable',reasons:[e.message]};}}
+// Read the actual factor used by buildWorlds, including its jitter normalization.
+// This is latent dependence, not a claim about transformed score correlations.
+function relationships(p){
+ const pairs=[],ids=p.candidate.ids;
+ for(let a=0;a<ids.length;a++)for(let b=a+1;b<ids.length;b++){
+  const i=ids[a],j=ids[b],x=p.pool.players[i],y=p.pool.players[j],same=x.team===y.team;
+  const g=p.correlations.find(g=>g.ids.includes(i)&&g.ids.includes(j));
+  let applied=0,table=null,basis='Different games: modeled independent';
+  if(g){
+   const ai=g.ids.indexOf(i),bi=g.ids.indexOf(j);
+   for(let k=0;k<g.n;k++)applied+=g.L[ai*g.n+k]*g.L[bi*g.n+k];
+   applied/=1+g.jitter;
+   const ri=E.CORR.roles.indexOf(p.roles[i]),rj=E.CORR.roles.indexOf(p.roles[j]);
+   if(ri>=0&&rj>=0&&!(same&&ri===rj))table=(same?E.CORR.same:E.CORR.opp)[ri][rj];
+   basis=p.config.correlation==='independent'?'Explicit independence':ri<0||rj<0?'No historical role coverage: modeled zero':same&&ri===rj?'Shared depth role: engine fallback assumption':'Historical '+(same?'same-team':'opposing-team')+' role table';
+  }
+  pairs.push({names:[x.name,y.name],roles:[p.roles[i]||x.pos,p.roles[j]||y.pos],context:g?(same?'Same team':'Opponents'):'Different games',table,applied,basis,jitter:g?.jitter||0});
+ }
+ return {source:copy(E.CORR.meta),scale:p.config.correlationScale,pairs};
+}
 function normal(random){return Math.sqrt(-2*Math.log(Math.max(Number.MIN_VALUE,random())))*Math.cos(2*Math.PI*random());}
 async function buildWorlds(p,{signal,onProgress}={}){const random=H.rng(p.config.seed^0x124ea915),worlds=[];for(let k=0;k<p.config.iterations;k++){aborted(signal);const scores=Array(p.pool.players.length);for(const g of p.correlations){const z=Array.from({length:g.n},()=>normal(random));for(let a=0;a<g.n;a++){let latent=0;for(let b=0;b<=a;b++)latent+=g.L[a*g.n+b]*z[b];latent/=Math.sqrt(1+g.jitter);const m=p.margins[g.ids[a]],v=m.kind==='normal'?m.mean+m.sd*latent:m.mean*Math.exp(-m.sigma*m.sigma/2+m.sigma*latent);need(finite(v)&&Math.abs(v)<=1000,'A sampled score exceeded the supported ±1,000 range. Revise variance assumptions; no clipping was applied.');scores[g.ids[a]]=Math.round(v*100)/100;}}
  worlds.push({weight:1,scores});if(k%64===0){onProgress?.({phase:'score worlds',completed:k,total:p.config.iterations});await pause();}}
@@ -100,7 +120,7 @@ async function run(input,{signal,onProgress}={}){
  const now=new Date().toISOString(),source={name:'Locally generated conditional model',version:VERSION,asOf:now},pool={...p.pool,source:{name:'Frozen local inputs; provider time is retained separately',version:inputHash,asOf:now}};
  const request={version:1,pool,candidates:[{id:'current-build',participantId:'candidate',...p.candidate}],settings:{seed:p.config.seed,iterations:p.config.iterations,evaluatedAt:now,maxAgeHours:1},scoreModel:{type:'joint_worlds',basis:p.pool.synthetic?'synthetic':'forecast_scenarios',sampling:'generated_independent_once',source,projectionVersion:inputHash,playerIds:pool.players.map(x=>x.uid),scoreDecimals:2,captainPolicy:'official_1_5',worlds},contests:p.config.contests.map((c,i)=>({id:'profile-'+i,kind:p.config.contestKind,site:pool.site,slate:pool.slate,source,fieldSize:c.fieldSize,paidPlaces:c.paidPlaces,entryLimit:1,tiePayoutRule:'pool_occupied_places_equally',field:{mode:'complete',source,scoreRelationship:'fixed_before_outcomes',entries:field.entries.slice(0,c.fieldSize-1).map((e,j)=>({...e,participantId:'modeled-opponent-'+j}))}}))};
  const result=await F.run(request,{signal,onProgress:progress=>onProgress?.({...progress,phase:'shared score worlds'}),batchSize:16});aborted(signal);
- return {...result,inputHash,coreInputHash:result.inputHash,modelVersion:VERSION,model:{assumptions:copy(p.config),providerSource:copy(p.pool.source||{}),importedAt:p.pool.importedAt||null,historical:E.CORR.meta,correlation:p.config.correlation==='historical'?'Historical score correlations used as Gaussian latent correlations; lognormal score correlations differ. Projection rank assigns roles; historical roles used season usage. Kicker dependence is explicitly zero.':'Explicit independent score model',correlationJitter:p.correlations.map(g=>({game:g.game,jitter:g.jitter})),marginals:p.margins.map((m,i)=>({name:p.pool.players[i].name,...m})),field:field.diagnostics,uncertainty:'Intervals cover score-world Monte Carlo error conditional on this one modeled field. They exclude projection, ceiling-percentile, correlation, field-selection and calibration error. Rerun with a different seed or assumptions to assess sensitivity.'}};
+ return {...result,inputHash,coreInputHash:result.inputHash,modelVersion:VERSION,model:{relationships:relationships(p),assumptions:copy(p.config),providerSource:copy(p.pool.source||{}),importedAt:p.pool.importedAt||null,historical:E.CORR.meta,correlation:p.config.correlation==='historical'?'Historical score correlations used as Gaussian latent correlations; lognormal score correlations differ. Projection rank assigns roles; historical roles used season usage. Kicker dependence is explicitly zero.':'Explicit independent score model',correlationJitter:p.correlations.map(g=>({game:g.game,jitter:g.jitter})),marginals:p.margins.map((m,i)=>({name:p.pool.players[i].name,...m})),field:field.diagnostics,uncertainty:'Intervals cover score-world Monte Carlo error conditional on this one modeled field. They exclude projection, ceiling-percentile, correlation, field-selection and calibration error. Rerun with a different seed or assumptions to assess sensitivity.'}};
 }
-root.DDFSBuilderSim={VERSION,assess,run,margin,prepare,buildWorlds};if(node)module.exports=root.DDFSBuilderSim;
+root.DDFSBuilderSim={VERSION,assess,run,margin,prepare,buildWorlds,relationships};if(node)module.exports=root.DDFSBuilderSim;
 })(typeof globalThis!=='undefined'?globalThis:this);
