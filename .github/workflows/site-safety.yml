@@ -151,7 +151,7 @@ jobs:
       - run: node work/test-dfs-page.js
       - run: node work/test-dfs-main-slate.cjs
       - run: npm install --prefix /tmp/dd-dfs-test jsdom@30.0.1 --no-audit --no-fund
-      - run: DD_NODE_MODULES=/tmp/dd-dfs-test/node_modules node --test tests/nhl-ui.test.cjs
+      - run: DD_NODE_MODULES=/tmp/dd-dfs-test/node_modules node --test tests/nhl-ui.test.cjs tests/nhl-account.test.cjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-agent-feedback-dom.mjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-agent-board-dom.mjs
       - run: npm install --prefix /tmp/dd-feedback-pw playwright@1.56.1 --no-audit --no-fund

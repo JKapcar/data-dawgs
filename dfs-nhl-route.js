@@ -1,5 +1,0 @@
-/* Reuse the existing decision-desk frame and private account bridge. */
-(function(){'use strict';const frame=document.getElementById('diagnosticsFrame'),football=document.getElementById('dfsFootball'),hockey=document.getElementById('dfsHockey');if(!frame||!hockey)return;
-function show(nhl){if(frame.dataset.nhl===String(nhl))return;frame.dataset.nhl=String(nhl);frame.src=nhl?'dfs-nhl.html':'dfs-diagnostics.html#builder';hockey.setAttribute('aria-pressed',String(nhl));football.setAttribute('aria-pressed',String(!nhl));const url=new URL(location.href);nhl?url.searchParams.set('sport','nhl'):url.searchParams.delete('sport');history.replaceState(null,'',url);}
-football.onclick=()=>{if(frame.dataset.nhl==='true'&&!confirm('Switching sports discards unsaved NHL work. Save or download first. Continue?'))return;show(false);};hockey.onclick=()=>{if(frame.dataset.nhl!=='true'&&!confirm('Switching sports discards unsaved desk work. Save first. Continue?'))return;show(true);};if(new URLSearchParams(location.search).get('sport')==='nhl')show(true);
-})();
