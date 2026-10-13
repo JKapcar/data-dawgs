@@ -6,7 +6,8 @@
  "note": "One row per published candidate per week, graded at its published line only. Results are pending until a final exists; a push is a push. Closes are NEAR-CLOSE (SportsGameOdds free tier, about 10 minutes behind DraftKings). Entry probability CLV stays null because the menu saves one entry side; no juice is assumed. Simulation-free; not a recommendation.",
  "data": {
   "weeks": [
-   "2026-10-05"
+   "2026-10-05",
+   "2026-10-12"
   ],
   "rows": [
    {
@@ -285,7 +286,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-13T14:09:01.000Z"
+     "score_observed_at": "2026-10-13T19:09:01.000Z"
     },
     "result": "loss",
     "actual": {
@@ -4051,7 +4052,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-13T14:09:01.000Z"
+     "score_observed_at": "2026-10-13T19:09:01.000Z"
     },
     "result": "win",
     "actual": {
@@ -4124,7 +4125,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-13T14:09:01.000Z"
+     "score_observed_at": "2026-10-13T19:09:01.000Z"
     },
     "result": "win",
     "actual": {
@@ -4197,7 +4198,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-13T14:09:01.000Z"
+     "score_observed_at": "2026-10-13T19:09:01.000Z"
     },
     "result": "win",
     "actual": {
@@ -4270,7 +4271,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-13T14:09:01.000Z"
+     "score_observed_at": "2026-10-13T19:09:01.000Z"
     },
     "result": "loss",
     "actual": {
@@ -4342,7 +4343,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-13T14:09:01.000Z"
+     "score_observed_at": "2026-10-13T19:09:01.000Z"
     },
     "result": "loss",
     "actual": {
@@ -4415,7 +4416,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-13T14:09:01.000Z"
+     "score_observed_at": "2026-10-13T19:09:01.000Z"
     },
     "result": "win",
     "actual": {
@@ -4488,7 +4489,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-13T14:09:01.000Z"
+     "score_observed_at": "2026-10-13T19:09:01.000Z"
     },
     "result": "loss",
     "actual": {
@@ -4497,10 +4498,3466 @@
     "close": null,
     "clv": null,
     "grade_note": null
+   },
+   {
+    "id": "agree-20261013-alabama-at-tennessee-spread-tennessee",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Alabama at Tennessee",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Tennessee +8.5",
+     "side": "Tennessee",
+     "line": 8.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-appalachian-state-at-coastal-carolina-moneyline",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Appalachian State at Coastal Carolina",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Appalachian State moneyline",
+     "side": "Appalachian State",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-appalachian-state-at-coastal-carolina-spread-appalachian-state",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Appalachian State at Coastal Carolina",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Appalachian State -1.5",
+     "side": "Appalachian State",
+     "line": -1.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-arizona-state-at-texas-tech-spread-texas-tech",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Arizona State at Texas Tech",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Texas Tech -14.5",
+     "side": "Texas Tech",
+     "line": -14.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-arkansas-at-vanderbilt-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Arkansas at Vanderbilt",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Arkansas at Vanderbilt — Over 50.5",
+     "side": "over",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-arkansas-state-at-southern-miss-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Arkansas State at Southern Miss",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Arkansas State at Southern Miss — Under 62.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-auburn-at-georgia-spread-auburn",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Auburn at Georgia",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Auburn +20.5",
+     "side": "Auburn",
+     "line": 20.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-auburn-at-georgia-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Auburn at Georgia",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Auburn at Georgia — Under 49.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-cincinnati-at-west-virginia-spread-cincinnati",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Cincinnati at West Virginia",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Cincinnati +1.5",
+     "side": "Cincinnati",
+     "line": 1.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-cincinnati-at-west-virginia-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Cincinnati at West Virginia",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Cincinnati at West Virginia — Under 63.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-colorado-state-at-texas-state-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Colorado State at Texas State",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Colorado State at Texas State — Under 71.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-delaware-at-middle-tennessee-moneyline",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Delaware at Middle Tennessee",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Delaware moneyline",
+     "side": "Delaware",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-delaware-at-middle-tennessee-spread-delaware",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Delaware at Middle Tennessee",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Delaware -1",
+     "side": "Delaware",
+     "line": -1,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-east-carolina-at-uab-moneyline",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "East Carolina at UAB",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "East Carolina moneyline",
+     "side": "East Carolina",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-east-carolina-at-uab-spread-east-carolina",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "East Carolina at UAB",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "East Carolina -4.5",
+     "side": "East Carolina",
+     "line": -4.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-florida-at-texas-moneyline",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Florida at Texas",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Texas moneyline",
+     "side": "Texas",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-florida-at-texas-spread-texas",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Florida at Texas",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Texas -10.5",
+     "side": "Texas",
+     "line": -10.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-florida-atlantic-at-army-spread-florida-atlantic",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Florida Atlantic at Army",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Florida Atlantic +2.5",
+     "side": "Florida Atlantic",
+     "line": 2.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-fresno-state-at-san-diego-state-moneyline",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Fresno State at San Diego State",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Fresno State moneyline",
+     "side": "Fresno State",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-fresno-state-at-san-diego-state-spread-fresno-state",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Fresno State at San Diego State",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Fresno State -7.5",
+     "side": "Fresno State",
+     "line": -7.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-georgia-southern-at-old-dominion-spread-old-dominion",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Georgia Southern at Old Dominion",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Old Dominion +3.5",
+     "side": "Old Dominion",
+     "line": 3.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-georgia-southern-at-old-dominion-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Georgia Southern at Old Dominion",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Georgia Southern at Old Dominion — Over 47.5",
+     "side": "over",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-georgia-state-at-james-madison-moneyline",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Georgia State at James Madison",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "James Madison moneyline",
+     "side": "James Madison",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-georgia-state-at-james-madison-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Georgia State at James Madison",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Georgia State at James Madison — Under 57.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-georgia-tech-at-virginia-tech-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Georgia Tech at Virginia Tech",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Georgia Tech at Virginia Tech — Under 57.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-kansas-at-kansas-state-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Kansas at Kansas State",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Kansas at Kansas State — Under 55.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-kennesaw-state-at-missouri-state-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Kennesaw State at Missouri State",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Kennesaw State at Missouri State — Under 52.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-kentucky-at-oklahoma-spread-kentucky",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Kentucky at Oklahoma",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Kentucky +7",
+     "side": "Kentucky",
+     "line": 7,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-kentucky-at-oklahoma-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Kentucky at Oklahoma",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Kentucky at Oklahoma — Over 43.5",
+     "side": "over",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-massachusetts-at-buffalo-spread-massachusetts",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Massachusetts at Buffalo",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Massachusetts +6.5",
+     "side": "Massachusetts",
+     "line": 6.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-memphis-at-tulane-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Memphis at Tulane",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Memphis at Tulane — Under 54.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-mississippi-state-at-lsu-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Mississippi State at LSU",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Mississippi State at LSU — Under 58.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-missouri-at-ole-miss-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Missouri at Ole Miss",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Missouri at Ole Miss — Under 59.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-navy-at-utsa-spread-navy",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Navy at UTSA",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Navy +6.5",
+     "side": "Navy",
+     "line": 6.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-navy-at-utsa-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Navy at UTSA",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Navy at UTSA — Under 56.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-new-mexico-at-hawaii-spread-new-mexico",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "New Mexico at Hawaii",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "New Mexico -14.5",
+     "side": "New Mexico",
+     "line": -14.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-bears-at-falcons-spread",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Bears at Falcons",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Falcons +3.5",
+     "side": "Falcons",
+     "line": 3.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     },
+     {
+      "name": "Unexpected Points Week 6, Oct 13; reviewed 13:10 EDT; exact model update time unverified; shared PFF inputs",
+      "as_of": "2026-10-13T17:10:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-bills-at-raiders-total",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Bills at Raiders",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Bills at Raiders — Under 53.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-cardinals-at-rams-total",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Cardinals at Rams",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Cardinals at Rams — Under 52.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-commanders-at-49ers-spread",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Commanders at 49ers",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "49ers -7.5",
+     "side": "49ers",
+     "line": -7.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     },
+     {
+      "name": "Unexpected Points Week 6, Oct 13; reviewed 13:10 EDT; exact model update time unverified; shared PFF inputs",
+      "as_of": "2026-10-13T17:10:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-commanders-at-49ers-total",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Commanders at 49ers",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Commanders at 49ers — Under 50.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-cowboys-at-packers-total",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Cowboys at Packers",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Cowboys at Packers — Under 52.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-jets-at-patriots-spread",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Jets at Patriots",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Patriots -7.5",
+     "side": "Patriots",
+     "line": -7.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     },
+     {
+      "name": "Unexpected Points Week 6, Oct 13; reviewed 13:10 EDT; exact model update time unverified; shared PFF inputs",
+      "as_of": "2026-10-13T17:10:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-jets-at-patriots-total",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Jets at Patriots",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Jets at Patriots — Under 43.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-panthers-at-eagles-moneyline",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Panthers at Eagles",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Eagles moneyline",
+     "side": "Eagles",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     },
+     {
+      "name": "Unexpected Points Week 6, Oct 13; reviewed 13:10 EDT; exact model update time unverified; shared PFF inputs",
+      "as_of": "2026-10-13T17:10:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-panthers-at-eagles-spread",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Panthers at Eagles",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Eagles -1",
+     "side": "Eagles",
+     "line": -1,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     },
+     {
+      "name": "Unexpected Points Week 6, Oct 13; reviewed 13:10 EDT; exact model update time unverified; shared PFF inputs",
+      "as_of": "2026-10-13T17:10:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-saints-at-giants-total",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Saints at Giants",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Saints at Giants — Under 45.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-seahawks-at-broncos-spread",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Seahawks at Broncos",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Broncos +3",
+     "side": "Broncos",
+     "line": 3,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     },
+     {
+      "name": "Unexpected Points Week 6, Oct 13; reviewed 13:10 EDT; exact model update time unverified; shared PFF inputs",
+      "as_of": "2026-10-13T17:10:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-seahawks-at-broncos-total",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Seahawks at Broncos",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Seahawks at Broncos — Under 40.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-steelers-at-buccaneers-moneyline",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Steelers at Buccaneers",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Steelers moneyline",
+     "side": "Steelers",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     },
+     {
+      "name": "Unexpected Points Week 6, Oct 13; reviewed 13:10 EDT; exact model update time unverified; shared PFF inputs",
+      "as_of": "2026-10-13T17:10:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-steelers-at-buccaneers-spread",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Steelers at Buccaneers",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Steelers -2.5",
+     "side": "Steelers",
+     "line": -2.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     },
+     {
+      "name": "Unexpected Points Week 6, Oct 13; reviewed 13:10 EDT; exact model update time unverified; shared PFF inputs",
+      "as_of": "2026-10-13T17:10:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-steelers-at-buccaneers-total",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Steelers at Buccaneers",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Steelers at Buccaneers — Under 40.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-texans-at-jaguars-total",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Texans at Jaguars",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Texans at Jaguars — Over 42.5",
+     "side": "over",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-titans-at-colts-spread",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Titans at Colts",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Titans +7",
+     "side": "Titans",
+     "line": 7,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     },
+     {
+      "name": "Unexpected Points Week 6, Oct 13; reviewed 13:10 EDT; exact model update time unverified; shared PFF inputs",
+      "as_of": "2026-10-13T17:10:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-nfl-titans-at-colts-total",
+    "week": "2026-10-12",
+    "sport": "nfl",
+    "event": "Titans at Colts",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:34:00Z",
+    "selection": {
+     "text": "Titans at Colts — Under 44",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "PFF authenticated NFL consensus board; observation time only, model update time unavailable",
+      "as_of": "2026-10-13T15:34:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-north-carolina-at-duke-moneyline",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "North Carolina at Duke",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Duke moneyline",
+     "side": "Duke",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-north-carolina-at-duke-spread-duke",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "North Carolina at Duke",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Duke -3",
+     "side": "Duke",
+     "line": -3,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-north-carolina-at-duke-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "North Carolina at Duke",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "North Carolina at Duke — Over 47.5",
+     "side": "over",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-northern-illinois-at-wyoming-moneyline",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Northern Illinois at Wyoming",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Wyoming moneyline",
+     "side": "Wyoming",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-northern-illinois-at-wyoming-spread-wyoming",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Northern Illinois at Wyoming",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Wyoming -8.5",
+     "side": "Wyoming",
+     "line": -8.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-northern-illinois-at-wyoming-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Northern Illinois at Wyoming",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Northern Illinois at Wyoming — Over 40.5",
+     "side": "over",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-northwestern-at-michigan-state-moneyline",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Northwestern at Michigan State",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Northwestern moneyline",
+     "side": "Northwestern",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-northwestern-at-michigan-state-spread-northwestern",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Northwestern at Michigan State",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Northwestern -7.5",
+     "side": "Northwestern",
+     "line": -7.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-northwestern-at-michigan-state-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Northwestern at Michigan State",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Northwestern at Michigan State — Over 48.5",
+     "side": "over",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-notre-dame-at-byu-spread-byu",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Notre Dame at BYU",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "BYU +10",
+     "side": "BYU",
+     "line": 10,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-ohio-state-at-indiana-spread-indiana",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Ohio State at Indiana",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Indiana +3.5",
+     "side": "Indiana",
+     "line": 3.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-oklahoma-state-at-houston-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Oklahoma State at Houston",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Oklahoma State at Houston — Under 61.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-penn-state-at-michigan-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Penn State at Michigan",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Penn State at Michigan — Over 42.5",
+     "side": "over",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-pittsburgh-at-boston-college-moneyline",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Pittsburgh at Boston College",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Pittsburgh moneyline",
+     "side": "Pittsburgh",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-pittsburgh-at-boston-college-spread-pittsburgh",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Pittsburgh at Boston College",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Pittsburgh -6.5",
+     "side": "Pittsburgh",
+     "line": -6.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-pittsburgh-at-boston-college-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Pittsburgh at Boston College",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Pittsburgh at Boston College — Over 42.5",
+     "side": "over",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-san-jose-state-at-utep-moneyline",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "San Jose State at UTEP",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "San Jose State moneyline",
+     "side": "San Jose State",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-san-jose-state-at-utep-spread-san-jose-state",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "San Jose State at UTEP",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "San Jose State -7.5",
+     "side": "San Jose State",
+     "line": -7.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-san-jose-state-at-utep-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "San Jose State at UTEP",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "San Jose State at UTEP — Under 47.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-tcu-at-baylor-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "TCU at Baylor",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "TCU at Baylor — Under 48.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-toledo-at-eastern-michigan-spread-toledo",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Toledo at Eastern Michigan",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Toledo -6.5",
+     "side": "Toledo",
+     "line": -6.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-toledo-at-eastern-michigan-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Toledo at Eastern Michigan",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Toledo at Eastern Michigan — Under 53.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-tulsa-at-rice-moneyline",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Tulsa at Rice",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Tulsa moneyline",
+     "side": "Tulsa",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-tulsa-at-rice-spread-tulsa",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Tulsa at Rice",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Tulsa -4.5",
+     "side": "Tulsa",
+     "line": -4.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-tulsa-at-rice-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Tulsa at Rice",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Tulsa at Rice — Over 46.5",
+     "side": "over",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-virginia-at-smu-spread-virginia",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Virginia at SMU",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Virginia +9.5",
+     "side": "Virginia",
+     "line": 9.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-wake-forest-at-california-moneyline",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Wake Forest at California",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Wake Forest moneyline",
+     "side": "Wake Forest",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-wake-forest-at-california-spread-wake-forest",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Wake Forest at California",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Wake Forest -9.5",
+     "side": "Wake Forest",
+     "line": -9.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-wake-forest-at-california-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Wake Forest at California",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Wake Forest at California — Under 53.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-washington-at-purdue-spread-washington",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Washington at Purdue",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Washington +3.5",
+     "side": "Washington",
+     "line": 3.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-washington-state-at-oregon-state-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Washington State at Oregon State",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Washington State at Oregon State — Under 52.5",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-western-kentucky-at-sam-houston-spread-western-kentucky",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Western Kentucky at Sam Houston",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Western Kentucky +1.5",
+     "side": "Western Kentucky",
+     "line": 1.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-western-kentucky-at-sam-houston-total",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Western Kentucky at Sam Houston",
+    "kickoff": null,
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Western Kentucky at Sam Houston — Under 53",
+     "side": "under",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-western-michigan-at-central-michigan-moneyline",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Western Michigan at Central Michigan",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Western Michigan moneyline",
+     "side": "Western Michigan",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-western-michigan-at-central-michigan-spread-western-michigan",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Western Michigan at Central Michigan",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "Western Michigan -6.5",
+     "side": "Western Michigan",
+     "line": -6.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-wisconsin-at-ucla-moneyline",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Wisconsin at UCLA",
+    "kickoff": null,
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "UCLA moneyline",
+     "side": "UCLA",
+     "line": null,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "agree-20261013-wisconsin-at-ucla-spread-ucla",
+    "week": "2026-10-12",
+    "sport": "cfb",
+    "event": "Wisconsin at UCLA",
+    "kickoff": null,
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-13T17:14:04.746Z",
+    "screened_at": "2026-10-13T15:43:00Z",
+    "selection": {
+     "text": "UCLA -2.5",
+     "side": "UCLA",
+     "line": -2.5,
+     "team": null,
+     "odds": null,
+     "book": null,
+     "quoted_at": null
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "SP+ Week 7; retrieved Oct 13 07:02 EDT, source update time unknown",
+      "as_of": "2026-10-13T11:02:52Z"
+     },
+     {
+      "name": "PFF authenticated consensus-board review; observed Oct 13 11:35–11:42 EDT, model update time not shown",
+      "as_of": "2026-10-13T15:42:18Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
    }
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-13T14:15:59.729Z",
+ "built": "2026-10-13T19:52:54.512Z",
  "canonical_url": "https://datadawgs216.com/data/bozo-menu-ledger.json"
 }
