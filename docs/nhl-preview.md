@@ -1,4 +1,4 @@
-# Hockey DFS â€” standalone DraftKings preview
+# Hockey DFS — standalone DraftKings preview
 
 Review branch only. No merge, production Pages release, Worker promotion, or contest submission is authorized by this build.
 
@@ -34,7 +34,7 @@ node tools/nhl-research.cjs /private/player_box_2027.csv 2026-10-13T12:00:00Z /p
 
 The command writes a derived model and chronological event-count backtest. Paste the derived model under **Local research model** for offline review, or use the authenticated preview Worker refresh after that Worker is available. Full raw history and derived player-level research files are intentionally outside the public repo. Aggregate evidence is in `docs/nhl-backtest-preview.json`, including source SHA-256.
 
-The walk-forward test uses 1,326 skater appearances from October 4â€“12 with at least three earlier appearances. All methods use the same eligible rows; no same-day results or realized target minutes enter predictions. This is conditional-on-appearance retrospective evaluation from a current snapshot, not a prospective fantasy-point validation or availability calibration.
+The walk-forward test uses 1,326 skater appearances from October 4–12 with at least three earlier appearances. All methods use the same eligible rows; no same-day results or realized target minutes enter predictions. This is conditional-on-appearance retrospective evaluation from a current snapshot, not a prospective fantasy-point validation or availability calibration.
 
 | Event | Shrinkage MAE | Season average MAE | Shrinkage RMSE | Season average RMSE |
 |---|---:|---:|---:|---:|
@@ -43,7 +43,7 @@ The walk-forward test uses 1,326 skater appearances from October 4â€“12 wit
 | Shots | 1.0598 | 1.1348 | 1.3591 | 1.4748 |
 | Blocks | 0.7685 | 0.7780 | 0.9803 | 1.0458 |
 
-Last-10 averages and simple recent-minutes Ã— historical-rate baselines coincide with season averages in this young-season sample. Goal/assist MAE did not improve. Parameters were not optimized on these rows, but have not been validated on a broad independent holdout. No profit, ceiling calibration, goalie performance, full fantasy-score, cash-rate, top-1% or ROI claim follows from these results.
+Last-10 averages and simple recent-minutes × historical-rate baselines coincide with season averages in this young-season sample. Goal/assist MAE did not improve. Parameters were not optimized on these rows, but have not been validated on a broad independent holdout. No profit, ceiling calibration, goalie performance, full fantasy-score, cash-rate, top-1% or ROI claim follows from these results.
 
 ## Release blockers and next increment
 
@@ -56,7 +56,7 @@ Last-10 averages and simple recent-minutes Ã— historical-rate baselines coinc
 
 ## Checks
 
-`node --test tests/nhl.test.cjs` (12 core tests), `node work/test-nhl-workspace.mjs` (30 checks), and `DD_NODE_MODULES=/path/to/node_modules node --test tests/nhl-ui.test.cjs` (4 interaction tests). Existing DFS draft, workspace, portfolio, history and MCP regression checks also run. Worker assembly is deterministic and generated from `work/` sources. The service-worker cache key must be stamped after final HTML/JS edits.
+`node --test tests/nhl.test.cjs` (13 core tests), `node work/test-nhl-workspace.mjs` (30 checks), and `DD_NODE_MODULES=/path/to/node_modules node --test tests/nhl-ui.test.cjs` (4 interaction tests). Existing DFS draft, workspace, portfolio, history and MCP regression checks also run. Worker assembly is deterministic and generated from `work/` sources. The service-worker cache key must be stamped after final HTML/JS edits.
 
 ## Scoring verification update — October 13, 2026
 
