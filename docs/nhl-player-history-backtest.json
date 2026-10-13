@@ -1,0 +1,197 @@
+{
+  "design": "Walk-forward by date; all same-day games withheld together. At least 10 prior appearances/starts. 2026 development comparison; 2027 descriptive holdout. Fixed alternatives, no parameter fitting. Scores are observed-component DK subtotals, not complete fantasy points. Actual future minutes and status are never features.",
+  "metrics": {
+    "2026:skater_appearance:player_mean": {
+      "n": 45748,
+      "mae": 4.542963591699274,
+      "rmse": 6.110606315816113,
+      "bias": 0.0718724289320252,
+      "empiricalPriorP10P90Coverage": 0.826112616945003,
+      "empiricalPriorP10P90MeanWidth": 13.284196686193782
+    },
+    "2026:skater_appearance:previous_season_or_player_mean": {
+      "n": 45748,
+      "mae": 4.609525870180897,
+      "rmse": 6.204340725658303,
+      "bias": 0.05386186121262526,
+      "empiricalPriorP10P90Coverage": 0.826112616945003,
+      "empiricalPriorP10P90MeanWidth": 13.284196686193782
+    },
+    "2026:skater_appearance:last10": {
+      "n": 45748,
+      "mae": 4.632905045029269,
+      "rmse": 6.299222440361327,
+      "bias": 0.03592856518317738,
+      "empiricalPriorP10P90Coverage": 0.826112616945003,
+      "empiricalPriorP10P90MeanWidth": 13.284196686193782
+    },
+    "2026:skater_appearance:last20": {
+      "n": 45748,
+      "mae": 4.559371912142875,
+      "rmse": 6.170424519960091,
+      "bias": 0.05152331005087701,
+      "empiricalPriorP10P90Coverage": 0.826112616945003,
+      "empiricalPriorP10P90MeanWidth": 13.284196686193782
+    },
+    "2026:skater_appearance:ewma20": {
+      "n": 45748,
+      "mae": 4.519609773167069,
+      "rmse": 6.09580856059764,
+      "bias": 0.060583578246825635,
+      "empiricalPriorP10P90Coverage": 0.826112616945003,
+      "empiricalPriorP10P90MeanWidth": 13.284196686193782
+    },
+    "2026:skater_appearance:minutes_adjusted_mean": {
+      "n": 45748,
+      "mae": 4.5182341613099855,
+      "rmse": 6.087689150464909,
+      "bias": 0.0860117014953012,
+      "empiricalPriorP10P90Coverage": 0.826112616945003,
+      "empiricalPriorP10P90MeanWidth": 13.284196686193782
+    },
+    "2026:goalie_start:player_mean": {
+      "n": 2472,
+      "mae": 8.030457723589329,
+      "rmse": 9.932693322953865,
+      "bias": 0.9565091500335805,
+      "empiricalPriorP10P90Coverage": 0.7827669902912622,
+      "empiricalPriorP10P90MeanWidth": 24.81948220064725
+    },
+    "2026:goalie_start:previous_season_or_player_mean": {
+      "n": 2472,
+      "mae": 8.239699882159352,
+      "rmse": 10.179159343552003,
+      "bias": 1.0792729088833526,
+      "empiricalPriorP10P90Coverage": 0.7827669902912622,
+      "empiricalPriorP10P90MeanWidth": 24.81948220064725
+    },
+    "2026:goalie_start:last10": {
+      "n": 2472,
+      "mae": 8.247431229773452,
+      "rmse": 10.251020232989108,
+      "bias": 0.28772249190938504,
+      "empiricalPriorP10P90Coverage": 0.7827669902912622,
+      "empiricalPriorP10P90MeanWidth": 24.81948220064725
+    },
+    "2026:goalie_start:last20": {
+      "n": 2472,
+      "mae": 8.073139388778095,
+      "rmse": 10.005107730314503,
+      "bias": 0.4133967995995897,
+      "empiricalPriorP10P90Coverage": 0.7827669902912622,
+      "empiricalPriorP10P90MeanWidth": 24.81948220064725
+    },
+    "2026:goalie_start:ewma20": {
+      "n": 2472,
+      "mae": 8.006268749670173,
+      "rmse": 9.915644436579013,
+      "bias": 0.6533333634006709,
+      "empiricalPriorP10P90Coverage": 0.7827669902912622,
+      "empiricalPriorP10P90MeanWidth": 24.81948220064725
+    },
+    "2026:goalie_start:minutes_adjusted_mean": {
+      "n": 2472,
+      "mae": 8.034346944633791,
+      "rmse": 9.942219658953602,
+      "bias": 0.9479288351484734,
+      "empiricalPriorP10P90Coverage": 0.7827669902912622,
+      "empiricalPriorP10P90MeanWidth": 24.81948220064725
+    },
+    "2027:skater_appearance:player_mean": {
+      "n": 3048,
+      "mae": 4.6225944812000135,
+      "rmse": 6.119190016031419,
+      "bias": 0.3254386763818595,
+      "empiricalPriorP10P90Coverage": 0.8336614173228346,
+      "empiricalPriorP10P90MeanWidth": 13.625390419947474
+    },
+    "2027:skater_appearance:previous_season_or_player_mean": {
+      "n": 3048,
+      "mae": 4.622031753203105,
+      "rmse": 6.133047066306059,
+      "bias": 0.27078052393361246,
+      "empiricalPriorP10P90Coverage": 0.8336614173228346,
+      "empiricalPriorP10P90MeanWidth": 13.625390419947474
+    },
+    "2027:skater_appearance:last10": {
+      "n": 3048,
+      "mae": 4.678884514435705,
+      "rmse": 6.321111593039122,
+      "bias": 0.12169947506561643,
+      "empiricalPriorP10P90Coverage": 0.8336614173228346,
+      "empiricalPriorP10P90MeanWidth": 13.625390419947474
+    },
+    "2027:skater_appearance:last20": {
+      "n": 3048,
+      "mae": 4.65937465404876,
+      "rmse": 6.237845095199721,
+      "bias": 0.13212408167960282,
+      "empiricalPriorP10P90Coverage": 0.8336614173228346,
+      "empiricalPriorP10P90MeanWidth": 13.625390419947474
+    },
+    "2027:skater_appearance:ewma20": {
+      "n": 3048,
+      "mae": 4.605712788745354,
+      "rmse": 6.120958385874514,
+      "bias": 0.24756568820896374,
+      "empiricalPriorP10P90Coverage": 0.8336614173228346,
+      "empiricalPriorP10P90MeanWidth": 13.625390419947474
+    },
+    "2027:skater_appearance:minutes_adjusted_mean": {
+      "n": 3048,
+      "mae": 4.572092741808254,
+      "rmse": 6.067348113398947,
+      "bias": 0.26095652764040816,
+      "empiricalPriorP10P90Coverage": 0.8336614173228346,
+      "empiricalPriorP10P90MeanWidth": 13.625390419947474
+    },
+    "2027:goalie_start:player_mean": {
+      "n": 163,
+      "mae": 7.9426355488412534,
+      "rmse": 9.788251448001004,
+      "bias": 1.0090743678400762,
+      "empiricalPriorP10P90Coverage": 0.7791411042944786,
+      "empiricalPriorP10P90MeanWidth": 25.12355828220859
+    },
+    "2027:goalie_start:previous_season_or_player_mean": {
+      "n": 163,
+      "mae": 7.99746896916183,
+      "rmse": 9.723713373272995,
+      "bias": 0.5848239104573714,
+      "empiricalPriorP10P90Coverage": 0.7791411042944786,
+      "empiricalPriorP10P90MeanWidth": 25.12355828220859
+    },
+    "2027:goalie_start:last10": {
+      "n": 163,
+      "mae": 8.268404907975457,
+      "rmse": 10.066536893623093,
+      "bias": -0.29907975460122693,
+      "empiricalPriorP10P90Coverage": 0.7791411042944786,
+      "empiricalPriorP10P90MeanWidth": 25.12355828220859
+    },
+    "2027:goalie_start:last20": {
+      "n": 163,
+      "mae": 8.069752567693742,
+      "rmse": 9.739271679871885,
+      "bias": -0.07320585084749656,
+      "empiricalPriorP10P90Coverage": 0.7791411042944786,
+      "empiricalPriorP10P90MeanWidth": 25.12355828220859
+    },
+    "2027:goalie_start:ewma20": {
+      "n": 163,
+      "mae": 7.960243186531688,
+      "rmse": 9.691667688879189,
+      "bias": 0.4986221187109806,
+      "empiricalPriorP10P90Coverage": 0.7791411042944786,
+      "empiricalPriorP10P90MeanWidth": 25.12355828220859
+    },
+    "2027:goalie_start:minutes_adjusted_mean": {
+      "n": 163,
+      "mae": 7.9413809879752515,
+      "rmse": 9.83604424510939,
+      "bias": 1.0607752943415998,
+      "empiricalPriorP10P90Coverage": 0.7791411042944786,
+      "empiricalPriorP10P90MeanWidth": 25.12355828220859
+    }
+  }
+}

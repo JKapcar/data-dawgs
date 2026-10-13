@@ -1,0 +1,11 @@
+{
+  "recipeVersion": "nhl-refresh/1",
+  "modelVersion": "player-history/1",
+  "seasons": [2025, 2026, 2027],
+  "gameType": "02",
+  "sourceBase": "https://github.com/sportsdataverse/sportsdataverse-data/releases/download/",
+  "sources": [{"prefix":"player_box","tag":"nhl_player_boxscores"},{"prefix":"goalie_box","tag":"nhl_goalie_boxscores"},{"prefix":"team_box","tag":"nhl_team_boxscores"},{"prefix":"game_info","tag":"nhl_game_info"}],
+  "scoring": {"platform":"DK Classic","implementation":"dfs-nhl.js RULES.dk and score","verifiedAt":"2026-10-13","source":"https://dknetwork.draftkings.com/2025/09/30/nhl-daily-fantasy-101-how-to-play-dfs-on-draftkings/"},
+  "parameters": {"default":"player-specific mean","positionShrinkage":0,"sampleVarianceDenominator":"n-1","goalies":"starts including pulled starts; relief separate","sameDayPolicy":"exclude entire cutoff UTC date","manualSkaterMinutesScale":[0.85,1.15],"backtestMinPriorSamples":10},
+  "limitations": ["No slate salaries, verified DK eligibility or slate alignment are created by this recipe.","Playing/start probability, current lines, PP roles and injury status remain separate inputs.","SH points, shootout goals and missing goalie offensive events remain unknown; outputs are partial DK scores.","Identity seed fixes the included player cohort and current-team labels; refresh and independently verify the seed before adding new players or team changes.","Fixed 2025-2027 season window; a new season requires an explicit reviewed recipe/builder update.","No scheduled refresh, account persistence, AI cloud refresh endpoint or automatic production deployment.","Historical SD and quantiles are descriptive, not calibrated forecast certainty."]
+}

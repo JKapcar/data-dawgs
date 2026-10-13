@@ -1,0 +1,37 @@
+{
+  "recipeVersion": "nhl-refresh/1",
+  "normalizedCutoff": "2026-10-13T20:21:00.000Z",
+  "sourceFiles": 12,
+  "players": 725,
+  "goalies": 63,
+  "outputHashes": {
+    "model.json": {
+      "bytes": 1436920,
+      "sha256": "2389efbaf19b57d9132e4b43c542e2a5d2c9f0afce2cd12e3fe7551c79380925"
+    },
+    "projections.csv": {
+      "bytes": 337432,
+      "sha256": "697d7407848bc1e01d3a71abdf9507168e8f85b6f01915d06c090babc505a3c4"
+    },
+    "backtest.json": {
+      "bytes": 7146,
+      "sha256": "70d4140abab923119e833a20a519cab51e45b9c7581fdf57a7ebdb946f56c269"
+    },
+    "comparison.json": {
+      "bytes": 197846,
+      "sha256": "0b58bba9599e5c3703988338fdb39799061972d6c0c205fafd4f70200c64985c"
+    },
+    "workbook-data.json": {
+      "bytes": 1593442,
+      "sha256": "ba497a5ba39e392438648bd957639428e14d60127156fb0763829ab2145b1eaa"
+    }
+  },
+  "checks": {
+    "downloadCommandPassed": true,
+    "offlineReproductionIdentical": true,
+    "timezoneEquivalentCutoffsIdentical": true,
+    "unchangedPriorComparisonZeroDelta": true,
+    "modelValidationPassed": true
+  },
+  "notes": "Audits preserve source representation hashes, so audit files need not be byte-identical when a JS seed is serialized to JSON. The five generated data outputs match exactly. Raw inputs remain outside the public repository."
+}

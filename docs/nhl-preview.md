@@ -2,6 +2,24 @@
 
 Local research release: static publication authorized October 13, 2026. Cloud save/load, automatic history refresh and AI workspace access are disabled. Reload clears all work. No Worker promotion.
 
+## Current baseline: player-history/1
+
+[Download the 725-player projection CSV](nhl-player-history-projections.csv). These are conditional known-component DK averages, not a fabricated tonight slate. No salaries, forecast appearance/start probabilities or full-point totals are supplied. The app downloads the same CSV and displays average, game-to-game SD and sample count. Full structured components, season splits, relief samples and source hashes are in `dfs-nhl-model.js`.
+
+The default is each player's flat mean over the 2024-25 and 2025-26 regular seasons plus 2026-27 games strictly before October 13. There is **no position-mean shrinkage**. Variance is `sum((score - mean)^2)/(n-1)`; SD is its square root, not standard error. Score sum and sum of squares are exported for independent reconciliation. P10/median/P90 describe the historical partial-score distribution and are not guaranteed floors/ceilings. Historical statistics remain unchanged when an explicit forecast probability is entered.
+
+Each appearance is scored with observed DK components and actual threshold bonuses before averaging. This replaces Poisson bonus approximations in the earlier rate prototype. Skater short-handed points and shootout goals are absent from these boxscores and remain flagged. Goalie offensive fields are absent too. Goalies are conditioned on starts, including short/pulled starts; relief samples are separate. W and O decisions supply wins and overtime losses, and actual 35-save bonuses are included. A shutout requires zero goalie goals allowed, a sole positive-minute goalie for that team, and zero team goals against. One ambiguous zero-GA result remains unknown. Missing contributions are omitted from the labeled partial subtotal, never described as observed zero.
+
+Source coverage: 1,312 completed regular-season games in each of 2025 and 2026; 89 current-season games. Accepted appearances: 49,968 / 49,974 / 3,392. Zero/invalid-minute rows excluded: 2,485 / 2,480 / 167. Goalie save+GA versus shots inconsistencies exclude 20 / 24 / 1 additional rows. Accepted starts: 2,604 / 2,600 / 177. These omissions mean goalie samples are not complete even though every game has accepted player data. Playoffs are excluded. Same-day games are withheld together; no postgame minutes enter a prediction for that game.
+
+Current role, line, PP and status remain timestamped manual evidence. They do not silently alter the baseline. An explicit skater minutes override scales the partial mean by requested/historical minutes, capped at 0.85-1.15. This is an approximate linear adjustment, including nonlinear bonuses, and is labeled as such. Goalie minutes overrides do not scale the start-conditioned score. Playing/start probability remains separate; blank shows points conditional on appearance/start. No opponent, ownership or profit model is claimed.
+
+[Chronological backtest results](nhl-player-history-backtest.json) compare player mean, previous-season mean (falling back to available player mean), last 10, last 20, EWMA with 20-appearance half-life, and a capped recent-minutes adjustment. At least 10 prior appearances/starts are required. 2026 is the development comparison; 2027 is a small descriptive holdout. The same prior P10-P90 empirical range is evaluated for coverage across method rows; it is not a method-specific calibrated interval. The plain mean remains the transparent default, not a claim of optimality. On 3,048 current-season skater appearances its MAE/RMSE are 4.623/6.119; last-10 is 4.679/6.321. On 163 goalie starts the mean's MAE/RMSE are 7.943/9.788. Prospective calibration and contest outcomes are untested.
+
+Rebuild with `node tools/nhl-player-history.cjs /private/source-directory base-model.js 2026-10-13T20:21:00Z /private/output-prefix`. Source directory contains player_box, goalie_box, team_box and game_info CSVs for ending-year seasons 2025, 2026 and 2027. Full names/current teams use the previously audited 725-ID roster snapshot; history follows stable NHL IDs across trades. Same-source agreement is not independent identity verification. Export generation is `DDNHL.projectionCsv(model)`.
+
+Audit/red-team priorities: independently verify IDs and roster changes; investigate the 45 rejected goalie starts and unresolved shutout; supplement missing SH/shootout/offensive goalie events; assess era/team/role drift and survival bias of the current 725-player cohort; prospectively freeze inputs; validate probability and variance calibration; compare minutes adjustments without tuning on the holdout. No missing advanced input blocks the historical baseline.
+
 ## Open and review
 
 Open `dfs-nhl.html` directly, or run `node tools/nhl-preview-server.cjs` and visit `http://127.0.0.1:8765/dfs-nhl.html`. Hockey DFS is its own app and site-navigation entry, like Showdown; it is not embedded in football DFS. The first version is DraftKings only. Use **Try synthetic example** for review without private data. Synthetic examples cannot be saved as real lineups.
@@ -10,7 +28,7 @@ Upload one DraftKings slate CSV. The importer recognizes name/position/team/sala
 
 Select a player to view event components and edit minutes, playing/start probability, line, PP unit, availability, NHL ID and source. Overrides are timestamped assumptions. Then choose an eligible roster slot. The builder checks uniqueness, salary, position, three skater teams, slate date/ID and games; DK Classic roster rules are verified from current official rules screenshots supplied by the user on October 13, 2026. Correlation diagnostics identify shared line/PP roles and goalie-versus-skater opposition without estimating numerical correlation or contest suitability.
 
-## What is implemented
+## Earlier rate prototype and shared infrastructure
 
 - Shared browser/Worker NHL core (`dfs-nhl.js`), separate from NFL arithmetic.
 - DraftKings source-verified event scoring (legacy FD arithmetic remains internal and unexposed), explicit missing components, and Poisson threshold bonus expectations rather than thresholds on means. Full points/value remain unknown while required components are absent; the display clearly labels the available subtotal.
