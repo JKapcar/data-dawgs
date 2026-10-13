@@ -15,6 +15,11 @@ for(const op of ['solve','simulate','export','exposure','sync','players','settin
 await reject('portfolio',{workspace_id:args.workspace_id,expected_revision:3,portfolio:{}},/NFL portfolios/);await reject('draft',{...args,expected_revision:3,draft:{version:1}},/requires an NHL/);
 await run('create',{workspace_id:'nfl',site:'dk_classic',source:'fixture',as_of:'2026-10-13T12:00:00Z'});await reject('draft',{...args,workspace_id:'nfl',expected_revision:1},/separate NHL/);
 await reject('draft',{...args,workspace_id:'synthetic',draft:{...draft,synthetic:true}},/Synthetic/);
+const lockedDraft=copy(draft);lockedDraft.players[0].kickoff='2000-01-01T00:00:00Z';
+await reject('draft',{workspace_id:'lock-add',expected_revision:0,draft:lockedDraft},/Locked player cannot be added/);
+// Existing locked roster is immutable even if a client strips its time from the new payload.
+env.rows['/users/userA/dfsWorkspaces/lock-existing']={id:'lock-existing',site:'nhl_dk',revision:1,nhl_json:JSON.stringify(lockedDraft)};env.versions['/users/userA/dfsWorkspaces/lock-existing']=1;
+const removed=copy(draft);removed.roster=Array(9).fill(null);await reject('draft',{workspace_id:'lock-existing',expected_revision:1,draft:removed},/Locked player cannot be removed/);
 assert.ok(context.api.tools.find(t=>t.name==='dd_dfs_nhl_model').readOnlyHint);assert.equal((await run('schema')).nhl_schema.draft_sport,'nhl');checks+=2;
 vm.runInContext('sessionAuth=async(r)=>r.headers.get("X-Bozo-Session")==="fixture"?{uid:"userA"}:{err:"unauthorized",code:401};',context);
 const url=new URL('https://worker.invalid/api/dfs/draft');let response=await context.api.route(new Request(url,{method:'POST',body:JSON.stringify(args)}),url,env,{});assert.equal(response.status,401);checks++;

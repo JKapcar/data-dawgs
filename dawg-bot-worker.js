@@ -15195,10 +15195,10 @@ const dfsModules = {};
 /* NHL research core. Shared browser/Worker implementation; no network, identity or storage. */
 (function(root){'use strict';
 const VERSION='nhl-rate/0.1',PARAMS={halfLifeDays:30,priorMinutes:180,minGames:3};
-// DK scoring verified against DraftKings Network on 2026-10-13; roster rules remain provisional.
+// DK scoring and Classic roster rules verified on 2026-10-13; see rule-specific provenance.
 // Never describe a roster as provider-verified until this version is source-verified.
 const RULES={
- dk:{cap:50000,slots:['C','C','W','W','W','D','D','G','UTIL'],maxTeam:6,minTeams:3,verified:false,capVerified:true,slotsVerified:true,utilEligibilityVerified:false,teamConstraintsVerified:false,rosterEvidence:'User-provided current DK NHL Classic lineup-builder screenshots reviewed 2026-10-13; cap and slot layout only',scoringVerified:true,scoringVerifiedAt:'2026-10-13',scoringSource:'https://dknetwork.draftkings.com/2025/09/30/nhl-daily-fantasy-101-how-to-play-dfs-on-draftkings/',source:'https://www.draftkings.com/help/rules/nhl',weights:{goals:8.5,assists:5,sog:1.5,blocks:1.3,shPoints:2,shootoutGoals:1.5,saves:.7,ga:-3.5,wins:6,shutouts:4,otLoss:2}},
+ dk:{cap:50000,slots:['C','C','W','W','W','D','D','G','UTIL'],minSkaterTeams:3,verified:true,capVerified:true,slotsVerified:true,utilEligibilityVerified:true,teamConstraintsVerified:true,lockRule:'scheduled-player-game-time',rosterVerifiedAt:'2026-10-13',rosterEvidence:'Current official DK NHL Classic rules screenshots supplied by user and reviewed 2026-10-13: 8 skaters from at least 3 teams, 1 goalie; UTIL C/W/D; no separate total-team cap. Private source images are not published.',scoringVerified:true,scoringVerifiedAt:'2026-10-13',scoringSource:'https://dknetwork.draftkings.com/2025/09/30/nhl-daily-fantasy-101-how-to-play-dfs-on-draftkings/',source:'https://www.draftkings.com/help/rules/nhl',weights:{goals:8.5,assists:5,sog:1.5,blocks:1.3,shPoints:2,shootoutGoals:1.5,saves:.7,ga:-3.5,wins:6,shutouts:4,otLoss:2}},
  fd:{cap:55000,slots:['C','C','W','W','D','D','UTIL','UTIL','G'],maxTeam:4,minTeams:3,verified:false,source:'https://www.fanduel.com/rules',weights:{goals:12,assists:8,sog:1.6,blocks:1.6,ppPoints:.5,shPoints:2,saves:.8,ga:-4,wins:12,shutouts:8}}
 };
 const EVENTS=['goals','assists','sog','blocks'],norm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
@@ -15211,7 +15211,21 @@ function csv(text){
  else if(!quoted&&(c===','||c==='\n'||c==='\r')){row.push(cell);cell='';if(c!==','){if(row.some(x=>x.trim()))rows.push(row);row=[];if(c==='\r'&&text[i+1]==='\n')i++;}}else cell+=c;}
  assert(!quoted,'Unclosed quoted CSV cell');row.push(cell);if(row.some(x=>x.trim()))rows.push(row);return rows;
 }
-const ALIASES={id:['id','playerid','dkid','fdid'],nhlId:['nhlid','nhlplayerid'],name:['name','player','playername','nickname'],pos:['position','pos','rosterposition','dkpos','fdpos'],team:['team','teamabbrev','teamabbreviation'],opp:['opp','opponent'],salary:['salary','dksalary','fdsalary'],game:['gameinfo','game','matchup'],slateId:['slateid','draftgroupid'],date:['date','slatedate','gamedate'],own:['ownership','own','projectedownership'],minutes:['minutes','toi','projectedminutes'],playProb:['playprob','playingprobability','startprob'],line:['line','evenstrengthline'],pp:['pp','ppline'],status:['status','goalieStatus'],sourceAt:['sourceat','asof'],source:['source']};
+const ALIASES={id:['id','playerid','dkid','fdid'],nhlId:['nhlid','nhlplayerid'],name:['name','player','playername','nickname'],pos:['position','pos','rosterposition','dkpos','fdpos'],team:['team','teamabbrev','teamabbreviation'],opp:['opp','opponent'],salary:['salary','dksalary','fdsalary'],game:['gameinfo','game','matchup'],slateId:['slateid','draftgroupid'],date:['date','slatedate','gamedate'],own:['ownership','own','projectedownership'],minutes:['minutes','toi','projectedminutes'],playProb:['playprob','playingprobability','startprob'],line:['line','evenstrengthline'],pp:['pp','ppline'],status:['status','goalieStatus'],sourceAt:['sourceat','asof'],source:['source'],kickoff:['kickoff','starttime','gamestart','gametime']};
+function kickoff(value){
+ const t=String(value||'').trim();if(!t)return null;
+ if(/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:?\d{2})$/i.test(t)){const n=Date.parse(t);return Number.isFinite(n)?new Date(n).toISOString():null;}
+ const m=t.match(/\b(\d{2})\/(\d{2})\/(\d{4})\s+(\d{1,2}):(\d{2})\s*(AM|PM)\s+ET\b/i);if(!m)return null;
+ const month=+m[1],day=+m[2],year=+m[3],hour=(+m[4]%12)+(m[6].toUpperCase()==='PM'?12:0),minute=+m[5];if(month<1||month>12||day<1||day>31||+m[4]<1||+m[4]>12||minute>59)return null;
+ const wall=Date.UTC(year,month-1,day,hour,minute),fmt=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});let n=wall;
+ for(let i=0;i<3;i++){const q=Object.fromEntries(fmt.formatToParts(n).map(x=>[x.type,x.value]));n+=wall-Date.UTC(+q.year,+q.month-1,+q.day,+q.hour,+q.minute);}
+ const q=Object.fromEntries(fmt.formatToParts(n).map(x=>[x.type,x.value]));return +q.year===year&&+q.month===month&&+q.day===day&&+q.hour===hour&&+q.minute===minute?new Date(n).toISOString():null;
+}
+function locked(p,now=Date.now()){return !!p&&Number.isFinite(Date.parse(p.kickoff))&&Date.parse(p.kickoff)<=now;}
+function checkRosterChange(previous, next, now=Date.now()){
+ previous.roster.forEach((i,s)=>{const p=previous.players[i];if(i!==null&&locked(p,now))assert(next.players[next.roster[s]]?.id===p.id,'Locked player cannot be removed or moved: '+p.name);});
+ next.roster.forEach((i,s)=>{const p=next.players[i];if(i!==null&&locked(p,now))assert(previous.players[previous.roster[s]]?.id===p.id,'Locked player cannot be added: '+p.name);});
+}
 function parsePool(text,platform){
  assert(RULES[platform],'Choose DK or FD');const rows=csv(text);assert(rows.length>1,'CSV needs a header and player rows');
  const start=rows.findIndex(r=>r.some(c=>ALIASES.salary.includes(norm(c)))&&r.some(c=>ALIASES.name.includes(norm(c))));assert(start>=0,'Cannot find player name and salary columns');
@@ -15227,7 +15241,7 @@ function parsePool(text,platform){
  const id=get('id')||platform+':'+team+':'+norm(name);assert(!ids.has(id),'Duplicate player ID');
  const matchup=get('game').match(/\b([A-Z]{2,4})@([A-Z]{2,4})\b/),opp=get('opp').replace(/^@/,'').toUpperCase()||(matchup?(matchup[1]===team?matchup[2]:matchup[2]===team?matchup[1]:''):'');assert(!opp||opp!==team,'Opponent equals team');
  const own=num(get('own'));assert(!get('own')||own!==null,'Invalid ownership number');assert(own===null||own>=0&&own<=100,'Ownership must be percent 0–100');
- ids.add(id);players.push({id,nhlId:get('nhlId')||null,name,pos,team,opp,salary,own,slateId:get('slateId'),date:get('date'),minutes:num(get('minutes')),playProb:num(get('playProb')),line:get('line'),pp:get('pp'),status:get('status')||'unknown',sourceAt:get('sourceAt')||null,source:get('source'),platform,override:null});
+ ids.add(id);players.push({kickoff:kickoff(get('kickoff')||get('game')),id,nhlId:get('nhlId')||null,name,pos,team,opp,salary,own,slateId:get('slateId'),date:get('date'),minutes:num(get('minutes')),playProb:num(get('playProb')),line:get('line'),pp:get('pp'),status:get('status')||'unknown',sourceAt:get('sourceAt')||null,source:get('source'),platform,override:null});
  }catch(e){rejected.push({row:i+1,reason:e.message});}}
  assert(players.length<=600,'Maximum 600 players');return {players,rejected,parsed:players.length,total:rows.length-start-1,mapping:Object.fromEntries(Object.entries(mapping).filter(([,v])=>v>=0).map(([k,v])=>[k,headers[v]])),platform};
 }
@@ -15286,7 +15300,7 @@ function eligible(p,slot){return slot==='UTIL'?!p.pos.includes('G'):p.pos.includ
 function legality(players,roster,platform,slate={}){
  const r=RULES[platform],issues=[];assert(r,'Unknown platform');const picked=roster.filter(x=>x!==null).map(i=>players[i]);if(roster.length!==r.slots.length||picked.length!==r.slots.length)issues.push('Fill all nine roster slots');
  if(new Set(roster.filter(x=>x!==null)).size!==picked.length)issues.push('Duplicate player');roster.forEach((i,s)=>{if(i!==null&&(!players[i]||!eligible(players[i],r.slots[s])))issues.push('Ineligible '+r.slots[s]+' slot');});
- const valid=picked.filter(Boolean),salary=valid.reduce((s,p)=>s+p.salary,0),teams={};valid.forEach(p=>teams[p.team]=(teams[p.team]||0)+1);if(salary>r.cap)issues.push('Salary cap exceeded');if(Object.values(teams).some(n=>n>r.maxTeam))issues.push('Too many players from one team');if(Object.keys(teams).length<r.minTeams)issues.push('Need at least '+r.minTeams+' teams');
+ const valid=picked.filter(Boolean),salary=valid.reduce((s,p)=>s+p.salary,0),teams={};valid.forEach(p=>teams[p.team]=(teams[p.team]||0)+1);if(salary>r.cap)issues.push('Salary cap exceeded');if(r.maxTeam&&Object.values(teams).some(n=>n>r.maxTeam))issues.push('Too many players from one team');if(r.minSkaterTeams&&new Set(valid.filter(p=>!p.pos.includes('G')).map(p=>p.team)).size<r.minSkaterTeams)issues.push('Need skaters from at least '+r.minSkaterTeams+' NHL teams');if(r.minTeams&&Object.keys(teams).length<r.minTeams)issues.push('Need at least '+r.minTeams+' teams');
  const slateIssues=[];if(!slate.id||!slate.date||!Array.isArray(slate.games)||!slate.games.length)slateIssues.push('Exact slate ID, date and game list required');
  for(const p of valid){if(p.platform!==platform)slateIssues.push(p.name+': platform differs');if(!p.slateId||p.slateId!==slate.id)slateIssues.push(p.name+': slate ID missing/mismatch');if(!p.date||p.date!==slate.date)slateIssues.push(p.name+': slate date missing/mismatch');if(!p.opp||!(slate.games||[]).includes([p.team,p.opp].sort().join('@')))slateIssues.push(p.name+': game not verified in exact slate');}
  return {legal:issues.length===0,providerVerified:r.verified,issues,slateIssues:[...new Set(slateIssues)],salary,remaining:r.cap-salary,ready:false};
@@ -15296,6 +15310,7 @@ function validate(value){
  assert(value&&value.version===1,'Expected NHL draft version 1');assert(JSON.stringify(value).length<=500000,'NHL draft exceeds 500 KB');
  const allowed=['version','platform','players','roster','slate','model','receipt','synthetic'];assert(Object.keys(value).every(k=>allowed.includes(k)),'Unsupported NHL draft field');assert(RULES[value.platform],'Unknown platform');assert(Array.isArray(value.players)&&value.players.length<=600,'Invalid player pool');
  const ids=new Set();for(const p of value.players){assert(p&&typeof p.id==='string'&&p.id.length<=160&&!ids.has(p.id),'Invalid / duplicate player ID');ids.add(p.id);assert(typeof p.name==='string'&&p.name.length<=160&&typeof p.team==='string'&&typeof p.opp==='string','Invalid identity');assert(Array.isArray(p.pos)&&p.pos.length>0&&p.pos.every(x=>['C','W','D','G'].includes(x))&&!(p.pos.includes('G')&&p.pos.length>1),'Invalid position');assert(p.platform===value.platform,'Mixed platform pool');assert(Number.isInteger(p.salary)&&p.salary>0&&p.salary<=RULES[value.platform].cap,'Invalid salary');assert(p.own===null||Number.isFinite(p.own)&&p.own>=0&&p.own<=100,'Invalid ownership');
+ assert(p.kickoff==null||typeof p.kickoff==='string'&&Number.isFinite(Date.parse(p.kickoff)),'Invalid game start');
  for(const k of ['minutes','playProb'])assert(p[k]==null||Number.isFinite(p[k])&&p[k]>=0&&p[k]<=(k==='minutes'?100:1),'Invalid '+k);
  if(p.override){assert(typeof p.override.at==='string'&&Number.isFinite(Date.parse(p.override.at)),'Override timestamp required');for(const [k,v] of Object.entries(p.override)){if(['minutes','playProb','winProb','shutoutProb','otLossProb','shPoints','ppPoints','shootoutGoals'].includes(k))assert(v===null||Number.isFinite(v)&&v>=0&&v<=(k.includes('Prob')?1:100),'Invalid override '+k);else assert(['at','source','line','pp','status'].includes(k)&&typeof v==='string'&&v.length<=200,'Invalid role override');}}
  }
@@ -15305,7 +15320,7 @@ function validate(value){
  // Reject prototype-bearing JSON keys at any depth; preserve explicit nulls through storage.
  const scan=(v,d=0)=>{assert(d<20,'NHL state too deeply nested');if(v&&typeof v==='object')for(const [k,x] of Object.entries(v)){assert(!['__proto__','prototype','constructor'].includes(k),'Unsafe state key');scan(x,d+1);}};scan(value);return JSON.parse(JSON.stringify(value));
 }
-const api={VERSION,PARAMS,RULES,EVENTS,csv,num,norm,parsePool,minutes,history,train,match,tail,score,project,eligible,legality,correlations,validate};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DDNHL=api;
+const api={VERSION,PARAMS,RULES,EVENTS,csv,num,norm,kickoff,locked,checkRosterChange,parsePool,minutes,history,train,match,tail,score,project,eligible,legality,correlations,validate};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DDNHL=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
 
 })(dfsModules, dfsModules, undefined, undefined);
@@ -16486,6 +16501,7 @@ async function dfsRun(op,a,env,caller){
   if(a.draft?.sport==='nhl'){
    dfsAssert(!r.data||String(r.data.site).startsWith('nhl_'),'Use a separate NHL workspace; existing NFL data is preserved');
    const {sport,...raw}=a.draft,d=dfsModules.DDNHL.validate(raw);dfsAssert(!d.synthetic,'Synthetic NHL drafts cannot be saved as real workspaces');
+   dfsModules.DDNHL.checkRosterChange(r.data?.nhl_json?JSON.parse(r.data.nhl_json):{players:[],roster:Array(9).fill(null)},d);
    const w={id:a.workspace_id,site:'nhl_'+d.platform,revision:r.data?.revision||0,source:d.model?.source||'User NHL CSV',as_of:d.model?.asOf||null,players:[],lineups:[],settings:{},nhl_json:JSON.stringify(d)};
    return {...await dfsCommit(env,r,w,a.expected_revision),draft:{sport:'nhl',...d}};
   }

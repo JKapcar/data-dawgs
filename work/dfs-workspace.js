@@ -140,6 +140,7 @@ async function dfsRun(op,a,env,caller){
   if(a.draft?.sport==='nhl'){
    dfsAssert(!r.data||String(r.data.site).startsWith('nhl_'),'Use a separate NHL workspace; existing NFL data is preserved');
    const {sport,...raw}=a.draft,d=dfsModules.DDNHL.validate(raw);dfsAssert(!d.synthetic,'Synthetic NHL drafts cannot be saved as real workspaces');
+   dfsModules.DDNHL.checkRosterChange(r.data?.nhl_json?JSON.parse(r.data.nhl_json):{players:[],roster:Array(9).fill(null)},d);
    const w={id:a.workspace_id,site:'nhl_'+d.platform,revision:r.data?.revision||0,source:d.model?.source||'User NHL CSV',as_of:d.model?.asOf||null,players:[],lineups:[],settings:{},nhl_json:JSON.stringify(d)};
    return {...await dfsCommit(env,r,w,a.expected_revision),draft:{sport:'nhl',...d}};
   }
