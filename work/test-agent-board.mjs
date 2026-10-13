@@ -37,4 +37,28 @@ await check('assembled Worker independently enforces board scope and preserves f
  try{const req=new Request('https://example.test/agent-board',{method:'POST',headers:{'Content-Type':'application/json','CF-Connecting-IP':'192.0.2.1','Idempotency-Key':'assembled-board-123456'},body:JSON.stringify(body)});const r=await worker.fetch(req,fullEnv);assert.equal(r.status,202);const id=(await r.json()).receipt_id;const m=await worker.fetch(new Request('https://example.test/agent-board/moderation',{method:'POST',headers:{'Content-Type':'application/json','X-Dawg-Session':token},body:JSON.stringify({id,decision:'approved',expected_status:'pending',publication_confirmed:true})}),fullEnv);assert.equal(m.status,200);assert.equal((await(await worker.fetch(new Request('https://example.test/agent-board'),fullEnv)).json()).posts.length,1);role={feedback_reader:true};assert.equal((await worker.fetch(new Request('https://example.test/agent-board/moderation',{headers:{'X-Dawg-Session':token}}),fullEnv)).status,403);assert.equal(networkWrites,2);}finally{globalThis.fetch=old;}
 });
 await check('CAS exhaustion fails closed and opposite moderation decisions serialize',async()=>{conflicts=10;assert.equal((await call()).status,503);assert.equal(reads,3);assert.equal(writes,0);conflicts=0;const id=(await call()).data.receipt_id;owner();const results=await Promise.all([moderate(id,'approved'),moderate(id,'rejected')]);assert.deepEqual(results.map(r=>r.status).sort(),[200,409]);assert.equal(writes,2);const row=Object.values(state.entries)[0];assert.equal((await call({method:'GET'})).data.posts.length,row.status==='approved'?1:0);});
+await check('release manifest opens moderated board intake only; kill switch fails closed',async()=>{
+ const manifest=JSON.parse(readFileSync(new URL('../wrangler.jsonc',import.meta.url),'utf8'));
+ assert.equal(manifest.vars.AGENT_BOARD_ENABLED,'true');
+ assert.equal(manifest.vars.AGENT_FEEDBACK_ENABLED,'false');
+ const releaseEnv={...env,...manifest.vars};
+ assert.equal((await call({method:'GET',environment:releaseEnv})).data.submissions_enabled,true);
+ const received=await call({environment:releaseEnv});
+ assert.equal(received.status,202);assert.equal(received.data.status,'pending_review');
+ assert.deepEqual((await call({method:'GET',environment:releaseEnv})).data.posts,[]);
+ // Opening public intake never authorizes anonymous moderation, including writes.
+ for(const method of ['GET','POST'])assert.equal((await call({method,path:'/agent-board/moderation',environment:releaseEnv,data:{id:received.data.receipt_id,decision:'approved',expected_status:'pending',publication_confirmed:true}})).status,401);
+ assert.equal(writes,1);
+ for(const flag of ['false',undefined,'TRUE',true]){
+  const closed={...releaseEnv,AGENT_BOARD_ENABLED:flag};
+  assert.equal((await call({method:'GET',environment:closed})).data.submissions_enabled,false);
+  const rejected=await call({environment:closed});
+  assert.equal(rejected.status,503);assert.equal(rejected.data.error,'submissions_closed');
+ }
+ assert.equal(writes,1);
+ owner();await moderate(received.data.receipt_id);
+ const closed={...releaseEnv,AGENT_BOARD_ENABLED:'false'};
+ assert.equal((await call({method:'GET',environment:closed})).data.posts.length,1);
+ assert.equal((await call({method:'GET',path:'/agent-board/moderation',environment:closed})).status,200);
+});
 console.log(`${count} agent board tests passed`);
