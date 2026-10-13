@@ -6,7 +6,8 @@ const server=http.createServer((q,r)=>{const f=path.resolve(root,'.'+new URL(q.u
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;try{
  const origin='http://127.0.0.1:'+server.address().port,errors=[],requests=[];let holdGet=false,releaseGet=null;
  browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{})});fs.mkdirSync(out,{recursive:true});
- const click=async el=>{await el.scrollIntoViewIfNeeded();await el.click();};
+ // Locator.click scrolls and retries if a refreshed history row detaches.
+ const click=async el=>{await el.click();};
  async function session(width){const context=await browser.newContext({viewport:{width,height:1000},isMobile:width<600,hasTouch:width<600,reducedMotion:'reduce'}),page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/*',async route=>{const r=route.request(),url=r.url();if(url.startsWith(origin+'/'))return route.continue();if(url.startsWith('https://toto.jkapcar4.workers.dev/api/dfs/')){const op=url.split('/').pop();requests.push({op,body:r.postData(),auth:r.headers()['x-bozo-session']});if(holdGet&&op==='history_get')await new Promise(resolve=>releaseGet=resolve);const response=await api.route(new Request(url,{method:'POST',headers:r.headers(),body:r.postData()}),new URL(url),env,{'Access-Control-Allow-Origin':origin});try{return await route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:await response.text()});}catch{return;}}return route.abort();});
   await page.goto(origin+'/dfs.html#bankroll');await page.locator('#brFile').waitFor();return {context,page};
