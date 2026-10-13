@@ -1,10 +1,22 @@
 # DFS results history and ledger
 
-Two formats use separate device stores. Neither is an account-level historical archive yet.
+Two formats use separate device stores. Explicit account archives are also available in the Saved history sheet (`dfs.html#history`); imports are never uploaded automatically.
 
 - **DraftKings account history:** `dfs.html#bankroll`. `Entry_Key` identifies each entry, `Contest_Key` the contest, and `Entry` its name. Records live in browser state `dd-dfs-v1`.
 - **Contest standings:** `dfs.html#standings`. The ledger joins the specified user's entries to a saved prediction workspace. Other entrants' names and lineups are discarded after counting ownership, copies and ties. Explicit Keep on this device stores a ledger locally; downloads are private files.
 - The older weekly-receipts panel has its own device IndexedDB. Loading a workspace or portfolio does not restore these stores.
+
+## Private account history
+
+Save log to my account archives the full bankroll log and retained legacy archives. Save audit to my account archives the current results ledger. Saved history lists and opens these versions on any device signed into the same account. Opening is read-only and does not replace the current draft or device log. Post-lock audits open in the existing audit renderer; account logs show entry IDs, finish/field, points, separate cash/tickets and missing values. Download original JSON retains the full source evidence.
+
+Archive this revision copies a selected server workspace, including all players, candidates, settings, results and portfolio JSON. It requires the exact workspace revision and preserves the original prediction provenance without modifying the current workspace. Later changes do not affect the archive. Legacy timestamps remain unverified.
+
+The four browser/AI operations are `history_save`, `history_archive`, `history_list`, and `history_get`, under `/api/dfs/` and `dd_dfs_` MCP tools. Account ownership comes only from the verified session/connector UID. Archives live below `/users/{uid}/dfsHistory/records/{sha256}`; a separate metadata index keeps list responses free of payload data. The UI clears loaded account history on account changes, rejects late responses, and does not mirror archives into localStorage or Toto context.
+
+Archives preserve JSON as a string so Firebase cannot remove nulls or empty arrays. The kind and exact JSON determine the SHA-256 ID. Identical retries reuse the original record and server save time, including after an interrupted index write. Corrections create a separate archive; these endpoints cannot overwrite or delete an existing one. Titles of identical archives are not renamed on retry. Save responses distinguish existing records. Archive save time never proves historical prediction timing; client-supplied ledgers remain client-supplied evidence.
+
+Maximum payload: 8 MB UTF-8, 24 nesting levels and 750,000 JSON nodes. List returns 25 metadata records by default, up to 100, with a cursor and optional kind filter. Oversize or incomplete payloads fail explicitly; no rows are truncated. A failed listing-index write reports that the archive was stored and asks for an identical retry. No automatic recovery, backfill, source reconciliation, strategy calibration or publication occurs.
 
 ## Import correctness
 
@@ -54,6 +66,6 @@ node tools/dfs-ledger.mjs --snapshot ws.json --user NAME --lock ISO --contests m
 
 Use complete `dd_dfs_get` output with `include_results:true`. CLI output defaults to gitignored `private/`. Never commit private account-history CSVs, paid projections or user ledgers.
 
-Synthetic coverage: `tests/dfs-history-correctness.test.cjs`, `tests/dfs-ledger.test.js`, `work/test-dfs-portfolio-workspace.mjs`, `work/test-dfs-ledger-ui.cjs` and `tests/dfs-history.browser.cjs`.
+Synthetic coverage: `tests/dfs-history-correctness.test.cjs`, `tests/dfs-ledger.test.js`, `work/test-dfs-portfolio-workspace.mjs`, `work/test-dfs-ledger-ui.cjs`, `tests/dfs-history.browser.cjs`, `work/test-dfs-history-workspace.mjs` and `tests/dfs-account-history.browser.cjs`. The latter uses two isolated browser sessions and the assembled Worker with in-memory storage, without production access.
 
-Unfinished: private account-level history save/list/load, cross-device historical browsing, immutable storage of successive prediction versions, and reconciliation of recovered user archives. The separate portfolio feature persists one complete current audit; it does not import a results CSV or populate historical stores automatically.
+Unfinished: production publication and authenticated deployment verification, recovery/reconciliation of the user's original archives, archive deletion/retention management, and automatic archival of successive prediction runs. The implemented archive action is explicit. The separate portfolio feature persists one current audit; it does not import a results CSV or populate historical stores automatically. No personal history is saved by implementing or testing this feature.

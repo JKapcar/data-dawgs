@@ -16331,9 +16331,10 @@ async function dfsCommit(env,r,w,revision,preservePredictionTime=false){
 }
 async function dfsRun(op,a,env,caller){
  dfsUid(caller);
+ if(op.startsWith("history_"))return dfsHistoryRun(op,a,env,caller);
  const allowed={portfolio:['workspace_id','expected_revision','portfolio'],draft:['workspace_id','expected_revision','draft'],compare:['workspace_id','expected_revision','indices','profiles','script'],sync:['workspace_id','expected_revision','players','lineups','settings','source','as_of'],list:[],get:['workspace_id','offset','limit','include_results'],create:['workspace_id','site','source','as_of'],upload:['workspace_id','expected_revision','csv','source','as_of','commit'],players:['workspace_id','expected_revision','players'],settings:['workspace_id','expected_revision','section','patch'],solve:['workspace_id','expected_revision'],explore:['workspace_id','expected_revision'],simulate:['workspace_id','expected_revision','indices'],exposure:['workspace_id'],select:['workspace_id','expected_revision','indices'],export:['workspace_id'],delete:['workspace_id','expected_revision'],schema:[]};
  dfsAssert(allowed[op],'Unknown DFS operation');dfsObj(a,allowed[op],'arguments');
- if(op==='schema')return {version:2,portfolio_schema:{version:1,tool:'dd_dfs_portfolio',read:'dd_dfs_get returns portfolio; audit remains the computed workspace summary.',limit_bytes:450000,notes:['Read get, edit its full portfolio, then save with exact expected_revision. Zero creates a new named workspace only.','Independent snapshot: preserves solver players, candidates, settings and results exactly.','Retains all version 1 JSON evidence, fees, contests, roles, notes and availability. Missing stays unknown.','Explicit private save only. One current snapshot per workspace; export previous versions if needed. No provider submission or automatic sync.']},draft_schema:{version:1,tool:'dd_dfs_draft',required:['version','pool','roster','preset','settings'],pool_fields:['site','players','slate','source','filename','synthetic','importedAt','units','convention','matchupEvidence','warnings','mapping'],roster:'Nullable zero-based indexes in official slot order. Unique players and slot eligibility enforced; incomplete/over-budget drafts may be saved, not submitted.',presets:['unset','cash','small','large'],settings:dfsModules.DDFSDraft.defaults,notes:['Call get; edit its draft; save with the returned expected_revision. Zero creates a new named workspace only.','One player array is shared by draft, solver and AI. Replacing it invalidates computed results.','Unknown slate/date and freshness are allowed for exploration; never invent source time.','Ownership columns remain separate. Cash/small must not silently reuse large-field ownership.','Preset fields are explicit assumptions, not verified lobby settings. Browser load is explicit; no background account writes.']},guide:{url:'https://datadawgs216.com/docs/dfs-playbook.md',app_url:'https://datadawgs216.com/dfs.html#dfsPlaybook',updated:'2026-10-09',instruction:'Read the public playbook before constructing entries. It covers evidence ranking, tool sequence, actual-lobby settings, model limits, final checks and the post-slate ledger.',contest_inputs:['contest ID/name','field capacity/current entrants','entry fee','max entries per person','user entry count','payout table','slate/lock time'],required_checks:['Verify source time, format, imports and ownership units before solving.','Use actual contest settings; compare profiles are illustrative, not arbitrary lobby payouts.','Solver changes clear candidates; solve/explore replace the pool; select invalidates simulations. Preserve roster contents and receipts before mutations.','Audit final exposure, legality and official slot IDs; export does not submit entries.','Disclose partial search and model uncertainty; do not invent unresolved first-place EV.']},limits:DFS_LIMITS,player_fields:DFS_PLAYER_FIELDS,required_player_fields:['name','pos','team','opp','gid','sal'],field_notes:{proj:'Nullable FLEX points; missing projections are excluded.',own:'Total player ownership percent; Classic position or Showdown total across slots.',cptOwn:'Showdown captain ownership percent; must not exceed total.',maxExp:'Sequential solver cap fraction; final violations are reported.',dkId:'Official FLEX ID required for entry CSV.',cptId:'Official captain ID required for Showdown entry CSV.',gid:'Shared stable game identifier; never guess missing games.'},defaults:{solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT},units:{own:'percent 0–100',cptOwn:'percent 0–100',flexOwn:'percent 0–100',maxExp:'fraction 0–1',randomness:'fraction 0–0.6'},workflow:['create','upload (commit=false to preview)','upload (commit=true)','players/settings','solve or explore','simulate','exposure','select','export'],notes:['Every write requires expected_revision.','Read get with include_results=true for simulations.','Use player IDs in groups; lineup ids are indexes into the saved players array.','Results are model-conditional; no guarantee of profitability.']};
+ if(op==='schema')return {version:2,history_schema:{version:1,save:'dd_dfs_history_save',archive:'dd_dfs_history_archive',list:'dd_dfs_history_list',get:'dd_dfs_history_get',limit_bytes:8000000,notes:['Explicit immutable account archives; never upload automatically.','Account history and result ledgers retain original JSON evidence; save time never verifies prediction time.','history_archive copies an exact server workspace revision without changing it.','List returns metadata only. Get returns the complete saved payload.','Identical kind and JSON payload are idempotent; corrections create a new archive. No historical records are recovered automatically.']},portfolio_schema:{version:1,tool:'dd_dfs_portfolio',read:'dd_dfs_get returns portfolio; audit remains the computed workspace summary.',limit_bytes:450000,notes:['Read get, edit its full portfolio, then save with exact expected_revision. Zero creates a new named workspace only.','Independent snapshot: preserves solver players, candidates, settings and results exactly.','Retains all version 1 JSON evidence, fees, contests, roles, notes and availability. Missing stays unknown.','Explicit private save only. One current snapshot per workspace; export previous versions if needed. No provider submission or automatic sync.']},draft_schema:{version:1,tool:'dd_dfs_draft',required:['version','pool','roster','preset','settings'],pool_fields:['site','players','slate','source','filename','synthetic','importedAt','units','convention','matchupEvidence','warnings','mapping'],roster:'Nullable zero-based indexes in official slot order. Unique players and slot eligibility enforced; incomplete/over-budget drafts may be saved, not submitted.',presets:['unset','cash','small','large'],settings:dfsModules.DDFSDraft.defaults,notes:['Call get; edit its draft; save with the returned expected_revision. Zero creates a new named workspace only.','One player array is shared by draft, solver and AI. Replacing it invalidates computed results.','Unknown slate/date and freshness are allowed for exploration; never invent source time.','Ownership columns remain separate. Cash/small must not silently reuse large-field ownership.','Preset fields are explicit assumptions, not verified lobby settings. Browser load is explicit; no background account writes.']},guide:{url:'https://datadawgs216.com/docs/dfs-playbook.md',app_url:'https://datadawgs216.com/dfs.html#dfsPlaybook',updated:'2026-10-09',instruction:'Read the public playbook before constructing entries. It covers evidence ranking, tool sequence, actual-lobby settings, model limits, final checks and the post-slate ledger.',contest_inputs:['contest ID/name','field capacity/current entrants','entry fee','max entries per person','user entry count','payout table','slate/lock time'],required_checks:['Verify source time, format, imports and ownership units before solving.','Use actual contest settings; compare profiles are illustrative, not arbitrary lobby payouts.','Solver changes clear candidates; solve/explore replace the pool; select invalidates simulations. Preserve roster contents and receipts before mutations.','Audit final exposure, legality and official slot IDs; export does not submit entries.','Disclose partial search and model uncertainty; do not invent unresolved first-place EV.']},limits:DFS_LIMITS,player_fields:DFS_PLAYER_FIELDS,required_player_fields:['name','pos','team','opp','gid','sal'],field_notes:{proj:'Nullable FLEX points; missing projections are excluded.',own:'Total player ownership percent; Classic position or Showdown total across slots.',cptOwn:'Showdown captain ownership percent; must not exceed total.',maxExp:'Sequential solver cap fraction; final violations are reported.',dkId:'Official FLEX ID required for entry CSV.',cptId:'Official captain ID required for Showdown entry CSV.',gid:'Shared stable game identifier; never guess missing games.'},defaults:{solver:DFS_SOLVER_DEFAULT,simulation:DFS_SIM_DEFAULT,lab:DFS_LAB_DEFAULT},units:{own:'percent 0–100',cptOwn:'percent 0–100',flexOwn:'percent 0–100',maxExp:'fraction 0–1',randomness:'fraction 0–0.6'},workflow:['create','upload (commit=false to preview)','upload (commit=true)','players/settings','solve or explore','simulate','exposure','select','export'],notes:['Every write requires expected_revision.','Read get with include_results=true for simulations.','Use player IDs in groups; lineup ids are indexes into the saved players array.','Results are model-conditional; no guarantee of profitability.']};
  if(op==='list'){const r=await fbGet(env,'/users/'+dfsUid(caller)+'/dfsWorkspaces');return {workspaces:Object.values(r.data||{}).map(w=>({workspace_id:w.id,site:w.site,source:w.source,as_of:w.as_of,revision:w.revision,players:(w.players||[]).length,lineups:(w.lineups||[]).length,has_portfolio:typeof w.portfolio_json==='string',updated_at:w.updated_at}))};}
  if(op==='portfolio'){
   dfsNum(a.expected_revision,0,2147483647,'expected_revision',true);
@@ -16432,15 +16433,86 @@ function dfsExport(w){
  return {filename:w.id+'-draftkings.csv',csv:rows.map(r=>r.join(',')).join('\r\n')+'\r\n',lineups:ls.length,revision:w.revision,note:'Export only. No contest entries were submitted.'};
 }
 async function handleDfsWorkspace(request,url,env,cors){
+ cors={...cors,"Cache-Control":"private, no-store"};
  const auth=await sessionAuth(request,env);if(auth.err)return json({error:auth.err},auth.code||401,cors);
  if(request.method!=='POST')return json({error:'POST only'},405,cors);
- try{const body=await readCappedJson(request,600000);dfsAssert(!body.tooLarge&&!body.malformed,'Invalid or oversized JSON body');return json(await dfsRun(url.pathname.split('/').pop(),body.value,env,{kind:'user',uid:auth.uid}),200,cors);}catch(e){return json({error:e.message},400,cors);}
+ try{const body=await readCappedJson(request,url.pathname.endsWith("/history_save")?8100000:600000);dfsAssert(!body.tooLarge&&!body.malformed,'Invalid or oversized JSON body');return json(await dfsRun(url.pathname.split('/').pop(),body.value,env,{kind:'user',uid:auth.uid}),200,cors);}catch(e){return json({error:e.message},400,cors);}
 }
 function dfsToolSchema(op){
  const s={type:'string'},num={type:'integer'},id={type:'string',pattern:'^[A-Za-z0-9_-]{1,80}$'},obj={type:'object'};
  const common={workspace_id:id,expected_revision:{type:'integer',minimum:1}};
  const props={portfolio:{workspace_id:id,expected_revision:{type:'integer',minimum:0},portfolio:obj},draft:{workspace_id:id,expected_revision:{type:'integer',minimum:0},draft:obj},compare:{...common,indices:{type:'array',items:num,maxItems:200},profiles:obj,script:{type:'string',enum:['any','pass','back','run']}},sync:{...common,players:{type:'array',items:obj},lineups:{type:'array',items:obj},settings:obj,source:s,as_of:s},schema:{},list:{},get:{workspace_id:id,offset:num,limit:num,include_results:{type:'boolean'}},create:{workspace_id:id,site:{enum:['dk_classic','dk_showdown'],type:'string'},source:s,as_of:s},upload:{...common,csv:{type:'string',maxLength:500000},source:s,as_of:s,commit:{type:'boolean'}},players:{...common,players:{type:'array',items:obj,minItems:1,maxItems:220}},settings:{...common,section:{type:'string',enum:['solver','simulation','lab']},patch:obj},solve:common,explore:common,simulate:{...common,indices:{type:'array',items:num,maxItems:200}},select:{...common,indices:{type:'array',items:num}},exposure:{workspace_id:id},export:{workspace_id:id},delete:common};
  const optional={get:['offset','limit','include_results'],simulate:['indices'],compare:['indices','profiles','script']};return {type:'object',properties:props[op],required:Object.keys(props[op]).filter(k=>!(optional[op]||[]).includes(k)),additionalProperties:false};
+}
+
+/* Explicit, immutable private DFS archives. No automatic imports or account writes.
+   Payload JSON preserves nulls, empty arrays and original source evidence in RTDB. */
+const DFS_HISTORY_BYTES=8000000;
+function dfsHistoryPayload(kind,payload){
+ dfsAssert(['account_history','results_ledger','workspace'].includes(kind),'Unknown history kind');
+ let nodes=0;
+ const visit=(v,depth=0)=>{
+  dfsAssert(++nodes<=750000&&depth<=24,'History is too large or deeply nested');
+  if(v===null||typeof v==='boolean')return;
+  if(typeof v==='number'){dfsAssert(Number.isFinite(v),'History numbers must be finite or null');return;}
+  if(typeof v==='string'){dfsAssert(v.length<=4000000,'History text exceeds 4 MB');return;}
+  dfsAssert(v&&typeof v==='object','History must contain JSON values');
+  for(const [k,x] of Object.entries(v)){dfsAssert(!['__proto__','constructor','prototype'].includes(k),'Unsupported history key');visit(x,depth+1);}
+ };
+ visit(payload);dfsAssert(payload&&!Array.isArray(payload),'Supply a history object');
+ const objects=a=>Array.isArray(a)&&a.every(v=>v&&typeof v==='object'&&!Array.isArray(v));
+ if(kind==='account_history'){
+  dfsAssert(payload.version===2&&objects(payload.records)&&Array.isArray(payload.legacy_archives),'Expected version 2 account history with records and legacy_archives');
+  dfsAssert(payload.records.length>0||payload.legacy_archives.length>0,'History has no records to save');
+ }else if(kind==='results_ledger'){
+  dfsAssert(['dfs-ledger/1','dfs-ledger/2'].includes(payload.schema)&&payload.slate&&objects(payload.entries)&&objects(payload.contests)&&objects(payload.ownership),'Expected a complete results ledger');
+  dfsAssert(payload.entries.length>0,'Ledger has no entries to save');
+ }else dfsAssert(payload.version===1&&payload.workspace&&Array.isArray(payload.workspace.players)&&Array.isArray(payload.workspace.lineups),'Expected a saved workspace archive');
+ const json=JSON.stringify(payload),bytes=new TextEncoder().encode(json).length;
+ dfsAssert(bytes<=DFS_HISTORY_BYTES,'History exceeds 8 MB; export it privately and split the source by date');return {json,bytes};
+}
+async function dfsHistoryDigest(kind,json){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(kind+'\n'+json));return Array.from(new Uint8Array(bytes),v=>v.toString(16).padStart(2,'0')).join('');}
+function dfsHistoryRoot(caller){return '/users/'+dfsUid(caller)+'/dfsHistory';}
+function dfsHistoryId(id){dfsAssert(typeof id==='string'&&/^[a-f0-9]{64}$/.test(id),'Invalid history ID');return id;}
+async function dfsHistorySave(env,caller,kind,title,payload,origin){
+ title=mcpDfsString(title,'title',160);const {json,bytes}=dfsHistoryPayload(kind,payload),id=await dfsHistoryDigest(kind,json),base=dfsHistoryRoot(caller),path=base+'/records/'+id;
+ const prior=await fbGet(env,path,true);let record=prior.data;
+ if(!record){
+  const records=kind==='account_history'?payload.records:kind==='results_ledger'?payload.entries:payload.workspace.lineups;
+  const dates=records.map(r=>r.date).filter(v=>typeof v==='string'&&v).sort();
+  const meta={id,kind,title,saved_at:new Date().toISOString(),entries:records.length,bytes,source_start:dates[0]||payload.slate?.date||payload.workspace?.as_of||null,source_end:dates.at(-1)||payload.slate?.date||payload.workspace?.as_of||null,origin};
+  record={meta,payload_json:json};dfsAssert(prior.etag,'Storage did not return an ETag; refusing an unsafe history write');
+  if(!await fbPut(env,path,record,prior.etag)){record=(await fbGet(env,path)).data;dfsAssert(record?.payload_json===json,'Archive conflict; original history retained');}
+ }
+ dfsAssert(record.payload_json===json&&record.meta?.kind===kind,'Archive conflict; original history retained');
+ // A failed index write is repairable by retrying the identical payload. The archive never changes.
+ try{await fbPut(env,base+'/index/'+id,record.meta);}catch{throw Error('Archive stored, but its history listing could not be saved. Retry the same save to finish; no duplicate will be created.');}
+ return {saved:true,existing:!!prior.data,history:record.meta};
+}
+async function dfsHistoryRun(op,a,env,caller){
+ const base=dfsHistoryRoot(caller),allowed={history_save:['kind','title','payload'],history_archive:['workspace_id','expected_revision','title'],history_list:['kind','limit','cursor'],history_get:['history_id']};
+ dfsAssert(allowed[op],'Unknown history operation');dfsObj(a,allowed[op],'arguments');
+ if(op==='history_save'){
+  dfsAssert(['account_history','results_ledger'].includes(a.kind),'Use history_archive for server workspace evidence');
+  return dfsHistorySave(env,caller,a.kind,a.title,a.payload,'user-supplied history; save time is not prediction time');
+ }
+ if(op==='history_archive'){
+  const r=await dfsLoad(env,caller,a.workspace_id);dfsNum(a.expected_revision,1,2147483647,'expected_revision',true);dfsAssert(r.data.revision===a.expected_revision,'Revision conflict. Reload the workspace before archiving.');
+  return dfsHistorySave(env,caller,'workspace',a.title,{version:1,workspace:r.data},'server workspace revision '+r.data.revision+'; original prediction provenance retained');
+ }
+ if(op==='history_get'){
+  const record=(await fbGet(env,base+'/records/'+dfsHistoryId(a.history_id))).data;dfsAssert(record?.payload_json&&record.meta,'History not found');
+  return {history:record.meta,payload:JSON.parse(record.payload_json)};
+ }
+ const limit=a.limit??25;dfsNum(limit,1,100,'limit',true);if(a.kind!=null)dfsAssert(['account_history','results_ledger','workspace'].includes(a.kind),'Unknown history kind');if(a.cursor!=null)dfsHistoryId(a.cursor);
+ const rows=Object.values((await fbGet(env,base+'/index')).data||{}).filter(r=>!a.kind||r.kind===a.kind).sort((x,y)=>String(y.saved_at).localeCompare(String(x.saved_at))||y.id.localeCompare(x.id));
+ const start=a.cursor==null?0:rows.findIndex(r=>r.id===a.cursor)+1;dfsAssert(a.cursor==null||start>0,'History cursor no longer exists; refresh the list');
+ const page=rows.slice(start,start+limit);return {history:page,next_cursor:start+limit<rows.length?page.at(-1).id:null,total:rows.length};
+}
+function dfsHistorySchema(op){
+ const s={type:'string'},k={type:'string',enum:['account_history','results_ledger','workspace']};
+ const properties={history_save:{kind:{type:'string',enum:['account_history','results_ledger']},title:{type:'string',maxLength:160},payload:{type:'object'}},history_archive:{workspace_id:s,expected_revision:{type:'integer',minimum:1},title:{type:'string',maxLength:160}},history_list:{kind:k,limit:{type:'integer',minimum:1,maximum:100},cursor:s},history_get:{history_id:s}}[op];
+ return {type:'object',properties,required:op==='history_list'?[]:Object.keys(properties),additionalProperties:false};
 }
 
 /* ===== DD-DFS-WORKSPACE END ===== */
@@ -20284,6 +20356,46 @@ const MCP_NO_ARGS = { type: "object", properties: {}, additionalProperties: fals
 const SWOLE_NEEDS_USER = "SwoleDawg needs to know who you are, and the shared league connector cannot tell. Mint a personal URL at " + SITE + "/connect.html and this works.";
 
 const MCP_TOOLS = [
+  {
+    name: "dd_dfs_history_save",
+    title: "Save private DFS history",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Explicitly archive account_history (version 2 records and legacy_archives) or a complete results_ledger. Retains original evidence and unknown values. Immutable, account scoped, maximum 8 MB; identical payload retries reuse the archive. Save time does not prove pre-lock prediction timing. Never upload automatically.",
+    inputSchema: dfsHistorySchema("history_save"),
+    async run(args, env, caller) { return toolText(await dfsRun("history_save", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_history_archive",
+    title: "Archive a saved DFS workspace",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Copy an exact current account workspace revision into immutable private history, preserving all players, lineups, model results, portfolio JSON and original prediction provenance. Requires expected_revision. Does not mutate the workspace or backdate legacy predictions.",
+    inputSchema: dfsHistorySchema("history_archive"),
+    async run(args, env, caller) { return toolText(await dfsRun("history_archive", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_history_list",
+    title: "List private DFS history",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "List this account's saved historical audits, result logs and workspace snapshots. Metadata only, optional kind filter and cursor, 25 records by default. Nothing is recovered or saved automatically.",
+    inputSchema: dfsHistorySchema("history_list"),
+    async run(args, env, caller) { return toolText(await dfsRun("history_list", args, env, caller)); },
+  },
+  {
+    name: "dd_dfs_history_get",
+    title: "Read private DFS history",
+    catalog: "core",
+    readOnlyHint: true,
+    destructiveHint: false,
+    description: "Read one immutable account archive by history_id. Returns original payload and separate server save metadata. Retain missing values and provenance; cash rate and top1Share do not establish first-place upside.",
+    inputSchema: dfsHistorySchema("history_get"),
+    async run(args, env, caller) { return toolText(await dfsRun("history_get", args, env, caller)); },
+  },
   {
     name: "dd_dfs_portfolio",
     title: "Save private DFS portfolio audit",

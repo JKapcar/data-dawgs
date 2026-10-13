@@ -2738,7 +2738,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div><div class="atlas-kicker"><span class="atlas-mark" aria-hidden="true"></span> DataDawgs / Field Notes 01</div>
     <h2 id="labsWelcomeTitle">Find your angle.<br><em>Know the tradeoff.</em></h2></div>
     <div class="atlas-intro-right"><p>Projection. Salary. Popularity. Put your lineup decisions in perspective. Every dot is a lineup you can inspect.</p>
-    <div class="btnrow"><button class="btn" id="labsDemo" type="button">Run the demo ↗</button><button class="btn ghost" id="labsUpload" type="button">Use my CSV</button><button class="btn ghost" id="labsBuilder" type="button">Build by hand</button></div>
+    <div class="btnrow"><button class="btn" id="labsDemo" type="button">Run the demo ↗</button><button class="btn ghost" id="labsUpload" type="button">Use my CSV</button><button class="btn ghost" id="labsBuilder" type="button">Build by hand</button><a class="btn ghost" href="#history">Saved history</a></div>
     <p id="labsDemoStatus" role="status">Synthetic players. Real calculations. No entries.</p></div>
   </div>
   <div class="atlas-workbench">
@@ -2853,6 +2853,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <button data-s="solver">Solver<span class="kbd">3</span></button>
     <button data-s="sim">Simulator<span class="kbd">4</span></button>
     <button data-s="exposure">Exposure<span class="kbd">5</span></button>
+    <button data-s="history">Saved history</button>
     <button data-s="bankroll">Bankroll<span class="kbd">6</span></button>
     <button data-s="screener">Screener<span class="kbd">7</span></button>
     <button data-s="standings">Standings<span class="kbd">8</span></button>
@@ -3227,11 +3228,22 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="emptystate" id="expEmpty"><div class="big">No lineups yet</div><p><a href="#solver" data-goto="solver">Build lineups in Solver</a> to see how often each player appears across your lineup pool.</p></div>
 </section>
 
+<section class="sheet" id="sh-history" hidden data-ddb-skip>
+  <div class="card" id="historyCard">
+    <h3>Saved history <span class="rt">Private account archive</span></h3>
+    <p class="sub">Open the same saved audit on another signed-in device. Saving creates an unchanged historical copy; it never replaces your current draft. Importing a CSV alone does not upload it.</p>
+    <div class="btnrow"><button class="btn" id="hiRefresh" type="button">List my history</button><select class="fi" id="hiKind" aria-label="History kind" style="max-width:260px"><option value="">All history</option><option value="account_history">Results logs</option><option value="results_ledger">Post-lock audits</option><option value="workspace">Prediction workspaces</option></select><button class="btn ghost" id="hiMore" type="button" disabled>More history</button></div>
+    <p class="note" id="hiStatus" role="status" aria-live="polite">Sign in to list private history. No history is loaded automatically.</p>
+    <div id="hiList" class="btnrow" aria-label="Saved history records"></div>
+    <details class="gear"><summary>Archive a saved prediction workspace</summary><div class="gear-body"><p class="note">Copies the selected server revision, including predictions, inputs and portfolio. Later workspace edits cannot change this archive. An archive saved after lock does not backdate its predictions.</p><div class="btnrow"><button class="btn ghost" id="hiWorkspaces" type="button">List workspaces</button><select class="fi" id="hiWorkspace" aria-label="Workspace to archive" style="max-width:340px"></select><button class="btn" id="hiArchive" type="button" disabled>Archive this revision</button></div></div></details>
+    <div id="hiViewer" hidden><h3 id="hiTitle" style="margin-top:24px"></h3><p class="note" id="hiMeta"></p><div id="hiSummary" class="statrow"></div><p class="note" id="hiCaveat"></p><div class="btnrow"><button class="btn ghost" id="hiDownload" type="button">Download original JSON</button><button class="btn" id="hiOpenAudit" type="button" hidden>Open audit details</button></div><div class="tscroll"><table class="dtab" id="hiTable"></table></div><button class="btn ghost" id="hiRows" type="button" hidden>Show more rows</button></div>
+  </div>
+</section>
 <!-- ======================================================= BANKROLL -->
 <section class="sheet" id="sh-bankroll" hidden>
   <div class="card">
     <h3>Results <span class="rt" id="brMeta"></span></h3>
-    <p class="sub">Every contest you have entered, and what it actually returned. Stored on this device only — nothing is sent anywhere.</p>
+    <p class="sub">Every contest you have entered, and what it actually returned. Imports stay on this device. Save log to my account explicitly creates a private historical copy you can open on another device.</p>
     <div class="statrow" id="brStats"></div>
     <p class="note" id="brSig"></p>
   </div>
@@ -3261,7 +3273,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <textarea class="fi" id="brPaste" style="margin-top:10px" placeholder="Sport,Game_Type,Entry_Key,Contest_Key,Contest_Date_EST,Place,Points,Entry_Fee,Winnings_Non_Ticket,…"></textarea>
       <div class="btnrow"><button class="btn sm" id="brImport">Import</button>
         <button class="btn ghost sm" id="brExport">Export my log</button>
-        <button class="btn ghost sm" id="brWipe">Delete everything</button></div>
+        <button class="btn ghost sm" id="brWipe">Delete everything</button><button class="btn sm" id="brHistorySave" type="button">Save log to my account</button><a class="btn ghost sm" href="#history">Saved history</a></div>
       <p class="note" id="brImportNote"></p><p class="note">Entry_Key identifies each entry, including tied entries. Cash and ticket winnings stay separate. Missing amounts remain unknown. Legacy imports are never silently rewritten.</p><div class="btnrow"><button class="btn ghost sm" id="brLegacyArchive" disabled>Archive legacy import for re-import</button><button class="btn ghost sm" id="brArchiveExport">Export log + legacy archives</button></div><p class="note" id="brArchiveNote"></p>
     </div>
   </div>
@@ -3343,7 +3355,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="btnrow"><select class="fi" id="lgSaved" style="max-width:260px"></select><button class="btn ghost sm" id="lgOpen" disabled>Open kept ledger</button></div>
     <div class="banner" id="lgWarn" hidden></div>
     <div class="tscroll"><table class="dtab" id="lgTab"><thead></thead><tbody></tbody></table></div>
-    <p class="note" id="lgNote"></p><details class="gear"><summary>Actual contest bases and payout shape</summary><div id="lgContext"></div></details>
+    <div class="btnrow"><button class="btn" id="lgHistorySave" type="button" disabled>Save audit to my account</button><a class="btn ghost" href="#history">Saved history</a></div><p class="note" id="lgNote"></p><details class="gear"><summary>Actual contest bases and payout shape</summary><div id="lgContext"></div></details>
   </div>
   <div class="card">
     <h3>Standings ingest <span class="rt" id="stState"></span></h3>
@@ -4708,6 +4720,7 @@ root.DDFS.modelHelpers={assignRoles,corrBetween,cholesky,cvFor,sampleClassic,sam
 <script src="dfs-pareto.js?v=20260910-contests"></script>
 <script src="dfs-ledger.js?v=20261006"></script>
 <script defer src="dfs-ledger-ui.js?v=20261006"></script>
+<script defer src="dfs-history-ui.js"></script>
 <script>
 /* =========================================================================
    DFS workbench — slate ingest, solver + simulator wiring, exposure, bankroll.
@@ -9261,7 +9274,7 @@ async function doStandingsImport(text) {
 
 /* ---------------------------------------------------------------- sheets */
 
-const SHEETS = ["week","slate","solver","sim","exposure","bankroll","screener","standings","method"];
+const SHEETS = ["week","slate","solver","sim","exposure","bankroll","screener","standings","method","history"];
 function show(name) {
   const anchor = ["dfsPlaybook", "dfsGuide", "dfsCloudCard", "csvUploadCard"].includes(name) ? name : null;
   if (anchor) {
@@ -9595,6 +9608,7 @@ $('paretoStop').addEventListener('click', () => { if(frontWorker)frontWorker.ter
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     a.download = "dd-bankroll.csv"; document.body.appendChild(a); a.click(); a.remove();
   });
+  $('brHistorySave').onclick=()=>window.DDFSHistoryUI.save('account_history','DraftKings results · '+S.bankroll.length+' records',{version:2,records:S.bankroll,legacy_archives:S.bankrollArchives||[]});
   $('brLegacyArchive').onclick=()=>{
     const legacy=S.bankroll.filter(b=>b.k&&b.history_version!==2);if(!legacy.length)return;const previous=S.bankroll,previousArchives=S.bankrollArchives;
     S.bankrollArchives=[...(S.bankrollArchives||[]),{archived_at:new Date().toISOString(),reason:'Explicit archive before identity-preserving re-import; original legacy values unchanged',records:JSON.parse(JSON.stringify(legacy))}];
@@ -10290,7 +10304,7 @@ function botContext() {
       ["Why is the highest-projected lineup often a bad tournament entry?", "Why is chalk bad?"],
       ["What is leverage, and how should I read the win-lineup column?", "What is leverage?"],
       ["Are my results good enough to say I have an edge?", "Do I have an edge?"]] },
-    sys: `PRIVATE DECISION DESK: Build by hand opens the Lineup builder tab in the existing decision desk. CSV mapping and DK Classic/Showdown roster construction are session-local, with drag, tap and keyboard controls. The builder shows arithmetic, projected inputs and structural stack checks only. Cash/top-1%/win rates, copies, contest suitability regions and score cutoffs are unavailable without validated field/model evidence. The diagnostics iframe below the atlas keeps session-only private audits and builder inputs outside your context. Do not claim to read its inputs, findings, notes, entry evidence or recommendations. Users capture workspace explicitly and export/import private audit files; no backend audit retention or provider submission is added. Explain these boundaries and direct the user to the desk for its findings.
+    sys: `PRIVATE DECISION DESK: Build by hand opens the Lineup builder tab in the existing decision desk. CSV mapping and DK Classic/Showdown roster construction are session-local, with drag, tap and keyboard controls. The builder shows arithmetic, projected inputs and structural stack checks only. Cash/top-1%/win rates, copies, contest suitability regions and score cutoffs are unavailable without validated field/model evidence. The diagnostics iframe below the atlas keeps session-only private audits and builder inputs outside your context. Do not claim to read its inputs, findings, notes, entry evidence or recommendations. Users explicitly save/load a private portfolio in the desk. The Saved history sheet can save, list and open private account results/audits and archive exact server workspace revisions. It never imports or saves history automatically. Archived save time is not prediction time. Do not claim any personal history was saved without a successful save response. Its viewer is excluded from your page context. No provider submission is added. Explain these boundaries and direct the user to the desk for its findings.
 DFS LABS PLAYBOOK: The current operating guide is https://datadawgs216.com/docs/dfs-playbook.md and its full text is in the page at #dfsPlaybook. Follow it for account/workspace setup, tool sequence and actual-lobby construction. Capture contest size, fee, payout, entry limits and user entry count before claiming contest fit. Public guide access does not grant private workspace access. Selection metrics are contest-dependent: do not treat a default sort, rarity, top-10 rate or uncalibrated EV_adj as a universal objective. Preserve run receipts before select/settings invalidate results; never invent unavailable first-place EV. Historical Bible claims do not establish calibration or current capabilities.
 OPERATING CHECKLIST: Ask only for missing slate, source, workspace and contest inputs. Upload alone stays local; Save privately shares with the same account and Load saved retrieves remote changes. Use personal access, never another user's workspace or connector credential. Read schema, list/get, preview import, inspect matches, commit, configure, solve/explore, simulate, audit exposure, select and validate/export. Preserve user constraints and revisions; another solve replaces candidates and indexes can change. Showdown Total Own includes CPT when the vendor uses that convention: FLEX=Total-CPT. For cash prioritize projection and supported cash probability; for small-field GPP measure the cost of differentiation; for large top-heavy fields compare ceiling/correlation/tie dilution under actual payouts. Entry limit is not field size and the user chooses entry count. Compare several credible scripts and shared failure modes, not just different captains. Report salary, projection, contest assignment, script, failure condition and computed metrics. Refresh availability and official IDs before export. Do not submit entries.
 Classic hard ACO caps are constraints: never silently relax one. Score-tail simulations are uncalibrated lognormal assumptions, separate from the empirical contest simulator. QB score-tail loadings are assumed 0.35 game / 0.45 team. Threshold probabilities are not win probabilities or payout EV. A timeout proves neither infeasibility nor optimality.

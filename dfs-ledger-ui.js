@@ -1,7 +1,7 @@
 /* Results ledger panel (WO-1) on the Standings sheet. Engine: dfs-ledger.js.
    Standings CSVs are parsed in this browser and never uploaded. The pre-lock snapshot is
    read from the signed-in account's saved workspace exactly as saved; nothing is re-run.
-   Built ledgers are kept on this device (localStorage) and can be downloaded. */
+   Built ledgers may be kept on this device, downloaded, or explicitly archived to the private account. */
 (function(){
 'use strict';
 const L=window.DDFSLedger,$=id=>document.getElementById(id);if(!L||!$('lgBuild'))return;
@@ -44,7 +44,7 @@ function render(){
   ' · Objective: '+objective+' (stated at audit time). '+s.first_place_finishes+' observed first-place finishes; inspect ties and prize splits. '+s.calibration.eligible+' compatible calibration rows; '+s.calibration.excluded+' excluded. Cash predicted '+s.cash.predicted.toFixed(2)+' vs observed '+s.cash.observed+' (n='+s.cash.n+'); top-1% predicted '+s.top1pct.predicted.toFixed(2)+' vs observed '+s.top1pct.observed+' (n='+s.top1pct.n+'). Top-1% is not first place; top1Share is a ranking proxy, never first-place probability. One slate is not calibration.'+
   (ledger.schema!==L.SCHEMA?' Legacy ledger retained unchanged. Rebuild a new audit from original standings and archived prediction evidence; old calibration is excluded.':'');
  $('lgContext').innerHTML=ledger.contests.map(c=>'<p><b>'+esc(c.name||c.contest_id)+'</b>: field '+esc(c.field_size??'unknown')+'; paid fraction '+(c.paid_fraction==null?'unknown':(100*c.paid_fraction).toFixed(2)+'%')+'; first prize / pool '+(c.first_prize_pool_share==null?'unknown':(100*c.first_prize_pool_share).toFixed(2)+'%')+'. Equal-entry first-place reference '+(c.equal_entry_first_place_reference==null?'unknown':(100*c.equal_entry_first_place_reference).toFixed(3)+'%')+' (no-tie reference only, not your lineup or portfolio win probability).</p>').join('');
- ['lgCsv','lgCsvFull','lgJson','lgKeep'].forEach(id=>$(id).disabled=false);
+ ['lgCsv','lgCsvFull','lgJson','lgKeep','lgHistorySave'].forEach(id=>$(id).disabled=false);
 }
 function stored(){
  const keys=[];try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(KEY))keys.push(k.slice(KEY.length));}}catch{}
@@ -70,5 +70,9 @@ $('lgCsvFull').onclick=()=>save(ledger.slate.slate_id+'-audit-full.csv',L.auditC
 $('lgJson').onclick=()=>save(ledger.slate.slate_id+'-ledger.json',JSON.stringify(ledger,null,1),'application/json');
 $('lgKeep').onclick=()=>{try{const key=KEY+ledger.slate.slate_id;if(localStorage.getItem(key)&&localStorage.getItem(key)!==JSON.stringify(ledger))throw Error('A ledger already exists for this slate. Export the new JSON; the original archive was retained.');localStorage.setItem(key,JSON.stringify(ledger));stored();say('Kept on this device as '+ledger.slate.slate_id+'.');}catch(e){say('Not saved: '+e.message+' Download the JSON to retain the new audit.',true);}};
 $('lgOpen').onclick=()=>{try{ledger=JSON.parse(localStorage.getItem(KEY+$('lgSaved').value));render();say('');}catch{say('Could not read that saved ledger.',true);}};
+$('lgHistorySave').onclick=()=>window.DDFSHistoryUI.save('results_ledger',(ledger.slate.slate_id||'DFS')+' · post-lock audit',ledger);
+let accountHistoryOpen=false;
+window.DDFSLedgerUI={openHistory:value=>{ledger=JSON.parse(JSON.stringify(value));accountHistoryOpen=true;render();say('Opened from private account history. The archived original is unchanged.');location.hash='standings';}};
+window.addEventListener('dd-auth',()=>{if(accountHistoryOpen){ledger=null;accountHistoryOpen=false;render();['lgCsv','lgCsvFull','lgJson','lgKeep','lgHistorySave'].forEach(id=>$(id).disabled=true);$('lgContext').replaceChildren();say('Account changed. Open history for the current account.');}});
 stored();render();
 })();

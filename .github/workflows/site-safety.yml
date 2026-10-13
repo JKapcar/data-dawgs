@@ -36,6 +36,11 @@ on:
       - "tests/dfs-ledger.test.js"
       - "tests/dfs-history-correctness.test.cjs"
       - "tests/dfs-history.browser.cjs"
+      - "tests/dfs-account-history.browser.cjs"
+      - "tests/fixtures/dfs-history*.cjs"
+      - "dfs-history-ui.js"
+      - "work/dfs-history-store.js"
+      - "work/test-dfs-history-workspace.mjs"
       - "tests/fixtures/dfs-ledger/**"
       - "work/test-dfs-ledger-ui.cjs"
       - "guillotine*.js"
@@ -92,6 +97,11 @@ on:
       - "tests/dfs-ledger.test.js"
       - "tests/dfs-history-correctness.test.cjs"
       - "tests/dfs-history.browser.cjs"
+      - "tests/dfs-account-history.browser.cjs"
+      - "tests/fixtures/dfs-history*.cjs"
+      - "dfs-history-ui.js"
+      - "work/dfs-history-store.js"
+      - "work/test-dfs-history-workspace.mjs"
       - "tests/fixtures/dfs-ledger/**"
       - "work/test-dfs-ledger-ui.cjs"
       - "guillotine*.js"
@@ -181,3 +191,5 @@ jobs:
       - run: node work/test-dfs-portfolio-workspace.mjs
       - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-portfolio.browser.cjs
       - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-history.browser.cjs
+      - run: node work/test-dfs-history-workspace.mjs
+      - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-account-history.browser.cjs
