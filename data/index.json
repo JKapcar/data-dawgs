@@ -288,9 +288,9 @@
    {
     "path": "/data/models.json",
     "url": "https://datadawgs216.com/data/models.json",
-    "bytes": 3183,
+    "bytes": 3267,
     "as_of": "2026-10-12",
-    "sha256": "1e4f59e29b6d197b083931779da669bc19dbb098c30e0b2d63af62fa8259f84d",
+    "sha256": "605385db4fa933eb3d8acae86e398cf6a53b068b2712b1564df7327d12472064",
     "note": "Survivor uses nfelo published probabilities or nfelo-season-v1, not the legacy margin model below. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
@@ -360,9 +360,9 @@
    {
     "path": "/data/surfaces.json",
     "url": "https://datadawgs216.com/data/surfaces.json",
-    "bytes": 48374,
+    "bytes": 49165,
     "as_of": "2026-10-13",
-    "sha256": "0c89e70fdc1321216d10f9dc1f034110f17b40aca7b8c42c1d71ca91b5a8247a",
+    "sha256": "7de8a0d4a38cf0be5b2f70811b51f46203d753a321b185b07896344d80229d0d",
     "note": "THE DESIGN INTENT, STATED PLAINLY: every part of this site that makes sense to expose to a machine gets a dated JSON or markdown surface, and — where a tool computes something rather than just reporting it — an MCP tool and a REST route. This file is the map of how far that has actually got. `status` is honest. \"planned\" means NOT BUILT: do not tell a user you can call it. Gaps are listed on purpose — a coverage map that hides its holes is marketing."
    },
    {
@@ -384,9 +384,9 @@
    {
     "path": "/data/survivor.json",
     "url": "https://datadawgs216.com/data/survivor.json",
-    "bytes": 115003,
+    "bytes": 115490,
     "as_of": "2026-10-12",
-    "sha256": "368ca075fe4e30695b42f276f50962b5c1c21da2441d952ac95eafedb1e4d9e1",
+    "sha256": "61770b39f42776b80eec37546a2cfa856b356dc4dfd538b4c6a6a3746117be25",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"nfelo\" = published nfelo forecast without an extra blend; \"nfelo-season\" = nfelo pre-market calculation with current team/QB strength and game-specific HFA. Ownership is modelled, not observed."
    },
    {
@@ -516,8 +516,8 @@
    {
     "path": "/data/receipts-method.md",
     "url": "https://datadawgs216.com/data/receipts-method.md",
-    "bytes": 8680,
-    "sha256": "9daa3c9ffe44696a5f01599f9f0e46833bd04d5a1c484cec4ac475ea07c61b50",
+    "bytes": 8790,
+    "sha256": "e0f3120a8058e8c22ae80e926a134ae6be2536106cb4bc717134b76fda0f5943",
     "as_of": "2026-08-06"
    },
    {

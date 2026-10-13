@@ -431,7 +431,7 @@ write('models.json', {
         model_straight_up: SV.meta.model_su,
         blend_straight_up: SV.meta.blend_su,
         market_straight_up: SV.meta.market_su,
-        caveat: 'Backtest, not out-of-sample. The market column is the benchmark that matters.',
+        caveat: 'Backtest, not out-of-sample. market_straight_up is a legacy key name: it scores the nfelo line (model) copied from nfelo, not a sportsbook close.',
       },
     },
     bozo_index: {
@@ -460,7 +460,7 @@ write('models.json', {
         'Double-pick weeks are recorded but NOT simulated. Every survival number after a double-pick week ' +
         'is too optimistic. Open backlog item.',
       ownership_note:
-        'Pool ownership is MODELLED (chalk exponent over market win probability), not observed. ' +
+        'Pool ownership is MODELLED (chalk exponent over the nfelo line (model) win probability), not observed. ' +
         'No real pick data exists yet.',
     },
     nfelo_reference: { version: NF.meta.model_version, commit: NF.meta.sha, repo: NF.meta.repo },
@@ -479,15 +479,16 @@ write('survivor.json', {
     '"nfelo" = published nfelo forecast without an extra blend; "nfelo-season" = nfelo pre-market calculation with current team/QB strength and game-specific HFA. Ownership is modelled, not observed.',
   field_notes: {
     mm: 'Legacy margin diagnostic; not used to calculate win probabilities',
-    mk: 'market-implied home win probability (null when no line); derivation and provenance are named by mk_src',
-    mk_src: 'nfelo-mirror | carried:2026-08-06 | null',
-    mk_obs: 'when the market input was observed; null when no line',
-    mk_book: 'source book; null because the nfelo upstream output does not identify it',
+    mk: 'nfelo line (model): home win probability implied by the spread line in the daily nfelo mirror (null when none). A model output copied from nfelo, NOT a sportsbook quote; the key keeps its legacy name `mk` for existing consumers. Provenance is named by mk_src',
+    mk_src: 'nfelo-mirror (nfelo line (model)) | carried:2026-08-06 (dated 2026-08-06 devigged-moneyline carry-forward) | null',
+    mk_obs: 'upstream nfelo commit time for the nfelo line (model); null when none',
+    mk_book: 'always null: the nfelo line (model) comes from nfelo, which names no sportsbook, so no book is attributed',
     season_p: 'nfelo pre-market logistic probability using current base ratings, QB adjustments and game-specific HFA',
     season_elo_dif: 'Base home minus away Elo plus HFA Elo and net QB adjustment',
     nfp: 'Published nfelo home win probability; null when unavailable. No additional market blend.',
     nfelo_obs: 'Upstream commit timestamp for the published forecast',
     p: 'Home win probability used: published nfelo forecast or nfelo-based full-season projection',
+    'meta.market_su / meta.market_observed_at': 'Legacy key names kept for consumers. They describe the nfelo line (model) (backtest straight-up rate; upstream nfelo observation time), not a sportsbook market',
     src: 'nfelo | nfelo-season',
   },
   data: { meta: SV.meta, elo: SV.elo, teams: SV.teams, games: SV.games, ownership: SV.ownership || {} },
@@ -1246,6 +1247,16 @@ const MCP_REGISTRY = (() => {
     throw new Error(`work/mcp-block.js: ${declared} tools declared, ${out.length} fully annotated — run work/patch-mcp-annotations.py`);
   return out;
 })();
+// Every MCP_TOOLS entry, including the SwoleDawg sd_* tools served on the same endpoint.
+// Prose about tool counts and read-only status is generated from THIS, never hand-typed.
+const MCP_ALL_TOOLS = (() => {
+  const block = read('work/mcp-block.js');
+  const reg = block.slice(block.indexOf('const MCP_TOOLS = ['));
+  const rx = /\n    name: "((?:dd|sd)_\w+)",\n    title: "[^"]+",\n    catalog: "(core|full)",\n    readOnlyHint: (true|false),\n/g;
+  const out = [];
+  for (let m; (m = rx.exec(reg)); ) out.push({ name: m[1], catalog: m[2], readOnly: m[3] === 'true' });
+  return out;
+})();
 // Staged = the tool is in work/mcp-block.js and the committed Worker source, but the
 // deployed Worker has not been updated yet. It is NOT callable. Keeping it out of
 // tools_live is the whole point: the map must not claim coverage the endpoint has.
@@ -1639,7 +1650,7 @@ write('surfaces.json', {
               'A leading `core`/`full` is only read as a catalog when a credential follows it, or when ' +
               'the credential arrived in a header — so no passphrase can be stranded by its own name. ' +
               'NOT VERIFIED IN PRODUCTION: the per-catalog tools/list counts, which need a credential.',
-      why: 'Forty-three tool schemas cost 10-25k context tokens in every conversation that connects. ' +
+      why: 'Every tool schema costs context tokens in every conversation that connects (' + MCP_ALL_TOOLS.length + ' tools in the source registry). ' +
            'core is the everyday league surface; full is everything and stays the default, so the bare ' +
            '/mcp/<credential> URL keeps serving every tool a live connector may already be calling.',
       paths: { core: '/mcp/core/<credential>', full: '/mcp/full/<credential>' },
@@ -1651,6 +1662,9 @@ write('surfaces.json', {
               'registered tool carries a display title and a readOnlyHint matching its read/write behavior on tools/list. ' +
               'destructiveHint, idempotentHint and openWorldHint are deliberately absent rather ' +
               'than guessed. NOT VERIFIED ON THE WIRE: reading them back needs a credential.',
+      not_every_tool_is_read_only: 'Source registry (work/mcp-block.js MCP_TOOLS, dd_ and sd_): ' + MCP_ALL_TOOLS.length +
+        ' tools, ' + MCP_ALL_TOOLS.filter(t => !t.readOnly).length + ' with readOnlyHint=false, listed in read_only_false.',
+      read_only_false: MCP_ALL_TOOLS.filter(t => !t.readOnly).map(t => t.name),
       titles: Object.fromEntries(MCP_REGISTRY.map(t => [t.name, t.title])),
     },
   },

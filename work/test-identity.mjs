@@ -541,9 +541,9 @@ console.log("\nentitlement — what MCP sees, and what it must not do");
 {
   /* ⚠️ THE BACKFILL IS DELIBERATELY NOT IN loadUsers. loadUsers is the funnel every path
      uses, INCLUDING mcpAuth, so a write there would let a read-only MCP tool trigger a
-     Firebase write on its first call. "Every tool is read-only, asserted by test against
-     the source" is a published claim on connect.html and in surfaces.json; a self-healing
-     migration is not a good enough reason to make it need an asterisk. Nothing is lost:
+     Firebase write on its first call. (The old claim "every tool is read-only" is retired:
+     readOnlyHint=false tools exist and surfaces.json lists them; auth itself never writes.)
+     A self-healing migration is not a good enough reason to break that. Nothing is lost:
      entitlementOf() defaults on read, so no read is ambiguous before the record catches up. */
   /* ⚠️ THIS HAS TO SET UP ITS OWN CONDITION, AND THE FIRST DRAFT DID NOT. A source-level
      check for "no entitlement write inside loadUsers" was written first and the mutation

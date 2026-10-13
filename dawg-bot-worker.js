@@ -3825,9 +3825,10 @@ async function bozoRoster(env, cors) {
   /* ⚠️ THE ENTITLEMENT BACKFILL RIDES THE SAME PATCH, AND IT LIVES HERE RATHER THAN IN
      loadUsers ON PURPOSE. loadUsers is the funnel every path uses — including mcpAuth —
      so putting a write there would mean an MCP read-only tool could trigger a Firebase
-     write on its first call. "Every tool is read-only, asserted by test against the
-     source" is a published claim on connect.html and in surfaces.json, and a self-healing
-     migration is not a good enough reason to make it need an asterisk.
+     write on its first call. (The old published claim "every tool is read-only" is retired:
+     readOnlyHint=false tools exist, and surfaces.json lists them. The rule that survives is
+     that auth itself never writes.) A self-healing migration is not a good enough reason
+     to break that.
      Nothing is lost by backfilling here instead: entitlementOf() already returns the free
      default for an absent field, so every read is unambiguous whether or not the record
      has caught up, and this route runs on every sign-on page load. Accounts converge in
@@ -20106,8 +20107,10 @@ async function mcpAuth(request, url, env) {
     // check instead of re-fetching /users on every tool call.
     // ⚠️ THIS IS A READ. entitlementOf() never writes, and the backfill that persists the
     // field deliberately lives on /auth/roster instead of in loadUsers, so that no MCP call
-    // can ever trigger a Firebase write. Every tool except dd_submit_bozo_leg is read-only,
-    // and that one writes only at its confirm step — never during auth.
+    // can ever trigger a Firebase write. Not every tool is read-only: MCP_TOOLS carries
+    // readOnlyHint=false on 25 of its 86 tools (the dd_dfs_* workspace savers, the Bozo
+    // menu save/publish, dd_submit_bozo_leg, dd_verify_bozo_entry and the sd_* loggers).
+    // None of them writes during auth; each writes only inside its own run().
     if (!hit) return null;
     const display = hitUser && typeof hitUser.name === "string" && hitUser.name.trim()
       ? hitUser.name.trim() : hit;
@@ -20344,8 +20347,9 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
 }
 
 /* ------------------------------- the tools ------------------------------- */
-// All read-only except dd_submit_bozo_leg (two-phase; your own leg, or another member's
-// leg if you are this league's manager — see the tool).
+// Read/write is declared per tool by readOnlyHint; tools/list publishes it. At this commit
+// 86 tools (74 dd_, 12 sd_), 25 with readOnlyHint=false. dd_submit_bozo_leg is two-phase
+// (your own leg, or another member's leg if you are this league's manager — see the tool).
 // Data tools use the same Firebase paths, KV keys and published pages
 // the site itself uses; calculator tools mirror work/pound-core.js and are parity-tested.
 

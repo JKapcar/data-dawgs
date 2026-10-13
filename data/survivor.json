@@ -7,15 +7,16 @@
  "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"nfelo\" = published nfelo forecast without an extra blend; \"nfelo-season\" = nfelo pre-market calculation with current team/QB strength and game-specific HFA. Ownership is modelled, not observed.",
  "field_notes": {
   "mm": "Legacy margin diagnostic; not used to calculate win probabilities",
-  "mk": "market-implied home win probability (null when no line); derivation and provenance are named by mk_src",
-  "mk_src": "nfelo-mirror | carried:2026-08-06 | null",
-  "mk_obs": "when the market input was observed; null when no line",
-  "mk_book": "source book; null because the nfelo upstream output does not identify it",
+  "mk": "nfelo line (model): home win probability implied by the spread line in the daily nfelo mirror (null when none). A model output copied from nfelo, NOT a sportsbook quote; the key keeps its legacy name `mk` for existing consumers. Provenance is named by mk_src",
+  "mk_src": "nfelo-mirror (nfelo line (model)) | carried:2026-08-06 (dated 2026-08-06 devigged-moneyline carry-forward) | null",
+  "mk_obs": "upstream nfelo commit time for the nfelo line (model); null when none",
+  "mk_book": "always null: the nfelo line (model) comes from nfelo, which names no sportsbook, so no book is attributed",
   "season_p": "nfelo pre-market logistic probability using current base ratings, QB adjustments and game-specific HFA",
   "season_elo_dif": "Base home minus away Elo plus HFA Elo and net QB adjustment",
   "nfp": "Published nfelo home win probability; null when unavailable. No additional market blend.",
   "nfelo_obs": "Upstream commit timestamp for the published forecast",
   "p": "Home win probability used: published nfelo forecast or nfelo-based full-season projection",
+  "meta.market_su / meta.market_observed_at": "Legacy key names kept for consumers. They describe the nfelo line (model) (backtest straight-up rate; upstream nfelo observation time), not a sportsbook market",
   "src": "nfelo | nfelo-season"
  },
  "data": {

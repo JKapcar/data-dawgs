@@ -1,6 +1,11 @@
 # MCP tool annotations and the core/full catalogs
 
-**Status: DEPLOYED 2026-08-09. AMENDED 2026-08-10 — the registry is 41 tools, not 43.**
+**Status: DEPLOYED 2026-08-09. AMENDED 2026-08-10 — the registry was 41 tools, not 43.**
+
+**AMENDED 2026-10-13 — those counts are historical.** The source registry (`MCP_TOOLS` in
+`work/mcp-block.js`) now holds 86 tools: 74 `dd_` and 12 SwoleDawg `sd_`; 55 are in `core`.
+25 carry `readOnlyHint: false`, so "every tool is read-only" is no longer true. The current
+list is `mcp.annotations.read_only_false` in `data/surfaces.json`.
 The live endpoint carries the annotations and answers on both `/mcp/core/<credential>` and
 `/mcp/full/<credential>`; `GET /mcp/` advertises both. The bare `/mcp/<credential>` is
 unchanged and still full. `data/surfaces.json` reports them under `mcp.catalogs` and
@@ -27,7 +32,7 @@ Built in `e99ddf1`, base `c3f7250`. Deployed from `74ea314`; Worker etag
 ## What it does
 
 Every tool in `work/mcp-block.js` carries three new fields: `title` (a short display
-name), `readOnlyHint` (`true` for every tool today) and `catalog` (`core` or `full`).
+name), `readOnlyHint` (`true` for every tool on 2026-08-09; see the 2026-10-13 amendment for the tools that are now `false`) and `catalog` (`core` or `full`).
 `tools/list` projects the first two into the MCP annotation shape — top-level `title`
 plus `annotations: { title, readOnlyHint }`. `catalog` is ours and never crosses the wire.
 
