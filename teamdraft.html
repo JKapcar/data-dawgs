@@ -860,10 +860,17 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 /* One shared finish target; each roster also retains its frozen preseason dot. */
 .td-rfinish{position:absolute;top:-5px;bottom:-5px;width:8px;transform:translateX(-50%);
   background:repeating-conic-gradient(#111 0% 25%,#fff 0% 50%) 0 0 / 8px 8px;
-  box-shadow:0 0 0 1px #111;z-index:3;pointer-events:none}
-.td-preseason{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;
-  transform:translate(-50%,-50%);background:#111;border:2px solid #fff;
-  box-shadow:0 0 0 1px #111;z-index:5;pointer-events:none}
+  box-shadow:0 0 0 1px #111;z-index:0;pointer-events:none}
+.td-rtrack{isolation:isolate}
+.td-race .td-seg,.td-race .td-ghost{z-index:1}
+.td-race button.td-rlab{border:0;background:none;padding:0;text-align:left;font-family:inherit;cursor:pointer;color:inherit}
+.td-preseason{position:absolute;top:50%;width:36px;height:44px;padding:0;border:0;
+  transform:translate(-50%,-50%);background:transparent;z-index:5;cursor:pointer}
+.td-preseason::after{content:"";position:absolute;top:50%;left:50%;width:12px;height:12px;
+  transform:translate(-50%,-50%);border-radius:50%;background:#111;border:2px solid #fff;
+  box-shadow:0 0 0 1px #111}
+.td-preseason:focus-visible::after{outline:3px solid var(--accent);outline-offset:3px}
+.td-race button.td-rlab:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .td-marker-key{display:inline-block;vertical-align:middle;margin-right:5px;width:10px;height:10px;
   background:#111;border:1px solid #fff;box-shadow:0 0 0 1px #111;border-radius:50%}
 .td-marker-key.finish{border:0;border-radius:0;width:8px;height:16px;
@@ -1171,10 +1178,11 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
   border-radius:0 6px 6px 0;background:repeating-linear-gradient(135deg,
   color-mix(in srgb,var(--own) 40%,transparent) 0 6px,color-mix(in srgb,var(--own) 9%,transparent) 6px 12px)}
 .td-rfinish{top:-8px;bottom:-25px}
-.td-rrow:last-of-type .td-rfinish{bottom:-8px}
+.td-rrow:has(+ .td-rfoot) .td-rfinish{bottom:-8px}
 /* Totals stay legible below the bar; round details remain in the table and tooltip. */
 .td-race .td-seg{font-size:0}
-.td-rtot{left:auto!important;right:0;top:auto;bottom:-20px;transform:none;padding:0;
+.td-rtot{left:0!important;right:auto;top:auto;bottom:-20px;transform:none;padding:0 5px 0 0;
+  background:var(--surface-1);border-radius:3px;
   font-size:14px;line-height:1.15;text-shadow:none;color:var(--ink-1)}
 .td-rtot b{color:var(--own);font-weight:900}
 .td-rproj{font-weight:750;color:var(--ink-2)}
@@ -1199,7 +1207,7 @@ html:has(.td-shot[open]){overflow:hidden}
   .td-race-date{font-size:10px}.td-race-brand{font-size:10px}
   .td-rlab{font-size:15px;gap:5px}.td-rlab i{width:9px;height:9px}
   .td-rtrack{height:30px}.td-rrow{padding:7px 0 24px}.td-rtot{font-size:13px;bottom:-19px}
-  .td-race .td-rfinish{top:-7px;bottom:-24px}.td-race .td-rrow:last-of-type .td-rfinish{bottom:-7px}
+  .td-race .td-rfinish{top:-7px;bottom:-24px}.td-race .td-rrow:has(+ .td-rfoot) .td-rfinish{bottom:-7px}
   .td-rword{display:inline}.td-rfoot{font-size:11px;gap:4px 12px}
   .td-shot{padding:8px;border-radius:0}.td-shot-toolbar{margin:0 2px 8px}
 }
@@ -3286,6 +3294,14 @@ window.DDSheets = function(cfg){
     tip.style.top  = Math.max(8, Math.min(y+16, innerHeight - r.height - 8)) + "px";
   }
   const tipOff = () => { tip.style.opacity = "0"; };
+  // Native dot buttons support touch and keyboard without selecting the roster.
+  document.addEventListener("click", e=>{
+    const dot = e.target.closest(".td-preseason");
+    if(!dot){ tipOff(); return; }
+    const r = dot.getBoundingClientRect();
+    tipAt(dot.dataset.tip, r.left, r.bottom - 6);
+  });
+  document.addEventListener("keydown", e=>{ if(e.key === "Escape") tipOff(); });
   document.addEventListener("mousemove", e=>{
     const el = e.target.closest("[data-tip]");
     if(el) tipAt(el.dataset.tip, e.clientX, e.clientY); else tipOff();
@@ -3316,6 +3332,7 @@ window.DDSheets = function(cfg){
     if(opts && opts.jump && !selEmpty() && sheets) sheets.show("team");
   }
   document.addEventListener("click", e=>{
+    if(e.target.closest(".td-preseason")) return;
     const el = e.target.closest("[data-sel]");
     if(!el) return;
     const [kind, id] = el.dataset.sel.split(":");
@@ -3380,27 +3397,33 @@ window.DDSheets = function(cfg){
       const pre = preseason(name);
       const preText = Number.isFinite(pre) ? `Preseason ${n2(pre)} wins (2026-08-09 snapshot)`
         : 'Preseason expectation unavailable';
+      const change = Number.isFinite(pre) && Number.isFinite(D.drafters[name]?.projected)
+        ? D.drafters[name].projected - pre : null;
+      const changeText = change == null ? 'Change unavailable'
+        : `Change ${change >= 0 ? '+' : ''}${n2(change)} wins vs preseason`;
+      const forecastText = `${preText}. Current forecast ${n2(proj)} wins (as of ${DATED.as_of}). ${changeText}.`;
+      const dotTip = `<b>${esc(name)}</b><br>${esc(preText)}<br>Current forecast ${n2(proj)} wins (${esc(DATED.as_of)})<br>${esc(changeText)}`;
       const alt = `${name}: ${anyPlayed
         ? `${(w.rounds||[]).map((v,i)=>`round ${i+1} ${v==null?"no pick":n1(v)}`).join(", ")}, total ${n1(total)}`
-        : `no games played, projected ${n2(proj)}`}. ${preText}. ${targetText}.`;
-      return `<button type="button" class="td-rrow ${oc(name)}" data-sel="drafter:${esc(name)}"
+        : `no games played, projected ${n2(proj)}`}. ${forecastText} ${targetText}.`;
+      return `<div class="td-rrow ${oc(name)}" data-sel="drafter:${esc(name)}"
           aria-label="${esc(alt)}"
           data-tip="<b>${esc(name)}</b><br>${esc(rosterTxt)}<br>projected ${n2(proj)}<br>${esc(preText)}<br>${esc(targetText)}">
-        <span class="td-rlab"><i></i>${esc(name)}</span>
+        <button type="button" class="td-rlab" data-sel="drafter:${esc(name)}"><i></i>${esc(name)}</button>
         <span class="td-rtrack">
           ${segs}${ghost}
           ${finish == null ? '' : `<span class="td-rfinish" aria-hidden="true" style="left:${x(finish)}%"></span>`}
-          ${Number.isFinite(pre) ? `<span class="td-preseason" aria-hidden="true" style="left:${x(pre)}%"></span>` : ''}
-          <span class="td-rtot" style="left:${x(Math.max(total, proj))}%">${label}</span>
+          ${Number.isFinite(pre) ? `<button type="button" class="td-preseason" style="left:${x(pre)}%" aria-label="${esc(name)}: ${esc(forecastText)}" data-tip="${dotTip}"></button>` : ''}
+          <span class="td-rtot">${label}</span>
         </span>
-      </button>`;
+      </div>`;
     }).join("");
 
     $("tdRace").innerHTML = `<div class="td-race-head"><div><div class="td-race-brand">Data Dawgs · NFL pool</div><h3>Wins tracker</h3></div>
       <div class="td-race-date">${esc(DATED.as_of)}<br>${D.basis.settled_games} / ${D.basis.total_games} games played</div></div>
       <div class="td-scale">${ticks}</div>${rows}
       <div class="td-rfoot">
-        <span><i class="td-marker-key" aria-hidden="true"></i><b>Preseason</b> · Aug 9 snapshot</span>
+        <span><i class="td-marker-key" aria-hidden="true"></i><b>Preseason</b> · Aug 9 snapshot · tap dot for change</span>
         <span><i class="td-marker-key finish" aria-hidden="true"></i><b>${esc(targetText)}</b></span>
         <span>scale 0&ndash;${max} wins</span>
         <span>a tie counts <b>half</b> a win</span>

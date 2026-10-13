@@ -31,6 +31,33 @@ for (const n of data.draft_order) {
   assert.ok(Math.abs(data.drafters[n].ew-data.drafters[n].roster.reduce((s,t)=>s+data.teams[t].ew,0))<0.011);
 }
 assert.ok(!out.includes('td-rpar'));
+assert.equal((out.match(/<button type="button" class="td-preseason"/g)||[]).length,8);
+assert.ok(out.includes('Change +'));
+assert.ok(out.includes('Change -'));
+for (const n of data.draft_order) {
+  const delta = data.drafters[n].projected-data.drafters[n].ew;
+  assert.ok(out.includes(`Change ${delta>=0?'+':''}${delta.toFixed(2)} wins vs preseason`));
+}
+assert.ok(!/<button[^>]*class="td-rrow/.test(out),'Avoid nested buttons');
+assert.match(html,/\.td-rfinish\{[^}]*z-index:0/);
+assert.match(html,/\.td-race \.td-seg,\.td-race \.td-ghost\{z-index:1\}/);
+assert.match(html,/\.td-rtot\{left:0!important;right:auto/);
+// Exercise delegated tap and Escape handling without a browser dependency.
+const handlers = {};
+const calls = [];
+const interactions = html.slice(html.indexOf('  const tipOff ='),html.indexOf('  document.addEventListener("mousemove"'));
+const tip = {style:{opacity:'0'}};
+vm.runInNewContext(interactions, {tip,document:{addEventListener:(type,fn)=>handlers[type]=fn},
+  tipAt:(...args)=>{calls.push(args);tip.style.opacity='1';}});
+const dot = {dataset:{tip:'Preseason 35.59; current 39.96; change +4.37'},getBoundingClientRect:()=>({left:100,bottom:200})};
+handlers.click({target:{closest:()=>dot}});
+assert.deepEqual(calls[0],[dot.dataset.tip,100,194]);
+assert.equal(tip.style.opacity,'1');
+handlers.keydown({key:'Escape'});
+assert.equal(tip.style.opacity,'0');
+handlers.click({target:{closest:()=>dot}});
+handlers.click({target:{closest:()=>null}});
+assert.equal(tip.style.opacity,'0');
 const originalDots = positions(out,'td-preseason');
 data.drafters.Matt.projected = 50;
 data.drafters.Rob.projected = 50;
