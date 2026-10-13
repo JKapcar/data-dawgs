@@ -6,9 +6,10 @@
  "note": "Source scorecard for the Bozo Menu. Every number carries its n; nothing is ranked below 30 graded rows. Benchmarks: 50% at the line, 52.38% break-even at -110, and the near-close.",
  "data": {
   "weeks": [
-   "2026-10-05"
+   "2026-10-05",
+   "2026-10-12"
   ],
-  "rows_total": 64,
+  "rows_total": 156,
   "benchmarks": {
    "random_hit_rate": 0.5,
    "breakeven_at_minus_110": 0.5238,
@@ -157,6 +158,23 @@
    }
   ],
   "edge_buckets": {
+   "none": {
+    "n_graded": 0,
+    "wins": 0,
+    "losses": 0,
+    "pushes": 0,
+    "hit_rate": null,
+    "hit_wilson90": null,
+    "clv_points": {
+     "n": 0,
+     "mean": null
+    },
+    "close_fair_prob_at_line": {
+     "n": 0,
+     "mean": null
+    },
+    "verdict": "insufficient (n=0 < 30)"
+   },
    "percentage_points: 3-5": {
     "n_graded": 1,
     "wins": 1,
@@ -280,6 +298,6 @@
   }
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-13T14:15:59.729Z",
+ "built": "2026-10-13T19:52:54.512Z",
  "canonical_url": "https://datadawgs216.com/data/bozo-menu-scorecard.json"
 }
