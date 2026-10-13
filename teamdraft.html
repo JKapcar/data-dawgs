@@ -852,16 +852,22 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .td-ghost{position:absolute;top:3px;bottom:3px;border-radius:0 4px 4px 0;
   border:1px dashed color-mix(in srgb,var(--own) 62%,transparent);
   background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--own) 22%,transparent) 0 5px,transparent 5px 10px)}
-/* Sits above the par rule and carries a halo, because at most projections the label
-   runs straight through 34 and the rule is drawn over the fill by design. */
+/* Keep totals legible above chart markers. */
 .td-rtot{position:absolute;top:50%;transform:translateY(-50%);padding-left:9px;z-index:4;
   font:800 12.5px/1 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--own);
   white-space:nowrap;text-shadow:0 0 4px var(--surface-1),0 0 4px var(--surface-1),0 0 4px var(--surface-1)}
 .td-rproj{font-weight:650;color:var(--ink-3)}
-/* par: the reference the entire page rests on, so it is drawn ABOVE the fill and
-   overshoots the track top and bottom. Second thing the eye should find. */
-.td-rpar{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--ink-1);
-  opacity:.8;z-index:3;pointer-events:none}
+/* One shared finish target; each roster also retains its frozen preseason dot. */
+.td-rfinish{position:absolute;top:-5px;bottom:-5px;width:8px;transform:translateX(-50%);
+  background:repeating-conic-gradient(#111 0% 25%,#fff 0% 50%) 0 0 / 8px 8px;
+  box-shadow:0 0 0 1px #111;z-index:3;pointer-events:none}
+.td-preseason{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;
+  transform:translate(-50%,-50%);background:#111;border:2px solid #fff;
+  box-shadow:0 0 0 1px #111;z-index:5;pointer-events:none}
+.td-marker-key{display:inline-block;vertical-align:middle;margin-right:5px;width:10px;height:10px;
+  background:#111;border:1px solid #fff;box-shadow:0 0 0 1px #111;border-radius:50%}
+.td-marker-key.finish{border:0;border-radius:0;width:8px;height:16px;
+  background:repeating-conic-gradient(#111 0% 25%,#fff 0% 50%) 0 0 / 8px 8px}
 .td-rfoot{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:11px 0 0 104px;
   font:10.5px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--ink-3);
   letter-spacing:.05em}
@@ -1164,8 +1170,8 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .td-ghost{top:2px;bottom:2px;border:1px solid color-mix(in srgb,var(--own) 75%,transparent);
   border-radius:0 6px 6px 0;background:repeating-linear-gradient(135deg,
   color-mix(in srgb,var(--own) 40%,transparent) 0 6px,color-mix(in srgb,var(--own) 9%,transparent) 6px 12px)}
-.td-rpar{top:-8px;bottom:-25px;width:3px;opacity:.85}
-.td-rrow:last-of-type .td-rpar{bottom:-8px}
+.td-rfinish{top:-8px;bottom:-25px}
+.td-rrow:last-of-type .td-rfinish{bottom:-8px}
 /* Totals stay legible below the bar; round details remain in the table and tooltip. */
 .td-race .td-seg{font-size:0}
 .td-rtot{left:auto!important;right:0;top:auto;bottom:-20px;transform:none;padding:0;
@@ -1193,7 +1199,7 @@ html:has(.td-shot[open]){overflow:hidden}
   .td-race-date{font-size:10px}.td-race-brand{font-size:10px}
   .td-rlab{font-size:15px;gap:5px}.td-rlab i{width:9px;height:9px}
   .td-rtrack{height:30px}.td-rrow{padding:7px 0 24px}.td-rtot{font-size:13px;bottom:-19px}
-  .td-race .td-rpar{top:-7px;bottom:-24px}.td-race .td-rrow:last-of-type .td-rpar{bottom:-7px}
+  .td-race .td-rfinish{top:-7px;bottom:-24px}.td-race .td-rrow:last-of-type .td-rfinish{bottom:-7px}
   .td-rword{display:inline}.td-rfoot{font-size:11px;gap:4px 12px}
   .td-shot{padding:8px;border-radius:0}.td-shot-toolbar{margin:0 2px 8px}
 }
@@ -2867,10 +2873,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <!-- ============================ THE POOL ============================ -->
   <section id="sheetPool">
     <section class="p-section" id="tracker" style="padding-top:0">
-      <header><div><h2>Wins tracker</h2><p class="dek" id="tdTrackDek">Each bar is a roster's season against the
-        <b>par rule at 34</b> — 272 wins split eight ways. Solid segments are wins actually banked,
-        one per draft round; the hatched extension is the season still to play, ending at that
-        roster's projection. Scale is fixed at 48 so par never moves.</p></div>
+      <header><div><h2>Wins tracker</h2><p class="dek" id="tdTrackDek">Solid segments are wins banked; the hatched extension ends at each roster's current projection. The dot marks its preseason expectation. The checkered line marks the highest current expected season wins across all eight rosters — the target to chase.</p></div>
         <div class="p-meta" id="trackMeta" aria-live="polite"></div></header>
       <div class="td-race-actions"><button type="button" class="td-shot-btn" id="tdScreenshot">Screenshot view</button></div>
       <div class="td-race" id="tdRace"></div>
@@ -3237,7 +3240,7 @@ window.DDSheets = function(cfg){
 
   const DIVS = ["AFC East","AFC North","AFC South","AFC West",
                 "NFC East","NFC North","NFC South","NFC West"];
-  const TRACK_MAX = 48;                 // fixed, so the par rule never moves week to week
+  const TRACK_MAX = 48;                 // usual wins axis; expand only if a marker exceeds it
 
   let D = null, ORDER = [], sheets = null;
   /* SELECTION IS A SET, not one thing. Two drafters' distributions laid over each
@@ -3330,16 +3333,19 @@ window.DDSheets = function(cfg){
   }
 
   /* ====================== 1 · the wins tracker ========================== */
-  /* A race track, not a grid. The question people actually ask during the season
-     is "who is ahead and by how much", and a table of sixteen numbers answers it
-     slower than eight bars against a rule.
-
-     ⚠️ The scale is FIXED at 48 and does not autoscale to the leader. The whole
-     value of the par rule is that it sits in the same place every week; rescaling
-     to whoever is hot would move it and destroy the comparison. */
+  /* Preserve the wins axis while comparing preseason expectations with the live leader. */
   function race(){
     const W = D.wins_tracker || {};
-    const x = v => (Math.max(0, Math.min(TRACK_MAX, v)) / TRACK_MAX * 100);
+    const projections = D.draft_order.map(n=>D.drafters[n]?.projected);
+    const finish = projections.length && projections.every(v=>Number.isFinite(v) && v >= 0)
+      ? Math.max(...projections) : null;
+    const leaders = finish == null ? [] : D.draft_order.filter(n=>D.drafters[n].projected === finish);
+    const preseason = name => D.drafters[name]?.ew;
+    const max = Math.max(TRACK_MAX, Math.ceil(Math.max(0, ...projections.filter(Number.isFinite),
+      ...D.draft_order.map(preseason).filter(Number.isFinite)) / 12) * 12);
+    const x = v => (Math.max(0, Math.min(max, v)) / max * 100);
+    const targetText = finish == null ? 'Current target unavailable'
+      : `Current leader ${leaders.join(' / ')}: ${n2(finish)} expected season wins (as of ${DATED.as_of})`;
     const anyPlayed = D.draft_order.some(n=>(W[n]?.total || 0) > 0);
     /* Sort by total once there are totals; draft order before that, because
        sorting eight identical zeros invents a ranking that does not exist. */
@@ -3347,7 +3353,7 @@ window.DDSheets = function(cfg){
       ? [...D.draft_order].sort((a,b)=>(W[b].total||0) - (W[a].total||0))
       : [...D.draft_order];
 
-    const ticks = [0,12,24,34,48].map(v=>
+    const ticks = Array.from({length:max/12+1}, (_,i)=>i*12).map(v=>
       `<span style="left:${x(v)}%">${v}</span>`).join("");
 
     const rows = names.map(name=>{
@@ -3371,16 +3377,20 @@ window.DDSheets = function(cfg){
         }<span class="td-rword"> projected</span></span>`;
       const rosterTxt = (w.teams||[]).map((t,i)=>
         t ? `R${i+1} ${t}${w.rounds[i]!=null?` ${n1(w.rounds[i])}`:""}` : `R${i+1} —`).join(" · ");
+      const pre = preseason(name);
+      const preText = Number.isFinite(pre) ? `Preseason ${n2(pre)} wins (2026-08-09 snapshot)`
+        : 'Preseason expectation unavailable';
       const alt = `${name}: ${anyPlayed
         ? `${(w.rounds||[]).map((v,i)=>`round ${i+1} ${v==null?"no pick":n1(v)}`).join(", ")}, total ${n1(total)}`
-        : `no games played, projected ${n2(proj)}`}, par 34.`;
+        : `no games played, projected ${n2(proj)}`}. ${preText}. ${targetText}.`;
       return `<button type="button" class="td-rrow ${oc(name)}" data-sel="drafter:${esc(name)}"
           aria-label="${esc(alt)}"
-          data-tip="<b>${esc(name)}</b><br>${esc(rosterTxt)}<br>projected ${n2(proj)} · par ${n2(D.par)}">
+          data-tip="<b>${esc(name)}</b><br>${esc(rosterTxt)}<br>projected ${n2(proj)}<br>${esc(preText)}<br>${esc(targetText)}">
         <span class="td-rlab"><i></i>${esc(name)}</span>
         <span class="td-rtrack">
           ${segs}${ghost}
-          <span class="td-rpar" style="left:${x(D.par)}%"></span>
+          ${finish == null ? '' : `<span class="td-rfinish" aria-hidden="true" style="left:${x(finish)}%"></span>`}
+          ${Number.isFinite(pre) ? `<span class="td-preseason" aria-hidden="true" style="left:${x(pre)}%"></span>` : ''}
           <span class="td-rtot" style="left:${x(Math.max(total, proj))}%">${label}</span>
         </span>
       </button>`;
@@ -3390,8 +3400,9 @@ window.DDSheets = function(cfg){
       <div class="td-race-date">${esc(DATED.as_of)}<br>${D.basis.settled_games} / ${D.basis.total_games} games played</div></div>
       <div class="td-scale">${ticks}</div>${rows}
       <div class="td-rfoot">
-        <span>&#9650; the vertical rule is <b>par — ${n2(D.par)}</b></span>
-        <span>scale fixed 0&ndash;${TRACK_MAX}</span>
+        <span><i class="td-marker-key" aria-hidden="true"></i><b>Preseason</b> · Aug 9 snapshot</span>
+        <span><i class="td-marker-key finish" aria-hidden="true"></i><b>${esc(targetText)}</b></span>
+        <span>scale 0&ndash;${max} wins</span>
         <span>a tie counts <b>half</b> a win</span>
       </div>`;
 
@@ -3409,19 +3420,7 @@ window.DDSheets = function(cfg){
         Draft-day values are retained only for historical comparisons. Nothing here is graded.
         <br><small>Data updated: ${esc(DATED.built || DATED.as_of)} · <span id="tdRefreshState">Checking automatically</span></small>`;
     }
-    if(dek){
-      const n = D.basis?.settled_games || 0;
-      dek.innerHTML = n > 0
-        ? `Each bar is a roster's season against the <b>par rule at 34</b> — 272 wins split eight
-           ways. Solid segments are wins actually banked, one per draft round; the hatched extension
-           is the season still to play, ending at that roster's projection. Scale is fixed at 48 so
-           par never moves.`
-        : `Each bar is a roster's season against the <b>par rule at 34</b> — 272 wins split eight
-           ways. Solid segments are wins actually banked, one per draft round; the hatched extension
-           is the season still to play, ending at that roster's projection. Nothing is banked yet,
-           so right now every bar is entirely projection — and that is the honest shape of it.
-           Scale is fixed at 48 so par never moves.`;
-    }
+    if(dek) dek.textContent = "Solid segments are wins banked; the hatched extension ends at each roster's current projection. The dot marks its preseason expectation. The checkered line marks the highest current expected season wins across all eight rosters — the target to chase.";
 
     /* the disclosure table — round by round, which the bars deliberately compress */
     const head = `<thead><tr><th>Drafter</th><th>R1</th><th>R2</th><th>R3</th><th>R4</th>
@@ -4270,6 +4269,7 @@ window.DD_BOTCTX = {
     ['Why do games between two of my own teams not help me?','Internal games'],
     ['What does the reach number on a pick actually mean?','Reach explained']]},
   sys: `The Wins tracker has a Screenshot view button that opens a dated, clean copy of the current chart. Close or Escape returns to the page. This is a display feature, not a data refresh.
+The wins tracker dot is the frozen 2026-08-09 preseason roster expectation; the checkered line is the maximum current full-season projected wins across all eight drafters, dated by the payload. It is a moving comparison target, not a guaranteed winning score.
 RIGHT NOW you are on The 32-Team Draft: a private eight-person pool where everyone owns four NFL teams and total regular-season wins is the only criterion. Every number is read from /data/draft-2026.json.
 - ⚠️ NOTHING HERE IS GRADED AND NOBODY IS WINNING. Banked cells are observed wins only. If no game has been played, the tracker reads zero because zero is the true number. Say that before discussing any standing. Team-sheet win curves and expected-wins displays use live projections conditioned on banked results. The raw ew field is retained for historical comparisons only.
 - EXPECTED WINS on live displays = projected = banked wins plus remaining-game probabilities. Data updates daily, not play by play; the open page checks every minute. Draft-day ew and posted lines are historical comparisons, and only the draft board uses them to describe pick value.
@@ -4318,7 +4318,7 @@ RIGHT NOW you are on The 32-Team Draft: a private eight-person pool where everyo
   const spine = `THE 32-TEAM DRAFT PAGE. Everything is read from /data/draft-2026.json, built by scripts/team_draft_pool.py; the results and price feeds it composes are /data/nfl-schedule.json and /data/survivor.json. Tier: Pup. Nothing on the page is graded.
 WHAT EACH FIGURE IS: Posted line = the median regular-season win total on the board, half-points included. Expected wins on live displays = projected = banked plus remaining-game probabilities. Raw ew is the historical draft-day devig, used only for draft comparisons and diagnostics. Δvig = the gap between the two. Σp = the 17 game probabilities summed. μdist = the mean of the win distribution. Internal = head-to-head meetings inside one roster, the only purely structural figure here. Par is 34 wins per roster (272 split eight ways) and 8.5 per team.
 WHERE A GAME'S NUMBER COMES FROM, resolved per game in order: a settled result if it has been played, a market price for an unplayed game, the model beyond the market's horizon, and before the season the frozen preseason devig. The switch is data-driven — one settled game anywhere flips the whole payload — so no date is hardcoded.
-THE SECTIONS: wins tracker against par · a spin wheel whose slices are finishing probability from the payload · Monte Carlo over all 272 games · expected wins for all 32 with the posted line marked · the 32x32 head-to-head grid · the snake board with reach · eight roster cards · week-by-week probabilities with same-owner collisions outlined · win distributions · every game as a table · a diagnostics panel that reports drift rather than only printing OK.
+THE SECTIONS: wins tracker with frozen preseason dots and a shared checkered target at the highest current full-season projection · a spin wheel whose slices are finishing probability from the payload · Monte Carlo over all 272 games · expected wins for all 32 with the posted line marked · the 32x32 head-to-head grid · the snake board with reach · eight roster cards · week-by-week probabilities with same-owner collisions outlined · win distributions · every game as a table · a diagnostics panel that reports drift rather than only printing OK.
 
 `;
   return () => spine + '\n\n' + board() + '\n\n'
