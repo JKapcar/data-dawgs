@@ -3262,7 +3262,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <div class="btnrow"><button class="btn sm" id="brImport">Import</button>
         <button class="btn ghost sm" id="brExport">Export my log</button>
         <button class="btn ghost sm" id="brWipe">Delete everything</button></div>
-      <p class="note" id="brImportNote"></p>
+      <p class="note" id="brImportNote"></p><p class="note">Entry_Key identifies each entry, including tied entries. Cash and ticket winnings stay separate. Missing amounts remain unknown. Legacy imports are never silently rewritten.</p><div class="btnrow"><button class="btn ghost sm" id="brLegacyArchive" disabled>Archive legacy import for re-import</button><button class="btn ghost sm" id="brArchiveExport">Export log + legacy archives</button></div><p class="note" id="brArchiveNote"></p>
     </div>
   </div>
 
@@ -3328,6 +3328,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <label class="fld"><span>Lock time</span><input class="fi" type="datetime-local" id="lgLock"></label>
       <label class="fld"><span>Pre-lock workspace</span><select class="fi" id="lgWs"></select></label>
     </div>
+    <label class="fld"><span>Stated decision objective (recorded at audit time)</span><select class="fi" id="lgObjective"><option value="unrecorded">Not recorded</option><option value="first_place_upside">First-place tournament upside</option><option value="cash">Cash frequency</option><option value="profit">Expected profit</option></select></label><p class="note">Cash rate does not grade first-place upside. Top-1% share is a ranking proxy, not first-place probability. Legacy snapshot timestamps stay unverified; rebuild from original evidence without overwriting the archive.</p>
     <label class="fld"><span>Contest-standings CSVs (contest-standings-&lt;id&gt;.csv)</span><input class="fi" type="file" id="lgFiles" multiple accept=".csv,text/csv"></label>
     <label class="note"><input type="checkbox" id="lgDk" checked> Fetch entry fee and payout table from DraftKings by contest ID</label>
     <label class="note"><input type="checkbox" id="lgPost"> Allow a snapshot saved after lock (every row is labelled not pre-lock)</label>
@@ -3342,7 +3343,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="btnrow"><select class="fi" id="lgSaved" style="max-width:260px"></select><button class="btn ghost sm" id="lgOpen" disabled>Open kept ledger</button></div>
     <div class="banner" id="lgWarn" hidden></div>
     <div class="tscroll"><table class="dtab" id="lgTab"><thead></thead><tbody></tbody></table></div>
-    <p class="note" id="lgNote"></p>
+    <p class="note" id="lgNote"></p><details class="gear"><summary>Actual contest bases and payout shape</summary><div id="lgContext"></div></details>
   </div>
   <div class="card">
     <h3>Standings ingest <span class="rt" id="stState"></span></h3>
@@ -8882,123 +8883,50 @@ function bar(name, frac, label, mark) {
 
 function brAdd(rec) { S.bankroll.push(rec); S.bankroll.sort((a, b) => (a.date || "").localeCompare(b.date || "")); save(); renderBankroll(); renderStrip(); }
 
-function brImport(text) {
-  const rows = parseCSV(text);
-  if (rows.length < 2) return { error: "Nothing to import." };
-  const head = rows[0].map(h => String(h).trim().toLowerCase().replace(/[^a-z0-9]/g, ""));
-  const at = (...names) => { for (const n of names) { const j = head.indexOf(n); if (j >= 0) return j; } return -1; };
-  const iFee = at("entryfee", "entry_fee", "fee");
-  const iWin = at("winningsnonticket", "winnings", "winningsnonticketwinningsticket", "prize");
-  const iWinT = at("winningsticket");
-  const iDate = at("contestdateest", "contestdate", "date", "entrydate");
-  const iName = at("contestname", "contest", "title", "contestkey");
-  const iType = at("gametype", "type", "contesttype", "sport");
-  const iPlace = at("place", "rank", "position");
-  const iEntries = at("contestentries", "entries");
-  if (iFee < 0) return { error: "Could not find an entry-fee column. This does not look like a DraftKings contest-history export." };
-  const num = v => { const x = parseFloat(String(v || "").replace(/[^0-9.\-]/g, "")); return isFinite(x) ? x : 0; };
-  let added = 0;
-  const seen = {};
-  S.bankroll.forEach(b => { if (b.k) seen[b.k] = 1; });
-  for (let r = 1; r < rows.length; r++) {
-    const row = rows[r];
-    const fee = num(row[iFee]);
-    if (!isFinite(fee)) continue;
-    const win = (iWin >= 0 ? num(row[iWin]) : 0) + (iWinT >= 0 ? num(row[iWinT]) : 0);
-    let date = iDate >= 0 ? String(row[iDate] || "").trim() : "";
-    const dm = date.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/) || date.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
-    if (dm) date = dm[1].length === 4 ? `${dm[1]}-${String(dm[2]).padStart(2, "0")}-${String(dm[3]).padStart(2, "0")}`
-                                      : `${dm[3]}-${String(dm[1]).padStart(2, "0")}-${String(dm[2]).padStart(2, "0")}`;
-    else date = date.slice(0, 10);
-    const name = iName >= 0 ? String(row[iName] || "").trim() : "";
-    const rawType = iType >= 0 ? String(row[iType] || "").trim() : "";
-    const type = /double|50|fifty|head|h2h|cash/i.test(rawType + name) ? "Cash"
-               : /showdown|single game|captain/i.test(rawType + name) ? "Showdown"
-               : /satellite|qualifier|ticket/i.test(rawType + name) ? "Satellite" : "GPP";
-    // ⚠️ De-duplicated on a content key so re-importing an overlapping export does not
-    // silently double the bankroll. Exports overlap constantly.
-    const k = [date, name, fee, win, iPlace >= 0 ? row[iPlace] : r].join("~");
-    if (seen[k]) continue;
-    seen[k] = 1;
-    S.bankroll.push({ date, name, type, entries: 1, fee, win, k,
-                      place: iPlace >= 0 ? num(row[iPlace]) : null,
-                      size: iEntries >= 0 ? num(row[iEntries]) : null });
-    added++;
-  }
-  S.bankroll.sort((a, b) => (a.date || "").localeCompare(b.date || ""));
-  save();
-  return { added, total: rows.length - 1 };
+function brImport(text,filename) {
+  try { const result=DDFSLedger.mergeHistory(S.bankroll,DDFSLedger.parseHistory(text,{filename})),previous=S.bankroll;S.bankroll=result.records;if(!save(true)){S.bankroll=previous;throw Error("Device storage failed; the previous log was retained.");}return result; }
+  catch(e){return {error:e.message};}
 }
-
-function brSummary(list) {
-  let staked = 0, won = 0, entries = 0;
-  for (const b of list) { const e = b.entries || 1; staked += e * b.fee; won += b.win; entries += e; }
-  return { staked, won, net: won - staked, roi: staked ? (won - staked) / staked : null, entries, n: list.length };
-}
-
-// Bootstrap the ROI confidence band by resampling CONTESTS, not entries. A 150-entry
-// night is one correlated bet on one slate, and resampling entries would pretend it was
-// 150 independent ones — which is exactly the error that makes a small sample look like
-// an edge.
-function brBootstrap(list, iters) {
-  if (list.length < 5) return null;
-  const R = E.rng(20260101), n = list.length, out = [];
-  const stake = list.map(b => (b.entries || 1) * b.fee), win = list.map(b => b.win);
-  for (let k = 0; k < (iters || 3000); k++) {
-    let s = 0, w = 0;
-    for (let i = 0; i < n; i++) { const j = (R() * n) | 0; s += stake[j]; w += win[j]; }
-    if (s > 0) out.push((w - s) / s);
-  }
-  if (!out.length) return null;
-  out.sort((a, b) => a - b);
-  return { lo: out[Math.floor(out.length * 0.025)], hi: out[Math.floor(out.length * 0.975)], n };
-}
+function brSummary(list) { return DDFSLedger.historySummary(list); }
+// Entry rows share contests and slates. No independent-entry confidence claim is valid here.
+function brBootstrap() { return null; }
 
 function renderBankroll() {
   const L = S.bankroll;
-  $("brMeta").textContent = L.length ? `${L.length} contests` : "";
+  $("brMeta").textContent = L.length ? `${L.length} records` : "";
   const s = brSummary(L);
   $("brStats").innerHTML = [
-    ["Contests", s.n], ["Entries", s.entries],
-    ["Staked", money(s.staked)], ["Won", money(s.won)],
+    ["Contest IDs", s.contests??"unknown"], ["Entries", s.entries],
+    ["Staked", money(s.staked)], ["Cash won", money(s.won)], ["Tickets (face value)", money(s.tickets)],
     ["Net", money(s.net)], ["ROI", s.roi == null ? "—" : (s.roi * 100).toFixed(1) + "%"]
   ].map(([l, v]) => `<div class="s"><div class="sv">${v}</div><div class="sl">${l}</div></div>`).join("");
 
-  const bs = brBootstrap(L);
-  $("brSig").innerHTML = !L.length ? "Nothing logged yet."
-    : !bs ? `<span class="warn">Five contests is the minimum before a confidence band means anything. With ${L.length}, this is a ledger, not evidence.</span>`
-    : (() => {
-        const lo = (bs.lo * 100).toFixed(0), hi = (bs.hi * 100).toFixed(0);
-        const spans0 = bs.lo < 0 && bs.hi > 0;
-        return `Bootstrapped 95% band on ROI: <b>${lo}% to ${hi}%</b>, resampling ${bs.n} contests. ` + (spans0
-          ? `<span class="warn">That band contains zero, so this sample cannot distinguish your results from breaking even — in either direction. Nothing here is yet evidence of an edge or of a leak.</span>`
-          : bs.lo > 0
-            ? `<span class="good">The whole band is above zero. That is real for this sample; it is still one sample, and DFS results are heavy-tailed enough that a single tournament score can carry it.</span>`
-            : `<span class="bad">The whole band is below zero. Over this sample you are losing money at a rate the noise does not explain.</span>`);
-      })();
+  $('brSig').textContent=!L.length?'Nothing logged yet.':`${s.missing_cash} ${s.missing_cash===1?'entry has':'entries have'} unknown cash winnings. Ticket winnings are separate from cash ROI. No confidence band or strategy grade is inferred: entries share contests and slates. For a first-place objective, review finish/field size and payout shape; cash rate is not the goal.`;
+  $('brLegacyArchive').disabled=!L.some(b=>b.k&&b.history_version!==2);
+  $('brArchiveNote').textContent=(S.bankrollArchives||[]).length+' legacy import archives on this device. Original rows are retained; no missing values are backfilled.';
 
   drawBrChart();
 
   // by type
   const types = {};
   L.forEach(b => (types[b.type || "Other"] = types[b.type || "Other"] || []).push(b));
-  let h = `<thead><tr><th class="l">Type</th><th>Contests</th><th>Entries</th><th>Staked</th><th>Won</th><th>Net</th><th>ROI</th></tr></thead><tbody>`;
+  let h = `<thead><tr><th class="l">Type</th><th>Records</th><th>Entries</th><th>Staked</th><th>Won</th><th>Net</th><th>ROI</th></tr></thead><tbody>`;
   for (const t of Object.keys(types).sort()) {
     const x = brSummary(types[t]);
     h += `<tr><td class="l">${esc(t)}</td><td>${x.n}</td><td>${x.entries}</td><td>${money(x.staked)}</td>
-      <td>${money(x.won)}</td><td class="${x.net >= 0 ? "pos" : "neg"}">${money(x.net)}</td>
-      <td class="${x.roi >= 0 ? "pos" : "neg"}">${x.roi == null ? "—" : (x.roi * 100).toFixed(0) + "%"}</td></tr>`;
+      <td>${money(x.won)}</td><td class="${x.net==null?"mut":x.net >= 0 ? "pos" : "neg"}">${money(x.net)}</td>
+      <td class="${x.roi==null?"mut":x.roi >= 0 ? "pos" : "neg"}">${x.roi == null ? "—" : (x.roi * 100).toFixed(0) + "%"}</td></tr>`;
   }
   $("brByType").innerHTML = L.length ? h + "</tbody>" : "";
 
   const CAP = 150, recent = L.slice().reverse();
   let t = `<thead><tr><th class="l">Date</th><th class="l">Contest</th><th class="l">Type</th><th>Entries</th>
-    <th>Fee</th><th>Won</th><th>Net</th><th></th></tr></thead><tbody>`;
+    <th>Entry ID</th><th>Finish / field</th><th>Points</th><th>Fee</th><th>Cash won</th><th>Tickets</th><th>Cash net</th><th></th></tr></thead><tbody>`;
   recent.slice(0, CAP).forEach((b) => {
-    const i = L.indexOf(b), net = b.win - (b.entries || 1) * b.fee;
+    const i = L.indexOf(b), net = !(b.k&&b.history_version!==2)&&Number.isFinite(b.win)&&Number.isFinite(b.fee)?b.win-(b.entries||1)*b.fee:null;
     t += `<tr><td class="l mut">${esc(b.date || "—")}</td><td class="l" style="max-width:280px">${esc(b.name || "—")}</td>
-      <td class="l mut">${esc(b.type || "")}</td><td>${b.entries || 1}</td><td>${money(b.fee)}</td>
-      <td>${money(b.win)}</td><td class="${net >= 0 ? "pos" : "neg"}">${money(net)}</td>
+      <td class="l mut">${esc(b.type || "")}</td><td>${b.entries || 1}</td><td>${esc(b.entry_id||"unknown")}</td><td>${esc(b.place??"unknown")} / ${esc(b.size??"unknown")}</td><td>${esc(b.points??"unknown")}</td><td>${money(b.fee)}</td>
+      <td>${b.k&&b.history_version!==2?"legacy combined amount: ":""}${money(b.win)}</td><td>${money(b.ticket_winnings)}</td><td class="${net==null?"mut":net >= 0 ? "pos" : "neg"}">${money(net)}</td>
       <td><button class="toggle" data-del="${i}">Delete</button></td></tr>`;
   });
   $("brTab").innerHTML = L.length ? t + "</tbody>" : "";
@@ -9010,6 +8938,7 @@ function drawBrChart() {
   if (!L.length) { box.innerHTML = `<p class="note">Log or import some contests and the running profit line appears here.</p>`; $("brChartNote").textContent = ""; return; }
   // ⚠️ Size the viewBox to the live container in CSS pixels. A fixed viewBox plus
   // width:100% silently shrinks every label on a phone.
+  if(L.some(b=>(b.k&&b.history_version!==2)||!Number.isFinite(b.fee)||!Number.isFinite(b.win))){box.innerHTML='<p class="note">Running cash profit is unknown while fees or cash winnings are missing.</p>';$('brChartNote').textContent='Original rows retained; missing does not mean zero.';return;}
   const W = Math.max(280, box.clientWidth || 640), H = 210, PADL = 52, PADB = 26, PADT = 12, PADR = 12;
   let cum = 0;
   const pts = L.map((b, i) => { cum += b.win - (b.entries || 1) * b.fee; return { x: i, y: cum, d: b.date }; });
@@ -9024,7 +8953,7 @@ function drawBrChart() {
       <line x1="${PADL}" y1="${Y(v).toFixed(1)}" x2="${W - PADR}" y2="${Y(v).toFixed(1)}" stroke="var(--grid)" stroke-width="1"/>`).join("");
   const last = pts[pts.length - 1];
   box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" style="height:auto;display:block" role="img"
-      aria-label="Running profit across ${pts.length} logged contests, ending at ${money(last.y)}">
+      aria-label="Running profit across ${pts.length} logged records, ending at ${money(last.y)}">
     ${ticks}
     <line x1="${PADL}" y1="${zero.toFixed(1)}" x2="${W - PADR}" y2="${zero.toFixed(1)}" stroke="var(--ink-3)" stroke-dasharray="3 3" stroke-width="1"/>
     <path d="${path}" fill="none" stroke="${last.y >= 0 ? "var(--good)" : "var(--bad)"}" stroke-width="2" stroke-linejoin="round"/>
@@ -9032,8 +8961,8 @@ function drawBrChart() {
     <text x="${(W - PADR)}" y="${H - 8}" text-anchor="end" font-size="10" fill="var(--ink-3)">${esc(L[L.length - 1].date || "")}</text>
     <text x="${PADL}" y="${H - 8}" font-size="10" fill="var(--ink-3)">${esc(L[0].date || "")}</text>
   </svg>`;
-  $("brChartNote").innerHTML = `Cumulative net across ${pts.length} logged contests, in the order they were entered. ` +
-    `Ending at <b>${money(last.y)}</b>. A line like this is a story, not a test — the confidence band above is the test.`;
+  $("brChartNote").innerHTML = `Cumulative cash net across ${pts.length} logged records, in the order they were entered. ` +
+    `Ending at <b>${money(last.y)}</b>. Descriptive results only; correlated entries do not establish a strategy's edge.`;
 }
 
 /* ---------------------------------------------------------------- method sheet */
@@ -9584,7 +9513,7 @@ $('paretoStop').addEventListener('click', () => { if(frontWorker)frontWorker.ter
   $("brFile").addEventListener("change", e => {
     const f = e.target.files && e.target.files[0]; if (!f) return;
     const r = new FileReader();
-    r.onload = () => { $("brPaste").value = String(r.result).slice(0, 4000000); doBrImport(); };
+    r.onload = () => { $("brPaste").value = String(r.result).slice(0, 4000000); doBrImport(f.name); };
     r.readAsText(f);
   });
   $("brImport").addEventListener("click", doBrImport);
@@ -9661,13 +9590,17 @@ $('paretoStop').addEventListener('click', () => { if(frontWorker)frontWorker.ter
   $("stImport").addEventListener("click", () => doStandingsImport($("stPaste").value));
   $("stRefresh").addEventListener("click", () => renderStandings());
   $("brExport").addEventListener("click", () => {
-    const lines = ["date,contest,type,entries,fee,winnings,net"];
-    S.bankroll.forEach(b => lines.push([b.date, '"' + String(b.name || "").replace(/"/g, '""') + '"',
-      b.type, b.entries || 1, b.fee, b.win, b.win - (b.entries || 1) * b.fee].join(",")));
+    let csv;try{csv=DDFSLedger.historyCSV(S.bankroll);}catch(e){$('brImportNote').textContent=e.message;return;}
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/csv" }));
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     a.download = "dd-bankroll.csv"; document.body.appendChild(a); a.click(); a.remove();
   });
+  $('brLegacyArchive').onclick=()=>{
+    const legacy=S.bankroll.filter(b=>b.k&&b.history_version!==2);if(!legacy.length)return;const previous=S.bankroll,previousArchives=S.bankrollArchives;
+    S.bankrollArchives=[...(S.bankrollArchives||[]),{archived_at:new Date().toISOString(),reason:'Explicit archive before identity-preserving re-import; original legacy values unchanged',records:JSON.parse(JSON.stringify(legacy))}];
+    S.bankroll=S.bankroll.filter(b=>!(b.k&&b.history_version!==2));if(!save(true)){S.bankroll=previous;S.bankrollArchives=previousArchives;$('brImportNote').textContent='Archive storage failed; original active log retained. Export the full JSON to keep a private copy.';return;}renderBankroll();renderStrip();
+  };
+  $('brArchiveExport').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({version:2,records:S.bankroll,legacy_archives:S.bankrollArchives||[]},null,2)],{type:'application/json'}));a.download='private-dfs-history-with-archives.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
   $("brWipe").addEventListener("click", () => {
     if (!S.bankroll.length) return;
     if (!confirm(`Delete all ${S.bankroll.length} logged contests from this device? This cannot be undone.`)) return;
@@ -10108,11 +10041,11 @@ document.addEventListener("change", e => {
                   own: +$("mapOwn").value, team: +$("mapTeam").value });
 });
 
-function doBrImport() {
-  const r = brImport($("brPaste").value);
+function doBrImport(filename) {
+  const r = brImport($("brPaste").value,typeof filename==='string'?filename:null);
   if (r.error) { $("brImportNote").innerHTML = `<span class="bad">${esc(r.error)}</span>`; return; }
   $("brImportNote").innerHTML = `Imported <b>${r.added}</b> of ${r.total} rows` +
-    (r.added < r.total ? ` — the rest were already logged, or had no entry fee.` : ".");
+    (r.added < r.total ? ` — the rest were already logged with the same entry and contest IDs.` : ".");
   renderBankroll(); renderStrip();
 }
 
@@ -10407,10 +10340,9 @@ ${S.demo ? "- ⚠️ THE LOADED SLATE IS THE DEMO SLATE. Every player name, sala
         L.push("HIGHEST LEVERAGE: " + lev.map(r => `${S.players[r.i].name} ${(r.leverage).toFixed(1)}`).join(", "));
       } else L.push("No simulation has been run in this session.");
       if (S.bankroll.length) {
-        const s = brSummary(S.bankroll), bs = brBootstrap(S.bankroll, 800);
-        L.push(`BANKROLL: ${s.n} contests, ${s.entries} entries, staked $${s.staked.toFixed(0)}, won $${s.won.toFixed(0)}, net $${s.net.toFixed(0)}, ROI ${(s.roi * 100).toFixed(1)}%.`);
-        L.push(bs ? `⚠️ Bootstrapped 95% band on that ROI: ${(bs.lo * 100).toFixed(0)}% to ${(bs.hi * 100).toFixed(0)}%, resampling contests not entries. LEAD WITH THIS BAND, never with the point estimate.`
-                  : `⚠️ Fewer than five contests logged — there is no confidence band and you must not imply the ROI figure means anything.`);
+        const s = brSummary(S.bankroll);
+        L.push(`BANKROLL: ${s.n} records, ${s.entries} entries, staked ${money(s.staked)}, cash won ${money(s.won)}, cash net ${money(s.net)}, cash ROI ${s.roi==null?'unknown':pct(s.roi,1)}. Tickets are separate. Unknown values are not zero.`);
+        L.push('No confidence band: entry rows are correlated within contests and slates. Do not infer edge or grade a first-place tournament objective from cash rate or this sample alone.');
       } else L.push("Nothing is logged in the bankroll tracker.");
       if (FRONT && FRONT.points && FRONT.points.length > 1) {
         const a = FRONT.points[0], z = FRONT.points[FRONT.points.length - 1];

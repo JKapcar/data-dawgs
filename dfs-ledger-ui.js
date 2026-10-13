@@ -35,13 +35,15 @@ function save(f,text,type){const a=document.createElement('a');a.href=URL.create
 const fmt=(v,k)=>v==null?'—':typeof v==='boolean'?(v?'yes':'no'):k==='roi'?(v*100).toFixed(0)+'%':k==='pred_top1pct'||k==='pred_cash'?(v*100).toFixed(2)+'%':k==='actual_percentile'?v.toFixed(1):k==='pred_dupes_scaled'?v.toFixed(2):k==='payout'?'$'+(+v).toFixed(2):v;
 function render(){
  const t=$('lgTab');if(!ledger){t.querySelector('tbody').innerHTML='';$('lgNote').textContent='No ledger built yet.';return;}
- t.querySelector('thead').innerHTML='<tr>'+L.AUDIT_COLUMNS.map(c=>'<th>'+esc(c[1])+'</th>').join('')+'<th>Join</th></tr>';
- t.querySelector('tbody').innerHTML=ledger.entries.map(r=>'<tr>'+L.AUDIT_COLUMNS.map(([k])=>'<td>'+esc(fmt(r[k],k))+'</td>').join('')+'<td>'+esc(r.join_status)+'</td></tr>').join('');
- const s=ledger.summary,sl=ledger.slate;
- $('lgNote').textContent=s.entries+' entries in '+ledger.contests.length+' contests · '+s.joined+' joined to the simulation · snapshot '+sl.workspace_id+' r'+sl.workspace_revision+' saved '+sl.workspace_updated_at+
-  (sl.prelock_verified===true?' (before lock)':sl.prelock_verified===false?' (AFTER lock — predictions are not pre-lock)':' (lock time not given — pre-lock unverified)')+
-  ' · cash predicted '+s.cash.predicted.toFixed(2)+' vs observed '+s.cash.observed+' (n='+s.cash.n+') · top-1% predicted '+s.top1pct.predicted.toFixed(2)+' vs observed '+s.top1pct.observed+
-  (s.roi!=null?' · ROI '+(s.roi*100).toFixed(1)+'%':'')+'. Predictions are conditional on the simulated '+(sl.model?sl.model.field_size:'—')+'-entry contest; one slate is an observation, not a calibration.';
+ t.querySelector('thead').innerHTML='<tr>'+L.AUDIT_COLUMNS.map(c=>'<th>'+esc(c[1])+'</th>').join('')+'<th>Join</th><th>Calibration</th></tr>';
+ t.querySelector('tbody').innerHTML=ledger.entries.map(r=>'<tr>'+L.AUDIT_COLUMNS.map(([k])=>'<td>'+esc(fmt(r[k],k))+'</td>').join('')+'<td>'+esc(r.join_status)+'</td><td>'+esc(r.calibration_eligible?'Compatible inputs':r.calibration_reason||(ledger.schema===L.SCHEMA?'No compatible saved prediction':'Legacy basis unverified'))+'</td></tr>').join('');
+ const s=L.summarize(ledger),sl=ledger.slate;
+ const objective=ledger.decision_objective?.value||'unrecorded',currentProvenance=ledger.schema===L.SCHEMA&&sl.prediction_timestamp_basis==='server-prediction-save',verified=currentProvenance?sl.prelock_verified:null;
+ $('lgNote').textContent=s.entries+' entries in '+ledger.contests.length+' contests · '+s.joined+' joined to the simulation · prediction snapshot '+(currentProvenance&&sl.prediction_saved_at||'time unverified')+
+  (verified===true?' (before lock)':verified===false?' (AFTER lock)':' (pre-lock provenance unverified)')+'; workspace last saved '+sl.workspace_updated_at+
+  ' · Objective: '+objective+' (stated at audit time). '+s.first_place_finishes+' observed first-place finishes; inspect ties and prize splits. '+s.calibration.eligible+' compatible calibration rows; '+s.calibration.excluded+' excluded. Cash predicted '+s.cash.predicted.toFixed(2)+' vs observed '+s.cash.observed+' (n='+s.cash.n+'); top-1% predicted '+s.top1pct.predicted.toFixed(2)+' vs observed '+s.top1pct.observed+' (n='+s.top1pct.n+'). Top-1% is not first place; top1Share is a ranking proxy, never first-place probability. One slate is not calibration.'+
+  (ledger.schema!==L.SCHEMA?' Legacy ledger retained unchanged. Rebuild a new audit from original standings and archived prediction evidence; old calibration is excluded.':'');
+ $('lgContext').innerHTML=ledger.contests.map(c=>'<p><b>'+esc(c.name||c.contest_id)+'</b>: field '+esc(c.field_size??'unknown')+'; paid fraction '+(c.paid_fraction==null?'unknown':(100*c.paid_fraction).toFixed(2)+'%')+'; first prize / pool '+(c.first_prize_pool_share==null?'unknown':(100*c.first_prize_pool_share).toFixed(2)+'%')+'. Equal-entry first-place reference '+(c.equal_entry_first_place_reference==null?'unknown':(100*c.equal_entry_first_place_reference).toFixed(3)+'%')+' (no-tie reference only, not your lineup or portfolio win probability).</p>').join('');
  ['lgCsv','lgCsvFull','lgJson','lgKeep'].forEach(id=>$(id).disabled=false);
 }
 function stored(){
@@ -57,7 +59,7 @@ async function build(){
  const starts=contests.map(c=>Date.parse(c.meta.start_time)).filter(Number.isFinite);
  // Showdown locks at the contest's start; the earliest start among the contests is the binding lock.
  const lock=$('lgLock').value?new Date($('lgLock').value).toISOString():starts.length?new Date(Math.min(...starts)).toISOString():null;
- ledger=L.buildLedger(snapshot,contests,{users,lockTime:lock,allowPostLock:$('lgPost').checked});
+ ledger=L.buildLedger(snapshot,contests,{users,lockTime:lock,allowPostLock:$('lgPost').checked,objective:$('lgObjective').value});
  const missing=contests.filter(c=>c.meta.entry_fee==null).map(c=>c.meta.contest_id);
  say(missing.length?'No entry fee/payout for '+missing.join(', ')+': payout and ROI stay blank for those contests.':'');render();
 }
@@ -66,7 +68,7 @@ $('lgBuild').onclick=()=>build().catch(e=>say(e.message,true));
 $('lgCsv').onclick=()=>save(ledger.slate.slate_id+'-audit.csv',L.auditCSV(ledger,false),'text/csv');
 $('lgCsvFull').onclick=()=>save(ledger.slate.slate_id+'-audit-full.csv',L.auditCSV(ledger,true),'text/csv');
 $('lgJson').onclick=()=>save(ledger.slate.slate_id+'-ledger.json',JSON.stringify(ledger,null,1),'application/json');
-$('lgKeep').onclick=()=>{try{localStorage.setItem(KEY+ledger.slate.slate_id,JSON.stringify(ledger));stored();say('Kept on this device as '+ledger.slate.slate_id+'.');}catch(e){say('This browser refused to store it ('+e.name+'). Download the JSON instead.',true);}};
+$('lgKeep').onclick=()=>{try{const key=KEY+ledger.slate.slate_id;if(localStorage.getItem(key)&&localStorage.getItem(key)!==JSON.stringify(ledger))throw Error('A ledger already exists for this slate. Export the new JSON; the original archive was retained.');localStorage.setItem(key,JSON.stringify(ledger));stored();say('Kept on this device as '+ledger.slate.slate_id+'.');}catch(e){say('Not saved: '+e.message+' Download the JSON to retain the new audit.',true);}};
 $('lgOpen').onclick=()=>{try{ledger=JSON.parse(localStorage.getItem(KEY+$('lgSaved').value));render();say('');}catch{say('Could not read that saved ledger.',true);}};
 stored();render();
 })();

@@ -34,6 +34,8 @@ on:
       - "work/test-dfs-autoload-ui.cjs"
       - "dfs-ledger*.js"
       - "tests/dfs-ledger.test.js"
+      - "tests/dfs-history-correctness.test.cjs"
+      - "tests/dfs-history.browser.cjs"
       - "tests/fixtures/dfs-ledger/**"
       - "work/test-dfs-ledger-ui.cjs"
       - "guillotine*.js"
@@ -88,6 +90,8 @@ on:
       - "work/test-dfs-autoload-ui.cjs"
       - "dfs-ledger*.js"
       - "tests/dfs-ledger.test.js"
+      - "tests/dfs-history-correctness.test.cjs"
+      - "tests/dfs-history.browser.cjs"
       - "tests/fixtures/dfs-ledger/**"
       - "work/test-dfs-ledger-ui.cjs"
       - "guillotine*.js"
@@ -151,6 +155,7 @@ jobs:
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-workspace-ui.cjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-ledger-ui.cjs
       - run: node tests/dfs-ledger.test.js
+      - run: node --test tests/dfs-history-correctness.test.cjs
       - run: node --check sw.js
       - run: node --check dd-live-state.js
       - run: node --check warroom-weekly.js
@@ -175,3 +180,4 @@ jobs:
       - run: node work/test-dfs-draft-workspace.mjs
       - run: node work/test-dfs-portfolio-workspace.mjs
       - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-portfolio.browser.cjs
+      - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-history.browser.cjs

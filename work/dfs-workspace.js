@@ -92,9 +92,15 @@ function dfsExposure(w){
  return {lineups:n,players:players.map(p=>({...p,rate:n?p.total/n:0,captain_rate:n?p.captain/n:0,violates_max:n>0&&p.max!=null&&p.total/n>p.max+1e-9})),teams,games,note:'Team/game counts are lineups containing that team/game. Rates are fractions. Solver exposure caps are sequential heuristics; inspect final violations.'};
 }
 async function dfsLoad(env,caller,id){const path=dfsPath(caller,id),r=await fbGet(env,path,true);dfsAssert(r.data,'Workspace not found');return {path,...r};}
-async function dfsCommit(env,r,w,revision){
+async function dfsCommit(env,r,w,revision,preservePredictionTime=false){
  dfsNum(revision,0,2147483647,'expected_revision',true);dfsAssert((r.data?.revision||0)===revision,'Revision conflict. Read workspace and retry with the current revision.');
- w.revision=revision+1;w.updated_at=new Date().toISOString();const clean=dfsClone(w);dfsAssert(JSON.stringify(clean).length<=DFS_LIMITS.bytes,'Workspace exceeds 2 MB; reduce candidate count');
+ w.revision=revision+1;w.updated_at=new Date().toISOString();
+ if(preservePredictionTime){
+  w.portfolio_saved_at=w.updated_at;
+  // Do not infer historical pre-lock evidence from an old mutable workspace clock.
+  w.prediction_provenance=r.data?.prediction_provenance?dfsClone(r.data.prediction_provenance):{version:1,saved_at:null,workspace_revision:null,basis:r.data?'legacy-unverified':'no-predictions',legacy_workspace_updated_at:r.data?.updated_at||null,legacy_workspace_revision:r.data?.revision??null};
+ }else w.prediction_provenance={version:1,saved_at:w.updated_at,workspace_revision:w.revision,basis:'server-prediction-save',source_as_of:w.as_of??null};
+ const clean=dfsClone(w);dfsAssert(JSON.stringify(clean).length<=DFS_LIMITS.bytes,'Workspace exceeds 2 MB; reduce candidate count');
  dfsAssert(r.etag,'Storage did not return an ETag; refusing an unsafe write');dfsAssert(await fbPut(env,r.path,clean,r.etag),'Revision conflict. No changes saved.');return {workspace_id:w.id,revision:w.revision,updated_at:w.updated_at,audit:dfsAudit(w)};
 }
 async function dfsRun(op,a,env,caller){
@@ -112,7 +118,7 @@ async function dfsRun(op,a,env,caller){
   // JSON string preserves nulls, empty and sparse arrays across Firebase storage.
   // Do not route through draft/sync: those operations replace solver inputs/candidates.
   w.portfolio_json=JSON.stringify(p);
-  return {...await dfsCommit(env,r,w,a.expected_revision),portfolio_saved:true};
+  return {...await dfsCommit(env,r,w,a.expected_revision,true),portfolio_saved:true};
  }
  if(op==='draft'){
   dfsNum(a.expected_revision,0,2147483647,'expected_revision',true);

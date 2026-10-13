@@ -10,11 +10,14 @@ let checks=0;const ok=(x,msg)=>{assert(x,msg);checks++;};async function reject(a
 const id='synthetic-existing',path='/users/userA/dfsWorkspaces/'+id,a=fixture();
 await run('create',{workspace_id:id,site:'dk_showdown',source:'Existing solver source',as_of:'2026-10-12T18:00:00Z'});
 Object.assign(env.rows[path],{players:clone(a.players),lineups:Array.from({length:20},(_,i)=>({ids:[0,1,2,15,16,17],cpt:i%3,syntheticCandidate:i})),compute:{operation:'solve',input_revision:1},simulation:{synthetic:true,meta:{sims:200}},comparison:{synthetic:true},builder:{version:1,pool:{site:'dk_showdown'},rosterIds:['synthetic-0',null],preset:'unset',settings:{}}});
+env.rows[path].prediction_provenance={version:1,basis:'server-prediction-save',saved_at:'2026-09-07T16:00:00Z',workspace_revision:1};
 const before=clone(env.rows[path]),args={workspace_id:id,expected_revision:1,portfolio:a};
 await reject(args,/personal/,{kind:'shared'});await reject({...args,uid:'userB'},/unsupported/);await reject({...args,workspace_id:'../userB'},/workspace_id/);await reject(args,/Revision conflict/,{kind:'user',uid:'userB'});
 const tool=context.api.tools.find(t=>t.name==='dd_dfs_portfolio');ok(tool&&!tool.readOnlyHint,'MCP write registered');ok(tool.inputSchema.properties.expected_revision.minimum===0,'zero only creates');
 const m=await tool.run(args,env,caller);ok(JSON.parse(m.content[0].text).revision===2,'MCP save returns revision');
 const after=clone(env.rows[path]);for(const k of Object.keys(before))if(!['revision','updated_at'].includes(k))assert.deepEqual(after[k],before[k],k+' must be preserved');checks++;
+assert.deepEqual(after.prediction_provenance,before.prediction_provenance);checks++;ok(after.portfolio_saved_at===after.updated_at,'portfolio has its own save clock');
+ok(require('../dfs-ledger.js').snapshotInfo(after,'2026-09-07T17:00:00Z').prelock_verified===true,'portfolio save after lock preserves pre-lock prediction timestamp');
 ok(typeof after.portfolio_json==='string','JSON encoded for null/empty-array fidelity');
 let w=await run('get',{workspace_id:id,include_results:true});assert.deepEqual(clone(w.portfolio),a);checks++;ok(w.total_lineups===20&&w.players.length===30,'solver candidates and pool preserved');ok(!('portfolio_json' in w)&&w.audit.players===30,'computed audit distinct from portfolio');
 ok((await run('list')).workspaces.find(x=>x.workspace_id===id).has_portfolio,'private list marks saved portfolios');
@@ -31,4 +34,7 @@ const url=new URL('https://worker.invalid/api/dfs/portfolio');let http=await con
 http=await context.api.route(new Request(url,{method:'POST',headers:{'X-Bozo-Session':'fixture'},body:JSON.stringify({...args,expected_revision:3})}),url,env,{});ok(http.status===200,'browser REST updates MCP audit');ok((await http.json()).revision===4,'shared revision');
 const getTool=context.api.tools.find(t=>t.name==='dd_dfs_get');const read=JSON.parse((await getTool.run({workspace_id:id},env,caller)).content[0].text);assert.deepEqual(read.portfolio,a);checks++;
 ok((await run('schema')).portfolio_schema.limit_bytes===450000,'discoverable bounded contract');
+const legacy=clone(env.rows[path]);delete legacy.prediction_provenance;legacy.id='legacy-clock';legacy.updated_at='2026-09-07T16:00:00Z';env.rows['/users/userA/dfsWorkspaces/legacy-clock']=legacy;
+await run('portfolio',{workspace_id:'legacy-clock',expected_revision:legacy.revision,portfolio:a});const migrated=await run('get',{workspace_id:'legacy-clock'});ok(migrated.prediction_provenance.saved_at===null&&migrated.prediction_provenance.legacy_workspace_updated_at===legacy.updated_at,'legacy evidence retained without invented prediction time');ok(require('../dfs-ledger.js').snapshotInfo(migrated,'2026-09-07T17:00:00Z').prelock_verified===null,'legacy migration remains unverified');
+const priorPrediction=clone(env.rows[path].prediction_provenance);await run('settings',{workspace_id:id,expected_revision:4,section:'solver',patch:{count:19}});const changed=await run('get',{workspace_id:id});ok(changed.prediction_provenance.saved_at!==priorPrediction.saved_at&&changed.prediction_provenance.workspace_revision===5,'actual prediction input changes get a new provenance clock');
 console.log('PASS',checks,'portfolio checks: full browser/MCP snapshot roundtrip, preservation of 30 players/20 candidates/results, UID/CAS isolation, nulls/extensions, payload bounds, role ownership.');
