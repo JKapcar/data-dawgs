@@ -25,7 +25,7 @@ Users can drive the workflow with one word plus their files. Ask for anything a 
 | Word | What the AI does |
 | --- | --- |
 | `screen` | Screens the listed contests (section 1): rake, payout shape, entry cap against the user's entry count, total buy-in against bankroll |
-| `classic` or `showdown` | Runs sections 1â€“7 for that format. Showdown starts with a menu of captains and game scripts for the user to choose from |
+| `classic` or `showdown` | Runs sections 1–7 for that format. Showdown starts with a menu of captains and game scripts for the user to choose from |
 | `sim` | Simulates the actual contests and ranks candidates without overclaiming (section 6) |
 | `swap` | Late swap from the live state: unlocked slots only, with the remaining field in mind; says whether it protects position or chases |
 | `results` | Builds the post-slate audit (section 8) |
@@ -60,7 +60,7 @@ Record the sport, date, timezone, site, format, slate or draft-group ID and lock
 
 Ask for missing screenshots or exports once; prepare candidates while waiting. Never infer field size from a contest name, buy-in or prize pool alone. Distinguish projected final fill from current entrants. A default profile is a scenario, not the user's actual lobby. The user sets budget and entry count; a 150-entry cap is not a recommendation to buy 150 entries.
 
-Screen each contest before building for it. Rake is 1 âˆ’ prize pool Ã· (entries Ã— entry fee). Lower rake, flatter payouts, smaller fields and an entry cap near the user's own entry count are friendlier. Contests full of max-entry players are a structural disadvantage for someone entering a few lineups. If the user asks for a bankroll rule, the house default is total weekly buy-ins at or under 1/40 of bankroll, with more cushion for larger, more top-heavy fields.
+Screen each contest before building for it. Rake is 1 − prize pool ÷ (entries × entry fee). Lower rake, flatter payouts, smaller fields and an entry cap near the user's own entry count are friendlier. Contests full of max-entry players are a structural disadvantage for someone entering a few lineups. If the user asks for a bankroll rule, the house default is total weekly buy-ins at or under 1/40 of bankroll, with more cushion for larger, more top-heavy fields.
 
 ## 2. Audit the inputs before choosing players
 
@@ -113,7 +113,7 @@ Give the user a small menu of the strongest defensible scripts. Quantify weaker 
 - Inspect the current engine/mode. The contest simulator's correlated score worlds are not a vendor's play-by-play simulations. Its historical variance is not derived from the uploaded Ceiling column. Summing player ceilings does not produce a lineup ceiling. Classic score-tail thresholds are not contest placements or payout EV.
 - Check ownership reconciliation, field-strength diagnostics, correlation fallback and CPT scoring. A softer modelled field can make every lineup look profitable. A passed numerical gate is not external calibration.
 - Ownership product and analytic expected-copy adjustments are uncalibrated priors. Zero matches in a sampled field does not prove uniqueness. Verify tie handling before applying any extra duplication haircut.
-- Sampled opponents may not resolve first-place probability or top-heavy ROI. Approximate numeric output is not a workaround. Top-10 means literal positions 1â€“10. Win-lineup player rate means inclusion in the best sampled opponent, not inclusion in an exact optimal lineup.
+- Sampled opponents may not resolve first-place probability or top-heavy ROI. Approximate numeric output is not a workaround. Top-10 means literal positions 1–10. Win-lineup player rate means inclusion in the best sampled opponent, not inclusion in an exact optimal lineup.
 - Report timeouts, pool caps and incomplete frontiers. Do not call partial search exhaustive or treat a timeout as proof of infeasibility. Final exposure bounds can fail because generation is heuristic; audit actual counts.
 - Punt/no-touch outcomes and kicker correlations are model-sensitive. Monte Carlo intervals cover simulation noise conditional on assumptions, not projection or field-model error. Three weeks of results alone cannot establish calibration or justify a claim of professional equivalence.
 
@@ -137,7 +137,7 @@ This is the reusable operating guide; current-slate research belongs in the user
 When a tool, workflow or material model limit changes, update this guide, its app rendering, the schema guidance and discovery links in the same release. Source: docs/dfs-playbook.md; render with node tools/sync-dfs-playbook.mjs. Public instructions must never embed subscriber projections, subscriber research figures, user lineups or connector credentials. Evidence rules here stay generic; numbers from subscriber research belong in each user's private notes.
 
 
-## Hockey DFS â€” separate DraftKings app (preview)
+## Hockey DFS — separate DraftKings app (preview)
 
 Hockey now lives at dfs-nhl.html with its own site-navigation entry, not inside the football DFS desk. Its first version is DraftKings only: one slate CSV, player pool, status checks, lineup builder and salary/position/slate validation. Projection explanations and provenance are in details. No ownership, contest, portfolio, simulation or market-import controls appear. Current official DraftKings scoring/roster verification is still a release gate; no contest-ready claim is made.
 
