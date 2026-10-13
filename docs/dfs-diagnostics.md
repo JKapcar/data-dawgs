@@ -12,7 +12,7 @@ The shared browser/MCP contract is POST `/api/dfs/portfolio` / `dd_dfs_portfolio
 
 Private saves support explicit DK Classic/Showdown version 1 records, at most 450,000 UTF-8 bytes, depth 24, 60,000 JSON values, and 64,000 characters per string, within the existing 2 MB workspace limit. All JSON evidence and extensions are preserved, including fees, contests, source, notes, roles, availability and nulls. An internal JSON string avoids Firebase dropping nulls or empty arrays. The API returns the decoded object. Invalid lineups remain auditable warnings rather than being silently repaired. Evidence is supplied and editable, not independently verified or tamper-proof.
 
-There is no automatic upload, continuous sync or server version archive. Reloading loses unsaved changes. Export to retain an earlier version or an audit larger than the private-save limit. Clear audit only clears local audit state; it does not delete the saved account snapshot or the separate builder session. Keep private exports outside public repositories and shared assets.
+There is no automatic upload, continuous sync or automatic version history. Reloading loses unsaved changes. Saved history can explicitly archive an exact saved workspace revision, including its portfolio, as described in [the results-ledger documentation](dfs-results-ledger.md). Export to retain an audit larger than the private-save limit. Clear audit only clears local audit state; it does not delete the saved account snapshot or the separate builder session. Keep private exports outside public repositories and shared assets.
 
 ## Schema and conventions
 
@@ -47,7 +47,7 @@ Every finding includes evidence and a next action. Swap recommendations preserve
 
 ## Backend follow-up (not implemented)
 
-Full audit attachment retention/versioning, a verified entry/result import, sourced injury refresh, exact field/payout simulation with duplicate splitting, calibration receipts and shared access controls need separate backend work. Current private workspace storage remains its existing players/lineups/settings/source/as_of schema with the 220-player and 200-character source limits. No credentials or access rights were created. History and Team functionality is not assumed live.
+Automatic audit versioning, provider-verified entry/results, sourced injury refresh, calibrated contest probabilities, calibration receipts and shared access controls need separate backend work. Complete portfolio snapshots and explicit immutable account-history/workspace archives are implemented; each requires an intentional private save. The existing solver state remains separate from the portfolio attachment. No credentials or access rights were created. Team functionality is not assumed live.
 
 ## Validation
 
