@@ -20,4 +20,4 @@ Bundled same-team QB/WR2 = 0.3134; QB/own DST = -0.1101; QB/RB1 = 0.0642; QB/RB2
 
 ## Integration
 
-Based on main 9819894f in isolated `codex/dfs-correlation-clarity`. Inspected the pending account-history patch; no history/account checkout was edited. Merge code changes after that work and regenerate `sw.js` from the combined HTML/JS tree rather than copying its hash. Deployment requires approval.
+Reconciled onto main 48d7bcb4 (deployed PR236); originally based on main 9819894f in isolated `codex/dfs-correlation-clarity`. Inspected the pending account-history patch; no history/account checkout was edited. Merge code changes after that work and regenerate `sw.js` from the combined HTML/JS tree rather than copying its hash. Publication approved by Jason on 2026-10-13; use the PR/checks/deployment workflow.
