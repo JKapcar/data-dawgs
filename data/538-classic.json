@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-12",
+ "as_of": "2026-10-13",
  "source": "Data Dawgs reimplementation of FiveThirtyEight 538 Classic Elo at commit fbec1afa38ece5befe24fb21be8ddba8eb160fe6; state extended with nflverse/nfldata at 7ffd3a03ed276ac5c9ee38ec8b3baeefa84710b7.",
  "tier": "labs",
  "graded": false,
@@ -14,7 +14,7 @@
   "methodology_url": "https://datadawgs216.com/data/538-classic-methodology.md"
  },
  "provenance": {
-  "generated_at": "2026-10-12T03:58:54.608776Z",
+  "generated_at": "2026-10-13T03:52:21.963232Z",
   "official_reference": {
    "repository": "fivethirtyeight/nfl-elo-game",
    "commit": "fbec1afa38ece5befe24fb21be8ddba8eb160fe6",
@@ -32,7 +32,7 @@
    "last_game": "2025_22_SEA_NE",
    "last_game_date": "2026-02-08"
   },
-  "schedule_snapshot_id": "sha256:5db41a630ded1ae933d4e710cfa0227cc088a0f183e4d71a9fee15a6e0790bb7",
+  "schedule_snapshot_id": "sha256:34c6cda2d85db6b12a0031bd0e64b45a2a0527083f83ae9279cb5bd2e9ad3d3c",
   "input_material": {
    "model": {
     "id": "538-classic",
@@ -54,7 +54,7 @@
     "games_sha256": "27cfbb7be0c81706d0c0d99c5eeee07c54e943fbabf21141003a1d12da32463e",
     "games_replayed": 1424
    },
-   "schedule_snapshot_id": "sha256:5db41a630ded1ae933d4e710cfa0227cc088a0f183e4d71a9fee15a6e0790bb7",
+   "schedule_snapshot_id": "sha256:34c6cda2d85db6b12a0031bd0e64b45a2a0527083f83ae9279cb5bd2e9ad3d3c",
    "target_season_ratings": [
     {
      "team": "ARI",
@@ -196,9 +196,9 @@
   "note": "This proves the published mathematics were reproduced; it does not establish current predictive skill or betting profitability."
  },
  "integrity": {
-  "input_snapshot_id": "sha256:107c95c2590fd95e12d3abed8906589a119ed13531cc78f364b1a1eaa04cf2cd",
-  "snapshot_id": "sha256:1f5bb76304cacdd43b56df7cfbfc2fa765619820f3a27e6d54557e14df728c7a",
-  "forecast_rows": 194,
+  "input_snapshot_id": "sha256:c1c4d0ebdeae6add438715f68563581de5ec2d4f639330c99c2a46263c6e9848",
+  "snapshot_id": "sha256:f00f06ec7da6ab1cbfa149a1b2de5566db84b2164bbafb4ceeb8694a334d54e3",
+  "forecast_rows": 193,
   "team_rows": 32
  },
  "data": {
@@ -334,19 +334,6 @@
    }
   ],
   "forecasts": [
-   {
-    "game_id": "2026_05_BUF_LAR",
-    "season": 2026,
-    "week": 5,
-    "kickoff_at": "2026-10-13T00:15:00Z",
-    "home_team": "LAR",
-    "away_team": "BUF",
-    "neutral_site": false,
-    "home_elo": 1612.55363,
-    "away_elo": 1609.382196,
-    "home_field_elo": 65,
-    "home_win_probability": 0.596867
-   },
    {
     "game_id": "2026_06_SEA_DEN",
     "season": 2026,
@@ -2859,6 +2846,6 @@
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-12",
+ "built": "2026-10-13",
  "canonical_url": "https://datadawgs216.com/data/538-classic.json"
 }
