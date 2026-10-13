@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-10",
+ "as_of": "2026-10-13",
  "source": "Generated from the site itself. Tier is read from each page's live chip.",
  "tier": "labs",
  "graded": false,
@@ -289,8 +289,8 @@
   }
  },
  "counts": {
-  "surfaces": 25,
-  "with_live_machine_access": 19,
+  "surfaces": 26,
+  "with_live_machine_access": 20,
   "with_no_machine_access": 6,
   "mcp_tools_registered": 68,
   "mcp_tools_live": 68,
@@ -933,6 +933,32 @@
    "tier": "labs"
   },
   {
+   "id": "dfs-showdown",
+   "domain": "arena",
+   "name": "DFS SHOWDOWN",
+   "page": "/dfs-showdown.html",
+   "machine": [
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_list",
+     "status": "live",
+     "covers": "account-scoped list of the caller’s DFS workspaces; the page keeps the Showdown ones"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_get",
+     "status": "live",
+     "covers": "account-scoped read of one workspace (players, lineups, saved portfolio); grades are computed in the browser and never stored"
+    }
+   ],
+   "planned": [
+    "field calibration from the user’s own contest standings",
+    "real payout tables and the duplicate split, so ROI can be shown"
+   ],
+   "gap": "Grades, bands, finish odds and expected copies are computed in the browser from the user’s own projections and ownership; nothing is stored and nothing is graded. Contest types differ by a field-sharpness preset that stays a hypothesis until standings calibrate it. No ROI until real payout tables and the duplicate split are applied.",
+   "tier": "labs"
+  },
+  {
    "id": "guillotine",
    "domain": "arena",
    "name": "Last Dawg Standing",
@@ -1343,6 +1369,6 @@
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-10",
+ "built": "2026-10-13",
  "canonical_url": "https://datadawgs216.com/data/surfaces.json"
 }

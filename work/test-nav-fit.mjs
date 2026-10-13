@@ -160,8 +160,9 @@ for (const page of PAGES) {
        split. See the EIGHT IS THE CEILING note above — seven is inside it, but only just,
        and only because the Markets label is the short form. */
     ok(tag + " all seven groups are present", m.groups === 7, String(m.groups));
+    /* ELEVEN since 2026-10-12: DFS SHOWDOWN joined the Arena tools. */
     ok(tag + " every Arena destination has a cartoon badge",
-       m.arenaItemCount === 10 && m.arenaIconCount === 10,
+       m.arenaItemCount === 11 && m.arenaIconCount === 11,
        `${m.arenaIconCount}/${m.arenaItemCount}`);
     ok(tag + " Fantasy Draft Dashboard uses the same menu face as Bozo",
        !m.dashboardIsHot && m.dashboardFont === m.bozoFont,
