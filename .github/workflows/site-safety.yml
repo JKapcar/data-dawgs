@@ -207,7 +207,7 @@ jobs:
       - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-builder.browser.cjs
       - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-relationships.browser.cjs
       - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-entry.browser.cjs
-      - run: node --test tests/nhl.test.cjs tests/nhl-snapshot.test.cjs
+      - run: node --test tests/nhl.test.cjs tests/nhl-snapshot.test.cjs tests/nhl-player-history.test.cjs
       - run: node work/test-nhl-workspace.mjs
       - run: node work/test-dfs-workspace.mjs
       - run: node work/test-dfs-draft-workspace.mjs
