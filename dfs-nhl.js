@@ -88,6 +88,9 @@ function score(events,platform,goalie=false,expected=false){
  return {components,subtotal:Object.values(components).reduce((a,b)=>a+b,0),total:missing.length?null:Object.values(components).reduce((a,b)=>a+b,0),missing,verified:!!rule.scoringVerified};
 }
 function project(p,model){
+ const target=p.date||(p.kickoff?new Date(p.kickoff).toISOString().slice(0,10):null);
+ if(target&&model.asOf.slice(0,10)>target)return {points:null,subtotal:null,components:{},flags:['Historical slate predates model as-of; load a pre-slate model to prevent leakage'],match:'As-of conflict'};
+
  const joined=match(p,model),o=p.override||{},base=joined.player,flags=[];if(!base)return {points:null,subtotal:null,flags:[joined.reason],match:joined.method,components:{}};
  const goalie=p.pos.includes('G'),m=o.minutes??p.minutes??base.minutes,prob=o.playProb??p.playProb;
  if(prob===null||prob===undefined)flags.push(goalie?'Starting probability unknown':'Playing probability unknown');if(base.games<PARAMS.minGames)flags.push('Small historical sample');if(!o.at&&!p.sourceAt)flags.push('Role/news timestamp unknown');if(!o.source&&!p.source)flags.push('Role/news source unknown');if(/^(out|scratched|not starting)$/i.test(o.status||p.status||'')&&prob>0)flags.push('Availability conflicts with positive playing probability');
