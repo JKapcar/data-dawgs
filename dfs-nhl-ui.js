@@ -6,6 +6,7 @@ const say=s=>$('message').textContent=s,projection=p=>N.draftProjection({...p,da
 let savedSnapshot=null,busy=false,confirmedKey=null;
 const fields=[['minutes','Expected minutes',100],['playProb','Playing / start probability',1],['line','Even-strength line'],['pp','Power-play unit'],['status','Goalie / availability status'],['source','Role/news source'],['winProb','Goalie win probability, given appearance',1],['shutoutProb','Goalie shutout probability, given appearance',1],['otLossProb','Goalie overtime-loss probability',1],['shPoints','Expected shorthanded points',10],['ppPoints','Expected power-play points',10],['shootoutGoals','Expected shootout goals',1]];
 window.DDNHLView=()=>structuredClone(state);
+window.DDNHLPlace=(i,slot)=>{if(!Number.isInteger(i)||!state.players[i])throw Error('Choose a player from the loaded slate.');const s=slot??state.roster.findIndex((x,j)=>x===null&&N.eligible(state.players[i],N.RULES[state.platform].slots[j]));if(s<0||s>=9||state.roster[s]!==null||state.roster.includes(i)||!N.eligible(state.players[i],N.RULES[state.platform].slots[s]))throw Error('Choose an empty eligible slot.');const next={...state,roster:[...state.roster]};next.roster[s]=i;N.checkRosterChange(state,next);state=next;selected=i;render();};
 function render(){
  const key=N.ownershipKey(state);if(confirmedKey!==key){$('ownershipConfirm').checked=false;confirmedKey=key;}
  if(state.ownershipModel&&!N.currentOwnership(state))state.ownershipModel=null;
