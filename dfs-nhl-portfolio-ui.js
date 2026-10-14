@@ -24,7 +24,7 @@ function render(){
  $('setTeams').textContent='Team inclusion (at least one player): '+diag.teams.map(x=>x.team+' '+x.count+'/'+diag.count).join(' / ')+'. Goalies: '+diag.exposures.filter(x=>x.goalie).map(x=>x.name+' '+x.count+'/'+diag.count).join(' / ');
 }
 async function action(fn){if(busy)return;busy=true;render();try{await fn();}catch(e){$('setStatus').textContent=e.message;}finally{busy=false;render();}}
-function accept(value){set=P.readSet(value);refs=[];selected=0;render();}
+function accept(value){set=P.readSet(value);refs=[];selected=0;window.DDNHLLoadLocal?.(set.lineups[0].draft);window.dispatchEvent(new CustomEvent('nhl-set-accepted'));render();}
 function route(name){const u=new URL(location.href);u.searchParams.set('set',name);history.replaceState(null,'',u);}
 $('setSelected').onchange=()=>{selected=Number($('setSelected').value);render();};
 $('setGenerate').onclick=()=>action(async()=>{accept(P.generate(window.DDNHLView(),{confirmedSlate:$('setConfirm').checked,seed:Number($('setSeed').value)}));$('setStatus').textContent='Generated ten distinct candidates. Three sampled preference scenarios; 2-point overlap penalty and at most seven shared players. Not optimized for a measured cash rate. Review before saving.';});

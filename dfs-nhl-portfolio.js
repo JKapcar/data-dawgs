@@ -5,7 +5,7 @@ const identity=p=>p.nhlId?'nhl:'+p.nhlId:N.norm(p.name)+'|'+p.team;
 function readSet(value){
  if(!value||value.version!==1||!Array.isArray(value.lineups)||!value.lineups.length||value.lineups.length>10)throw Error('Expected version 1 and 1–10 lineups');
  const out={version:1,lineups:value.lineups.map((x,i)=>{const {sport,...raw}=x.draft||{};if(sport&&sport!=='nhl')throw Error('NHL drafts only');const draft=N.privateDraft(raw);return {label:String(x.label||'Lineup '+(i+1)).slice(0,100),draft};})};
- const key=d=>JSON.stringify([d.platform,d.slate.id,d.slate.date,[...d.slate.games].sort()]);if(out.lineups.some(x=>key(x.draft)!==key(out.lineups[0].draft)))throw Error('Lineups must share one exact slate');
+ if(out.lineups.some(x=>x.draft.slate.games.some(g=>!N.matchupKey(g))))throw Error('Invalid slate matchup');const key=d=>JSON.stringify([d.platform,d.slate.id,d.slate.date,[...d.slate.games].map(N.matchupKey).sort()]);if(out.lineups.some(x=>key(x.draft)!==key(out.lineups[0].draft)))throw Error('Lineups must share one exact slate');
  return out;
 }
 function diagnose(value,now=Date.now()){
