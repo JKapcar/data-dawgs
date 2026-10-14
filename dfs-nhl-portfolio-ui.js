@@ -4,6 +4,7 @@ let set=null,selected=0,busy=false,epoch=0,refs=[],poolKey=null;
 const el=(tag,text,parent)=>{const e=document.createElement(tag);if(text!=null)e.textContent=text;if(parent)parent.append(e);return e;};
 const fmt=n=>n==null?'Unknown':n.toFixed(2),prefix=()=>{const s=$('setName').value.trim();if(!/^[A-Za-z0-9_-]{1,60}$/.test(s))throw Error('Set name: 1–60 letters, numbers, hyphens or underscores');return s;};
 function render(){
+ queueMicrotask(()=>window.dispatchEvent(new CustomEvent('nhl-set-change')));
  const current=window.DDNHLView?.();if(current){const key=N.ownershipKey(current);if(poolKey!==key){$('setConfirm').checked=false;poolKey=key;}}
  $('setSave').disabled=busy||!set||!A.signedIn()||set.lineups.some(x=>x.draft.synthetic);$('setLoad').disabled=busy||!A.signedIn();$('setGenerate').disabled=busy||!window.DDNHLView?.().players.length;$('setImport').disabled=busy;$('setExport').disabled=!set||busy;$('setResults').hidden=!set;if(!set)return;
  const diag=P.diagnose(set),row=diag.rows[selected]||diag.rows[0];selected=row.index;$('setSummary').textContent=(diag.rows.some(x=>x.synthetic)?'SYNTHETIC EXAMPLE. ':'')+diag.count+' candidate lineups / '+diag.rows.filter(x=>x.legal).length+' structurally legal. Conditional point sums; no cash probability, correlated ceiling or contest uniqueness estimate. Exposure describes this set only.';
@@ -34,5 +35,8 @@ $('setSave').onclick=()=>action(async()=>{const name=prefix(),snapshot=P.readSet
  route(name);$('setStatus').textContent='Saved and read back all '+snapshot.lineups.length+' private lineups. Reopen this set URL after signing in. No entries submitted.';});
 async function load(){const name=prefix(),gen=epoch,out=await A.request('list',{});if(gen!==epoch)throw Error('Account changed');const matches=out.workspaces.filter(w=>w.site==='nhl_dk'&&w.workspace_id.startsWith(name+'-')&&/^\d{2}$/.test(w.workspace_id.slice(name.length+1))).sort((a,b)=>a.workspace_id.localeCompare(b.workspace_id));if(!matches.length||matches.length>10)throw Error('Expected 1–10 saved NHL lineups under this set name.');const lineups=[],loaded=[];for(const w of matches){const read=await A.request('get',{workspace_id:w.workspace_id});if(gen!==epoch)throw Error('Account changed');lineups.push({label:w.workspace_id,draft:read.draft});loaded.push({id:w.workspace_id,revision:read.revision});}accept({version:1,lineups});refs=loaded;route(name);$('setStatus').textContent='Loaded '+lineups.length+' private lineups and their current revisions.';}
 $('setLoad').onclick=()=>action(load);window.addEventListener('nhl-view-change',render);window.addEventListener('storage',e=>{if(e.key==='dd-bozo-sess'){epoch++;set=null;refs=[];$('setJson').value='';$('setStatus').textContent='Account changed; private lineup set cleared.';render();}});
-window.DDNHLPortfolioView=()=>set?structuredClone(set):null;const reopen=new URLSearchParams(location.search).get('set');if(reopen){$('setName').value=reopen;if(A.signedIn())action(load);}render();
+window.DDNHLPortfolioView=()=>set?structuredClone(set):null;
+window.DDNHLPortfolioAccept=value=>accept(value);
+window.DDNHLPortfolioUpdate=(i,draft)=>{if(!set||!set.lineups[i])throw Error('Select a lineup set');const next=structuredClone(set);next.lineups[i].draft=draft;set=P.readSet(next);render();$('setStatus').textContent='Updated locally; save set to persist changes.';};
+const reopen=new URLSearchParams(location.search).get('set');if(reopen){$('setName').value=reopen;if(A.signedIn())action(load);}render();
 })();
