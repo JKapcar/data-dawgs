@@ -15309,12 +15309,13 @@ function project(p,model){
  return {points:prob==null||s.total===null?null:s.total*scale,subtotal:s.subtotal*scale,conditional:prob==null,components,events,minutes:m,playProb:prob??null,games:base.games,lastGame:base.lastGame,match:joined.method,flags,model:VERSION,asOf:model.asOf};
 }
 function eligible(p,slot){return slot==='UTIL'?!p.pos.includes('G'):p.pos.includes(slot);}
+function matchupKey(game){if(typeof game!=='string'||!/^([A-Z]{2,4})@([A-Z]{2,4})$/.test(game))return null;const teams=game.split('@');return teams[0]===teams[1]?null:teams.sort().join('@');}
 function legality(players,roster,platform,slate={}){
  const r=RULES[platform],issues=[];assert(r,'Unknown platform');const picked=roster.filter(x=>x!==null).map(i=>players[i]);if(roster.length!==r.slots.length||picked.length!==r.slots.length)issues.push('Fill all nine roster slots');
  if(new Set(roster.filter(x=>x!==null)).size!==picked.length)issues.push('Duplicate player');roster.forEach((i,s)=>{if(i!==null&&(!players[i]||!eligible(players[i],r.slots[s])))issues.push('Ineligible '+r.slots[s]+' slot');});
  const valid=picked.filter(Boolean),salary=valid.reduce((s,p)=>s+p.salary,0),teams={};valid.forEach(p=>teams[p.team]=(teams[p.team]||0)+1);if(salary>r.cap)issues.push('Salary cap exceeded');if(r.maxTeam&&Object.values(teams).some(n=>n>r.maxTeam))issues.push('Too many players from one team');if(r.minSkaterTeams&&new Set(valid.filter(p=>!p.pos.includes('G')).map(p=>p.team)).size<r.minSkaterTeams)issues.push('Need skaters from at least '+r.minSkaterTeams+' NHL teams');if(r.minTeams&&Object.keys(teams).length<r.minTeams)issues.push('Need at least '+r.minTeams+' teams');
  const slateIssues=[];if(!slate.id||!slate.date||!Array.isArray(slate.games)||!slate.games.length)slateIssues.push('Exact slate ID, date and game list required');
- for(const p of valid){if(p.platform!==platform)slateIssues.push(p.name+': platform differs');if(!p.slateId||p.slateId!==slate.id)slateIssues.push(p.name+': slate ID missing/mismatch');if(!p.date||p.date!==slate.date)slateIssues.push(p.name+': slate date missing/mismatch');if(!p.opp||!(slate.games||[]).includes([p.team,p.opp].sort().join('@')))slateIssues.push(p.name+': game not verified in exact slate');}
+ for(const p of valid){if(p.platform!==platform)slateIssues.push(p.name+': platform differs');if(!p.slateId||p.slateId!==slate.id)slateIssues.push(p.name+': slate ID missing/mismatch');if(!p.date||p.date!==slate.date)slateIssues.push(p.name+': slate date missing/mismatch');if(p.kickoff&&(!Number.isFinite(Date.parse(p.kickoff))||new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(p.kickoff))!==slate.date))slateIssues.push(p.name+': scheduled game date mismatch');if(!p.opp||!(slate.games||[]).map(matchupKey).includes(matchupKey(p.team+'@'+p.opp))||!matchupKey(p.team+'@'+p.opp))slateIssues.push(p.name+': game not verified in exact slate');}
  return {legal:issues.length===0,providerVerified:r.verified,issues,slateIssues:[...new Set(slateIssues)],salary,remaining:r.cap-salary,ready:false};
 }
 function correlations(players,roster){const ps=roster.filter(i=>i!==null).map(i=>players[i]).filter(Boolean),notes=[];for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){const a=ps[i],b=ps[j],ao=a.override||a,bo=b.override||b;if(a.team===b.team&&!a.pos.includes('G')&&!b.pos.includes('G')){if(ao.line&&ao.line===bo.line)notes.push(a.name+' + '+b.name+': same even-strength line');if(ao.pp&&ao.pp===bo.pp)notes.push(a.name+' + '+b.name+': same power-play unit');}if((a.pos.includes('G')&&a.opp===b.team)||(b.pos.includes('G')&&b.opp===a.team))notes.push(a.name+' + '+b.name+': goalie versus opposing skater');}return [...new Set(notes)];}
@@ -15395,7 +15396,7 @@ function ownershipGate(d,{confirmedSlate=false,now=Date.now(),assumption=null}={
  if(!d.slate.id||!/^\d{4}-\d{2}-\d{2}$/.test(d.slate.date)||!d.slate.games.length)issues.push('Apply the exact slate ID, date and games in Slate details.');
  if(Date.parse(d.forecast?.asOf||d.model?.asOf)>now)issues.push('Projection as-of is in the future.');
  const games=[...new Set(d.players.map(p=>[p.team,p.opp].sort().join('@')))].sort();
- if(JSON.stringify(games)!==JSON.stringify([...new Set(d.slate.games)].sort()))issues.push('Uploaded games must exactly equal the target slate.');
+ if(JSON.stringify(games)!==JSON.stringify([...new Set(d.slate.games.map(matchupKey))].sort()))issues.push('Uploaded games must exactly equal the target slate.');
  const eligible=[],identities=new Set();
  for(let i=0;i<d.players.length;i++){
   const p=d.players[i],o=p.override||p,keys=['name:'+norm(p.name)+'|'+p.team,...(p.nhlId?['nhl:'+p.nhlId]:[])];
@@ -15472,7 +15473,7 @@ function projectionCsv(model){
  const rows=model.players.filter(p=>p.baseline).map(p=>{const b=p.baseline;return [p.nhlId,p.name,p.team,p.pos,b.kind,b.n,b.mean,b.sd,b.variance,b.sum,b.sumSquares,b.minutes,b.recent5Minutes,b.p10,b.median,b.p90,b.last10.mean,b.last10.n,b.firstDate,b.lastDate,model.asOf,null,null,null,null,b.missing.join('; '),...components.map(k=>b.components[k]??null)];});
  const cell=v=>{if(v==null)return '';const s=String(v);return '"'+s.replace(/"/g,'""')+'"';};return [header,...rows].map(r=>r.map(cell).join(',')).join('\r\n')+'\r\n';
 }
-const api={defaultOwnershipAssumption,supportedSlateRow,ownershipKey,ownershipGate,sampleOwnership,currentOwnership,projectionRows,projectionTableCsv,qualitativePair,reviewedJoin,draftProjection,privateDraft,projectionCsv,VERSION,PARAMS,RULES,EVENTS,csv,num,norm,kickoff,locked,checkRosterChange,parsePool,minutes,history,train,match,tail,score,project,eligible,legality,correlations,validate};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DDNHL=api;
+const api={matchupKey,defaultOwnershipAssumption,supportedSlateRow,ownershipKey,ownershipGate,sampleOwnership,currentOwnership,projectionRows,projectionTableCsv,qualitativePair,reviewedJoin,draftProjection,privateDraft,projectionCsv,VERSION,PARAMS,RULES,EVENTS,csv,num,norm,kickoff,locked,checkRosterChange,parsePool,minutes,history,train,match,tail,score,project,eligible,legality,correlations,validate};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DDNHL=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
 
 })(dfsModules, dfsModules, undefined, undefined);
