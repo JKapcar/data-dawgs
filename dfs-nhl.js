@@ -126,7 +126,7 @@ function legality(players,roster,platform,slate={}){
 function correlations(players,roster){const ps=roster.filter(i=>i!==null).map(i=>players[i]).filter(Boolean),notes=[];for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){const a=ps[i],b=ps[j],ao=a.override||a,bo=b.override||b;if(a.team===b.team&&!a.pos.includes('G')&&!b.pos.includes('G')){if(ao.line&&ao.line===bo.line)notes.push(a.name+' + '+b.name+': same even-strength line');if(ao.pp&&ao.pp===bo.pp)notes.push(a.name+' + '+b.name+': same power-play unit');}if((a.pos.includes('G')&&a.opp===b.team)||(b.pos.includes('G')&&b.opp===a.team))notes.push(a.name+' + '+b.name+': goalie versus opposing skater');}return [...new Set(notes)];}
 function validate(value){
  assert(value&&value.version===1,'Expected NHL draft version 1');assert(JSON.stringify(value).length<=2000000,'NHL draft exceeds 2 MB');
- const allowed=['version','platform','players','roster','slate','model','receipt','synthetic'];assert(Object.keys(value).every(k=>allowed.includes(k)),'Unsupported NHL draft field');assert(RULES[value.platform],'Unknown platform');assert(Array.isArray(value.players)&&value.players.length<=600,'Invalid player pool');
+ const allowed=['version','platform','players','roster','slate','model','receipt','synthetic','forecast'];assert(Object.keys(value).every(k=>allowed.includes(k)),'Unsupported NHL draft field');assert(RULES[value.platform],'Unknown platform');assert(Array.isArray(value.players)&&value.players.length<=600,'Invalid player pool');
  const ids=new Set();for(const p of value.players){assert(p&&typeof p.id==='string'&&p.id.length<=160&&!ids.has(p.id),'Invalid / duplicate player ID');ids.add(p.id);assert(typeof p.name==='string'&&p.name.length<=160&&typeof p.team==='string'&&typeof p.opp==='string','Invalid identity');assert(Array.isArray(p.pos)&&p.pos.length>0&&p.pos.every(x=>['C','W','D','G'].includes(x))&&!(p.pos.includes('G')&&p.pos.length>1),'Invalid position');assert(p.platform===value.platform,'Mixed platform pool');assert(Number.isInteger(p.salary)&&p.salary>0&&p.salary<=RULES[value.platform].cap,'Invalid salary');assert(p.own===null||Number.isFinite(p.own)&&p.own>=0&&p.own<=100,'Invalid ownership');
  assert(p.kickoff==null||typeof p.kickoff==='string'&&Number.isFinite(Date.parse(p.kickoff)),'Invalid game start');
  for(const k of ['minutes','playProb'])assert(p[k]==null||Number.isFinite(p[k])&&p[k]>=0&&p[k]<=(k==='minutes'?100:1),'Invalid '+k);
@@ -135,14 +135,37 @@ function validate(value){
  assert(Array.isArray(value.roster)&&value.roster.length===9,'Nine roster slots required');const used=new Set();value.roster.forEach((i,s)=>{if(i===null)return;assert(Number.isInteger(i)&&value.players[i]&&!used.has(i)&&eligible(value.players[i],RULES[value.platform].slots[s]),'Duplicate / ineligible roster slot');used.add(i);});
  assert(value.slate&&typeof value.slate.id==='string'&&typeof value.slate.date==='string'&&Array.isArray(value.slate.games)&&value.slate.games.every(g=>typeof g==='string'),'Invalid slate');
  if(value.model){assert(value.model.version===VERSION&&Number.isFinite(Date.parse(value.model.asOf))&&Array.isArray(value.model.players)&&value.model.players.length<=2000,'Invalid model');for(const p of value.model.players){assert(typeof p.nhlId==='string'&&['F','D','G'].includes(p.pos)&&typeof p.name==='string'&&typeof p.team==='string'&&Number.isFinite(p.minutes)&&p.minutes>0&&p.minutes<=100&&Number.isInteger(p.games)&&p.games>0,'Invalid model player');assert(p.rates&&Object.values(p.rates).every(n=>Number.isFinite(n)&&n>=0&&n<=10),'Invalid model rates');assert(p.lastGame<value.model.asOf.slice(0,10),'Model contains as-of/future game');if(p.baseline){const b=p.baseline;assert(Number.isInteger(b.n)&&b.n===p.games&&Number.isFinite(b.mean)&&Number.isFinite(b.minutes)&&b.minutes>0&&b.lastDate<value.model.asOf.slice(0,10),'Invalid historical baseline');assert(b.variance===null||Number.isFinite(b.variance)&&b.variance>=0,'Invalid historical variance');assert(b.sd===null||Number.isFinite(b.sd)&&b.sd>=0,'Invalid historical SD');assert(b.components&&Object.values(b.components).every(Number.isFinite)&&Math.abs(Object.values(b.components).reduce((s,v)=>s+v,0)-b.mean)<1e-6,'Historical components do not reconcile');assert(Array.isArray(b.missing)&&b.missing.every(x=>typeof x==='string'),'Invalid missing-component receipt');}}}
+ if(value.forecast){const f=value.forecast;assert(f.version===1&&typeof f.source==='string'&&f.source.length<=1000&&Number.isFinite(Date.parse(f.asOf))&&f.date===value.slate.date&&Array.isArray(f.players)&&f.players.length<=value.players.length,'Invalid reviewed forecast');const seen=new Set();for(const r of f.players){assert(ids.has(r.id)&&!seen.has(r.id)&&Number.isFinite(r.points)&&r.points>=-100&&r.points<=200,'Invalid reviewed projection');seen.add(r.id);}}
  // Reject prototype-bearing JSON keys at any depth; preserve explicit nulls through storage.
  const scan=(v,d=0)=>{assert(d<20,'NHL state too deeply nested');if(v&&typeof v==='object')for(const [k,x] of Object.entries(v)){assert(!['__proto__','prototype','constructor'].includes(k),'Unsafe state key');scan(x,d+1);}};scan(value);return JSON.parse(JSON.stringify(value));
 }
+
+function reviewedJoin(d,pack){
+ assert(!d.synthetic&&d.platform==='dk','Use a real DraftKings CSV');
+ assert(d.receipt?.mapping?.id,'Actual platform ID column required');
+ assert(pack&&pack.slateDate&&Array.isArray(pack.players),'Reviewed package required');
+ const gameKey=p=>[p.team,p.opp].sort().join('@'),expected=pack.games.map(g=>g.split('@').sort().join('@')).sort();
+ assert(d.players.length&&d.players.every(p=>/^\d+$/.test(p.id)&&p.kickoff&&new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(p.kickoff))===pack.slateDate),'CSV IDs and Eastern game dates must match the reviewed slate');
+ assert(JSON.stringify([...new Set(d.players.map(gameKey))].sort())===JSON.stringify(expected),'CSV games must exactly match the reviewed slate');
+ const rows=d.players.map(p=>{const matches=pack.players.filter(q=>norm(q.name)===norm(p.name)&&q.team===p.team&&q.opponent===p.opp);const q=matches.length===1?matches[0]:null;return q&&p.pos.includes(q.position)?{id:p.id,points:q.points,flag:q.flag||'',line:q.line||'',pp:q.pp||''}:null;}).filter(Boolean);
+ assert(rows.length,'No unambiguous eligible reviewed matches');
+ return validate({...d,slate:{...d.slate,date:pack.slateDate,games:expected},forecast:{version:1,source:pack.source,asOf:pack.reviewedAt,date:pack.slateDate,players:rows}});
+}
+function draftProjection(p,d){
+ if(!d.forecast)return d.model?project(p,d.model):{points:null,subtotal:null,components:{},flags:['No historical model loaded']};
+ const row=d.forecast.players.find(q=>q.id===p.id);
+ return {points:null,subtotal:row?.points??null,components:row?{'Reviewed matchup mean':row.points}:{},minutes:null,playProb:null,match:row?'Exact name / team / opponent / position':'Unmatched reviewed forecast',flags:[row?'Conditional on active / starting. Reviewed forecast; not independently calibrated.':'No reviewed projection matched this player.',row?.flag||'',d.forecast.source+' / '+d.forecast.asOf].filter(Boolean)};
+}
+function privateDraft(d){
+ const clean=validate(d);if(clean.model)clean.model.players=clean.model.players.filter(m=>clean.players.some(p=>p.nhlId===m.nhlId||norm(p.name)===norm(m.name)&&p.team===m.team));
+ assert(JSON.stringify(clean).length<=550000,'Workspace exceeds 550 KB; reduce the player pool or historical model');return clean;
+}
+
 function projectionCsv(model){
  const header=['NHL_ID','Name','CurrentSourceTeam','ModelPosition_NotDKEligibility','Population','SampleN','MeanPartialDKPoints','EmpiricalGameToGameSD','SampleVariancePointsSquared','ScoreSum','ScoreSumSquares','HistoricalMeanMinutes','Recent5MeanMinutes','EmpiricalP10','EmpiricalMedian','EmpiricalP90','Last10MeanPartialDK','Last10N','FirstDate','LastDate','AsOf','ForecastPlayingOrStartingProbability','FullProjectedDKPoints','DKSalary','SlateID','MissingComponents'];
  const components=[...new Set(model.players.flatMap(p=>Object.keys(p.baseline?.components||{})))].sort();header.push(...components.map(k=>'MeanDKComponent_'+k));
  const rows=model.players.filter(p=>p.baseline).map(p=>{const b=p.baseline;return [p.nhlId,p.name,p.team,p.pos,b.kind,b.n,b.mean,b.sd,b.variance,b.sum,b.sumSquares,b.minutes,b.recent5Minutes,b.p10,b.median,b.p90,b.last10.mean,b.last10.n,b.firstDate,b.lastDate,model.asOf,null,null,null,null,b.missing.join('; '),...components.map(k=>b.components[k]??null)];});
  const cell=v=>{if(v==null)return '';const s=String(v);return '"'+s.replace(/"/g,'""')+'"';};return [header,...rows].map(r=>r.map(cell).join(',')).join('\r\n')+'\r\n';
 }
-const api={projectionCsv,VERSION,PARAMS,RULES,EVENTS,csv,num,norm,kickoff,locked,checkRosterChange,parsePool,minutes,history,train,match,tail,score,project,eligible,legality,correlations,validate};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DDNHL=api;
+const api={reviewedJoin,draftProjection,privateDraft,projectionCsv,VERSION,PARAMS,RULES,EVENTS,csv,num,norm,kickoff,locked,checkRosterChange,parsePool,minutes,history,train,match,tail,score,project,eligible,legality,correlations,validate};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DDNHL=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

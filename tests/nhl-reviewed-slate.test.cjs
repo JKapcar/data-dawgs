@@ -18,5 +18,5 @@ test('rank UI remains independent of builder and historical baseline',()=>{
  const s=fs.readFileSync(require.resolve('../dfs-nhl-slate-ui.js'),'utf8');
  assert.ok(!s.includes('DDNHLSnapshot'));assert.ok(!s.includes('innerHTML'));assert.ok(!s.includes('DDNHL.'));
  const html=fs.readFileSync(require.resolve('../dfs-nhl.html'),'utf8');
- assert.match(html,/Not lineup-ready/);assert.match(html,/DFS CSV/);assert.match(html,/do not populate the builder/);
+ assert.match(html,/Not lineup-ready/);assert.match(html,/DFS CSV/);assert.match(html,/matching dated salary CSV/);
 });

@@ -7,7 +7,7 @@ const draft={sport:'nhl',version:1,platform:'dk',players:[{id:'p1',name:'Fixture
 const args={workspace_id:'nhl-test',expected_revision:0,draft};async function reject(op,a,re,who){await assert.rejects(run(op,a,who),re);checks++;}
 await reject('draft',args,/personal/,{kind:'shared'});await reject('draft',{...args,uid:'other'},/unsupported/);await reject('draft',{...args,workspace_id:'../other'},/workspace_id/);
 delete env.NHL_PRIVATE_PREVIEW;
-await reject('draft',args,/disabled/);await reject('nhl_model',{},/disabled/);assert.equal((await run('schema')).nhl_schema.enabled,false);checks++;
+await reject('nhl_model',{},/disabled/);assert.equal((await run('schema')).nhl_schema.enabled,true);checks++;
 env.NHL_PRIVATE_PREVIEW='enabled';
 let saved=await run('draft',args);assert.equal(saved.revision,1);checks++;
 let w=await run('get',{workspace_id:args.workspace_id});assert.deepEqual(copy(w.draft),draft);assert.equal(w.draft.players[0].own,null);assert.equal(w.nhl_json,undefined);checks+=3;
@@ -30,4 +30,7 @@ response=await context.api.route(new Request(url,{method:'POST',headers:{'X-Bozo
 vm.runInContext(`fetch=async()=>new Response('game_id,player_id,player_name,team_abbrev,position,toi,game_date,goals,assists,shots_on_goal,blocked_shots\\n2026020001,1,Fixture,AAA,C,20:00,2026-10-11,1,0,3,2');`,context);
 const model=await run('nhl_model',{as_of:'2026-10-12T00:00:00Z',season:2027,game_type:'02'});assert.equal(model.model.players.length,1);assert.equal(model.model.receipt.trainingMaxDate,'2026-10-11');checks+=2;
 await reject('nhl_model',{as_of:'2099-01-01T00:00:00Z',season:2027,game_type:'02'},/future/);await reject('nhl_model',{as_of:'2026-10-12T00:00:00Z',season:2027,game_type:'01'},/regular season/);
+const mcpSaved=await context.api.tools.find(t=>t.name==='dd_dfs_draft').run({workspace_id:'isolated-mcp-qa',expected_revision:0,draft},env,caller);
+const mcpRead=await context.api.tools.find(t=>t.name==='dd_dfs_get').run({workspace_id:'isolated-mcp-qa'},env,caller);assert.match(JSON.stringify(mcpSaved),/revision/);assert.match(JSON.stringify(mcpRead),/Fixture/);checks+=2;
+await assert.rejects(context.api.tools.find(t=>t.name==='dd_dfs_get').run({workspace_id:'isolated-mcp-qa'},env,{kind:'user',uid:'userB'}),/not found/);checks++;
 console.log('PASS',checks,'NHL private workspace checks: roundtrip/nulls, model, schema, cross-account isolation, revisions, races, authenticated REST, NFL operation guards.');
