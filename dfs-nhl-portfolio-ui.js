@@ -1,9 +1,10 @@
 (function(){'use strict';
 const P=window.DDNHLPortfolio,N=window.DDNHL,A=window.DDNHLAccount,$=id=>document.getElementById(id);
-let set=null,selected=0,busy=false,epoch=0,refs=[];
+let set=null,selected=0,busy=false,epoch=0,refs=[],poolKey=null;
 const el=(tag,text,parent)=>{const e=document.createElement(tag);if(text!=null)e.textContent=text;if(parent)parent.append(e);return e;};
 const fmt=n=>n==null?'Unknown':n.toFixed(2),prefix=()=>{const s=$('setName').value.trim();if(!/^[A-Za-z0-9_-]{1,60}$/.test(s))throw Error('Set name: 1–60 letters, numbers, hyphens or underscores');return s;};
 function render(){
+ const current=window.DDNHLView?.();if(current){const key=N.ownershipKey(current);if(poolKey!==key){$('setConfirm').checked=false;poolKey=key;}}
  $('setSave').disabled=busy||!set||!A.signedIn()||set.lineups.some(x=>x.draft.synthetic);$('setLoad').disabled=busy||!A.signedIn();$('setGenerate').disabled=busy||!window.DDNHLView?.().players.length;$('setImport').disabled=busy;$('setExport').disabled=!set||busy;$('setResults').hidden=!set;if(!set)return;
  const diag=P.diagnose(set),row=diag.rows[selected]||diag.rows[0];selected=row.index;$('setSummary').textContent=(diag.rows.some(x=>x.synthetic)?'SYNTHETIC EXAMPLE. ':'')+diag.count+' candidate lineups / '+diag.rows.filter(x=>x.legal).length+' structurally legal. Conditional point sums; no cash probability, correlated ceiling or contest uniqueness estimate. Exposure describes this set only.';
  const select=$('setSelected');select.replaceChildren();diag.rows.forEach((r,i)=>{const o=el('option',r.label+' / '+fmt(r.points)+' pts / $'+r.salary.toLocaleString(),select);o.value=i;});select.value=selected;
@@ -25,7 +26,7 @@ async function action(fn){if(busy)return;busy=true;render();try{await fn();}catc
 function accept(value){set=P.readSet(value);refs=[];selected=0;render();}
 function route(name){const u=new URL(location.href);u.searchParams.set('set',name);history.replaceState(null,'',u);}
 $('setSelected').onchange=()=>{selected=Number($('setSelected').value);render();};
-$('setGenerate').onclick=()=>action(async()=>{accept(P.generate(window.DDNHLView(),{confirmedSlate:$('ownershipConfirm').checked,seed:Number($('ownershipSeed').value)}));$('setStatus').textContent='Generated ten distinct candidates. Three sampled preference scenarios; 2-point overlap penalty and at most seven shared players. Not optimized for a measured cash rate. Review before saving.';});
+$('setGenerate').onclick=()=>action(async()=>{accept(P.generate(window.DDNHLView(),{confirmedSlate:$('setConfirm').checked,seed:Number($('setSeed').value)}));$('setStatus').textContent='Generated ten distinct candidates. Three sampled preference scenarios; 2-point overlap penalty and at most seven shared players. Not optimized for a measured cash rate. Review before saving.';});
 $('setImport').onclick=()=>action(async()=>{accept(JSON.parse($('setJson').value));$('setJson').value='';$('setStatus').textContent='Imported locally. Nothing saved yet; review diagnostics and sources.';});
 $('setExport').onclick=()=>{const url=URL.createObjectURL(new Blob([JSON.stringify(set,null,2)],{type:'application/json'})),a=el('a');a.href=url;a.download='private-nhl-lineup-set.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('setSave').onclick=()=>action(async()=>{const name=prefix(),snapshot=P.readSet(set),gen=epoch;if(snapshot.lineups.some(x=>x.draft.synthetic))throw Error('Synthetic examples cannot be saved as real lineups.');if(P.diagnose(snapshot).rows.some(x=>!x.legal))throw Error('Complete all nine legal roster slots before saving a set.');
