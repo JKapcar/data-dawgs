@@ -14,9 +14,9 @@ test('public package excludes private sources and restricted benchmarks',()=>{
  const s=fs.readFileSync(require.resolve('../dfs-nhl-slate.js'),'utf8');
  for(const bad of ['docs.google.com','libfile_','gmail','DFF 10-13','download_url'])assert.ok(!s.includes(bad));
 });
-test('rank UI remains independent of builder and historical baseline',()=>{
+test('table shares projection schema without mutating the historical baseline',()=>{
  const s=fs.readFileSync(require.resolve('../dfs-nhl-slate-ui.js'),'utf8');
- assert.ok(!s.includes('DDNHLSnapshot'));assert.ok(!s.includes('innerHTML'));assert.ok(!s.includes('DDNHL.'));
+ assert.ok(s.includes('N.projectionRows'));assert.ok(!s.includes('DDNHLSnapshot='));assert.ok(!s.includes('innerHTML'));assert.ok(!s.includes('DDNHL.'));
  const html=fs.readFileSync(require.resolve('../dfs-nhl.html'),'utf8');
- assert.match(html,/Not lineup-ready/);assert.match(html,/DFS CSV/);assert.match(html,/do not populate the builder/);
+ assert.match(html,/Not lineup-ready/);assert.match(html,/DFS CSV/);assert.match(html,/matching dated salary CSV/);
 });

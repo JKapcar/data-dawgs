@@ -2274,7 +2274,7 @@ const MCP_TOOLS = [
     catalog: "core",
     readOnlyHint: false,
     destructiveHint: false,
-    description: "Save the shared player pool, partial manual roster, Cash/Small/Large preset and conditional-model settings. Read dd_dfs_schema and dd_dfs_get first. Pass get.draft with changes and the exact expected_revision; zero creates a new workspace only. Unknown source date is allowed. Explicit private save; never submits an entry. Replacing inputs clears computed candidates/results.",
+    description: "Save a private NFL draft or NHL named lineup. NHL uses sport=nhl, version=1, platform=dk, players, nine nullable roster indexes, slate, model, receipt, synthetic=false and optional forecast. Read the NHL schema and guide; full-draft updates use the same authorization. NFL supports the shared player pool, manual roster and Cash/Small/Large settings. Read dd_dfs_schema and dd_dfs_get first. Pass get.draft with changes and the exact expected_revision; zero creates a new workspace only. Unknown source date is allowed. Explicit private save; never submits an entry. Replacing inputs clears computed candidates/results.",
     inputSchema: dfsToolSchema("draft"),
     async run(args, env, caller) { return toolText(await dfsRun("draft", args, env, caller)); },
   },

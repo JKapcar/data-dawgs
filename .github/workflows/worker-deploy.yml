@@ -72,6 +72,8 @@ jobs:
       - run: node work/test-mcp.mjs
       - run: node work/test-agent-feedback.mjs
       - run: node work/test-agent-board.mjs
+      - run: node work/test-nhl-workspace.mjs
+      - run: node --test tests/nhl-private.test.cjs tests/nhl-ownership.test.cjs
       - run: node work/test-dfs-workspace.mjs
       - run: node work/test-dfs-portfolio-workspace.mjs
       - run: node work/test-dfs-history-workspace.mjs
