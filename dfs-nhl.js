@@ -126,7 +126,7 @@ function legality(players,roster,platform,slate={}){
 function correlations(players,roster){const ps=roster.filter(i=>i!==null).map(i=>players[i]).filter(Boolean),notes=[];for(let i=0;i<ps.length;i++)for(let j=i+1;j<ps.length;j++){const a=ps[i],b=ps[j],ao=a.override||a,bo=b.override||b;if(a.team===b.team&&!a.pos.includes('G')&&!b.pos.includes('G')){if(ao.line&&ao.line===bo.line)notes.push(a.name+' + '+b.name+': same even-strength line');if(ao.pp&&ao.pp===bo.pp)notes.push(a.name+' + '+b.name+': same power-play unit');}if((a.pos.includes('G')&&a.opp===b.team)||(b.pos.includes('G')&&b.opp===a.team))notes.push(a.name+' + '+b.name+': goalie versus opposing skater');}return [...new Set(notes)];}
 function validate(value){
  assert(value&&value.version===1,'Expected NHL draft version 1');assert(JSON.stringify(value).length<=2000000,'NHL draft exceeds 2 MB');
- const allowed=['version','platform','players','roster','slate','model','receipt','synthetic','forecast'];assert(Object.keys(value).every(k=>allowed.includes(k)),'Unsupported NHL draft field');assert(RULES[value.platform],'Unknown platform');assert(Array.isArray(value.players)&&value.players.length<=600,'Invalid player pool');
+ const allowed=['version','platform','players','roster','slate','model','receipt','synthetic','forecast','ownershipModel'];assert(Object.keys(value).every(k=>allowed.includes(k)),'Unsupported NHL draft field');assert(RULES[value.platform],'Unknown platform');assert(Array.isArray(value.players)&&value.players.length<=600,'Invalid player pool');
  const ids=new Set();for(const p of value.players){assert(p&&typeof p.id==='string'&&p.id.length<=160&&!ids.has(p.id),'Invalid / duplicate player ID');ids.add(p.id);assert(typeof p.name==='string'&&p.name.length<=160&&typeof p.team==='string'&&typeof p.opp==='string','Invalid identity');assert(Array.isArray(p.pos)&&p.pos.length>0&&p.pos.every(x=>['C','W','D','G'].includes(x))&&!(p.pos.includes('G')&&p.pos.length>1),'Invalid position');assert(p.platform===value.platform,'Mixed platform pool');assert(Number.isInteger(p.salary)&&p.salary>0&&p.salary<=RULES[value.platform].cap,'Invalid salary');assert(p.own===null||Number.isFinite(p.own)&&p.own>=0&&p.own<=100,'Invalid ownership');
  assert(p.kickoff==null||typeof p.kickoff==='string'&&Number.isFinite(Date.parse(p.kickoff)),'Invalid game start');
  for(const k of ['minutes','playProb'])assert(p[k]==null||Number.isFinite(p[k])&&p[k]>=0&&p[k]<=(k==='minutes'?100:1),'Invalid '+k);
@@ -136,6 +136,10 @@ function validate(value){
  assert(value.slate&&typeof value.slate.id==='string'&&typeof value.slate.date==='string'&&Array.isArray(value.slate.games)&&value.slate.games.every(g=>typeof g==='string'),'Invalid slate');
  if(value.model){assert(value.model.version===VERSION&&Number.isFinite(Date.parse(value.model.asOf))&&Array.isArray(value.model.players)&&value.model.players.length<=2000,'Invalid model');for(const p of value.model.players){assert(typeof p.nhlId==='string'&&['F','D','G'].includes(p.pos)&&typeof p.name==='string'&&typeof p.team==='string'&&Number.isFinite(p.minutes)&&p.minutes>0&&p.minutes<=100&&Number.isInteger(p.games)&&p.games>0,'Invalid model player');assert(p.rates&&Object.values(p.rates).every(n=>Number.isFinite(n)&&n>=0&&n<=10),'Invalid model rates');assert(p.lastGame<value.model.asOf.slice(0,10),'Model contains as-of/future game');if(p.baseline){const b=p.baseline;assert(Number.isInteger(b.n)&&b.n===p.games&&Number.isFinite(b.mean)&&Number.isFinite(b.minutes)&&b.minutes>0&&b.lastDate<value.model.asOf.slice(0,10),'Invalid historical baseline');assert(b.variance===null||Number.isFinite(b.variance)&&b.variance>=0,'Invalid historical variance');assert(b.sd===null||Number.isFinite(b.sd)&&b.sd>=0,'Invalid historical SD');assert(b.components&&Object.values(b.components).every(Number.isFinite)&&Math.abs(Object.values(b.components).reduce((s,v)=>s+v,0)-b.mean)<1e-6,'Historical components do not reconcile');assert(Array.isArray(b.missing)&&b.missing.every(x=>typeof x==='string'),'Invalid missing-component receipt');}}}
  if(value.forecast){const f=value.forecast;assert(f.version===1&&typeof f.source==='string'&&f.source.length<=1000&&Number.isFinite(Date.parse(f.asOf))&&f.date===value.slate.date&&Array.isArray(f.players)&&f.players.length<=value.players.length,'Invalid reviewed forecast');const seen=new Set();for(const r of f.players){assert(ids.has(r.id)&&!seen.has(r.id)&&Number.isFinite(r.points)&&r.points>=-100&&r.points<=200,'Invalid reviewed projection');seen.add(r.id);}}
+ if(value.ownershipModel){const o=value.ownershipModel;assert(o.version===1&&o.kind==='uncalibrated-legal-lineup-heuristic'&&typeof o.key==='string'&&Number.isFinite(Date.parse(o.asOf))&&Number.isInteger(o.seed)&&o.seed>=0&&o.seed<=4294967295&&o.confirmedSlate===true&&Number.isInteger(o.samples)&&o.samples>=20&&o.samples<=1000&&Array.isArray(o.scenarios)&&o.scenarios.length===3&&Array.isArray(o.rows)&&o.rows.length===value.players.length,'Invalid ownership heuristic');
+ const seen=new Set();for(const r of o.rows){assert(ids.has(r.id)&&!seen.has(r.id)&&[r.mean,r.low,r.high].every(x=>Number.isFinite(x)&&x>=0&&x<=100)&&r.low<=r.mean+1e-9&&r.mean<=r.high+1e-9,'Invalid ownership range');seen.add(r.id);}
+ for(const [j,x] of o.scenarios.entries()){assert(x.name===['projection','value','stack'][j]&&x.samples===o.samples&&Array.isArray(x.percent)&&x.percent.length===value.players.length&&x.percent.every(v=>Number.isFinite(v)&&v>=0&&v<=100)&&Math.abs(x.percent.reduce((a,b)=>a+b,0)-900)<1e-6&&Math.abs(x.percent.reduce((a,b,i)=>a+(value.players[i].pos.includes('G')?b:0),0)-100)<1e-6,'Invalid ownership scenario totals');}
+ for(let i=0;i<o.rows.length;i++){const r=o.rows[i],v=o.scenarios.map(x=>x.percent[i]);assert(r.id===value.players[i].id&&Math.abs(r.mean-v.reduce((a,b)=>a+b,0)/3)<1e-6&&r.low===Math.min(...v)&&r.high===Math.max(...v),'Ownership scenarios do not reconcile');}}
  // Reject prototype-bearing JSON keys at any depth; preserve explicit nulls through storage.
  const scan=(v,d=0)=>{assert(d<20,'NHL state too deeply nested');if(v&&typeof v==='object')for(const [k,x] of Object.entries(v)){assert(!['__proto__','prototype','constructor'].includes(k),'Unsafe state key');scan(x,d+1);}};scan(value);return JSON.parse(JSON.stringify(value));
 }
@@ -162,11 +166,78 @@ function privateDraft(d){
 }
 
 
+// Uncalibrated field assumptions, not observed ownership or a predictive simulator.
+function ownershipKey(d){
+ const s=JSON.stringify([d.platform,d.synthetic,d.slate,d.receipt?.mapping?.id,d.forecast?.asOf,d.forecast?.source,d.model?.asOf,d.model?.version,d.players.map(p=>[p.id,p.nhlId,p.name,p.team,p.opp,p.pos,p.salary,p.kickoff,p.date,p.slateId,p.override,p.status,p.source,p.sourceAt,p.line,p.pp,draftProjection(p,d).subtotal])]);
+ let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return (h>>>0).toString(16);
+}
+function ownershipGate(d,{confirmedSlate=false,now=Date.now()}={}){
+ const issues=[];try{validate({...d,ownershipModel:null});}catch(e){return {ok:false,issues:[e.message],eligible:[]};}
+ if(d.platform!=='dk')issues.push('DraftKings Classic only.');
+ if(!confirmedSlate)issues.push('Confirm the official slate ID, date, complete salaries and DK eligibility against your CSV.');
+ if(!d.players.length||!d.receipt?.mapping?.id)issues.push('Upload the actual DFS CSV with platform IDs.');
+ if(!d.slate.id||!/^\d{4}-\d{2}-\d{2}$/.test(d.slate.date)||!d.slate.games.length)issues.push('Apply the exact slate ID, date and games in Slate details.');
+ if(Date.parse(d.forecast?.asOf||d.model?.asOf)>now)issues.push('Projection as-of is in the future.');
+ const games=[...new Set(d.players.map(p=>[p.team,p.opp].sort().join('@')))].sort();
+ if(JSON.stringify(games)!==JSON.stringify([...new Set(d.slate.games)].sort()))issues.push('Uploaded games must exactly equal the target slate.');
+ const eligible=[],identities=new Set();
+ for(let i=0;i<d.players.length;i++){
+  const p=d.players[i],o=p.override||p,keys=['name:'+norm(p.name)+'|'+p.team,...(p.nhlId?['nhl:'+p.nhlId]:[])];
+  if(keys.some(k=>identities.has(k)))issues.push(p.name+': duplicate player identity.');keys.forEach(k=>identities.add(k));
+  if(!d.synthetic&&!/^\d+$/.test(p.id))issues.push(p.name+': numeric platform ID required.');
+  const start=Date.parse(p.kickoff),date=Number.isFinite(start)?new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(start)):null;
+  if(date!==d.slate.date||start<=now||p.date&&p.date!==d.slate.date||p.slateId&&p.slateId!==d.slate.id)issues.push(p.name+': missing, locked or mismatched slate/game time.');
+  const stamp=Date.parse(o.at||p.sourceAt),status=(o.status||'').trim().toLowerCase();
+  if(!o.source||!Number.isFinite(stamp)||stamp>now||now-stamp>6*3600000)issues.push(p.name+': availability needs a named source and timestamp within 6 hours.');
+  if(['out','scratched','not starting'].includes(status))continue;
+  if(!(p.pos.includes('G')?status==='confirmed':['active','confirmed'].includes(status)))issues.push(p.name+': mark active, confirmed starter (G), out, scratched or not starting after checking availability.');
+  if(!Number.isFinite(draftProjection(p,d).subtotal))issues.push(p.name+': projection missing.');
+  eligible.push(i);
+ }
+ if(eligible.length<9||new Set(eligible.filter(i=>!d.players[i].pos.includes('G')).map(i=>d.players[i].team)).size<3)issues.push('Infeasible pool: need nine available players and at least three skater teams.');
+ return {ok:!issues.length,issues:[...new Set(issues)],eligible};
+}
+function sampleOwnership(d,{confirmedSlate=false,now=Date.now(),seed=216,samples=300,includeLineups=false}={}){
+ const gate=ownershipGate(d,{confirmedSlate,now});assert(gate.ok,gate.issues.join(' / '));
+ assert(Number.isInteger(samples)&&samples>=20&&samples<=1000,'Use 20–1000 samples per scenario');assert(Number.isInteger(seed)&&seed>=0&&seed<=4294967295,'Seed must be an unsigned integer');
+ let rng=seed>>>0;const random=()=>{let t=rng+=0x6D2B79F5;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return ((t^t>>>14)>>>0)/4294967296;};
+ const ps=d.players,slots=RULES.dk.slots,pool=gate.eligible,points=ps.map(p=>draftProjection(p,d).subtotal);
+ const rank=(i,value)=>{const peers=pool.filter(j=>ps[j].pos.some(p=>ps[i].pos.includes(p)));const x=value(i);return peers.reduce((n,j)=>n+(value(j)<x?1:value(j)===x?.5:0),0)/peers.length;};
+ const ranks=ps.map((p,i)=>({points:pool.includes(i)?rank(i,j=>points[j]):0,value:pool.includes(i)?rank(i,j=>points[j]/ps[j].salary):0}));
+ const scenarios=[];
+ for(const name of ['projection','value','stack']){
+  const counts=ps.map(()=>0),lineups=[];let accepted=0,attempts=0;
+  while(accepted<samples&&attempts++<samples*12){
+   const roster=Array(9).fill(null),used=new Set();let nodes=0;
+   const search=(depth,salary)=>{
+    if(++nodes>2500)return false;
+    if(depth===9)return legality(ps,roster,'dk',d.slate).legal;
+    const remaining=slots.map((slot,s)=>({s,ids:roster[s]===null?pool.filter(i=>!used.has(i)&&eligible(ps[i],slot)):[]})).filter(x=>roster[x.s]===null).sort((a,b)=>a.ids.length-b.ids.length||a.s-b.s);
+    if(remaining.some(x=>!x.ids.length)||salary+remaining.reduce((n,x)=>n+Math.min(...x.ids.map(i=>ps[i].salary)),0)>RULES.dk.cap)return false;
+    const {s,ids}=remaining[0];
+    const ordered=ids.map(i=>{const r=ranks[i],role=ps[i].override||ps[i];let w=Math.exp(2*(name==='value'?.25*r.points+.75*r.value:.8*r.points+.2*r.value));
+     if(name==='stack'&&!ps[i].pos.includes('G')&&[...used].some(j=>{const b=ps[j],o=b.override||b;return !b.pos.includes('G')&&b.team===ps[i].team&&(role.line&&role.line===o.line||role.pp&&role.pp===o.pp);}))w*=2;
+     return {i,key:-Math.log(Math.max(random(),1e-12))/w};}).sort((a,b)=>a.key-b.key||a.i-b.i);
+    for(const {i} of ordered){if(nodes>2500)break;if(salary+ps[i].salary>RULES.dk.cap)continue;roster[s]=i;used.add(i);if(search(depth+1,salary+ps[i].salary))return true;used.delete(i);roster[s]=null;}return false;
+   };
+   if(search(0,0)){accepted++;roster.forEach(i=>counts[i]++);if(includeLineups)lineups.push([...roster]);}
+  }
+  assert(accepted===samples,'No complete sample: legal lineup search exhausted its bounded budget. Pool may be infeasible; no ownership estimate produced.');
+  scenarios.push({name,samples:accepted,attempts,percent:counts.map(c=>100*c/accepted),...(includeLineups?{lineups}:{})});
+ }
+ return {version:1,kind:'uncalibrated-legal-lineup-heuristic',key:ownershipKey(d),asOf:new Date(now).toISOString(),seed,samples,synthetic:!!d.synthetic,confirmedSlate:true,confidence:'low; assumptions unvalidated against contest fields',scenarios,rows:ps.map((p,i)=>({id:p.id,mean:scenarios.reduce((s,x)=>s+x.percent[i],0)/3,low:Math.min(...scenarios.map(x=>x.percent[i])),high:Math.max(...scenarios.map(x=>x.percent[i]))}))};
+}
+function currentOwnership(d,now=Date.now()){
+ const o=d.ownershipModel;if(!o||o.key!==ownershipKey(d)||Date.parse(o.asOf)>now||now-Date.parse(o.asOf)>6*3600000)return null;
+ return ownershipGate(d,{confirmedSlate:o.confirmedSlate,now}).ok?o:null;
+}
+
 function projectionRows(d){
- return d.players.map(p=>{const v=draftProjection(p,d),b=d.model?match(p,d.model).player?.baseline:null;return {id:p.id,name:p.name,team:p.team,position:p.pos.join('/'),salary:p.salary,projectedPoints:v.subtotal,projectionBasis:d.forecast?'Reviewed conditional matchup mean':'Historical partial-DK mean',projectionAsOf:d.forecast?.asOf||d.model?.asOf||null,ceiling:b&&b.n>=10?b.p90:null,ceilingPercentile:90,ceilingBasis:'Empirical historical partial-DK P90; linear interpolation at (n-1)*0.90; skater appearances / goalie starts; not a calibrated matchup forecast',ceilingN:b?.n??0,ceilingReason:!b?'No matched empirical history':b.n<10?'Fewer than 10 historical samples':'',estimatedOwnership:p.own??null,ownershipBasis:p.own==null?'Unavailable: no calibrated field model or supplied estimate':'User CSV estimate; not independently verified',value:v.subtotal==null?null:v.subtotal/p.salary*1000,flag:v.flags.join(' / ')};});
+ const heuristic=currentOwnership(d);
+ return d.players.map(p=>{const v=draftProjection(p,d),b=d.model?match(p,d.model).player?.baseline:null,o=heuristic?.rows.find(r=>r.id===p.id);return {id:p.id,name:p.name,team:p.team,position:p.pos.join('/'),salary:p.salary,projectedPoints:v.subtotal,projectionBasis:d.forecast?'Reviewed conditional matchup mean':'Historical partial-DK mean',projectionAsOf:d.forecast?.asOf||d.model?.asOf||null,ceiling:b&&b.n>=10?b.p90:null,ceilingPercentile:90,ceilingBasis:'Empirical historical partial-DK P90; linear interpolation at (n-1)*0.90; skater appearances / goalie starts; not a calibrated matchup forecast',ceilingN:b?.n??0,ceilingReason:!b?'No matched empirical history':b.n<10?'Fewer than 10 historical samples':'',estimatedOwnership:o?.mean??p.own??null,ownershipLow:o?.low??null,ownershipHigh:o?.high??null,ownershipSeed:heuristic?.seed??null,ownershipAsOf:heuristic?.asOf??null,ownershipBasis:o?'Uncalibrated legal-lineup heuristic v1; equal scenario mix; low confidence; range is scenario sensitivity, not a confidence interval':p.own==null?'Unavailable: run gated legal-lineup heuristic or supply an estimate':'User CSV estimate; not independently verified',value:v.subtotal==null?null:v.subtotal/p.salary*1000,flag:v.flags.join(' / ')};});
 }
 function projectionTableCsv(rows){
- const cols=['id','name','team','position','salary','projectedPoints','projectionBasis','projectionAsOf','ceiling','ceilingPercentile','ceilingBasis','ceilingN','ceilingReason','estimatedOwnership','ownershipBasis','value','flag'];
+ const cols=['id','name','team','position','salary','projectedPoints','projectionBasis','projectionAsOf','ceiling','ceilingPercentile','ceilingBasis','ceilingN','ceilingReason','estimatedOwnership','ownershipLow','ownershipHigh','ownershipSeed','ownershipAsOf','ownershipBasis','value','flag'];
  const cell=v=>'"'+((typeof v==='string'&&/^[=+\-@\t\r]/.test(v)?"'":'')+String(v??'')).replaceAll('"','""')+'"';return [cols.join(','),...rows.map(r=>cols.map(k=>cell(r[k])).join(','))].join('\r\n');
 }
 function qualitativePair(a,b){
@@ -184,5 +255,5 @@ function projectionCsv(model){
  const rows=model.players.filter(p=>p.baseline).map(p=>{const b=p.baseline;return [p.nhlId,p.name,p.team,p.pos,b.kind,b.n,b.mean,b.sd,b.variance,b.sum,b.sumSquares,b.minutes,b.recent5Minutes,b.p10,b.median,b.p90,b.last10.mean,b.last10.n,b.firstDate,b.lastDate,model.asOf,null,null,null,null,b.missing.join('; '),...components.map(k=>b.components[k]??null)];});
  const cell=v=>{if(v==null)return '';const s=String(v);return '"'+s.replace(/"/g,'""')+'"';};return [header,...rows].map(r=>r.map(cell).join(',')).join('\r\n')+'\r\n';
 }
-const api={projectionRows,projectionTableCsv,qualitativePair,reviewedJoin,draftProjection,privateDraft,projectionCsv,VERSION,PARAMS,RULES,EVENTS,csv,num,norm,kickoff,locked,checkRosterChange,parsePool,minutes,history,train,match,tail,score,project,eligible,legality,correlations,validate};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DDNHL=api;
+const api={ownershipKey,ownershipGate,sampleOwnership,currentOwnership,projectionRows,projectionTableCsv,qualitativePair,reviewedJoin,draftProjection,privateDraft,projectionCsv,VERSION,PARAMS,RULES,EVENTS,csv,num,norm,kickoff,locked,checkRosterChange,parsePool,minutes,history,train,match,tail,score,project,eligible,legality,correlations,validate};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DDNHL=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

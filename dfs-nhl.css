@@ -20,3 +20,7 @@ input[type=file]::file-selector-button{background:#e5f2ff;color:#103e6e;border:1
 @media(forced-colors:active){button[data-select]:disabled{border:2px solid Highlight}button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid Highlight}}
 
 .projection-table{min-width:880px;width:100%;font-variant-numeric:tabular-nums}.projection-table th button{font-size:12px;padding:6px;border:0;background:transparent}.projection-table td:not(:first-child){text-align:right}.projection-table th:first-child,.projection-table td:first-child{position:sticky;left:0;background:#f3f9ff;z-index:1;min-width:160px}.projection-table th{position:sticky;top:0;z-index:2}#pairMatrix td{min-width:65px;text-align:center}#pairMatrix td:first-child{text-align:left;min-width:140px}
+
+#ownershipSeed{max-width:12rem}#ownershipDetails label:has(input[type=checkbox]){display:flex;align-items:center;gap:10px}#ownershipDetails input[type=checkbox]{flex:none;width:auto}
+
+.projection-table th:first-child{z-index:3}

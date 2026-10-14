@@ -1,4 +1,4 @@
-import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
 const source=fs.readFileSync(new URL('../dawg-bot-worker.js',import.meta.url),'utf8').replace(/^import .*;$/m,'const BOZO_ESPN_TEAM_SEED = {};').replace('export default','const worker =');
 const context=vm.createContext({console,Date,URL,Response,Request,Headers,TextEncoder,TextDecoder,crypto:globalThis.crypto,AbortController,AbortSignal,setTimeout,clearTimeout});
 vm.runInContext(source+`\nglobalThis.api={run:dfsRun,tools:MCP_TOOLS,route:handleDfsWorkspace};fbGet=async(e,p)=>({data:e.rows[p]||null,etag:String(e.versions[p]||0)});fbPut=async(e,p,v,t)=>{if(String(e.versions[p]||0)!==t)return false;e.rows[p]=JSON.parse(JSON.stringify(v));e.versions[p]=(e.versions[p]||0)+1;return true;};`,context);
@@ -33,4 +33,8 @@ await reject('nhl_model',{as_of:'2099-01-01T00:00:00Z',season:2027,game_type:'02
 const mcpSaved=await context.api.tools.find(t=>t.name==='dd_dfs_draft').run({workspace_id:'isolated-mcp-qa',expected_revision:0,draft},env,caller);
 const mcpRead=await context.api.tools.find(t=>t.name==='dd_dfs_get').run({workspace_id:'isolated-mcp-qa'},env,caller);assert.match(JSON.stringify(mcpSaved),/revision/);assert.match(JSON.stringify(mcpRead),/Fixture/);checks+=2;
 await assert.rejects(context.api.tools.find(t=>t.name==='dd_dfs_get').run({workspace_id:'isolated-mcp-qa'},env,{kind:'user',uid:'userB'}),/not found/);checks++;
+// All state here is isolated synthetic test data in mock Firebase, never a real account.
+const require=createRequire(import.meta.url),N=require('../dfs-nhl.js'),{fixture}=require('../tests/nhl-ownership.test.cjs'),field=fixture(),stamp=new Date().toISOString(),future=new Date(Date.now()+3*3600000).toISOString();
+field.synthetic=false;field.slate.date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(future));field.forecast.date=field.slate.date;field.forecast.asOf=stamp;field.players.forEach(p=>{p.kickoff=future;p.sourceAt=stamp;});field.ownershipModel=N.sampleOwnership(field,{confirmedSlate:true,samples:20});
+await run('draft',{workspace_id:'isolated-ownership',expected_revision:0,draft:{sport:'nhl',...field}});const fieldRead=await run('get',{workspace_id:'isolated-ownership'});assert.deepEqual(copy(fieldRead.draft.ownershipModel),field.ownershipModel);assert.deepEqual(copy(fieldRead.nhl_projection_rows),N.projectionRows(field));checks+=2;
 console.log('PASS',checks,'NHL private workspace checks: roundtrip/nulls, model, schema, cross-account isolation, revisions, races, authenticated REST, NFL operation guards.');
