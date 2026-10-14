@@ -24,3 +24,7 @@ input[type=file]::file-selector-button{background:#e5f2ff;color:#103e6e;border:1
 #ownershipSeed{max-width:12rem}#ownershipDetails label:has(input[type=checkbox]){display:flex;align-items:center;gap:10px}#ownershipDetails input[type=checkbox]{flex:none;width:auto}
 
 .projection-table th:first-child{z-index:3}
+
+#lineupSet{border-top:2px solid #bed9ed;margin-top:32px;padding-top:24px}#setChart{display:block;width:100%;max-width:850px;background:#f3f9ff;border:1px solid #bfd7e9;font-size:12px}#setChart circle{cursor:pointer}#setChart circle:focus{stroke:#092f50;stroke-width:3}#setExposure>div{display:grid;grid-template-columns:minmax(140px,2fr) minmax(60px,1fr) auto;gap:10px;padding:6px 0;align-items:center}#setExposure meter{width:100%}#setOverlap td,#setOverlap th{min-width:35px;text-align:center}#setOverlap th:first-child{min-width:90px}#setDetail{padding:16px;background:#eaf5ff;margin-top:14px}
+
+#setExposure meter::-webkit-meter-optimum-value{background:#2086d4}#setExposure meter::-moz-meter-bar{background:#2086d4}
