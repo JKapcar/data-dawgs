@@ -45,8 +45,48 @@ FIELDS = {
 }
 
 
+def _js_number(value: float) -> str:
+    """Match tools/validate-data.js JSON.stringify number formatting."""
+    if not math.isfinite(value):
+        raise ValueError("non-finite float cannot be hashed")
+    abs_value = abs(value)
+    # ECMAScript NumberToString: scientific outside [1e-6, 1e21).
+    if abs_value != 0 and (abs_value < 1e-6 or abs_value >= 1e21):
+        text = format(value, ".15e")
+        mantissa, _, exponent = text.partition("e")
+        mantissa = mantissa.rstrip("0").rstrip(".")
+        exp = int(exponent)
+        sign = "+" if exp >= 0 else "-"
+        return f"{mantissa}e{sign}{abs(exp)}"
+    text = format(value, ".15f").rstrip("0").rstrip(".")
+    if text in {"", "-0"}:
+        return "0"
+    return text
+
+
+def _canonical_text(value: object) -> str:
+    if isinstance(value, dict):
+        return "{" + ",".join(
+            f"{json.dumps(key, ensure_ascii=False)}:{_canonical_text(value[key])}"
+            for key in sorted(value)
+        ) + "}"
+    if isinstance(value, list):
+        return "[" + ",".join(_canonical_text(item) for item in value) + "]"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return "null"
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        return _js_number(value)
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False)
+    raise TypeError(f"Unsupported canonical type: {type(value)!r}")
+
+
 def canonical(value: object) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+    return _canonical_text(value).encode()
 
 
 def number(value: str, *, integer: bool = False):
