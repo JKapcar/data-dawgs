@@ -5,7 +5,9 @@ let state={version:1,platform:'dk',players:[],roster:Array(9).fill(null),slate:{
 const say=s=>$('message').textContent=s,projection=p=>N.draftProjection({...p,date:state.slate.date||p.date},state);
 let savedSnapshot=null,busy=false;
 const fields=[['minutes','Expected minutes',100],['playProb','Playing / start probability',1],['line','Even-strength line'],['pp','Power-play unit'],['status','Goalie / availability status'],['source','Role/news source'],['winProb','Goalie win probability, given appearance',1],['shutoutProb','Goalie shutout probability, given appearance',1],['otLossProb','Goalie overtime-loss probability',1],['shPoints','Expected shorthanded points',10],['ppPoints','Expected power-play points',10],['shootoutGoals','Expected shootout goals',1]];
+window.DDNHLView=()=>structuredClone(state);
 function render(){
+ window.dispatchEvent(new CustomEvent('nhl-view-change'));
  if($('save')){const signed=window.DDNHLAccount?.signedIn();$('save').disabled=busy||!signed||state.synthetic||!state.players.length;$('load').disabled=busy||!signed;$('list').disabled=busy||!signed;$('savedState').textContent=savedSnapshot?(JSON.stringify(N.privateDraft(state))===savedSnapshot?'Saved and verified · revision '+revision:'Unsaved changes · last verified revision '+revision):'Not saved';}
  $('projectionHeading').textContent=state.forecast?'Reviewed DK if active':'DK baseline / SD';
  $('recipeFreshness').textContent=bundled?'Bundled '+(bundled.baselineVersion||bundled.version)+' / as-of '+bundled.asOf+' / history through '+(bundled.receipt?.trainingMaxDate||'unknown')+'. This dated snapshot is not a live feed.':'No bundled model available.';

@@ -1,21 +1,25 @@
 (function(){
-  'use strict';
-  const data=window.DDNHLReviewedSlate, root=document.getElementById('reviewedSlate');
-  if(!data||!root)return;
-  const $=id=>document.getElementById(id), fmt=n=>n==null?'Unknown':Number(n).toFixed(2);
-  function cell(row,text){const td=document.createElement('td');td.textContent=text;row.append(td);}
-  function render(){
-    const mode=$('slateRankMode').value, query=$('slateRankSearch').value.trim().toLowerCase();
-    const rows=data.players.filter(p=>(mode==='goalies'?p.position==='G':p.position!=='G')&&(mode!=='value'||p.valueRank!=null)&&(!query||(p.name+' '+p.team).toLowerCase().includes(query))).sort((a,b)=>(mode==='value'?a.valueRank-b.valueRank:a.rank-b.rank));
-    $('slateScoreLabel').textContent=mode==='value'?'Indicative pts / $1K':'DK if '+(mode==='goalies'?'starting':'active');
-    $('slateRankRows').replaceChildren();
-    for(const p of rows.slice(0,$('slateShowAll').checked?rows.length:10)){
-      const tr=document.createElement('tr');cell(tr,mode==='value'?p.valueRank:p.rank);cell(tr,p.name+' · '+p.team+' '+p.position);cell(tr,fmt(mode==='value'?p.value:p.points));cell(tr,p.flag||[p.line,p.pp].filter(Boolean).join(' / ')+' · role unverified');$('slateRankRows').append(tr);
-    }
-    $('slateRankCount').textContent=`${Math.min(rows.length,$('slateShowAll').checked?rows.length:10)} of ${rows.length} shown. ${mode==='value'?'Value uses October 13 placeholder prices; it is not current-slate value.':mode==='goalies'?'Conditional on starting; reported status is dated, not a live feed.':'Conditional on being active; availability is unresolved.'}`;
-  }
-  $('slateReviewStamp').textContent='Reviewed '+data.reviewedAt+' · Published '+data.publishedAt;
-  for(const p of data.scenarios){const li=document.createElement('li');li.textContent=`${p.name}: ${p.status}. ${fmt(p.points)} DK if active. Scenario changes: ${p.changes}. ${p.check}`;$('slateScenarios').append(li);}
-  for(const id of ['slateRankMode','slateShowAll'])$(id).addEventListener('change',render);
-  $('slateRankSearch').addEventListener('input',render);render();
+'use strict';const N=window.DDNHL,data=window.DDNHLReviewedSlate,$=id=>document.getElementById(id);if(!data||!$('reviewedSlate'))return;
+let rows=[],sort='projectedPoints',direction=-1;
+const fmt=n=>n==null?'—':Number(n).toFixed(2),cell=(tr,t,title)=>{const td=document.createElement('td');td.textContent=t;if(title)td.title=title;tr.append(td);};
+function inputs(){const d=window.DDNHLView?.();if(d?.players.length)return {draft:d,rows:N.projectionRows(d),players:d.players};
+ const model=window.DDNHLSnapshot,players=data.players.map((p,i)=>({id:'review-'+i,name:p.name,team:p.team,opp:p.opponent,pos:[p.position],own:null,platform:'dk',nhlId:null,line:p.line,pp:p.pp}));
+ return {draft:null,players,rows:players.map((p,i)=>{const q=data.players[i],b=model?N.match(p,model).player?.baseline:null;return {id:p.id,name:p.name,team:p.team,position:null,salary:null,projectedPoints:q.points,projectionBasis:'Reviewed conditional matchup mean',projectionAsOf:data.reviewedAt,ceiling:b&&b.n>=10?b.p90:null,ceilingN:b?.n??0,ceilingPercentile:90,ceilingBasis:'Historical partial-DK P90; linear interpolation; appearances / goalie starts',ceilingReason:!b?'No matched history':b.n<10?'Fewer than 10 samples':'',estimatedOwnership:null,ownershipBasis:'Missing verified slate salaries/eligibility and field model',value:null,flag:'Source position '+q.position+'; DK eligibility unverified. '+q.flag};})};}
+function render(){
+ const view=inputs();$('projectionTableTitle').textContent=view.draft?'Player projection table / uploaded CSV':'October 14 / reviewed matchup rankings / provisional';$('reviewedSchedule').hidden=Boolean(view.draft);$('tableReadiness').textContent=view.draft?'Salary and DK position are from your uploaded CSV. Verify the official slate and availability; saved or imported does not mean contest-ready. Points follow the selected builder model.':'Not lineup-ready. Actual October 14 salaries and all DK IDs are missing from the reviewed package. Upload the actual DFS CSV; placeholder prices are not used here.';const selectedTeam=$('tableTeam').value,teams=[...new Set(view.players.map(p=>p.team))].sort();$('tableTeam').replaceChildren();for(const t of ['',...teams]){const o=document.createElement('option');o.value=t;o.textContent=t||'All teams';$('tableTeam').append(o);}$('tableTeam').value=teams.includes(selectedTeam)?selectedTeam:'';const mode=$('slateRankMode').value,query=$('slateRankSearch').value.trim().toLowerCase(),team=$('tableTeam').value,pos=$('tablePosition').value;
+ rows=view.rows.filter((r,i)=>{const p=view.players[i];return (mode==='goalies'?p.pos.includes('G'):!p.pos.includes('G'))&&(!query||(r.name+' '+r.team).toLowerCase().includes(query))&&(!team||r.team===team)&&(!pos||p.pos.includes(pos));});
+ rows.sort((a,b)=>{const x=a[sort],y=b[sort];if(x==null)return y==null?a.name.localeCompare(b.name):1;if(y==null)return -1;return direction*(typeof x==='number'?x-y:String(x).localeCompare(String(y)));});
+ $('slateRankRows').replaceChildren();for(const r of rows.slice(0,$('slateShowAll').checked?rows.length:10)){const tr=document.createElement('tr');cell(tr,r.name,r.flag);cell(tr,r.team);cell(tr,r.position||'—','DK eligibility: '+(r.position?'uploaded CSV':r.flag));cell(tr,r.salary==null?'—':'$'+r.salary.toLocaleString(),'Salary from uploaded CSV only');cell(tr,fmt(r.projectedPoints),r.projectionBasis+' / '+r.projectionAsOf);cell(tr,fmt(r.ceiling)+(r.ceiling!=null?' · n='+r.ceilingN:''),r.ceilingBasis+'; '+r.ceilingReason);cell(tr,r.estimatedOwnership==null?'—':fmt(r.estimatedOwnership)+'%',r.ownershipBasis);cell(tr,fmt(r.value));$('slateRankRows').append(tr);}
+ $('slateRankCount').textContent=Math.min(rows.length,$('slateShowAll').checked?rows.length:10)+' of '+rows.length+' shown. '+(view.draft?'Uploaded CSV salaries/positions; projections follow the builder selection.':'Provisional reviewed points. Salary and DK position blank until actual DFS CSV.')+' Ownership is blank without a supplied estimate; no heuristic is fabricated.';
+ for(const b of document.querySelectorAll('[data-projection-sort]')){b.parentElement.setAttribute('aria-sort',b.dataset.projectionSort===sort?(direction===1?'ascending':'descending'):'none');}
+ const chosen=view.draft?.roster.filter(i=>i!==null).map(i=>view.players[i])||[],pairs=chosen.length?chosen:view.players.filter(p=>rows.some(r=>r.id===p.id)).slice(0,6),table=$('pairMatrix');table.replaceChildren();
+ const head=document.createElement('tr');cell(head,'Pair');pairs.forEach(p=>cell(head,p.name));table.append(head);for(const a of pairs){const tr=document.createElement('tr');cell(tr,a.name);for(const b of pairs){const c=N.qualitativePair(a,b);cell(tr,c.symbol,c.label);tr.lastChild.setAttribute('aria-label',a.name+' / '+b.name+': '+c.label);}table.append(tr);}
+ $('matrixNote').textContent=(chosen.length?'Current lineup':'First six filtered players')+'. Symbols are hypotheses only: + shared scoring opportunity; − opposing scoring interests; ± mixed; ? unmeasured. No coefficients, sample sizes or joint simulation are implied.';
+}
+$('slateReviewStamp').textContent='Reviewed '+data.reviewedAt+' / Published '+data.publishedAt;
+for(const p of data.scenarios){const li=document.createElement('li');li.textContent=p.name+': '+p.status+'. '+fmt(p.points)+' DK if active. Scenario changes: '+p.changes+'. '+p.check;$('slateScenarios').append(li);}
+for(const id of ['slateRankMode','slateShowAll','tableTeam','tablePosition'])$(id).addEventListener('change',()=>{if(id==='slateRankMode'){sort=$('slateRankMode').value==='value'?'value':'projectedPoints';direction=-1;}render();});
+$('slateRankSearch').addEventListener('input',render);window.addEventListener('nhl-view-change',render);
+for(const b of document.querySelectorAll('[data-projection-sort]'))b.onclick=()=>{const key=b.dataset.projectionSort;direction=sort===key?-direction:(key==='name'||key==='team'||key==='position'?1:-1);sort=key;render();};
+$('tableExport').onclick=()=>{const a=document.createElement('a'),url=URL.createObjectURL(new Blob([N.projectionTableCsv(rows)],{type:'text/csv;charset=utf-8'}));a.href=url;a.download='nhl-projection-table.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};render();
 })();

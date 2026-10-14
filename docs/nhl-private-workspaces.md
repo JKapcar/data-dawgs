@@ -28,3 +28,15 @@ The builder can explicitly apply the published reviewed package only when upload
 The optional `forecast` is `{version:1, source, asOf, date, players:[{id, points, flag, line, pp}]}`. It stores conditional reviewed points separately from the historical `model`. Unknown playing/start probabilities and ownership stay unknown. Do not mix unmatched historical means into a reviewed-forecast total. Switching back to historical mode clears `forecast`. Refreshing an uploaded pool or exact-slate target invalidates the join.
 
 AI clients may load and update the same complete draft through `dd_dfs_draft`; preserve provenance for any supplied forecast. These are user/model inputs, not server-certified predictions. No cash-rate, ROI or contest-entry claim follows from persistence. Actual October 14 salaries remain required for real October 14 lineups.
+
+## Projection table schema
+
+`get.nhl_projection_rows` (REST and MCP) is derived by the same `DDNHL.projectionRows` function as the browser table. CSV export includes id, name, team, position, salary, projectedPoints, projectionBasis, projectionAsOf, ceiling, ceilingPercentile, ceilingBasis, ceilingN, ceilingReason, estimatedOwnership, ownershipBasis, value and flag. Blank remains unknown. Salary/position come only from the uploaded CSV. Provisional package rows have neither verified DK positions nor current salaries.
+
+Ceiling means empirical historical **partial-DK P90**, with linear interpolation at sorted index `(n-1)*0.90`, using skater appearances or goalie starts. It is not a maximum, a simulated quantile, or a calibrated next-game forecast. It remains blank for fewer than 10 samples. See the historical scoring omissions and source cutoff; it is displayed separately even when the points column uses a matchup forecast.
+
+Ownership is either the uploaded user estimate, explicitly unverified, or null. No independent percentages are generated. A future heuristic requires verified slate eligibility/salaries and a distribution over legal nine-slot, salary-cap-constrained lineups; inclusion rates must sum to nine players per lineup and respect position constraints. That field model and contest ownership calibration do not exist in this release.
+
+The collapsible pair matrix is qualitative. Same-line/PP shared scoring, own-goalie mixed drivers, and opposing-goalie conflicts are hypotheses. No paired-game empirical study, sample size, numeric coefficient or shrinkage model is claimed. The matrix is not a joint simulator and does not predict cash rates.
+
+P90 is never availability-weighted or summed into a lineup ceiling. Legitimate zero-score appearances, negative goalie scores and pulled starts remain in the empirical history. Any future ownership sampler must use legal nine-slot lineups: marginal inclusion rates sum to 900%, with goalies 100% and skaters 800%; UTIL changes C/W/D totals. Scenario sensitivity would describe assumptions, not cash probabilities. Marginal historical summaries cannot supply covariance; numerical correlations need joint game histories, contemporaneous roles, joint sample sizes and a defensible shrinkage/positive-semidefinite treatment.

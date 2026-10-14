@@ -10,7 +10,7 @@ delete env.NHL_PRIVATE_PREVIEW;
 await reject('nhl_model',{},/disabled/);assert.equal((await run('schema')).nhl_schema.enabled,true);checks++;
 env.NHL_PRIVATE_PREVIEW='enabled';
 let saved=await run('draft',args);assert.equal(saved.revision,1);checks++;
-let w=await run('get',{workspace_id:args.workspace_id});assert.deepEqual(copy(w.draft),draft);assert.equal(w.draft.players[0].own,null);assert.equal(w.nhl_json,undefined);checks+=3;
+let w=await run('get',{workspace_id:args.workspace_id});assert.deepEqual(copy(w.draft),draft);assert.equal(w.draft.players[0].own,null);assert.equal(w.nhl_json,undefined);assert.equal(w.nhl_projection_rows[0].estimatedOwnership,null);assert.equal(w.nhl_projection_rows[0].salary,5000);checks+=5;
 await reject('get',{workspace_id:args.workspace_id},/not found/,{kind:'user',uid:'userB'});await reject('draft',args,/Revision conflict/);
 const edited=copy(w.draft);edited.players[0].override.playProb=.5;await run('draft',{...args,draft:edited,expected_revision:1});w=await run('get',{workspace_id:args.workspace_id});assert.equal(w.draft.players[0].override.playProb,.5);checks++;
 const race=await Promise.allSettled([run('draft',{...args,expected_revision:2}),run('draft',{...args,expected_revision:2})]);assert.equal(race.filter(r=>r.status==='fulfilled').length,1);checks++;

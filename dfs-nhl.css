@@ -18,3 +18,5 @@ input[type=file]::file-selector-button{background:#e5f2ff;color:#103e6e;border:1
 .numbers{border-bottom:1px solid #b7cddd;padding-bottom:24px}.scroll{background:#ffffffb8}th{background:#e7f2fb;color:#244b70}td{border-color:#c1d3e0}
 #availability:not(:empty){background:#e7f3ff;border-left:3px solid #0066cc;padding:10px 12px}summary:hover{color:#0057ae}a:hover{text-decoration:underline}
 @media(forced-colors:active){button[data-select]:disabled{border:2px solid Highlight}button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid Highlight}}
+
+.projection-table{min-width:880px;width:100%;font-variant-numeric:tabular-nums}.projection-table th button{font-size:12px;padding:6px;border:0;background:transparent}.projection-table td:not(:first-child){text-align:right}.projection-table th:first-child,.projection-table td:first-child{position:sticky;left:0;background:#f3f9ff;z-index:1;min-width:160px}.projection-table th{position:sticky;top:0;z-index:2}#pairMatrix td{min-width:65px;text-align:center}#pairMatrix td:first-child{text-align:left;min-width:140px}

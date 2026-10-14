@@ -161,11 +161,28 @@ function privateDraft(d){
  assert(JSON.stringify(clean).length<=550000,'Workspace exceeds 550 KB; reduce the player pool or historical model');return clean;
 }
 
+
+function projectionRows(d){
+ return d.players.map(p=>{const v=draftProjection(p,d),b=d.model?match(p,d.model).player?.baseline:null;return {id:p.id,name:p.name,team:p.team,position:p.pos.join('/'),salary:p.salary,projectedPoints:v.subtotal,projectionBasis:d.forecast?'Reviewed conditional matchup mean':'Historical partial-DK mean',projectionAsOf:d.forecast?.asOf||d.model?.asOf||null,ceiling:b&&b.n>=10?b.p90:null,ceilingPercentile:90,ceilingBasis:'Empirical historical partial-DK P90; linear interpolation at (n-1)*0.90; skater appearances / goalie starts; not a calibrated matchup forecast',ceilingN:b?.n??0,ceilingReason:!b?'No matched empirical history':b.n<10?'Fewer than 10 historical samples':'',estimatedOwnership:p.own??null,ownershipBasis:p.own==null?'Unavailable: no calibrated field model or supplied estimate':'User CSV estimate; not independently verified',value:v.subtotal==null?null:v.subtotal/p.salary*1000,flag:v.flags.join(' / ')};});
+}
+function projectionTableCsv(rows){
+ const cols=['id','name','team','position','salary','projectedPoints','projectionBasis','projectionAsOf','ceiling','ceilingPercentile','ceilingBasis','ceilingN','ceilingReason','estimatedOwnership','ownershipBasis','value','flag'];
+ const cell=v=>'"'+((typeof v==='string'&&/^[=+\-@\t\r]/.test(v)?"'":'')+String(v??'')).replaceAll('"','""')+'"';return [cols.join(','),...rows.map(r=>cols.map(k=>cell(r[k])).join(','))].join('\r\n');
+}
+function qualitativePair(a,b){
+ if(a.id===b.id)return {symbol:'—',label:'Same player; no coefficient estimated'};
+ const ag=a.pos.includes('G'),bg=b.pos.includes('G'),ao=a.override||a,bo=b.override||b;
+ if(ag||bg){if(ag&&bg)return {symbol:'?',label:'Goalie pair: no empirical estimate'};if(a.team===b.team)return {symbol:'±',label:'Own goalie / skater: shared win context may help, but scoring and saves have different drivers; qualitative hypothesis'};if(a.team===b.opp)return {symbol:'−',label:'Opposing goalie / skater: goals and saves create opposing scoring interests; qualitative hypothesis'};return {symbol:'?',label:'Different games: no empirical estimate'};}
+ if(a.team===b.team&&ao.pp&&ao.pp===bo.pp)return {symbol:'+',label:'Same PP unit: shared power-play goals/assists may co-occur; qualitative hypothesis, role must be current'};
+ if(a.team===b.team&&ao.line&&ao.line===bo.line)return {symbol:'+',label:'Same even-strength line: shared ice time and goals/assists may co-occur; qualitative hypothesis, role must be current'};
+ return {symbol:'?',label:a.team===b.team?'Other teammates: shared team environment, direction and strength unmeasured':'Opposing/different-team skaters: game environment and deployment matter; unmeasured'};
+}
+
 function projectionCsv(model){
  const header=['NHL_ID','Name','CurrentSourceTeam','ModelPosition_NotDKEligibility','Population','SampleN','MeanPartialDKPoints','EmpiricalGameToGameSD','SampleVariancePointsSquared','ScoreSum','ScoreSumSquares','HistoricalMeanMinutes','Recent5MeanMinutes','EmpiricalP10','EmpiricalMedian','EmpiricalP90','Last10MeanPartialDK','Last10N','FirstDate','LastDate','AsOf','ForecastPlayingOrStartingProbability','FullProjectedDKPoints','DKSalary','SlateID','MissingComponents'];
  const components=[...new Set(model.players.flatMap(p=>Object.keys(p.baseline?.components||{})))].sort();header.push(...components.map(k=>'MeanDKComponent_'+k));
  const rows=model.players.filter(p=>p.baseline).map(p=>{const b=p.baseline;return [p.nhlId,p.name,p.team,p.pos,b.kind,b.n,b.mean,b.sd,b.variance,b.sum,b.sumSquares,b.minutes,b.recent5Minutes,b.p10,b.median,b.p90,b.last10.mean,b.last10.n,b.firstDate,b.lastDate,model.asOf,null,null,null,null,b.missing.join('; '),...components.map(k=>b.components[k]??null)];});
  const cell=v=>{if(v==null)return '';const s=String(v);return '"'+s.replace(/"/g,'""')+'"';};return [header,...rows].map(r=>r.map(cell).join(',')).join('\r\n')+'\r\n';
 }
-const api={reviewedJoin,draftProjection,privateDraft,projectionCsv,VERSION,PARAMS,RULES,EVENTS,csv,num,norm,kickoff,locked,checkRosterChange,parsePool,minutes,history,train,match,tail,score,project,eligible,legality,correlations,validate};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DDNHL=api;
+const api={projectionRows,projectionTableCsv,qualitativePair,reviewedJoin,draftProjection,privateDraft,projectionCsv,VERSION,PARAMS,RULES,EVENTS,csv,num,norm,kickoff,locked,checkRosterChange,parsePool,minutes,history,train,match,tail,score,project,eligible,legality,correlations,validate};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DDNHL=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
