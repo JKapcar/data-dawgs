@@ -15371,9 +15371,16 @@ function ownershipKey(d){
  const s=JSON.stringify([d.platform,d.synthetic,d.slate,d.receipt?.mapping?.id,d.forecast?.asOf,d.forecast?.source,d.model?.asOf,d.model?.version,d.players.map(p=>[p.id,p.nhlId,p.name,p.team,p.opp,p.pos,p.salary,p.platformId,p.salarySource,p.salaryAsOf,p.eligibilitySource,p.eligibilityAsOf,p.kickoff,p.date,p.slateId,p.override,p.status,p.source,p.sourceAt,p.line,p.pp,draftProjection(p,d).subtotal])]);
  let h=2166136261;for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),16777619);return (h>>>0).toString(16);
 }
+function defaultOwnershipAssumption(d){
+ assert(d.receipt?.publicPackage,'Automatic ownership requires the reviewed public source package');
+ const ps=d.players.filter(p=>{const o=p.override||p;return p.selectableByDefault!==false&&!/^(out|scratched|not starting|confirmed_out|confirmed_scratch)$/i.test(o.status||'')&&(!p.pos.includes('G')||/^(confirmed|confirmed_starter|reported_starter)$/i.test(o.status||''));});
+ return {version:1,mode:'conditional-participants',origin:'model-default',acknowledged:false,participantIds:ps.map(p=>p.id),goalieIds:ps.filter(p=>p.pos.includes('G')).map(p=>p.id)};
+}
 function validateOwnershipAssumption(d,a){
- assert(a&&a.version===1&&a.mode==='conditional-participants'&&a.acknowledged===true,'Acknowledge conditional participant assumptions');
- assert(Object.keys(a).every(k=>['version','mode','acknowledged','participantIds','goalieIds'].includes(k)),'Unsupported participant assumption');
+ const automatic=a?.origin==='model-default';
+ assert(a&&a.version===1&&a.mode==='conditional-participants'&&(automatic?a.acknowledged===false:a.acknowledged===true),'Acknowledge conditional participant assumptions');
+ assert(Object.keys(a).every(k=>['version','mode','origin','acknowledged','participantIds','goalieIds'].includes(k))&&(!a.origin||automatic),'Unsupported participant assumption');
+ if(automatic)assert(JSON.stringify(a)===JSON.stringify(defaultOwnershipAssumption(d)),'Default model participants no longer match the current source package');
  for(const k of ['participantIds','goalieIds'])assert(Array.isArray(a[k])&&a[k].length>0&&new Set(a[k]).size===a[k].length&&a[k].every(id=>typeof id==='string'&&d.players.some(p=>p.id===id)),'Invalid '+k);
  const goalies=d.players.filter(p=>a.participantIds.includes(p.id)&&p.pos.includes('G'));
  assert(goalies.length===a.goalieIds.length&&goalies.every(p=>a.goalieIds.includes(p.id)),'Explicitly select every assumed starting goalie');
@@ -15435,7 +15442,7 @@ function sampleOwnership(d,{confirmedSlate=false,now=Date.now(),seed=216,samples
   assert(accepted===samples,'No complete sample: legal lineup search exhausted its bounded budget. Pool may be infeasible; no ownership estimate produced.');
   scenarios.push({name,samples:accepted,attempts,percent:counts.map(c=>100*c/accepted),...(includeLineups?{lineups}:{})});
  }
- return {version:1,kind:'uncalibrated-legal-lineup-heuristic',...(assumption?{assumption:JSON.parse(JSON.stringify(assumption)),assumptionKey:JSON.stringify(assumption),condition:'Conditional on explicitly selected participants and starting goalies; recorded statuses are unchanged.'}:{}),key:ownershipKey(d),asOf:new Date(now).toISOString(),seed,samples,synthetic:!!d.synthetic,confirmedSlate:true,confidence:'low; assumptions unvalidated against contest fields',scenarios,rows:ps.map((p,i)=>({id:p.id,mean:scenarios.reduce((s,x)=>s+x.percent[i],0)/3,low:Math.min(...scenarios.map(x=>x.percent[i])),high:Math.max(...scenarios.map(x=>x.percent[i]))}))};
+ return {version:1,kind:'uncalibrated-legal-lineup-heuristic',...(assumption?{assumption:JSON.parse(JSON.stringify(assumption)),assumptionKey:JSON.stringify(assumption),condition:assumption.origin==='model-default'?'Conditional model default: projected participants and source-listed starting goalies; not user-confirmed. Recorded statuses are unchanged.':'Conditional on explicitly selected participants and starting goalies; recorded statuses are unchanged.',confirmationBasis:assumption.origin==='model-default'?'dated-source-evidence':'explicit-review'}:{}),key:ownershipKey(d),asOf:new Date(now).toISOString(),seed,samples,synthetic:!!d.synthetic,confirmedSlate:true,confidence:'low; assumptions unvalidated against contest fields',scenarios,rows:ps.map((p,i)=>({id:p.id,mean:scenarios.reduce((s,x)=>s+x.percent[i],0)/3,low:Math.min(...scenarios.map(x=>x.percent[i])),high:Math.max(...scenarios.map(x=>x.percent[i]))}))};
 }
 function currentOwnership(d,now=Date.now()){
  const o=d.ownershipModel;if(o?.assumption&&o.assumptionKey!==JSON.stringify(o.assumption))return null;if(!o||o.key!==ownershipKey(d)||Date.parse(o.asOf)>now||now-Date.parse(o.asOf)>6*3600000)return null;
@@ -15465,7 +15472,7 @@ function projectionCsv(model){
  const rows=model.players.filter(p=>p.baseline).map(p=>{const b=p.baseline;return [p.nhlId,p.name,p.team,p.pos,b.kind,b.n,b.mean,b.sd,b.variance,b.sum,b.sumSquares,b.minutes,b.recent5Minutes,b.p10,b.median,b.p90,b.last10.mean,b.last10.n,b.firstDate,b.lastDate,model.asOf,null,null,null,null,b.missing.join('; '),...components.map(k=>b.components[k]??null)];});
  const cell=v=>{if(v==null)return '';const s=String(v);return '"'+s.replace(/"/g,'""')+'"';};return [header,...rows].map(r=>r.map(cell).join(',')).join('\r\n')+'\r\n';
 }
-const api={supportedSlateRow,ownershipKey,ownershipGate,sampleOwnership,currentOwnership,projectionRows,projectionTableCsv,qualitativePair,reviewedJoin,draftProjection,privateDraft,projectionCsv,VERSION,PARAMS,RULES,EVENTS,csv,num,norm,kickoff,locked,checkRosterChange,parsePool,minutes,history,train,match,tail,score,project,eligible,legality,correlations,validate};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DDNHL=api;
+const api={defaultOwnershipAssumption,supportedSlateRow,ownershipKey,ownershipGate,sampleOwnership,currentOwnership,projectionRows,projectionTableCsv,qualitativePair,reviewedJoin,draftProjection,privateDraft,projectionCsv,VERSION,PARAMS,RULES,EVENTS,csv,num,norm,kickoff,locked,checkRosterChange,parsePool,minutes,history,train,match,tail,score,project,eligible,legality,correlations,validate};if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.DDNHL=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
 
 })(dfsModules, dfsModules, undefined, undefined);
