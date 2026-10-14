@@ -24,3 +24,5 @@ test('isolated private save reads back, reopens after reload and never saves dem
  const reopened=boot({signed:true,fetch,url});await new Promise(r=>setTimeout(r,30));assert.equal(reopened.window.document.querySelectorAll('#pool tr').length,1);assert.match(reopened.window.document.getElementById('savedState').textContent,/Saved and verified/);
  reopened.window.document.getElementById('demo').click();assert.equal(reopened.window.document.getElementById('save').disabled,true);assert.equal(writes,1);reopened.window.close();
 });
+
+test('card placement rejects duplicate and ineligible slots without altering roster',()=>{const dom=boot(),w=dom.window,d=w.document;d.getElementById('demo').click();w.DDNHLPlace(0);assert.equal(w.DDNHLView().roster[0],0);assert.throws(()=>w.DDNHLPlace(0),/eligible/);const goalie=w.DDNHLView().players.findIndex(p=>p.pos.includes('G'));assert.throws(()=>w.DDNHLPlace(goalie,1),/eligible/);assert.equal(w.DDNHLView().roster.filter(x=>x!==null).length,1);w.DDNHLPlace(goalie,7);assert.equal(w.DDNHLView().roster[7],goalie);dom.window.close();});

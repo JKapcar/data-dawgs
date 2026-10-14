@@ -9,5 +9,8 @@ async function request(op,args){
  if(token()!==session)throw Error('Account changed during request; reopen the workspace.');
  if(!r.ok||out.error)throw Error(out.error||'Workspace request failed');return out;
 }
+let observed=token();
+function refresh(){const current=token();if(current!==observed){observed=current;window.dispatchEvent(new StorageEvent('storage',{key:'dd-bozo-sess'}));}}
+if(window.addEventListener){window.addEventListener('storage',e=>{if(e.key==='dd-bozo-sess')observed=token();});window.addEventListener('focus',refresh);window.addEventListener('pageshow',refresh);}
 window.DDNHLAccount=Object.freeze({signedIn:()=>Boolean(token()),request});
 })();
