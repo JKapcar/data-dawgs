@@ -2,7 +2,7 @@
  "source_page": "/stats.html",
  "tier": "dawg",
  "graded": false,
- "as_of": "2026-10-14",
+ "as_of": "2026-10-15",
  "source": "nflverse play-by-play; current-season completed games refreshed daily, with corrections; historical seasons retain their dated snapshots. See data.coverage for exact games, source hash and timestamps.",
  "note": "Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback minimum for QBs; the pooled table uses 500. 2026 covers Weeks 1-5 ONLY (79 games) — a small sample sensitive to opponent and game script; its QB minimum is the 200 bar prorated to 59 dropbacks. The pooled table spans every season in the snapshot, including the partial one. These are descriptive aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026, and do not interpret an incomplete season as a complete season. Dropback EPA counts every dropback including scrambles and penalty-nullified plays and uses play epa, not qb_epa; Rush EPA excludes scrambles and kneels. These will not match nflverse passing_epa / rushing_epa.",
  "field_notes": {
@@ -4504,12 +4504,12 @@
      "WAS": 5
     },
     "through": "2026-10-12",
-    "captured": "2026-10-14",
-    "refreshed_at": "2026-10-14T15:57:55.035571Z",
+    "captured": "2026-10-15",
+    "refreshed_at": "2026-10-15T15:44:01.509883Z",
     "source_url": "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2026.csv.gz",
-    "source_updated": "Wed, 14 Oct 2026 14:31:37 GMT",
+    "source_updated": "Thu, 15 Oct 2026 14:09:56 GMT",
     "source_sha256": "f6dca321749fc6ddbfa32cfb85c9818ab2b270ceae64a45299a46e9251cbd8fb",
-    "schedule_sha256": "cca3d3ef5b077f1786ab6f86683decc5b7e3d7ac50f67f226fd4b6708bb66055",
+    "schedule_sha256": "6e2e5b374d3abe3cd6d44e32474d7e33823dd90d6902b2a9de03c620b1dd22fb",
     "pending_games": [],
     "refresh_frequency": "daily at 11:43 UTC",
     "note": "Completed games only, including incomplete weeks. Daily published nflverse EPA; not live. Historical seasons retained; current-season corrections incorporated."
@@ -4524,6 +4524,6 @@
   }
  },
  "tier_meaning": "Working Dawg — earned its collar. Evidence survived validation: receipts against a benchmark chosen in advance for forecasters, named sources and reproducible maths for measurement tools.",
- "built": "2026-10-14",
+ "built": "2026-10-15",
  "canonical_url": "https://datadawgs216.com/data/epa-teams.json"
 }
