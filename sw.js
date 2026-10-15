@@ -5,7 +5,7 @@
 // meant a JS-only fix never invalidated a phone's cache.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "01f00b8af7";
+const VERSION = "9d8d8e95a8";
 // A cache revision also invalidates old images when only precached artwork changes.
 const CACHE = "dd-" + VERSION + "-public-v3";
 
@@ -88,6 +88,7 @@ function canStore(response, allowOpaque = false){
 }
 function publicRequest(req){
   const url = new URL(req.url);
+  if(url.pathname === "/vault.html" || url.pathname === "/vault-setup.js") return false;
   if(req.method !== "GET" || req.cache === "no-store" || req.headers.has("authorization") ||
      /no-store|no-cache/i.test(req.headers.get("cache-control") || "")) return false;
   if(req.headers.has("range") && !(url.origin===self.location.origin && CORE_MEDIA.includes(url.pathname))) return false;

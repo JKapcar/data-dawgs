@@ -150,3 +150,5 @@ test('precache is per-file, rejects private responses and includes the live-stat
   assert.ok(h.entries.has(h.key('/board.html')));
   assert.ok(!h.entries.has(h.key('/connect.html')));
 });
+
+test('vault setup shell and script bypass CacheStorage',async()=>{const h=harness();for(const url of ['/vault.html','/vault-setup.js','/api/vault','/api/vault/access','/mcp/vault'])assert.equal(await h.dispatch(url),undefined);assert.equal(h.stores.size,0);});

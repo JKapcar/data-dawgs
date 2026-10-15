@@ -1665,6 +1665,42 @@ async function handleSleeperPlayersSlim(request, env, cors) {
   return serve(payload);
 }
 
+/* VAULT-SETUP HANDLERS START */
+// Self-profile only: no owner configuration, storage access, token minting or account listing.
+async function handleAccountSelf(request,env,readSession,sessionAuth,origins){
+ const origin=request.headers.get('Origin'),url=new URL(request.url);
+ const headers={'Content-Type':'application/json','Cache-Control':'private, no-store, max-age=0','Pragma':'no-cache','Vary':'Origin, X-Dawg-Session','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'};
+ if(origin&&origins.includes(origin))Object.assign(headers,{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'X-Dawg-Session','Access-Control-Allow-Methods':'GET, OPTIONS'});
+ const reply=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
+ try{
+  if(origin&&!origins.includes(origin))return reply({error:'Origin denied'},403);
+  if(url.search)return reply({error:'Query parameters are not accepted'},400);
+  if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
+  if(request.method!=='GET')return reply({error:'GET required'},405);
+  if(request.headers.has('Authorization'))return reply({error:'Use the site sign-in session'},401);
+  const token=request.headers.get('X-Dawg-Session')||'';
+  if(!token)return reply({error:'Sign in to view your account ID'},401);
+  // Reject legacy/name-only sessions before sessionAuth can enter its legacy account-list branch.
+  const signed=await readSession(env,token);
+  if(!signed||!/^u_[A-Za-z0-9_-]+$/.test(signed.u||''))return reply({error:'Sign in again to view your account ID'},401);
+  const auth=await sessionAuth(request,env);
+  if(auth.err||auth.uid!==signed.u)return reply({error:'Sign in again to view your account ID'},401);
+  return reply({uid:auth.uid});
+ }catch{return reply({error:'Account verification is temporarily unavailable'},503);}
+}
+
+// Setup release: these routes are inert regardless of configuration or credentials.
+function handleVaultDisabled(request, origins) {
+ const origin=request.headers.get('Origin');
+ const headers={'Content-Type':'application/json','Cache-Control':'private, no-store, max-age=0','Pragma':'no-cache','Vary':'Origin, Authorization, X-Dawg-Session','X-Content-Type-Options':'nosniff'};
+ if(origin&&origins.includes(origin))Object.assign(headers,{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'Content-Type, Authorization, X-Dawg-Session','Access-Control-Allow-Methods':'POST, OPTIONS'});
+ if(origin&&!origins.includes(origin))return new Response(JSON.stringify({error:'Origin denied'}),{status:403,headers});
+ if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
+ return new Response(JSON.stringify({error:'Vault storage and sharing are not enabled'}),{status:503,headers});
+}
+
+/* VAULT-SETUP HANDLERS END */
+
 export default {
   // Two isolated jobs share this Worker: the nightly private RTDB backup and the
   // hourly public-data CFB receipt capture. Never run the backup hourly: it contains
@@ -1801,6 +1837,9 @@ export default {
     }
   },
   async fetch(request, env) {
+    const setupPath = new URL(request.url).pathname;
+    if (setupPath === "/auth/self") return handleAccountSelf(request, env, readSession, sessionAuth, ORIGINS);
+    if (["/api/vault", "/api/vault/access", "/mcp/vault"].includes(setupPath)) return handleVaultDisabled(request, ORIGINS);
     // Keep renewal outside the dispatcher: every authenticated route, including old
     // compatibility aliases, gets the same sliding-session behavior automatically.
     const dispatch = async () => {
