@@ -1,9 +1,9 @@
 {
- "as_of": "2026-10-14",
+ "as_of": "2026-10-15",
  "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
  "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
  "site": "https://datadawgs216.com",
- "built": "2026-10-14",
+ "built": "2026-10-15",
  "data": {
   "files": [
    {
@@ -248,10 +248,10 @@
    {
     "path": "/data/fourth-down-previous.json",
     "url": "https://datadawgs216.com/data/fourth-down-previous.json",
-    "bytes": 232676,
-    "as_of": "2026-09-28",
-    "sha256": "33e3643ed72454eb78278e46385ac5f69c88b424ad8eae485ab0052efaa4d458",
-    "note": "Previous captured week: week 3, seeded from the live snapshot as committed 2026-09-28 (git 4aa3d2a), captured before the Monday night game (PHI @ CHI has no decisions). Week 4 was not captured: the refresh pipeline failed from Oct 3 to Oct 9. Replaced automatically when the live snapshot rolls from week 5 to week 6. Later ESPN revisions are not applied. Delayed snapshot; pregame lines, not live prices."
+    "bytes": 248150,
+    "as_of": "2026-10-14",
+    "sha256": "130e4ab6616a78817a9a534f6f1200442d246cbb249f13dc469e92300fd87081",
+    "note": "Previous captured week, frozen when the live snapshot rolled forward. As captured at refreshed_at; later ESPN revisions are not applied. Delayed snapshot; pregame lines, not live prices."
    },
    {
     "path": "/data/fourth-down-rates.json",
@@ -264,9 +264,9 @@
    {
     "path": "/data/fourth-down.json",
     "url": "https://datadawgs216.com/data/fourth-down.json",
-    "bytes": 248053,
-    "as_of": "2026-10-14",
-    "sha256": "6b9f46c7cdcf5df889f009d5b3db030eac2ba83679a309adea4aaa5785e7b74f",
+    "bytes": 2489,
+    "as_of": "2026-10-15",
+    "sha256": "66b73e74614d629a2ac94c227b22ba73f9bd3734a6fb9da1c1b4c3925c811944",
     "note": "Delayed game-decision snapshot. Check per-game capture time and refresh_error. No overtime recommendations. Pregame lines, not live betting prices."
    },
    {
