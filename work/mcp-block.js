@@ -1951,9 +1951,16 @@ async function mcpAuth(request, url, env) {
     let users;
     try { users = await loadUsers(env); } catch { return null; }
     const h = await mcpTokenHash(env, supplied);
-    let hit = null, hitUser = null;
-    for (const [key, u] of Object.entries(users))
-      if (u && u.mcpToken && timingSafeEqual(h, u.mcpToken)) { hit = playerName(key); hitUser = u; }
+    let hit = null, hitUser = null, keyLabel = null;
+    // The primary key (mcpToken) plus any labeled per-AI keys (mcpTokens.<label>.hash). Every
+    // row and every key is compared, timing-safely, so a near miss leaks nothing.
+    for (const [key, u] of Object.entries(users)) {
+      if (!u) continue;
+      if (u.mcpToken && timingSafeEqual(h, u.mcpToken)) { hit = playerName(key); hitUser = u; keyLabel = "primary"; }
+      if (u.mcpTokens && typeof u.mcpTokens === "object")
+        for (const [label, k] of Object.entries(u.mcpTokens))
+          if (k && typeof k.hash === "string" && timingSafeEqual(h, k.hash)) { hit = playerName(key); hitUser = u; keyLabel = label; }
+    }
     // The caller's own entitlement rides along. Their record is already in hand here, so it
     // costs no extra read, and it is what a future gate on the solver or the simulator will
     // check instead of re-fetching /users on every tool call.
@@ -1966,7 +1973,7 @@ async function mcpAuth(request, url, env) {
     if (!hit) return null;
     const display = hitUser && typeof hitUser.name === "string" && hitUser.name.trim()
       ? hitUser.name.trim() : hit;
-    return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser), transport,
+    return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser), transport, keyLabel,
       // ⚠️ The account's role flags, read here so isSiteAdmin() has one shape to check.
       // Never derived from anything the caller sent.
       roles: (hitUser && hitUser.roles && typeof hitUser.roles === "object") ? hitUser.roles : null };
@@ -2011,10 +2018,21 @@ async function mcpAuth(request, url, env) {
 const MCP_CATALOGS = ["core", "full"];
 const MCP_DEFAULT_CATALOG = "full";
 
+// Accepted credential headers, in order: X-Dawg-Pass, X-Api-Key (what clients with a plain
+// "API key" field often send), Authorization with any-case "Bearer", or a bare personal
+// token (u_…) in Authorization. Never a cookie, never a query string.
+function mcpHeaderPass(request) {
+  if (!request) return "";
+  const pass = request.headers.get("X-Dawg-Pass") || request.headers.get("X-Api-Key");
+  if (pass) return pass.trim();
+  const a = (request.headers.get("Authorization") || "").trim();
+  const m = /^bearer\s+(\S+)$/i.exec(a);
+  if (m) return m[1];
+  return /^u_[A-Za-z0-9_-]+$/.test(a) ? a : "";
+}
+
 function mcpHasHeaderPass(request) {
-  if (!request) return false;
-  if (request.headers.get("X-Dawg-Pass")) return true;
-  return (request.headers.get("Authorization") || "").startsWith("Bearer ");
+  return !!mcpHeaderPass(request);
 }
 
 function mcpRoute(url, request) {
@@ -2028,11 +2046,7 @@ function mcpRoute(url, request) {
 function mcpPassOf(request, url) {
   const { rest } = mcpRoute(url, request);
   if (rest.length) { try { return decodeURIComponent(rest.join("/")); } catch { return rest.join("/"); } }
-  const h = request.headers.get("X-Dawg-Pass");
-  if (h) return h;
-  const a = request.headers.get("Authorization") || "";
-  if (a.startsWith("Bearer ")) return a.slice(7);
-  return "";
+  return mcpHeaderPass(request);
 }
 
 const mcpJson = (obj, status) =>
@@ -2538,6 +2552,7 @@ const MCP_TOOLS = [
           // | storage_unavailable. Only "on" lists dd_owner_* tools or lets them run.
           private_apps: await mcpOwnerAppStatus(env, caller),
           credential_transport: caller.transport || null,
+          credential_label: caller.keyLabel || null,
           note: "Rows belonging to this player are marked `you: true` by the other tools.",
         });
       return toolText({

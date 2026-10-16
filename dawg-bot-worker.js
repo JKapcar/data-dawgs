@@ -3585,7 +3585,13 @@ async function authName(request, env, cors) {
                 session: await makeSession(env, name, auth.passwordSetAt || 0, auth.uid) }, 200, cors);
 }
 
-// POST /auth/mcp-token {action:"mint"|"revoke"} — session required, acts only on SELF.
+// POST /auth/mcp-token — session required, acts only on SELF.
+//   {action:"mint"|"revoke"}          the primary key (unchanged behaviour)
+//   {action:"add", label}             a separate key for one more AI; other keys keep working.
+//                                     Re-adding a label replaces only that label's key.
+//   {action:"remove", label}          turns off one labeled key
+//   {action:"list"}                   labels and creation times; never hashes or tokens
+// Labeled keys live at /users/<uid>/mcpTokens/<label> as {hash, ts}; mcpAuth accepts any of them.
 async function authMcpToken(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   const auth = await sessionAuth(request, env);
@@ -3599,12 +3605,37 @@ async function authMcpToken(request, env, cors) {
   const action = String((body && body.action) || "mint");
   const key = encodeURIComponent(auth.uid || auth.name);
 
+  if (["add", "remove", "list"].includes(action)) {
+    if (!auth.uid) return json({ error: "Per-AI keys need an email-first account." }, 403, cors);
+    const keys = (auth.user && auth.user.mcpTokens && typeof auth.user.mcpTokens === "object") ? auth.user.mcpTokens : {};
+    if (action === "list")
+      return json({ ok: true, primary: !!(auth.user && auth.user.mcpToken),
+        keys: Object.entries(keys).filter(([, k]) => k && k.hash).map(([label, k]) => ({ label, ts: k.ts || null })) }, 200, cors);
+    const label = String((body && body.label) || "").trim();
+    if (!/^[A-Za-z0-9_-]{1,24}$/.test(label))
+      return json({ error: "Label: 1-24 letters, digits, - or _ (for example Muse)." }, 400, cors);
+    if (action === "remove") {
+      try { await fbPatch(env, "/users/" + key, { ["mcpTokens/" + label]: null }); }
+      catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+      return json({ ok: true, label, removed: true }, 200, cors);
+    }
+    if (!keys[label] && Object.keys(keys).length >= 8)
+      return json({ error: "Up to 8 per-AI keys. Remove one first." }, 409, cors);
+    const token = newMcpToken();
+    try { await fbPatch(env, "/users/" + key, { ["mcpTokens/" + label]: { hash: await mcpTokenHash(env, token), ts: Date.now() } }); }
+    catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
+    const origin = new URL(request.url).origin;
+    return json({ ok: true, label, token, endpoint: origin + "/mcp/core", header: "Authorization: Bearer " + token,
+      url: origin + "/mcp/full/" + token,
+      note: "Shown once. Paste the token into that AI's key or credential field. Your other keys keep working." }, 200, cors);
+  }
+
   if (action === "revoke") {
     try { await fbPatch(env, "/users/" + key, { mcpToken: null, mcpTokenTs: null }); }
     catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
     return json({ ok: true, player: auth.name, revoked: true }, 200, cors);
   }
-  if (action !== "mint") return json({ error: "action must be mint or revoke" }, 400, cors);
+  if (action !== "mint") return json({ error: "action must be mint, revoke, add, remove or list" }, 400, cors);
 
   const token = newMcpToken();
   try {
@@ -20914,9 +20945,16 @@ async function mcpAuth(request, url, env) {
     let users;
     try { users = await loadUsers(env); } catch { return null; }
     const h = await mcpTokenHash(env, supplied);
-    let hit = null, hitUser = null;
-    for (const [key, u] of Object.entries(users))
-      if (u && u.mcpToken && timingSafeEqual(h, u.mcpToken)) { hit = playerName(key); hitUser = u; }
+    let hit = null, hitUser = null, keyLabel = null;
+    // The primary key (mcpToken) plus any labeled per-AI keys (mcpTokens.<label>.hash). Every
+    // row and every key is compared, timing-safely, so a near miss leaks nothing.
+    for (const [key, u] of Object.entries(users)) {
+      if (!u) continue;
+      if (u.mcpToken && timingSafeEqual(h, u.mcpToken)) { hit = playerName(key); hitUser = u; keyLabel = "primary"; }
+      if (u.mcpTokens && typeof u.mcpTokens === "object")
+        for (const [label, k] of Object.entries(u.mcpTokens))
+          if (k && typeof k.hash === "string" && timingSafeEqual(h, k.hash)) { hit = playerName(key); hitUser = u; keyLabel = label; }
+    }
     // The caller's own entitlement rides along. Their record is already in hand here, so it
     // costs no extra read, and it is what a future gate on the solver or the simulator will
     // check instead of re-fetching /users on every tool call.
@@ -20929,7 +20967,7 @@ async function mcpAuth(request, url, env) {
     if (!hit) return null;
     const display = hitUser && typeof hitUser.name === "string" && hitUser.name.trim()
       ? hitUser.name.trim() : hit;
-    return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser), transport,
+    return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser), transport, keyLabel,
       // ⚠️ The account's role flags, read here so isSiteAdmin() has one shape to check.
       // Never derived from anything the caller sent.
       roles: (hitUser && hitUser.roles && typeof hitUser.roles === "object") ? hitUser.roles : null };
@@ -20974,10 +21012,21 @@ async function mcpAuth(request, url, env) {
 const MCP_CATALOGS = ["core", "full"];
 const MCP_DEFAULT_CATALOG = "full";
 
+// Accepted credential headers, in order: X-Dawg-Pass, X-Api-Key (what clients with a plain
+// "API key" field often send), Authorization with any-case "Bearer", or a bare personal
+// token (u_…) in Authorization. Never a cookie, never a query string.
+function mcpHeaderPass(request) {
+  if (!request) return "";
+  const pass = request.headers.get("X-Dawg-Pass") || request.headers.get("X-Api-Key");
+  if (pass) return pass.trim();
+  const a = (request.headers.get("Authorization") || "").trim();
+  const m = /^bearer\s+(\S+)$/i.exec(a);
+  if (m) return m[1];
+  return /^u_[A-Za-z0-9_-]+$/.test(a) ? a : "";
+}
+
 function mcpHasHeaderPass(request) {
-  if (!request) return false;
-  if (request.headers.get("X-Dawg-Pass")) return true;
-  return (request.headers.get("Authorization") || "").startsWith("Bearer ");
+  return !!mcpHeaderPass(request);
 }
 
 function mcpRoute(url, request) {
@@ -20991,11 +21040,7 @@ function mcpRoute(url, request) {
 function mcpPassOf(request, url) {
   const { rest } = mcpRoute(url, request);
   if (rest.length) { try { return decodeURIComponent(rest.join("/")); } catch { return rest.join("/"); } }
-  const h = request.headers.get("X-Dawg-Pass");
-  if (h) return h;
-  const a = request.headers.get("Authorization") || "";
-  if (a.startsWith("Bearer ")) return a.slice(7);
-  return "";
+  return mcpHeaderPass(request);
 }
 
 const mcpJson = (obj, status) =>
@@ -21501,6 +21546,7 @@ const MCP_TOOLS = [
           // | storage_unavailable. Only "on" lists dd_owner_* tools or lets them run.
           private_apps: await mcpOwnerAppStatus(env, caller),
           credential_transport: caller.transport || null,
+          credential_label: caller.keyLabel || null,
           note: "Rows belonging to this player are marked `you: true` by the other tools.",
         });
       return toolText({
