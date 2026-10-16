@@ -59,17 +59,20 @@ def num(v):
         return None
 
 
-def load(source, features_table, outcome_spec):
+def load(source, features_table, outcome_spec, open_holdout=False):
+    # Develop runs never read a holdout athlete's card or outcome: those rows are skipped on input.
+    classes = DEVELOP | HOLDOUT if open_holdout else DEVELOP
     with open_table(source, features_table) as f:
         r = csv.DictReader(f)
         aid, year, pos = column(r.fieldnames, "nfl_id", "gsis_id"), column(r.fieldnames, "draft_year", "season", "year"), column(r.fieldnames, "position", "pos")
+        counts_key = "wr_in_classes" if open_holdout else "wr_in_develop_classes"
         cols = [column(r.fieldnames, c) for c in FEATURES]
-        athletes, counts = {}, {"rows": 0, "wr_in_classes": 0, "incomplete_card": 0, "duplicate_athlete": 0}
+        athletes, counts = {}, {"rows": 0, counts_key: 0, "incomplete_card": 0, "duplicate_athlete": 0, "holdout_read": bool(open_holdout)}
         for row in r:
             counts["rows"] += 1
-            if row[pos].strip().upper() != "WR" or row[year].strip() not in DEVELOP | HOLDOUT:
+            if row[pos].strip().upper() != "WR" or row[year].strip() not in classes:
                 continue
-            counts["wr_in_classes"] += 1
+            counts[counts_key] += 1
             x = [num(row[c]) for c in cols]
             if None in x:
                 counts["incomplete_card"] += 1
@@ -170,7 +173,7 @@ def main(argv=None):
     lock = os.path.join(args.out, "baseline-holdout-receipt.json")
     if args.open_holdout and os.path.exists(lock):
         raise SystemExit("holdout already opened: " + lock + " exists. It opens once.")
-    data, counts = load(args.source, args.features, args.outcome)
+    data, counts = load(args.source, args.features, args.outcome, args.open_holdout)
     result = run(data, args.open_holdout)
     with open(__file__, "rb") as f:
         code = hashlib.sha256(f.read()).hexdigest()

@@ -261,6 +261,8 @@ class Baseline(unittest.TestCase):
         with open(os.path.join(self.out, "baseline-develop-receipt.json"), encoding="utf-8") as f:
             r = json.load(f)
         self.assertEqual(r["result"]["holdout_n"], "sealed")
+        self.assertFalse(r["counts"]["holdout_read"])
+        self.assertEqual(r["counts"]["wr_in_develop_classes"], sum(1 for i in range(90) if i % 10 and (2023, 2024, 2025)[i % 3] != 2025) + 1)
         self.assertNotIn("holdout", r["result"])
         self.assertEqual(r["counts"]["incomplete_card"], 1)
         self.assertGreater(r["counts"]["no_outcome_excluded"], 0)
