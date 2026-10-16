@@ -77,3 +77,11 @@ test('BDB read reports upload metadata and quarantine expiry, never bytes or a d
  const rec=JSON.parse(JSON.parse(JSON.stringify(f.db.get('/researchUploads/v1/u_owner'))).payload);rec.key='datasets/u_owner/x.zip';f.db.set('/researchUploads/v1/u_owner',{version:1,owner_uid:'u_owner',payload:JSON.stringify(rec)});f.env.RESEARCH_UPLOADS.head=async()=>({size:9000000,uploaded});
  assert.deepEqual((await f.run('dd_owner_bdb_read')).dataset.lifecycle,{durable:true});
  await f.enable('pound');assert.equal((await f.run('dd_owner_pound_read')).dataset,undefined);});
+test('BDB read reports a promoted durable copy as the dataset of record',async()=>{const f=rig();await f.enable('research');
+ const key='quarantine/u_owner/x.zip',durable={key:'datasets/u_owner/'+'d'.repeat(64)+'.zip',sha256:'d'.repeat(64),size:9000000,promotedAt:Date.parse('2026-10-17T00:00:00Z'),verification:'checked'};
+ f.db.set('/researchUploads/v1/u_owner',{version:1,owner_uid:'u_owner',payload:JSON.stringify({id:'x',name:'synthetic.zip',size:9000000,hashes:['a'.repeat(64)],key,status:'complete',durable})});
+ const objects=new Map([[key,{size:9000000,uploaded:new Date('2026-10-10T00:00:00Z')}],[durable.key,{size:9000000,uploaded:new Date('2026-10-17T00:00:00Z')}]]);
+ f.env.RESEARCH_UPLOADS={head:async k=>objects.get(k)||null};
+ let d=(await f.run('dd_owner_bdb_read')).dataset;assert.equal(d.durable.object,'present');assert.equal(d.durable.sha256,'d'.repeat(64));assert.equal(d.durable.objectMatchesRecordedSize,true);assert.equal(d.lifecycle.durable,true);assert.equal(d.lifecycle.expiresAt,'2026-11-09T00:00:00.000Z');
+ objects.delete(key);d=(await f.run('dd_owner_bdb_read')).dataset;assert.equal(d.object,'quarantine_copy_expired_durable_copy_present');assert.deepEqual(d.lifecycle,{durable:true});
+ objects.delete(durable.key);d=(await f.run('dd_owner_bdb_read')).dataset;assert.equal(d.durable.object,'missing');assert.equal(d.object,'missing');assert.equal(d.lifecycle,undefined);});

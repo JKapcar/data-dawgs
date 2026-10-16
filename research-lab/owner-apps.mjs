@@ -35,10 +35,16 @@ async function datasetStatus(fbGet,env,uid){
    createdAt:d.createdAt?new Date(d.createdAt).toISOString():null,completedAt:d.completedAt?new Date(d.completedAt).toISOString():null,
    storage:{bucket:'datadawgs-research-private',key:d.key,prefix:String(d.key||'').split('/')[0]+'/'},object:'not_checked',rawData:'not_exposed',
    integrity:'Each 8 MiB part was SHA-256 verified on receipt. Compare partHashesSha256 with research-lab/data/archive.py verify on the local copy.'};
+  if(d.durable?.key){
+   // Promoted: report the durable copy as the dataset of record; the quarantine original is left to its lifecycle rule.
+   out.durable={key:d.durable.key,sha256:d.durable.sha256,size:d.durable.size,promotedAt:d.durable.promotedAt?new Date(d.durable.promotedAt).toISOString():null,verification:d.durable.verification||null};
+   if(env.RESEARCH_UPLOADS){const h=await env.RESEARCH_UPLOADS.head(d.durable.key);out.durable.object=h?'present':'missing';if(h)out.durable.objectMatchesRecordedSize=h.size===d.size;}
+  }
   if(env.RESEARCH_UPLOADS&&d.key){const head=await env.RESEARCH_UPLOADS.head(d.key);
-   if(!head)out.object='missing';
+   if(!head)out.object=out.durable?.object==='present'?'quarantine_copy_expired_durable_copy_present':'missing';
    else{const uploaded=head.uploaded instanceof Date?head.uploaded:new Date(head.uploaded);Object.assign(out,{object:'present',objectSize:head.size,objectMatchesRecordedSize:head.size===d.size,objectUploadedAt:uploaded.toISOString(),
-    lifecycle:out.storage.prefix==='quarantine/'?{rule:'quarantine/ objects expire '+QUARANTINE_DAYS+' days after upload (documented bucket rule, not read from Cloudflare)',expiresAt:new Date(uploaded.getTime()+QUARANTINE_DAYS*86400000).toISOString(),durable:false}:{durable:true}});}}
+    lifecycle:out.storage.prefix==='quarantine/'?{rule:'quarantine/ objects expire '+QUARANTINE_DAYS+' days after upload (documented bucket rule, not read from Cloudflare)',expiresAt:new Date(uploaded.getTime()+QUARANTINE_DAYS*86400000).toISOString(),durable:out.durable?.object==='present'}:{durable:true}});}}
+  if(out.durable?.object==='present'&&!out.lifecycle)out.lifecycle={durable:true};
   return out;
  }catch{return {status:'unavailable',rawData:'not_exposed'};}
 }
