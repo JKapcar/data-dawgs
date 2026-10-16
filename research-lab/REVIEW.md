@@ -1,5 +1,7 @@
 # Milestone validation — 2026-10-16
 
+> **Superseded (2026-10-16).** This document predates the "BDB Research Lab and Dawg Pound" release plan of 2026-10-16. Where they disagree, the plan and `OWNER-CONNECTOR.md` win. Kept for history; do not treat its status lines as current.
+
 ## Instrument UI and hosted-adapter follow-up
 
 - Replaced the large hero with a compact command bar, real site logo, instrument-first

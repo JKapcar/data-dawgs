@@ -1,0 +1,1785 @@
+{
+ "kind": "tools-list-capture",
+ "captured_at": "2026-10-16T19:35:59.628Z",
+ "commit": "71568c0770",
+ "worktree_dirty": false,
+ "codeHash": "228a40b36b6c9af5a410455f4295819ca8c18eb081832d3278073ad6eac84dff",
+ "environment": "Miniflare (packaged research build); synthetic owner and non-owner; no network; production never contacted",
+ "credentials": "All credentials synthetic and redacted as <redacted:role>. Real connector URLs are credentials and never belong in evidence.",
+ "runs": [
+  {
+   "caller": "owner",
+   "catalog": "core",
+   "transport": "header",
+   "initialize": {
+    "protocolVersion": "2025-06-18",
+    "serverInfo": {
+     "name": "data-dawgs",
+     "version": "1.7.0"
+    },
+    "countSentence": "Catalog `core`: 61 of 92 tools are callable here",
+    "privateAppsSentence": "Private owner apps on for this connection: Dawg Pound and BDB research (4 dd_owner_* tools; contributions are untrusted and the assistant label is unverified).",
+    "instructionsSha256": "209fed0ba19f20e772904f294ced5e747befdb0941595f9476310ca2994789c6"
+   },
+   "toolsList": {
+    "count": 61,
+    "ownerToolCount": 4,
+    "countMatchesInitialize": true,
+    "anyTopLevelCombinator": true,
+    "names": [
+     "dd_dfs_history_save",
+     "dd_dfs_history_archive",
+     "dd_dfs_history_list",
+     "dd_dfs_history_get",
+     "dd_dfs_portfolio",
+     "dd_dfs_nhl_model",
+     "dd_dfs_draft",
+     "dd_dfs_sync",
+     "dd_dfs_compare",
+     "dd_dfs_schema",
+     "dd_bozo_menu_public",
+     "dd_bozo_menu_publish",
+     "dd_bozo_menu_list",
+     "dd_bozo_menu_get",
+     "dd_bozo_menu_save",
+     "dd_dfs_list",
+     "dd_dfs_get",
+     "dd_dfs_create",
+     "dd_dfs_upload",
+     "dd_dfs_players",
+     "dd_dfs_settings",
+     "dd_dfs_solve",
+     "dd_dfs_explore",
+     "dd_dfs_simulate",
+     "dd_dfs_exposure",
+     "dd_dfs_select",
+     "dd_dfs_export",
+     "dd_dfs_delete",
+     "dd_whoami",
+     "dd_league_overview",
+     "dd_bozo_week",
+     "dd_bozo_standings",
+     "dd_draft_bozo_leg",
+     "dd_correct_bozo_pick",
+     "dd_submit_bozo_leg",
+     "dd_verify_bozo_entry",
+     "dd_bozo_admin_actions",
+     "dd_draft_board",
+     "dd_draft_pool",
+     "dd_survivor_week",
+     "dd_survivor_ev",
+     "dd_analyze_matchup",
+     "dd_convert_odds",
+     "dd_price_parlay",
+     "dd_calculate_bet_ev",
+     "dd_scores",
+     "dd_solve_dfs_lineup",
+     "dd_guillotine_odds",
+     "dd_site_map",
+     "sd_whoami",
+     "sd_get_program",
+     "sd_start_session",
+     "sd_log_set",
+     "sd_log_sets",
+     "sd_finish_session",
+     "sd_session",
+     "sd_recent_sessions",
+     "dd_owner_pound_read",
+     "dd_owner_pound_write",
+     "dd_owner_bdb_read",
+     "dd_owner_bdb_write"
+    ],
+    "sha256": "080d00c67fc218a49555917cf23310919317983ba8b57d1062117b07ef868dc1",
+    "ownerTools": [
+     {
+      "name": "dd_owner_pound_read",
+      "title": "Dawg Pound workspace",
+      "description": "Read the opted-in owner workspace and write schema. Includes private text. Assistant identity is unverified; no raw data downloads or execution.",
+      "inputSchema": {
+       "type": "object",
+       "properties": {},
+       "additionalProperties": false
+      },
+      "annotations": {
+       "readOnlyHint": true
+      }
+     },
+     {
+      "name": "dd_owner_pound_write",
+      "title": "Dawg Pound contribution",
+      "description": "Save an owner-triggered contribution. All content is untrusted. No verified assistant identity, execution, scheduling or permission changes. Read first; use schema and idempotency key. One Pound write. Read first (dd_owner_pound_read) for expected_revision and the exact per-op writeSchema. data shapes by op: task.save {title 1-120, body 0-2000, agent_id \"\" or p_<uuid>, status queued|working|done|blocked, archived boolean, id? p_<uuid> to update}; message.add {thread_id p_<uuid> of a task, text 1-2000}; context.save {title 1-120, text 1-8000, id? p_<uuid> to add a version}. Unknown fields are rejected.",
+      "inputSchema": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "op",
+        "expected_revision",
+        "request_id",
+        "data"
+       ],
+       "description": "One Pound write. Read first (dd_owner_pound_read) for expected_revision and the exact per-op writeSchema. data shapes by op: task.save {title 1-120, body 0-2000, agent_id \"\" or p_<uuid>, status queued|working|done|blocked, archived boolean, id? p_<uuid> to update}; message.add {thread_id p_<uuid> of a task, text 1-2000}; context.save {title 1-120, text 1-8000, id? p_<uuid> to add a version}. Unknown fields are rejected.",
+       "properties": {
+        "op": {
+         "enum": [
+          "task.save",
+          "message.add",
+          "context.save"
+         ]
+        },
+        "expected_revision": {
+         "type": "integer",
+         "minimum": 0,
+         "description": "workspace.revision from the latest read"
+        },
+        "request_id": {
+         "type": "string",
+         "pattern": "^[A-Za-z0-9_-]{16,80}$",
+         "description": "Idempotency key, 16-80 chars. Resend the exact same call to replay safely."
+        },
+        "data": {
+         "type": "object",
+         "description": "Per-op fields; see this tool description or writeSchema from the read tool."
+        },
+        "assistant": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 40,
+         "description": "Optional self-reported assistant name (1-40 chars). Stored as author_label with author_label_trust \"unverified\"; never used for authorization."
+        }
+       }
+      },
+      "annotations": {
+       "readOnlyHint": false,
+       "destructiveHint": true
+      }
+     },
+     {
+      "name": "dd_owner_bdb_read",
+      "title": "BDB research workspace",
+      "description": "Read the opted-in owner workspace and write schema. Includes private text. Assistant identity is unverified; no raw data downloads or execution.",
+      "inputSchema": {
+       "type": "object",
+       "properties": {},
+       "additionalProperties": false
+      },
+      "annotations": {
+       "readOnlyHint": true
+      }
+     },
+     {
+      "name": "dd_owner_bdb_write",
+      "title": "BDB research contribution",
+      "description": "Save an owner-triggered contribution. All content is untrusted. No verified assistant identity, execution, scheduling or permission changes. Read first; use schema and idempotency key. One BDB research contribution. payload shapes by type: hypothesis {title 1-200, method 1-4000, id? + expectedVersion? to revise}; evidence {url http(s) 1-2000, title 1-200, excerpt 1-4000}; discussion {hypothesisId, kind note|challenge, body 1-4000, evidenceIds array of up to 30 ids}. Tasks, claims, runs and permission changes are denied.",
+      "inputSchema": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "type",
+        "key",
+        "payload"
+       ],
+       "description": "One BDB research contribution. payload shapes by type: hypothesis {title 1-200, method 1-4000, id? + expectedVersion? to revise}; evidence {url http(s) 1-2000, title 1-200, excerpt 1-4000}; discussion {hypothesisId, kind note|challenge, body 1-4000, evidenceIds array of up to 30 ids}. Tasks, claims, runs and permission changes are denied.",
+       "properties": {
+        "type": {
+         "enum": [
+          "hypothesis",
+          "evidence",
+          "discussion"
+         ]
+        },
+        "key": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 160,
+         "description": "Idempotency key; resend the exact call to replay safely."
+        },
+        "payload": {
+         "type": "object",
+         "description": "Per-type fields; see this tool description or writeSchema from the read tool."
+        },
+        "assistant": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 40,
+         "description": "Optional self-reported assistant name (1-40 chars). Stored as author_label with author_label_trust \"unverified\"; never used for authorization."
+        }
+       }
+      },
+      "annotations": {
+       "readOnlyHint": false,
+       "destructiveHint": false
+      }
+     }
+    ]
+   },
+   "whoami": {
+    "player": "Synthetic Owner",
+    "anonymous": false,
+    "private_apps": {
+     "pound": "on",
+     "research": "on"
+    },
+    "credential_transport": "header"
+   }
+  },
+  {
+   "caller": "owner",
+   "catalog": "core",
+   "transport": "url",
+   "initialize": {
+    "protocolVersion": "2025-06-18",
+    "serverInfo": {
+     "name": "data-dawgs",
+     "version": "1.7.0"
+    },
+    "countSentence": "Catalog `core`: 61 of 92 tools are callable here",
+    "privateAppsSentence": "Private owner apps on for this connection: Dawg Pound and BDB research (4 dd_owner_* tools; contributions are untrusted and the assistant label is unverified).",
+    "instructionsSha256": "209fed0ba19f20e772904f294ced5e747befdb0941595f9476310ca2994789c6"
+   },
+   "toolsList": {
+    "count": 61,
+    "ownerToolCount": 4,
+    "countMatchesInitialize": true,
+    "anyTopLevelCombinator": true,
+    "names": [
+     "dd_dfs_history_save",
+     "dd_dfs_history_archive",
+     "dd_dfs_history_list",
+     "dd_dfs_history_get",
+     "dd_dfs_portfolio",
+     "dd_dfs_nhl_model",
+     "dd_dfs_draft",
+     "dd_dfs_sync",
+     "dd_dfs_compare",
+     "dd_dfs_schema",
+     "dd_bozo_menu_public",
+     "dd_bozo_menu_publish",
+     "dd_bozo_menu_list",
+     "dd_bozo_menu_get",
+     "dd_bozo_menu_save",
+     "dd_dfs_list",
+     "dd_dfs_get",
+     "dd_dfs_create",
+     "dd_dfs_upload",
+     "dd_dfs_players",
+     "dd_dfs_settings",
+     "dd_dfs_solve",
+     "dd_dfs_explore",
+     "dd_dfs_simulate",
+     "dd_dfs_exposure",
+     "dd_dfs_select",
+     "dd_dfs_export",
+     "dd_dfs_delete",
+     "dd_whoami",
+     "dd_league_overview",
+     "dd_bozo_week",
+     "dd_bozo_standings",
+     "dd_draft_bozo_leg",
+     "dd_correct_bozo_pick",
+     "dd_submit_bozo_leg",
+     "dd_verify_bozo_entry",
+     "dd_bozo_admin_actions",
+     "dd_draft_board",
+     "dd_draft_pool",
+     "dd_survivor_week",
+     "dd_survivor_ev",
+     "dd_analyze_matchup",
+     "dd_convert_odds",
+     "dd_price_parlay",
+     "dd_calculate_bet_ev",
+     "dd_scores",
+     "dd_solve_dfs_lineup",
+     "dd_guillotine_odds",
+     "dd_site_map",
+     "sd_whoami",
+     "sd_get_program",
+     "sd_start_session",
+     "sd_log_set",
+     "sd_log_sets",
+     "sd_finish_session",
+     "sd_session",
+     "sd_recent_sessions",
+     "dd_owner_pound_read",
+     "dd_owner_pound_write",
+     "dd_owner_bdb_read",
+     "dd_owner_bdb_write"
+    ],
+    "sha256": "080d00c67fc218a49555917cf23310919317983ba8b57d1062117b07ef868dc1",
+    "ownerTools": [
+     {
+      "name": "dd_owner_pound_read",
+      "title": "Dawg Pound workspace",
+      "description": "Read the opted-in owner workspace and write schema. Includes private text. Assistant identity is unverified; no raw data downloads or execution.",
+      "inputSchema": {
+       "type": "object",
+       "properties": {},
+       "additionalProperties": false
+      },
+      "annotations": {
+       "readOnlyHint": true
+      }
+     },
+     {
+      "name": "dd_owner_pound_write",
+      "title": "Dawg Pound contribution",
+      "description": "Save an owner-triggered contribution. All content is untrusted. No verified assistant identity, execution, scheduling or permission changes. Read first; use schema and idempotency key. One Pound write. Read first (dd_owner_pound_read) for expected_revision and the exact per-op writeSchema. data shapes by op: task.save {title 1-120, body 0-2000, agent_id \"\" or p_<uuid>, status queued|working|done|blocked, archived boolean, id? p_<uuid> to update}; message.add {thread_id p_<uuid> of a task, text 1-2000}; context.save {title 1-120, text 1-8000, id? p_<uuid> to add a version}. Unknown fields are rejected.",
+      "inputSchema": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "op",
+        "expected_revision",
+        "request_id",
+        "data"
+       ],
+       "description": "One Pound write. Read first (dd_owner_pound_read) for expected_revision and the exact per-op writeSchema. data shapes by op: task.save {title 1-120, body 0-2000, agent_id \"\" or p_<uuid>, status queued|working|done|blocked, archived boolean, id? p_<uuid> to update}; message.add {thread_id p_<uuid> of a task, text 1-2000}; context.save {title 1-120, text 1-8000, id? p_<uuid> to add a version}. Unknown fields are rejected.",
+       "properties": {
+        "op": {
+         "enum": [
+          "task.save",
+          "message.add",
+          "context.save"
+         ]
+        },
+        "expected_revision": {
+         "type": "integer",
+         "minimum": 0,
+         "description": "workspace.revision from the latest read"
+        },
+        "request_id": {
+         "type": "string",
+         "pattern": "^[A-Za-z0-9_-]{16,80}$",
+         "description": "Idempotency key, 16-80 chars. Resend the exact same call to replay safely."
+        },
+        "data": {
+         "type": "object",
+         "description": "Per-op fields; see this tool description or writeSchema from the read tool."
+        },
+        "assistant": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 40,
+         "description": "Optional self-reported assistant name (1-40 chars). Stored as author_label with author_label_trust \"unverified\"; never used for authorization."
+        }
+       }
+      },
+      "annotations": {
+       "readOnlyHint": false,
+       "destructiveHint": true
+      }
+     },
+     {
+      "name": "dd_owner_bdb_read",
+      "title": "BDB research workspace",
+      "description": "Read the opted-in owner workspace and write schema. Includes private text. Assistant identity is unverified; no raw data downloads or execution.",
+      "inputSchema": {
+       "type": "object",
+       "properties": {},
+       "additionalProperties": false
+      },
+      "annotations": {
+       "readOnlyHint": true
+      }
+     },
+     {
+      "name": "dd_owner_bdb_write",
+      "title": "BDB research contribution",
+      "description": "Save an owner-triggered contribution. All content is untrusted. No verified assistant identity, execution, scheduling or permission changes. Read first; use schema and idempotency key. One BDB research contribution. payload shapes by type: hypothesis {title 1-200, method 1-4000, id? + expectedVersion? to revise}; evidence {url http(s) 1-2000, title 1-200, excerpt 1-4000}; discussion {hypothesisId, kind note|challenge, body 1-4000, evidenceIds array of up to 30 ids}. Tasks, claims, runs and permission changes are denied.",
+      "inputSchema": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "type",
+        "key",
+        "payload"
+       ],
+       "description": "One BDB research contribution. payload shapes by type: hypothesis {title 1-200, method 1-4000, id? + expectedVersion? to revise}; evidence {url http(s) 1-2000, title 1-200, excerpt 1-4000}; discussion {hypothesisId, kind note|challenge, body 1-4000, evidenceIds array of up to 30 ids}. Tasks, claims, runs and permission changes are denied.",
+       "properties": {
+        "type": {
+         "enum": [
+          "hypothesis",
+          "evidence",
+          "discussion"
+         ]
+        },
+        "key": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 160,
+         "description": "Idempotency key; resend the exact call to replay safely."
+        },
+        "payload": {
+         "type": "object",
+         "description": "Per-type fields; see this tool description or writeSchema from the read tool."
+        },
+        "assistant": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 40,
+         "description": "Optional self-reported assistant name (1-40 chars). Stored as author_label with author_label_trust \"unverified\"; never used for authorization."
+        }
+       }
+      },
+      "annotations": {
+       "readOnlyHint": false,
+       "destructiveHint": false
+      }
+     }
+    ]
+   },
+   "whoami": {
+    "player": "Synthetic Owner",
+    "anonymous": false,
+    "private_apps": {
+     "pound": "on",
+     "research": "on"
+    },
+    "credential_transport": "url"
+   }
+  },
+  {
+   "caller": "owner",
+   "catalog": "full",
+   "transport": "header",
+   "initialize": {
+    "protocolVersion": "2025-06-18",
+    "serverInfo": {
+     "name": "data-dawgs",
+     "version": "1.7.0"
+    },
+    "countSentence": "Catalog `full`: 92 of 92 tools are callable here",
+    "privateAppsSentence": "Private owner apps on for this connection: Dawg Pound and BDB research (4 dd_owner_* tools; contributions are untrusted and the assistant label is unverified).",
+    "instructionsSha256": "fe0acc4819ef8a36cd2f137903f5be4cc3028fa195ce78579492a88dd0dc3327"
+   },
+   "toolsList": {
+    "count": 92,
+    "ownerToolCount": 4,
+    "countMatchesInitialize": true,
+    "anyTopLevelCombinator": true,
+    "names": [
+     "dd_dfs_history_save",
+     "dd_dfs_history_archive",
+     "dd_dfs_history_list",
+     "dd_dfs_history_get",
+     "dd_dfs_portfolio",
+     "dd_dfs_nhl_model",
+     "dd_dfs_draft",
+     "dd_dfs_sync",
+     "dd_dfs_compare",
+     "dd_dfs_schema",
+     "dd_bozo_menu_public",
+     "dd_bozo_menu_publish",
+     "dd_bozo_menu_list",
+     "dd_bozo_menu_get",
+     "dd_bozo_menu_save",
+     "dd_dfs_list",
+     "dd_dfs_get",
+     "dd_dfs_create",
+     "dd_dfs_upload",
+     "dd_dfs_players",
+     "dd_dfs_settings",
+     "dd_dfs_solve",
+     "dd_dfs_explore",
+     "dd_dfs_simulate",
+     "dd_dfs_exposure",
+     "dd_dfs_select",
+     "dd_dfs_export",
+     "dd_dfs_delete",
+     "dd_whoami",
+     "dd_league_overview",
+     "dd_bozo_clv",
+     "dd_bozo_week",
+     "dd_bozo_standings",
+     "dd_draft_bozo_leg",
+     "dd_correct_bozo_pick",
+     "dd_submit_bozo_leg",
+     "dd_verify_bozo_entry",
+     "dd_bozo_admin_actions",
+     "dd_draft_board",
+     "dd_fantasy_leagues",
+     "dd_war_room",
+     "dd_draft_pool",
+     "dd_survivor_week",
+     "dd_survivor_ev",
+     "dd_optimize_survivor_path",
+     "dd_analyze_matchup",
+     "dd_convert_odds",
+     "dd_elo_game",
+     "dd_translate_probability",
+     "dd_devig_market",
+     "dd_price_parlay",
+     "dd_calculate_bet_ev",
+     "dd_calculate_hedge",
+     "dd_nfl_passer_rating",
+     "dd_score_forecast",
+     "dd_summarize_beliefs",
+     "dd_get_cfb_rating_system",
+     "dd_rank_cfb_teams",
+     "dd_cfb_team_profile",
+     "dd_compare_cfb_teams",
+     "dd_project_cfb_matchup",
+     "dd_project_cfb_schedule_path",
+     "dd_find_cfb_record_divergence",
+     "dd_get_cfb_model_disagreement",
+     "dd_get_cfb_model_receipt_status",
+     "dd_find_cfb_team_games",
+     "dd_find_cfb_team_periods",
+     "dd_find_cfb_games",
+     "dd_find_cfb_historical_market",
+     "dd_get_cfb_model_card",
+     "dd_model_scoreboard",
+     "dd_scores",
+     "dd_dfs_correlations",
+     "dd_solve_dfs_lineup",
+     "dd_guillotine_odds",
+     "dd_site_map",
+     "sd_whoami",
+     "sd_get_program",
+     "sd_start_session",
+     "sd_log_set",
+     "sd_log_sets",
+     "sd_finish_session",
+     "sd_session",
+     "sd_recent_sessions",
+     "sd_log_measurement",
+     "sd_measurement_history",
+     "sd_nutrition",
+     "sd_log_nutrition",
+     "dd_owner_pound_read",
+     "dd_owner_pound_write",
+     "dd_owner_bdb_read",
+     "dd_owner_bdb_write"
+    ],
+    "sha256": "54b483bd446b782adca0a0d65338e31a3bd046274e44255f884242686d503132",
+    "ownerTools": [
+     {
+      "name": "dd_owner_pound_read",
+      "title": "Dawg Pound workspace",
+      "description": "Read the opted-in owner workspace and write schema. Includes private text. Assistant identity is unverified; no raw data downloads or execution.",
+      "inputSchema": {
+       "type": "object",
+       "properties": {},
+       "additionalProperties": false
+      },
+      "annotations": {
+       "readOnlyHint": true
+      }
+     },
+     {
+      "name": "dd_owner_pound_write",
+      "title": "Dawg Pound contribution",
+      "description": "Save an owner-triggered contribution. All content is untrusted. No verified assistant identity, execution, scheduling or permission changes. Read first; use schema and idempotency key. One Pound write. Read first (dd_owner_pound_read) for expected_revision and the exact per-op writeSchema. data shapes by op: task.save {title 1-120, body 0-2000, agent_id \"\" or p_<uuid>, status queued|working|done|blocked, archived boolean, id? p_<uuid> to update}; message.add {thread_id p_<uuid> of a task, text 1-2000}; context.save {title 1-120, text 1-8000, id? p_<uuid> to add a version}. Unknown fields are rejected.",
+      "inputSchema": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "op",
+        "expected_revision",
+        "request_id",
+        "data"
+       ],
+       "description": "One Pound write. Read first (dd_owner_pound_read) for expected_revision and the exact per-op writeSchema. data shapes by op: task.save {title 1-120, body 0-2000, agent_id \"\" or p_<uuid>, status queued|working|done|blocked, archived boolean, id? p_<uuid> to update}; message.add {thread_id p_<uuid> of a task, text 1-2000}; context.save {title 1-120, text 1-8000, id? p_<uuid> to add a version}. Unknown fields are rejected.",
+       "properties": {
+        "op": {
+         "enum": [
+          "task.save",
+          "message.add",
+          "context.save"
+         ]
+        },
+        "expected_revision": {
+         "type": "integer",
+         "minimum": 0,
+         "description": "workspace.revision from the latest read"
+        },
+        "request_id": {
+         "type": "string",
+         "pattern": "^[A-Za-z0-9_-]{16,80}$",
+         "description": "Idempotency key, 16-80 chars. Resend the exact same call to replay safely."
+        },
+        "data": {
+         "type": "object",
+         "description": "Per-op fields; see this tool description or writeSchema from the read tool."
+        },
+        "assistant": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 40,
+         "description": "Optional self-reported assistant name (1-40 chars). Stored as author_label with author_label_trust \"unverified\"; never used for authorization."
+        }
+       }
+      },
+      "annotations": {
+       "readOnlyHint": false,
+       "destructiveHint": true
+      }
+     },
+     {
+      "name": "dd_owner_bdb_read",
+      "title": "BDB research workspace",
+      "description": "Read the opted-in owner workspace and write schema. Includes private text. Assistant identity is unverified; no raw data downloads or execution.",
+      "inputSchema": {
+       "type": "object",
+       "properties": {},
+       "additionalProperties": false
+      },
+      "annotations": {
+       "readOnlyHint": true
+      }
+     },
+     {
+      "name": "dd_owner_bdb_write",
+      "title": "BDB research contribution",
+      "description": "Save an owner-triggered contribution. All content is untrusted. No verified assistant identity, execution, scheduling or permission changes. Read first; use schema and idempotency key. One BDB research contribution. payload shapes by type: hypothesis {title 1-200, method 1-4000, id? + expectedVersion? to revise}; evidence {url http(s) 1-2000, title 1-200, excerpt 1-4000}; discussion {hypothesisId, kind note|challenge, body 1-4000, evidenceIds array of up to 30 ids}. Tasks, claims, runs and permission changes are denied.",
+      "inputSchema": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "type",
+        "key",
+        "payload"
+       ],
+       "description": "One BDB research contribution. payload shapes by type: hypothesis {title 1-200, method 1-4000, id? + expectedVersion? to revise}; evidence {url http(s) 1-2000, title 1-200, excerpt 1-4000}; discussion {hypothesisId, kind note|challenge, body 1-4000, evidenceIds array of up to 30 ids}. Tasks, claims, runs and permission changes are denied.",
+       "properties": {
+        "type": {
+         "enum": [
+          "hypothesis",
+          "evidence",
+          "discussion"
+         ]
+        },
+        "key": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 160,
+         "description": "Idempotency key; resend the exact call to replay safely."
+        },
+        "payload": {
+         "type": "object",
+         "description": "Per-type fields; see this tool description or writeSchema from the read tool."
+        },
+        "assistant": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 40,
+         "description": "Optional self-reported assistant name (1-40 chars). Stored as author_label with author_label_trust \"unverified\"; never used for authorization."
+        }
+       }
+      },
+      "annotations": {
+       "readOnlyHint": false,
+       "destructiveHint": false
+      }
+     }
+    ]
+   },
+   "whoami": {
+    "player": "Synthetic Owner",
+    "anonymous": false,
+    "private_apps": {
+     "pound": "on",
+     "research": "on"
+    },
+    "credential_transport": "header"
+   }
+  },
+  {
+   "caller": "owner",
+   "catalog": "full",
+   "transport": "url",
+   "initialize": {
+    "protocolVersion": "2025-06-18",
+    "serverInfo": {
+     "name": "data-dawgs",
+     "version": "1.7.0"
+    },
+    "countSentence": "Catalog `full`: 92 of 92 tools are callable here",
+    "privateAppsSentence": "Private owner apps on for this connection: Dawg Pound and BDB research (4 dd_owner_* tools; contributions are untrusted and the assistant label is unverified).",
+    "instructionsSha256": "fe0acc4819ef8a36cd2f137903f5be4cc3028fa195ce78579492a88dd0dc3327"
+   },
+   "toolsList": {
+    "count": 92,
+    "ownerToolCount": 4,
+    "countMatchesInitialize": true,
+    "anyTopLevelCombinator": true,
+    "names": [
+     "dd_dfs_history_save",
+     "dd_dfs_history_archive",
+     "dd_dfs_history_list",
+     "dd_dfs_history_get",
+     "dd_dfs_portfolio",
+     "dd_dfs_nhl_model",
+     "dd_dfs_draft",
+     "dd_dfs_sync",
+     "dd_dfs_compare",
+     "dd_dfs_schema",
+     "dd_bozo_menu_public",
+     "dd_bozo_menu_publish",
+     "dd_bozo_menu_list",
+     "dd_bozo_menu_get",
+     "dd_bozo_menu_save",
+     "dd_dfs_list",
+     "dd_dfs_get",
+     "dd_dfs_create",
+     "dd_dfs_upload",
+     "dd_dfs_players",
+     "dd_dfs_settings",
+     "dd_dfs_solve",
+     "dd_dfs_explore",
+     "dd_dfs_simulate",
+     "dd_dfs_exposure",
+     "dd_dfs_select",
+     "dd_dfs_export",
+     "dd_dfs_delete",
+     "dd_whoami",
+     "dd_league_overview",
+     "dd_bozo_clv",
+     "dd_bozo_week",
+     "dd_bozo_standings",
+     "dd_draft_bozo_leg",
+     "dd_correct_bozo_pick",
+     "dd_submit_bozo_leg",
+     "dd_verify_bozo_entry",
+     "dd_bozo_admin_actions",
+     "dd_draft_board",
+     "dd_fantasy_leagues",
+     "dd_war_room",
+     "dd_draft_pool",
+     "dd_survivor_week",
+     "dd_survivor_ev",
+     "dd_optimize_survivor_path",
+     "dd_analyze_matchup",
+     "dd_convert_odds",
+     "dd_elo_game",
+     "dd_translate_probability",
+     "dd_devig_market",
+     "dd_price_parlay",
+     "dd_calculate_bet_ev",
+     "dd_calculate_hedge",
+     "dd_nfl_passer_rating",
+     "dd_score_forecast",
+     "dd_summarize_beliefs",
+     "dd_get_cfb_rating_system",
+     "dd_rank_cfb_teams",
+     "dd_cfb_team_profile",
+     "dd_compare_cfb_teams",
+     "dd_project_cfb_matchup",
+     "dd_project_cfb_schedule_path",
+     "dd_find_cfb_record_divergence",
+     "dd_get_cfb_model_disagreement",
+     "dd_get_cfb_model_receipt_status",
+     "dd_find_cfb_team_games",
+     "dd_find_cfb_team_periods",
+     "dd_find_cfb_games",
+     "dd_find_cfb_historical_market",
+     "dd_get_cfb_model_card",
+     "dd_model_scoreboard",
+     "dd_scores",
+     "dd_dfs_correlations",
+     "dd_solve_dfs_lineup",
+     "dd_guillotine_odds",
+     "dd_site_map",
+     "sd_whoami",
+     "sd_get_program",
+     "sd_start_session",
+     "sd_log_set",
+     "sd_log_sets",
+     "sd_finish_session",
+     "sd_session",
+     "sd_recent_sessions",
+     "sd_log_measurement",
+     "sd_measurement_history",
+     "sd_nutrition",
+     "sd_log_nutrition",
+     "dd_owner_pound_read",
+     "dd_owner_pound_write",
+     "dd_owner_bdb_read",
+     "dd_owner_bdb_write"
+    ],
+    "sha256": "54b483bd446b782adca0a0d65338e31a3bd046274e44255f884242686d503132",
+    "ownerTools": [
+     {
+      "name": "dd_owner_pound_read",
+      "title": "Dawg Pound workspace",
+      "description": "Read the opted-in owner workspace and write schema. Includes private text. Assistant identity is unverified; no raw data downloads or execution.",
+      "inputSchema": {
+       "type": "object",
+       "properties": {},
+       "additionalProperties": false
+      },
+      "annotations": {
+       "readOnlyHint": true
+      }
+     },
+     {
+      "name": "dd_owner_pound_write",
+      "title": "Dawg Pound contribution",
+      "description": "Save an owner-triggered contribution. All content is untrusted. No verified assistant identity, execution, scheduling or permission changes. Read first; use schema and idempotency key. One Pound write. Read first (dd_owner_pound_read) for expected_revision and the exact per-op writeSchema. data shapes by op: task.save {title 1-120, body 0-2000, agent_id \"\" or p_<uuid>, status queued|working|done|blocked, archived boolean, id? p_<uuid> to update}; message.add {thread_id p_<uuid> of a task, text 1-2000}; context.save {title 1-120, text 1-8000, id? p_<uuid> to add a version}. Unknown fields are rejected.",
+      "inputSchema": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "op",
+        "expected_revision",
+        "request_id",
+        "data"
+       ],
+       "description": "One Pound write. Read first (dd_owner_pound_read) for expected_revision and the exact per-op writeSchema. data shapes by op: task.save {title 1-120, body 0-2000, agent_id \"\" or p_<uuid>, status queued|working|done|blocked, archived boolean, id? p_<uuid> to update}; message.add {thread_id p_<uuid> of a task, text 1-2000}; context.save {title 1-120, text 1-8000, id? p_<uuid> to add a version}. Unknown fields are rejected.",
+       "properties": {
+        "op": {
+         "enum": [
+          "task.save",
+          "message.add",
+          "context.save"
+         ]
+        },
+        "expected_revision": {
+         "type": "integer",
+         "minimum": 0,
+         "description": "workspace.revision from the latest read"
+        },
+        "request_id": {
+         "type": "string",
+         "pattern": "^[A-Za-z0-9_-]{16,80}$",
+         "description": "Idempotency key, 16-80 chars. Resend the exact same call to replay safely."
+        },
+        "data": {
+         "type": "object",
+         "description": "Per-op fields; see this tool description or writeSchema from the read tool."
+        },
+        "assistant": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 40,
+         "description": "Optional self-reported assistant name (1-40 chars). Stored as author_label with author_label_trust \"unverified\"; never used for authorization."
+        }
+       }
+      },
+      "annotations": {
+       "readOnlyHint": false,
+       "destructiveHint": true
+      }
+     },
+     {
+      "name": "dd_owner_bdb_read",
+      "title": "BDB research workspace",
+      "description": "Read the opted-in owner workspace and write schema. Includes private text. Assistant identity is unverified; no raw data downloads or execution.",
+      "inputSchema": {
+       "type": "object",
+       "properties": {},
+       "additionalProperties": false
+      },
+      "annotations": {
+       "readOnlyHint": true
+      }
+     },
+     {
+      "name": "dd_owner_bdb_write",
+      "title": "BDB research contribution",
+      "description": "Save an owner-triggered contribution. All content is untrusted. No verified assistant identity, execution, scheduling or permission changes. Read first; use schema and idempotency key. One BDB research contribution. payload shapes by type: hypothesis {title 1-200, method 1-4000, id? + expectedVersion? to revise}; evidence {url http(s) 1-2000, title 1-200, excerpt 1-4000}; discussion {hypothesisId, kind note|challenge, body 1-4000, evidenceIds array of up to 30 ids}. Tasks, claims, runs and permission changes are denied.",
+      "inputSchema": {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "type",
+        "key",
+        "payload"
+       ],
+       "description": "One BDB research contribution. payload shapes by type: hypothesis {title 1-200, method 1-4000, id? + expectedVersion? to revise}; evidence {url http(s) 1-2000, title 1-200, excerpt 1-4000}; discussion {hypothesisId, kind note|challenge, body 1-4000, evidenceIds array of up to 30 ids}. Tasks, claims, runs and permission changes are denied.",
+       "properties": {
+        "type": {
+         "enum": [
+          "hypothesis",
+          "evidence",
+          "discussion"
+         ]
+        },
+        "key": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 160,
+         "description": "Idempotency key; resend the exact call to replay safely."
+        },
+        "payload": {
+         "type": "object",
+         "description": "Per-type fields; see this tool description or writeSchema from the read tool."
+        },
+        "assistant": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 40,
+         "description": "Optional self-reported assistant name (1-40 chars). Stored as author_label with author_label_trust \"unverified\"; never used for authorization."
+        }
+       }
+      },
+      "annotations": {
+       "readOnlyHint": false,
+       "destructiveHint": false
+      }
+     }
+    ]
+   },
+   "whoami": {
+    "player": "Synthetic Owner",
+    "anonymous": false,
+    "private_apps": {
+     "pound": "on",
+     "research": "on"
+    },
+    "credential_transport": "url"
+   }
+  },
+  {
+   "caller": "non_owner",
+   "catalog": "core",
+   "transport": "header",
+   "initialize": {
+    "protocolVersion": "2025-06-18",
+    "serverInfo": {
+     "name": "data-dawgs",
+     "version": "1.7.0"
+    },
+    "countSentence": "Catalog `core`: 57 of 88 tools are callable here",
+    "privateAppsSentence": "No private owner apps are on for this connection.",
+    "instructionsSha256": "1169adfdf070ba71fc77c5ab488b35bfeba4353ea233b6898171548947240bc0"
+   },
+   "toolsList": {
+    "count": 57,
+    "ownerToolCount": 0,
+    "countMatchesInitialize": true,
+    "anyTopLevelCombinator": true,
+    "names": [
+     "dd_dfs_history_save",
+     "dd_dfs_history_archive",
+     "dd_dfs_history_list",
+     "dd_dfs_history_get",
+     "dd_dfs_portfolio",
+     "dd_dfs_nhl_model",
+     "dd_dfs_draft",
+     "dd_dfs_sync",
+     "dd_dfs_compare",
+     "dd_dfs_schema",
+     "dd_bozo_menu_public",
+     "dd_bozo_menu_publish",
+     "dd_bozo_menu_list",
+     "dd_bozo_menu_get",
+     "dd_bozo_menu_save",
+     "dd_dfs_list",
+     "dd_dfs_get",
+     "dd_dfs_create",
+     "dd_dfs_upload",
+     "dd_dfs_players",
+     "dd_dfs_settings",
+     "dd_dfs_solve",
+     "dd_dfs_explore",
+     "dd_dfs_simulate",
+     "dd_dfs_exposure",
+     "dd_dfs_select",
+     "dd_dfs_export",
+     "dd_dfs_delete",
+     "dd_whoami",
+     "dd_league_overview",
+     "dd_bozo_week",
+     "dd_bozo_standings",
+     "dd_draft_bozo_leg",
+     "dd_correct_bozo_pick",
+     "dd_submit_bozo_leg",
+     "dd_verify_bozo_entry",
+     "dd_bozo_admin_actions",
+     "dd_draft_board",
+     "dd_draft_pool",
+     "dd_survivor_week",
+     "dd_survivor_ev",
+     "dd_analyze_matchup",
+     "dd_convert_odds",
+     "dd_price_parlay",
+     "dd_calculate_bet_ev",
+     "dd_scores",
+     "dd_solve_dfs_lineup",
+     "dd_guillotine_odds",
+     "dd_site_map",
+     "sd_whoami",
+     "sd_get_program",
+     "sd_start_session",
+     "sd_log_set",
+     "sd_log_sets",
+     "sd_finish_session",
+     "sd_session",
+     "sd_recent_sessions"
+    ],
+    "sha256": "a7c5589892757a41a9a25287aaa695cfbe5e081c9775eae94b2749c385eaf05f",
+    "ownerTools": []
+   },
+   "whoami": {
+    "player": "Synthetic Member",
+    "anonymous": false,
+    "private_apps": {
+     "pound": "not_owner",
+     "research": "not_owner"
+    },
+    "credential_transport": "header"
+   }
+  },
+  {
+   "caller": "non_owner",
+   "catalog": "core",
+   "transport": "url",
+   "initialize": {
+    "protocolVersion": "2025-06-18",
+    "serverInfo": {
+     "name": "data-dawgs",
+     "version": "1.7.0"
+    },
+    "countSentence": "Catalog `core`: 57 of 88 tools are callable here",
+    "privateAppsSentence": "No private owner apps are on for this connection.",
+    "instructionsSha256": "1169adfdf070ba71fc77c5ab488b35bfeba4353ea233b6898171548947240bc0"
+   },
+   "toolsList": {
+    "count": 57,
+    "ownerToolCount": 0,
+    "countMatchesInitialize": true,
+    "anyTopLevelCombinator": true,
+    "names": [
+     "dd_dfs_history_save",
+     "dd_dfs_history_archive",
+     "dd_dfs_history_list",
+     "dd_dfs_history_get",
+     "dd_dfs_portfolio",
+     "dd_dfs_nhl_model",
+     "dd_dfs_draft",
+     "dd_dfs_sync",
+     "dd_dfs_compare",
+     "dd_dfs_schema",
+     "dd_bozo_menu_public",
+     "dd_bozo_menu_publish",
+     "dd_bozo_menu_list",
+     "dd_bozo_menu_get",
+     "dd_bozo_menu_save",
+     "dd_dfs_list",
+     "dd_dfs_get",
+     "dd_dfs_create",
+     "dd_dfs_upload",
+     "dd_dfs_players",
+     "dd_dfs_settings",
+     "dd_dfs_solve",
+     "dd_dfs_explore",
+     "dd_dfs_simulate",
+     "dd_dfs_exposure",
+     "dd_dfs_select",
+     "dd_dfs_export",
+     "dd_dfs_delete",
+     "dd_whoami",
+     "dd_league_overview",
+     "dd_bozo_week",
+     "dd_bozo_standings",
+     "dd_draft_bozo_leg",
+     "dd_correct_bozo_pick",
+     "dd_submit_bozo_leg",
+     "dd_verify_bozo_entry",
+     "dd_bozo_admin_actions",
+     "dd_draft_board",
+     "dd_draft_pool",
+     "dd_survivor_week",
+     "dd_survivor_ev",
+     "dd_analyze_matchup",
+     "dd_convert_odds",
+     "dd_price_parlay",
+     "dd_calculate_bet_ev",
+     "dd_scores",
+     "dd_solve_dfs_lineup",
+     "dd_guillotine_odds",
+     "dd_site_map",
+     "sd_whoami",
+     "sd_get_program",
+     "sd_start_session",
+     "sd_log_set",
+     "sd_log_sets",
+     "sd_finish_session",
+     "sd_session",
+     "sd_recent_sessions"
+    ],
+    "sha256": "a7c5589892757a41a9a25287aaa695cfbe5e081c9775eae94b2749c385eaf05f",
+    "ownerTools": []
+   },
+   "whoami": {
+    "player": "Synthetic Member",
+    "anonymous": false,
+    "private_apps": {
+     "pound": "not_owner",
+     "research": "not_owner"
+    },
+    "credential_transport": "url"
+   }
+  },
+  {
+   "caller": "non_owner",
+   "catalog": "full",
+   "transport": "header",
+   "initialize": {
+    "protocolVersion": "2025-06-18",
+    "serverInfo": {
+     "name": "data-dawgs",
+     "version": "1.7.0"
+    },
+    "countSentence": "Catalog `full`: 88 of 88 tools are callable here",
+    "privateAppsSentence": "No private owner apps are on for this connection.",
+    "instructionsSha256": "af1beb531c49921df5b9985c9d361c47c9bf78da06b326a535ef4161565f19c6"
+   },
+   "toolsList": {
+    "count": 88,
+    "ownerToolCount": 0,
+    "countMatchesInitialize": true,
+    "anyTopLevelCombinator": true,
+    "names": [
+     "dd_dfs_history_save",
+     "dd_dfs_history_archive",
+     "dd_dfs_history_list",
+     "dd_dfs_history_get",
+     "dd_dfs_portfolio",
+     "dd_dfs_nhl_model",
+     "dd_dfs_draft",
+     "dd_dfs_sync",
+     "dd_dfs_compare",
+     "dd_dfs_schema",
+     "dd_bozo_menu_public",
+     "dd_bozo_menu_publish",
+     "dd_bozo_menu_list",
+     "dd_bozo_menu_get",
+     "dd_bozo_menu_save",
+     "dd_dfs_list",
+     "dd_dfs_get",
+     "dd_dfs_create",
+     "dd_dfs_upload",
+     "dd_dfs_players",
+     "dd_dfs_settings",
+     "dd_dfs_solve",
+     "dd_dfs_explore",
+     "dd_dfs_simulate",
+     "dd_dfs_exposure",
+     "dd_dfs_select",
+     "dd_dfs_export",
+     "dd_dfs_delete",
+     "dd_whoami",
+     "dd_league_overview",
+     "dd_bozo_clv",
+     "dd_bozo_week",
+     "dd_bozo_standings",
+     "dd_draft_bozo_leg",
+     "dd_correct_bozo_pick",
+     "dd_submit_bozo_leg",
+     "dd_verify_bozo_entry",
+     "dd_bozo_admin_actions",
+     "dd_draft_board",
+     "dd_fantasy_leagues",
+     "dd_war_room",
+     "dd_draft_pool",
+     "dd_survivor_week",
+     "dd_survivor_ev",
+     "dd_optimize_survivor_path",
+     "dd_analyze_matchup",
+     "dd_convert_odds",
+     "dd_elo_game",
+     "dd_translate_probability",
+     "dd_devig_market",
+     "dd_price_parlay",
+     "dd_calculate_bet_ev",
+     "dd_calculate_hedge",
+     "dd_nfl_passer_rating",
+     "dd_score_forecast",
+     "dd_summarize_beliefs",
+     "dd_get_cfb_rating_system",
+     "dd_rank_cfb_teams",
+     "dd_cfb_team_profile",
+     "dd_compare_cfb_teams",
+     "dd_project_cfb_matchup",
+     "dd_project_cfb_schedule_path",
+     "dd_find_cfb_record_divergence",
+     "dd_get_cfb_model_disagreement",
+     "dd_get_cfb_model_receipt_status",
+     "dd_find_cfb_team_games",
+     "dd_find_cfb_team_periods",
+     "dd_find_cfb_games",
+     "dd_find_cfb_historical_market",
+     "dd_get_cfb_model_card",
+     "dd_model_scoreboard",
+     "dd_scores",
+     "dd_dfs_correlations",
+     "dd_solve_dfs_lineup",
+     "dd_guillotine_odds",
+     "dd_site_map",
+     "sd_whoami",
+     "sd_get_program",
+     "sd_start_session",
+     "sd_log_set",
+     "sd_log_sets",
+     "sd_finish_session",
+     "sd_session",
+     "sd_recent_sessions",
+     "sd_log_measurement",
+     "sd_measurement_history",
+     "sd_nutrition",
+     "sd_log_nutrition"
+    ],
+    "sha256": "9934a14ebecb176bbde28cca0112644649629184932efaf47c269890dd9eb3d7",
+    "ownerTools": []
+   },
+   "whoami": {
+    "player": "Synthetic Member",
+    "anonymous": false,
+    "private_apps": {
+     "pound": "not_owner",
+     "research": "not_owner"
+    },
+    "credential_transport": "header"
+   }
+  },
+  {
+   "caller": "non_owner",
+   "catalog": "full",
+   "transport": "url",
+   "initialize": {
+    "protocolVersion": "2025-06-18",
+    "serverInfo": {
+     "name": "data-dawgs",
+     "version": "1.7.0"
+    },
+    "countSentence": "Catalog `full`: 88 of 88 tools are callable here",
+    "privateAppsSentence": "No private owner apps are on for this connection.",
+    "instructionsSha256": "af1beb531c49921df5b9985c9d361c47c9bf78da06b326a535ef4161565f19c6"
+   },
+   "toolsList": {
+    "count": 88,
+    "ownerToolCount": 0,
+    "countMatchesInitialize": true,
+    "anyTopLevelCombinator": true,
+    "names": [
+     "dd_dfs_history_save",
+     "dd_dfs_history_archive",
+     "dd_dfs_history_list",
+     "dd_dfs_history_get",
+     "dd_dfs_portfolio",
+     "dd_dfs_nhl_model",
+     "dd_dfs_draft",
+     "dd_dfs_sync",
+     "dd_dfs_compare",
+     "dd_dfs_schema",
+     "dd_bozo_menu_public",
+     "dd_bozo_menu_publish",
+     "dd_bozo_menu_list",
+     "dd_bozo_menu_get",
+     "dd_bozo_menu_save",
+     "dd_dfs_list",
+     "dd_dfs_get",
+     "dd_dfs_create",
+     "dd_dfs_upload",
+     "dd_dfs_players",
+     "dd_dfs_settings",
+     "dd_dfs_solve",
+     "dd_dfs_explore",
+     "dd_dfs_simulate",
+     "dd_dfs_exposure",
+     "dd_dfs_select",
+     "dd_dfs_export",
+     "dd_dfs_delete",
+     "dd_whoami",
+     "dd_league_overview",
+     "dd_bozo_clv",
+     "dd_bozo_week",
+     "dd_bozo_standings",
+     "dd_draft_bozo_leg",
+     "dd_correct_bozo_pick",
+     "dd_submit_bozo_leg",
+     "dd_verify_bozo_entry",
+     "dd_bozo_admin_actions",
+     "dd_draft_board",
+     "dd_fantasy_leagues",
+     "dd_war_room",
+     "dd_draft_pool",
+     "dd_survivor_week",
+     "dd_survivor_ev",
+     "dd_optimize_survivor_path",
+     "dd_analyze_matchup",
+     "dd_convert_odds",
+     "dd_elo_game",
+     "dd_translate_probability",
+     "dd_devig_market",
+     "dd_price_parlay",
+     "dd_calculate_bet_ev",
+     "dd_calculate_hedge",
+     "dd_nfl_passer_rating",
+     "dd_score_forecast",
+     "dd_summarize_beliefs",
+     "dd_get_cfb_rating_system",
+     "dd_rank_cfb_teams",
+     "dd_cfb_team_profile",
+     "dd_compare_cfb_teams",
+     "dd_project_cfb_matchup",
+     "dd_project_cfb_schedule_path",
+     "dd_find_cfb_record_divergence",
+     "dd_get_cfb_model_disagreement",
+     "dd_get_cfb_model_receipt_status",
+     "dd_find_cfb_team_games",
+     "dd_find_cfb_team_periods",
+     "dd_find_cfb_games",
+     "dd_find_cfb_historical_market",
+     "dd_get_cfb_model_card",
+     "dd_model_scoreboard",
+     "dd_scores",
+     "dd_dfs_correlations",
+     "dd_solve_dfs_lineup",
+     "dd_guillotine_odds",
+     "dd_site_map",
+     "sd_whoami",
+     "sd_get_program",
+     "sd_start_session",
+     "sd_log_set",
+     "sd_log_sets",
+     "sd_finish_session",
+     "sd_session",
+     "sd_recent_sessions",
+     "sd_log_measurement",
+     "sd_measurement_history",
+     "sd_nutrition",
+     "sd_log_nutrition"
+    ],
+    "sha256": "9934a14ebecb176bbde28cca0112644649629184932efaf47c269890dd9eb3d7",
+    "ownerTools": []
+   },
+   "whoami": {
+    "player": "Synthetic Member",
+    "anonymous": false,
+    "private_apps": {
+     "pound": "not_owner",
+     "research": "not_owner"
+    },
+    "credential_transport": "url"
+   }
+  },
+  {
+   "caller": "shared",
+   "catalog": "core",
+   "transport": "header",
+   "initialize": {
+    "protocolVersion": "2025-06-18",
+    "serverInfo": {
+     "name": "data-dawgs",
+     "version": "1.7.0"
+    },
+    "countSentence": "Catalog `core`: 57 of 88 tools are callable here",
+    "privateAppsSentence": "No private owner apps are on for this connection.",
+    "instructionsSha256": "c68a19bae12679d104cec261e78d57d6bfd6d8d87f83bdb9156a3787f7c57c9f"
+   },
+   "toolsList": {
+    "count": 57,
+    "ownerToolCount": 0,
+    "countMatchesInitialize": true,
+    "anyTopLevelCombinator": true,
+    "names": [
+     "dd_dfs_history_save",
+     "dd_dfs_history_archive",
+     "dd_dfs_history_list",
+     "dd_dfs_history_get",
+     "dd_dfs_portfolio",
+     "dd_dfs_nhl_model",
+     "dd_dfs_draft",
+     "dd_dfs_sync",
+     "dd_dfs_compare",
+     "dd_dfs_schema",
+     "dd_bozo_menu_public",
+     "dd_bozo_menu_publish",
+     "dd_bozo_menu_list",
+     "dd_bozo_menu_get",
+     "dd_bozo_menu_save",
+     "dd_dfs_list",
+     "dd_dfs_get",
+     "dd_dfs_create",
+     "dd_dfs_upload",
+     "dd_dfs_players",
+     "dd_dfs_settings",
+     "dd_dfs_solve",
+     "dd_dfs_explore",
+     "dd_dfs_simulate",
+     "dd_dfs_exposure",
+     "dd_dfs_select",
+     "dd_dfs_export",
+     "dd_dfs_delete",
+     "dd_whoami",
+     "dd_league_overview",
+     "dd_bozo_week",
+     "dd_bozo_standings",
+     "dd_draft_bozo_leg",
+     "dd_correct_bozo_pick",
+     "dd_submit_bozo_leg",
+     "dd_verify_bozo_entry",
+     "dd_bozo_admin_actions",
+     "dd_draft_board",
+     "dd_draft_pool",
+     "dd_survivor_week",
+     "dd_survivor_ev",
+     "dd_analyze_matchup",
+     "dd_convert_odds",
+     "dd_price_parlay",
+     "dd_calculate_bet_ev",
+     "dd_scores",
+     "dd_solve_dfs_lineup",
+     "dd_guillotine_odds",
+     "dd_site_map",
+     "sd_whoami",
+     "sd_get_program",
+     "sd_start_session",
+     "sd_log_set",
+     "sd_log_sets",
+     "sd_finish_session",
+     "sd_session",
+     "sd_recent_sessions"
+    ],
+    "sha256": "a7c5589892757a41a9a25287aaa695cfbe5e081c9775eae94b2749c385eaf05f",
+    "ownerTools": []
+   },
+   "whoami": {
+    "player": null,
+    "anonymous": true,
+    "private_apps": {
+     "pound": "not_owner",
+     "research": "not_owner"
+    },
+    "credential_transport": "header"
+   }
+  },
+  {
+   "caller": "shared",
+   "catalog": "core",
+   "transport": "url",
+   "initialize": {
+    "protocolVersion": "2025-06-18",
+    "serverInfo": {
+     "name": "data-dawgs",
+     "version": "1.7.0"
+    },
+    "countSentence": "Catalog `core`: 57 of 88 tools are callable here",
+    "privateAppsSentence": "No private owner apps are on for this connection.",
+    "instructionsSha256": "c68a19bae12679d104cec261e78d57d6bfd6d8d87f83bdb9156a3787f7c57c9f"
+   },
+   "toolsList": {
+    "count": 57,
+    "ownerToolCount": 0,
+    "countMatchesInitialize": true,
+    "anyTopLevelCombinator": true,
+    "names": [
+     "dd_dfs_history_save",
+     "dd_dfs_history_archive",
+     "dd_dfs_history_list",
+     "dd_dfs_history_get",
+     "dd_dfs_portfolio",
+     "dd_dfs_nhl_model",
+     "dd_dfs_draft",
+     "dd_dfs_sync",
+     "dd_dfs_compare",
+     "dd_dfs_schema",
+     "dd_bozo_menu_public",
+     "dd_bozo_menu_publish",
+     "dd_bozo_menu_list",
+     "dd_bozo_menu_get",
+     "dd_bozo_menu_save",
+     "dd_dfs_list",
+     "dd_dfs_get",
+     "dd_dfs_create",
+     "dd_dfs_upload",
+     "dd_dfs_players",
+     "dd_dfs_settings",
+     "dd_dfs_solve",
+     "dd_dfs_explore",
+     "dd_dfs_simulate",
+     "dd_dfs_exposure",
+     "dd_dfs_select",
+     "dd_dfs_export",
+     "dd_dfs_delete",
+     "dd_whoami",
+     "dd_league_overview",
+     "dd_bozo_week",
+     "dd_bozo_standings",
+     "dd_draft_bozo_leg",
+     "dd_correct_bozo_pick",
+     "dd_submit_bozo_leg",
+     "dd_verify_bozo_entry",
+     "dd_bozo_admin_actions",
+     "dd_draft_board",
+     "dd_draft_pool",
+     "dd_survivor_week",
+     "dd_survivor_ev",
+     "dd_analyze_matchup",
+     "dd_convert_odds",
+     "dd_price_parlay",
+     "dd_calculate_bet_ev",
+     "dd_scores",
+     "dd_solve_dfs_lineup",
+     "dd_guillotine_odds",
+     "dd_site_map",
+     "sd_whoami",
+     "sd_get_program",
+     "sd_start_session",
+     "sd_log_set",
+     "sd_log_sets",
+     "sd_finish_session",
+     "sd_session",
+     "sd_recent_sessions"
+    ],
+    "sha256": "a7c5589892757a41a9a25287aaa695cfbe5e081c9775eae94b2749c385eaf05f",
+    "ownerTools": []
+   },
+   "whoami": {
+    "player": null,
+    "anonymous": true,
+    "private_apps": {
+     "pound": "not_owner",
+     "research": "not_owner"
+    },
+    "credential_transport": "url"
+   }
+  },
+  {
+   "caller": "shared",
+   "catalog": "full",
+   "transport": "header",
+   "initialize": {
+    "protocolVersion": "2025-06-18",
+    "serverInfo": {
+     "name": "data-dawgs",
+     "version": "1.7.0"
+    },
+    "countSentence": "Catalog `full`: 88 of 88 tools are callable here",
+    "privateAppsSentence": "No private owner apps are on for this connection.",
+    "instructionsSha256": "a6b3a6dafa7ea220c15dbdc63620069b5d379778061ab873c82cc07aa21b8eb1"
+   },
+   "toolsList": {
+    "count": 88,
+    "ownerToolCount": 0,
+    "countMatchesInitialize": true,
+    "anyTopLevelCombinator": true,
+    "names": [
+     "dd_dfs_history_save",
+     "dd_dfs_history_archive",
+     "dd_dfs_history_list",
+     "dd_dfs_history_get",
+     "dd_dfs_portfolio",
+     "dd_dfs_nhl_model",
+     "dd_dfs_draft",
+     "dd_dfs_sync",
+     "dd_dfs_compare",
+     "dd_dfs_schema",
+     "dd_bozo_menu_public",
+     "dd_bozo_menu_publish",
+     "dd_bozo_menu_list",
+     "dd_bozo_menu_get",
+     "dd_bozo_menu_save",
+     "dd_dfs_list",
+     "dd_dfs_get",
+     "dd_dfs_create",
+     "dd_dfs_upload",
+     "dd_dfs_players",
+     "dd_dfs_settings",
+     "dd_dfs_solve",
+     "dd_dfs_explore",
+     "dd_dfs_simulate",
+     "dd_dfs_exposure",
+     "dd_dfs_select",
+     "dd_dfs_export",
+     "dd_dfs_delete",
+     "dd_whoami",
+     "dd_league_overview",
+     "dd_bozo_clv",
+     "dd_bozo_week",
+     "dd_bozo_standings",
+     "dd_draft_bozo_leg",
+     "dd_correct_bozo_pick",
+     "dd_submit_bozo_leg",
+     "dd_verify_bozo_entry",
+     "dd_bozo_admin_actions",
+     "dd_draft_board",
+     "dd_fantasy_leagues",
+     "dd_war_room",
+     "dd_draft_pool",
+     "dd_survivor_week",
+     "dd_survivor_ev",
+     "dd_optimize_survivor_path",
+     "dd_analyze_matchup",
+     "dd_convert_odds",
+     "dd_elo_game",
+     "dd_translate_probability",
+     "dd_devig_market",
+     "dd_price_parlay",
+     "dd_calculate_bet_ev",
+     "dd_calculate_hedge",
+     "dd_nfl_passer_rating",
+     "dd_score_forecast",
+     "dd_summarize_beliefs",
+     "dd_get_cfb_rating_system",
+     "dd_rank_cfb_teams",
+     "dd_cfb_team_profile",
+     "dd_compare_cfb_teams",
+     "dd_project_cfb_matchup",
+     "dd_project_cfb_schedule_path",
+     "dd_find_cfb_record_divergence",
+     "dd_get_cfb_model_disagreement",
+     "dd_get_cfb_model_receipt_status",
+     "dd_find_cfb_team_games",
+     "dd_find_cfb_team_periods",
+     "dd_find_cfb_games",
+     "dd_find_cfb_historical_market",
+     "dd_get_cfb_model_card",
+     "dd_model_scoreboard",
+     "dd_scores",
+     "dd_dfs_correlations",
+     "dd_solve_dfs_lineup",
+     "dd_guillotine_odds",
+     "dd_site_map",
+     "sd_whoami",
+     "sd_get_program",
+     "sd_start_session",
+     "sd_log_set",
+     "sd_log_sets",
+     "sd_finish_session",
+     "sd_session",
+     "sd_recent_sessions",
+     "sd_log_measurement",
+     "sd_measurement_history",
+     "sd_nutrition",
+     "sd_log_nutrition"
+    ],
+    "sha256": "9934a14ebecb176bbde28cca0112644649629184932efaf47c269890dd9eb3d7",
+    "ownerTools": []
+   },
+   "whoami": {
+    "player": null,
+    "anonymous": true,
+    "private_apps": {
+     "pound": "not_owner",
+     "research": "not_owner"
+    },
+    "credential_transport": "header"
+   }
+  },
+  {
+   "caller": "shared",
+   "catalog": "full",
+   "transport": "url",
+   "initialize": {
+    "protocolVersion": "2025-06-18",
+    "serverInfo": {
+     "name": "data-dawgs",
+     "version": "1.7.0"
+    },
+    "countSentence": "Catalog `full`: 88 of 88 tools are callable here",
+    "privateAppsSentence": "No private owner apps are on for this connection.",
+    "instructionsSha256": "a6b3a6dafa7ea220c15dbdc63620069b5d379778061ab873c82cc07aa21b8eb1"
+   },
+   "toolsList": {
+    "count": 88,
+    "ownerToolCount": 0,
+    "countMatchesInitialize": true,
+    "anyTopLevelCombinator": true,
+    "names": [
+     "dd_dfs_history_save",
+     "dd_dfs_history_archive",
+     "dd_dfs_history_list",
+     "dd_dfs_history_get",
+     "dd_dfs_portfolio",
+     "dd_dfs_nhl_model",
+     "dd_dfs_draft",
+     "dd_dfs_sync",
+     "dd_dfs_compare",
+     "dd_dfs_schema",
+     "dd_bozo_menu_public",
+     "dd_bozo_menu_publish",
+     "dd_bozo_menu_list",
+     "dd_bozo_menu_get",
+     "dd_bozo_menu_save",
+     "dd_dfs_list",
+     "dd_dfs_get",
+     "dd_dfs_create",
+     "dd_dfs_upload",
+     "dd_dfs_players",
+     "dd_dfs_settings",
+     "dd_dfs_solve",
+     "dd_dfs_explore",
+     "dd_dfs_simulate",
+     "dd_dfs_exposure",
+     "dd_dfs_select",
+     "dd_dfs_export",
+     "dd_dfs_delete",
+     "dd_whoami",
+     "dd_league_overview",
+     "dd_bozo_clv",
+     "dd_bozo_week",
+     "dd_bozo_standings",
+     "dd_draft_bozo_leg",
+     "dd_correct_bozo_pick",
+     "dd_submit_bozo_leg",
+     "dd_verify_bozo_entry",
+     "dd_bozo_admin_actions",
+     "dd_draft_board",
+     "dd_fantasy_leagues",
+     "dd_war_room",
+     "dd_draft_pool",
+     "dd_survivor_week",
+     "dd_survivor_ev",
+     "dd_optimize_survivor_path",
+     "dd_analyze_matchup",
+     "dd_convert_odds",
+     "dd_elo_game",
+     "dd_translate_probability",
+     "dd_devig_market",
+     "dd_price_parlay",
+     "dd_calculate_bet_ev",
+     "dd_calculate_hedge",
+     "dd_nfl_passer_rating",
+     "dd_score_forecast",
+     "dd_summarize_beliefs",
+     "dd_get_cfb_rating_system",
+     "dd_rank_cfb_teams",
+     "dd_cfb_team_profile",
+     "dd_compare_cfb_teams",
+     "dd_project_cfb_matchup",
+     "dd_project_cfb_schedule_path",
+     "dd_find_cfb_record_divergence",
+     "dd_get_cfb_model_disagreement",
+     "dd_get_cfb_model_receipt_status",
+     "dd_find_cfb_team_games",
+     "dd_find_cfb_team_periods",
+     "dd_find_cfb_games",
+     "dd_find_cfb_historical_market",
+     "dd_get_cfb_model_card",
+     "dd_model_scoreboard",
+     "dd_scores",
+     "dd_dfs_correlations",
+     "dd_solve_dfs_lineup",
+     "dd_guillotine_odds",
+     "dd_site_map",
+     "sd_whoami",
+     "sd_get_program",
+     "sd_start_session",
+     "sd_log_set",
+     "sd_log_sets",
+     "sd_finish_session",
+     "sd_session",
+     "sd_recent_sessions",
+     "sd_log_measurement",
+     "sd_measurement_history",
+     "sd_nutrition",
+     "sd_log_nutrition"
+    ],
+    "sha256": "9934a14ebecb176bbde28cca0112644649629184932efaf47c269890dd9eb3d7",
+    "ownerTools": []
+   },
+   "whoami": {
+    "player": null,
+    "anonymous": true,
+    "private_apps": {
+     "pound": "not_owner",
+     "research": "not_owner"
+    },
+    "credential_transport": "url"
+   }
+  }
+ ]
+}

@@ -813,6 +813,7 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
     const j = await (await req(rpc("initialize", { protocolVersion: "2025-06-18" }), { path })).json();
     ok(j.result.instructions.startsWith(needle), "initialize opens by naming the catalog: " + needle);
     ok(new RegExp(`${N_CORE} of ${N_TOOLS}|${N_TOOLS} of ${N_TOOLS}`).test(j.result.instructions), "…with the honest count for that path");
+    ok(/No private owner apps are on for this connection\./.test(j.result.instructions), "…and says plainly that no private owner app is on");
   }
   {
     const r = await req(null, { path: "/mcp/" + PASS, method: "GET", headers: { Accept: "text/event-stream" } });
@@ -2001,7 +2002,10 @@ function refNcdf(z) {
      /remains transient/.test(d.notServedHere.dfs_projections_and_ownership),
      "notServedHere explains private workspaces and the legacy transient solver");
   ok(d.machine.surfaces.includes("surfaces.json"), "points agents at the surfaces map");
-  ok(d.machine.data.includes("/data/model-contracts.json") && d.pages["pound.html"], "site map includes the Pound contracts and workbench");
+  ok(d.machine.data.includes("/data/model-contracts.json") && d.pages["dawghouse.html"] && !d.pages["pound.html"], "site map names the DawgHouse workbench, not the pound.html redirect stub");
+  ok(/private/i.test(d.privateSurfaces["dawg-pound.html"]) && /dd_owner_pound_read/.test(d.privateSurfaces["dawg-pound.html"]) &&
+     /private/i.test(d.privateSurfaces["research-lab/private.html"]) && /dd_owner_bdb_read/.test(d.privateSurfaces["research-lab/private.html"]),
+     "site map lists the private owner surfaces and the connector tools that reach them");
   ok(d.machine.data.includes("/data/cfb-ratings.json") && d.machine.data.includes("/data/cfb-model-receipts.json") &&
      d.machine.data.includes("/data/cfb-team-game.json") && d.machine.data.includes("/data/cfb-team-week.json") &&
      d.machine.data.includes("/data/cfb-team-week-latest.json") && d.machine.data.includes("/data/cfb-games-latest.json") &&
@@ -2357,6 +2361,12 @@ const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", sid
   const who = text(await (await reqW(call("dd_whoami"), "/mcp/u_jefftok")).json());
   ok(who.player === "Jeff", "a uid-keyed account's connector resolves to its display name");
   ok(/dd_submit_bozo_leg/.test(who.access), "whoami states the write scope instead of claiming read-only");
+  ok(who.credential_transport === "url", "whoami reports a URL-path credential as url");
+  ok(who.private_apps && who.private_apps.pound === "app_disabled" && who.private_apps.research === "app_disabled",
+     "outside the packaged research build every private app reports app_disabled");
+  const whoHeader = text(await (await worker.fetch(new Request("https://w.test/mcp/full", { method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer u_jefftok" }, body: JSON.stringify(call("dd_whoami")) }), envW)).json());
+  ok(whoHeader.player === "Jeff" && whoHeader.credential_transport === "header", "whoami reports a Bearer-header credential as header");
   const wk = text(await (await reqW(call("dd_bozo_week"), "/mcp/u_jefftok")).json());
   ok(wk.legs.some(l => l.player === "Jeff" && l.you === true),
      "a uid-keyed member's own leg is marked you:true — the exact miss the live board showed");

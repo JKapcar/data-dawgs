@@ -1,5 +1,7 @@
 # Shared research release and activation boundary
 
+> **Superseded (2026-10-16).** This document predates the "BDB Research Lab and Dawg Pound" release plan of 2026-10-16. Where they disagree, the plan and `OWNER-CONNECTOR.md` win. Kept for history; do not treat its status lines as current.
+
 ## Release contents
 
 The public `/research-lab/` dashboard runs the fixed synthetic audit in this tab's

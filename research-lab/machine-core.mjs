@@ -21,7 +21,7 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
   const replay=s.idempotency.find(x=>x.tenant===tenant && x.actor===principal.id && x.key===key);
   if(replay) {requireThat(replay.fingerprint===fingerprint,'Idempotency key conflict');return {state:s,result:structuredClone(replay.result)};}
   const own=(collection,id)=>{const x=s[collection].find(x=>x.tenant===tenant&&x.id===id);requireThat(x,'Resource unavailable');return x;};
-  const stamp={tenant,actor:principal.id,subject:principal.subject||principal.id,at:new Date(now).toISOString()};
+  const stamp={tenant,actor:principal.id,subject:principal.subject||principal.id,at:new Date(now).toISOString(),...(principal.authorLabel?{author_label:principal.authorLabel,author_label_trust:'unverified'}:{})};
   let result;
   if(type==='hypothesis') {
     const previous=p.id?own('hypotheses',p.id):null;
