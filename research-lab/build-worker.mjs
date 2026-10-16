@@ -8,13 +8,15 @@ export function buildWorker(destination=path.join(root,'../work/artifacts/resear
   const worker=readFileSync(path.join(root,'../dawg-bot-worker.js'),'utf8');
   const anchor='  async fetch(request, env) {';
   if(worker.split(anchor).length!==2)throw new Error('Worker entry changed; review integration before rebuilding');
-  const sources=['../dawg-bot-worker.js','../bozo-team-registry.mjs','build-worker.mjs',...modules];
+  const sources=['repair-owner-envelope.mjs','../dawg-bot-worker.js','../bozo-team-registry.mjs','build-worker.mjs',...modules];
   const manifest=Object.fromEntries(sources.map(f=>[f,createHash('sha256').update(readFileSync(path.join(root,f))).digest('hex')]));
   const codeHash=createHash('sha256').update(JSON.stringify(manifest)).digest('hex');
   mkdirSync(destination,{recursive:true});
   const integration=`import {createResearchGateway} from './gateway.mjs';\nimport {exactStore} from './exact-store.mjs';\nimport {transition,view} from './worker-core.mjs';\nconst ddResearchGateway=createResearchGateway({...exactStore(fbGet,fbPut),sessionAuth,mcpAuth,transition,view,codeHash:'${codeHash}'});\n`;
   const uploadIntegration="import {createUploadGateway} from './upload-gateway.mjs';\nconst ddUploadGateway=createUploadGateway({fbGet,fbPut,sessionAuth});\n";
   writeFileSync(path.join(destination,'worker.mjs'),integration+uploadIntegration+worker.replace(anchor,anchor+"\n    if(new URL(request.url).pathname.startsWith('/research-upload/'))return ddUploadGateway(request,env);\n    if(new URL(request.url).pathname.startsWith('/research/'))return ddResearchGateway(request,env);"));
+  mkdirSync(path.join(destination,'research-lab'),{recursive:true});
+  copyFileSync(path.join(root,'repair-owner-envelope.mjs'),path.join(destination,'research-lab/repair-owner-envelope.mjs'));
   for(const f of modules)copyFileSync(path.join(root,f),path.join(destination,f));
   copyFileSync(path.join(root,'../bozo-team-registry.mjs'),path.join(destination,'bozo-team-registry.mjs'));
   writeFileSync(path.join(destination,'build-manifest.json'),JSON.stringify({codeHash,sources:manifest,enabled:false},null,2));

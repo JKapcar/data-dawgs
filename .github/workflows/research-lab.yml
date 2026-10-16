@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
-      - run: node --test research-lab/lab.test.mjs research-lab/gateway.test.mjs research-lab/upload.test.mjs research-lab/exact-store.test.mjs
+      - run: node --test research-lab/repair-owner-envelope.test.mjs research-lab/lab.test.mjs research-lab/gateway.test.mjs research-lab/upload.test.mjs research-lab/exact-store.test.mjs
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: python research-lab/inspect_zip_test.py

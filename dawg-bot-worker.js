@@ -1,3 +1,4 @@
+import { repairOwnerEnvelope } from "./research-lab/repair-owner-envelope.mjs";
 import { BOZO_ESPN_TEAM_SEED } from "./bozo-team-registry.mjs";
 
 /**
@@ -1707,6 +1708,12 @@ export default {
   // sensitive auth material and exists for disaster recovery, not polling.
   async scheduled(controller, env, ctx) {
     const cron = (controller && controller.cron) || "";
+    // Time-bounded, approved incident repair rides an existing tick; never HTTP.
+    if(cron === "*/5 * * * *" && ctx?.waitUntil){
+      ctx.waitUntil(repairOwnerEnvelope({env,fbGet,fbPut,backup:now=>{const run=runBackup(env,now);opsTrack(ctx,env,"backup",now,run);return run;}}).catch(async()=>{
+        if(env.RL)await env.RL.put('research-repair:v1:outer-envelope-20261016:error',JSON.stringify({at:new Date().toISOString(),error:'Scoped repair failed; inspect private recovery and record'}),{expirationTtl:2592000});
+      }));
+    }
     // Bozo closes: fires every five minutes and does nothing on a tick with no game
     // about to start, which is the overwhelming majority of them. One RTDB read.
     if (cron === BOZO_CLOSE_CRON) {
