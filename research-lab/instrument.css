@@ -32,3 +32,4 @@ footer{padding:20px 0;font-size:10px}@media(max-width:900px){#instruments{grid-t
 .machine-status .light{background:#69736c;box-shadow:none}.machine-status[data-ready=true] .light{background:var(--green);box-shadow:0 0 12px #00e5b077}
 
 #cohort-grid [data-cohort="amber"]{border-color:#b17b23;background:linear-gradient(145deg,#302514,#17180f)}#cohort-grid [data-cohort="amber"] .metric,#cohort-grid [data-cohort="amber"] .meta{color:#ffb300}#cohort-grid [data-cohort="amber"] meter{accent-color:#ffb300}#cohort-grid [data-cohort="amber"] meter::-webkit-meter-optimum-value{background:#ffb300}
+#cohort-grid [data-cohort="amber"]:before{background:#ffb300;box-shadow:0 0 12px #ffb30066}
