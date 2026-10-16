@@ -1,7 +1,7 @@
 name: Research lab contracts and preview
 on:
   pull_request:
-    paths: ['install-help.js', 'install-help.css', 'tests/install-help.test.mjs', 'tests/dawg-pound-ui.cjs', 'research-lab/**', 'dawg-pound.html', 'dawg-pound.js', 'signon.html', '.github/workflows/research-lab.yml']
+    paths: ['install-help.js', 'install-help.css', 'tests/install-help.test.mjs', 'tests/dawg-pound-ui.cjs', 'tools/check-research-data.py', 'research-lab/**', 'dawg-pound.html', 'dawg-pound.js', 'signon.html', '.github/workflows/research-lab.yml']
 permissions:
   contents: read
 jobs:
@@ -15,6 +15,8 @@ jobs:
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: python research-lab/inspect_zip_test.py
+      - run: python research-lab/data/test_data_tools.py
+      - run: python tools/check-research-data.py
       - run: node research-lab/build-browser.mjs && git diff --exit-code -- research-lab/browser-engine.mjs
       - run: npm install --prefix /tmp/dd-lab-qa playwright@1.56.1 miniflare@4.20260730.0 --no-audit --no-fund
       - run: /tmp/dd-lab-qa/node_modules/.bin/playwright install --with-deps chromium

@@ -32,3 +32,12 @@ work/vendor-dollars.json
 
 # DFS results ledgers: built from paid projections and DK standings. Private, never committed.
 /private/dfs-ledger/
+
+# BDB research data: only tools, field lists and a redacted manifest-summary.json belong in
+# research-lab/data/. Raw files and the full manifest stay on the owner's machine.
+# tools/check-research-data.py enforces the same rule in CI.
+research-lab/data/manifest.json
+research-lab/data/*.audit.json
+research-lab/data/*.csv
+research-lab/data/*.zip
+research-lab/data/*.parquet
