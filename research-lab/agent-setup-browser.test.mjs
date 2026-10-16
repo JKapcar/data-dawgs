@@ -35,7 +35,7 @@ try{
  await page.evaluate(()=>{localStorage.clear();dispatchEvent(new StorageEvent('storage',{key:null}));});assert(await page.locator('#setup').isHidden());assert(await page.locator('#signinHelp').isVisible());assert.deepEqual(errors,[]);
  let releaseRead,startedRead;holdRead=new Promise(r=>releaseRead=r);const started=new Promise(r=>startedRead=r);readStarted=startedRead;
  await page.evaluate(()=>{localStorage.setItem('dd-bozo-sess','synthetic-owner');dispatchEvent(new StorageEvent('storage',{key:'dd-bozo-sess'}));});await started;
- await page.evaluate(()=>{localStorage.clear();dispatchEvent(new StorageEvent('storage',{key:null}));});releaseRead();holdRead=null;await page.getByText('Sign in to DataDawgs to open Connections.',{exact:true}).waitFor();
- await page.waitForFunction(()=>document.querySelector('#status').textContent==='Sign in to DataDawgs to open Connections.'&&document.querySelector('#accountLink').textContent==='Sign in');assert(await page.locator('#signinHelp').isVisible());assert(await page.locator('#setup').isHidden());assert.equal(writes,1);
+ await page.evaluate(()=>{localStorage.clear();dispatchEvent(new StorageEvent('storage',{key:null}));});const completed=page.waitForResponse(r=>r.url().endsWith('/agent-setup/v1')&&r.request().method()==='GET');releaseRead();holdRead=null;await (await completed).finished();await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+ assert.equal(await page.locator('#status').textContent(),'Sign in to DataDawgs to open Connections.');assert.equal(await page.locator('#accountLink').textContent(),'Sign in');assert(await page.locator('#signinHelp').isVisible());assert(await page.locator('#setup').isHidden());assert.equal(writes,1);
  console.log(JSON.stringify({passed:true,syntheticOnly:true,widths:[1440,390,320],screenshots:output,secretCleared:true,noExternalConnections:true}));
 }finally{await browser.close();}
