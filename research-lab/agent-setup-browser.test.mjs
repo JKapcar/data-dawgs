@@ -3,7 +3,7 @@ import {loadPlaywright,chromiumExecutable} from '../work/playwright-loader.mjs';
 const {chromium}=loadPlaywright(),browser=await chromium.launch({headless:true,executablePath:chromiumExecutable(chromium)});
 const output=process.env.LAB_SCREENSHOTS||path.join(os.tmpdir(),'dd-agent-setup-preview');mkdirSync(output,{recursive:true});
 try{
- const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));let enabled=false,writes=0,denied=0,reads=0;
+ const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));let enabled=false,writes=0,denied=0,reads=0,holdRead=null,readStarted=null;
  const state={delegatedEnabled:false,scopes:{pound:['pound:task:read','pound:message:append'],research:['research:read']},grants:[],resources:{roster:[{id:'roster',name:'Claude synthetic'}],tasks:[{id:'task',title:'Synthetic pilot',agent_id:'roster'}],contexts:[{id:'context',title:'Synthetic approved brief',versions:[1]}]}};
  await page.route('**/*',async route=>{
   const req=route.request(),url=new URL(req.url());
@@ -15,7 +15,7 @@ try{
   const send=(body,status=200)=>route.fulfill({status,headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify(body)});
   if(denied)return send({error:denied===401?'owner_session_required':'owner_required'},denied);
   if(!enabled)return send({error:'setup_unconfigured'},503);
-  if(req.method()==='GET'){reads++;return send(state);}
+  if(req.method()==='GET'){reads++;if(holdRead){readStarted?.();await holdRead;}return send(state);}
   writes++;const b=req.postDataJSON();if(b.action==='issue')return send({id:'synthetic',endpoint:'https://example.invalid/mcp',secret:'synthetic-not-a-real-credential',expiresAt:Date.now()+604800000});
   assert.equal(b.action,'revoke');return send({revoked:true});
  });
@@ -33,5 +33,9 @@ try{
  await page.locator('#load').click();await page.locator('#setup').waitFor();await page.evaluate(()=>{localStorage.removeItem('dd-bozo-sess');dispatchEvent(new StorageEvent('storage',{key:'dd-bozo-sess'}));});assert(await page.locator('#setup').isHidden());assert.equal(await page.locator('#sessionStatus').textContent(),'Not signed in in this browser');assert(await page.locator('#load').isDisabled());
  await page.evaluate(()=>{localStorage.setItem('dd-bozo-sess','synthetic-owner');dispatchEvent(new StorageEvent('storage',{key:'dd-bozo-sess'}));});await page.locator('#setup').waitFor();
  await page.evaluate(()=>{localStorage.clear();dispatchEvent(new StorageEvent('storage',{key:null}));});assert(await page.locator('#setup').isHidden());assert(await page.locator('#signinHelp').isVisible());assert.deepEqual(errors,[]);
+ let releaseRead,startedRead;holdRead=new Promise(r=>releaseRead=r);const started=new Promise(r=>startedRead=r);readStarted=startedRead;
+ await page.evaluate(()=>{localStorage.setItem('dd-bozo-sess','synthetic-owner');dispatchEvent(new StorageEvent('storage',{key:'dd-bozo-sess'}));});await started;
+ await page.evaluate(()=>{localStorage.clear();dispatchEvent(new StorageEvent('storage',{key:null}));});releaseRead();holdRead=null;await page.getByText('Sign in to DataDawgs to open Connections.',{exact:true}).waitFor();
+ await page.waitForFunction(()=>document.querySelector('#status').textContent==='Sign in to DataDawgs to open Connections.'&&document.querySelector('#accountLink').textContent==='Sign in');assert(await page.locator('#signinHelp').isVisible());assert(await page.locator('#setup').isHidden());assert.equal(writes,1);
  console.log(JSON.stringify({passed:true,syntheticOnly:true,widths:[1440,390,320],screenshots:output,secretCleared:true,noExternalConnections:true}));
 }finally{await browser.close();}

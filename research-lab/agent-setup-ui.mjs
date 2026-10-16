@@ -5,6 +5,7 @@ function sessionLabel(){try{const b=JSON.parse(atob(token().split('.')[0].replac
 function account(text,signIn=false){$('sessionStatus').textContent=text;$('accountLink').textContent=signIn?'Sign in':'Account';$('signinHelp').hidden=!signIn;}
 function refreshSession(){
  invalidate();
+ if(busy)refreshQueued=true;
  if(!token()){account('Not signed in in this browser',true);status('Sign in to DataDawgs to open Connections.');$('load').disabled=true;return;}
  account('Checking saved sign-in');status('Checking your DataDawgs sign-in.');
  if(busy){refreshQueued=true;return;}
