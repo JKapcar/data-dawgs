@@ -1,3 +1,4 @@
+import {agentCredential,authorizeAgent,RESEARCH_AGENT_SCOPES} from './agent-identity.mjs';
 // Disabled-by-default hosted adapter. Identity and storage primitives come from the
 // existing Worker; this module neither mints credentials nor writes access grants.
 const scopes = Object.freeze({hypothesis:'hypothesis:write',evidence:'evidence:write',discussion:'discussion:write',task:'task:write',claim:'task:claim',run:'experiment:run'});
@@ -41,11 +42,13 @@ export function createResearchGateway({fbGet,fbPut,sessionAuth,mcpAuth,transitio
       const bearer=request.headers.get('Authorization'),session=request.headers.get('X-Dawg-Session');
       if((bearer?.length||0)>4096||(session?.length||0)>4096)fail(431,'credential_header_too_large');
       if(Boolean(bearer)===Boolean(session))fail(401,'exactly_one_identity_required');
-      let identity,kind;
+      let identity,kind,delegated;
       // Existing loadUsers has a legacy invitation-seeding fallback. Disable that
       // fallback in this request only: research authentication must never seed users.
       const identityEnv={...env,BOZO_TOKENS:undefined};
-      if(bearer?.startsWith('Bearer u_')){
+      if(bearer?.startsWith('Bearer da1_')){
+        delegated=await agentCredential(request,env);identity={uid:delegated.id};kind='delegated';
+      }else if(bearer?.startsWith('Bearer u_')){
         if(!/^Bearer u_[A-Za-z0-9_-]+$/.test(bearer))fail(401,'personal_mcp_identity_required');
         // mcpAuth normally supports URL/shared credentials. Give it only this vetted
         // header and its canonical empty /mcp path so none of those modes can win.
@@ -57,14 +60,15 @@ export function createResearchGateway({fbGet,fbPut,sessionAuth,mcpAuth,transitio
         identity=await sessionAuth(sessionRequest,identityEnv);kind='users';
       }
       if(!identity||identity.err||!safeId(identity.uid))fail(401,'verified_uid_required');
-      const actor=`${kind==='agents'?'mcp':'user'}:${identity.uid}`;
+      const actor=`${delegated?'agent':kind==='agents'?'mcp':'user'}:${identity.uid}`;
       const path=`/researchLab/v1/tenants/${tenant}`;
       const authorize=envelope=>{
         const grant=envelope?.access?.[kind]?.[identity.uid];
+        if(delegated)authorizeAgent(delegated,grant,'research:'+tenant,RESEARCH_AGENT_SCOPES,now());
         const durableOwner=kind==='users'&&identity.uid===env.RESEARCH_OWNER_UID&&grant?.owner===true&&grant?.expiresAt==null;
         if(!grant||grant.enabled!==true||(!durableOwner&&(!Number.isFinite(grant.expiresAt)||grant.expiresAt<=now()))||!Array.isArray(grant.capabilities)||grant.capabilities.some(c=>!allowed.has(c)))fail(403,'research_grant_required');
         if(envelope.version!==1||envelope.state?.version!==1)fail(503,'store_unavailable');
-        return {tenant,id:actor,subject:identity.uid,capabilities:[...grant.capabilities]};
+        return {tenant,id:actor,subject:delegated?'agent:'+identity.uid:identity.uid,capabilities:[...grant.capabilities]};
       };
       const read=async()=>{const result=await fbGet(env,path,true);if(!result.etag)fail(503,'conditional_storage_required');return result;};
       let snapshot=await read(),principal=authorize(snapshot.data);
@@ -115,6 +119,11 @@ export function createResearchGateway({fbGet,fbPut,sessionAuth,mcpAuth,transitio
         if(!principal.capabilities.includes('research:read'))fail(403,'read_scope_required');
         return respond(project(snapshot.data.state));
       }
+      if(delegated&&command&&(!scopes[command.type]||!principal.capabilities.includes(scopes[command.type])))fail(403,'agent_tool_denied');
+      if(delegated&&command?.type==='hypothesis'&&command.payload?.id){
+        const h=snapshot.data.state.hypotheses.find(h=>h.tenant===tenant&&h.id===command.payload.id);
+        if(!h||h.revisions[0]?.subject!==principal.subject)fail(403,'own_hypothesis_only');
+      }
       if(!command||Object.keys(command).some(k=>!['type','key','payload'].includes(k))||!Object.hasOwn(scopes,command.type))fail(400,'invalid_command');
       if(command.type==='run'&&command.payload?.tracking!=null){
         const tracking=command.payload.tracking;
@@ -124,6 +133,7 @@ export function createResearchGateway({fbGet,fbPut,sessionAuth,mcpAuth,transitio
         if(attempt)snapshot=await read();principal=authorize(snapshot.data);
         // Grants and state share one CAS envelope. A concurrent revocation changes
         // the same ETag, so an obsolete grant can never commit after revocation.
+        if(delegated&&command.type==='hypothesis'&&command.payload?.id){const h=snapshot.data.state.hypotheses.find(h=>h.tenant===tenant&&h.id===command.payload.id);if(!h||h.revisions[0]?.subject!==principal.subject)fail(403,'own_hypothesis_only');}
         let next;
         try{next=await transition(snapshot.data.state,principal,command,now(),codeHash);}catch(error){fail(/denied/.test(error.message)?403:/conflict|unavailable|lease required/.test(error.message)?409:400,error.message);}
         const envelope={...clone(snapshot.data),state:next.state};

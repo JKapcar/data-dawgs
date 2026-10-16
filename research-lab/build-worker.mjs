@@ -4,7 +4,7 @@ import {readFileSync,writeFileSync,mkdirSync,copyFileSync} from 'node:fs';
 import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';
 const root=path.dirname(fileURLToPath(import.meta.url));
 export function buildWorker(destination=path.join(root,'../work/artifacts/research-lab')) {
-  const modules=['tracking.mjs','machine-core.mjs','worker-core.mjs','gateway.mjs','upload-gateway.mjs','exact-store.mjs'];
+  const modules=['tracking.mjs','machine-core.mjs','worker-core.mjs','gateway.mjs','upload-gateway.mjs','exact-store.mjs','agent-identity.mjs','pound-agent-gateway.mjs'];
   const worker=readFileSync(path.join(root,'../dawg-bot-worker.js'),'utf8');
   const anchor='  async fetch(request, env) {';
   if(worker.split(anchor).length!==2)throw new Error('Worker entry changed; review integration before rebuilding');
@@ -13,8 +13,9 @@ export function buildWorker(destination=path.join(root,'../work/artifacts/resear
   const codeHash=createHash('sha256').update(JSON.stringify(manifest)).digest('hex');
   mkdirSync(destination,{recursive:true});
   const integration=`import {createResearchGateway} from './gateway.mjs';\nimport {exactStore} from './exact-store.mjs';\nimport {transition,view} from './worker-core.mjs';\nconst ddResearchGateway=createResearchGateway({...exactStore(fbGet,fbPut),sessionAuth,mcpAuth,transition,view,codeHash:'${codeHash}'});\n`;
+  const agentIntegration="import {createPoundAgentGateway} from './pound-agent-gateway.mjs';\nconst ddPoundAgentGateway=createPoundAgentGateway({fbGet,fbPut});\n";
   const uploadIntegration="import {createUploadGateway} from './upload-gateway.mjs';\nconst ddUploadGateway=createUploadGateway({fbGet,fbPut,sessionAuth});\n";
-  writeFileSync(path.join(destination,'worker.mjs'),integration+uploadIntegration+worker.replace(anchor,anchor+"\n    if(new URL(request.url).pathname.startsWith('/research-upload/'))return ddUploadGateway(request,env);\n    if(new URL(request.url).pathname.startsWith('/research/'))return ddResearchGateway(request,env);"));
+  writeFileSync(path.join(destination,'worker.mjs'),integration+uploadIntegration+agentIntegration+worker.replace(anchor,anchor+"\n    if(new URL(request.url).pathname.startsWith('/agents/'))return ddPoundAgentGateway(request,env);\n    if(new URL(request.url).pathname.startsWith('/research-upload/'))return ddUploadGateway(request,env);\n    if(new URL(request.url).pathname.startsWith('/research/'))return ddResearchGateway(request,env);"));
   for(const f of modules)copyFileSync(path.join(root,f),path.join(destination,f));
   copyFileSync(path.join(root,'../bozo-team-registry.mjs'),path.join(destination,'bozo-team-registry.mjs'));
   writeFileSync(path.join(destination,'build-manifest.json'),JSON.stringify({codeHash,sources:manifest,enabled:false},null,2));
