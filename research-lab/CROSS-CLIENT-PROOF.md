@@ -25,7 +25,7 @@ Fallback URL: `https://toto.jkapcar4.workers.dev/mcp/full/<token>` (same token, 
 | Claude | Settings → Connectors → Add custom connector. If the dialog has no header field, use the fallback URL. Enable the connector in the conversation. | header if offered, else URL |
 | Gemini | Spark on the web → Settings & help → Connected Apps → Custom apps for Spark. Use the header if the form offers one, else the fallback URL. Spark currently requires a US personal account, 18+, English and Keep Activity on. | header if offered, else URL |
 | Grok | Wherever Grok accepts a remote MCP server: endpoint plus Authorization header; fallback URL only if it has no header field. | header |
-| Muse | If Muse can add a remote (Streamable HTTP) MCP server: endpoint plus Authorization header; otherwise the fallback URL. | header |
+| Muse | Follow `MUSE-CONNECTOR.md`: endpoint `https://toto.jkapcar4.workers.dev/mcp/core`, token only in Muse's secure header field (`Authorization: Bearer <token>`). Never give Muse the URL-path form. | header only |
 
 ## The script
 
