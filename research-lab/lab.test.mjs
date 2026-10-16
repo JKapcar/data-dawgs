@@ -53,3 +53,11 @@ test('v1 journal written by d5d4836 still verifies, recomputes and accepts new c
  const revised=transition(state,local,{type:'hypothesis',key:'fx-new-1',payload:{id:old.id,expectedVersion:old.revisions.length,title:old.revisions.at(-1).title,method:old.revisions.at(-1).method,family:'speed-retention',status:'registered'}},2000,'b'.repeat(64));
  assert.equal(revised.result.revisions.length,2);assert.equal(revised.result.revisions[0].family,undefined);assert.equal(revised.result.revisions[1].status,'registered');assert.equal(revised.state.version,1);
  const v=view(revised.state,local);assert.equal(v.receipts.length,1);assert.equal(v.evidence[0].kind,undefined);assert.equal(v.hypotheses.length,3);});
+test('seed-registered exports five registered T1 designs from the local runner and refuses an in-repo state dir',async()=>{
+ const {execFileSync}=await import('node:child_process');const dir=mkdtempSync(path.join(os.tmpdir(),'dd-seed-')),out=path.join(dir,'out.json');
+ try{assert.throws(()=>execFileSync(process.execPath,['research-lab/seed-registered.mjs',out],{env:{...process.env,LAB_STATE_DIR:'research-lab/tmp-state'},stdio:'pipe'}),/outside the repository/);
+  execFileSync(process.execPath,['research-lab/seed-registered.mjs',out],{env:{...process.env,LAB_STATE_DIR:path.join(dir,'state')},stdio:'pipe'});const d=JSON.parse(readFileSync(out,'utf8'));
+  assert.deepEqual(d.records.map(r=>r.revisions[0].family),['speed-retention','accel-decel-cut','missingness','external-market','other']);
+  for(const r of d.records){const v=r.revisions[0];assert.equal(v.status,'registered');assert.match(v.target,/^T1/);assert.match(v.featureCutoff,/^combine_results \+ combine_tracking only/);assert.match(v.splitPolicy,/2025 = untouched holdout, split by athlete/);assert.match(v.baseline,/draft_overall_pick/);}
+  const committed=JSON.parse(readFileSync(new URL('./seed/registered-hypotheses-2026-10-16.json',import.meta.url),'utf8'));assert.deepEqual(committed.commands,d.commands);
+ }finally{rmSync(dir,{recursive:true,force:true});}});
