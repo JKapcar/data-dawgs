@@ -25,7 +25,7 @@ export function createClient(config,{fetcher=fetch,origin=location.origin,token=
     ensureIdentity();
     const data=await r.json();
     ensureIdentity();
-    if(!r.ok){if(r.status===401||r.status===403)invalidate();if(hosted)onRejected(r.status);throw new Error(data.error||'Research request failed');}
+    if(!r.ok){if(r.status===401||r.status===403)invalidate();if(hosted)onRejected(r.status);const error=new Error(data.error||'Research request failed');error.status=r.status;throw error;}
     if(hosted)onVerified(credential);
     return data;
   }

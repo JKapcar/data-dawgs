@@ -56,7 +56,7 @@ async function save(op,data,baseRevision=state?.revision){
     render();note('Saved · '+date(state.updated_at));return true;
   }catch(e){
     if(generation!==epoch||e.name==='AbortError')return false;
-    if(e.status===401||e.status===403){clear();note(e.message);return false;}
+    if(e.status===401||e.status===403){clear();globalThis.DDAccount?.failed(e.status);note(e.message);return false;}
     if(e.status===409){pending=null;note(e.message+' Your text is still in the editor; copy it before refreshing.');}
     else note(e.status?e.message:'Connection interrupted. Retry Save to check the same request.');
     $('editorError').textContent=$('status').textContent;return false;
