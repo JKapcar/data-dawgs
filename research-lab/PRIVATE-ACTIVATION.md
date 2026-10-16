@@ -1,7 +1,12 @@
 # Owner persistence and private competition intake
 
-Prepared 2026-10-16. Code proposal only: no bucket, grant, credentials, lifecycle,
-security rule, schedule or deployment is created by this change.
+Activation prepared 2026-10-16 following explicit owner approval. The private R2
+bucket and 30-day object/seven-day multipart lifecycle are provisioned. Canonical
+owner identity was verified against the existing site record; the empty tenant
+and owner grant were saved and read back in the Firebase console. No external
+agent grants, credentials, billing upgrades, rules or schedules were added.
+The public demo remains at `index.html`; `private.html` uses the authenticated
+hosted workspace. Signed-in live persistence and upload checks remain pending.
 
 ## Exact approval scope
 
@@ -129,6 +134,8 @@ Verified provider references, 2026-10-16:
   API, streamed retrieval and multipart completion/abort races.
 - https://developers.cloudflare.com/r2/pricing/ — rates, allowance and rounding.
 
-The existing Vault page is setup-only. No usable R2 binding is present in the
-checked-in Worker configuration. This does not prove the account has no buckets;
-account inventory and billing remain activation preflight checks.
+The existing Vault page is setup-only. The approved bucket binding is now in the
+complete Worker configuration. Firebase currently warns that monthly downloads
+exceed its free allowance; the editor remained operational and initialization
+succeeded. No plan change was made. Future service continuity remains a risk
+until usage resets or the owner separately decides how to address the overage.
