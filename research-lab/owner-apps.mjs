@@ -21,6 +21,27 @@ const flat={
 const withAssistant=schema=>({...schema,oneOf:schema.oneOf.map(s=>({...s,properties:{...s.properties,assistant}}))});
 const label=args=>{if(!Object.hasOwn(args,'assistant'))return null;const v=args.assistant;check(typeof v==='string'&&v.trim().length>=1&&v.length<=40&&!/[\u0000-\u001f\u007f]/.test(v),400,'invalid_assistant_label');return v;};
 const without=(args,key)=>{const {[key]:_,...rest}=args;return rest;};
+// Uploaded archive: metadata only. The connector never streams, copies or links the bytes.
+// Lifecycle is the bucket rule documented in PRIVATE-ACTIVATION.md (quarantine/ expires 30 days
+// after upload); it is stated, not read from Cloudflare.
+export const QUARANTINE_DAYS=30,UPLOAD_PART_BYTES=8*1024*1024;
+const sha256Hex=async text=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),b=>b.toString(16).padStart(2,'0')).join('');
+async function datasetStatus(fbGet,env,uid){
+ try{
+  const r=await fbGet(env,'/researchUploads/v1/'+uid,true),d=r?.data?.payload?JSON.parse(r.data.payload):null;
+  if(!d)return {status:'none',note:'No archive upload recorded for this owner.',rawData:'not_exposed'};
+  const out={status:d.status,name:d.name,size:d.size,parts:Array.isArray(d.hashes)?d.hashes.length:null,partBytes:UPLOAD_PART_BYTES,
+   partHashesSha256:Array.isArray(d.hashes)?await sha256Hex(d.hashes.join('\n')):null,
+   createdAt:d.createdAt?new Date(d.createdAt).toISOString():null,completedAt:d.completedAt?new Date(d.completedAt).toISOString():null,
+   storage:{bucket:'datadawgs-research-private',key:d.key,prefix:String(d.key||'').split('/')[0]+'/'},object:'not_checked',rawData:'not_exposed',
+   integrity:'Each 8 MiB part was SHA-256 verified on receipt. Compare partHashesSha256 with research-lab/data/archive.py verify on the local copy.'};
+  if(env.RESEARCH_UPLOADS&&d.key){const head=await env.RESEARCH_UPLOADS.head(d.key);
+   if(!head)out.object='missing';
+   else{const uploaded=head.uploaded instanceof Date?head.uploaded:new Date(head.uploaded);Object.assign(out,{object:'present',objectSize:head.size,objectMatchesRecordedSize:head.size===d.size,objectUploadedAt:uploaded.toISOString(),
+    lifecycle:out.storage.prefix==='quarantine/'?{rule:'quarantine/ objects expire '+QUARANTINE_DAYS+' days after upload (documented bucket rule, not read from Cloudflare)',expiresAt:new Date(uploaded.getTime()+QUARANTINE_DAYS*86400000).toISOString(),durable:false}:{durable:true}});}}
+  return out;
+ }catch{return {status:'unavailable',rawData:'not_exposed'};}
+}
 export const OWNER_APP_STATUSES=['on','off','expired','not_owner','app_disabled','tenant_unconfigured','storage_unavailable'];
 
 const names={pound:['dd_owner_pound_read','dd_owner_pound_write'],research:['dd_owner_bdb_read','dd_owner_bdb_write']};
@@ -54,7 +75,7 @@ export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeH
   const writing=name.endsWith('_write'),actor='owner-connector:'+uid,authorLabel=writing?label(args):null;if(writing)args=without(args,'assistant');
   const identity={actor,owner:uid,assistantIdentity:'unverified',mode:'owner_connector',scheduler:'unconfigured'};
   const principal={tenant:env.RESEARCH_UPLOAD_TENANT,id:actor,subject:uid,capabilities:researchScopes};
-  if(!writing){check(Object.keys(args).length===0,400,'unexpected_arguments');const workspace=app==='pound'?pound.view(JSON.parse(s.data.payload)):view(decodeEnvelope(s.data).state,principal);if(app==='research')for(const task of workspace.tasks)if(task.lease)task.lease={owner:task.lease.owner,expiresAt:task.lease.expiresAt};const result={workspace,writeSchema:schemas[app],identity,holdout:'unavailable',rawData:'not_exposed'};check(bytes(result)<=524288,507,'response_capacity');return result;}
+  if(!writing){check(Object.keys(args).length===0,400,'unexpected_arguments');const workspace=app==='pound'?pound.view(JSON.parse(s.data.payload)):view(decodeEnvelope(s.data).state,principal);if(app==='research')for(const task of workspace.tasks)if(task.lease)task.lease={owner:task.lease.owner,expiresAt:task.lease.expiresAt};const result={workspace,writeSchema:schemas[app],identity,holdout:'unavailable',rawData:'not_exposed',...(app==='research'?{dataset:await datasetStatus(fbGet,env,uid)}:{})};check(bytes(result)<=524288,507,'response_capacity');return result;}
   let next,result;
   if(app==='pound'){
    check(poundOps.includes(args.op),403,'operation_denied');pound.validate(args,pound.schema.write.inputSchema);

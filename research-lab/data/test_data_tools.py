@@ -145,6 +145,149 @@ class TinyFakeCsv(unittest.TestCase):
         self.assertNotIn("nfl_id", r["sample_track"]["rows"][0])
 
 
+archive_mod = load("archive", os.path.join(HERE, "archive.py"))
+audit_mod = load("audit", os.path.join(HERE, "audit.py"))
+
+
+class ArchiveAndAudit(unittest.TestCase):
+    """A fake competition ZIP, generated here: verify, audit, receipt, redaction."""
+
+    def setUp(self):
+        import zipfile, hashlib
+        self.dir = tempfile.mkdtemp(prefix="dd-data-zip-")
+        members = {
+            "combine_results.csv": "nfl_id,draft_year,position,forty,ten_yd_split,combine_height,combine_weight,draft_overall_pick\n"
+            + "".join(f"{fake_id(i)},{2023 + i % 3},WR,4.{40 + i},1.5{i},7{i % 3},19{i},{10 + i}\n" for i in range(6)),
+            "players.csv": "nfl_id,position\n" + "".join(f"{fake_id(i)},WR\n" for i in range(5)),
+            "plays.csv": "game_id,play_id,yards_gained,pass_result,visitor_team_win_probility_added\n7,3,12,C,0.01\n7,4,0,I,-0.02\n",
+            "tracking_week_1.csv": "game_id,play_id,nfl_id,frame_id,time,x,y,s,a,dis,dir,o,entity_type\n"
+            + "".join(f"7,3,{fake_id(1)},{k},{k / 10},{100 + k},20,5,1,1,90,85,PLAYER\n" for k in range(1, 5))
+            + f"7,9,{fake_id(77)},1,0.1,50,20,0,0,,,,PLAYER\n",
+        }
+        self.zip = os.path.join(self.dir, "competition.zip")
+        with zipfile.ZipFile(self.zip, "w", zipfile.ZIP_DEFLATED) as z:
+            for name, text in members.items():
+                z.writestr(name, text)
+        self.member_sha = {n: hashlib.sha256(t.encode()).hexdigest() for n, t in members.items()}
+        with open(self.zip, "rb") as f:
+            data = f.read()
+        self.size, self.sha = len(data), hashlib.sha256(data).hexdigest()
+
+    def test_verify_matches_only_the_same_bytes(self):
+        fp = archive_mod.fingerprint(self.zip)
+        self.assertEqual((fp["bytes"], fp["sha256"], fp["parts"]), (self.size, self.sha, 1))
+        good = archive_mod.verify(self.zip, self.size, self.sha, fp["partHashesSha256"])
+        self.assertTrue(good["ok"])
+        self.assertEqual(set(good["checks"]), {"size_matches_verified_archive", "sha256_matches_verified_archive", "matches_uploaded_copy"})
+        default = archive_mod.verify(self.zip)  # the real archive's expectations
+        self.assertFalse(default["ok"])
+        self.assertFalse(archive_mod.verify(self.zip, self.size, self.sha, "0" * 64)["ok"])
+        self.assertEqual(archive_mod.main(["verify", self.zip, "--expect-size", str(self.size), "--expect-sha256", self.sha]), 0)
+
+    def test_part_digest_matches_the_upload_gateway_definition(self):
+        import hashlib
+        big = os.path.join(self.dir, "big.bin")
+        with open(big, "wb") as f:
+            f.write(os.urandom(archive_mod.PART_BYTES + 5))
+        with open(big, "rb") as f:
+            a, b = f.read(archive_mod.PART_BYTES), f.read()
+        expected = hashlib.sha256((hashlib.sha256(a).hexdigest() + "\n" + hashlib.sha256(b).hexdigest()).encode()).hexdigest()
+        self.assertEqual(archive_mod.fingerprint(big)["partHashesSha256"], expected)
+
+    def test_audit_reads_the_zip_in_place_and_writes_a_sealed_receipt(self):
+        import hashlib, json as _json
+        before = os.listdir(self.dir)
+        full, summary = audit_mod.build(self.zip)
+        self.assertEqual(os.listdir(self.dir), before)  # nothing written beside the source
+        by = {t["file"]: t for t in full["tables"]}
+        self.assertEqual({n: t["sha256"] for n, t in by.items()}, self.member_sha)
+        self.assertEqual(by["combine_results.csv"]["post_cutoff_columns"], ["draft_overall_pick"])
+        self.assertEqual(by["plays.csv"]["post_play_fields"], ["pass_result", "visitor_team_win_probability_added", "yards_gained"])
+        self.assertTrue(by["tracking_week_1.csv"]["tracking"])
+        self.assertEqual(full["tracking"][0]["tracks"], 2)
+        athletes = {r["file"]: r for r in full["joins"]["athlete_ids"]["by_table"]}
+        self.assertEqual(athletes["combine_results.csv"]["absent_from_all_other_tables"], 1)  # fake_id(5) has no players row
+        self.assertEqual(athletes["tracking_week_1.csv"]["absent_from_all_other_tables"], 1)  # fake_id(77)
+        plays = {r["file"]: r for r in full["joins"]["game_play"]["by_table"]}
+        self.assertEqual(plays["tracking_week_1.csv"]["absent_from_all_other_tables"], 1)  # play 9 is not in plays.csv
+        self.assertTrue(summary["readiness"]["forty"] and summary["readiness"]["draft_overall_pick"])
+        self.assertFalse(summary["readiness"]["rookie_snap_share_or_snaps"])
+        self.assertFalse(summary["archive"]["ok"])
+        for receipt in (full, summary):
+            body = {k: v for k, v in receipt.items() if k != "receipt_sha256"}
+            self.assertEqual(receipt["receipt_sha256"], hashlib.sha256(_json.dumps(body, sort_keys=True, separators=(",", ":")).encode()).hexdigest())
+        self.assertEqual(summary["full_receipt_sha256"], full["receipt_sha256"])
+        self.assertEqual(set(summary["code_sha256"]), set(audit_mod.CODE_FILES))
+        text = _json.dumps(summary)
+        for i in (1, 5, 77):
+            self.assertNotIn(fake_id(i), text)
+        out = tempfile.mkdtemp(prefix="dd-audit-out-")
+        audit_mod.main([self.zip, "--out", out])
+        clean = tempfile.mkdtemp(prefix="dd-audit-clean-")
+        os.replace(os.path.join(out, "audit-receipt-summary.json"), os.path.join(clean, "audit-receipt-summary.json"))
+        self.assertEqual(guard.check(clean), [])
+
+    def test_audit_is_reproducible_apart_from_its_timestamp(self):
+        a, _ = audit_mod.build(self.zip)
+        b, _ = audit_mod.build(self.zip)
+        strip = lambda r: {k: v for k, v in r.items() if k not in ("generated_at", "as_of", "receipt_sha256")}
+        self.assertEqual(strip(a), strip(b))
+
+
+baseline_mod = load("baseline", os.path.join(HERE, "baseline.py"))
+
+
+class Baseline(unittest.TestCase):
+    """Synthetic cohort with a known linear signal: the card must beat the mean, the holdout opens once."""
+
+    def setUp(self):
+        import random
+        rng = random.Random(7)
+        self.dir = tempfile.mkdtemp(prefix="dd-baseline-")
+        rows, outs = [], []
+        for i in range(90):
+            year = (2023, 2024, 2025)[i % 3]
+            forty, split, h, w = 4.3 + rng.random() * 0.4, 1.45 + rng.random() * 0.15, 69 + rng.randrange(8), 175 + rng.randrange(50)
+            rows.append([fake_id(i), year, "WR" if i % 10 else "CB", round(forty, 3), round(split, 3), h, w])
+            if i % 9:  # some athletes have no outcome: excluded and counted, never imputed
+                outs.append([fake_id(i), round(0.9 - 1.5 * (forty - 4.3) + rng.gauss(0, 0.05), 4)])
+        rows.append([fake_id(200), 2024, "WR", "", 1.5, 70, 190])  # incomplete card
+        write(os.path.join(self.dir, "combine_results.csv"), ["nfl_id", "draft_year", "position", "forty", "ten_yd_split", "combine_height", "combine_weight"], rows)
+        write(os.path.join(self.dir, "rookie_usage.csv"), ["nfl_id", "snap_share"], outs)
+        self.out = tempfile.mkdtemp(prefix="dd-baseline-out-")
+
+    def test_develop_run_never_reads_the_holdout_and_card_beats_mean(self):
+        baseline_mod.main([self.dir, "--outcome", "rookie_usage.csv:snap_share", "--out", self.out])
+        with open(os.path.join(self.out, "baseline-develop-receipt.json"), encoding="utf-8") as f:
+            r = json.load(f)
+        self.assertEqual(r["result"]["holdout_n"], "sealed")
+        self.assertNotIn("holdout", r["result"])
+        self.assertEqual(r["counts"]["incomplete_card"], 1)
+        self.assertGreater(r["counts"]["no_outcome_excluded"], 0)
+        loo = r["result"]["develop_loo"]
+        self.assertLess(loo["mae_card"], loo["mae_mean"])
+        self.assertLess(loo["mae_difference_card_minus_mean_95ci"][1], 0)
+        self.assertLess(r["result"]["develop_fit"]["forty"], 0)
+
+    def test_holdout_opens_once(self):
+        args = [self.dir, "--outcome", "rookie_usage.csv:snap_share", "--out", self.out, "--open-holdout"]
+        baseline_mod.main(args)
+        with open(os.path.join(self.out, "baseline-holdout-receipt.json"), encoding="utf-8") as f:
+            r = json.load(f)
+        self.assertGreater(r["result"]["holdout_n"], 0)
+        self.assertLess(r["result"]["holdout"]["mae_card"], r["result"]["holdout"]["mae_mean"])
+        with self.assertRaises(SystemExit):
+            baseline_mod.main(args)
+
+    def test_receipt_holds_no_identifiers(self):
+        baseline_mod.main([self.dir, "--outcome", "rookie_usage.csv:snap_share", "--out", self.out])
+        with open(os.path.join(self.out, "baseline-develop-receipt.json"), encoding="utf-8") as f:
+            text = f.read()
+        for i in range(0, 90, 7):
+            self.assertNotIn(fake_id(i), text)
+        self.assertEqual(guard.check(self.out), [])
+
+
 class Guard(unittest.TestCase):
     def test_committed_directory_is_clean(self):
         self.assertEqual(guard.check(HERE), [])

@@ -62,3 +62,18 @@ test('the connector proposes and withdraws but never registers or grades; design
  for(const name of ['dd_owner_bdb_write'])for(const type of ['task','claim','run'])await assert.rejects(f.run(name,{type,key:'still-denied-'+type,payload:{}}),/operation_denied/);
  const tool=(await f.api.list(f.env,caller)).find(t=>t.name==='dd_owner_bdb_write');assert.match(tool.inputSchema.description,/featureCutoff/);assert.match(tool.inputSchema.description,/signed owner/);
  const read=await f.run('dd_owner_bdb_read');assert.deepEqual(read.writeSchema.oneOf[0].properties.payload.properties.status.enum,['exploratory','registered','confirmatory','supported','null','inconclusive','withdrawn']);});
+test('BDB read reports upload metadata and quarantine expiry, never bytes or a download link',async()=>{const f=rig();await f.enable('research');
+ assert.deepEqual((await f.run('dd_owner_bdb_read')).dataset,{status:'none',note:'No archive upload recorded for this owner.',rawData:'not_exposed'});
+ const hashes=['a'.repeat(64),'b'.repeat(64)],key='quarantine/u_owner/11111111-1111-4111-8111-111111111111.zip',uploaded=new Date('2026-10-10T00:00:00Z');
+ f.db.set('/researchUploads/v1/u_owner',{version:1,owner_uid:'u_owner',payload:JSON.stringify({id:'x',name:'synthetic.zip',size:9000000,hashes,key,uploadId:'secret-upload-id',status:'complete',parts:{1:{etag:'e1'},2:{etag:'e2'}},createdAt:Date.parse('2026-10-09T00:00:00Z'),completedAt:Date.parse('2026-10-10T00:00:00Z'),etag:'r2etag'})});
+ let heads=[];f.env.RESEARCH_UPLOADS={head:async k=>{heads.push(k);return {size:9000000,uploaded};},get:()=>{throw Error('bytes must never be read');}};
+ const d=(await f.run('dd_owner_bdb_read')).dataset;assert.deepEqual(heads,[key]);
+ assert.equal(d.status,'complete');assert.equal(d.object,'present');assert.equal(d.objectMatchesRecordedSize,true);assert.equal(d.parts,2);
+ assert.equal(d.partHashesSha256,(await import('node:crypto')).createHash('sha256').update(hashes.join('\n')).digest('hex'));
+ assert.equal(d.lifecycle.durable,false);assert.equal(d.lifecycle.expiresAt,'2026-11-09T00:00:00.000Z');assert.equal(d.rawData,'not_exposed');
+ assert.ok(!JSON.stringify(d).includes('secret-upload-id'));assert.ok(!/https?:/.test(JSON.stringify(d)));
+ f.env.RESEARCH_UPLOADS.head=async()=>null;assert.equal((await f.run('dd_owner_bdb_read')).dataset.object,'missing');
+ f.env.RESEARCH_UPLOADS.head=async()=>{throw Error('r2 down');};assert.deepEqual((await f.run('dd_owner_bdb_read')).dataset,{status:'unavailable',rawData:'not_exposed'});
+ const rec=JSON.parse(JSON.parse(JSON.stringify(f.db.get('/researchUploads/v1/u_owner'))).payload);rec.key='datasets/u_owner/x.zip';f.db.set('/researchUploads/v1/u_owner',{version:1,owner_uid:'u_owner',payload:JSON.stringify(rec)});f.env.RESEARCH_UPLOADS.head=async()=>({size:9000000,uploaded});
+ assert.deepEqual((await f.run('dd_owner_bdb_read')).dataset.lifecycle,{durable:true});
+ await f.enable('pound');assert.equal((await f.run('dd_owner_pound_read')).dataset,undefined);});

@@ -41,3 +41,9 @@ research-lab/data/*.audit.json
 research-lab/data/*.csv
 research-lab/data/*.zip
 research-lab/data/*.parquet
+
+# Local outputs of research-lab/data/audit.py and baseline.py. They hold private-derived detail;
+# only audit-receipt-summary.json is meant to be shared, and only after the CI guard passes.
+audit-output/
+research-lab/data/audit-receipt.json
+research-lab/data/baseline-*-receipt.json
