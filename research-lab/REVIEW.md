@@ -1,5 +1,23 @@
 # Milestone validation — 2026-10-16
 
+## Instrument UI and hosted-adapter follow-up
+
+- Replaced the large hero with a compact command bar, real site logo, instrument-first
+  research view, luminous descriptive cohort meters, hypothesis cartridges and a
+  circular brass wheel. Queue and evidence have actual accessible tab panels.
+- Tab arrow/Home/End navigation, active task counts, single-receipt grammar, retained
+  frame/research state, circular wheel geometry and all four panels tested at four widths.
+- 19 core/gateway/transport tests pass. Gateway tests reuse actual repo identity and
+  RTDB functions with a fake network, and cover concurrent claims, grant revocation,
+  expiry while streaming, canonical-subject independence, scoped MCP calls/lifecycle,
+  token redaction, failed input retention and fail-closed capacity.
+- Independent follow-up review found grant expiry, cross-transport identity and MCP
+  lifecycle/input representation issues. Fixed with regression tests.
+- Hosted handler is executable but unwired. No production route, database, grant,
+  credential, Worker configuration or external provider was changed. See HOSTED-BOUNDARY.md.
+
+## Initial milestone
+
 - 10 Node contract/transport tests passed: tenant/capability denial, revision conflicts,
   idempotency conflict/replay, lease expiry/ownership/reclaim, held-out rejection,
   malformed/missing tracking, null/failure receipts, UTF-8 chunking, journal restart.

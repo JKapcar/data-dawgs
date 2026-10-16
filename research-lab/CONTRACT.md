@@ -40,13 +40,18 @@ request body**. Production needs a transactional tenant store, authenticated
 credential verifier, rate limits, credential revocation and an atomic claim/commit
 transaction. The file writer lock supplies single-process serialization locally.
 
-## Authorized external AI / MCP adapter specification (unconfigured)
+## Authorized external AI / MCP adapter (unwired and unconfigured)
+
+`gateway.mjs` now implements scoped HTTP and synchronous MCP dispatch plus an ETag
+storage adapter. See `HOSTED-BOUNDARY.md` for executable routes, identity reuse,
+tests, account-versus-agent limitations and the remaining Worker packaging boundary.
+The browser still uses the local runner; no hosted route has been mounted or enabled.
 
 A future gateway must verify audience, expiry, tenant, subject, allowed tool scopes
 and revocation from a server-owned credential mapping. Existing website sessions or
 Dawg Pound MCP tokens do not imply research access. No credentials are created here.
-The gateway must project MCP tools onto the same operations below, derive principal
-server-side, and never let tool arguments widen grants. Reads require research:read.
+The adapter projects MCP tools onto the same operations below, derives principal
+server-side, and never lets tool arguments widen grants. Reads require research:read.
 Do not expose journal paths, other tenants, lease tokens belonging to other agents,
 or raw held-out data. The current local dashboard is not that gateway.
 

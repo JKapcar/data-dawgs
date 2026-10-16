@@ -20,7 +20,7 @@ export function transition(state, principal, command, now=Date.now(), codeHash='
   const replay=s.idempotency.find(x=>x.tenant===tenant && x.actor===principal.id && x.key===key);
   if(replay) {requireThat(replay.fingerprint===fingerprint,'Idempotency key conflict');return {state:s,result:structuredClone(replay.result)};}
   const own=(collection,id)=>{const x=s[collection].find(x=>x.tenant===tenant&&x.id===id);requireThat(x,'Resource unavailable');return x;};
-  const stamp={tenant,actor:principal.id,at:new Date(now).toISOString()};
+  const stamp={tenant,actor:principal.id,subject:principal.subject||principal.id,at:new Date(now).toISOString()};
   let result;
   if(type==='hypothesis') {
     const previous=p.id?own('hypotheses',p.id):null;
@@ -37,7 +37,7 @@ export function transition(state, principal, command, now=Date.now(), codeHash='
     requireThat(['note','challenge'].includes(p.kind),'Discussion kind required');
     requireThat(Array.isArray(p.evidenceIds)&&p.evidenceIds.length<=30,'Evidence IDs required');p.evidenceIds.forEach(id=>own('evidence',id));
     result={id:randomUUID(),...stamp,hypothesisId:h.id,kind:p.kind,body:text(p.body),evidenceIds:p.evidenceIds,
-      independent:p.kind==='challenge'&&!h.revisions.some(r=>r.actor===principal.id),trust:'untrusted content'};s.discussions.push(result);
+      independent:p.kind==='challenge'&&!h.revisions.some(r=>(r.subject||r.actor)===(principal.subject||principal.id)),trust:'untrusted content'};s.discussions.push(result);
   }
   if(type==='task') {
     const h=own('hypotheses',p.hypothesisId);
