@@ -33,3 +33,4 @@ footer{padding:20px 0;font-size:10px}@media(max-width:900px){#instruments{grid-t
 
 #cohort-grid [data-cohort="amber"]{border-color:#b17b23;background:linear-gradient(145deg,#302514,#17180f)}#cohort-grid [data-cohort="amber"] .metric,#cohort-grid [data-cohort="amber"] .meta{color:#ffb300}#cohort-grid [data-cohort="amber"] meter{accent-color:#ffb300}#cohort-grid [data-cohort="amber"] meter::-webkit-meter-optimum-value{background:#ffb300}
 #cohort-grid [data-cohort="amber"]:before{background:#ffb300;box-shadow:0 0 12px #ffb30066}
+@media(max-width:600px){header{flex-wrap:wrap}header>a:not(.brand){font-size:12px;overflow-wrap:anywhere}}
