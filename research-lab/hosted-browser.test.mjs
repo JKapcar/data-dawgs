@@ -13,8 +13,8 @@ try{
   assert.equal(url.origin,site,'test must not contact external services');
   let file=url.pathname.split('/').at(-1)||'index.html';if(file==='data-dawgs-site-logo-560.png')file='brand.png';
   if(file==='client-config.mjs')return route.fulfill({contentType:'text/javascript',body:`export default {mode:'hosted',workerOrigin:'${worker}',tenant:'demo'};`});
-  assert(['index.html','app.mjs','client.mjs','tracking.mjs','style.css','instrument.css','brand.png'].includes(file),file);
-  return route.fulfill({contentType:file.endsWith('.mjs')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'text/html',body:readFileSync(new URL(file==='brand.png'?'../assets/data-dawgs-site-logo-560.png':file,import.meta.url))});
+  assert(['index.html','app.mjs','client.mjs','tracking.mjs','style.css','instrument.css','brand.png','navigation.css','navigation.js'].includes(file),file);
+  return route.fulfill({contentType:/\.(mjs|js)$/.test(file)?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'text/html',body:readFileSync(new URL(file==='brand.png'?'../assets/data-dawgs-site-logo-560.png':file,import.meta.url))});
  });
  await page.goto(site+'/research-lab/');await page.getByText('Shared runner ready.',{exact:false}).waitFor();assert.equal(await page.locator('#hypothesis-grid article').count(),1);
  await page.getByRole('tab',{name:'Queue'}).click();await page.getByRole('button',{name:'Claim & run shared audit'}).click();await page.getByText('Receipt recorded: success.',{exact:false}).waitFor();assert.equal(f.rows.get('/researchLab/v1/tenants/demo').state.receipts.length,1);
@@ -23,3 +23,4 @@ try{
  await page.getByRole('tab',{name:'Research',exact:true}).click();await page.locator('#new-hypothesis').click();await page.getByLabel('Title',{exact:true}).fill('Denied');await page.getByLabel('Method and falsification criteria').fill('Test');await page.getByRole('button',{name:'Save hypothesis'}).click();await page.getByText('research_grant_required',{exact:false}).first().waitFor();assert.equal(await page.locator('#hypothesis-grid article').count(),0);assert.equal(f.rows.get('/researchLab/v1/tenants/demo').state.hypotheses.length,1);
  assert.deepEqual(errors,[]);console.log('PASS signed-in browser → WebCrypto gateway → conditional shared state → receipt → reload → revocation clears state; all network intercepted.');
 }finally{await browser.close();}
+
