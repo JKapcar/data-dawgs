@@ -28,6 +28,9 @@ const agentFeedback = readFileSync("agent-feedback.js", "utf8").trimEnd();
 const AB_START = "/* ===== DD-AGENT-BOARD START — generated from work/agent-board.js ===== */";
 const AB_END = "/* ===== DD-AGENT-BOARD END ===== */";
 const agentBoard = readFileSync("agent-board.js", "utf8").trimEnd();
+const P_START = "/* ===== DD-POUND START - generated from work/dawg-pound.js ===== */";
+const P_END = "/* ===== DD-POUND END ===== */";
+const pound = readFileSync("dawg-pound.js", "utf8").trimEnd();
 const TARGET = "../dawg-bot-worker.js";
 const START = "/* ===== DD-MCP-BLOCK START — generated from work/mcp-block.js; edit THERE ===== */";
 const END   = "/* ===== DD-MCP-BLOCK END ===== */";
@@ -118,6 +121,8 @@ const yahoo = readFileSync("yahoo-parse.js", "utf8").replace(/\s+$/, "")
 /* ---- the whole pipeline, so the build and its idempotency proof cannot diverge ---- */
 function transform(input) {
   let t = input;
+  const ps=t.indexOf(P_START), pe=t.indexOf(P_END);
+  if(ps>=0 && pe>ps)t=t.slice(0,ps)+t.slice(pe+P_END.length);
   const es = t.indexOf(E_START), ee = t.indexOf(E_END);
   if (es >= 0 && ee > es) t = t.slice(0, es) + t.slice(ee + E_END.length).replace(/^\n\n/, "");
   if (t.includes("async function runBozoLiveScores("))
@@ -198,6 +203,7 @@ function transform(input) {
 
   /* 7. inject the blocks, Yahoo and rankings before MCP's write-scope boundary */
   return t.replace(/\s+$/, "")
+    + "\n\n" + P_START + "\n" + pound + "\n" + P_END
     + "\n\n" + AB_START + "\n" + agentBoard + "\n" + AB_END
     + "\n\n" + AF_START + "\n" + agentFeedback + "\n" + AF_END
     + "\n\n" + Y_START + "\n" + yahoo + "\n" + Y_END
@@ -222,6 +228,9 @@ once("async function runBozoLiveScores(", "live score job");
 once("async function bozoEspnRefresh(", "ESPN refresh");
 if (!(out.indexOf(E_START) < out.indexOf(E_ANCHOR) && out.indexOf(E_START) > out.indexOf("function bozoScheduledTeamSide")))
   fail("the ESPN scores block must sit inside the Bozo grade region, above the near-close archive");
+once(P_START, "private pound block");
+once("async function handlePound(", "private pound handler");
+if(out.indexOf(P_START)>out.indexOf(START)) fail("Pound writes must precede MCP boundary");
 once(AB_START, "agent board block start");
 once(AB_END, "agent board block end");
 once("async function handleAgentBoard(", "agent board handler");
