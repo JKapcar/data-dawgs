@@ -2,7 +2,13 @@
  * POUND_PLAYWRIGHT_MODULE may point to a local playwright-core install.
  * POUND_CHROME may point to an installed browser. Screenshots go outside the repository. */
 const fs=require('node:fs'),http=require('node:http'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
-const {webcrypto}=require('node:crypto');
+const {webcrypto,createHash}=require('node:crypto'),{execFileSync}=require('node:child_process');
+// The header must stay pixel-identical to the page before this release. The baseline page is
+// read from git (POUND_HEADER_BASE, default the release-plan start commit) and rendered in
+// the same browser, so the comparison does not depend on fonts installed on the machine.
+const BASE_REF=process.env.POUND_HEADER_BASE||'d5d48369a412fd7263c751e42b6108ba498a798a';
+const baseFile=f=>execFileSync('git',['show',BASE_REF+':'+f],{encoding:'utf8'});
+let ownerApps={status:200,body:{owner:'u_demo',apps:[{app:'pound',status:'on',enabled:true,mode:'until_revoked',version:3},{app:'research',available:false,status:'tenant_unconfigured',error:'tenant_unconfigured'}],assistantIdentity:'unverified'}};
 const {chromium}=require(process.env.POUND_PLAYWRIGHT_MODULE||'playwright-core');
 const db=new Map();let revision=0,commits=0,loseResponse=false,heldRead=null;
 const ctx={crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,Request,Response,Headers,URL,Date,ORIGINS:[],
@@ -18,8 +24,9 @@ let browser;
   browser=await chromium.launch({headless:true,...(process.env.POUND_CHROME?{executablePath:process.env.POUND_CHROME}:{channel:'chrome'})});
   const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
-  await page.route('**/*',async route=>{
-    const req=route.request();if(req.url().startsWith(origin)){const file=new URL(req.url()).pathname.slice(1);if(!['install-help.js','dawg-pound.html','dawg-pound.js','research-lab/account.js','research-lab/navigation.js'].includes(file))return route.fulfill({status:404,body:''});return route.fulfill({status:200,contentType:file.endsWith('.js')?'text/javascript':'text/html',headers:{'Cache-Control':'no-store'},body:fs.readFileSync(file,'utf8')});}
+  await page.context().route('**/*',async route=>{
+    const req=route.request();if(req.url().startsWith(origin)){let file=new URL(req.url()).pathname.slice(1);const base=file.startsWith('base/');if(base)file=file.slice(5);if(!['install-help.js','dawg-pound.html','dawg-pound.js','research-lab/account.js','research-lab/navigation.js'].includes(file))return route.fulfill({status:404,body:''});return route.fulfill({status:200,contentType:file.endsWith('.js')?'text/javascript':'text/html',headers:{'Cache-Control':'no-store'},body:base?baseFile(file):fs.readFileSync(file,'utf8')});}
+    if(req.url()==='https://toto.jkapcar4.workers.dev/owner-apps/v1'){assert.match(req.headers().authorization,/^Bearer u_(demo|other)\.[x]{43}$/);assert.equal(req.method(),'GET');return route.fulfill({status:ownerApps.status,contentType:'application/json',body:JSON.stringify(ownerApps.body)});}
     if(req.url()==='https://toto.jkapcar4.workers.dev/api/pound'){
       assert.match(req.headers().authorization,/^Bearer u_(demo|other)\.[x]{43}$/);
       for(const h of ['x-dawg-session','x-bozo-session','x-dawg-pass'])assert.equal(req.headers()[h],undefined);
@@ -32,16 +39,41 @@ let browser;
   });
   await page.goto(origin+'/dawg-pound.html');await page.getByText('Sign in to open your private workspace.',{exact:true}).waitFor();
   await page.evaluate(()=>localStorage.setItem('dd-bozo-sess','u_demo.'+'x'.repeat(43)));await page.reload();await page.locator('#workspace:not([hidden])').waitFor();
+  // Roster, diagnostics and limits live behind <details>; the default screen is context, open work and recent messages.
+  assert.equal(await page.locator('#rosterDrawer').evaluate(d=>d.open),false);assert.equal(await page.locator('#diagnostics').evaluate(d=>d.open),false);assert.ok(await page.locator('#activeContext').isVisible()&&await page.locator('#openTasks').isVisible()&&await page.locator('#recentMessages').isVisible());
+  await page.locator('#rosterDrawer > summary').click();
   async function createAgent(name,role,fn,caps){await page.locator('#addAgent').click();await page.locator('[name=name]').fill(name);await page.locator('[name=role]').fill(role);await page.locator('[name=function]').fill(fn);await page.locator('[name=capabilities]').fill(caps);await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});}
   await createAgent('Scout','Research & discovery','Find primary sources and bring back the useful details.','Source review · concise research notes');
   await createAgent('Analyst','Data & evidence','Turn a clear question into a reproducible analysis.','Dataset checks · analysis planning');
   assert.equal(await page.getByText('Not connected',{exact:true}).count(),2);
   await page.locator('#addTask').click();await page.locator('[name=title]').fill('Build the next research brief');await page.locator('[name=body]').fill('Start with the question. Gather primary sources, then capture what changed and what remains uncertain.');await page.locator('[name=agent_id]').selectOption({label:'Scout'});await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});
-  await page.locator('#messageText').fill('Keep the first pass small: three good sources and a short recommendation.');await page.locator('#sendMessage').click();await page.getByText('Keep the first pass small: three good sources and a short recommendation.',{exact:true}).waitFor();
+  await page.locator('#messageText').fill('Keep the first pass small: three good sources and a short recommendation.');await page.locator('#sendMessage').click();await page.locator('#messages').getByText('Keep the first pass small: three good sources and a short recommendation.',{exact:true}).waitFor();
+  // Kind picker and reference field; refs link only https on the allowlist, everything else is inert text.
+  const refs=[['https://github.com/JKapcar/data-dawgs',true],['https://www.kaggle.com/competitions/nfl-big-data-bowl-2027',true],['https://datadawgs216.com/receipts.html',true],['http://github.com/insecure',false],['javascript:alert(1)',false],['https://evil.example/github.com',false],['https://user:pw@github.com/x',false],['Smith et al. 2024, table 3',false]];
+  for(const [i,[ref]] of refs.entries()){await page.locator('#messageKind').selectOption(i%2?'finding':'question');await page.locator('#messageRef').fill(ref);await page.locator('#messageText').fill('Ref check '+i);await page.locator('#sendMessage').click();await page.locator('#messages').getByText('Ref check '+i,{exact:true}).waitFor();}
+  for(const [ref,linked] of refs){const anchors=page.locator('#messages a',{hasText:ref});if(linked){assert.equal(await anchors.count(),1,ref);assert.equal(await anchors.getAttribute('rel'),'noopener noreferrer');assert.equal(await anchors.getAttribute('target'),'_blank');}else{assert.equal(await anchors.count(),0,ref);assert.equal(await page.locator('#messages li',{hasText:ref}).count(),1,ref);}}
+  const stored=JSON.parse(db.get('/privatePounds/u_demo').payload).messages;assert.deepEqual(stored.slice(1).map(m=>m.kind),refs.map((_,i)=>i%2?'finding':'question'));assert.equal(stored[0].kind,'note');
+  assert.equal(await page.locator('#recentMessages li').count(),5);assert.match(await page.locator('#recentMessages li').first().textContent(),/Ref check 7/);
   await page.locator('#openLibrary').click();await page.locator('#addContext').click();await page.locator('[name=title]').fill('How we work');await page.locator('[name=text]').fill('Start with evidence.\nName the uncertainty.\nKeep the next step clear.');await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});await page.locator('#closeLibrary').click();
+  assert.match(await page.locator('#activeContext').textContent(),/How we work · version 1[\s\S]*Start with evidence/);
+  // Task edits quote the task revision; open work sorts ahead of done work.
+  await page.locator('#addTask').click();await page.locator('[name=title]').fill('Finished item');await page.locator('[name=status]').selectOption('done');await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});
+  assert.match(await page.locator('#openTasks li').first().textContent(),/Build the next research brief/);
+  await page.locator('#taskSelect').selectOption({label:'Build the next research brief'});await page.locator('#taskDetail button',{hasText:'Edit task'}).click();await page.locator('[name=status]').selectOption('working');await page.locator('[name=refs]').fill('https://github.com/JKapcar/data-dawgs\nplain citation');await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});
+  const edited=JSON.parse(db.get('/privatePounds/u_demo').payload).tasks.find(t=>t.title==='Build the next research brief');assert.equal(edited.revision,2);assert.equal(edited.status,'working');assert.deepEqual(edited.refs,['https://github.com/JKapcar/data-dawgs','plain citation']);
+  // Diagnostics reads /owner-apps/v1 only when opened and shows reason codes.
+  await page.locator('#diagnostics > summary').click();await page.locator('#diagOut').filter({hasText:'research: tenant_unconfigured'}).waitFor();assert.match(await page.locator('#diagOut').textContent(),/pound: on · mode until_revoked · grant v3/);await page.locator('#diagnostics > summary').click();
+  ownerApps={status:403,body:{error:'configured_owner_required'}};await page.locator('#diagnostics > summary').click();await page.locator('#diagOut').filter({hasText:'not_owner'}).waitFor();await page.locator('#diagnostics > summary').click();
   const out=path.resolve(process.env.POUND_SCREENSHOTS||'../pound-preview');fs.mkdirSync(out,{recursive:true});
   await page.screenshot({path:path.join(out,'dawg-pound-desktop.png'),fullPage:true});
-  await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'mobile has no horizontal overflow');await page.screenshot({path:path.join(out,'dawg-pound-mobile.png'),fullPage:true});
+  const headerHashes={};
+  for(const width of [390,320]){await page.setViewportSize({width,height:844});await page.waitForTimeout(100);
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),width+'px has no horizontal overflow');
+    await page.locator('#messageText').scrollIntoViewIfNeeded();assert.ok(await page.locator('#messageForm').isVisible()&&await page.locator('#sendMessage').isVisible()&&await page.locator('#messageKind').isVisible()&&await page.locator('#messageRef').isVisible(),width+'px composer visible');
+    const box=await page.locator('#messageForm').boundingBox();assert.ok(box.x>=0&&box.x+box.width<=width+1,width+'px composer inside the viewport');
+    await page.screenshot({path:path.join(out,'dawg-pound-'+width+'.png'),fullPage:true});
+    headerHashes[width]=createHash('sha256').update(await page.locator('header.dd-shell').screenshot()).digest('hex');}
+  await page.setViewportSize({width:390,height:844});
   await page.locator('#openLibrary').click();await page.getByRole('button',{name:'How we work',exact:true}).click();await page.screenshot({path:path.join(out,'dawg-pound-context.png'),fullPage:true});await page.locator('#closeLibrary').click();
   // Inert rendering of adversarial text in all user-controlled display surfaces.
   await createAgent('<img src=x onerror=alert(1)>','<script>bad()</script>','Untrusted text','<svg onload=bad()>');assert.equal(await page.locator('#roster img,#roster script,#roster svg').count(),0);
@@ -63,10 +95,15 @@ let browser;
   await visibility(false);await startedPromise;await visibility(true);release();await visibility(false);await page.locator('#editor[open]').waitFor();assert.equal(await page.locator('[name=name]').inputValue(),'Keep this repeated-switch draft');await page.locator('#closeEditor').click();
   const externalChange=fn=>{const row=db.get('/privatePounds/u_demo'),s=JSON.parse(row.payload);fn(s);s.revision++;row.payload=JSON.stringify(s);revision++;};
   // Restored edits retain their original revision instead of silently replacing another tab's work.
-  await page.locator('#roster button').first().click();await page.locator('[name=role]').fill('Stale owner edit');await visibility(true);externalChange(s=>s.agents[0].role='Changed in another tab');await visibility(false);await page.locator('#editor[open]').waitFor();await page.locator('#saveEdit').click();await page.locator('#editorError').filter({hasText:'Workspace changed'}).waitFor();assert.equal(JSON.parse(db.get('/privatePounds/u_demo').payload).agents[0].role,'Changed in another tab');await page.locator('#closeEditor').click();
+  await page.locator('#rosterDrawer').evaluate(d=>d.open=true);await page.locator('#roster button').first().click();await page.locator('[name=role]').fill('Stale owner edit');await visibility(true);externalChange(s=>s.agents[0].role='Changed in another tab');await visibility(false);await page.locator('#editor[open]').waitFor();await page.locator('#saveEdit').click();await page.locator('#editorError').filter({hasText:'Workspace changed'}).waitFor();assert.equal(JSON.parse(db.get('/privatePounds/u_demo').payload).agents[0].role,'Changed in another tab');await page.locator('#closeEditor').click();
   // An archived original thread must never rebind its unsent note to a fallback thread.
   await page.locator('#messageText').fill('This draft belongs to the original thread only');await visibility(true);
   externalChange(s=>{s.tasks[0].archived=true;s.tasks.push({id:'p_'+webcrypto.randomUUID(),title:'Other thread',body:'Other task',agent_id:'',status:'queued',archived:false});});
   await visibility(false);await page.getByText('Your draft belongs to an archived thread. Copy it before refreshing; it has not moved to another task.',{exact:true}).waitFor();assert.match(await page.locator('#taskDetail').textContent(),/Build the next research brief/);assert.equal(await page.locator('#messageText').inputValue(),'This draft belongs to the original thread only');await page.locator('#sendMessage').click();await page.locator('#status').filter({hasText:'Task is archived'}).waitFor();assert.ok(JSON.parse(db.get('/privatePounds/u_demo').payload).messages.every(m=>m.text!=='This draft belongs to the original thread only'));
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,checks:['signed-out','owner workspace CRUD','truthful disconnected status','mobile no overflow','safe rendering','mobile draft suspension','uncertain commit replay','cross-account clearing','same-document identity change','repeated visibility during delayed revalidation','restored edit concurrency','archived thread draft binding'],screenshots:out,liveRequests:0},null,2));
+  // Baseline header, same browser, same identity, same widths, rendered last so it cannot disturb the flow above.
+  await page.goto(origin+'/dawg-pound.html');await page.locator('#workspace:not([hidden])').waitFor();
+  for(const width of [390,320]){await page.setViewportSize({width,height:844});await page.waitForTimeout(100);headerHashes[width]=createHash('sha256').update(await page.locator('header.dd-shell').screenshot()).digest('hex');}
+  await page.goto(origin+'/base/dawg-pound.html');await page.locator('#workspace:not([hidden])').waitFor();
+  for(const width of [390,320]){await page.setViewportSize({width,height:844});await page.waitForTimeout(100);const baseHash=createHash('sha256').update(await page.locator('header.dd-shell').screenshot()).digest('hex');assert.equal(headerHashes[width],baseHash,width+'px header pixels match '+BASE_REF.slice(0,7));}
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,headerHashes,checks:['signed-out','default screen: context, open tasks, last 5 messages; roster/diagnostics behind details','kind picker + allowlisted refs','task revision on edit','diagnostics reason codes','390/320 no overflow + composer visible','header pixel hash equals baseline','owner workspace CRUD','truthful disconnected status','mobile no overflow','safe rendering','mobile draft suspension','uncertain commit replay','cross-account clearing','same-document identity change','repeated visibility during delayed revalidation','restored edit concurrency','archived thread draft binding'],screenshots:out,liveRequests:0},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await browser?.close();server.close();});
