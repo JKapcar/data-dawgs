@@ -20,8 +20,10 @@ The file contains secret **names only**. Secret values stay encrypted in Cloudfl
   rather than failing silently. Note `wrangler.jsonc` must stay comment-free despite the
   extension: `tools/validate-data.js` parses it with strict `JSON.parse`.
 - Plain variables: `BOZO_ADMIN`, `ELEVEN_VOICE`, `MAIL_FROM`, `MODEL`.
-- Required encrypted secrets: `BOZO_PEPPER`, `BOZO_TOKENS`, `DAWG_PASS`,
+- Required encrypted secrets (must match `wrangler.jsonc` `secrets.required`): `BOZO_PEPPER`, `DAWG_PASS`,
   `DDCC_IMPORT_TOKEN`, `ELEVEN_KEY`, `FB_SECRET`, `RESEND_KEY`, `ODDS_API_KEY`, `SGO_KEY`, `XAI_KEY`.
+  `BOZO_TOKENS` is optional: `bozoConfig()` no longer requires it once `/users` is seeded, and it is not
+  set on the production Worker (checked 2026-10-16 on versions `32ed5314` and `a074cd75`).
 - Daily `0 9 * * *` trigger: private Firebase disaster-recovery backup.
 - Hourly `9 * * * *` trigger: prospective CFB 24-hour market receipts.
 - Five-minute `*/5 * * * *` trigger: Bozo close-price capture.
