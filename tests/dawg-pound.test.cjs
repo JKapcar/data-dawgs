@@ -25,6 +25,14 @@ function rig(){
 }
 const agent={name:'Researcher',role:'Research',function:'Find sources',capabilities:'Read and summarize',archived:false};
 const task={title:'Check sources',body:'A private brief',agent_id:'',status:'queued',archived:false};
+test('owner saves preserve delegated grants and isolate agent idempotency keys',async()=>{
+ const r=rig();await r.send(r.command('agent.save',agent,0));
+ const record=r.db.get('/privatePounds/u_one');record.agentAccess={synthetic:{enabled:false,credentialHash:'test-hash'}};
+ const next=r.command('task.save',task,1),state=JSON.parse(record.payload);
+ state.receipts.push({agent:'agent:synthetic',request_id:next.request_id,fingerprint:'different',result:{}});record.payload=JSON.stringify(state);
+ assert.equal((await r.send(next)).status,200);
+ assert.deepEqual(r.db.get('/privatePounds/u_one').agentAccess,record.agentAccess);
+});
 test('empty workspace is owner-only, bounded, no-store, and agent access disabled',async()=>{
   const r=rig(),out=await r.send();assert.equal(out.status,200);assert.equal(out.body.workspace.revision,0);assert.equal(out.body.workspace.agent_access_enabled,false);assert.match(out.headers.get('cache-control'),/private, no-store/);assert.deepEqual(r.reads,['/privatePounds/u_one']);assert.equal(out.body.workspace.receipts,undefined);
 });

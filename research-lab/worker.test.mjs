@@ -1,9 +1,25 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {createRequire} from 'node:module';
-import {mkdtempSync,rmSync,readFileSync} from 'node:fs';import os from 'node:os';import path from 'node:path';import {createHmac} from 'node:crypto';
+import {mkdtempSync,rmSync,readFileSync} from 'node:fs';import os from 'node:os';import path from 'node:path';import {createHmac,createHash} from 'node:crypto';
 import {buildWorker} from './build-worker.mjs';import {initialState,capabilities,hash} from './machine.mjs';import {syntheticTracking} from './tracking.mjs';
 import {encodeEnvelope,decodeEnvelope} from './exact-store.mjs';
 const require=createRequire(process.env.DD_NODE_MODULES?path.join(process.env.DD_NODE_MODULES,'resolver.cjs'):import.meta.url);
 const {Miniflare}=require('miniflare');
+test('packaged delegated routes are closed by default and use isolated scoped identity',async()=>{
+ const directory=mkdtempSync(path.join(os.tmpdir(),'dd-agent-worker-'));let mf;
+ try{
+  buildWorker(directory);const id='a'.repeat(32),token='da1_'+id+'_'+'x'.repeat(43),credentialHash=createHash('sha256').update(token).digest('hex');
+  const shared={enabled:true,expiresAt:Date.now()+600000,credentialHash};let reads=0;
+  const options={modules:true,modulesRoot:directory,scriptPath:path.join(directory,'worker.mjs'),compatibilityDate:'2026-07-30',bindings:{DAWG_POUND_ENABLED:'true',RESEARCH_LAB_ENABLED:'true',FB_SECRET:'fake'},outboundService:async r=>{
+   reads++;const p=new URL(r.url).pathname;assert.equal(r.method,'GET');assert.equal(p,'/privatePounds/u_test.json');
+   return Response.json({owner_uid:'u_test',agentAccess:{[id]:{...shared,audience:'pound:u_test',capabilities:['pound:task:read'],rosterId:'p_'+'a'.repeat(36),rosterIds:[],taskIds:[],contextVersions:{}}},payload:'{}'},{headers:{ETag:'"1"'}});
+  }};
+  mf=new Miniflare(options);const url='https://test/agents/v1/owners/u_test/mcp',request={method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list'})};
+  assert.equal((await mf.dispatchFetch(url,request)).status,503);assert.equal(reads,0);
+  await mf.setOptions({...options,bindings:{...options.bindings,DELEGATED_AGENTS_ENABLED:'true'}});
+  const r=await mf.dispatchFetch(url,request);assert.equal(r.status,200);assert.deepEqual((await r.json()).result.tools.map(t=>t.name),['pound_tasks']);assert.equal(reads,1);
+  assert.equal((await mf.dispatchFetch('https://test/api/pound',{headers:request.headers})).status,401);
+ }finally{await mf?.dispose();rmSync(directory,{recursive:true,force:true});}
+});
 test('generated production-source Worker loads without Node compatibility and runs a real synthetic audit',async()=>{
  const directory=mkdtempSync(path.join(os.tmpdir(),'dd-worker-'));let mf;
  try{

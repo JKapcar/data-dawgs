@@ -12578,7 +12578,7 @@ async function handlePound(request,env){
     poundCheck(!saved.data||saved.data.owner_uid===uid,503,'Workspace unavailable');
     if(!writing)return reply({workspace:poundView(state)});
     const fingerprint=await poundHash(poundCanonical(input));
-    const previous=state.receipts.find(r=>r.request_id===input.request_id);
+    const previous=state.receipts.find(r=>!r.agent&&r.request_id===input.request_id);
     if(previous){poundCheck(previous.fingerprint===fingerprint,409,'Request ID already used');return reply({receipt:previous.result,replayed:true,workspace:poundView(state)});}
     poundCheck(input.expected_revision===state.revision,409,'Workspace changed. Refresh before saving.');
     const result=await poundWrite(state,input,uid);
@@ -12588,7 +12588,7 @@ async function handlePound(request,env){
     poundCheck(saved.etag,503,'Conditional storage unavailable');
     // Recheck password/account revocation immediately before the conditional commit.
     poundCheck(await poundIdentity(request,env)===uid,401,'Sign in again');
-    poundCheck(await fbPut(env,path,{owner_uid:uid,payload},saved.etag),409,'Workspace changed. Refresh before saving.');
+    poundCheck(await fbPut(env,path,{...saved.data,owner_uid:uid,payload},saved.etag),409,'Workspace changed. Refresh before saving.');
     return reply({receipt:result,replayed:false,workspace:poundView(state)});
   }catch(e){return reply({error:e.poundStatus?e.message:'Workspace temporarily unavailable'},e.poundStatus||503);}
 }
