@@ -34,9 +34,21 @@ Before enabling, obtain explicit approval and verify:
 
 ## Identity and transport
 
-Only the `X-Dawg-Session` site header is accepted. A signed immutable `u_…` UID is
-required before calling the existing account/password-revocation check. Name-only
-sessions, shared connector/bearer credentials and supplied identity fields are rejected.
+Pound alone accepts `Authorization: Bearer <existing signed site session>` (the scheme
+is case-insensitive). The browser reads the same existing sign-in session; no token is
+minted or granted by Pound. The token must have exactly the existing two base64url
+components, including the 43-character HMAC signature. Comma-combined/duplicate bearer
+values, extra suffixes, name-only sessions and invalid/expired signatures are rejected.
+`X-Dawg-Session`, `X-Bozo-Session` and `X-Dawg-Pass` are rejected by presence, even empty
+or accompanying an otherwise valid Authorization value. There is no credential fallback.
+
+A signed immutable `u_` UID is required before calling the existing account/password
+revocation verifier. An in-memory header adapter supplies that verifier's existing input;
+it is never fetched, dispatched or logged and cannot emit a custom session-renewal header.
+The shared verifier, other applications' transport and public MCP auth are unchanged.
+Although public MCP also uses Bearer, its connector tokens/shared passphrases are not
+signed site sessions and cannot authorize Pound. `/mcp/pound` is intercepted before the
+public MCP dispatcher and stays disabled. Caller-supplied identity fields remain rejected.
 Every read and write is scoped to `/privatePounds/<verified UID>`. Recheck the account
 immediately before committing. This has the same narrow check-to-commit revocation window
 as existing session-based writes; no distributed transaction spans account and workspace.
@@ -46,6 +58,8 @@ restricted origin headers. Query parameters are rejected. Private content never 
 the public board, `/data`, feeds, public MCP tools, Toto's DOM reader or application logs.
 The shell has a restrictive CSP, no bot/analytics scripts, no content persistence and a
 service-worker network-only exclusion. Only the existing session is read from storage.
+Pound CORS permits only `Content-Type, Authorization`; the schema declares this exact
+transport. The browser uses a fixed URL, JSON bodies, omitted cookies and refused redirects.
 
 | Route | Behavior |
 |---|---|
@@ -59,6 +73,40 @@ service-worker network-only exclusion. Only the existing session is read from st
 the public MCP write boundary. The owner schema includes an explicit disabled MCP
 descriptor with no advertised tools. Future agent transports must use the same operation
 definitions, add explicit least-privilege authorization, and receive separate approval.
+
+## Measured platform logging check (2026-10-16 UTC)
+
+An owner-approved disposable Worker, separate from production `toto`, received ten
+synthetic requests: five with the production logging settings and five with query-string
+redaction enabled only on the fixture. Both phases kept invocation logging/persistence
+enabled at 100% sampling and traces disabled. There were no storage bindings, real
+credentials or user content. All ten live-tail and all ten persisted invocation events
+were inspected; persisted events were untruncated.
+
+| Synthetic value | Live tail | Persisted invocation logs |
+|---|---|---|
+| `X-Dawg-Session` | Visible in both phases | Visible in both phases |
+| `Authorization` | Value hidden in both phases | Value hidden in both phases |
+| Request body and response body markers | Absent | Absent |
+| Query value, redaction disabled | Visible | Visible |
+| Query value, redaction enabled | Still visible | Hidden |
+
+This measured leak is why Pound now uses Authorization and rejects legacy credential
+headers. Rejecting a request cannot erase its upstream log, so callers must not send
+credentials or content in custom headers or URLs in the first place. The fixture and
+tail were deleted after 86 seconds; the script settings API returned 404 afterward.
+Production settings/deployments were unchanged. No new grants or billing upgrade were
+required; actual incremental billing was not measured. Raw logs were never saved locally;
+only sanitized findings were retained. Provider-retained synthetic logs follow the existing
+retention policy; deleting the Worker does not prove immediate log deletion.
+
+This is evidence for the tested platform configuration, not a guarantee for every future
+runtime, proxy, analytics export, exception trace or administrator-added log sink. The
+fixture returned generic 200/400/401/500 responses and did not exercise uncaught exceptions.
+No production logging configuration was changed, and other applications' custom-header
+auth is outside this repair. Private content remains in bodies and errors remain generic.
+The release/activation approval gate remains closed; the test does not authorize a deploy.
+
 
 ## Writes, versions and limits
 

@@ -5,9 +5,9 @@ const fs=require('node:fs'),http=require('node:http'),vm=require('node:vm'),path
 const {webcrypto}=require('node:crypto');
 const {chromium}=require(process.env.POUND_PLAYWRIGHT_MODULE||'playwright-core');
 const db=new Map();let revision=0,commits=0,loseResponse=false,heldRead=null;
-const ctx={crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,Request,Response,URL,Date,ORIGINS:[],
-  readSession:async(e,t)=>['u_demo','u_other'].includes(t)?{u:t}:null,
-  sessionAuth:async r=>({uid:r.headers.get('X-Dawg-Session')}),
+const ctx={crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,Request,Response,Headers,URL,Date,ORIGINS:[],
+  readSession:async(e,t)=>['u_demo','u_other'].some(u=>t===u+'.'+'x'.repeat(43))?{u:t.split('.')[0]}:null,
+  sessionAuth:async r=>({uid:r.headers.get('X-Dawg-Session').split('.')[0]}),
   fbGet:async(e,p)=>({data:db.has(p)?JSON.parse(JSON.stringify(db.get(p))):null,etag:String(revision)}),
   fbPut:async(e,p,v,etag)=>{if(etag!==String(revision))return false;db.set(p,JSON.parse(JSON.stringify(v)));revision++;commits++;return true;}
 };vm.createContext(ctx);vm.runInContext(fs.readFileSync('work/dawg-pound.js','utf8')+'\nthis.handle=handlePound;',ctx);
@@ -21,6 +21,8 @@ let browser;
   await page.route('**/*',async route=>{
     const req=route.request();if(req.url().startsWith(origin)){const file=new URL(req.url()).pathname.slice(1);if(!['dawg-pound.html','dawg-pound.js'].includes(file))return route.fulfill({status:404,body:''});return route.fulfill({status:200,contentType:file.endsWith('.js')?'text/javascript':'text/html',headers:{'Cache-Control':'no-store'},body:fs.readFileSync(file,'utf8')});}
     if(req.url()==='https://toto.jkapcar4.workers.dev/api/pound'){
+      assert.match(req.headers().authorization,/^Bearer u_(demo|other)\.[x]{43}$/);
+      for(const h of ['x-dawg-session','x-bozo-session','x-dawg-pass'])assert.equal(req.headers()[h],undefined);
       if(req.method()==='GET'&&heldRead){const hold=heldRead;heldRead=null;hold.started();await hold.wait;}
       const response=await ctx.handle(new Request(req.url(),{method:req.method(),headers:req.headers(),...(req.postData()?{body:req.postData()}: {})}),{DAWG_POUND_ENABLED:'true'});
       if(loseResponse&&req.method()==='POST'){loseResponse=false;return route.abort('failed');}
@@ -29,7 +31,7 @@ let browser;
     return route.abort();
   });
   await page.goto(origin+'/dawg-pound.html');await page.getByText('Sign in to open your private workspace.',{exact:true}).waitFor();
-  await page.evaluate(()=>localStorage.setItem('dd-bozo-sess','u_demo'));await page.reload();await page.locator('#workspace:not([hidden])').waitFor();
+  await page.evaluate(()=>localStorage.setItem('dd-bozo-sess','u_demo.'+'x'.repeat(43)));await page.reload();await page.locator('#workspace:not([hidden])').waitFor();
   async function createAgent(name,role,fn,caps){await page.locator('#addAgent').click();await page.locator('[name=name]').fill(name);await page.locator('[name=role]').fill(role);await page.locator('[name=function]').fill(fn);await page.locator('[name=capabilities]').fill(caps);await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});}
   await createAgent('Scout','Research & discovery','Find primary sources and bring back the useful details.','Source review · concise research notes');
   await createAgent('Analyst','Data & evidence','Turn a clear question into a reproducible analysis.','Dataset checks · analysis planning');
@@ -52,9 +54,9 @@ let browser;
   const before=commits;loseResponse=true;await page.locator('#saveEdit').click();await page.getByText('Connection interrupted. Retry Save to check the same request.',{exact:true}).first().waitFor();
   await visibility(true);await visibility(false);await page.locator('#editor[open]').waitFor();await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});assert.equal(commits,before+1,'uncertain retry committed exactly once');
   // Switching identities clears messages, context, dialogs and suspended drafts.
-  await page.evaluate(()=>{localStorage.setItem('dd-bozo-sess','u_other');window.dispatchEvent(new StorageEvent('storage',{key:'dd-bozo-sess'}));});await page.getByText('Start with a name and a role. Your roster stays private.',{exact:true}).waitFor();assert.doesNotMatch(await page.locator('body').textContent(),/How we work|Unsaved mobile draft|Build the next research brief/);
+  await page.evaluate(()=>{localStorage.setItem('dd-bozo-sess','u_other.'+'x'.repeat(43));window.dispatchEvent(new StorageEvent('storage',{key:'dd-bozo-sess'}));});await page.getByText('Start with a name and a role. Your roster stays private.',{exact:true}).waitFor();assert.doesNotMatch(await page.locator('body').textContent(),/How we work|Unsaved mobile draft|Build the next research brief/);
   // Same-document storage updates cannot submit another user's old draft under the new identity.
-  await page.locator('#addTask').click();await page.locator('[name=title]').fill('Old account draft');const writesBefore=commits;await page.evaluate(()=>localStorage.setItem('dd-bozo-sess','u_demo'));await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});assert.equal(commits,writesBefore);
+  await page.locator('#addTask').click();await page.locator('[name=title]').fill('Old account draft');const writesBefore=commits;await page.evaluate(()=>localStorage.setItem('dd-bozo-sess','u_demo.'+'x'.repeat(43)));await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});assert.equal(commits,writesBefore);
   // Repeated hide/show while revalidation is in flight must not drop an in-memory draft.
   await page.locator('#addAgent').click();await page.locator('[name=name]').fill('Keep this repeated-switch draft');await visibility(true);
   let release,started;const startedPromise=new Promise(r=>started=r);heldRead={started,wait:new Promise(r=>release=r)};

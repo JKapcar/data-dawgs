@@ -12385,6 +12385,7 @@ const poundFields = {
 const poundRequired = {'agent.save':['name','role','function','capabilities','archived'],'task.save':['title','body','agent_id','status','archived'],'message.add':['thread_id','text'],'context.save':['title','text'],'context.archive':['id']};
 const POUND_SCHEMA = {
   version:1,owner_transport:'/api/pound',agent_transport:'/mcp/pound',agent_access_enabled:false,
+  authentication:{header:'Authorization',scheme:'Bearer',credential:'existing_signed_site_session',immutable_uid_required:true,rejected_headers:['X-Dawg-Session','X-Bozo-Session','X-Dawg-Pass'],query_credentials:false},
   limits:POUND_LIMITS,
   read:{method:'GET',path:'/api/pound',query_parameters:false},
   write:{method:'POST',path:'/api/pound',inputSchema:{oneOf:Object.keys(poundFields).map(op=>({type:'object',additionalProperties:false,required:['op','expected_revision','request_id','data'],properties:{op:{const:op},expected_revision:{type:'integer',minimum:0},request_id:{type:'string',pattern:'^[A-Za-z0-9_-]{16,80}$'},data:{type:'object',additionalProperties:false,required:poundRequired[op],properties:poundFields[op]}}}))}},
@@ -12419,11 +12420,17 @@ async function poundBody(request){
   try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{poundFail(400,'Invalid JSON');}
 }
 async function poundIdentity(request,env){
-  poundCheck(!request.headers.has('Authorization'),401,'Use your site sign-in');
-  const token=request.headers.get('X-Dawg-Session')||'';
+  // Presence (even empty) is a conflict. Never fall back to legacy/MCP credentials.
+  poundCheck(!POUND_SCHEMA.authentication.rejected_headers.some(h=>request.headers.has(h)),401,'Use Authorization with your site session');
+  // Exact signed-session shape also closes readSession's permissive extra-dot suffix.
+  const match=/^Bearer ([A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43})$/i.exec(request.headers.get('Authorization')||'');
+  poundCheck(match,401,'Sign in again');
+  const token=match[1];
   const signed=token?await readSession(env,token):null;
   poundCheck(signed&&/^u_[A-Za-z0-9_-]{1,100}$/.test(signed.u||''),401,'Sign in again');
-  const auth=await sessionAuth(request,env);
+  // In-memory adapter only: reuse the account/revocation verifier unchanged. This
+  // object is never dispatched, fetched, logged or used to renew a response session.
+  const auth=await sessionAuth({headers:new Headers({'X-Dawg-Session':token})},env);
   poundCheck(!auth.err&&auth.uid===signed.u,401,'Sign in again');
   return auth.uid;
 }
@@ -12462,8 +12469,8 @@ async function poundWrite(state,input,uid){
 }
 async function handlePound(request,env){
   const url=new URL(request.url),origin=request.headers.get('Origin');
-  const headers={'Content-Type':'application/json','Cache-Control':'private, no-store, max-age=0','Pragma':'no-cache','Vary':'Origin, X-Dawg-Session, Authorization','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Robots-Tag':'noindex, nofollow'};
-  if(origin&&ORIGINS.includes(origin))Object.assign(headers,{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'Content-Type, X-Dawg-Session','Access-Control-Allow-Methods':'GET, POST, OPTIONS'});
+  const headers={'Content-Type':'application/json','Cache-Control':'private, no-store, max-age=0','Pragma':'no-cache','Vary':'Origin, Authorization','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Robots-Tag':'noindex, nofollow'};
+  if(origin&&ORIGINS.includes(origin))Object.assign(headers,{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'Content-Type, Authorization','Access-Control-Allow-Methods':'GET, POST, OPTIONS'});
   const reply=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
   try{
     poundCheck(!origin||ORIGINS.includes(origin),403,'Origin denied');

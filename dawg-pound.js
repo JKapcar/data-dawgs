@@ -16,7 +16,7 @@ function clear(){
   $('workspace').hidden=true;$('welcome').hidden=false;$('contextReader').hidden=true;$('openLibrary').disabled=true;$('contextCount').textContent='0';$('agentCount').textContent='0 / 24';$('accountLabel').textContent='Private workspace';
 }
 async function request(method,body,generation,token){
-  const res=await fetch(API,{method,cache:'no-store',credentials:'omit',redirect:'error',signal:controller.signal,headers:{'X-Dawg-Session':token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
+  const res=await fetch(API,{method,cache:'no-store',credentials:'omit',redirect:'error',signal:controller.signal,headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
   const result=await res.json();
   if(generation!==epoch||token!==session()||document.hidden)throw new DOMException('Account changed','AbortError');
   if(!res.ok){const e=new Error(res.status===401?'Sign in again to open your workspace.':res.status===503?'Dawg Pound is awaiting private workspace setup.':result.error||'The request could not be completed.');e.status=res.status;throw e;}

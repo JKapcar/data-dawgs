@@ -2,18 +2,20 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const {webcrypto,createHash}=require('node:crypto');
 const source=fs.readFileSync('work/dawg-pound.js','utf8');
 const clone=x=>JSON.parse(JSON.stringify(x));
+const mockToken=user=>user+'.'+'x'.repeat(43);
 function rig(){
   const db=new Map(),reads=[],writes=[];let revision=0,revoke=false,race=false,lost=false,noEtag=false,revokeOnRead=false;
   const env={DAWG_POUND_ENABLED:'true'};
-  const context={crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,Request,Response,URL,Date,
+  const context={crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,Request,Response,Headers,URL,Date,
     ORIGINS:['https://datadawgs216.com'],
-    readSession:async(e,t)=>t==='legacy'?{n:'same-name'}:['u_one','u_two'].includes(t)?{u:t}:null,
-    sessionAuth:async r=>revoke?{err:'revoked'}:{uid:r.headers.get('X-Dawg-Session'),name:'same-name'},
+    readSession:async(e,t)=>t===mockToken('legacy')?{n:'same-name'}:['u_one','u_two'].some(u=>mockToken(u)===t)?{u:t.split('.')[0]}:null,
+    sessionAuth:async r=>revoke?{err:'revoked'}:{uid:r.headers.get('X-Dawg-Session').split('.')[0],name:'same-name'},
     fbGet:async(e,p)=>{reads.push(p);if(revokeOnRead)revoke=true;return {data:db.has(p)?clone(db.get(p)):null,etag:noEtag?null:String(revision)};},
     fbPut:async(e,p,v,etag)=>{assert.ok(etag);if(race){race=false;revision++;}if(etag!==String(revision))return false;db.set(p,clone(v));revision++;writes.push(p);if(lost){lost=false;throw Error('lost response secret');}return true;}
   };vm.createContext(context);vm.runInContext(source+'\nthis.api={handlePound,POUND_SCHEMA,POUND_LIMITS};',context);
   const send=async(body,options={})=>{
-    const headers={'X-Dawg-Session':options.user===undefined?'u_one':options.user,...options.headers};
+    const user=options.user===undefined?'u_one':options.user;
+    const headers={...(user?{Authorization:'Bearer '+mockToken(user)}:{}),...options.headers};
     if(body!==undefined)headers['Content-Type']=options.contentType||'application/json';
     const req=new Request('https://worker.test'+(options.path||'/api/pound'),{method:options.method||(body===undefined?'GET':'POST'),headers,...(body===undefined?{}:{body:typeof body==='string'?body:JSON.stringify(body)})});
     const res=await context.api.handlePound(req,env);return {status:res.status,headers:res.headers,body:res.status===204?null:await res.json()};
@@ -48,6 +50,21 @@ test('default closed gate, authenticated schema matches supported operations',as
 test('hostile Origin and Authorization bearer rejected before storage; OPTIONS never reads',async()=>{
   const r=rig();assert.equal((await r.send(undefined,{headers:{Origin:'https://evil.test'}})).status,403);assert.equal((await r.send(undefined,{headers:{Authorization:'Bearer invented'}})).status,401);
   const o=await r.send(undefined,{method:'OPTIONS',headers:{Origin:'https://datadawgs216.com'}});assert.equal(o.status,204);assert.equal(o.headers.get('access-control-allow-origin'),'https://datadawgs216.com');assert.equal(r.reads.length,0);
+  assert.equal(o.headers.get('access-control-allow-headers'),'Content-Type, Authorization');
+  assert.equal(o.headers.get('vary'),'Origin, Authorization');
+});
+
+for(const header of ['X-Dawg-Session','X-Bozo-Session','X-Dawg-Pass'])for(const value of ['',mockToken('u_one'),mockToken('u_two')])test('reject legacy/conflicting '+header+' '+JSON.stringify(value),async()=>{
+  const r=rig();for(const path of ['/api/pound','/api/pound/schema'])assert.equal((await r.send(undefined,{path,headers:{[header]:value}})).status,401);
+  assert.equal((await r.send(r.command('agent.save',agent,0),{headers:{[header]:value}})).status,401);
+  assert.equal((await r.send(undefined,{user:'',headers:{[header]:value}})).status,401);assert.equal(r.reads.length,0);assert.equal(r.writes.length,0);
+});
+for(const authorization of ['', 'Basic '+mockToken('u_one'), 'Bearer', 'Bearer  '+mockToken('u_one'), 'Bearer '+mockToken('u_one')+', Bearer '+mockToken('u_two'), 'Bearer '+mockToken('u_one')+'.suffix', 'Bearer '+mockToken('u_one')+' '+mockToken('u_two'), 'Bearer shared-league-pass', 'Bearer u_connector_token'])test('reject malformed or non-session Authorization '+JSON.stringify(authorization),async()=>{
+  const r=rig();assert.equal((await r.send(undefined,{headers:{Authorization:authorization}})).status,401);assert.equal(r.reads.length,0);
+});
+test('bearer scheme is case-insensitive; schema advertises only the signed site session',async()=>{
+  const r=rig();assert.equal((await r.send(undefined,{headers:{Authorization:'bEaReR '+mockToken('u_one')}})).status,200);
+  assert.deepEqual(r.schema.authentication,{header:'Authorization',scheme:'Bearer',credential:'existing_signed_site_session',immutable_uid_required:true,rejected_headers:['X-Dawg-Session','X-Bozo-Session','X-Dawg-Pass'],query_credentials:false});
 });
 test('revoked password/account denies both reads and writes, including revocation during save',async()=>{
   const r=rig();r.revoke();assert.equal((await r.send()).status,401);assert.equal((await r.send(r.command('agent.save',agent,0))).status,401);assert.equal(r.reads.length,0);
@@ -109,5 +126,65 @@ test('worker integration bypasses public MCP; no credential minting, logs or sha
   assert.ok(worker.indexOf('return handlePound(request, env)')<worker.indexOf('return handleMcp(request, url, env)'));
   assert.doesNotMatch(source,/console\.|\/agentBoard|env\.RL|fetch\(/);assert.doesNotMatch(ui,/innerHTML|insertAdjacentHTML|localStorage\.setItem|console\./);assert.match(html,/data-ddb-skip/);assert.doesNotMatch(html,/dawg-bot|analytics|DD_BOTCTX/);
   assert.match(fs.readFileSync('sw.js','utf8'),/"\/dawg-pound.html", "\/dawg-pound.js"/);
+  assert.match(ui,/Authorization:'Bearer '\+token/);assert.doesNotMatch(ui,/X-Dawg-Session|X-Bozo-Session|X-Dawg-Pass/);
   assert.doesNotMatch(fs.readFileSync('work/mcp-block.js','utf8'),/dd_pound/);
+});
+
+test('assembled router with real signatures preserves owner isolation, revocation and MCP separation',async t=>{
+  const {pathToFileURL}=require('node:url'),path=require('node:path');
+  const assembled=fs.readFileSync('dawg-bot-worker.js','utf8').replace('"./bozo-team-registry.mjs"',JSON.stringify(pathToFileURL(path.resolve('bozo-team-registry.mjs')).href));
+  const W=await import('data:text/javascript;base64,'+Buffer.from(assembled+'\nexport {makeSession,readSession,hmac,mcpAuth,mcpTokenHash,sessionAuth};').toString('base64'));
+  const env={DAWG_POUND_ENABLED:'true',BOZO_PEPPER:'pound-test-only-pepper',FB_SECRET:'test-only',DAWG_PASS:'test-only-shared-pass'};
+  const users={u_one:{name:'Same name',passwordSetAt:10},u_two:{name:'Same name',passwordSetAt:10}},db=new Map(),calls=[];let rev=0,revokeOnWorkspaceRead=false;
+  t.mock.method(globalThis,'fetch',async(url,init={})=>{
+    const u=new URL(url);assert.equal(u.hostname,'data-dawgs-draft-default-rtdb.firebaseio.com');
+    assert.equal(new Headers(init.headers).has('X-Dawg-Session'),false);assert.equal(new Headers(init.headers).has('Authorization'),false);
+    const key=decodeURIComponent(u.pathname.replace(/\.json$/,''));calls.push({key,method:init.method||'GET'});
+    if(key==='/users')return Response.json(users);
+    if(key.startsWith('/users/'))return Response.json(users[key.slice(7)]||null);
+    assert.match(key,/^\/privatePounds\/u_(one|two)$/);
+    if(init.method==='PUT'){assert.equal(init.headers['if-match'],String(rev));db.set(key,JSON.parse(init.body));rev++;return Response.json({ok:true});}
+    if(revokeOnWorkspaceRead)users.u_one.passwordSetAt++;
+    return Response.json(db.get(key)||null,{headers:{ETag:String(rev)}});
+  });
+  const one=await W.makeSession(env,'Same name',10,'u_one'),two=await W.makeSession(env,'Same name',10,'u_two');
+  const call=async(token=one,{path='/api/pound',headers={},body}={})=>{
+    const req=new Request('https://worker.test'+path,{method:body?'POST':'GET',headers:{...(token?{Authorization:'Bearer '+token}:{}),...headers,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
+    const res=await W.default.fetch(req,env,{});assert.match(res.headers.get('cache-control'),/no-store/);assert.equal(res.headers.has('X-Dawg-Session'),false);return {status:res.status,body:await res.json()};
+  };
+  await t.test('real signature writes and reads exact context; another user cannot update guessed ID',async()=>{
+    const text='Private synthetic context\n\u2603';const body={op:'context.save',expected_revision:0,request_id:'real_signed_request_01',data:{title:'Test',text}};
+    const saved=await call(one,{body});assert.equal(saved.status,200);assert.equal(saved.body.workspace.contexts[0].versions[0].sha256,createHash('sha256').update(text).digest('hex'));
+    assert.equal((await call()).body.workspace.contexts[0].versions[0].text,text);assert.deepEqual((await call(two)).body.workspace.contexts,[]);
+    assert.equal((await call(two,{body:{...body,data:{...body.data,id:saved.body.receipt.item_id}}})).status,404);
+  });
+  await t.test('absent, forged, expired, legacy and suffixed sessions fail before any database read',async()=>{
+    const expiredPayload=Buffer.from(JSON.stringify({u:'u_one',n:'Same name',p:10,e:1})).toString('base64url');
+    const expired=expiredPayload+'.'+await W.hmac(env.BOZO_PEPPER,expiredPayload);
+    const legacy=await W.makeSession(env,'Same name',10),forged=one.slice(0,-1)+(one.endsWith('A')?'B':'A');
+    for(const token of ['',expired,legacy,forged,one+'.extra']){const count=calls.length;assert.equal((await call(token)).status,401);assert.equal(calls.length,count);}
+  });
+  await t.test('duplicate Authorization and custom credential conflicts never select a fallback',async()=>{
+    const headers=new Headers();headers.append('Authorization','Bearer '+one);headers.append('Authorization','Bearer '+two);
+    for(const extra of [Object.fromEntries(headers),{'X-Dawg-Session':one},{'X-Bozo-Session':two},{'X-Dawg-Pass':''}]){const count=calls.length;assert.equal((await call(one,{headers:extra})).status,401);assert.equal(calls.length,count);}
+  });
+  await t.test('valid MCP bearer remains MCP-only; Pound MCP dispatcher stays inert',async()=>{
+    const connector='u_test_connector_not_a_real_credential';users.u_one.mcpToken=await W.mcpTokenHash(env,connector);
+    const url=new URL('https://worker.test/mcp'),request=new Request(url,{headers:{Authorization:'Bearer '+connector}});
+    assert.equal((await W.mcpAuth(request,url,env)).uid,'u_one');
+    for(const token of [connector,env.DAWG_PASS]){const count=calls.length;assert.equal((await call(token)).status,401);assert.equal(calls.length,count);}
+    assert.equal(await W.mcpAuth(new Request(url,{headers:{Authorization:'Bearer '+one}}),url,env),null);
+    for(const path of ['/mcp/pound','/mcp/pound/tools/list','/api/pound/agents/token'])assert.equal((await call(connector,{path})).status,503);
+  });
+  await t.test('password change, account removal and revocation between read and commit still deny',async()=>{
+    users.u_one.passwordSetAt=11;assert.equal((await call()).status,401);users.u_one.passwordSetAt=10;
+    const user=users.u_one;delete users.u_one;assert.equal((await call()).status,401);users.u_one=user;
+    revokeOnWorkspaceRead=true;const beforeWrites=calls.filter(c=>c.method==='PUT').length;
+    assert.equal((await call(one,{body:{op:'agent.save',expected_revision:1,request_id:'real_signed_request_02',data:agent}})).status,401);
+    assert.equal(calls.filter(c=>c.method==='PUT').length,beforeWrites);revokeOnWorkspaceRead=false;users.u_one.passwordSetAt=10;
+  });
+  await t.test('unrelated shared verifier still requires its existing custom header',async()=>{
+    assert.equal((await W.sessionAuth(new Request('https://worker.test',{headers:{'X-Dawg-Session':one}}),env)).uid,'u_one');
+    assert.equal((await W.sessionAuth(new Request('https://worker.test',{headers:{Authorization:'Bearer '+one}}),env)).code,401);
+  });
 });
