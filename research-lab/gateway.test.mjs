@@ -144,3 +144,11 @@ test('malformed MCP names, arguments and oversized IDs return bounded client err
  const f=await fixture();for(const params of [{name:3,arguments:{}},{name:'research_state',arguments:[]},{name:'constructor',arguments:{}},{name:'research_toString',arguments:{}}])assert.equal((await f.request('mcp',{jsonrpc:'2.0',id:1,method:'tools/call',params},'agent')).status,400);
  assert.equal((await f.request('mcp',{jsonrpc:'2.0',id:'x'.repeat(161),method:'tools/list'},'agent')).status,400);
 });
+test('only the signed durable owner may register a hypothesis; an expiring user grant may only propose or withdraw',async()=>{
+ const f=await fixture(),cmd=async(type,payload)=>{const r=await f.command(type,payload);return {status:r.status,body:await r.json()};},reg={title:'Registered study',method:'Pre-registered synthetic method',status:'registered',family:'speed-retention',target:'T1'};
+ const denied=await cmd('hypothesis',reg);assert.equal(denied.status,400);assert.match(denied.body.error,/signed owner/);
+ const proposed=await cmd('hypothesis',{title:'Proposal',method:'Exploratory synthetic method',family:'missingness'});assert.equal(proposed.status,200);assert.equal(proposed.body.revisions[0].status,'exploratory');
+ const withdrawn=await cmd('hypothesis',{id:proposed.body.id,expectedVersion:1,title:'Proposal',method:'Exploratory synthetic method',status:'withdrawn'});assert.equal(withdrawn.status,200);
+ f.env.RESEARCH_OWNER_UID='u_owner';const e=f.rows.get('/researchLab/v1/tenants/demo');e.access.users.u_owner.owner=true;delete e.access.users.u_owner.expiresAt;f.put('/researchLab/v1/tenants/demo',e);
+ const ok=await cmd('hypothesis',reg);assert.equal(ok.status,200,JSON.stringify(ok.body));assert.equal(ok.body.revisions[0].status,'registered');assert.equal(ok.body.revisions[0].target,'T1');
+});

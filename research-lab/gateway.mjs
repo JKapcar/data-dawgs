@@ -68,7 +68,9 @@ export function createResearchGateway({fbGet,fbPut,sessionAuth,mcpAuth,transitio
         const durableOwner=kind==='users'&&identity.uid===env.RESEARCH_OWNER_UID&&grant?.owner===true&&grant?.expiresAt==null;
         if(!grant||grant.enabled!==true||(!durableOwner&&(!Number.isFinite(grant.expiresAt)||grant.expiresAt<=now()))||!Array.isArray(grant.capabilities)||grant.capabilities.some(c=>!allowed.has(c)))fail(403,'research_grant_required');
         if(envelope.version!==1||envelope.state?.version!==1)fail(503,'store_unavailable');
-        return {tenant,id:actor,subject:delegated?'agent:'+identity.uid:identity.uid,capabilities:[...grant.capabilities]};
+        // signedOwner: the configured owner on a signed site session with a durable owner grant.
+        // Only this principal may register or grade a hypothesis (machine-core OWNER_ONLY_STATUSES).
+        return {tenant,id:actor,subject:delegated?'agent:'+identity.uid:identity.uid,capabilities:[...grant.capabilities],...(durableOwner&&!delegated?{signedOwner:true}:{})};
       };
       const read=async()=>{const result=await fbGet(env,path,true);if(!result.etag)fail(503,'conditional_storage_required');return result;};
       let snapshot=await read(),principal=authorize(snapshot.data);

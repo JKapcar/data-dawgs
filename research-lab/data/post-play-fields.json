@@ -1,0 +1,25 @@
+{
+ "as_of": "2026-10-16",
+ "source": "DataDawgs release plan 2026-10-16",
+ "note": "Fields known only after the play (or after the draft) has happened. They may be outcomes or audit context, never features for a prediction made before the snap or before the draft. Names are canonical (after aliases.json). A feature list that contains any of these fails the leakage check.",
+ "post_play_fields": [
+  "expected_points_added",
+  "epa",
+  "home_team_win_probability_added",
+  "visitor_team_win_probability_added",
+  "wpa",
+  "pass_result",
+  "yards_after_catch",
+  "expected_yards_after_catch",
+  "yards_gained",
+  "pre_penalty_yards_gained",
+  "play_nullified_by_penalty",
+  "penalty_yards",
+  "penalty_type",
+  "penalty_player",
+  "target",
+  "targeted_receiver",
+  "pass_length"
+ ],
+ "patterns": ["_win_probability_added$", "^penalty_", "_penalty$"]
+}

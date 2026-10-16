@@ -6,13 +6,14 @@ import os from 'node:os';
 import {initialState,transition,view,hash,capabilities} from './machine.mjs';
 import {syntheticTracking} from './tracking.mjs';
 const root=path.dirname(fileURLToPath(import.meta.url));
-export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-lab'),port=0}={}) {
+export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-lab'),port=0,manifestSummary=path.join(root,'data','manifest-summary.json')}={}) {
   mkdirSync(directory,{recursive:true});
   const lock=path.join(directory,'writer.lock'); const fd=openSync(lock,'wx');
   const journal=path.join(directory,'journal.jsonl');
   let state=initialState();
   const codeHash=hash(['machine.mjs','machine-core.mjs','tracking.mjs','server.mjs'].map(f=>readFileSync(path.join(root,f),'utf8')).join('\n'));
-  const principal={tenant:'local-research',id:'local-owner',capabilities};
+  // The loopback runner is the owner's own machine: it may register hypotheses.
+  const principal={tenant:'local-research',id:'local-owner',capabilities,signedOwner:true};
   try {
     if(existsSync(journal)) {
       let previous=null;
@@ -43,7 +44,7 @@ export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-l
       execute({type:'task',key:`seed-t-${i}`,payload:{hypothesisId:h.id,split:'discovery',budgetMs:5000,maxObservations:10000}});
     }
   }
-  const assets=new Map([['/install-help.js','../install-help.js'],['/install-help.css','../install-help.css'],['/navigation.css','navigation.css'],['/navigation.js','navigation.js'],['/','index.html'],['/app.mjs','app.mjs'],['/client.mjs','client.mjs'],['/style.css','style.css'],['/instrument.css','instrument.css'],['/tracking.mjs','tracking.mjs'],['/CONTRACT.md','CONTRACT.md'],['/brand.png','../assets/data-dawgs-site-logo-560.png'],['/assets/data-dawgs-site-logo-560.png','../assets/data-dawgs-site-logo-560.png']]);
+  const assets=new Map([['/install-help.js','../install-help.js'],['/install-help.css','../install-help.css'],['/navigation.css','navigation.css'],['/navigation.js','navigation.js'],['/','index.html'],['/private.html','private.html'],['/account.js','account.js'],['/app.mjs','app.mjs'],['/client.mjs','client.mjs'],['/style.css','style.css'],['/instrument.css','instrument.css'],['/tracking.mjs','tracking.mjs'],['/CONTRACT.md','CONTRACT.md'],['/brand.png','../assets/data-dawgs-site-logo-560.png'],['/assets/data-dawgs-site-logo-560.png','../assets/data-dawgs-site-logo-560.png']]);
   const server=http.createServer(async(req,res)=>{
     const origin=`http://127.0.0.1:${server.address().port}`;
     const send=(status,value,type='application/json')=>{res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"});res.end(type==='application/json'?JSON.stringify(value):value);};
@@ -63,6 +64,8 @@ export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-l
         if(!['hypothesis','evidence','discussion','task','claim','run'].includes(command.type)) throw new Error('Unknown command');
         return send(200,execute(command));
       }
+      // The owner's redacted manifest summary (counts only), when manifest.py has written one.
+      if(req.method==='GET'&&url.pathname==='/data/manifest-summary.json')return existsSync(manifestSummary)?send(200,JSON.parse(readFileSync(manifestSummary,'utf8'))):send(404,{error:'No manifest summary'});
       if(req.method==='GET'&&assets.has(url.pathname)) {
         const file=assets.get(url.pathname);return send(200,readFileSync(path.join(root,file)),file.endsWith('.png')?'image/png':/\.(mjs|js)$/.test(file)?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.md')?'text/plain':'text/html');
       }

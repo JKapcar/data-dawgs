@@ -1,0 +1,226 @@
+{
+ "as_of": "2026-10-16",
+ "source": "research-lab/seed-registered.mjs through the local loopback runner (tenant local-research, signed local owner)",
+ "note": "Registered designs only. No data was read and nothing was run. Load by replaying `commands` as the signed owner; the connector cannot register. Not written to the live tenant.",
+ "target": "T1",
+ "anchor": "T2",
+ "commands": [
+  {
+   "type": "hypothesis",
+   "key": "registered-2026-10-16-speed-retention",
+   "payload": {
+    "title": "Speed kept through the break predicts separation",
+    "method": "Hypothesis: the share of top drill speed a receiver keeps through a change of direction in combine_tracking predicts T1 beyond the stopwatch card. Falsified if the holdout gain over the card baseline is not above zero with the bootstrap interval.",
+    "status": "registered",
+    "family": "speed-retention",
+    "target": "T1: WR separation over expected on breaking routes (rookie season). T2, rookie snap share, is scored alongside for every athlete in the cohort as the missingness anchor.",
+    "predictionTime": "Pre-draft: after the combine, before the draft. No later information.",
+    "cohort": "Wide receivers with combine_results rows, draft classes 2023-2025.",
+    "featureCutoff": "combine_results + combine_tracking only. No pro day, no college production, no post-draft or in-season fields; post-play-fields.json is excluded by rule.",
+    "splitPolicy": "2023-2024 draft classes = develop; 2025 = untouched holdout, split by athlete, opened once after registration is frozen.",
+    "baseline": "Stopwatch card (forty, ten_yd_split, combine_height, combine_weight, position) linear model, plus a cohort-mean naive benchmark. Market baseline = card + draft_overall_pick.",
+    "metric": "Holdout MAE and R-squared versus the card baseline and versus the market baseline; paired bootstrap by athlete for the difference.",
+    "exclusions": "Athletes without combine_tracking are kept in T2 and reported as missing for T1, never imputed. No athlete appears in both develop and holdout."
+   }
+  },
+  {
+   "type": "hypothesis",
+   "key": "registered-2026-10-16-accel-decel-cut",
+   "payload": {
+    "title": "Deceleration into the cut and re-acceleration out of it",
+    "method": "Hypothesis: peak deceleration entering a cut and acceleration leaving it, from combine_tracking, predict T1 beyond the card. Falsified as above; reported per measure, no post-hoc combination.",
+    "status": "registered",
+    "family": "accel-decel-cut",
+    "target": "T1: WR separation over expected on breaking routes (rookie season). T2, rookie snap share, is scored alongside for every athlete in the cohort as the missingness anchor.",
+    "predictionTime": "Pre-draft: after the combine, before the draft. No later information.",
+    "cohort": "Wide receivers with combine_results rows, draft classes 2023-2025.",
+    "featureCutoff": "combine_results + combine_tracking only. No pro day, no college production, no post-draft or in-season fields; post-play-fields.json is excluded by rule.",
+    "splitPolicy": "2023-2024 draft classes = develop; 2025 = untouched holdout, split by athlete, opened once after registration is frozen.",
+    "baseline": "Stopwatch card (forty, ten_yd_split, combine_height, combine_weight, position) linear model, plus a cohort-mean naive benchmark. Market baseline = card + draft_overall_pick.",
+    "metric": "Holdout MAE and R-squared versus the card baseline and versus the market baseline; paired bootstrap by athlete for the difference.",
+    "exclusions": "Athletes without combine_tracking are kept in T2 and reported as missing for T1, never imputed. No athlete appears in both develop and holdout."
+   }
+  },
+  {
+   "type": "hypothesis",
+   "key": "registered-2026-10-16-missingness",
+   "payload": {
+    "title": "Who skips combine tracking is not random",
+    "method": "Hypothesis: absence of combine_tracking is associated with T2 rookie snap share, so complete-case T1 estimates are biased. Reports T2 by missingness group across the whole cohort before any T1 claim.",
+    "status": "registered",
+    "family": "missingness",
+    "target": "T1: WR separation over expected on breaking routes (rookie season). T2, rookie snap share, is scored alongside for every athlete in the cohort as the missingness anchor.",
+    "predictionTime": "Pre-draft: after the combine, before the draft. No later information.",
+    "cohort": "Wide receivers with combine_results rows, draft classes 2023-2025.",
+    "featureCutoff": "combine_results + combine_tracking only. No pro day, no college production, no post-draft or in-season fields; post-play-fields.json is excluded by rule.",
+    "splitPolicy": "2023-2024 draft classes = develop; 2025 = untouched holdout, split by athlete, opened once after registration is frozen.",
+    "baseline": "Stopwatch card (forty, ten_yd_split, combine_height, combine_weight, position) linear model, plus a cohort-mean naive benchmark. Market baseline = card + draft_overall_pick.",
+    "metric": "Holdout MAE and R-squared versus the card baseline and versus the market baseline; paired bootstrap by athlete for the difference.",
+    "exclusions": "Athletes without combine_tracking are kept in T2 and reported as missing for T1, never imputed. No athlete appears in both develop and holdout."
+   }
+  },
+  {
+   "type": "hypothesis",
+   "key": "registered-2026-10-16-external-market",
+   "payload": {
+    "title": "Tracking adds information the draft market missed",
+    "method": "Hypothesis: combine_tracking features improve on the market baseline (card + draft_overall_pick) for T1. Falsified if the holdout gain over the market baseline is not above zero.",
+    "status": "registered",
+    "family": "external-market",
+    "target": "T1: WR separation over expected on breaking routes (rookie season). T2, rookie snap share, is scored alongside for every athlete in the cohort as the missingness anchor.",
+    "predictionTime": "Pre-draft: after the combine, before the draft. No later information.",
+    "cohort": "Wide receivers with combine_results rows, draft classes 2023-2025.",
+    "featureCutoff": "combine_results + combine_tracking only. No pro day, no college production, no post-draft or in-season fields; post-play-fields.json is excluded by rule.",
+    "splitPolicy": "2023-2024 draft classes = develop; 2025 = untouched holdout, split by athlete, opened once after registration is frozen.",
+    "baseline": "Stopwatch card (forty, ten_yd_split, combine_height, combine_weight, position) linear model, plus a cohort-mean naive benchmark. Market baseline = card + draft_overall_pick.",
+    "metric": "Holdout MAE and R-squared versus the card baseline and versus the market baseline; paired bootstrap by athlete for the difference.",
+    "exclusions": "Athletes without combine_tracking are kept in T2 and reported as missing for T1, never imputed. No athlete appears in both develop and holdout."
+   }
+  },
+  {
+   "type": "hypothesis",
+   "key": "registered-2026-10-16-other",
+   "payload": {
+    "title": "Body orientation at the break",
+    "method": "Hypothesis: alignment of orientation (o) and direction (dir) through the break in combine_tracking predicts T1 beyond the card. Measures alignment only; it is not hip-shoulder decoupling.",
+    "status": "registered",
+    "family": "other",
+    "target": "T1: WR separation over expected on breaking routes (rookie season). T2, rookie snap share, is scored alongside for every athlete in the cohort as the missingness anchor.",
+    "predictionTime": "Pre-draft: after the combine, before the draft. No later information.",
+    "cohort": "Wide receivers with combine_results rows, draft classes 2023-2025.",
+    "featureCutoff": "combine_results + combine_tracking only. No pro day, no college production, no post-draft or in-season fields; post-play-fields.json is excluded by rule.",
+    "splitPolicy": "2023-2024 draft classes = develop; 2025 = untouched holdout, split by athlete, opened once after registration is frozen.",
+    "baseline": "Stopwatch card (forty, ten_yd_split, combine_height, combine_weight, position) linear model, plus a cohort-mean naive benchmark. Market baseline = card + draft_overall_pick.",
+    "metric": "Holdout MAE and R-squared versus the card baseline and versus the market baseline; paired bootstrap by athlete for the difference.",
+    "exclusions": "Athletes without combine_tracking are kept in T2 and reported as missing for T1, never imputed. No athlete appears in both develop and holdout."
+   }
+  }
+ ],
+ "records": [
+  {
+   "id": "d58cfab1-4114-4bfb-9461-eb639a069b41",
+   "tenant": "local-research",
+   "revisions": [
+    {
+     "version": 1,
+     "title": "Speed kept through the break predicts separation",
+     "method": "Hypothesis: the share of top drill speed a receiver keeps through a change of direction in combine_tracking predicts T1 beyond the stopwatch card. Falsified if the holdout gain over the card baseline is not above zero with the bootstrap interval.",
+     "status": "registered",
+     "family": "speed-retention",
+     "target": "T1: WR separation over expected on breaking routes (rookie season). T2, rookie snap share, is scored alongside for every athlete in the cohort as the missingness anchor.",
+     "predictionTime": "Pre-draft: after the combine, before the draft. No later information.",
+     "cohort": "Wide receivers with combine_results rows, draft classes 2023-2025.",
+     "featureCutoff": "combine_results + combine_tracking only. No pro day, no college production, no post-draft or in-season fields; post-play-fields.json is excluded by rule.",
+     "splitPolicy": "2023-2024 draft classes = develop; 2025 = untouched holdout, split by athlete, opened once after registration is frozen.",
+     "baseline": "Stopwatch card (forty, ten_yd_split, combine_height, combine_weight, position) linear model, plus a cohort-mean naive benchmark. Market baseline = card + draft_overall_pick.",
+     "metric": "Holdout MAE and R-squared versus the card baseline and versus the market baseline; paired bootstrap by athlete for the difference.",
+     "exclusions": "Athletes without combine_tracking are kept in T2 and reported as missing for T1, never imputed. No athlete appears in both develop and holdout.",
+     "tenant": "local-research",
+     "actor": "local-owner",
+     "subject": "local-owner",
+     "at": "2026-10-16T19:52:08.007Z"
+    }
+   ]
+  },
+  {
+   "id": "e900f85a-af34-48a4-b9f9-520919b5007d",
+   "tenant": "local-research",
+   "revisions": [
+    {
+     "version": 1,
+     "title": "Deceleration into the cut and re-acceleration out of it",
+     "method": "Hypothesis: peak deceleration entering a cut and acceleration leaving it, from combine_tracking, predict T1 beyond the card. Falsified as above; reported per measure, no post-hoc combination.",
+     "status": "registered",
+     "family": "accel-decel-cut",
+     "target": "T1: WR separation over expected on breaking routes (rookie season). T2, rookie snap share, is scored alongside for every athlete in the cohort as the missingness anchor.",
+     "predictionTime": "Pre-draft: after the combine, before the draft. No later information.",
+     "cohort": "Wide receivers with combine_results rows, draft classes 2023-2025.",
+     "featureCutoff": "combine_results + combine_tracking only. No pro day, no college production, no post-draft or in-season fields; post-play-fields.json is excluded by rule.",
+     "splitPolicy": "2023-2024 draft classes = develop; 2025 = untouched holdout, split by athlete, opened once after registration is frozen.",
+     "baseline": "Stopwatch card (forty, ten_yd_split, combine_height, combine_weight, position) linear model, plus a cohort-mean naive benchmark. Market baseline = card + draft_overall_pick.",
+     "metric": "Holdout MAE and R-squared versus the card baseline and versus the market baseline; paired bootstrap by athlete for the difference.",
+     "exclusions": "Athletes without combine_tracking are kept in T2 and reported as missing for T1, never imputed. No athlete appears in both develop and holdout.",
+     "tenant": "local-research",
+     "actor": "local-owner",
+     "subject": "local-owner",
+     "at": "2026-10-16T19:52:08.017Z"
+    }
+   ]
+  },
+  {
+   "id": "996cc8fb-4dff-4b84-b6fa-5d02844383a3",
+   "tenant": "local-research",
+   "revisions": [
+    {
+     "version": 1,
+     "title": "Who skips combine tracking is not random",
+     "method": "Hypothesis: absence of combine_tracking is associated with T2 rookie snap share, so complete-case T1 estimates are biased. Reports T2 by missingness group across the whole cohort before any T1 claim.",
+     "status": "registered",
+     "family": "missingness",
+     "target": "T1: WR separation over expected on breaking routes (rookie season). T2, rookie snap share, is scored alongside for every athlete in the cohort as the missingness anchor.",
+     "predictionTime": "Pre-draft: after the combine, before the draft. No later information.",
+     "cohort": "Wide receivers with combine_results rows, draft classes 2023-2025.",
+     "featureCutoff": "combine_results + combine_tracking only. No pro day, no college production, no post-draft or in-season fields; post-play-fields.json is excluded by rule.",
+     "splitPolicy": "2023-2024 draft classes = develop; 2025 = untouched holdout, split by athlete, opened once after registration is frozen.",
+     "baseline": "Stopwatch card (forty, ten_yd_split, combine_height, combine_weight, position) linear model, plus a cohort-mean naive benchmark. Market baseline = card + draft_overall_pick.",
+     "metric": "Holdout MAE and R-squared versus the card baseline and versus the market baseline; paired bootstrap by athlete for the difference.",
+     "exclusions": "Athletes without combine_tracking are kept in T2 and reported as missing for T1, never imputed. No athlete appears in both develop and holdout.",
+     "tenant": "local-research",
+     "actor": "local-owner",
+     "subject": "local-owner",
+     "at": "2026-10-16T19:52:08.022Z"
+    }
+   ]
+  },
+  {
+   "id": "f03d6cc1-8093-4358-827a-6cf2cd8a2e17",
+   "tenant": "local-research",
+   "revisions": [
+    {
+     "version": 1,
+     "title": "Tracking adds information the draft market missed",
+     "method": "Hypothesis: combine_tracking features improve on the market baseline (card + draft_overall_pick) for T1. Falsified if the holdout gain over the market baseline is not above zero.",
+     "status": "registered",
+     "family": "external-market",
+     "target": "T1: WR separation over expected on breaking routes (rookie season). T2, rookie snap share, is scored alongside for every athlete in the cohort as the missingness anchor.",
+     "predictionTime": "Pre-draft: after the combine, before the draft. No later information.",
+     "cohort": "Wide receivers with combine_results rows, draft classes 2023-2025.",
+     "featureCutoff": "combine_results + combine_tracking only. No pro day, no college production, no post-draft or in-season fields; post-play-fields.json is excluded by rule.",
+     "splitPolicy": "2023-2024 draft classes = develop; 2025 = untouched holdout, split by athlete, opened once after registration is frozen.",
+     "baseline": "Stopwatch card (forty, ten_yd_split, combine_height, combine_weight, position) linear model, plus a cohort-mean naive benchmark. Market baseline = card + draft_overall_pick.",
+     "metric": "Holdout MAE and R-squared versus the card baseline and versus the market baseline; paired bootstrap by athlete for the difference.",
+     "exclusions": "Athletes without combine_tracking are kept in T2 and reported as missing for T1, never imputed. No athlete appears in both develop and holdout.",
+     "tenant": "local-research",
+     "actor": "local-owner",
+     "subject": "local-owner",
+     "at": "2026-10-16T19:52:08.026Z"
+    }
+   ]
+  },
+  {
+   "id": "4c8aba5a-2736-401b-b9fe-e79fd98ecaf4",
+   "tenant": "local-research",
+   "revisions": [
+    {
+     "version": 1,
+     "title": "Body orientation at the break",
+     "method": "Hypothesis: alignment of orientation (o) and direction (dir) through the break in combine_tracking predicts T1 beyond the card. Measures alignment only; it is not hip-shoulder decoupling.",
+     "status": "registered",
+     "family": "other",
+     "target": "T1: WR separation over expected on breaking routes (rookie season). T2, rookie snap share, is scored alongside for every athlete in the cohort as the missingness anchor.",
+     "predictionTime": "Pre-draft: after the combine, before the draft. No later information.",
+     "cohort": "Wide receivers with combine_results rows, draft classes 2023-2025.",
+     "featureCutoff": "combine_results + combine_tracking only. No pro day, no college production, no post-draft or in-season fields; post-play-fields.json is excluded by rule.",
+     "splitPolicy": "2023-2024 draft classes = develop; 2025 = untouched holdout, split by athlete, opened once after registration is frozen.",
+     "baseline": "Stopwatch card (forty, ten_yd_split, combine_height, combine_weight, position) linear model, plus a cohort-mean naive benchmark. Market baseline = card + draft_overall_pick.",
+     "metric": "Holdout MAE and R-squared versus the card baseline and versus the market baseline; paired bootstrap by athlete for the difference.",
+     "exclusions": "Athletes without combine_tracking are kept in T2 and reported as missing for T1, never imputed. No athlete appears in both develop and holdout.",
+     "tenant": "local-research",
+     "actor": "local-owner",
+     "subject": "local-owner",
+     "at": "2026-10-16T19:52:08.030Z"
+    }
+   ]
+  }
+ ]
+}
