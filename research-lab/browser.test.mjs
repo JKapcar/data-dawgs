@@ -13,7 +13,7 @@ try {
  const page=await browser.newPage({viewport:{width:1440,height:1000},deviceScaleFactor:2,reducedMotion:'reduce'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(base);await page.getByText('Local runner ready.',{exact:false}).waitFor();
  assert.equal(await page.locator('#hypothesis-grid article').count(),3);
- assert(await page.locator('.brand img').evaluate(i=>i.complete&&i.naturalWidth>0));
+ assert.equal(await page.locator('.dd-brand').textContent(),'DATA DAWGS');
  await page.getByRole('tab',{name:'Queue'}).click();
  await page.getByRole('button',{name:'Claim & run locally'}).first().click();await page.getByText('Receipt recorded: success.',{exact:false}).waitFor();
  const state=await(await fetch(base+'/api/state')).json();assert.equal(state.receipts.length,1);assert(replay(directory,state.receipts[0].id).reproduced);

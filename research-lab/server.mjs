@@ -43,7 +43,7 @@ export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-l
       execute({type:'task',key:`seed-t-${i}`,payload:{hypothesisId:h.id,split:'discovery',budgetMs:5000,maxObservations:10000}});
     }
   }
-  const assets=new Map([['/','index.html'],['/app.mjs','app.mjs'],['/client.mjs','client.mjs'],['/style.css','style.css'],['/instrument.css','instrument.css'],['/tracking.mjs','tracking.mjs'],['/CONTRACT.md','CONTRACT.md'],['/brand.png','../assets/data-dawgs-site-logo-560.png'],['/assets/data-dawgs-site-logo-560.png','../assets/data-dawgs-site-logo-560.png']]);
+  const assets=new Map([['/navigation.css','navigation.css'],['/navigation.js','navigation.js'],['/','index.html'],['/app.mjs','app.mjs'],['/client.mjs','client.mjs'],['/style.css','style.css'],['/instrument.css','instrument.css'],['/tracking.mjs','tracking.mjs'],['/CONTRACT.md','CONTRACT.md'],['/brand.png','../assets/data-dawgs-site-logo-560.png'],['/assets/data-dawgs-site-logo-560.png','../assets/data-dawgs-site-logo-560.png']]);
   const server=http.createServer(async(req,res)=>{
     const origin=`http://127.0.0.1:${server.address().port}`;
     const send=(status,value,type='application/json')=>{res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"});res.end(type==='application/json'?JSON.stringify(value):value);};
@@ -64,7 +64,7 @@ export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-l
         return send(200,execute(command));
       }
       if(req.method==='GET'&&assets.has(url.pathname)) {
-        const file=assets.get(url.pathname);return send(200,readFileSync(path.join(root,file)),file.endsWith('.png')?'image/png':file.endsWith('.mjs')?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.md')?'text/plain':'text/html');
+        const file=assets.get(url.pathname);return send(200,readFileSync(path.join(root,file)),file.endsWith('.png')?'image/png':/\.(mjs|js)$/.test(file)?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.md')?'text/plain':'text/html');
       }
       send(404,{error:'Not found'});
     }catch(e){send(400,{error:e.message});}
