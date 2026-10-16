@@ -1,5 +1,7 @@
 # Research machine contract v1
 
+> **Superseded (2026-10-16).** This document predates the "BDB Research Lab and Dawg Pound" release plan of 2026-10-16. Where they disagree, the plan and `OWNER-CONNECTOR.md` win. Kept for history; do not treat its status lines as current.
+
 ## Run the preview
 
 Node 22 or later, no npm dependencies:

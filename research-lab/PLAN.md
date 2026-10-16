@@ -1,5 +1,7 @@
 # Agent-native research lab — preview milestone
 
+> **Superseded (2026-10-16).** This document predates the "BDB Research Lab and Dawg Pound" release plan of 2026-10-16. Where they disagree, the plan and `OWNER-CONNECTOR.md` win. Kept for history; do not treat its status lines as current.
+
 Isolated from production identity, Worker configuration, and Dawg Pound PR258.
 No external agents, credentials, schedules, data grants, merge or deployment.
 

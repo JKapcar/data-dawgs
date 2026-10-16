@@ -1,6 +1,19 @@
 # Personal assistant app permissions
 
-Status: implementation for review; deployment does not enable either app. No provider accounts have been tested by this change.
+Status: implementation for review; deployment does not enable either app. No provider accounts have been tested by this change. Updated 2026-10-16 for the "BDB Research Lab and Dawg Pound" release plan (PR 1: honest, portable discovery).
+
+> **Connector credentials are secrets.** The token — whether it rides in an `Authorization` header or inside a `/mcp/…/<token>` URL — acts as you. Never paste it, or a connector URL that contains it, into an issue, a pull request, a screenshot, a shared doc, a chat or a test fixture. If one leaks, rotate it on the Connect page; the old token dies immediately in every client.
+
+## Credential transport (no OAuth)
+
+One token, two transports, same authority:
+
+| Form | What the client is given | When |
+|---|---|---|
+| Header (primary) | Endpoint `https://toto.jkapcar4.workers.dev/mcp/full` plus `Authorization: Bearer <token>` | Any client with a header field |
+| URL (fallback) | `https://toto.jkapcar4.workers.dev/mcp/full/<token>` | Clients that only take a URL |
+
+`dd_whoami` reports `credential_transport: "header" | "url"` so you can see what a client actually sent. A request with no credential still gets `401` with a `Bearer` challenge; a credential that fails gets `403` (not `401`), so clients do not start an OAuth flow that has no server behind it. This Worker implements no OAuth endpoints. Per-client notes on the Connect page for Claude, Gemini, Grok and Muse are **unverified** until the owner fills the table in `CROSS-CLIENT-PROOF.md`.
 
 Use the existing personal DataDawgs MCP connection (the one used for Bozo). Do not rotate its credential merely to refresh tools. Each assistant needs its own supported connection setup; a connection in Claude does not install one in Gemini, Grok or Muse. This server supports stateless Streamable HTTP JSON-RPC. It does not implement OAuth, run personal assistant conversations, or schedule jobs. Consumer compatibility must be checked in the actual account. Existing URL credentials remain secrets; do not paste them into documentation, screenshots or chats.
 
@@ -12,7 +25,14 @@ Pound permission shares the entire owner's roster, tasks, messages and every con
 
 ## Tools and contracts
 
-Both core and full existing MCP catalogs dynamically include only currently permitted tools. Calls recheck permissions even if a client cached the tool list. No caller-supplied owner or tenant is accepted.
+Both core and full existing MCP catalogs dynamically include only currently permitted tools. Calls recheck permissions even if a client cached the tool list. No caller-supplied owner, tenant, scope or uid is accepted.
+
+Discovery is honest about itself:
+
+- `initialize` counts the owner tools it will list (`Catalog full: 92 of 92` for an opted-in owner; `88 of 88` for anyone else) and names which private apps are on, in one sentence.
+- `dd_whoami.private_apps` reports, per app, exactly one of `on`, `off`, `expired`, `not_owner`, `app_disabled`, `tenant_unconfigured`, `storage_unavailable`. Only `on` lists tools or lets them run.
+- Each write tool advertises **one flat object** `inputSchema` (no top-level `oneOf`, which several clients reject). The exact per-op shapes are in the tool description and in the read result's `writeSchema` (full `oneOf`). Server validation is unchanged.
+- Both write tools accept an optional `assistant` (1–40 characters). It is stored as `author_label` with `author_label_trust: "unverified"` and is never used for authorization. `identity.assistantIdentity` stays `"unverified"`.
 
 - `dd_owner_pound_read {}` returns workspace, exact write schema and truthful identity metadata.
 - `dd_owner_pound_write` accepts the existing Pound command `{op,expected_revision,request_id,data}`. Allowed `op`: `task.save`, `message.add`, `context.save`. Read first. Request IDs are 16–80 letters/digits/underscore/hyphen. Reuse the exact command/key for a retry after a lost response; revision conflicts require a fresh read.
