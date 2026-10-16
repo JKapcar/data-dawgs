@@ -2728,6 +2728,8 @@ async function runBackup(env, nowMs) {
     if (records == null) continue;
     if (typeof records !== 'object' || Array.isArray(records)) throw new Error('Private research backup shape invalid');
     for (const [id, record] of Object.entries(records)) {
+      if (!record || typeof record !== 'object' || Array.isArray(record))
+        throw new Error('Private research backup envelope must be an object');
       if (!/^[A-Za-z0-9_-]{1,100}$/.test(id) || !record || typeof record.payload !== 'string' || (kind === 'upload' && record.owner_uid !== id))
         throw new Error('Private research backup record invalid');
       try {

@@ -182,5 +182,24 @@ const T0 = Date.parse("2026-09-15T09:00:00Z");
   ok('research payloads retained exactly and active data unchanged',JSON.stringify(WHOLE_DB)===original&&JSON.parse(copies[0].v).record.payload===WHOLE_DB.researchLab.v1.tenants.jason_bdb.payload);
   delete WHOLE_DB.researchLab;delete WHOLE_DB.researchUploads;
 }
+// Actual incident shape: the complete tenant envelope was stored as a STRING.
+// Use synthetic content only. Rejection must preserve data and never leak it.
+{
+ const envelope={version:1,access:{users:{u_synthetic:{enabled:true,owner:true}}},payload:'{"state":{"version":1,"nullable":null,"tasks":[]},"inputs":{}}'};
+ WHOLE_DB.researchLab={v1:{tenants:{'synthetic-tenant':JSON.stringify(envelope)}}};
+ const original=JSON.stringify(WHOLE_DB),kv=makeKV();let message='';
+ try{await worker.scheduled({scheduledTime:T0},{FB_SECRET:'s',RL:kv},{});}catch(e){message=e.message;}
+ ok('outer-string incident rejects with sanitized type diagnostic',message==='Private research backup envelope must be an object');
+ ok('invalid tenant remains unchanged, with no fallback private copy',JSON.stringify(WHOLE_DB)===original&&!kv.puts.some(p=>p.k.startsWith('research-backup:')));
+ ok('invalid tenant never enters general backup or error content',!JSON.parse(kv.store.get('backup:latest')).db.researchLab&&!kv.store.get('backup:lasterror').includes('synthetic-tenant'));
+ // A separately authorized repair parses only the outer envelope, never payload.
+ WHOLE_DB.researchLab.v1.tenants['synthetic-tenant']=JSON.parse(WHOLE_DB.researchLab.v1.tenants['synthetic-tenant']);
+ const repaired=JSON.stringify(WHOLE_DB),after=makeKV();
+ await worker.scheduled({scheduledTime:T0},{FB_SECRET:'s',RL:after},{});
+ const copies=after.puts.filter(p=>p.k.startsWith('research-backup:'));
+ ok('native envelope backup keeps exact inner payload and 30-day expiry',copies.length===1&&copies[0].opts.expirationTtl===2592000&&JSON.parse(copies[0].v).record.payload===envelope.payload);
+ ok('successful backup does not alter repaired active data',JSON.stringify(WHOLE_DB)===repaired);
+ delete WHOLE_DB.researchLab;
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -43,6 +43,14 @@ show that specific requirement. Do not describe this as free or a hard dollar ca
    The seven capabilities are research:read, hypothesis:write, evidence:write,
    discussion:write, task:write, task:claim, experiment:run. `access.agents` stays
    absent. No public grant editor/bootstrap route is added.
+   Verify the stored node's actual JSON type is **object** with separately
+   addressable `access`, `version`, and string `payload` children. A scalar string
+   that visually contains this JSON is invalid. Parse only the payload on read;
+   never serialize the whole envelope into a console scalar-value editor.
+   The 2026-10-16 initialization did exactly that and the backup correctly failed.
+   Regression tests now cover that shape. Repair requires an explicit scoped
+   operation preserving the original value, exact inner payload and grants;
+   normal application reads and backups must continue to reject malformed types.
 4. Add the private bucket binding to the complete `wrangler.jsonc` only after the
    resource decision. Set `RESEARCH_OWNER_UID`, `RESEARCH_UPLOAD_TENANT=jason-bdb`,
    `RESEARCH_UPLOAD_ENABLED=true`, `RESEARCH_LAB_ENABLED=true`. The owner UID is
