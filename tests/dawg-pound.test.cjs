@@ -208,3 +208,35 @@ test('owner route never accepts or invents an assistant label; connector labels 
   assert.equal(state.messages[0].author_label,'Gemini');assert.equal(state.messages[0].author_label_trust,'unverified');assert.equal(state.contexts[0].versions[0].author_label,'Gemini');
   assert.ok(state.activity.every(a=>a.author_label==='Gemini'&&a.author_label_trust==='unverified'&&a.actor_uid==='u_one'));
 });
+
+// ---- 2026-10-16 additive fields. PR 276 payloads are pinned verbatim below. ----
+const PR276={agent:{op:'agent.save',data:{name:'Researcher',role:'Research',function:'Find sources',capabilities:'',archived:false}},task:{op:'task.save',data:{title:'Check sources',body:'',agent_id:'',status:'queued',archived:false}},context:{op:'context.save',data:{title:'Brief',text:'Body'}}};
+test('every PR 276 payload shape still validates and saves',async()=>{
+  const r=rig();let rev=0;for(const k of ['agent','task','context']){const out=await r.send(r.command(PR276[k].op,PR276[k].data,rev++));assert.equal(out.status,200,k);}
+  const s=(await r.send()).body.workspace;const out=await r.send(r.command('message.add',{thread_id:s.tasks[0].id,text:'legacy note'},rev++));assert.equal(out.status,200);
+  const id=s.contexts[0].id;assert.equal((await r.send(r.command('context.archive',{id},rev++))).status,200);
+  assert.equal(out.body.workspace.messages[0].kind,'note');
+});
+test('task revisions are server-set and required on update',async()=>{
+  const r=rig(),created=await r.send(r.command('task.save',task,0)),t=created.body.workspace.tasks[0];assert.equal(t.revision,1);
+  assert.equal((await r.send(r.command('task.save',{...task,id:t.id,status:'working'},1))).status,409);
+  assert.equal((await r.send(r.command('task.save',{...task,id:t.id,status:'working',expected_task_revision:2},1))).body.error,'task_revision_conflict');
+  const ok=await r.send(r.command('task.save',{...task,id:t.id,status:'working',expected_task_revision:1,refs:['https://github.com/x']},1));assert.equal(ok.status,200);assert.equal(ok.body.workspace.tasks[0].revision,2);assert.deepEqual(ok.body.workspace.tasks[0].refs,['https://github.com/x']);assert.equal(ok.body.workspace.tasks[0].expected_task_revision,undefined);
+  assert.equal((await r.send(r.command('task.save',{...task,expected_task_revision:1},2))).status,400);
+  assert.equal((await r.send(r.command('task.save',{...task,id:t.id,expected_task_revision:1},2))).body.error,'task_revision_conflict');
+  for(const bad of [0,-1,1.5,'2'])assert.equal((await r.send(r.command('task.save',{...task,id:t.id,expected_task_revision:bad},2))).status,400);
+});
+test('a task saved before revisions reads as revision 1 and updates from it',async()=>{
+  const r=rig();await r.send(r.command('task.save',task,0));const rec=r.db.get('/privatePounds/u_one'),s=JSON.parse(rec.payload);delete s.tasks[0].revision;rec.payload=JSON.stringify(s);
+  const t=(await r.send()).body.workspace.tasks[0];assert.equal(t.revision,1);const out=await r.send(r.command('task.save',{...task,id:t.id,expected_task_revision:1},1));assert.equal(out.status,200);assert.equal(out.body.workspace.tasks[0].revision,2);
+});
+test('message kinds and refs, context predecessor and active version',async()=>{
+  const r=rig(),t=await r.send(r.command('task.save',task,0)),thread_id=t.body.receipt.item_id;
+  for(const [i,kind] of ['question','finding','challenge','decision','note'].entries())assert.equal((await r.send(r.command('message.add',{thread_id,text:kind,kind,refs:['note '+i]},1+i))).status,200);
+  assert.equal((await r.send(r.command('message.add',{thread_id,text:'x',kind:'command'},6))).status,400);
+  for(const refs of [Array(9).fill('a'),[''],['x'.repeat(301)],'https://github.com',[1]])assert.equal((await r.send(r.command('message.add',{thread_id,text:'x',refs},6))).status,400);
+  const a=await r.send(r.command('context.save',{title:'Brief',text:'v1',refs:['https://www.kaggle.com/c']},6)),id=a.body.receipt.item_id,b=await r.send(r.command('context.save',{id,title:'Brief',text:'v2'},7));
+  const c=b.body.workspace.contexts[0];assert.equal(c.active_version,2);assert.equal(c.versions[0].predecessor,null);assert.equal(c.versions[1].predecessor,1);assert.deepEqual(c.versions[0].refs,['https://www.kaggle.com/c']);assert.equal(c.versions[1].refs,undefined);
+  assert.deepEqual(b.body.workspace.messages.map(m=>m.kind),['question','finding','challenge','decision','note']);
+});
+test('limits are unchanged by the additive fields',()=>{const r=rig();assert.deepEqual(r.schema.limits,{agents:24,tasks:40,messages:100,contexts:16,versions:8,activity:60,receipts:128,body_bytes:32768,state_bytes:524288});});

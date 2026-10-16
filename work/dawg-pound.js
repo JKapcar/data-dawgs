@@ -4,11 +4,15 @@
 const POUND_LIMITS = Object.freeze({agents:24,tasks:40,messages:100,contexts:16,versions:8,activity:60,receipts:128,body_bytes:32768,state_bytes:524288});
 const poundString = (maxLength,minLength=1)=>({type:'string',minLength,maxLength});
 const poundId = {type:'string',pattern:'^p_[a-f0-9-]{36}$'};
+// Additive, optional fields (2026-10-16). Every PR 276 payload still validates. refs are
+// plain text references; the UI links only https URLs on an allowlist.
+const poundRefs = {type:'array',maxItems:8,items:poundString(300)};
+const POUND_MESSAGE_KINDS = ['question','finding','challenge','decision','note'];
 const poundFields = {
   'agent.save': {id:poundId,name:poundString(60),role:poundString(100),function:poundString(500),capabilities:poundString(500,0),archived:{type:'boolean'}},
-  'task.save': {id:poundId,title:poundString(120),body:poundString(2000,0),agent_id:{type:'string',pattern:'^(|p_[a-f0-9-]{36})$'},status:{enum:['queued','working','done','blocked']},archived:{type:'boolean'}},
-  'message.add': {thread_id:poundId,text:poundString(2000)},
-  'context.save': {id:poundId,title:poundString(120),text:poundString(8000)},
+  'task.save': {id:poundId,title:poundString(120),body:poundString(2000,0),agent_id:{type:'string',pattern:'^(|p_[a-f0-9-]{36})$'},status:{enum:['queued','working','done','blocked']},archived:{type:'boolean'},refs:poundRefs,expected_task_revision:{type:'integer',minimum:1}},
+  'message.add': {thread_id:poundId,text:poundString(2000),kind:{enum:POUND_MESSAGE_KINDS},refs:poundRefs},
+  'context.save': {id:poundId,title:poundString(120),text:poundString(8000),refs:poundRefs},
   'context.archive': {id:poundId},
 };
 const poundRequired = {'agent.save':['name','role','function','capabilities','archived'],'task.save':['title','body','agent_id','status','archived'],'message.add':['thread_id','text'],'context.save':['title','text'],'context.archive':['id']};
@@ -37,6 +41,7 @@ function poundValidate(value,schema){
     if(schema.minLength!==undefined)poundCheck(value.trim().length>=schema.minLength&&value.length<=schema.maxLength,400,'Text length outside limit');
     if(schema.pattern)poundCheck(new RegExp(schema.pattern).test(value),400,'Invalid identifier');
   }
+  if(schema.type==='array'){poundCheck(Array.isArray(value)&&value.length<=schema.maxItems,400,'List outside limit');for(const item of value)poundValidate(item,schema.items);}
   if(schema.type==='boolean')poundCheck(typeof value==='boolean',400,'Boolean required');
   if(schema.type==='integer')poundCheck(Number.isSafeInteger(value)&&value>=schema.minimum,400,'Invalid revision');
 }
@@ -64,7 +69,9 @@ async function poundIdentity(request,env){
   return auth.uid;
 }
 function poundEmpty(){return {revision:0,updated_at:null,agents:[],tasks:[],messages:[],contexts:[],activity:[],receipts:[]};}
-function poundView(state){const {receipts,...view}=state;return {...view,agent_access_enabled:false};}
+// Tasks saved before task revisions existed read as revision 1, which is what the next
+// update must quote. Nothing is rewritten until that update commits.
+function poundView(state){const {receipts,...view}=state;return {...view,tasks:view.tasks.map(t=>({...t,revision:t.revision||1})),agent_access_enabled:false};}
 function poundItem(rows,id){const row=rows.find(r=>r.id===id);poundCheck(row,404,'Item not found');return row;}
 async function poundHash(value){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));return Array.from(new Uint8Array(bytes),x=>x.toString(16).padStart(2,'0')).join('');}
 function poundCanonical(v){return v&&typeof v==='object'?(Array.isArray(v)?'['+v.map(poundCanonical).join(',')+']':'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+poundCanonical(v[k])).join(',')+'}'):JSON.stringify(v);}
@@ -75,23 +82,30 @@ async function poundWrite(state,input,uid,actorKind='owner',authorLabel=null){
   const makeId=()=> 'p_'+crypto.randomUUID();let id=d.id;
   if(op==='agent.save'||op==='task.save'){
     const isAgent=op==='agent.save',rows=isAgent?state.agents:state.tasks;
+    const {expected_task_revision:expected,...fields}=d;
     let row=id?poundItem(rows,id):null;
+    // A task update must quote the task's own revision, so two writers editing the same
+    // task cannot silently overwrite each other even when other work moved the workspace.
+    if(!isAgent&&row)poundCheck(expected===(row.revision||1),409,'task_revision_conflict');
+    if(!isAgent&&!row)poundCheck(expected===undefined,400,'expected_task_revision applies to updates only');
     if(!row){poundCheck(rows.length<POUND_LIMITS[isAgent?'agents':'tasks'],409,'Workspace item limit reached');row={id:makeId(),created_at:now};rows.push(row);}
     if(!isAgent&&d.agent_id)poundCheck(!poundItem(state.agents,d.agent_id).archived,409,'Agent is archived');
-    Object.assign(row,d,{updated_at:now});id=row.id;
+    if(!isAgent)row.revision=(row.revision||(row.updated_at?1:0))+1;
+    Object.assign(row,fields,{updated_at:now});id=row.id;
     if(isAgent)Object.assign(row,{connection_status:'not_connected',last_seen:null,capabilities_source:'owner_declared'});
     else row.status_source=actorKind==='owner'?'owner_reported':'owner_connector_reported';
   }else if(op==='message.add'){
     poundCheck(!poundItem(state.tasks,d.thread_id).archived,409,'Task is archived');
     poundCheck(state.messages.length<POUND_LIMITS.messages,409,'Message limit reached');
-    id=makeId();state.messages.push({id,...d,actor_uid:uid,actor_kind:actorKind,...author,created_at:now});
+    id=makeId();state.messages.push({id,...d,kind:d.kind||'note',actor_uid:uid,actor_kind:actorKind,...author,created_at:now});
   }else if(op==='context.save'){
     let row=id?poundItem(state.contexts,id):null;
     if(!row){poundCheck(state.contexts.length<POUND_LIMITS.contexts,409,'Context limit reached');row={id:makeId(),versions:[],created_at:now,archived:false};state.contexts.push(row);}
     poundCheck(!row.archived,409,'Context is archived');
     poundCheck(row.versions.length<POUND_LIMITS.versions,409,'Context version limit reached; create a new document');
-    row.versions.push({version:row.versions.length+1,text:d.text,title:d.title,sha256:await poundHash(d.text),created_at:now,actor_uid:uid,actor_kind:actorKind,...author});
-    row.title=d.title;row.updated_at=now;id=row.id;
+    const version=row.versions.length+1;
+    row.versions.push({version,text:d.text,title:d.title,sha256:await poundHash(d.text),created_at:now,actor_uid:uid,actor_kind:actorKind,...author,...(d.refs?{refs:d.refs}:{}),predecessor:version>1?version-1:null});
+    row.title=d.title;row.active_version=version;row.updated_at=now;id=row.id;
   }else{const row=poundItem(state.contexts,id);row.archived=true;row.updated_at=now;}
   state.revision++;state.updated_at=now;
   state.activity.push({id:makeId(),operation:op,item_id:id,actor_uid:uid,actor_kind:actorKind,...author,at:now});
