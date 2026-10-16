@@ -18,7 +18,7 @@
  window.addEventListener('beforeinstallprompt',event=>{if(standalone())return;event.preventDefault();installEvent=event;refresh();});
  window.addEventListener('appinstalled',()=>{installEvent=null;entry.hidden=true;if(dialog.open)dialog.close();});
  matchMedia('(display-mode: standalone)').addEventListener('change',refresh);
- entry.onclick=()=>{refresh();note.textContent='';dialog.showModal();close.focus();};close.onclick=()=>dialog.close();dialog.addEventListener('close',()=>{if(!entry.hidden){const target=entry.getClientRects().length?entry:document.querySelector('.dd-apps>summary');target?.focus();}});
+ entry.onclick=()=>{refresh();note.textContent='';dialog.showModal();close.focus();};close.onclick=()=>dialog.close();dialog.addEventListener('close',()=>{if(!entry.hidden){requestAnimationFrame(()=>{const menu=entry.closest('details');const target=menu&&!menu.open?menu.querySelector('summary'):entry;target?.focus();});}});
  install.onclick=async()=>{const event=installEvent;if(!event)return;installEvent=null;refresh();try{await event.prompt();const result=await event.userChoice;note.textContent=result.outcome==='accepted'?'Installation requested. Follow your browser to finish.':'You can install later from your browser menu.';}catch{note.textContent='Use your browser menu and the steps above.';}};
  refresh();
 })();
