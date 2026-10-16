@@ -7,3 +7,10 @@ test('exact payload retains empty collections and explicit nulls across RTDB-sty
  const roundtrip=decodeEnvelope(normalize(encodeEnvelope(data)));assert.deepEqual(roundtrip.state,data.state);assert.deepEqual(roundtrip.inputs,data.inputs);assert.equal(hash(roundtrip.inputs),hash(data.inputs));
 });
 test('legacy raw envelopes fail closed rather than silently inventing missing values',()=>{assert.throws(()=>decodeEnvelope({state:initialState()}),/Exact/);});
+
+test('serialized outer envelope and malformed scalar types fail closed',()=>{
+ const envelope=encodeEnvelope({version:1,access:{users:{}},state:initialState(),inputs:{sample:{x:null,frames:[]}}});
+ for(const value of [JSON.stringify(envelope),'',false,true,0,1,[]])assert.throws(()=>decodeEnvelope(value),/must be an object/);
+ assert.equal(decodeEnvelope(null),null);assert.equal(decodeEnvelope(undefined),undefined);
+ assert.deepEqual(decodeEnvelope(envelope).inputs,{sample:{x:null,frames:[]}});
+});

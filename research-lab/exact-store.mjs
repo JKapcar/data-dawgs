@@ -5,7 +5,8 @@ export function encodeEnvelope(envelope){
  return {...metadata,payload:JSON.stringify({state,inputs:inputs??{}})};
 }
 export function decodeEnvelope(envelope){
- if(!envelope)return envelope;
+ if(envelope==null)return envelope;
+ if(typeof envelope!=='object'||Array.isArray(envelope))throw Error('Research envelope must be an object');
  if(typeof envelope.payload!=='string')throw Error('Exact research storage required');
  const {payload,...metadata}=envelope,parsed=JSON.parse(payload);
  if(!parsed.state||parsed.state.version!==1||!parsed.inputs||typeof parsed.inputs!=='object')throw Error('Invalid research payload');
