@@ -27,11 +27,11 @@ cross-database atomic operation. Rotation changes the hash in each approved reco
 There is no anonymous or agent-authorized administration endpoint. A separately
 disabled owner setup pilot is described below.
 
-## Owner-operated setup pilot (not activated)
+## Owner-operated setup pilot (owner setup approved)
 
 `/research-lab/agent-setup.html` calls `/agent-setup/v1`. The server requires
 `AGENT_SETUP_ENABLED=true` plus the existing signed site session for the exact
-configured research owner. This flag is absent from the release configuration.
+configured research owner. Owner-only setup activation was explicitly approved on 2026-10-16; the release manifest now sets this flag to true.
 The independent `DELEGATED_AGENTS_ENABLED` switch still controls agent use.
 No OAuth flow or provider account sign-in is implemented.
 
