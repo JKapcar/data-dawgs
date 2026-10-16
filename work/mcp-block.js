@@ -1941,6 +1941,10 @@ function mcpModelScoreboardRows(envelope, input) {
 async function mcpAuth(request, url, env) {
   const supplied = mcpPassOf(request, url);
   if (!supplied) return null;
+  // How the credential arrived, reported by dd_whoami. Mirrors mcpPassOf exactly: a path
+  // credential wins over any header. Inline on purpose — research-lab/gateway-fixture.mjs
+  // extracts mcpAuth by name and runs it without helpers it does not know about.
+  const transport = mcpRoute(url, request).rest.length ? "url" : "header";
 
   if (supplied.startsWith("u_")) {
     if (!env.BOZO_PEPPER) return null;          // per-user tokens need the pepper to hash
@@ -1962,21 +1966,14 @@ async function mcpAuth(request, url, env) {
     if (!hit) return null;
     const display = hitUser && typeof hitUser.name === "string" && hitUser.name.trim()
       ? hitUser.name.trim() : hit;
-    return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser), transport: mcpTransportOf(request, url),
+    return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser), transport,
       // ⚠️ The account's role flags, read here so isSiteAdmin() has one shape to check.
       // Never derived from anything the caller sent.
       roles: (hitUser && hitUser.roles && typeof hitUser.roles === "object") ? hitUser.roles : null };
   }
 
-  if (env.DAWG_PASS && timingSafeEqual(supplied, env.DAWG_PASS)) return { kind: "shared", transport: mcpTransportOf(request, url) };
+  if (env.DAWG_PASS && timingSafeEqual(supplied, env.DAWG_PASS)) return { kind: "shared", transport };
   return null;
-}
-
-// How the credential arrived: a URL path segment, or a header (Authorization: Bearer /
-// X-Dawg-Pass). Reported by dd_whoami so a member can see which form their client used.
-// Mirrors mcpPassOf exactly: a path credential wins over any header.
-function mcpTransportOf(request, url) {
-  return mcpRoute(url, request).rest.length ? "url" : "header";
 }
 
 // ⚠️ THE CATALOG IS A PATH SEGMENT, STRIPPED BEFORE THE CREDENTIAL IS READ.
