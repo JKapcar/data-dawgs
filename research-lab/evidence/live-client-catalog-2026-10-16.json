@@ -1,0 +1,18 @@
+{
+ "kind": "live-client-catalog-observation",
+ "observed_at": "2026-10-16",
+ "client": "Claude Code (cloud session) MCP client, connector DD, catalog full",
+ "method": "Passive: the client's own loaded tool list and server instructions. No dd_owner_* tool was called; no live grant was read or changed; no credential is recorded.",
+ "initialize_said": "Catalog `full`: 88 of 88 tools are callable here.",
+ "tools_listed_by_client": 92,
+ "owner_tools_listed": ["dd_owner_bdb_read", "dd_owner_bdb_write", "dd_owner_pound_read", "dd_owner_pound_write"],
+ "diagnosis": [
+  "Count: production initialize counted MCP_TOOLS (88) only, while tools/list appended the 4 opted-in owner tools (92). Fixed in PR 1: both now count owner tools.",
+  "Schema: the client collapsed each top-level oneOf to its FIRST branch. dd_owner_pound_write was presented as op const 'task.save' with the task data shape only; dd_owner_bdb_write as type const 'hypothesis' only. message.add, context.save, evidence and discussion were therefore not expressible from this client. PR 1 replaces both with one flat object schema; the exact oneOf moves to the read result's writeSchema."
+ ],
+ "client_presented_schemas": {
+  "dd_owner_pound_write": {"description_prefix": "Input constraint: Provide parameters for exactly one of: (op, expected_revision, request_id, data).", "properties": {"op": {"const": "task.save"}, "data.required": ["title", "body", "agent_id", "status", "archived"]}, "required": []},
+  "dd_owner_bdb_write": {"description_prefix": "Input constraint: Provide parameters for exactly one of: (type, key, payload).", "properties": {"type": {"const": "hypothesis"}, "payload.required": ["title", "method"]}, "required": []}
+ },
+ "also_found_not_changed": "Public tools dd_correct_bozo_pick (oneOf), dd_submit_bozo_leg (anyOf) and dd_verify_bozo_entry (anyOf) also carry a top-level combinator. Out of scope for this plan; listed as a known gap."
+}
