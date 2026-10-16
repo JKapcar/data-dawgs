@@ -89,7 +89,9 @@ test('closing cron uses the backup, writes both receipts, and never fetches live
   bozoOddsApiCapture:async(e,p,reg,opt)=>{capturedCalls.push(opt);return {quote:q};},
   bozoFetchEvents:async()=>{sgo++;throw Error('SGO 429');},
   bozoTeamRegistry:async()=>r.reg('nfl'),ledgerKey:(s,w,k)=>`${s}-w${w}-${k}`,
-  fbPatch:async(e,path,patch)=>patches.push(patch),LG:l=>l,cfbMarketKV:()=>null,
+  fbGet:async()=>({data:{week:3,season:2026,picks:{pat:bp}}}),
+  bozoSame:(a,b)=>JSON.stringify(a)===JSON.stringify(b),
+  bozoGuardedPatch:async(e,lid,state,patch)=>{patches.push(patch);return true;},LG:l=>l,cfbMarketKV:()=>null,
  });
  vm.runInContext(cut('async function runBozoCloseCapture(','/* GET /bozo/clv?')+'this.runClose=runBozoCloseCapture;',r.ctx);
  const out=await r.ctx.runClose({ODDS_API_KEY:'test-key'},start+1000);

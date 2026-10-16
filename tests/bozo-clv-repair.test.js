@@ -7,7 +7,8 @@ function rig(row={}){
   readBody:r=>r.json(),leagueOf:()=> 'main',SEASON:2026,LG:id=>'/bozo/leagues/'+id,
   ledgerKey:(s,w,k)=>`${s}-w${w}-${k}`,json:(b,status)=>({body:b,status}),
   requireManager:async()=>({name:'Manager',league:{season:2026,week:3,picks:{[key]:{}}}}),
-  fbGet:async()=>({data:{week:3,...row}}),fbPatch:async(env,...args)=>writes.push(args)};
+  fbGet:async()=>({data:{week:3,...row}}),fbPatch:async(env,...args)=>writes.push(args),
+  bozoGuardedPatch:async(env,lid,state,patch)=>{await ctx.fbPatch(env,"/bozo/leagues/"+lid,patch);return true;}};
  vm.createContext(ctx);vm.runInContext(cut('async function bozoCloseFill(','/* GET /bozo/close-gaps'),ctx);
  return {writes,ctx,save:b=>ctx.bozoCloseFill(new Request('https://test/bozo/close',{method:'POST',body:JSON.stringify({league:'main',row:rowKey,...b})}),{}, {})};
 }

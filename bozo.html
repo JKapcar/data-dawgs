@@ -3926,6 +3926,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <section class="card" id="bozoMenu" hidden aria-label="The Bozo Menu" data-ddb-skip></section>
 
 <div class="card" id="submitCard" style="display:none">
+  <div id="correctionFields" style="display:none" data-ddb-skip><p>Pre-kickoff correction: preserves the draw and lock time. Replaces one pick with a fresh quote and confirmation time; Last In, price and CLV may change. Original receipts stay in the audit. Unavailable after any ticket game starts or results exist.</p><label for="correctionReason">Reason for replacement (required)</label><input id="correctionReason" type="text" minlength="5" maxlength="300" autocomplete="off"></div>
   <h2 class="bz" id="submitH">Your leg</h2>
   <p class="note" id="buildStatus" role="status">Checking this page…</p>
   <button type="button" class="btn" id="buildRefresh" hidden>Load latest page</button>
@@ -6106,7 +6107,9 @@ function render(){
   // theirs yet. The note below the card says so — a hidden card with no explanation is
   // how a successful mid-week join looks like a failed one.
   const meSeated = !ME || isActiveSeat(ME.name);
-  document.getElementById('submitCard').style.display = (ME && open && onWeek && meAlive && meSeated) ? '' : 'none';
+  const correcting = !!ME && canProxy() && status==='placed' && onWeek;
+  document.getElementById('correctionFields').style.display = correcting ? '' : 'none';
+  document.getElementById('submitCard').style.display = (correcting || (ME && open && onWeek && meAlive && meSeated)) ? '' : 'none';
   const seatNote = document.getElementById('seatNote');
   if(seatNote){
     const st = ME ? seatStatusOf(ME.name) : 'active';
@@ -6128,7 +6131,8 @@ function render(){
   if(cmBtn) cmBtn.textContent = tgt ? ('Remove ' + tgt.name + "'s leg") : 'Remove my leg';
   document.getElementById('bandNote').textContent =
     `Favorites only, ${bd.ceil} to ${bd.floor} — the minus is already in the box, just type the number. No exact duplicates. Editing resets your clock and your price. The ticket locks the moment the last leg lands.`;
-  const cm=document.getElementById('clearMine'); if(cm) cm.style.display = tLeg ? '' : 'none';
+  if(correcting) { document.getElementById('submitH').textContent = 'Correct one placed pick'; document.getElementById('bandNote').textContent = 'Choose the member and replacement below. The server checks eligibility and captures the exact quote before asking for confirmation.'; }
+  const cm=document.getElementById('clearMine'); if(cm) cm.style.display = tLeg && !correcting ? '' : 'none';
 
   // Two destinations, one source. The banner is news and sits under the header; the log
   // is a receipt and sits at the bottom of the board.
@@ -6763,16 +6767,22 @@ async function submitLeg(){
     // target. The Worker resolves the seat from that key and the role from the session.
     const tgt = proxyTarget();
     const forUid = tgt ? {forUid: tgt.key} : {};
-    const proposal = await wPost('/bozo/pick', {captureVersion:1, clientBuild:BOZO_BUILD_ID, pick, ...forUid});
+    const correcting = (S.status||'open') === 'placed';
+    const reason = document.getElementById('correctionReason').value.trim();
+    if(correcting && reason.length<5) throw new Error('Enter a reason of at least 5 characters.');
+    const correctionTarget = {forUid: tgt ? tgt.key : kEnc(ME.name), type:'replace_before_kickoff'};
+    const route = correcting ? '/bozo/correct-pick' : '/bozo/pick';
+    const proposal = await wPost(route, correcting ? {pick, reason, ...correctionTarget} : {captureVersion:1, clientBuild:BOZO_BUILD_ID, pick, ...forUid});
     const agreement = proposal.agreement && proposal.agreement.needsConfirmation
       ? `\n\nYour check was ${fmtPrice(proposal.agreement.typedPrice)}; the captured price is ${fmtPrice(proposal.agreement.capturedPrice)} (${proposal.agreement.probabilityPointDifference.toFixed(2)} probability points apart).`
       : '';
     if(!window.confirm(proposal.echo + agreement + '\n\nNothing has been submitted yet. Submit this pick at these odds?')){
       e.textContent='Nothing submitted.'; bozoSubmitting=false; paintBuildGuard(); return;
     }
-    const res = await wPost('/bozo/pick', {confirm:proposal.confirm_code, clientBuild:BOZO_BUILD_ID, ...forUid});
+    const res = await wPost(route, correcting ? {confirm:proposal.confirm_code, ...correctionTarget} : {confirm:proposal.confirm_code, clientBuild:BOZO_BUILD_ID, ...forUid});
+    if(correcting) document.getElementById('correctionReason').value='';
     e.className='err ok';
-    e.textContent = (res.placed ? 'In — and that was the last leg. Ticket is locked.' : 'Submitted.')
+    e.textContent = (res.status==='corrected' ? 'Corrected. Original receipt saved; draw and lock time preserved.' : res.placed ? 'In — and that was the last leg. Ticket is locked.' : 'Submitted.')
       + (res.leg && res.leg.priceSource !== 'captured' ? ' Odds unverified — awaiting manager review.' : '')
       + (res.forName ? ' Filed for ' + res.forName + ' and logged as a commissioner action.' : '');
     resetAsSelect();
@@ -6793,12 +6803,12 @@ function paintAdminActions(){
     .filter(({r})=>r && (r.week||1)===wk)
     .sort((a,b)=>a.ts-b.ts);
   if(!rows.length){ el.style.display='none'; el.innerHTML=''; return; }
-  const verb = t => t==='proxy_remove' ? 'removed the leg of' : t==='proxy_edit' ? 'replaced the leg of'
+  const verb = t => t==='replace_before_kickoff' ? 'corrected the placed leg of' : t==='proxy_remove' ? 'removed the leg of' : t==='proxy_edit' ? 'replaced the leg of'
     : t==='verify_entry' ? 'verified the original odds for' : t==='roster_add' ? 'added' : t==='roster_remove' ? 'removed' : 'submitted for';
   el.innerHTML = '<b>Commissioner actions this week</b><br>' + rows.map(({ts,r})=>
     `${esc(when(ts))} · ${esc(r.byName||'?')} ` + (r.type==='reopen' ? 'unlocked the board'
       : `${verb(r.type)} ${esc(r.forName||'?')}`)
-    + (r.after && r.after.label ? ` — ${esc(r.after.label)}` : '')).join('<br>');
+    + (r.after && r.after.label ? ` — ${esc(r.after.label)}` : '') + (r.reason ? ` · Reason: ${esc(r.reason)}` : '')).join('<br>');
   el.style.display='';
 }
 

@@ -165,3 +165,16 @@ test('invalid or unfinished numbers never reach the submission API', async () =>
   w.wGet=async()=>({build:'bozo-20260924-02'});await w.submitLeg();assert.equal(calls.length,2);
   assert.ok(calls.every(c=>c.body.clientBuild==='bozo-20260924-02'));dom.window.close();
  });
+
+ test('placed correction uses exact target, reason, explicit type and confirmation; cancellation writes no confirmation',async()=>{
+  for(const accepted of [true,false]){
+   const {dom,w,el,type,calls}=fixture();w.S.status='placed';w.proxyTarget=()=>({key:'u_member',name:'Member'});
+   w.confirm=()=>accepted;el('correctionReason').value='Wrong side entered';type('+7.5');await w.submitLeg();
+   assert.equal(calls.length,accepted?2:1);assert.equal(calls[0].url,'/bozo/correct-pick');
+   assert.equal(calls[0].body.forUid,'u_member');assert.equal(calls[0].body.type,'replace_before_kickoff');
+   assert.equal(calls[0].body.reason,'Wrong side entered');assert.equal(calls[0].body.pick.line,-7.5);
+   if(accepted){assert.equal(calls[1].body.confirm,'fixture-only');assert.equal(calls[1].body.forUid,'u_member');assert.equal(calls[1].body.pick,undefined);assert.equal(calls[1].body.reason,undefined);}
+   dom.window.close();
+  }
+ });
+ test('placed correction requires a reason before any request',async()=>{const {dom,w,type,calls,el}=fixture();w.S.status='placed';type('+7.5');await w.submitLeg();assert.equal(calls.length,0);assert.match(el('err').textContent,/reason/);dom.window.close();});

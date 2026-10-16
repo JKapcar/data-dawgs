@@ -203,9 +203,10 @@ test('/bozo/grade phase one writes nothing and phase two does not re-fetch score
   context.leagueOf = body => body.league || 'main';
   context.json = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), { status, headers });
   context.LG = lid => `/bozo/leagues/${lid}`;
-  context.fbPut = async (_env, path, value) => { writes.push({ path, value }); };
+  context.fbPut = async (_env, path, value, etag) => { writes.push({ path, value, etag }); return true; };
   context.fbPatch = async (_env, path, value) => { writes.push({ path, value }); };
-  context.fbGet = async () => ({ data: {} });
+  context.fbGet = async (_env,path) => ({ data: path.endsWith("/ledger") ? {} : structuredClone(state), etag: "v1" });
+  vm.runInContext(sliceBetween("function bozoCanonical(", "function bozoCorrectionGate(") + sliceBetween("async function bozoGuardedPatch(", "/* =============================== /bozo/pick"), context);
   context.ledgerBackfill = async () => 0;
   context.ledgerGradeUpdate = () => ({});
   context.settingsOf = league => league.settings || {};
@@ -226,11 +227,16 @@ test('/bozo/grade phase one writes nothing and phase two does not re-fetch score
   assert.equal(writes.length, 0);
   assert.equal(scheduleReads, 1);
 
+  const originalLabel = state.picks.Kap.label;
+  state.picks.Kap.label = 'Corrected after preview';
+  const stale = await api.bozoGrade(new Request('https://example.test/bozo/grade', {method:'POST',body:JSON.stringify({confirm:proposal.confirm_code})}),env,{});
+  assert.equal(stale.status,409);assert.equal(writes.length,0);
+  if(originalLabel === undefined) delete state.picks.Kap.label; else state.picks.Kap.label=originalLabel;
   const phaseTwo = await api.bozoGrade(new Request('https://example.test/bozo/grade', { method: 'POST',
     body: JSON.stringify({ confirm: proposal.confirm_code }) }), env, {});
   assert.equal(phaseTwo.status, 200);
   assert.equal(scheduleReads, 1);
-  assert.equal(writes.some(write => write.path === '/bozo/leagues/main/results'), true);
+  assert.equal(writes.some(write => write.path === '/bozo/leagues/main' && write.value.results && write.etag === 'v1'), true);
   assert.equal(writes.some(write => write.path === '/bozo/leagues/main/status' && write.value === 'graded'), true);
 });
 
