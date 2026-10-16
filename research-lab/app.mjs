@@ -4,7 +4,7 @@ let state,tracking,index=0,playing=false,timer,returnFocus,audioContext;
 const notice=(message,error=false)=>{$('#notice').textContent=message;$('#notice').classList.toggle('error',error);};
 async function api(url,body) {const r=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:undefined);const data=await r.json();if(!r.ok)throw new Error(data.error);return data;}
 const command=(type,payload)=>api('/api/command',{type,payload,key:crypto.randomUUID()});
-const action=(label,fn)=>{const b=el('button',label);b.onclick=async()=>{b.disabled=true;try{await fn();}catch(e){notice(e.message,true);}finally{b.disabled=false;}};return b;};
+const action=(label,fn)=>{const b=el('button',label);b.onclick=async()=>{try{const pending=fn();if(pending&&typeof pending.then==='function'){b.disabled=true;await pending;}}catch(e){notice(e.message,true);}finally{b.disabled=false;}};return b;};
 function drawer(title,build) {stop();const wasOpen=$('#drawer').open;if(!wasOpen)returnFocus=document.activeElement;const content=$('#drawer-content');content.replaceChildren(el('h2',title));build(content);if(!wasOpen)$('#drawer').showModal();else $('#drawer').querySelector('button,input,textarea')?.focus();}
 $('#drawer').addEventListener('close',()=>returnFocus?.focus());
 function form(container,fields,submitLabel,submit) {
