@@ -8,9 +8,10 @@ result. Scheduling stays off: every step below is run by a person, once, on purp
 | Item | State |
 |---|---|
 | Local archive | On the owner's machine. Verified earlier: 512,718,566 bytes, nine CSVs, SHA-256 `27d52f59…8d0ced`. **Keep it.** It is the source of truth until the hosted copy is verified and durable. |
-| Uploaded copy | R2 `datadawgs-research-private`, key `quarantine/<owner uid>/<upload id>.zip`, metadata at `/researchUploads/v1/<owner uid>`. Keyed by owner uid, not by the `jason-bdb` tenant. Existence and size not yet confirmed (no session or Cloudflare access from the agent). |
-| Expiry | The bucket rule expires `quarantine/` objects **30 days after upload** (PRIVATE-ACTIVATION.md). The upload date is not yet known, so neither is the expiry. |
-| Studies | Five ideas loaded into `jason-bdb` as `exploratory` through the connector on 2026-10-16 (keys `idea-2026-10-16-<family>`). None is registered; none has data behind it yet. |
+| Uploaded copy | **Confirmed present 2026-10-16** via `dd_owner_bdb_read` (Worker `34f07d51`): `nfl-big-data-bowl-2027.zip`, **512,718,566 bytes**, which equals the verified local size. 62 parts of 8 MiB; part-hash digest `ac5de66b997c9bc08889cef9c8633fb5d80c2c8477d44a4cee23ddff557b0e04`. R2 `datadawgs-research-private`, key `quarantine/<owner uid>/<upload id>.zip`. Uploaded 2026-10-16 11:04 UTC. |
+| Expiry | The quarantine copy expires **2026-11-15 11:04 UTC** (30-day bucket rule, kept as is). Promotion (Step 2) makes a durable copy before then. |
+| Checksum vs local | **Not yet confirmed.** Size matches; byte identity needs `archive.py verify` on the owner's machine (Step 1). |
+| Studies | Five ideas loaded into `jason-bdb` as `exploratory` on 2026-10-16 (keys `idea-2026-10-16-<family>`). B1's design recorded as hypothesis `f77ab518…` before any data is read. None is registered; none has data behind it yet. |
 
 ## Step 1: verify the uploaded copy matches the local archive
 
@@ -22,7 +23,19 @@ py research-lab\data\archive.py verify <path to archive.zip> --connector-digest 
 
 The command exits 0 only when all three hold: the size matches 512,718,566, the SHA-256 matches `27d52f59…`, and the 8 MiB part-hash digest equals the uploaded copy's. The uploader hashed every part in the browser and the Worker re-verified each one on receipt, so equal digests mean the stored object is these bytes.
 
-## Step 2: durable private storage (plan; nothing changed yet)
+## Step 2: durable private storage (Option B, chosen 2026-10-16)
+
+**Built:** `POST /research-upload/v1/promote` (signed owner session only), plus a "Make durable copy" button on the Uploads page.
+- Copies `quarantine/<uid>/<id>.zip` to `datasets/<uid>/<sha256>.zip` in the same private bucket.
+- R2 refuses the write unless the bytes hash to the supplied SHA-256. The record is marked durable only after a re-read of the destination's size and stored checksum.
+- The quarantine original is never modified or deleted; the 30-day rule still cleans it up.
+- Retries are safe: the destination is content-addressed, an existing verified copy is reused, and an unexpected object at that key is refused, never overwritten.
+- While a durable copy exists, deleting the archive is refused, and downloads read the durable copy.
+- The connector reports `dataset.durable`.
+
+**To run it:** after Step 1 passes, open Uploads, confirm the SHA-256 field shows the value `archive.py` printed (pre-filled with the verified `27d52f59…`), and press the button once. The connector cannot trigger promotion; that would widen its access and needs a separate approval.
+
+Original plan, for the record:
 
 The archive must not depend on a 30-day quarantine rule.
 
@@ -72,7 +85,7 @@ Both receipts carry the SHA-256 of the code that produced them and of their own 
 | Missing | Athletes without an outcome are counted and excluded, never imputed. That count is the missingness anchor the T1 studies need. |
 | Holdout | `baseline.py --open-holdout` opens it **once**. It refuses if a holdout receipt already exists. |
 
-Commands on the owner's machine, after Step 3:
+Commands on the owner's machine, after Step 3. A develop run never reads a 2025 athlete's card or outcome, and its receipt records `holdout_read: false`:
 
 ```
 py research-lab\data\baseline.py <archive.zip> --outcome <TABLE.csv>:<COLUMN> --out <folder>
