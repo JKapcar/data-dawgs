@@ -6,6 +6,12 @@ import {syntheticTracking} from './tracking.mjs';
 import * as portable from './worker-core.mjs';
 import {createClient} from './client.mjs';
 import {fixture} from './gateway-fixture.mjs';
+test('durable owner grant accepts signed Authorization session, never grants durable agent access',async()=>{
+ const f=await fixture();f.env.RESEARCH_OWNER_UID='u_owner';const e=f.rows.get('/researchLab/v1/tenants/demo');e.access.users.u_owner.owner=true;delete e.access.users.u_owner.expiresAt;f.put('/researchLab/v1/tenants/demo',e);
+ const r=await f.request('state',null,'Bearer '+f.session);assert.equal(r.status,200);
+ f.env.RESEARCH_OWNER_UID='u_other';assert.equal((await f.request('state',null,'Bearer '+f.session)).status,403);
+ e.access.agents.u_agent.owner=true;delete e.access.agents.u_agent.expiresAt;f.put('/researchLab/v1/tenants/demo',e);f.env.RESEARCH_OWNER_UID='u_agent';assert.equal((await f.request('state',null,'agent')).status,403);
+});
 test('closed by default; actual session signature/password revocation and MCP token checked',async()=>{
  const f=await fixture();f.env.RESEARCH_LAB_ENABLED='false';assert.equal((await f.request()).status,503);f.env.RESEARCH_LAB_ENABLED='true';assert.equal((await f.request()).status,200);
  assert.equal((await f.request('state',null,'user','demo',{'X-Dawg-Session':f.session+'x'})).status,401);

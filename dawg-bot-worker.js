@@ -2696,7 +2696,12 @@ async function runBackup(env, nowMs) {
   const taken = new Date(nowMs).toISOString();
   // Copy only the root: never mutate the active database object or its records.
   const general = data && typeof data === "object" ? { ...data } : data;
-  if (general) delete general.privatePounds;
+  if (general) {
+    delete general.privatePounds;
+    // Private research metadata and exact payloads never enter the permanent copy.
+    delete general.researchLab;
+    delete general.researchUploads;
+  }
   const body = JSON.stringify({ taken, db: general });
   await kv.put("backup:" + taken.slice(0, 10), body, { expirationTtl: 15552000 });
   await kv.put("backup:latest", body);
@@ -2715,6 +2720,19 @@ async function runBackup(env, nowMs) {
         // Provider errors must not leak a private key or payload into cron logs.
         throw new Error("Private workspace backup write failed");
       }
+    }
+  }
+  // Same existing daily job; no new schedule. Archive bytes live only in private
+  // object storage and are NOT copied to KV. Each private metadata copy expires.
+  for (const [kind, records] of [['tenant', data?.researchLab?.v1?.tenants], ['upload', data?.researchUploads?.v1]]) {
+    if (records == null) continue;
+    if (typeof records !== 'object' || Array.isArray(records)) throw new Error('Private research backup shape invalid');
+    for (const [id, record] of Object.entries(records)) {
+      if (!/^[A-Za-z0-9_-]{1,100}$/.test(id) || !record || typeof record.payload !== 'string' || (kind === 'upload' && record.owner_uid !== id))
+        throw new Error('Private research backup record invalid');
+      try {
+        await kv.put('research-backup:v1:' + kind + ':' + id + ':' + taken.slice(0, 10), JSON.stringify({version:1,taken,kind,id,record}), {expirationTtl:2592000});
+      } catch { throw new Error('Private research backup write failed'); }
     }
   }
   return { day: taken.slice(0, 10), bytes: body.length };
