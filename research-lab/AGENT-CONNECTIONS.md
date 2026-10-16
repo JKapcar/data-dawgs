@@ -24,7 +24,47 @@ prevents stale writes. In-flight reads may complete from the pre-revocation snap
 Disabling `DELEGATED_AGENTS_ENABLED` stops all delegated entry points. To revoke one
 agent across both workspaces, disable its grant in **both** records; this is not a
 cross-database atomic operation. Rotation changes the hash in each approved record.
-There is deliberately no public administration or credential issuance endpoint.
+There is no anonymous or agent-authorized administration endpoint. A separately
+disabled owner setup pilot is described below.
+
+## Owner-operated setup pilot (not activated)
+
+`/research-lab/agent-setup.html` calls `/agent-setup/v1`. The server requires
+`AGENT_SETUP_ENABLED=true` plus the existing signed site session for the exact
+configured research owner. This flag is absent from the release configuration.
+The independent `DELEGATED_AGENTS_ENABLED` switch still controls agent use.
+No OAuth flow or provider account sign-in is implemented.
+
+After separate approval and activation of setup, the owner loads existing resources,
+selects the Claude roster, one assigned task/thread and one context version, checks
+the consent box, and issues a Pound credential. A separate BDB credential grants
+only the four research scopes. Expiry is fixed to seven days; callers cannot submit
+custom scopes, target owners, expiry or arbitrary storage paths. One active Claude
+pilot per audience is permitted, with at most sixteen retained grant records.
+The page never creates workspace content. Create missing resources in Pound first.
+
+Each secret is generated with 32 random bytes and displayed only in the successful
+issuance response; storage retains its SHA-256 hash. Grant updates, bounded setup
+audit metadata and existing data share one conditional write. The page uses no
+analytics, external scripts, secret browser storage or automatic provider connection.
+It clears the secret on hide/navigation/session change. User-operated clipboard copy
+is optional; clipboard contents must be cleared by the user after pasting.
+
+The owner pastes the connector URL and the Authorization header directly into
+Claude's custom connector Request headers fields. Never use a credential URL.
+Current Claude documentation explicitly describes this consumer-app option; its
+availability in this user's account and actual end-to-end connector negotiation
+have NOT been verified. The supported browser runtime currently fails before opening
+an app (Windows HRESULT 0x80070003). If Request headers is unavailable, stop instead
+of weakening authentication or placing a credential in a URL.
+
+Issuance is never automatically retried. If a response is lost, load the grant list,
+revoke the uncertain grant, and issue a replacement. Existing secrets cannot be read
+back. Revocation is per audience; revoke both records for complete withdrawal.
+The UI labels grants as issued, not connected, and preserves the separate disabled
+execution switch. Expired/revoked owner research access cannot mint new research grants.
+Signed-in live owner issuance and actual Claude use require explicit approval and
+are not part of synthetic tests or preview screenshots.
 
 ### Pound
 
