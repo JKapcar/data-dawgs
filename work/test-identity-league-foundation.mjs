@@ -176,6 +176,51 @@ const mcp = await call("/auth/mcp-token", { body: { action: "mint" }, session: l
 equal(mcp.response.status, 200, "verified UID mints MCP token");
 check(db.users[first.json.uid].mcpToken && db.users[first.json.uid].mcpToken !== mcp.json.token, "only MCP hash stored");
 
+// Per-AI keys: adding one never touches the primary key or another label's key.
+const mcpCall = async (headers, path = "/mcp/core") => {
+  const r = await worker.fetch(new Request("https://toto.example" + path, { method: "POST",
+    headers: { "Content-Type": "application/json", ...headers },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "dd_whoami", arguments: {} } }) }), ENV);
+  const j = await r.json();
+  return { status: r.status, who: j.result ? JSON.parse(j.result.content[0].text) : null };
+};
+const sess = login.json.session;
+const muse = await call("/auth/mcp-token", { body: { action: "add", label: "Muse" }, session: sess });
+equal(muse.response.status, 200, "per-AI key minted");
+check(/^u_/.test(muse.json.token) && muse.json.endpoint.endsWith("/mcp/core") && muse.json.header === "Authorization: Bearer " + muse.json.token, "key, endpoint and header returned once");
+equal(db.users[first.json.uid].mcpTokens.Muse.hash.length > 20 && db.users[first.json.uid].mcpTokens.Muse.hash !== muse.json.token, true, "only the per-AI key hash is stored");
+const grok = await call("/auth/mcp-token", { body: { action: "add", label: "Grok" }, session: sess });
+for (const [label, token] of [["primary", mcp.json.token], ["Muse", muse.json.token], ["Grok", grok.json.token]]) {
+  const viaUrl = await mcpCall({}, "/mcp/full/" + token);
+  equal(viaUrl.status, 200, label + " key works in the URL");
+  equal(viaUrl.who.credential_label, label, label + " key reports its label");
+}
+for (const headers of [{ Authorization: "Bearer " + muse.json.token }, { Authorization: "bearer " + muse.json.token }, { "X-Api-Key": muse.json.token },
+                       { "X-Dawg-Pass": muse.json.token }, { Authorization: muse.json.token }]) {
+  const r = await mcpCall(headers);
+  equal(r.status, 200, "header form accepted: " + Object.keys(headers)[0] + " " + String(Object.values(headers)[0]).slice(0, 7));
+  equal(r.who.credential_transport, "header", "transport reported as header");
+}
+equal((await mcpCall({ Authorization: "Basic " + muse.json.token })).status, 403, "Basic scheme is not a credential");
+const listed = await call("/auth/mcp-token", { body: { action: "list" }, session: sess });
+check(listed.json.primary === true && listed.json.keys.map(k => k.label).sort().join() === "Grok,Muse" && !JSON.stringify(listed.json).includes(muse.json.token)
+  && !JSON.stringify(listed.json).includes(db.users[first.json.uid].mcpTokens.Muse.hash), "list shows labels, never tokens or hashes");
+const museAgain = await call("/auth/mcp-token", { body: { action: "add", label: "Muse" }, session: sess });
+equal((await mcpCall({ Authorization: "Bearer " + muse.json.token })).status, 403, "re-adding a label replaces only that label's key");
+equal((await mcpCall({ Authorization: "Bearer " + museAgain.json.token })).status, 200, "new Muse key works");
+equal((await mcpCall({}, "/mcp/full/" + grok.json.token)).status, 200, "Grok key unaffected");
+equal((await mcpCall({}, "/mcp/full/" + mcp.json.token)).status, 200, "primary key unaffected");
+equal((await call("/auth/mcp-token", { body: { action: "remove", label: "Grok" }, session: sess })).response.status, 200, "remove one key");
+equal((await mcpCall({}, "/mcp/full/" + grok.json.token)).status, 403, "removed key stops working");
+equal((await mcpCall({ Authorization: "Bearer " + museAgain.json.token })).status, 200, "other keys keep working");
+for (const label of ["", "a b", "x".repeat(25), "../users", "a.b", "a$b"])
+  equal((await call("/auth/mcp-token", { body: { action: "add", label }, session: sess })).response.status, 400, "bad label " + JSON.stringify(label));
+for (let i = 0; i < 7; i++) await call("/auth/mcp-token", { body: { action: "add", label: "k" + i }, session: sess });
+equal((await call("/auth/mcp-token", { body: { action: "add", label: "ninth" }, session: sess })).response.status, 409, "at most 8 per-AI keys");
+equal((await call("/auth/mcp-token", { body: { action: "add", label: "Muse" }, session: sess })).response.status, 200, "an existing label can still be replaced at the cap");
+for (let i = 0; i < 7; i++) await call("/auth/mcp-token", { body: { action: "remove", label: "k" + i }, session: sess });
+equal((await call("/auth/mcp-token", { body: { action: "add", label: "Muse" } })).response.status, 401, "no session, no key");
+
 equal((await call("/league/create", { body: { game: "draft", name: "Rehearsal", gateCode: "short", settings: {} }, session: login.json.session })).response.status,
   400, "short gate rejected");
 const created = await call("/league/create", { body: {

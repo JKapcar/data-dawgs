@@ -6,6 +6,16 @@ Written 2026-10-16 from the server source (`work/mcp-block.js`, `mcpRoute` / `mc
 
 This guide contains no credential. Placeholders look like `<THIS>`.
 
+## Fastest path (2 minutes)
+
+1. On datadawgs216.com, go to **Connect Your Dawg → Keys for your other AIs**, type `Muse`, and press **Create key**. Claude's key is not touched.
+2. In Muse's "Add custom connector":
+   - **Server URL:** `https://toto.jkapcar4.workers.dev/mcp/core`
+   - **API Key:** the key you just copied.
+3. Ask Muse to call `dd_whoami`. It should report `credential_label: "Muse"` and `private_apps.pound: "on"`.
+
+To cut Muse off later, press **Remove** next to Muse on the same page. No other AI is affected.
+
 ## The one rule
 
 Claude's working connection carries the token **inside its URL path**. Muse must not get that
@@ -13,8 +23,7 @@ URL. Give Muse the endpoint below, and enter the token **only** in Muse's secure
 credential/header field. Never paste a token, or a connector URL containing one, into
 Muse's chat, an issue, a PR, a screenshot or a shared doc.
 
-It is the same personal token Claude uses, so no rotation is needed, and none should be done:
-rotating would break Claude's connection. Nothing in this guide changes any permission.
+Use a separate per-AI key for Muse, as in the fastest path above. Then nothing about Claude's connection changes, and nothing in this guide changes any permission.
 
 ## Connection settings
 
@@ -24,7 +33,7 @@ rotating would break Claude's connection. Nothing in this guide changes any perm
 | Endpoint | `https://toto.jkapcar4.workers.dev/mcp/core` |
 | Header name | `Authorization` |
 | Header value | `Bearer <PERSONAL_CONNECTOR_TOKEN>`, where `Bearer` is spelled exactly like that (case-sensitive) with one space |
-| Alternative header | `X-Dawg-Pass: <PERSONAL_CONNECTOR_TOKEN>` (same token, no `Bearer`). Use it only if Muse cannot set `Authorization`. |
+| Also accepted | `X-Api-Key: <KEY>`, `X-Dawg-Pass: <KEY>`, any-case `bearer`, or a bare `Authorization: <KEY>`. A plain "API key" field works whichever of these Muse sends. |
 | OAuth | None. The server has no OAuth endpoints. |
 | Protocol versions | `2025-03-26`, `2025-06-18`, `2026-07-28`; anything else falls back to `2025-06-18`. |
 
