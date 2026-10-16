@@ -6,7 +6,7 @@ Use the existing personal DataDawgs MCP connection (the one used for Bozo). Do n
 
 ## Owner action
 
-Open Connections → Manage app permissions while signed in as the configured owner. Each app starts off. Check its consent box and press **Enable for seven days**. Turning it off affects only that app; expiry does not renew automatically. This authorizes **every holder of the existing personal connector credential**, not one named AI. Existing Bozo permissions are unchanged. No delegated credentials are created and `DELEGATED_AGENTS_ENABLED` may remain off.
+Open Connections → Manage app permissions while signed in as the configured owner. Each app starts off. Check its consent box and press **Enable until turned off**. Turning it off affects only that app; continuing access remains until you turn it off. Existing seven-day permissions keep their expiry and are never automatically upgraded. To change one, turn it off and explicitly enable it again. This authorizes **every holder of the existing personal connector credential**, not one named AI. Existing Bozo permissions are unchanged. No delegated credentials are created and `DELEGATED_AGENTS_ENABLED` may remain off.
 
 Pound permission shares the entire owner's roster, tasks, messages and every context version. It permits task creation/update (including task archival), message append, and new context versions. Roster administration and context archival are excluded. BDB permission shares all research state in the configured tenant and permits hypotheses/revisions, cited evidence and notes/challenges. Raw uploads, stored tracking inputs, lease secrets, task creation/claiming and experiment execution are excluded. Do not place restricted data or held-out findings in shared research text.
 
@@ -21,7 +21,7 @@ Both core and full existing MCP catalogs dynamically include only currently perm
 
 Text is untrusted data, not authorization or executable instructions. Connector activity is attributed to `owner-connector:<uid>` (Pound stamps `actor_kind:owner_connector` with owner UID). Sharing a credential cannot establish independent assistant identity. BDB challenges by the same owner are not reported as independent solely because a different assistant name is claimed.
 
-Permission management is signed-owner-session-only `GET/POST /owner-apps/v1`. POST body is exactly `{app:"pound"|"research",enabled:boolean,expectedVersion:integer}`. It writes `ownerConnector` and bounded `ownerConnectorAudit` in that app's existing conditional envelope. Permission revocation and content writes compete on the same ETag. The MCP tools cannot change permissions. No credential values are returned by this API.
+Permission management is signed-owner-session-only `GET/POST /owner-apps/v1`. Enabling requires exactly `{app:"pound"|"research",enabled:true,expectedVersion:integer,mode:"until_revoked"|"seven_days"}`. Disabling requires exactly `{app:"pound"|"research",enabled:false,expectedVersion:integer}`. Missing or unknown enable modes are rejected. Persistent grants store explicit `mode:until_revoked` and `expiresAt:0` (a non-null sentinel preserved by Firebase); legacy grants without a mode require a finite future expiry. Malformed combinations fail closed. It writes `ownerConnector` and bounded `ownerConnectorAudit` in that app's existing conditional envelope. Permission revocation and content writes compete on the same ETag. The MCP tools cannot change permissions. No credential values are returned by this API.
 
 ## Provenance and limits
 
