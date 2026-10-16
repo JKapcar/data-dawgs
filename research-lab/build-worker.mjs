@@ -20,7 +20,7 @@ export function buildWorker(destination=path.join(root,'../work/artifacts/resear
   copyFileSync(path.join(root,'../bozo-team-registry.mjs'),path.join(destination,'bozo-team-registry.mjs'));
   writeFileSync(path.join(destination,'build-manifest.json'),JSON.stringify({codeHash,sources:manifest,enabled:false},null,2));
   const ui=path.join(destination,'dashboard');mkdirSync(ui,{recursive:true});
-  for(const f of ['index.html','private.html','app.mjs','client.mjs','client-config.mjs','browser-runner.mjs','browser-engine.mjs','worker-core.mjs','machine-core.mjs','style.css','instrument.css','tracking.mjs','CONTRACT.md','upload.html','upload.mjs','upload.css','agent-setup.html','agent-setup-ui.mjs','agent-setup.css'])copyFileSync(path.join(root,f),path.join(ui,f));
+  for(const f of ['index.html','private.html','app.mjs','client.mjs','client-config.mjs','browser-runner.mjs','browser-engine.mjs','worker-core.mjs','machine-core.mjs','style.css','instrument.css','tracking.mjs','CONTRACT.md','upload.html','upload.mjs','upload.css','agent-setup.html','agent-setup-ui.mjs','agent-setup.css','navigation.css','navigation.js'])copyFileSync(path.join(root,f),path.join(ui,f));
   // Relative asset works at the root or a separately approved /research-lab/ path.
   writeFileSync(path.join(ui,'index.html'),readFileSync(path.join(ui,'index.html'),'utf8').replace('src="../assets/data-dawgs-site-logo-560.png"','src="brand.png"'));
   copyFileSync(path.join(root,'../assets/data-dawgs-site-logo-560.png'),path.join(ui,'brand.png'));

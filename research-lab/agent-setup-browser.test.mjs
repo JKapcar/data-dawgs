@@ -7,7 +7,7 @@ try{
  const state={delegatedEnabled:false,scopes:{pound:['pound:task:read','pound:message:append'],research:['research:read']},grants:[],resources:{roster:[{id:'roster',name:'Claude synthetic'}],tasks:[{id:'task',title:'Synthetic pilot',agent_id:'roster'}],contexts:[{id:'context',title:'Synthetic approved brief',versions:[1]}]}};
  await page.route('**/*',async route=>{
   const req=route.request(),url=new URL(req.url());
-  if(url.hostname==='datadawgs216.com'){const name=url.pathname.split('/').at(-1);assert(['agent-setup.html','agent-setup.css','agent-setup-ui.mjs'].includes(name));return route.fulfill({contentType:name.endsWith('.mjs')?'text/javascript':name.endsWith('.css')?'text/css':'text/html',body:readFileSync(new URL(name,import.meta.url))});}
+  if(url.hostname==='datadawgs216.com'){const name=url.pathname.split('/').at(-1);assert(['agent-setup.html','agent-setup.css','agent-setup-ui.mjs','navigation.css','navigation.js'].includes(name));return route.fulfill({contentType:/\.(mjs|js)$/.test(name)?'text/javascript':name.endsWith('.css')?'text/css':'text/html',body:readFileSync(new URL(name,import.meta.url))});}
   assert.equal(url.hostname,'toto.jkapcar4.workers.dev');assert.equal(url.pathname,'/agent-setup/v1');assert.equal(url.search,'');
   const headers={'Access-Control-Allow-Origin':'https://datadawgs216.com','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Allow-Methods':'GET,POST,OPTIONS'};
   if(req.method()==='OPTIONS')return route.fulfill({status:204,headers});
