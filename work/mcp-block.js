@@ -2113,7 +2113,7 @@ async function handleMcp(request, url, env) {
 
   const replies = [];
   for (const m of msgs) {
-    const r = await mcpDispatch(m, env, caller, catalog);
+    const r = await mcpDispatch(m, env, caller, catalog, () => mcpAuth(request, url, {...env, BOZO_TOKENS:undefined}));
     if (r !== undefined) replies.push(r);        // notifications contribute nothing
   }
   if (!replies.length) return new Response(null, { status: 202, headers: MCP_CORS });
@@ -2125,7 +2125,7 @@ async function handleMcp(request, url, env) {
 // step around by remembering a name it saw in another conversation.
 const mcpCatalogTools = catalog => catalog === "full" ? MCP_TOOLS : MCP_TOOLS.filter(t => t.catalog === catalog);
 
-async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
+async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG, reauth) {
   if (!m || typeof m !== "object" || m.jsonrpc !== "2.0" || typeof m.method !== "string")
     return rpcErr(m && m.id, -32600, "Invalid Request");
   const id = m.id;
@@ -2178,9 +2178,14 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG) {
           // caller's existing leg, so destructive is the honest value.
           ...(t.readOnlyHint === true ? {} : { destructiveHint: t.destructiveHint === true }),
         },
-      })) });
+      })).concat(typeof ddOwnerApps === "undefined" ? [] : await ddOwnerApps.list(env, caller)) });
     case "tools/call": {
       const name = m.params && m.params.name;
+      if (typeof name === 'string' && name.startsWith('dd_owner_')) {
+        if (typeof ddOwnerApps === 'undefined') return rpcOk(id, toolErr('Owner app connector unavailable'));
+        try { return rpcOk(id, toolText(await ddOwnerApps.run(name, m.params.arguments, env, caller, reauth))); }
+        catch (e) { return rpcOk(id, toolErr(e.status || e.poundStatus ? e.message : 'Owner app operation unavailable')); }
+      }
       const tool = mcpCatalogTools(catalog).find(t => t.name === name);
       if (!tool)
         return rpcErr(id, -32602, MCP_TOOLS.some(t => t.name === name)
