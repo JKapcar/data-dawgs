@@ -27,12 +27,14 @@ try{
   for(const width of [1440,768,390,320]){
    await page.setViewportSize({width,height:1000});
    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${label} overflow ${width}`);
-   const summary=page.locator('.dd-global summary').filter({hasText:'Dawgs'});
-   await summary.focus();await page.keyboard.press('Enter');await page.locator('.dd-global details[open]').waitFor();
-   const menu=await page.locator('.dd-global details[open] .dd-menu').boundingBox();assert(menu.x>=0&&menu.x+menu.width<=width+1,`${label} dropdown ${width}`);
-   await page.keyboard.press('Escape');assert.equal(await page.locator('.dd-global details[open]').count(),0);assert(await summary.evaluate(n=>n===document.activeElement));
+   const summary=page.locator('.dd-apps > summary');
+   await summary.focus();await page.keyboard.press('Enter');await page.locator('.dd-apps[open]').waitFor();
+   const menu=await page.locator('.dd-app-menu').boundingBox();assert(menu.x>=0&&menu.x+menu.width<=width+1,`${label} dropdown ${width}`);
+   await page.keyboard.press('Escape');assert.equal(await page.locator('.dd-apps[open]').count(),0);assert(await summary.evaluate(n=>n===document.activeElement));
+   assert((await page.locator('.dd-shell').boundingBox()).height<=140,`${label} compact header ${width}`);
    await page.screenshot({path:path.join(output,`${label.replaceAll(' ','-')}-${width}.png`),fullPage:true});
   }
+  if(label==='Lab'||label==='My Lab'){await page.locator('.dd-apps > summary').click();await page.locator('#methods').click();await page.locator('#drawer[open]').waitFor();await page.locator('#drawer .close').click();await page.waitForFunction(()=>document.activeElement===document.querySelector('.dd-apps > summary'));}
   await page.locator('.dd-skip').focus();await page.keyboard.press('Enter');assert.equal(await page.evaluate(()=>document.activeElement.id),'main-content');
   assert.deepEqual(failed,[]);assert.deepEqual(errors,[]);await page.close();
  }

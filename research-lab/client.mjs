@@ -1,7 +1,7 @@
 import {syntheticTracking} from './tracking.mjs';
 const SITE_ORIGINS=['https://datadawgs216.com','https://www.datadawgs216.com'];
 const WORKER_ORIGIN='https://toto.jkapcar4.workers.dev';
-export function createClient(config,{fetcher=fetch,origin=location.origin,token=()=>globalThis.DDAuth?.token?.()||localStorage.getItem('dd-bozo-sess')||'',onInvalidated=()=>{}}={}) {
+export function createClient(config,{fetcher=fetch,origin=location.origin,token=()=>{try{return localStorage.getItem('dd-bozo-sess')||'';}catch{return '';}},onInvalidated=()=>{},onVerified=()=>{},onRejected=()=>{}}={}) {
   const hosted=config.mode==='hosted';
   if(hosted&&(!SITE_ORIGINS.includes(origin)||config.workerOrigin!==WORKER_ORIGIN||!/^[A-Za-z0-9_-]{1,100}$/.test(config.tenant)))throw new Error('Hosted research configuration denied');
   if(config.mode==='local'&&!/^http:\/\/127\.0\.0\.1:\d+$/.test(origin))throw new Error('Local runner requires loopback');
@@ -25,7 +25,8 @@ export function createClient(config,{fetcher=fetch,origin=location.origin,token=
     ensureIdentity();
     const data=await r.json();
     ensureIdentity();
-    if(!r.ok){if(r.status===401||r.status===403)invalidate();throw new Error(data.error||'Research request failed');}
+    if(!r.ok){if(r.status===401||r.status===403)invalidate();if(hosted)onRejected(r.status);const error=new Error(data.error||'Research request failed');error.status=r.status;throw error;}
+    if(hosted)onVerified(credential);
     return data;
   }
   return {mode:config.mode,invalidate,state:()=>request('state'),tracking:()=>request('tracking'),command:(type,payload,key=crypto.randomUUID())=>request('command',{type,payload,key})};
