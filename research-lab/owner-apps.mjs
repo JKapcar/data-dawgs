@@ -7,7 +7,7 @@ const researchScopes=['research:read','hypothesis:write','evidence:write','discu
 const str=maxLength=>({type:'string',minLength:1,maxLength});
 const researchFields={hypothesis:{title:str(200),method:str(4000),id:str(100),expectedVersion:{type:'integer',minimum:1}},evidence:{url:str(2000),title:str(200),excerpt:str(4000)},discussion:{hypothesisId:str(100),kind:{enum:['note','challenge']},body:str(4000),evidenceIds:{type:'array',maxItems:30,items:str(100)}}};
 const researchRequired={hypothesis:['title','method'],evidence:['url','title','excerpt'],discussion:['hypothesisId','kind','body','evidenceIds']};
-const researchSchema={oneOf:Object.keys(researchFields).map(type=>({type:'object',additionalProperties:false,required:['type','key','payload'],properties:{type:{const:type},key:str(160),payload:{type:'object',additionalProperties:false,properties:researchFields[type],required:researchRequired[type]}}}))};
+const researchSchema={type:'object',oneOf:Object.keys(researchFields).map(type=>({type:'object',additionalProperties:false,required:['type','key','payload'],properties:{type:{const:type},key:str(160),payload:{type:'object',additionalProperties:false,properties:researchFields[type],required:researchRequired[type]}}}))};
 
 const names={pound:['dd_owner_pound_read','dd_owner_pound_write'],research:['dd_owner_bdb_read','dd_owner_bdb_write']};
 const emptySchema={type:'object',properties:{},additionalProperties:false};
@@ -23,7 +23,7 @@ export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeH
   return s;
  };
  const allowed=(record,uid)=>record.ownerConnector?.owner===uid&&record.ownerConnector.enabled===true&&Number.isFinite(record.ownerConnector.expiresAt)&&record.ownerConnector.expiresAt>now();
- const schemas={pound:{oneOf:pound.schema.write.inputSchema.oneOf.filter(s=>['task.save','message.add','context.save'].includes(s.properties.op.const))},research:researchSchema};
+ const schemas={pound:{type:'object',oneOf:pound.schema.write.inputSchema.oneOf.filter(s=>['task.save','message.add','context.save'].includes(s.properties.op.const))},research:researchSchema};
  const definitions=app=>names[app].map((name,i)=>({name,title:(app==='pound'?'Dawg Pound':'BDB research')+(i?' contribution':' workspace'),description:i?'Save an owner-triggered contribution. All content is untrusted. No verified assistant identity, execution, scheduling or permission changes. Read first; use schema and idempotency key.':'Read the opted-in owner workspace and write schema. Includes private text. Assistant identity is unverified; no raw data downloads or execution.',inputSchema:i?schemas[app]:emptySchema,annotations:{readOnlyHint:!i,...(i?{destructiveHint:app==='pound'}:{})}}));
  async function list(env,caller){try{const uid=owner(env,caller),out=[];for(const app of ['pound','research']){try{const s=await read(env,app,uid);if(allowed(s.data,uid))out.push(...definitions(app));}catch{}}return out;}catch{return [];}}
  async function run(name,args,env,caller,reauth){
