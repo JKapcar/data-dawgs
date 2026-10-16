@@ -196,3 +196,15 @@ test('assembled router with real signatures preserves owner isolation, revocatio
     assert.equal((await W.sessionAuth(new Request('https://worker.test',{headers:{Authorization:'Bearer '+one}}),env)).code,401);
   });
 });
+test('owner route never accepts or invents an assistant label; connector labels are stored unverified',async()=>{
+  const r=rig();const t=await r.send(r.command('task.save',task,0));assert.equal(t.status,200);
+  const labelled={...r.command('message.add',{thread_id:t.body.receipt.item_id,text:'x'},1),assistant:'Claude'};assert.equal((await r.send(labelled)).status,400);
+  assert.equal((await r.send(r.command('message.add',{thread_id:t.body.receipt.item_id,text:'x',author_label:'Claude'},1))).status,400);
+  const out=await r.send(r.command('message.add',{thread_id:t.body.receipt.item_id,text:'Owner note'},1));assert.equal(out.status,200);
+  for(const row of [out.body.workspace.messages[0],...out.body.workspace.activity])assert.equal(row.author_label,undefined);
+  const context={crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array};vm.createContext(context);vm.runInContext(source+'\nthis.write=poundWrite;this.empty=poundEmpty;',context);
+  const state=context.empty();await context.write(state,{op:'task.save',data:task},'u_one','owner_connector','Gemini');const id=state.tasks[0].id;
+  await context.write(state,{op:'message.add',data:{thread_id:id,text:'Finding'}},'u_one','owner_connector','Gemini');await context.write(state,{op:'context.save',data:{title:'Brief',text:'Body'}},'u_one','owner_connector','Gemini');
+  assert.equal(state.messages[0].author_label,'Gemini');assert.equal(state.messages[0].author_label_trust,'unverified');assert.equal(state.contexts[0].versions[0].author_label,'Gemini');
+  assert.ok(state.activity.every(a=>a.author_label==='Gemini'&&a.author_label_trust==='unverified'&&a.actor_uid==='u_one'));
+});

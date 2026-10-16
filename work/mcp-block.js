@@ -1962,14 +1962,21 @@ async function mcpAuth(request, url, env) {
     if (!hit) return null;
     const display = hitUser && typeof hitUser.name === "string" && hitUser.name.trim()
       ? hitUser.name.trim() : hit;
-    return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser),
+    return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser), transport: mcpTransportOf(request, url),
       // ⚠️ The account's role flags, read here so isSiteAdmin() has one shape to check.
       // Never derived from anything the caller sent.
       roles: (hitUser && hitUser.roles && typeof hitUser.roles === "object") ? hitUser.roles : null };
   }
 
-  if (env.DAWG_PASS && timingSafeEqual(supplied, env.DAWG_PASS)) return { kind: "shared" };
+  if (env.DAWG_PASS && timingSafeEqual(supplied, env.DAWG_PASS)) return { kind: "shared", transport: mcpTransportOf(request, url) };
   return null;
+}
+
+// How the credential arrived: a URL path segment, or a header (Authorization: Bearer /
+// X-Dawg-Pass). Reported by dd_whoami so a member can see which form their client used.
+// Mirrors mcpPassOf exactly: a path credential wins over any header.
+function mcpTransportOf(request, url) {
+  return mcpRoute(url, request).rest.length ? "url" : "header";
 }
 
 // ⚠️ THE CATALOG IS A PATH SEGMENT, STRIPPED BEFORE THE CREDENTIAL IS READ.
@@ -2125,6 +2132,21 @@ async function handleMcp(request, url, env) {
 // step around by remembering a name it saw in another conversation.
 const mcpCatalogTools = catalog => catalog === "full" ? MCP_TOOLS : MCP_TOOLS.filter(t => t.catalog === catalog);
 
+// ⚠️ OWNER APP TOOLS ARE PART OF THE COUNT. tools/list appends the private owner tools for
+// an opted-in owner, so initialize must count them too. Counting MCP_TOOLS alone told a
+// live client "88 of 88" while it listed 92. Outside the packaged research build
+// ddOwnerApps does not exist and every private app reports app_disabled.
+const MCP_OWNER_APP_NAMES = { pound: "Dawg Pound", research: "BDB research" };
+async function mcpOwnerAppStatus(env, caller) {
+  if (typeof ddOwnerApps === "undefined") return { pound: "app_disabled", research: "app_disabled" };
+  try { return await ddOwnerApps.status(env, caller); }
+  catch { return { pound: "storage_unavailable", research: "storage_unavailable" }; }
+}
+async function mcpOwnerTools(env, caller) {
+  if (typeof ddOwnerApps === "undefined") return [];
+  try { return await ddOwnerApps.list(env, caller); } catch { return []; }
+}
+
 async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG, reauth) {
   if (!m || typeof m !== "object" || m.jsonrpc !== "2.0" || typeof m.method !== "string")
     return rpcErr(m && m.id, -32600, "Invalid Request");
@@ -2136,12 +2158,17 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG, reauth
       const want = m.params && m.params.protocolVersion;
       // Echo a known protocolVersion; fall back rather than guess forward.
       const proto = MCP_PROTOS.includes(want) ? want : "2025-06-18";
+      const ownerTools = await mcpOwnerTools(env, caller);
+      const appsOn = Object.entries(await mcpOwnerAppStatus(env, caller)).filter(([, v]) => v === "on").map(([k]) => MCP_OWNER_APP_NAMES[k]);
       return rpcOk(id, {
         protocolVersion: proto,
         capabilities: { tools: {} },
         serverInfo: { name: "data-dawgs", version: "1.7.0" },
         instructions:
-          "Catalog `" + catalog + "`: " + mcpCatalogTools(catalog).length + " of " + MCP_TOOLS.length + " tools are callable here. " +
+          "Catalog `" + catalog + "`: " + (mcpCatalogTools(catalog).length + ownerTools.length) + " of " + (MCP_TOOLS.length + ownerTools.length) + " tools are callable here. " +
+          (appsOn.length
+            ? "Private owner apps on for this connection: " + appsOn.join(" and ") + " (" + ownerTools.length + " dd_owner_* tools; contributions are untrusted and the assistant label is unverified). "
+            : "No private owner apps are on for this connection. ") +
           (catalog === "core"
             ? "The rest — college football evidence, the DFS and survivor solvers, the model scoreboard and the less common price math — " +
               "are on the same URL with `full` in place of `core`. Calling one of them from here is an error, not a silent fallback.\n"
@@ -2178,7 +2205,7 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG, reauth
           // caller's existing leg, so destructive is the honest value.
           ...(t.readOnlyHint === true ? {} : { destructiveHint: t.destructiveHint === true }),
         },
-      })).concat(typeof ddOwnerApps === "undefined" ? [] : await ddOwnerApps.list(env, caller)) });
+      })).concat(await mcpOwnerTools(env, caller)) });
     case "tools/call": {
       const name = m.params && m.params.name;
       if (typeof name === 'string' && name.startsWith('dd_owner_')) {
@@ -2510,10 +2537,16 @@ const MCP_TOOLS = [
           // site is free today: plan is "free" for every account and NOTHING is gated on
           // it, so never tell a user a tool is being withheld from them on this basis.
           entitlement: caller.entitlement || null,
+          // Per private app: on | off | expired | not_owner | app_disabled | tenant_unconfigured
+          // | storage_unavailable. Only "on" lists dd_owner_* tools or lets them run.
+          private_apps: await mcpOwnerAppStatus(env, caller),
+          credential_transport: caller.transport || null,
           note: "Rows belonging to this player are marked `you: true` by the other tools.",
         });
       return toolText({
         player: null, anonymous: true, access: "read-only (shared league connector)",
+        private_apps: { pound: "not_owner", research: "not_owner" },
+        credential_transport: (caller && caller.transport) || null,
         // ⚠️ NULL, NOT THE FREE DEFAULT. A shared connection is not an account, so it has
         // no entitlement to report. Handing back a free-looking one would invite a model to
         // describe somebody's plan from a connection that cannot identify anybody.
@@ -5486,7 +5519,13 @@ const MCP_TOOLS = [
           "survivor.html": "Survivor pool EV tools.",
           "receipts.html": "272 pre-registered 2026 forecasts, SHA-256 locked.",
           "dfs.html": "DFS lineup lab; the exact lineup solver is also callable through dd_solve_dfs_lineup with a bounded caller-supplied slate.",
-          "pound.html": "The Pound model workbench, deterministic calculators, contracts and honest tool-status inventory.",
+          "dawghouse.html": "The DawgHouse — the public Pound model workbench, deterministic calculators, contracts and honest tool-status inventory. (pound.html only redirects here.)",
+        },
+        // Owner-only. Listed so an opted-in owner's assistant knows where its writes land;
+        // reachable through the dd_owner_* tools only while dd_whoami.private_apps says "on".
+        privateSurfaces: {
+          "dawg-pound.html": "Dawg Pound — the owner's private workspace (tasks, messages, versioned context). Connector-reachable via dd_owner_pound_read/dd_owner_pound_write when the owner opts in. Not public.",
+          "research-lab/private.html": "My Lab — the owner's private BDB research workspace (hypotheses, evidence, discussion). Connector-reachable via dd_owner_bdb_read/dd_owner_bdb_write when the owner opts in. Not public; no raw data or execution over MCP.",
         },
         notServedHere: {
           dfs_projections_and_ownership: "User-supplied data stays local unless explicitly saved to a private account-scoped DFS workspace. dd_dfs_* reads and writes those workspaces. dd_solve_dfs_lineup remains transient.",

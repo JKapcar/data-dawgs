@@ -83,7 +83,7 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
   const replay=s.idempotency.find(x=>x.tenant===tenant && x.actor===principal.id && x.key===key);
   if(replay) {requireThat(replay.fingerprint===fingerprint,'Idempotency key conflict');return {state:s,result:structuredClone(replay.result)};}
   const own=(collection,id)=>{const x=s[collection].find(x=>x.tenant===tenant&&x.id===id);requireThat(x,'Resource unavailable');return x;};
-  const stamp={tenant,actor:principal.id,subject:principal.subject||principal.id,at:new Date(now).toISOString()};
+  const stamp={tenant,actor:principal.id,subject:principal.subject||principal.id,at:new Date(now).toISOString(),...(principal.authorLabel?{author_label:principal.authorLabel,author_label_trust:'unverified'}:{})};
   let result;
   if(type==='hypothesis') {
     const previous=p.id?own('hypotheses',p.id):null;
@@ -156,4 +156,4 @@ export async function transition(...args){
   return step.value;
 }
 
-export const codeHash='07f920d8dde74287a1d0609f1a76112ac4134921ad36d9bac40a1c818a732f6d';
+export const codeHash='90dc1e392334b31297083b9bd6061a559da7cc41849d95a5b45be5743c3a30ef';
