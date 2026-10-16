@@ -109,3 +109,7 @@ Real competition access, schema, licensing and study are blocked pending actual 
 The supplied competition URLs are references, not evidence of verified schema:
 https://www.kaggle.com/competitions/nfl-big-data-bowl-2027 and
 https://operations.nfl.com/programs-initiatives/innovation/big-data-bowl .
+
+## Source audit update — 2026-10-16
+
+The authorized data audit verified official Kaggle UI metadata: nine CSVs and a rounded displayed total of 2.31 GB. This verifies the manifest only. Schema remains pending, actual bytes and release hashes unavailable, and measurements unverified. No row counts, units, sampling frequency, key uniqueness or untouched holdout status are asserted. A missing writeup says nothing about rules acceptance. The UI metadata source is https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/data . No competition data is included in this release.

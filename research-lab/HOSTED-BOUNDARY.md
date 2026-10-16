@@ -94,3 +94,7 @@ Record Pages commit and Worker version/hash after promotion. Roll back Worker tr
 to the previously serving version with `wrangler versions deploy OLD_ID@100% --name
 toto`; revert this release through the normal PR path to roll back Pages. No data
 migration is needed while shared access stays disabled. Do not delete unrelated state.
+
+## Source audit update — 2026-10-16
+
+The authorized data audit verified official Kaggle UI metadata: nine CSVs and a rounded displayed total of 2.31 GB. This verifies the manifest only. Schema remains pending, actual bytes and release hashes unavailable, and measurements unverified. No row counts, units, sampling frequency, key uniqueness or untouched holdout status are asserted. A missing writeup says nothing about rules acceptance. The UI metadata source is https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/data . No competition data is included in this release.
