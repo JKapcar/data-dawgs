@@ -92,21 +92,32 @@ jobs:
       - run: node work/test-ops-health.mjs
       - run: node tools/validate-data.js
 
+      # Package the research route around the verified assembled Worker. Shared
+      # access stays disabled unless explicitly configured and granted separately.
+      - run: node --test research-lab/lab.test.mjs research-lab/gateway.test.mjs
+      - run: node research-lab/build-worker.mjs
+
       # Fails closed on a malformed manifest without uploading anything.
       - name: Dry run
-        run: npx wrangler@4 deploy --dry-run --config wrangler.jsonc
+        run: npx wrangler@4 deploy work/artifacts/research-lab/worker.mjs --dry-run --config wrangler.jsonc
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Upload a version — no traffic moves
+      - name: Record current deployment for rollback
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler@4 deployments list --name toto --json > previous-deployments.json
+
+      - name: Upload a version - no traffic moves
         id: upload
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           set -o pipefail
-          npx wrangler@4 versions upload --config wrangler.jsonc \
+          npx wrangler@4 versions upload work/artifacts/research-lab/worker.mjs --config wrangler.jsonc \
             --message "${{ inputs.message }} (${GITHUB_SHA::7})" 2>&1 | tee upload.log
           # The id is what steps 4 and 5 of the runbook take. Parsed rather than retyped —
           # a hand-copied uuid is the step that has gone wrong most often.
@@ -144,3 +155,12 @@ jobs:
         run: |
           echo "Version uploaded but NOT serving. Re-run with promote checked to move traffic." \
             >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: worker-release-evidence
+          path: |
+            previous-deployments.json
+            version.json
+            work/artifacts/research-lab/build-manifest.json

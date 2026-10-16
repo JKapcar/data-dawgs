@@ -7,7 +7,7 @@ The file contains secret **names only**. Secret values stay encrypted in Cloudfl
 
 ## Production invariants
 
-- Worker: `toto`; entry point: `dawg-bot-worker.js`.
+- Worker: `toto`; source entry: `dawg-bot-worker.js`. CI packages it with the disabled research gateway using `node research-lab/build-worker.mjs`; upload entry is `work/artifacts/research-lab/worker.mjs`. The full `wrangler.jsonc` remains authoritative.
 - Compatibility date: `2026-07-31`.
 - Workers.dev and version preview URLs enabled. Delete disposable, non-deployed preview
   versions after verification; never delete a version referenced by a deployment.
@@ -50,7 +50,8 @@ node work/test-identity.mjs
 node work/test-mcp.mjs
 node work/test-swoledawg.mjs
 node tools/validate-data.js
-wrangler deploy --dry-run --config wrangler.jsonc
+node research-lab/build-worker.mjs
+wrangler deploy work/artifacts/research-lab/worker.mjs --dry-run --config wrangler.jsonc
 ```
 
 ## First-time SwoleDawg setup
@@ -111,7 +112,7 @@ authorization.
 2. Run `wrangler secret list --name toto` and compare names with
    `secrets.required`; never request or print values.
 3. Upload a version without moving traffic:
-   `wrangler versions upload --config wrangler.jsonc --message "<commit and purpose>"`.
+   `wrangler versions upload work/artifacts/research-lab/worker.mjs --config wrangler.jsonc --message "<commit and purpose>"`.
    The command prints a **version id**; steps 4 and 5 take that literal id. `<version-id>`
    in this runbook is a placeholder, and PowerShell rejects `<` outright rather than
    passing it through, which is a useful accident.
