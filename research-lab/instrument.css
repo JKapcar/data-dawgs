@@ -34,3 +34,8 @@ footer{padding:20px 0;font-size:10px}@media(max-width:900px){#instruments{grid-t
 #cohort-grid [data-cohort="amber"]{border-color:#b17b23;background:linear-gradient(145deg,#302514,#17180f)}#cohort-grid [data-cohort="amber"] .metric,#cohort-grid [data-cohort="amber"] .meta{color:#ffb300}#cohort-grid [data-cohort="amber"] meter{accent-color:#ffb300}#cohort-grid [data-cohort="amber"] meter::-webkit-meter-optimum-value{background:#ffb300}
 #cohort-grid [data-cohort="amber"]:before{background:#ffb300;box-shadow:0 0 12px #ffb30066}
 @media(max-width:600px){header{flex-wrap:wrap}header>a:not(.brand){font-size:12px;overflow-wrap:anywhere}}
+/* 2026-10-16: hypotheses grouped by family, status chips, synthetic receipts, manifest summary */
+#hypothesis-grid .family-group{grid-column:1/-1;min-width:0}#hypothesis-grid .family-group>.eyebrow{margin:6px 0 10px}
+.status-chip{display:inline-block;border:1px solid #6c5843;border-radius:99px;padding:1px 8px;font-weight:800;letter-spacing:.06em}.status-registered,.status-confirmatory{color:var(--gold);border-color:var(--gold)}.status-supported{color:var(--green);border-color:var(--green)}.status-null,.status-inconclusive{color:var(--bone)}.status-withdrawn{color:var(--muted);text-decoration:line-through}
+.synthetic-badge{font-size:.7rem}
+#real-data{overflow-x:auto}#real-data table{border-collapse:collapse;width:100%;font:12px/1.4 ui-monospace,monospace}#real-data th,#real-data td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;white-space:nowrap}

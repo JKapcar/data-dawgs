@@ -3,9 +3,12 @@ import {createClient} from './client.mjs';
 const client=createClient(config,{onInvalidated:clearVisibleState,onVerified:t=>globalThis.DDAccount?.verified(t),onRejected:s=>globalThis.DDAccount?.failed(s)});
 import {validateTracking,summarize} from './tracking.mjs';
 const $=s=>document.querySelector(s),el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
-let state,tracking,index=0,playing=false,timer,returnFocus,audioContext;
+let state,tracking,index=0,playing=false,timer,returnFocus,audioContext,realData=false;
+// Mirrors machine-core.mjs HYPOTHESIS_FAMILIES; revisions saved before families existed group under other.
+const FAMILIES=[['speed-retention','Speed retention'],['accel-decel-cut','Accel / decel / cut'],['missingness','Missingness'],['external-market','External market'],['other','Other']];
+const chip=status=>el('span',status.toUpperCase(),'meta status-chip status-'+status);
 const tabs=[...document.querySelectorAll('[role=tab]')];
-function activateTab(tab,focus=false){stop();if(tab.id==='tab-inspector')$('#panel-inspector').append($('#inspector'));else if(tab.id==='tab-research')$('#instruments').prepend($('#inspector'));for(const t of tabs){const active=t===tab;t.setAttribute('aria-selected',String(active));t.tabIndex=active?0:-1;document.getElementById(t.getAttribute('aria-controls')).hidden=!active;}if(focus)tab.focus();render();}
+function activateTab(tab,focus=false){stop();if(tab.id==='tab-real')loadRealData();if(tab.id==='tab-inspector')$('#panel-inspector').append($('#inspector'));else if(tab.id==='tab-research')$('#instruments').prepend($('#inspector'));for(const t of tabs){const active=t===tab;t.setAttribute('aria-selected',String(active));t.tabIndex=active?0:-1;document.getElementById(t.getAttribute('aria-controls')).hidden=!active;}if(focus)tab.focus();render();}
 for(const tab of tabs){tab.onclick=()=>activateTab(tab);tab.onkeydown=e=>{const i=tabs.indexOf(tab),next=e.key==='Home'?0:e.key==='End'?tabs.length-1:e.key==='ArrowRight'?(i+1)%tabs.length:e.key==='ArrowLeft'?(i+tabs.length-1)%tabs.length:null;if(next!==null){e.preventDefault();activateTab(tabs[next],true);}};}
 const notice=(message,error=false)=>{$('#notice').textContent=message;$('#notice').classList.toggle('error',error);};
 const command=(type,payload)=>client.command(type,payload);
@@ -18,7 +21,8 @@ function form(container,fields,submitLabel,submit) {
   const b=el('button',submitLabel);b.type='submit';f.append(b);f.onsubmit=async e=>{e.preventDefault();b.disabled=true;try{await submit(Object.fromEntries(new FormData(f)));$('#drawer').close();await refresh();}catch(error){notice(error.message,true);let err=f.querySelector('[role=alert]');if(!err){err=el('p');err.setAttribute('role','alert');f.append(err);}err.textContent=error.message;}finally{b.disabled=false;}};container.append(f);return f;
 }
 function hypothesisDetails(h) {const latest=h.revisions.at(-1);drawer(latest.title,c=>{
-  c.append(el('p',`Revision ${latest.version} · exploratory · no verified/falsified verdict`),el('p',latest.method));
+  c.append(el('p',`Revision ${latest.version} · ${latest.status||'exploratory'} · ${latest.family||'other'} · ${['supported','null','inconclusive'].includes(latest.status)?'owner-recorded verdict':'no verified/falsified verdict'}`),el('p',latest.method));
+  const design=['target','predictionTime','cohort','featureCutoff','splitPolicy','baseline','metric','exclusions'].filter(k=>latest[k]);if(design.length){const dl=el('dl');for(const k of design)dl.append(el('dt',k),el('dd',latest[k]));c.append(dl);}
   c.append(action('Queue descriptive audit',async()=>{await command('task',{hypothesisId:h.id,split:'discovery',budgetMs:5000,maxObservations:10000});$('#drawer').close();await refresh();}));
   c.append(el('h3','Discussion & independent challenges'));
   for(const d of state.discussions.filter(d=>d.hypothesisId===h.id)){c.append(el('p',`${d.kind} · ${d.independent?'independent author':'same author / not independent'} · ${d.actor}`,'meta'),el('p',d.body));}
@@ -30,12 +34,13 @@ function hypothesisDetails(h) {const latest=h.revisions.at(-1);drawer(latest.tit
 async function refresh() {
   state=await client.state();$('.machine-status').dataset.ready='true';$('#receipt-count').textContent=`${state.receipts.length} ${state.receipts.length===1?'receipt':'receipts'}`;
   const active=state.tasks.filter(t=>t.status!=='completed'),claimed=active.filter(t=>t.lease?.expiresAt>Date.now()).length;$('#queue-count').textContent=active.length;$('#active-tasks').textContent=`${active.length} active ${active.length===1?'task':'tasks'} / ${claimed} leased / ${active.length-claimed} awaiting claim`;
-  $('#hypothesis-grid').replaceChildren(...state.hypotheses.map(h=>{const r=h.revisions.at(-1),n=el('article',undefined,'card');n.append(el('span',`EXPLORATORY / v${r.version}`,'meta'),el('h3',r.title),el('p',r.method),action('Open research record ↗',()=>hypothesisDetails(h)));return n;}));
+  const groups=FAMILIES.map(([family,label])=>[label,state.hypotheses.filter(h=>(h.revisions.at(-1).family||'other')===family)]).filter(([,list])=>list.length);
+  $('#hypothesis-grid').replaceChildren(...groups.map(([label,list])=>{const g=el('section',undefined,'family-group'),grid=el('div',undefined,'grid');g.append(el('h3',`${label} · ${list.length}`,'eyebrow'),grid);grid.append(...list.map(h=>{const r=h.revisions.at(-1),n=el('article',undefined,'card');n.dataset.status=r.status||'exploratory';n.append(chip(r.status||'exploratory'),el('span',` v${r.version}`,'meta'),el('h3',r.title),el('p',r.method),action('Open research record ↗',()=>hypothesisDetails(h)));return n;}));return g;}));
   $('#tasks').replaceChildren(...state.tasks.map(t=>{const n=el('article',undefined,'task'),d=el('div');n.dataset.status=t.status;d.append(el('strong',state.hypotheses.find(h=>h.id===t.hypothesisId)?.revisions[t.hypothesisVersion-1]?.title||t.hypothesisId),el('small',`${t.status} · discovery · ${t.budgetMs}ms / ${t.maxObservations} observations · requires experiment:run`));n.append(d);if(t.status!=='completed')n.append(action(t.lease&&t.lease.expiresAt>Date.now()?'Resume owned lease':client.mode==='hosted'?'Claim & run shared audit':client.mode==='browser'?'Run synthetic demo':'Claim & run locally',async()=>{
     let claimed=t;if(!t.lease||t.lease.expiresAt<=Date.now())claimed=await command('claim',{taskId:t.id,leaseMs:60000});
     const receipt=await command('run',{taskId:t.id,leaseToken:claimed.lease.token,tracking});notice(`Receipt recorded: ${receipt.outcome}. Synthetic discovery; no hypothesis verdict.`);await refresh();
   }));return n;}));
-  $('#receipts').replaceChildren(...state.receipts.map(r=>{const d=el('details');d.append(el('summary',`${r.outcome.toUpperCase()} · ${r.at} · ${r.id.slice(0,8)}`),el('pre',JSON.stringify(r,null,2)));return d;}));
+  $('#receipts').replaceChildren(...state.receipts.map(r=>{const d=el('details'),s=el('summary');s.append(...(r.synthetic?[el('span','SYNTHETIC','tag synthetic-badge'),' ']:[]),`${r.outcome.toUpperCase()}${r.reason?' ('+r.reason+')':''} · ${r.at} · ${r.id.slice(0,8)}`);d.append(s,el('pre',JSON.stringify(r,null,2)));return d;}));
   $('#evidence').replaceChildren(...state.evidence.map(e=>{const n=el('article'),a=el('a',e.title);a.href=e.url;a.target='_blank';a.rel='noopener noreferrer';n.append(a,el('p',e.excerpt),el('span',e.assessment,'meta'));return n;}));
   if(!state.evidence.length)$('#evidence').append(el('p','No cited evidence yet. Add a source and excerpt; claims remain unverified.'));
   $('#audit').replaceChildren(el('pre',JSON.stringify(state.audit,null,2)));
@@ -80,5 +85,16 @@ $('#jog').onpointerdown=e=>{stop();$('#jog').focus();$('#jog').setPointerCapture
 $('#entity').onchange=render;new ResizeObserver(render).observe($('#field'));document.addEventListener('visibilitychange',()=>{if(document.hidden)stop();});
 try{setTracking(validateTracking(await client.tracking()));await refresh();notice(`${client.mode==='hosted'?'Shared':client.mode==='browser'?'Browser demo':'Local'} runner ready. Synthetic discovery only; external AIs and schedules are unconfigured.${client.mode==='browser'?' Demo records reset when this page reloads.':''}`);$('.machine-status small').textContent=`${client.mode==='hosted'?'Shared':client.mode==='browser'?'Browser demo':'Local'} runner · external AIs unconfigured · holdout disabled`;$('#queue .tag').textContent=client.mode==='hosted'?'SHARED FIXED AUDIT':client.mode==='browser'?'THIS TAB / MEMORY ONLY':'LOCAL BUILT-IN RUNNER';}catch(e){if(client.mode==='hosted')globalThis.DDAccount?.failed(e.status);notice(e.message,true);}
 
-function clearVisibleState(){globalThis.DDAccount?.reset();state=null;stop();$('.machine-status').dataset.ready='false';for(const id of ['hypothesis-grid','tasks','receipts','evidence','audit'])$('#'+id).replaceChildren();$('#receipt-count').textContent='State cleared';$('#drawer').close();notice('Identity changed. Reload to verify research access.',true);}
+// Real data: renders research-lab/data/manifest-summary.json and nothing else. The summary is
+// written by the owner's local manifest.py; raw rows never reach this page.
+async function loadRealData(){
+  const box=$('#real-data');if(!box||realData)return;realData=true;box.replaceChildren(el('p','Checking for a manifest summary…'));
+  let summary=null;try{const r=await fetch('data/manifest-summary.json',{cache:'no-store'});if(r.ok)summary=await r.json();}catch{}
+  if(!summary||!Array.isArray(summary.files)){box.replaceChildren(el('p','No manifest summary is published here yet. The owner runs research-lab/data/manifest.py on their own machine; only its redacted summary would appear in this tab. No raw data is loaded.'));return;}
+  const head=el('p',`Archive ${summary.archive?.sha256?summary.archive.sha256.slice(0,12)+'…':'unhashed'} · ${summary.files.length} files · generated ${summary.generated_at||'unknown'} · ${summary.note||'counts only'}`);
+  const table=el('table'),hr=el('tr');for(const h of ['File','Bytes','Rows','Columns','Key unique','Max null share','SHA-256'])hr.append(el('th',h));table.append(hr);
+  for(const f of summary.files){const tr=el('tr');for(const v of [f.file,f.bytes?.toLocaleString?.()??f.bytes,f.rows?.toLocaleString?.()??f.rows,f.columns,f.key_unique===undefined?'—':String(f.key_unique),f.max_null_share===undefined?'—':String(f.max_null_share),f.sha256?f.sha256.slice(0,12)+'…':'—'])tr.append(el('td',v===undefined||v===null?'—':String(v)));table.append(tr);}
+  box.replaceChildren(head,table,el('p','Counts and shapes only. Not a finding, not a fitted baseline, and not evidence for any hypothesis.','meta'));
+}
+function clearVisibleState(){globalThis.DDAccount?.reset();state=null;stop();$('.machine-status').dataset.ready='false';for(const id of ['hypothesis-grid','tasks','receipts','evidence','audit'])$('#'+id).replaceChildren();if($('#real-data')){$('#real-data').replaceChildren();realData=false;}$('#receipt-count').textContent='State cleared';$('#drawer').close();notice('Identity changed. Reload to verify research access.',true);}
 window.addEventListener('storage',e=>{if(e.key==='dd-bozo-sess'||e.key===null)client.invalidate();});
