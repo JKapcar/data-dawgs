@@ -44,3 +44,43 @@ test('direct private routes deny the personal MCP bearer; denied operations stay
  for(const type of ['task','claim','run','permissions'])assert.match((await w.rpc('tools/call',{name:'dd_owner_bdb_write',arguments:{type,key:'denied',payload:{}}})).body.result.content[0].text,/operation_denied/);
  assert.equal(w.state.writes,0);
 }finally{await w.close();}});
+
+// ---- 2026-10-16: the website session and the owner connector are one owner, one tenant, one storage key ----
+// Real packaged Worker, real session signatures, synthetic credentials. Tenant mirrors production
+// (wrangler.jsonc RESEARCH_UPLOAD_TENANT and research-lab/client-config.mjs must agree).
+import {readFileSync} from 'node:fs';
+const b64u=s=>Buffer.from(s).toString('base64url');
+test('web session and owner connector resolve to the same owner, tenant and storage key for Pound and BDB',async()=>{
+ const wrangler=JSON.parse(readFileSync(new URL('../wrangler.jsonc',import.meta.url),'utf8')),tenant=wrangler.vars.RESEARCH_UPLOAD_TENANT;
+ assert.match(readFileSync(new URL('./client-config.mjs',import.meta.url),'utf8'),new RegExp(`tenant:'${tenant}'`),'browser tenant must equal the Worker tenant');
+ const directory=mkdtempSync(path.join(os.tmpdir(),'dd-owner-same-'));let mf;try{buildWorker(directory);
+  const pepper='synthetic-pepper',token='u_synthetic-personal',uid='u_owner',paths=[];let version=0;
+  const grant={owner:uid,enabled:true,expiresAt:0,mode:'until_revoked',version:1};
+  const db=new Map([['/users/'+uid,{name:'Synthetic Owner',passwordSetAt:0,mcpToken:createHmac('sha256',pepper).update('mcp|'+token).digest('base64url')}],
+   ['/privatePounds/'+uid,{owner_uid:uid,payload:JSON.stringify({revision:0,updated_at:null,agents:[],tasks:[],messages:[],contexts:[],activity:[],receipts:[]}),ownerConnector:grant}],
+   ['/researchLab/v1/tenants/'+tenant,{...encodeEnvelope({version:1,access:{users:{[uid]:{owner:true,enabled:true,capabilities:['research:read','hypothesis:write','evidence:write','discussion:write']}}},state:initialState(),inputs:{}}),ownerConnector:grant}]]);
+  mf=new Miniflare({modules:true,modulesRoot:directory,scriptPath:path.join(directory,'worker.mjs'),compatibilityDate:'2026-07-30',bindings:{RESEARCH_OWNER_UID:uid,RESEARCH_UPLOAD_TENANT:tenant,RESEARCH_LAB_ENABLED:'true',DAWG_POUND_ENABLED:'true',BOZO_PEPPER:pepper,DAWG_PASS:'synthetic-shared',FB_SECRET:'synthetic'},
+   outboundService:async req=>{const p=decodeURIComponent(new URL(req.url).pathname.replace(/\.json$/,''));if(p==='/users')return Response.json({[uid]:db.get('/users/'+uid)});paths.push(req.method+' '+p);assert.ok(db.has(p),'unexpected path '+p);
+    if(req.method==='PUT'){assert.equal(req.headers.get('if-match'),'"'+version+'"');db.set(p,await req.json());version++;return Response.json(db.get(p));}return Response.json(db.get(p),{headers:{ETag:'"'+version+'"'}});}});
+  const payload=b64u(JSON.stringify({u:uid,n:'Synthetic Owner',i:Date.now(),e:Date.now()+864e5,p:0})),session=payload+'.'+createHmac('sha256',pepper).update(payload).digest('base64url');
+  const web=async(route,body)=>{const r=await mf.dispatchFetch('https://test'+route,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+session,Origin:'https://datadawgs216.com',...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});return {status:r.status,body:await r.json()};};
+  const mcp=async(name,args={})=>{const r=await mf.dispatchFetch('https://test/mcp/full/'+token,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name,arguments:args}})});const j=await r.json();assert.ok(!j.result.isError,j.result.content[0].text);return JSON.parse(j.result.content[0].text);};
+  const touched=fn=>{paths.length=0;return fn().then(v=>({v,keys:[...new Set(paths.map(p=>p.split(' ')[1]).filter(p=>!p.startsWith('/users')))]}));};
+
+  // Pound: connector write -> web read, and web write -> connector read, on one key.
+  const c=await touched(()=>mcp('dd_owner_pound_write',{op:'context.save',expected_revision:0,request_id:'same_owner_context_01',data:{title:'Connector note',text:'Written by the connector'},assistant:'Claude'}));
+  assert.deepEqual(c.keys,['/privatePounds/'+uid]);
+  const w=await touched(()=>web('/api/pound'));assert.equal(w.v.status,200,JSON.stringify(w.v.body));assert.deepEqual(w.keys,['/privatePounds/'+uid]);
+  const ctx=w.v.body.workspace.contexts[0];assert.equal(ctx.id,c.v.result.item_id);assert.equal(ctx.versions[0].actor_uid,uid);assert.equal(ctx.versions[0].actor_kind,'owner_connector');
+  const ww=await web('/api/pound',{op:'context.save',expected_revision:1,request_id:'same_owner_context_02',data:{id:ctx.id,title:'Web edit',text:'Written on the website'}});assert.equal(ww.status,200);
+  const back=await mcp('dd_owner_pound_read');assert.equal(back.identity.owner,uid);assert.equal(back.workspace.contexts[0].versions.length,2);assert.equal(back.workspace.contexts[0].versions[1].actor_kind,'owner');
+
+  // BDB: connector write -> web read, and web write -> connector read, on one tenant key.
+  const e=await touched(()=>mcp('dd_owner_bdb_write',{type:'evidence',key:'same-owner-e1',payload:{url:'https://datadawgs216.com/',title:'Connector evidence',excerpt:'Synthetic'}}));
+  assert.deepEqual(e.keys,['/researchLab/v1/tenants/'+tenant]);assert.equal(e.v.result.tenant,tenant);
+  const s=await touched(()=>web('/research/v1/tenants/'+tenant+'/state'));assert.equal(s.v.status,200,JSON.stringify(s.v.body));assert.deepEqual(s.keys,['/researchLab/v1/tenants/'+tenant]);
+  assert.ok(s.v.body.evidence.some(x=>x.id===e.v.result.id&&x.subject===uid&&x.actor==='owner-connector:'+uid));
+  const h=await web('/research/v1/tenants/'+tenant+'/command',{type:'hypothesis',key:'same-owner-h1',payload:{title:'Web hypothesis',method:'Synthetic'}});assert.equal(h.status,200,JSON.stringify(h.body));
+  const r=await mcp('dd_owner_bdb_read');assert.ok(r.workspace.hypotheses.some(x=>x.id===h.body.id&&x.revisions[0].subject===uid));assert.ok(r.workspace.evidence.some(x=>x.id===e.v.result.id));
+ }finally{await mf?.dispose();rmSync(path.resolve(directory),{recursive:true,force:true});}
+});
