@@ -33,6 +33,7 @@ try {
  for(const width of [1440,768,390,320]){
   await page.setViewportSize({width,height:900});await page.waitForTimeout(100);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`overflow ${width}`);
+  await page.waitForFunction(()=>{const c=document.querySelector('#field'),r=c.getBoundingClientRect();return Math.abs(c.width-r.width*devicePixelRatio)<=1&&Math.abs(c.height-r.height*devicePixelRatio)<=1;});
   const dimensions=await page.locator('#field').evaluate(c=>({width:c.width,height:c.height,rectWidth:c.getBoundingClientRect().width,rectHeight:c.getBoundingClientRect().height,dpr:devicePixelRatio,scale:Number(c.dataset.yardScale)}));
   assert(Math.abs(dimensions.width-dimensions.rectWidth*dimensions.dpr)<=1);assert(Math.abs(dimensions.height-dimensions.rectHeight*dimensions.dpr)<=1);
   assert.equal(dimensions.scale,Math.min((dimensions.rectWidth-20)/120,(dimensions.rectHeight-20)/(160/3)));

@@ -8,7 +8,7 @@ export function buildWorker(destination=path.join(root,'../work/artifacts/resear
   const worker=readFileSync(path.join(root,'../dawg-bot-worker.js'),'utf8');
   const anchor='  async fetch(request, env) {';
   if(worker.split(anchor).length!==2)throw new Error('Worker entry changed; review integration before rebuilding');
-  const sources=['../dawg-bot-worker.js','../bozo-team-registry.mjs','build-worker.mjs',...modules];
+  const sources=['repair-owner-envelope.mjs','../dawg-bot-worker.js','../bozo-team-registry.mjs','build-worker.mjs',...modules];
   const manifest=Object.fromEntries(sources.map(f=>[f,createHash('sha256').update(readFileSync(path.join(root,f))).digest('hex')]));
   const codeHash=createHash('sha256').update(JSON.stringify(manifest)).digest('hex');
   mkdirSync(destination,{recursive:true});

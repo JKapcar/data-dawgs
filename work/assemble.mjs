@@ -121,6 +121,11 @@ const yahoo = readFileSync("yahoo-parse.js", "utf8").replace(/\s+$/, "")
 /* ---- the whole pipeline, so the build and its idempotency proof cannot diverge ---- */
 function transform(input) {
   let t = input;
+  const repairStart='/* DD-OWNER-REPAIR START */',repairEnd='/* DD-OWNER-REPAIR END */';
+  const ri=t.indexOf(repairStart),rj=t.indexOf(repairEnd);
+  if(ri<0||rj<ri)fail('owner repair markers missing');
+  const repair=readFileSync('../research-lab/repair-owner-envelope.mjs','utf8').replace(/^export /gm,'');
+  t=t.slice(0,ri)+repairStart+'\nconst DD_OWNER_REPAIR = (()=>{\n'+repair+'\nreturn repairOwnerEnvelope;\n})();\n'+repairEnd+t.slice(rj+repairEnd.length);
   const ps=t.indexOf(P_START), pe=t.indexOf(P_END);
   if(ps>=0 && pe>ps)t=t.slice(0,ps)+t.slice(pe+P_END.length);
   const es = t.indexOf(E_START), ee = t.indexOf(E_END);
