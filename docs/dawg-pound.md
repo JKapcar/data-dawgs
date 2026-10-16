@@ -6,13 +6,15 @@ identity system, agent runtime, token minting, grant management, file upload or 
 
 ## Release status
 
-**Disabled by default. This PR must not be merged or deployed without approval.**
-`DAWG_POUND_ENABLED` is intentionally absent from `wrangler.jsonc`. Merely deploying
-the code does not activate storage. No production rules or logging settings were changed.
+**Owner release approval received on 2026-10-16.** The release manifest now explicitly
+sets `DAWG_POUND_ENABLED=true` for private owner workspaces and the approved 30-day
+backup policy. The handler still fails closed when that flag is absent or false.
+This approval does not enable private MCP, external AI grants or vault storage.
+No production database rules or logging settings are changed by this release.
 The shell contains no private or example workspace data. Local preview screenshots use
 synthetic data intercepted entirely in memory, not live users or agents.
 
-Before enabling, obtain explicit approval and verify:
+Release verification requirements (approval received; runtime evidence is reported separately):
 
 1. RTDB `/privatePounds` and every ancestor deny all unauthenticated and browser-client
    reads/writes, including collection reads and guessed child paths. RTDB ancestor allows
@@ -105,7 +107,8 @@ runtime, proxy, analytics export, exception trace or administrator-added log sin
 fixture returned generic 200/400/401/500 responses and did not exercise uncaught exceptions.
 No production logging configuration was changed, and other applications' custom-header
 auth is outside this repair. Private content remains in bodies and errors remain generic.
-The release/activation approval gate remains closed; the test does not authorize a deploy.
+The isolated test itself did not authorize deployment. The later owner release approval
+covers Pound activation only, not new log sinks, external AI grants or vault storage.
 
 
 ## Writes, versions and limits
