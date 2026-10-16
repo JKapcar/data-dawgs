@@ -1,0 +1,22 @@
+name: Research lab contracts and preview
+on:
+  pull_request:
+    paths: ['research-lab/**', '.github/workflows/research-lab.yml']
+permissions:
+  contents: read
+jobs:
+  synthetic-lab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: node --test research-lab/lab.test.mjs
+      - run: npm install --prefix /tmp/dd-lab-qa playwright@1.56.1 --no-audit --no-fund
+      - run: /tmp/dd-lab-qa/node_modules/.bin/playwright install --with-deps chromium
+      - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/browser.test.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: research-lab-preview
+          path: /tmp/dd-lab-screenshots
