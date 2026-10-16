@@ -169,5 +169,18 @@ const T0 = Date.parse("2026-09-15T09:00:00Z");
   delete WHOLE_DB.privatePounds;
 }
 
+// Research payloads and upload metadata get distinct expiring copies, never a
+// general backup or an archive-byte copy. This tests the assembled Worker.
+{
+  WHOLE_DB.researchLab={v1:{tenants:{jason_bdb:{version:1,payload:'{"state":{"nullable":null},"inputs":{}}'}}}};
+  WHOLE_DB.researchUploads={v1:{u_owner:{version:1,owner_uid:'u_owner',payload:'{"name":"private.zip"}'}}};
+  const original=JSON.stringify(WHOLE_DB),kv=makeKV();
+  await worker.scheduled({scheduledTime:T0},{FB_SECRET:'s',RL:kv},{});
+  const copies=kv.puts.filter(p=>p.k.startsWith('research-backup:'));
+  ok('research gets two separate 30-day metadata copies',copies.length===2&&copies.every(p=>p.opts.expirationTtl===2592000));
+  ok('research never enters dated or permanent general backups',kv.puts.filter(p=>p.k.startsWith('backup:')).every(p=>!JSON.parse(p.v).db?.researchLab&&!JSON.parse(p.v).db?.researchUploads));
+  ok('research payloads retained exactly and active data unchanged',JSON.stringify(WHOLE_DB)===original&&JSON.parse(copies[0].v).record.payload===WHOLE_DB.researchLab.v1.tenants.jason_bdb.payload);
+  delete WHOLE_DB.researchLab;delete WHOLE_DB.researchUploads;
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

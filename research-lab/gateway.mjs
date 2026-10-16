@@ -45,19 +45,24 @@ export function createResearchGateway({fbGet,fbPut,sessionAuth,mcpAuth,transitio
       // Existing loadUsers has a legacy invitation-seeding fallback. Disable that
       // fallback in this request only: research authentication must never seed users.
       const identityEnv={...env,BOZO_TOKENS:undefined};
-      if(bearer){
+      if(bearer?.startsWith('Bearer u_')){
         if(!/^Bearer u_[A-Za-z0-9_-]+$/.test(bearer))fail(401,'personal_mcp_identity_required');
         // mcpAuth normally supports URL/shared credentials. Give it only this vetted
         // header and its canonical empty /mcp path so none of those modes can win.
         identity=await mcpAuth(new Request('https://research.invalid/mcp',{headers:{Authorization:bearer}}),new URL('https://research.invalid/mcp'),identityEnv);kind='agents';
         if(identity?.kind!=='user')fail(401,'personal_mcp_identity_required');
-      }else{identity=await sessionAuth(request,identityEnv);kind='users';}
+      }else{
+        if(bearer&&!/^Bearer [A-Za-z0-9_.-]+$/.test(bearer))fail(401,'signed_session_required');
+        const sessionRequest=bearer?new Request('https://research.invalid',{headers:{'X-Dawg-Session':bearer.slice(7)}}):request;
+        identity=await sessionAuth(sessionRequest,identityEnv);kind='users';
+      }
       if(!identity||identity.err||!safeId(identity.uid))fail(401,'verified_uid_required');
       const actor=`${kind==='agents'?'mcp':'user'}:${identity.uid}`;
       const path=`/researchLab/v1/tenants/${tenant}`;
       const authorize=envelope=>{
         const grant=envelope?.access?.[kind]?.[identity.uid];
-        if(!grant||grant.enabled!==true||!Number.isFinite(grant.expiresAt)||grant.expiresAt<=now()||!Array.isArray(grant.capabilities)||grant.capabilities.some(c=>!allowed.has(c)))fail(403,'research_grant_required');
+        const durableOwner=kind==='users'&&identity.uid===env.RESEARCH_OWNER_UID&&grant?.owner===true&&grant?.expiresAt==null;
+        if(!grant||grant.enabled!==true||(!durableOwner&&(!Number.isFinite(grant.expiresAt)||grant.expiresAt<=now()))||!Array.isArray(grant.capabilities)||grant.capabilities.some(c=>!allowed.has(c)))fail(403,'research_grant_required');
         if(envelope.version!==1||envelope.state?.version!==1)fail(503,'store_unavailable');
         return {tenant,id:actor,subject:identity.uid,capabilities:[...grant.capabilities]};
       };

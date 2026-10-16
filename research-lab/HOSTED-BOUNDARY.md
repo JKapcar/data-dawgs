@@ -25,21 +25,28 @@ After approved activation, GET `/research/v1/tenants/{tenant}/state` and POST
 POST `/research/v1/tenants/{tenant}/mcp` supports JSON-RPC initialize, tools/list and
 tools/call. No SSE, arbitrary code, external model call or background job executes.
 
-Identity uses the existing signed X-Dawg-Session or personal Bearer u_ MCP verifier.
+Browser identity uses the existing signed session in Authorization: Bearer; the
+older X-Dawg-Session transport remains compatible. Personal Bearer u_ tokens use
+the separate existing MCP verifier.
 Browser clients accept only the real site origins and existing Worker origin, reuse
 the sign-in session and never fall back to local state after an authorization error.
 Account changes invalidate pending responses, including JSON still being decoded.
 No credential input UI is added. Legacy invitation seeding is disabled in research
 authentication. Legacy name-only sessions and shared credentials are refused.
 
-Every identity needs an enabled, expiring tenant grant with exact capabilities.
+Every identity needs an enabled tenant grant with exact capabilities. Agent grants
+must expire. Only the environment's exact RESEARCH_OWNER_UID may use an explicit
+owner:true grant without expiry; existing session expiry still applies.
 There is no grant-write endpoint. Independence compares canonical UID: several AIs
 sharing a user token are one author, not independently authenticated agents. Research
 scopes do not restrict that token on other site tools. Never distribute a broad
 account token as a shortcut for delegated agent identity.
 
 One private RTDB node `/researchLab/v1/tenants/{tenant}` contains version, grants,
-state, accepted synthetic inputs and quota. ETag conditional writes atomically commit
+an exact JSON payload for state/accepted synthetic inputs, and quota. The exact
+encoding preserves nulls and empty collections through Firebase. Legacy raw
+envelopes fail closed and require an explicit reviewed migration; none is automatic.
+ETag conditional writes atomically commit
 tasks, receipts, inputs, idempotency and audit. Revocation changes the same ETag;
 conflicts re-read and reauthorize. Lease expiry is checked again before commit.
 
@@ -64,7 +71,8 @@ untrusted content and never confer authority.
    If that path is not private already, stop for a security-rule review; do not
    weaken rules or expose research data.
 2. Approve a named tenant, initial empty envelope, named UID grants, exact scopes
-   and expiry through an authorized administration path. No production records or
+   and agent expiry through an authorized administration path. Durable owner access
+   and private archive intake are specified in PRIVATE-ACTIVATION.md. No production records or
    grants are seeded by this release.
 3. Review least-privilege delegated agent credentials, rotation and revocation before
    connecting independent AIs. Personal MCP transport is not per-model identity.
