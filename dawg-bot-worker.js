@@ -1943,6 +1943,7 @@ export default {
     if (url.pathname === "/forecast/week")    return forecastWeek(request, url, env, cors);
     if (url.pathname === "/forecast/bot")     return forecastBot(request, env, cors);
     if (url.pathname === "/forecast/bots")    return forecastBots(request, env, cors);
+    if (url.pathname === "/bozo/correct-pick") return bozoCorrectPick(request, env, cors);
     if (url.pathname === "/bozo/pick")    return bozoPick(request, env, cors);
     if (url.pathname === "/bozo/grade")   return bozoGrade(request, env, cors);
     if (url.pathname === "/bozo/next")    return bozoNext(request, env, cors);
@@ -7045,6 +7046,185 @@ async function forecastBots(request, env, cors) {
   return json({ ok: true, owner: auth.name, bots: mine, cap: FC_BOTS_PER_OWNER }, 200, cors);
 }
 
+/* ================= manager pre-kickoff correction ================= */
+// One protocol for HTTP and MCP. No reopen, redraw, backdate or result override.
+const BOZO_CORRECTION_SCHEMA = {
+  type: "object", additionalProperties: false,
+  properties: {
+    league: { type: "string" },
+    forUid: { type: "string", description: "Exact stored member key, never an actor identity." },
+    type: { type: "string", enum: ["replace_before_kickoff"] },
+    reason: { type: "string", minLength: 5, maxLength: 300 },
+    pick: { type: "object", description: "Same selection fields as /bozo/pick; server captures the quote." },
+    confirm: { type: "string", description: "Returned code, only after approving the complete echo." },
+  },
+  required: ["league", "forUid", "type"],
+  oneOf: [{ required: ["reason", "pick"], not: { required: ["confirm"] } },
+    { required: ["confirm"], not: { anyOf: [{ required: ["reason"] }, { required: ["pick"] }] } }],
+};
+function bozoCorrectionManager(state, auth) {
+  // A verified UID is mandatory. A matching display name alone is not authority.
+  if (!state || !auth?.uid || auth.err) return false;
+  return auth.user?.roles?.site_admin === true || state.managerUid === auth.uid ||
+    (Object.hasOwn(state.members || {}, auth.uid) && state.delegates?.[auth.uid] === true);
+}
+function bozoCanonical(value) {
+  if (Array.isArray(value)) return value.map(bozoCanonical);
+  if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map(k => [k, bozoCanonical(value[k])]));
+  return value;
+}
+const bozoSame = (a, b) => JSON.stringify(bozoCanonical(a ?? null)) === JSON.stringify(bozoCanonical(b ?? null));
+function bozoCorrectionGate(state, key, now) {
+  if (state.status !== "placed" || !Array.isArray(state.order) || !state.order.length || !Number.isFinite(state.closeTs))
+    return "Only a placed ticket with an existing draw and lock timestamp can be corrected.";
+  if (!Object.hasOwn(state.members || {}, key) || memberStatusAt(state, key) !== "active" || !state.picks?.[key])
+    return "Choose an active member with an existing pick by exact member key.";
+  if (Object.keys(state.results || {}).length || state.bozo != null || state.bozoWhy || state.gradeStartedWeek === (state.week || 1) || state.royale?.chops?.[state.week || 1])
+    return "Results or grading already exist. This correction type cannot change them.";
+  if (settingsOf(state).format === "royale" && !royaleAliveKey(state, key))
+    return "An eliminated Royale member cannot receive a replacement.";
+  // Conservative: no corrections once ANY ticket game has started, even if this
+  // member's game is later. Unknown kickoff fails closed too.
+  if (Object.values(state.picks || {}).some(p => !(Date.parse(p.startsAt) > now)))
+    return "A ticket game has started or has no resolved kickoff. No replacement is permitted.";
+  const row = state.ledger?.[ledgerKey(state.season || SEASON, state.week || 1, key)];
+  if (!row) return "The original ledger receipt is missing; reconcile it before correction.";
+  if (["won", "result", "actual", "gradedAt", "close", "closeOpp", "clvPts"].some(k => row[k] != null))
+    return "The original ledger already has grading or close data. This correction type cannot change it.";
+  return null;
+}
+async function bozoCorrectionSchedule(env, state, replacement, now) {
+  const gate = await bozoWeekGate(env, state);
+  // Require a fresh schedule lookup on BOTH phases, including every original game.
+  for (const p of [...Object.values(state.picks || {}), replacement]) {
+    const game = bozoScheduleFindGame(gate.docs?.[p.sport], p);
+    if (!game || game.completed || !(Date.parse(game.startsAt) > now) || !(Date.parse(p.startsAt) > now))
+      return { error: "Schedule kickoff is missing, started or completed. Review the ticket; nothing changed." };
+    if (Date.parse(game.startsAt) !== Date.parse(p.startsAt))
+      return { error: "The schedule kickoff changed. Refresh and review before correction." };
+  }
+  return { gate };
+}
+async function bozoCorrectPick(request, env, cors) {
+  const headers = { ...cors, "Cache-Control": "private, no-store" };
+  if (request.method !== "POST") return json({ error: "POST only" }, 405, headers);
+  const auth = await sessionAuth(request, env);
+  if (auth.err) return json({ error: auth.err }, auth.code || 401, headers);
+  let body;
+  try { body = await readBody(request); } catch { return json({ error: "Bad JSON." }, 400, headers); }
+  const out = await bozoCorrectPickCore(env, auth, body, "site");
+  return json(out.body, out.status, headers);
+}
+async function bozoCorrectPickCore(env, auth, body, via = "site") {
+  const reply = (body, status = 200) => ({ body, status });
+  const fail = (error, status = 409) => reply({ error }, status);
+  if (!auth?.uid || auth.err) return fail("A personal authenticated account is required.", 401);
+  if (!body || Object.keys(body).some(k => !Object.hasOwn(BOZO_CORRECTION_SCHEMA.properties, k)) ||
+      !validLeagueId(body.league || "") || typeof body.forUid !== "string" || !body.forUid ||
+      body.type !== "replace_before_kickoff") return fail("Supply league, exact forUid and type replace_before_kickoff.", 400);
+  const confirming = body.confirm !== undefined;
+  if (confirming ? (typeof body.confirm !== "string" || !/^[a-f0-9-]{36}$/.test(body.confirm) || body.pick !== undefined || body.reason !== undefined)
+    : (typeof body.reason !== "string" || body.reason.trim().length < 5 || body.reason.length > 300 || !body.pick || typeof body.pick !== "object" || Array.isArray(body.pick)))
+    return fail("Propose with pick and a 5–300 character reason; confirm with only the returned code and target fields.", 400);
+  const lid = body.league, key = body.forUid, actor = auth.uid;
+  try {
+    const { data: state, etag } = await fbGet(env, LG(lid), true);
+    if (!bozoCorrectionManager(state, auth)) return fail("Only a verified league manager, delegate or site administrator may correct a pick.", 403);
+    const replay = code => {
+      const row = state.audit?.[code];
+      return row?.type === "replace_before_kickoff" && row.actor === actor && row.forUid === key && row.leagueId === lid ? row.result : null;
+    };
+    if (confirming && replay(body.confirm)) return reply(replay(body.confirm));
+    const gateError = bozoCorrectionGate(state, key, Date.now());
+    if (gateError) return fail(gateError);
+    if (!env.RL) return fail("Confirmation store unavailable.", 503);
+    const kvKey = "bozocorrection:" + actor + ":" + lid + ":" + key;
+    const version = await sha256hex(JSON.stringify(bozoCanonical(state)));
+    let pending;
+    if (!confirming) {
+      const captured = await bozoCaptureEntry(env, body.pick);
+      if (!captured.ok) return fail(captured.error, 400);
+      const p = captured.p;
+      const snapshot = Date.parse(p.entrySnapshotAt);
+      if (p.priceSource !== "captured" || p.clvEligible !== true || !Number.isFinite(Number(p.priceOpp)) || Math.abs(Number(p.priceOpp)) < 100 ||
+          !Number.isFinite(snapshot) || snapshot > Date.now() + 60000 || Date.now() - snapshot > 300000)
+        return fail("A fresh captured two-sided quote is required for correction; manual or stale fallback is not accepted.", 409);
+      const schedule = await bozoCorrectionSchedule(env, state, p, Date.now());
+      if (schedule.error) return fail(schedule.error);
+      const error = validatePick(p, memberNameAt(state, key), state.picks, bandOf(state), settingsOf(state).format, key, schedule.gate);
+      if (error) return fail(error, 400);
+      const code = crypto.randomUUID(), expiresAt = Math.min(Date.now() + 300000, snapshot + 300000);
+      p.submissionId = code;
+      const before = state.picks[key];
+      const echo = `Replace ${memberNameAt(state, key)}: ${before.label} at ${before.price} with ${p.label} (${p.game}) at ${p.price} / ${p.priceOpp}; captured ${p.entrySnapshotAt}. Reason: ${body.reason.trim()}. ` +
+        "This uses the server confirmation time: Last In and shortest-odds exposure may change. CLV and Worst Beat use the replacement and its new quote/outcome. " +
+        "The existing draw, original lock time, other members and prior weeks stay unchanged. Original and replacement receipts remain in the audit. No result or elimination override is permitted.";
+      pending = { code, actor, lid, key, version, p, reason: body.reason.trim(), via, expiresAt, echo };
+      await env.RL.put(kvKey, JSON.stringify(pending), { expirationTtl: 300 });
+      return reply({ status: "confirm_required", confirm_code: code, expiresAt, echo, captured: { price: p.price, priceOpp: p.priceOpp, entrySnapshotAt: p.entrySnapshotAt } });
+    }
+    pending = JSON.parse(await env.RL.get(kvKey) || "null");
+    if (!pending || pending.code !== body.confirm || pending.actor !== actor || pending.key !== key || pending.lid !== lid || Date.now() >= pending.expiresAt)
+      return fail("Correction proposal expired or does not match. Propose again.");
+    if (pending.version !== version) return fail("The league changed since the proposal. Review a new proposal.");
+    const schedule = await bozoCorrectionSchedule(env, state, pending.p, Date.now());
+    if (schedule.error) return fail(schedule.error);
+    const error = validatePick(pending.p, memberNameAt(state, key), state.picks, bandOf(state), settingsOf(state).format, key, schedule.gate);
+    if (error) return fail(error);
+    // Check again AFTER asynchronous reads and immediately before the conditional write.
+    const now = Date.now();
+    if (now >= pending.expiresAt || !(Date.parse(pending.p.startsAt) > now) || bozoCorrectionGate(state, key, now))
+      return fail("Proposal expired or kickoff passed during confirmation. Nothing changed.");
+    const before = state.picks[key], rowKey = ledgerKey(state.season || SEASON, state.week || 1, key);
+    const beforeLedger = state.ledger[rowKey];
+    const after = buildBozoLeg(memberNameAt(state, key), { ...pending.p, closeState: "pending" }, pending.via, { uid: actor, name: auth.name, proxy: true });
+    after.correctionId = pending.code;
+    const picks = { ...state.picks, [key]: after };
+    const afterLedger = ledgerEntries(lid, state.season || SEASON, state.week || 1, picks, state.order)[rowKey];
+    Object.assign(afterLedger, { correctionId: pending.code, submittedBy: actor, submittedByName: auth.name,
+      commissionerModified: true, via: pending.via, memberKey: key, originalLockTs: state.closeTs,
+      // This is an immutable lock fact, not a newly moved board close. Negative means
+      // the correction was submitted AFTER the original lock.
+      secToClose: Math.round((state.closeTs - after.ts) / 1000), rankBasis: "correction_time" });
+    const result = { ok: true, status: "corrected", correctionId: pending.code, league: lid, forUid: key,
+      forName: after.who, ts: after.ts, drawPreserved: true, lockPreserved: true,
+      leg: { label: after.label, price: after.price, priceOpp: after.entryPriceOpp, priceSource: after.priceSource } };
+    state.picks[key] = after; state.ledger[rowKey] = afterLedger;
+    // No inheritance from old results/close/grades. The gate requires their absence.
+    if (state.results) delete state.results[key];
+    const receipt = { type: body.type, actor, byUid: actor, byName: auth.name, forUid: key, forName: after.who,
+      leagueId: lid, week: state.week || 1, season: state.season || SEASON, ts: after.ts, via: pending.via,
+      reason: pending.reason, before, after, beforeLedger, afterLedger, draw: state.order, lockTs: state.closeTs, result };
+    state.audit = { ...state.audit, [pending.code]: receipt };
+    state.admin = { ...state.admin, actions: { ...state.admin?.actions, [pending.code]: receipt } };
+    if (!etag) return fail("Database concurrency token unavailable.", 503);
+    // Atomic audit + pick + one ledger row. Failure cannot commit an unaudited edit.
+    if (!await fbPut(env, LG(lid), state, etag)) {
+      const fresh = (await fbGet(env, LG(lid))).data;
+      if (!bozoCorrectionManager(fresh, auth)) return fail("Correction access changed.", 403);
+      const won = fresh?.audit?.[pending.code];
+      if (won?.actor === actor && won.forUid === key && won.type === body.type) return reply(won.result);
+      return fail("Concurrent league change. Review a new proposal.");
+    }
+    return reply(result);
+  } catch { return fail("Correction could not be committed. Retry the same confirmation to check its durable receipt.", 502); }
+}
+
+// Background captures/grades must not attach a stale selection's data to a corrected
+// pick. Compare selection snapshot and week, then atomically patch under a root ETag.
+async function bozoGuardedPatch(env, lid, expected, patch) {
+  const { data: live, etag } = await fbGet(env, LG(lid), true);
+  if (!live || !etag || (live.week || 1) !== (expected.week || 1) || (live.season || SEASON) !== (expected.season || SEASON) ||
+      !bozoSame(live.picks || {}, expected.picks || {})) return false;
+  for (const [path, value] of Object.entries(patch)) {
+    const parts = path.split("/"); let node = live;
+    for (const part of parts.slice(0, -1)) node = node[part] ||= {};
+    if (value === null) delete node[parts.at(-1)]; else node[parts.at(-1)] = value;
+  }
+  return fbPut(env, LG(lid), live, etag);
+}
+
+
 /* =============================== /bozo/pick =============================== */
 // One leg per person. Favorites only, band from /bozo/config. No exact duplicates.
 // Editing is allowed while the board is open — the Worker stamps a fresh server
@@ -7073,10 +7253,43 @@ async function commitBozoLeg(env, lid, state, name, p, via = null, mkey = null, 
   // points, which is comparable to the entire spread of CLV across the league. A leg
   // that arrives without it is stored with null and flagged, never quietly de-vigged
   // against nothing. See handoff §4 rule 6.
+  const pick = buildBozoLeg(name, p, via, by);
+  await fbPut(env, LG(lid) + "/picks/" + key, pick);
+
+  // ⚠️ THE LABEL IS REFRESHED ON EVERY SUBMISSION, and this is what keeps a rename from
+  // going stale. /auth/rename writes the new name to /users/<uid> and knows nothing about
+  // which leagues that person sits in; without this line the board would keep showing the
+  // old name until they re-joined. Filing a leg re-stamps it, so a rename is visible from
+  // the next submission and no cross-league name index has to exist.
+  try { await fbPatch(env, LG(lid) + "/members/" + key, { name: String(name || "") }); }
+  catch { /* the leg is the write that matters; a stale label is cosmetic and self-heals */ }
+
+  const picks = (await fbGet(env, LG(lid) + "/picks")).data || {};
+  // ⚠️ THIS league's threshold, never the global roster. Default is "everyone in",
+  // where the size IS the member count — an 8-person league locks on the 8th leg and
+  // a 4-person league on the 4th. A league can instead lock at a fixed count, which
+  // turns Last In into a race with a real risk of not making the ticket at all.
+  // ⚠️ In Bozo Royale the threshold is the ALIVE roster, not the member count. A
+  // chopped player never submits again, so waiting for "everyone in" would mean the
+  // ticket could never lock once the first elimination landed — the board would just
+  // sit open forever with the league unable to play.
+  // ⚠️ ACTIVE seats, not the member count (Phase 2.9). Someone who joined mid-week holds
+  // a pending seat: on the roster, on the board, not on this week's ticket. Counting them
+  // here would raise the threshold under a live board and strand it one leg short forever.
+  const size = set.format === "royale" ? royaleRoster(state).length : activeNames(state).length;
+  const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
+  let placed = false;
+  if (need > 0 && Object.keys(picks).length >= need) {
+    placed = await placeAndDraw(env, lid, picks, state);
+  }
+  return { ok: true, ts: pick.ts, placed, size, need, pick };
+}
+
+function buildBozoLeg(name, p, via = null, by = null) {
   const oppRaw = Number(p.priceOpp);
   const entryPriceOpp = Number.isFinite(oppRaw) && Math.abs(oppRaw) >= 100 ? Math.round(oppRaw) : null;
 
-  const pick = {
+  return {
     sport: p.sport, eventId: String(p.eventId), game: String(p.game).slice(0, 80),
     mkt: p.mkt, side: String(p.side).slice(0, 40),
     line: p.mkt === "ml" ? 0 : Number(p.line),
@@ -7144,35 +7357,6 @@ async function commitBozoLeg(env, lid, state, name, p, via = null, mkey = null, 
     ...(by && by.proxy ? { commissionerModified: true, submittedByName: String(by.name || "") } : {}),
     ts: Date.now(),                 // SERVER time — the reason this route exists
   };
-  await fbPut(env, LG(lid) + "/picks/" + key, pick);
-
-  // ⚠️ THE LABEL IS REFRESHED ON EVERY SUBMISSION, and this is what keeps a rename from
-  // going stale. /auth/rename writes the new name to /users/<uid> and knows nothing about
-  // which leagues that person sits in; without this line the board would keep showing the
-  // old name until they re-joined. Filing a leg re-stamps it, so a rename is visible from
-  // the next submission and no cross-league name index has to exist.
-  try { await fbPatch(env, LG(lid) + "/members/" + key, { name: String(name || "") }); }
-  catch { /* the leg is the write that matters; a stale label is cosmetic and self-heals */ }
-
-  const picks = (await fbGet(env, LG(lid) + "/picks")).data || {};
-  // ⚠️ THIS league's threshold, never the global roster. Default is "everyone in",
-  // where the size IS the member count — an 8-person league locks on the 8th leg and
-  // a 4-person league on the 4th. A league can instead lock at a fixed count, which
-  // turns Last In into a race with a real risk of not making the ticket at all.
-  // ⚠️ In Bozo Royale the threshold is the ALIVE roster, not the member count. A
-  // chopped player never submits again, so waiting for "everyone in" would mean the
-  // ticket could never lock once the first elimination landed — the board would just
-  // sit open forever with the league unable to play.
-  // ⚠️ ACTIVE seats, not the member count (Phase 2.9). Someone who joined mid-week holds
-  // a pending seat: on the roster, on the board, not on this week's ticket. Counting them
-  // here would raise the threshold under a live board and strand it one leg short forever.
-  const size = set.format === "royale" ? royaleRoster(state).length : activeNames(state).length;
-  const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
-  let placed = false;
-  if (need > 0 && Object.keys(picks).length >= need) {
-    placed = await placeAndDraw(env, lid, picks, state);
-  }
-  return { ok: true, ts: pick.ts, placed, size, need, pick };
 }
 
 async function bozoPick(request, env, cors) {
@@ -7212,7 +7396,7 @@ async function bozoPick(request, env, cors) {
     before: before || null, after: after || null, ticketWasPlaced: false,
   });
 
-  if ((state.status || "open") !== "open" && body.confirm === undefined) {
+  if ((state.status || "open") !== "open" && (body.confirm === undefined || body.action === "remove")) {
     return json({ error: "The ticket is placed. Board is locked." }, 409, cors);
   }
 
@@ -9040,7 +9224,12 @@ async function runBozoCloseCapture(env, nowMs) {
 
   for (const [lid, patch] of patches.entries()) {
     if (!Object.keys(patch).length) continue;
-    try { await fbPatch(env, LG(lid), patch); }
+    try {
+      const group = targets.filter(t => t.lid === lid);
+      const live = (await fbGet(env, LG(lid))).data;
+      if (!live || group.some(t => t.week !== (live.week || 1) || t.season !== (live.season || SEASON) || !bozoSame(live.picks?.[t.key], t.pick))) continue;
+      if (!await bozoGuardedPatch(env, lid, live, patch)) console.log("bozo close: concurrent change; retry next tick");
+    }
     catch (e) { console.log("bozo close: write failed for " + lid + " — " + e.message); }
   }
 
@@ -9769,7 +9958,10 @@ async function bozoCloseFill(request, env, cors) {
     row: rowKey, week: row.week, from: Object.fromEntries(Object.keys(patch).map(k => [k, row[k] ?? null])),
     to: patch,
   };
-  try { await fbPatch(env, LG(lid), changes); }
+  try {
+    if (!await bozoGuardedPatch(env, lid, state, changes))
+      return json({ error: "The picks changed during close entry. Refresh and review the new selection." }, 409, cors);
+  }
   catch (e) { return json({ error: "Nothing saved: " + e.message }, 502, cors); }
   return json({ ok: true, row: rowKey, close: clvOnly ? (row.close ?? null) : (clear ? null : close),
     closeOpp: clvOnly ? (row.closeOpp ?? null) : (clear ? null : closeOpp),
@@ -11151,10 +11343,14 @@ async function bozoCommitGrade(env, lid, state, body, status) {
       row.beatSd = rSd(p);
       row.beatBasis = bozoBeatBasis(p, row);
     }
-    await fbPut(env, LG(lid) + "/results", body.results);
   }
-  if (body.bozo !== undefined) await fbPut(env, LG(lid) + "/bozo", body.bozo);
-  if (body.bozoWhy !== undefined) await fbPut(env, LG(lid) + "/bozoWhy", String(body.bozoWhy).slice(0, 200));
+  // Results and grading fence land atomically against the picks that were graded.
+  const gradePatch = { gradeStartedWeek: state.week || 1 };
+  if (body.results && typeof body.results === "object") gradePatch.results = body.results;
+  if (body.bozo !== undefined) gradePatch.bozo = body.bozo;
+  if (body.bozoWhy !== undefined) gradePatch.bozoWhy = String(body.bozoWhy).slice(0, 200);
+  if (!await bozoGuardedPatch(env, lid, state, gradePatch))
+    return { conflict: "The picks changed during grading. Refresh and grade again." };
 
   // Ledger last, before the status flip: if it fails the manager gets a 502, status is
   // still "placed", and hitting Decide again replays the whole thing idempotently.
@@ -11484,8 +11680,9 @@ async function bozoAutoGradeOne(env, lid, lg, nowMs) {
 
   // Only write when something actually changed — this runs every few minutes.
   const before = JSON.stringify(lg.results || {});
-  if (JSON.stringify(automatic.results) !== before)
-    await fbPut(env, LG(lid) + "/results", automatic.results);
+  if (JSON.stringify(automatic.results) !== before &&
+      !await bozoGuardedPatch(env, lid, lg, { results: automatic.results }))
+    return { league: lid, week, graded: false, conflict: "Picks changed during automatic grading; retry next tick." };
 
   /* A leg the scheduled source cannot settle is a leg only a person can. Both kinds
      count against finishing the week: a pending game score AND a hand-graded leg that
@@ -11578,7 +11775,7 @@ async function bozoGrade(request, env, cors) {
       const proposal = await readBozoGradeConfirm(env, body.confirm);
       if (!proposal || proposal.lid !== lid)
         return json({ error: "That grade confirmation is invalid or expired. Preview it again." }, 409, cors);
-      if (proposal.week !== (state.week || 1) || proposal.status !== status)
+      if (proposal.week !== (state.week || 1) || proposal.status !== status || !bozoSame(proposal.picks, state.picks || {}))
         return json({ error: "The board changed after the grade preview. Preview it again." }, 409, cors);
       // Phase two uses only the signed, frozen phase-one values. It does not read a score
       // source again, and no value supplied beside `confirm` can alter the write.
@@ -11610,7 +11807,7 @@ async function bozoGrade(request, env, cors) {
         body.bozoWhy = decided.ticketCashed ? "Ticket cashed — every leg won."
           : `${decided.decidedBy} · lost ${state.picks[body.bozo].label} at ${state.picks[body.bozo].price} · funds next week`;
       }
-      const proposal = { v: 1, lid, week: state.week || 1, status,
+      const proposal = { v: 1, lid, week: state.week || 1, status, picks: state.picks || {},
         expiresAt: Date.now() + 5 * 60 * 1000,
         body: { results: body.results || {}, bozo: body.bozo ?? null,
           bozoWhy: body.bozoWhy == null ? "" : String(body.bozoWhy).slice(0, 200),
@@ -21421,6 +21618,20 @@ const MCP_TOOLS = [
           "A pass here is a pass at this instant. Someone else can take your exact leg, or fill the board, before you press submit.",
         ],
       });
+    },
+  },
+  {
+    name: "dd_correct_bozo_pick",
+    title: "Correct one placed pick before kickoff",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: true,
+    description: "Manager-only two-phase replacement of one placed pick. Requires exact member key, type replace_before_kickoff and a reason. All ticket games must still be pre-kickoff, with no results or grading. Capture a fresh two-sided quote; SHOW the complete echo and obtain human approval before confirming. Preserves draw, lock metadata, other members and prior weeks; changes Last In, price and future CLV/beat inputs. Saves original and replacement receipts atomically. Never use raw admin or reopen as a substitute.",
+    inputSchema: BOZO_CORRECTION_SCHEMA,
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user" || !caller.uid) return toolErr("A personal authenticated account is required.");
+      const out = await bozoCorrectPickCore(env, caller, args, "mcp");
+      return out.status === 200 ? toolText(out.body) : toolErr(out.body.error);
     },
   },
   {

@@ -2924,6 +2924,20 @@ const MCP_TOOLS = [
     },
   },
   {
+    name: "dd_correct_bozo_pick",
+    title: "Correct one placed pick before kickoff",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: true,
+    description: "Manager-only two-phase replacement of one placed pick. Requires exact member key, type replace_before_kickoff and a reason. All ticket games must still be pre-kickoff, with no results or grading. Capture a fresh two-sided quote; SHOW the complete echo and obtain human approval before confirming. Preserves draw, lock metadata, other members and prior weeks; changes Last In, price and future CLV/beat inputs. Saves original and replacement receipts atomically. Never use raw admin or reopen as a substitute.",
+    inputSchema: BOZO_CORRECTION_SCHEMA,
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user" || !caller.uid) return toolErr("A personal authenticated account is required.");
+      const out = await bozoCorrectPickCore(env, caller, args, "mcp");
+      return out.status === 200 ? toolText(out.body) : toolErr(out.body.error);
+    },
+  },
+  {
     // ⚠️ THE ONE WRITE TOOL. Spec: claude/data-dawgs-cep-identity.md §4 — two-phase
     // commit, idempotent replay, server-enforced blast radius, audit stamp. The blast
     // radius is absolute: this tool can touch the CALLER'S OWN LEG, in the CURRENT

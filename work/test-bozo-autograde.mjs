@@ -58,8 +58,8 @@ ok(/const blocked = \[\.\.\.automatic\.pending, \.\.\.handPending/.test(worker),
 
 /* Results still land while the week is pending — that is the whole point, legs settling
    on the board as games end rather than all at once days later. */
-ok(/if \(JSON\.stringify\(automatic\.results\) !== before\)\s*\n\s*await fbPut\(env, LG\(lid\) \+ "\/results", automatic\.results\);/.test(worker),
-   "settled legs are written even while the week is still pending, and only when changed");
+ok(/bozoGuardedPatch\(env, lid, lg, \{ results: automatic\.results \}\)/.test(worker),
+   "settled legs are conditionally written against the picks that were graded");
 
 /* ⚠️ Who wore it is DERIVED by the same lever machinery the manager's card runs. The
    cron must never invent a bozo. */
