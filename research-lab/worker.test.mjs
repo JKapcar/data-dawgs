@@ -14,10 +14,14 @@ test('packaged delegated routes are closed by default and use isolated scoped id
    return Response.json({owner_uid:'u_test',agentAccess:{[id]:{...shared,audience:'pound:u_test',capabilities:['pound:task:read'],rosterId:'p_'+'a'.repeat(36),rosterIds:[],taskIds:[],contextVersions:{}}},payload:'{}'},{headers:{ETag:'"1"'}});
   }};
   mf=new Miniflare(options);const url='https://test/agents/v1/owners/u_test/mcp',request={method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list'})};
+  assert.equal((await mf.dispatchFetch('https://test/agent-setup/v1')).status,503);
   assert.equal((await mf.dispatchFetch(url,request)).status,503);assert.equal(reads,0);
   await mf.setOptions({...options,bindings:{...options.bindings,DELEGATED_AGENTS_ENABLED:'true'}});
   const r=await mf.dispatchFetch(url,request);assert.equal(r.status,200);assert.deepEqual((await r.json()).result.tools.map(t=>t.name),['pound_tasks']);assert.equal(reads,1);
   assert.equal((await mf.dispatchFetch('https://test/api/pound',{headers:request.headers})).status,401);
+  await mf.setOptions({...options,bindings:{...options.bindings,AGENT_SETUP_ENABLED:'true',RESEARCH_OWNER_UID:'u_test',RESEARCH_UPLOAD_TENANT:'test'}});
+  assert.equal((await mf.dispatchFetch('https://test/agent-setup/v1',{headers:request.headers})).status,401);
+  assert.equal(reads,1,'agent credentials cannot reach owner setup storage');
  }finally{await mf?.dispose();rmSync(directory,{recursive:true,force:true});}
 });
 test('generated production-source Worker loads without Node compatibility and runs a real synthetic audit',async()=>{

@@ -94,7 +94,7 @@ jobs:
 
       # Package the research route around the verified assembled Worker. Shared
       # access stays disabled unless explicitly configured and granted separately.
-      - run: node --test research-lab/agent-integration.test.mjs research-lab/repair-owner-envelope.test.mjs research-lab/lab.test.mjs research-lab/gateway.test.mjs
+      - run: node --test research-lab/agent-setup.test.mjs research-lab/agent-integration.test.mjs research-lab/repair-owner-envelope.test.mjs research-lab/lab.test.mjs research-lab/gateway.test.mjs
       - run: node research-lab/build-worker.mjs
 
       # Fails closed on a malformed manifest without uploading anything.

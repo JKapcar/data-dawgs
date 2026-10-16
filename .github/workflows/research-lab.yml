@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
-      - run: node --test research-lab/agent-integration.test.mjs research-lab/repair-owner-envelope.test.mjs research-lab/lab.test.mjs research-lab/gateway.test.mjs research-lab/upload.test.mjs research-lab/exact-store.test.mjs
+      - run: node --test research-lab/agent-setup.test.mjs research-lab/agent-integration.test.mjs research-lab/repair-owner-envelope.test.mjs research-lab/lab.test.mjs research-lab/gateway.test.mjs research-lab/upload.test.mjs research-lab/exact-store.test.mjs
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: python research-lab/inspect_zip_test.py
@@ -23,6 +23,7 @@ jobs:
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node research-lab/hosted-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node research-lab/public-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/upload-browser.test.mjs
+      - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/agent-setup-browser.test.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

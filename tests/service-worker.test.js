@@ -152,6 +152,7 @@ test('precache is per-file, rejects private responses and includes the live-stat
 });
 
 test('vault setup shell and script bypass CacheStorage',async()=>{const h=harness();for(const url of ['/vault.html','/vault-setup.js','/api/vault','/api/vault/access','/mcp/vault'])assert.equal(await h.dispatch(url),undefined);assert.equal(h.stores.size,0);});
+test('agent credential setup never enters CacheStorage',async()=>{const h=harness();for(const url of ['/research-lab/agent-setup.html','/research-lab/agent-setup-ui.mjs','/research-lab/agent-setup.css','/agent-setup/v1'])assert.equal(await h.dispatch(url),undefined);assert.equal(h.stores.size,0);});
 test('Dawg Pound shell, API, private MCP and session requests bypass CacheStorage',async()=>{
   const h=harness();for(const url of ['/dawg-pound.html','/dawg-pound.js','/api/pound','/api/pound/schema','/mcp/pound'])assert.equal(await h.dispatch(url),undefined);
   for(const name of ['X-Dawg-Session','X-Bozo-Session'])assert.equal(await h.dispatch('/index.html',{headers:{[name]:'test-session'}}),undefined);
