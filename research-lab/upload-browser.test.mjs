@@ -5,7 +5,7 @@ const output=process.env.LAB_SCREENSHOTS||path.join(os.tmpdir(),'dd-upload-previ
 try{
  const page=await browser.newPage({viewport:{width:1440,height:1000},reducedMotion:'reduce'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  let configured=false,upload=null,parts=0,retry=true,partStarted;const firstPart=new Promise(r=>partStarted=r);
- await page.route('https://datadawgs216.com/**',async route=>{const name=new URL(route.request().url()).pathname.split('/').at(-1);assert(['upload.html','upload.css','upload.mjs','navigation.css','navigation.js'].includes(name));await route.fulfill({contentType:/\.(mjs|js)$/.test(name)?'text/javascript':name.endsWith('.css')?'text/css':'text/html',body:readFileSync(new URL(name,import.meta.url))});});
+ await page.route('https://datadawgs216.com/**',async route=>{const name=new URL(route.request().url()).pathname.split('/').at(-1);assert(['upload.html','upload.css','upload.mjs','navigation.css','navigation.js','account.js'].includes(name));await route.fulfill({contentType:/\.(mjs|js)$/.test(name)?'text/javascript':name.endsWith('.css')?'text/css':'text/html',body:readFileSync(new URL(name,import.meta.url))});});
  await page.route('https://toto.jkapcar4.workers.dev/**',async route=>{
   const req=route.request(),action=new URL(req.url()).pathname.split('/').at(-1),send=(body,status=200)=>route.fulfill({status,headers:{'Access-Control-Allow-Origin':'https://datadawgs216.com','Content-Type':'application/json'},body:JSON.stringify(body)});
   if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'Access-Control-Allow-Origin':'https://datadawgs216.com','Access-Control-Allow-Methods':'GET,POST,PUT,OPTIONS','Access-Control-Allow-Headers':'Authorization,Content-Type,X-Upload-Part,X-Upload-ID'}});

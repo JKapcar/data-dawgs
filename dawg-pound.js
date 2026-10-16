@@ -13,7 +13,7 @@ function clear(){
   for(const id of ['roster','taskSelect','taskDetail','messages','activity','contextList','contextVersions','editorFields'])$(id).replaceChildren();
   $('messageText').value='';$('contextText').textContent='';$('contextHash').textContent='';$('editorError').textContent='';
   for(const id of ['editor','library'])if($(id).open)$(id).close();
-  $('workspace').hidden=true;$('welcome').hidden=false;$('contextReader').hidden=true;$('openLibrary').disabled=true;$('contextCount').textContent='0';$('agentCount').textContent='0 / 24';$('accountLabel').textContent='Private workspace';
+  $('workspace').hidden=true;$('welcome').hidden=false;$('contextReader').hidden=true;$('openLibrary').disabled=true;$('contextCount').textContent='0';$('agentCount').textContent='0 / 24';globalThis.DDAccount?.reset();
 }
 async function request(method,body,generation,token){
   const res=await fetch(API,{method,cache:'no-store',credentials:'omit',redirect:'error',signal:controller.signal,headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
@@ -28,7 +28,7 @@ async function load(){
   if(!token){note('Sign in to open your private workspace.');return;}
   controller=new AbortController();note('Opening your workspace…');
   try{const result=await request('GET',null,generation,token);state=result.workspace;loadedToken=token;render();note('Private workspace · saved '+(state.updated_at?date(state.updated_at):'when you add your first item'));if(draft?.token===token)restoreDraft(draft);suspended=null;}
-  catch(e){if(generation===epoch&&e.name!=='AbortError'){if(e.status===401||e.status===403)suspended=null;note(e.message);}}
+  catch(e){if(generation===epoch&&e.name!=='AbortError'){if(e.status===401||e.status===403)suspended=null;globalThis.DDAccount?.failed(e.status);note(e.message);}}
 }
 function suspend(){
   if(loadedToken&&session()===loadedToken)suspended={token:loadedToken,activeTask,activeContext,message:$('messageText').value,pending,library:$('library').open,editor:$('editor').open&&edit?{...edit,fields:Object.fromEntries(new FormData($('editForm')))}:null};
@@ -63,7 +63,7 @@ async function save(op,data,baseRevision=state?.revision){
   }finally{if(generation===epoch)setBusy(false);}
 }
 function render(){
-  $('workspace').hidden=false;$('welcome').hidden=true;$('openLibrary').disabled=false;$('accountLabel').textContent='Owner workspace';
+  $('workspace').hidden=false;$('welcome').hidden=true;$('openLibrary').disabled=false;globalThis.DDAccount?.verified(loadedToken);
   const agents=state.agents.filter(a=>!a.archived);$('agentCount').textContent=state.agents.length+' / 24';$('roster').replaceChildren();
   for(const a of agents){const card=node('article',null,'agent'),bar=node('div',null,'bar');bar.append(node('h3',a.name),action('Edit',()=>editor('agent',a)));card.append(bar,node('p',a.role),node('p',a.function,'muted'),node('p','Declared capabilities: '+(a.capabilities||'Not specified'),'muted'),node('span','Not connected','badge'),node('p','Last seen: never','muted'));$('roster').append(card);}
   if(!agents.length)$('roster').append(node('p','Start with a name and a role. Your roster stays private.','empty'));
