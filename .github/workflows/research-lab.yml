@@ -1,7 +1,7 @@
 name: Research lab contracts and preview
 on:
   pull_request:
-    paths: ['research-lab/**', 'dawg-pound.html', 'dawg-pound.js', 'signon.html', '.github/workflows/research-lab.yml']
+    paths: ['install-help.js', 'install-help.css', 'tests/install-help.test.mjs', 'research-lab/**', 'dawg-pound.html', 'dawg-pound.js', 'signon.html', '.github/workflows/research-lab.yml']
 permissions:
   contents: read
 jobs:
@@ -27,6 +27,7 @@ jobs:
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/navigation-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/account-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/app-permissions-browser.test.mjs
+      - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node tests/install-help.test.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

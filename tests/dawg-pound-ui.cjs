@@ -19,7 +19,7 @@ let browser;
   const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/*',async route=>{
-    const req=route.request();if(req.url().startsWith(origin)){const file=new URL(req.url()).pathname.slice(1);if(!['dawg-pound.html','dawg-pound.js','research-lab/account.js','research-lab/navigation.js'].includes(file))return route.fulfill({status:404,body:''});return route.fulfill({status:200,contentType:file.endsWith('.js')?'text/javascript':'text/html',headers:{'Cache-Control':'no-store'},body:fs.readFileSync(file,'utf8')});}
+    const req=route.request();if(req.url().startsWith(origin)){const file=new URL(req.url()).pathname.slice(1);if(!['install-help.js','dawg-pound.html','dawg-pound.js','research-lab/account.js','research-lab/navigation.js'].includes(file))return route.fulfill({status:404,body:''});return route.fulfill({status:200,contentType:file.endsWith('.js')?'text/javascript':'text/html',headers:{'Cache-Control':'no-store'},body:fs.readFileSync(file,'utf8')});}
     if(req.url()==='https://toto.jkapcar4.workers.dev/api/pound'){
       assert.match(req.headers().authorization,/^Bearer u_(demo|other)\.[x]{43}$/);
       for(const h of ['x-dawg-session','x-bozo-session','x-dawg-pass'])assert.equal(req.headers()[h],undefined);

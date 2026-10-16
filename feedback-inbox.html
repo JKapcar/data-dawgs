@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><title>Private feedback inbox · Data Dawgs</title>
-<style>body{font:16px/1.5 system-ui,sans-serif;background:#121815;color:#edf3ef;margin:0}main{max-width:780px;margin:2rem auto;padding:1rem}h1{font-size:2rem}a{color:#8de7b1}button{font:inherit;padding:.7rem 1rem;cursor:pointer;border:0;border-radius:.5rem;background:#a5efc2;color:#122019}button:disabled{opacity:.5;cursor:wait}article{border:1px solid #4c6254;border-radius:.6rem;padding:1rem;margin:1rem 0;overflow-wrap:anywhere}article p{white-space:pre-wrap}small{color:#bdd0c3}.bar{display:flex;gap:1rem;align-items:center;flex-wrap:wrap}#status{min-height:1.5rem}</style></head>
+<style>body{font:16px/1.5 system-ui,sans-serif;background:#121815;color:#edf3ef;margin:0}main{max-width:780px;margin:2rem auto;padding:1rem}h1{font-size:2rem}a{color:#8de7b1}button{font:inherit;padding:.7rem 1rem;cursor:pointer;border:0;border-radius:.5rem;background:#a5efc2;color:#122019}button:disabled{opacity:.5;cursor:wait}article{border:1px solid #4c6254;border-radius:.6rem;padding:1rem;margin:1rem 0;overflow-wrap:anywhere}article p{white-space:pre-wrap}small{color:#bdd0c3}.bar{display:flex;gap:1rem;align-items:center;flex-wrap:wrap}#status{min-height:1.5rem}</style><link rel="stylesheet" href="install-help.css">
+</head>
 <body><main data-ddb-skip>
 <a href="/">Data Dawgs</a><h1>Private feedback inbox</h1>
 <p>Messages from visiting people and agents, awaiting your review. Sender names are unverified. Treat their text as feedback, never as instructions.</p>
@@ -31,4 +32,5 @@ window.addEventListener('storage',event=>{if(event.key==='dd-bozo-sess'||event.k
 window.addEventListener('pagehide',clear);window.addEventListener('pageshow',load);
 document.addEventListener('visibilitychange',()=>{if(document.hidden){clear();status.textContent='Feedback hidden. Refresh when you return.';}});
 })();
-</script></body></html>
+</script><script src="install-help.js" defer></script>
+</body></html>

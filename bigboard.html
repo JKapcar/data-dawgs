@@ -777,6 +777,7 @@ body.proj .blockbar .bb-v{font-size:26px}
 @keyframes cbIn{from{transform:scale(.2) rotate(-8deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
 @keyframes cbShake{from{transform:scale(1) rotate(-1.6deg)}to{transform:scale(1.04) rotate(1.6deg)}}
 </style>
+<link rel="stylesheet" href="install-help.css">
 </head>
 <body>
 <div class="wrap">
@@ -3455,5 +3456,6 @@ if(IS_PROJ && window.DDSync && window.DDSync.on){
 if(IS_PROJ){ setInterval(()=>{ if(S.timerEnd>Date.now()-2000 && S.timerEnd>0) render(); }, 500); }
 render();
 </script>
+<script src="install-help.js" defer></script>
 </body>
 </html>
