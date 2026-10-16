@@ -12,7 +12,8 @@ export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-l
   const journal=path.join(directory,'journal.jsonl');
   let state=initialState();
   const codeHash=hash(['machine.mjs','machine-core.mjs','tracking.mjs','server.mjs'].map(f=>readFileSync(path.join(root,f),'utf8')).join('\n'));
-  const principal={tenant:'local-research',id:'local-owner',capabilities};
+  // The loopback runner is the owner's own machine: it may register hypotheses.
+  const principal={tenant:'local-research',id:'local-owner',capabilities,signedOwner:true};
   try {
     if(existsSync(journal)) {
       let previous=null;
