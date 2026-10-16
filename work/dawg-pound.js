@@ -68,7 +68,7 @@ function poundView(state){const {receipts,...view}=state;return {...view,agent_a
 function poundItem(rows,id){const row=rows.find(r=>r.id===id);poundCheck(row,404,'Item not found');return row;}
 async function poundHash(value){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));return Array.from(new Uint8Array(bytes),x=>x.toString(16).padStart(2,'0')).join('');}
 function poundCanonical(v){return v&&typeof v==='object'?(Array.isArray(v)?'['+v.map(poundCanonical).join(',')+']':'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+poundCanonical(v[k])).join(',')+'}'):JSON.stringify(v);}
-async function poundWrite(state,input,uid){
+async function poundWrite(state,input,uid,actorKind='owner'){
   const now=new Date().toISOString(),d=input.data,op=input.op;
   const makeId=()=> 'p_'+crypto.randomUUID();let id=d.id;
   if(op==='agent.save'||op==='task.save'){
@@ -78,21 +78,21 @@ async function poundWrite(state,input,uid){
     if(!isAgent&&d.agent_id)poundCheck(!poundItem(state.agents,d.agent_id).archived,409,'Agent is archived');
     Object.assign(row,d,{updated_at:now});id=row.id;
     if(isAgent)Object.assign(row,{connection_status:'not_connected',last_seen:null,capabilities_source:'owner_declared'});
-    else row.status_source='owner_reported';
+    else row.status_source=actorKind==='owner'?'owner_reported':'owner_connector_reported';
   }else if(op==='message.add'){
     poundCheck(!poundItem(state.tasks,d.thread_id).archived,409,'Task is archived');
     poundCheck(state.messages.length<POUND_LIMITS.messages,409,'Message limit reached');
-    id=makeId();state.messages.push({id,...d,actor_uid:uid,actor_kind:'owner',created_at:now});
+    id=makeId();state.messages.push({id,...d,actor_uid:uid,actor_kind:actorKind,created_at:now});
   }else if(op==='context.save'){
     let row=id?poundItem(state.contexts,id):null;
     if(!row){poundCheck(state.contexts.length<POUND_LIMITS.contexts,409,'Context limit reached');row={id:makeId(),versions:[],created_at:now,archived:false};state.contexts.push(row);}
     poundCheck(!row.archived,409,'Context is archived');
     poundCheck(row.versions.length<POUND_LIMITS.versions,409,'Context version limit reached; create a new document');
-    row.versions.push({version:row.versions.length+1,text:d.text,title:d.title,sha256:await poundHash(d.text),created_at:now,actor_uid:uid});
+    row.versions.push({version:row.versions.length+1,text:d.text,title:d.title,sha256:await poundHash(d.text),created_at:now,actor_uid:uid,actor_kind:actorKind});
     row.title=d.title;row.updated_at=now;id=row.id;
   }else{const row=poundItem(state.contexts,id);row.archived=true;row.updated_at=now;}
   state.revision++;state.updated_at=now;
-  state.activity.push({id:makeId(),operation:op,item_id:id,actor_uid:uid,actor_kind:'owner',at:now});
+  state.activity.push({id:makeId(),operation:op,item_id:id,actor_uid:uid,actor_kind:actorKind,at:now});
   state.activity=state.activity.slice(-POUND_LIMITS.activity);
   return {item_id:id,revision:state.revision};
 }
