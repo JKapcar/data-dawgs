@@ -5,7 +5,11 @@
 // meant a JS-only fix never invalidated a phone's cache.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
+<<<<<<< HEAD
 const VERSION = "owner-connector-permissions-1";
+=======
+const VERSION = "91da3a28a1";
+>>>>>>> origin/main
 // A cache revision also invalidates old images when only precached artwork changes.
 const CACHE = "dd-" + VERSION + "-public-v3";
 
