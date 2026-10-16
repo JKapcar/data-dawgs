@@ -84,3 +84,11 @@ test('web session and owner connector resolve to the same owner, tenant and stor
   const r=await mcp('dd_owner_bdb_read');assert.ok(r.workspace.hypotheses.some(x=>x.id===h.body.id&&x.revisions[0].subject===uid));assert.ok(r.workspace.evidence.some(x=>x.id===e.v.result.id));
  }finally{await mf?.dispose();rmSync(path.resolve(directory),{recursive:true,force:true});}
 });
+test('packaged BDB read reports a real R2 object by metadata only',async()=>{const w=await boot();try{
+ const key='quarantine/'+w.uid+'/22222222-2222-4222-8222-222222222222.zip',bytes=new Uint8Array(1024).fill(7);bytes.set([80,75,3,4]);
+ await (await w.mf.getR2Bucket('RESEARCH_UPLOADS')).put(key,bytes);
+ w.db.set('/researchUploads/v1/'+w.uid,{version:1,owner_uid:w.uid,payload:JSON.stringify({id:'22222222-2222-4222-8222-222222222222',name:'synthetic.zip',size:1024,hashes:['c'.repeat(64)],key,uploadId:'u',status:'complete',parts:{1:{}},createdAt:Date.now(),completedAt:Date.now()})});
+ const r=await w.rpc('tools/call',{name:'dd_owner_bdb_read',arguments:{}});const d=callText(r).dataset;
+ assert.equal(d.object,'present');assert.equal(d.objectSize,1024);assert.equal(d.objectMatchesRecordedSize,true);assert.equal(d.lifecycle.durable,false);assert.ok(Date.parse(d.lifecycle.expiresAt)>Date.now());
+ assert.ok(!r.body.result.content[0].text.includes('PK'),'no archive bytes in the response');
+}finally{await w.close();}});
