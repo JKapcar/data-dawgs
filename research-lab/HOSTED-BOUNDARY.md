@@ -1,82 +1,96 @@
-# Durable collaboration adapter — executable code, not a live service
+# Shared research release and activation boundary
 
-## What exists now
+## Release contents
 
-`gateway.mjs` exports an executable Request/Response handler. Its tests invoke the
-actual repository `sessionAuth`, `readSession`, `mcpAuth`, `fbGet` and `fbPut` functions
-extracted from the checked-out Worker, with an in-memory HTTP/ETag database replacing
-network access. The tests do not contact Firebase or mint any real credential.
+The public `/research-lab/` dashboard runs the fixed synthetic audit in this tab's
+memory. Receipts are real WebCrypto-hashed execution records; reload resets this
+demo. It uses no account token, persistent storage, provider or shared service.
+The Node loopback runner retains durable private journals and input-backed replay.
 
-The local preview still uses `server.mjs` and its private disk journal. It has not
-been switched to hosted storage. The new gateway is not imported by the Worker,
-not assembled into `dawg-bot-worker.js`, and not reachable on production URLs.
+`build-worker.mjs` packages the current assembled production Worker with the research
+gateway and native WebCrypto core, writing an isolated ignored artifact and a source
+hash manifest. It never edits the root Worker or assembler. The existing manual
+`worker-deploy` workflow uses the full unchanged `wrangler.jsonc` for dry-run, upload
+and promotion. Bindings, encrypted secrets and existing schedules are preserved.
+`X-Research-Code` identifies the packaged source hash.
 
-## Smallest hosted storage path
+Shared routes are disabled unless `RESEARCH_LAB_ENABLED` is exactly `true`.
+The public client selects browser demo mode with `sharedEnabled:false`.
+No research feature flag, grant, credential or schedule is activated by this release.
 
-Reuse existing Firebase RTDB conditional writes, rather than provision a new database.
-One private node per tenant: `/researchLab/v1/tenants/{tenant}`. Its envelope contains
-`version:1`, server-managed `access.users` / `access.agents`, research `state`, and
-content-addressed synthetic `inputs`. Grants contain enabled, expiresAt and explicit
-capabilities. There is no grant-write endpoint. An absent envelope/grant fails closed.
+## Shared API and trust boundary
 
-All commands, leases, hypothesis revisions, evidence, discussion, receipts, inputs
-and audit records commit under the same ETag. Two clients racing for a task cannot
-both claim it. A concurrent access revocation changes that same ETag; retries read
-and reauthorize the new grant before committing. An 8 MB envelope limit rejects
-further writes instead of truncating receipts or silently dropping failed trials.
-This is a small-pilot architecture, not a high-volume archival store. Splitting
-large inputs/receipts into object storage needs an explicit transactional design.
+After approved activation, GET `/research/v1/tenants/{tenant}/state` and POST
+`/research/v1/tenants/{tenant}/command` expose the same state/commands as the dashboard.
+POST `/research/v1/tenants/{tenant}/mcp` supports JSON-RPC initialize, tools/list and
+tools/call. No SSE, arbitrary code, external model call or background job executes.
 
-## Identity and scope
+Identity uses the existing signed X-Dawg-Session or personal Bearer u_ MCP verifier.
+Browser clients accept only the real site origins and existing Worker origin, reuse
+the sign-in session and never fall back to local state after an authorization error.
+Account changes invalidate pending responses, including JSON still being decoded.
+No credential input UI is added. Legacy invitation seeding is disabled in research
+authentication. Legacy name-only sessions and shared credentials are refused.
 
-- Browser: existing `X-Dawg-Session` → `sessionAuth`; immutable UID required. Legacy
-  display-name-only sessions are refused. Password resets retain existing revocation.
-- AI transport: personal `Authorization: Bearer u_...` → existing `mcpAuth`, passed
-  only a sanitized canonical `/mcp` request. Shared passwords, URL/query credentials
-  and `X-Dawg-Pass` are refused. The usual token rotation/revocation still applies.
-- Neither identity implies research access. The corresponding explicit, expiring
-  grant must exist in that tenant. Tenant selection in a path is not a grant.
-- Human actor is `user:{uid}`; MCP actor is `mcp:{uid}`. A single user's existing MCP
-  credential is one identity, **not separately authenticated identities for each AI**.
-  The gateway scopes that credential on research routes only; it does not narrow the
-  credential's permissions on other existing site tools. Do not distribute an existing
-  broad account token to every AI. True per-agent credentials/rotation need a separately
-  approved delegated-identity design; none are created by this PR.
-- Read requires `research:read`. Writes use the core operation-specific capabilities.
-  Reads omit other actors' lease tokens. Access grants and raw stored inputs are not
-  returned by the state projection. Content remains untrusted/inert.
+Every identity needs an enabled, expiring tenant grant with exact capabilities.
+There is no grant-write endpoint. Independence compares canonical UID: several AIs
+sharing a user token are one author, not independently authenticated agents. Research
+scopes do not restrict that token on other site tools. Never distribute a broad
+account token as a shortcut for delegated agent identity.
 
-## Executable adapter routes (only when mounted and enabled)
+One private RTDB node `/researchLab/v1/tenants/{tenant}` contains version, grants,
+state, accepted synthetic inputs and quota. ETag conditional writes atomically commit
+tasks, receipts, inputs, idempotency and audit. Revocation changes the same ETag;
+conflicts re-read and reauthorize. Lease expiry is checked again before commit.
 
-| Route | Behavior |
-|---|---|
-| GET `/research/v1/tenants/{tenant}/state` | Scoped shared state |
-| POST `/research/v1/tenants/{tenant}/command` | Same validated research commands as the local core |
-| POST `/research/v1/tenants/{tenant}/mcp` | JSON-RPC initialize, tools/list, tools/call using the same state and scopes |
+Limits: 2 MB UTF-8 request, 10-second body read, 4 KB credential header, 1 MB response,
+8 MB store, five CAS attempts, 60 requests/account/minute and 240/tenant/minute.
+Durable fixed-window quotas span gateway instances and browser/MCP identities for
+one account. Authenticated malformed requests spend quota. Unauthenticated requests
+create no records; existing edge infrastructure governs that traffic. Writes stop
+before state exceeds the bounded readable response. Pagination and archival-scale
+storage are future work; this design is a small pilot.
 
-The MCP subset is synchronous JSON request/response; no SSE, background jobs, provider
-connection or scheduler is implemented. `research_state` and scoped `research_*`
-operation tools are executable in the adapter tests, not merely names in a contract.
-The default gate is `RESEARCH_LAB_ENABLED !== 'true'` → 503. No configuration changed.
+State reads omit grants, raw inputs and other actors' lease tokens. Only schema-valid
+synthetic discovery input is archived. Malformed trials retain hash/failure receipts,
+not raw unvalidated bytes, so hosted failure inputs cannot be replayed. Synthetic
+provenance is caller-asserted, not verified fact. Licensed and held-out data cannot
+run through the hosted adapter. Unknown fields are rejected. Messages remain inert,
+untrusted content and never confer authority.
 
-## Before any external change
+## Activation checklist — separate approval required
 
-1. Finish Worker packaging: `gateway.mjs` itself is runtime-neutral, but the current
-   core imports `node:crypto`. The existing manifest has no `nodejs_compat` flag.
-   Port the hashing/UUID dependency or review a compatible bundle before integration;
-   do not silently add a runtime compatibility setting.
-2. Review the integration diff against the then-current Worker/assembler. Avoid the
-   independent Dawg Pound PR; neither its unpublished identity changes nor its files
-   are a dependency of this adapter.
-3. Obtain explicit approval to mount/publish the routes, enable the feature, and create
-   the named tenant/grants. Confirm the RTDB path is private under existing rules.
-   If it is not already private, stop for security-rule approval rather than weaken
-   checks. No secrets, tokens, grants or production records have been changed here.
-4. Establish least-privilege independent agent identities before connecting external
-   providers. No broad credentials should be handed out as a shortcut.
-5. Connect the browser and test a controlled hosted round trip before describing state
-   as hosted/shared. Real-data ingestion, held-out gate and scheduling remain disabled.
+1. Verify deployed hash, current identity behavior and private RTDB path policy.
+   If that path is not private already, stop for a security-rule review; do not
+   weaken rules or expose research data.
+2. Approve a named tenant, initial empty envelope, named UID grants, exact scopes
+   and expiry through an authorized administration path. No production records or
+   grants are seeded by this release.
+3. Review least-privilege delegated agent credentials, rotation and revocation before
+   connecting independent AIs. Personal MCP transport is not per-model identity.
+4. Approve the Worker feature flag and dashboard hosted configuration (mode, existing
+   workerOrigin, tenant). Test signed-in write/read/reload, foreign-tenant denial,
+   expired/revoked grants, duplicate claims and unauthenticated denial using synthetic
+   data. A tenant selector must never grant access.
+5. Before scheduling, approve provider identities, capabilities, tasks, budgets,
+   cadence/timezone, retry/idempotency policy, delivery destination and stop switch.
+   Test one synthetic invocation. No scheduler is configured today.
+6. Real data requires verified access, licensing, schema and measurement audit, plus
+   a reviewed adapter. Held-out evaluation needs a separate role/store, frozen
+   protocol and split manifest, one-use approval budget and complete null/failure
+   reporting. Daily exploratory identities must never see held-out data.
 
-The architecture supports a durable multi-client state transition once integrated.
-It does not establish that a deployed endpoint, production access policy, independent
-AI identity or live provider connection currently exists.
+## Verification and rollback
+
+Contract tests execute real repository identity/storage functions against an
+intercepted ETag database. The generated full Worker runs in workerd with no Node
+compatibility flag and intercepted outbound traffic. Hosted-browser tests exercise
+signed-in UI, WebCrypto, CAS, receipts, reload and revocation. Public-browser tests
+verify actual in-tab execution/hashes, reload reset, no backend traffic and responsive
+layouts. Synthetic results never produce verified/falsified verdicts.
+
+Release uses PR CI, Pages' main-branch build and the existing manual Worker workflow.
+Record Pages commit and Worker version/hash after promotion. Roll back Worker traffic
+to the previously serving version with `wrangler versions deploy OLD_ID@100% --name
+toto`; revert this release through the normal PR path to roll back Pages. No data
+migration is needed while shared access stays disabled. Do not delete unrelated state.

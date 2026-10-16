@@ -12,9 +12,13 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
       - run: node --test research-lab/lab.test.mjs research-lab/gateway.test.mjs
-      - run: npm install --prefix /tmp/dd-lab-qa playwright@1.56.1 --no-audit --no-fund
+      - run: node research-lab/build-browser.mjs && git diff --exit-code -- research-lab/browser-engine.mjs
+      - run: npm install --prefix /tmp/dd-lab-qa playwright@1.56.1 miniflare@4.20260730.0 --no-audit --no-fund
       - run: /tmp/dd-lab-qa/node_modules/.bin/playwright install --with-deps chromium
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/browser.test.mjs
+      - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node --test research-lab/worker.test.mjs
+      - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node research-lab/hosted-browser.test.mjs
+      - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node research-lab/public-browser.test.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -1,23 +1,29 @@
 // Normalized internal contract v1. Not a claimed Kaggle schema.
 export const convention = 'yards:x-right,y-up;degrees:counterclockwise-from-positive-x';
 const fail = message => { throw new Error(message); };
+const fields=(value,keys)=>{if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!keys.includes(k)))fail('Unknown or malformed tracking fields');};
 export function validateTracking(input) {
   const d = structuredClone(input);
+  fields(d,['version','convention','split','provenance','frames']);
   if (!d || d.version !== 1 || d.convention !== convention) fail('Unsupported version or coordinate convention');
   if (!d.provenance || typeof d.provenance.source !== 'string' || !d.provenance.source.trim() ||
       !['synthetic','licensed'].includes(d.provenance.kind) || typeof d.provenance.note !== 'string') fail('Explicit provenance required');
+  fields(d.provenance,['source','kind','note']);if(d.provenance.source.length>2000||d.provenance.note.length>4000)fail('Provenance too long');
   if (d.split !== 'discovery') fail('Held-out data is not accepted by the exploratory loader');
   if (!Array.isArray(d.frames) || !d.frames.length || d.frames.length > 10000) fail('Expected 1–10000 frames');
   const ids = new Set(); let previous = -Infinity;
   for (const f of d.frames) {
-    if (!f || typeof f.sourceFrameId !== 'string' || !f.sourceFrameId || ids.has(f.sourceFrameId)) fail('Unique source frame IDs required');
+    fields(f,['sourceFrameId','timeMs','entities','events']);
+    if (!f || typeof f.sourceFrameId !== 'string' || !f.sourceFrameId || f.sourceFrameId.length>100 || ids.has(f.sourceFrameId)) fail('Unique source frame IDs required');
     ids.add(f.sourceFrameId);
     if (!Number.isFinite(f.timeMs) || f.timeMs < 0 || f.timeMs <= previous) fail('Timestamps must increase; no fixed frame rate assumed');
     previous = f.timeMs;
     if (!Array.isArray(f.entities) || f.entities.length > 100) fail('Malformed entities');
-    if (!Array.isArray(f.events) || f.events.some(e => typeof e !== 'string' || e.length > 200)) fail('Events must be strings');
+    if (!Array.isArray(f.events) || f.events.length>100 || f.events.some(e => typeof e !== 'string' || e.length > 200)) fail('Events must be strings');
     const entities = new Set();
     for (const e of f.entities) {
+      fields(e,['id','kind','cohort','x','y','speed','dir','o','missing']);
+      if(e.missing!==undefined&&(!Array.isArray(e.missing)||e.missing.length>5||e.missing.some(k=>!['x','y','speed','dir','o'].includes(k))))fail('Malformed missing fields');
       if (!e || typeof e.id !== 'string' || !e.id || e.id.length > 100 || entities.has(e.id)) fail('Unique entity IDs required per frame');
       entities.add(e.id);
       if (!['player','ball'].includes(e.kind) || typeof e.cohort !== 'string' || e.cohort.length > 100) fail('Entity kind/cohort required');

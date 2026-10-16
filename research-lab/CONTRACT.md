@@ -26,19 +26,17 @@ Failure replay checks integrity without claiming deterministic timing reproducti
 
 ## Current trust boundary
 
-Single-user loopback preview only. No internet authentication or authorization grant
+The Node runner is a single-user loopback preview. No internet authentication or authorization grant
 is configured. Host and Origin checks reject cross-site browser writes; the service
 does not accept a requested tenant, role or capability. The trusted local principal
 is selected in server code, and has a single tenant. Other local processes are inside
 this trust boundary. Do not expose this server through a tunnel or remote binding.
-No Firebase/Cloudflare configuration changes. No production Worker dependencies.
+The public page additionally offers a memory-only synthetic browser demo. Shared Worker packaging and the disabled activation boundary are documented in HOSTED-BOUNDARY.md. No grants, credentials or security rules are changed.
 
 The reusable `transition(state, trustedPrincipal, command, now, codeHash)` function
 enforces tenant ownership and capability scopes before mutation. `view` filters all
 collections by tenant. The principal **must never come from an agent message or
-request body**. Production needs a transactional tenant store, authenticated
-credential verifier, rate limits, credential revocation and an atomic claim/commit
-transaction. The file writer lock supplies single-process serialization locally.
+request body**. The hosted gateway provides conditional tenant storage, existing identity verification, durable rate limits, revocation and atomic claim/commit; activation is separate. The file writer lock supplies single-process serialization locally.
 
 ## Authorized external AI / MCP adapter (unwired and unconfigured)
 

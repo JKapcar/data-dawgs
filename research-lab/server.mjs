@@ -11,7 +11,7 @@ export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-l
   const lock=path.join(directory,'writer.lock'); const fd=openSync(lock,'wx');
   const journal=path.join(directory,'journal.jsonl');
   let state=initialState();
-  const codeHash=hash(['machine.mjs','tracking.mjs','server.mjs'].map(f=>readFileSync(path.join(root,f),'utf8')).join('\n'));
+  const codeHash=hash(['machine.mjs','machine-core.mjs','tracking.mjs','server.mjs'].map(f=>readFileSync(path.join(root,f),'utf8')).join('\n'));
   const principal={tenant:'local-research',id:'local-owner',capabilities};
   try {
     if(existsSync(journal)) {
@@ -43,7 +43,7 @@ export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-l
       execute({type:'task',key:`seed-t-${i}`,payload:{hypothesisId:h.id,split:'discovery',budgetMs:5000,maxObservations:10000}});
     }
   }
-  const assets=new Map([['/','index.html'],['/app.mjs','app.mjs'],['/style.css','style.css'],['/instrument.css','instrument.css'],['/tracking.mjs','tracking.mjs'],['/CONTRACT.md','CONTRACT.md'],['/brand.png','../assets/data-dawgs-site-logo-560.png']]);
+  const assets=new Map([['/','index.html'],['/app.mjs','app.mjs'],['/client.mjs','client.mjs'],['/style.css','style.css'],['/instrument.css','instrument.css'],['/tracking.mjs','tracking.mjs'],['/CONTRACT.md','CONTRACT.md'],['/brand.png','../assets/data-dawgs-site-logo-560.png'],['/assets/data-dawgs-site-logo-560.png','../assets/data-dawgs-site-logo-560.png']]);
   const server=http.createServer(async(req,res)=>{
     const origin=`http://127.0.0.1:${server.address().port}`;
     const send=(status,value,type='application/json')=>{res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"});res.end(type==='application/json'?JSON.stringify(value):value);};
@@ -52,6 +52,7 @@ export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-l
     if(req.headers['sec-fetch-site']==='cross-site') return send(403,{error:'Cross-site request denied'});
     const url=new URL(req.url,origin);
     try {
+      if(req.method==='GET'&&url.pathname==='/client-config.mjs')return send(200,"export default {mode:'local'};",'text/javascript');
       if(req.method==='GET'&&url.pathname==='/api/state') return send(200,{...view(state,principal),adapters:{externalAI:'unconfigured',scheduler:'unconfigured',verifiedData:'unconfigured',holdout:'disabled'},mode:'single-user loopback',codeHash});
       if(req.method==='GET'&&url.pathname==='/api/tracking') return send(200,syntheticTracking());
       if(req.method==='POST'&&url.pathname==='/api/command') {

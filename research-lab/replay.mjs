@@ -10,7 +10,7 @@ export function replay(directory,receiptId) {
   const receipt=state.receipts.find(r=>r.id===receiptId);if(!receipt)throw new Error('Receipt not found');
   const {receiptHash,...body}=receipt;if(hash(body)!==receiptHash)throw new Error('Receipt integrity check failed');
   const root=path.dirname(fileURLToPath(import.meta.url));
-  const codeHash=hash(['machine.mjs','tracking.mjs','server.mjs'].map(f=>readFileSync(path.join(root,f),'utf8')).join('\n'));
+  const codeHash=hash(['machine.mjs','machine-core.mjs','tracking.mjs','server.mjs'].map(f=>readFileSync(path.join(root,f),'utf8')).join('\n'));
   if(receipt.hashes.code!==codeHash)throw new Error('Code changed: use the receipt source revision');
   const {tracking}=JSON.parse(readFileSync(path.join(directory,`${receipt.hashes.data}.input.json`),'utf8'));
   if(hash(tracking)!==receipt.hashes.data)throw new Error('Input integrity check failed');
