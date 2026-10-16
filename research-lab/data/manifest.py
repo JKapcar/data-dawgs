@@ -94,53 +94,63 @@ def find_key(columns: list[str]):
     return None
 
 
-def profile_csv(path: str, check_keys: bool = True) -> dict:
+def profile_csv(path: str, check_keys: bool = True, hooks=()) -> dict:
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        return profile_stream(f, check_keys, hooks)
+
+
+def profile_stream(f, check_keys: bool = True, hooks=()) -> dict:
+    """Profile one CSV text stream in a single pass. Each hook gets hook.header(header) once and
+    hook.row(row) per data row, so other audits can ride the same read of a large file."""
     stats = {}
     rows = 0
     seen = set()
     duplicates = 0
     years: dict[str, int] = {}
     positions: dict[str, int] = {}
-    with open(path, newline="", encoding="utf-8-sig") as f:
-        reader = csv.reader(f)
-        header = next(reader, None) or []
-        key = find_key(header) if check_keys else None
-        key_idx = [header.index(k) for k in key] if key else None
-        lookup = {norm(c): i for i, c in enumerate(header)}
-        year_idx = next((lookup[norm(c)] for c in YEAR_COLUMNS if norm(c) in lookup), None)
-        pos_idx = next((lookup[norm(c)] for c in POSITION_COLUMNS if norm(c) in lookup), None)
-        for c in header:
-            stats[c] = {"nulls": 0, "type": None, "min": None, "max": None}
-        cols = list(stats.values())
-        width = len(header)
-        ragged = 0
-        for row in reader:
-            rows += 1
-            if len(row) != width:
-                ragged += 1
-            for i in range(width):
-                v = row[i] if i < len(row) else ""
-                s = cols[i]
-                if v in NULLS:
-                    s["nulls"] += 1
-                    continue
-                t = classify(v)
-                if s["type"] is None or RANK[t] > RANK[s["type"]]:
-                    s["type"] = t
-                if t in ("int", "float") and s["type"] in ("int", "float"):
-                    x = float(v)
-                    s["min"] = x if s["min"] is None or x < s["min"] else s["min"]
-                    s["max"] = x if s["max"] is None or x > s["max"] else s["max"]
-            if key_idx is not None:
-                digest = hashlib.blake2b("\x1f".join(row[i] if i < len(row) else "" for i in key_idx).encode(), digest_size=8).digest()
-                if digest in seen:
-                    duplicates += 1
-                else:
-                    seen.add(digest)
-            if year_idx is not None and year_idx < len(row) and row[year_idx] not in NULLS:
-                years[row[year_idx]] = years.get(row[year_idx], 0) + 1
-            if pos_idx is not None and pos_idx < len(row) and row[pos_idx] not in NULLS:
-                positions[row[pos_idx]] = positions.get(row[pos_idx], 0) + 1
+    reader = csv.reader(f)
+    header = next(reader, None) or []
+    for h in hooks:
+        h.header(header)
+    key = find_key(header) if check_keys else None
+    key_idx = [header.index(k) for k in key] if key else None
+    lookup = {norm(c): i for i, c in enumerate(header)}
+    year_idx = next((lookup[norm(c)] for c in YEAR_COLUMNS if norm(c) in lookup), None)
+    pos_idx = next((lookup[norm(c)] for c in POSITION_COLUMNS if norm(c) in lookup), None)
+    for c in header:
+        stats[c] = {"nulls": 0, "type": None, "min": None, "max": None}
+    cols = list(stats.values())
+    width = len(header)
+    ragged = 0
+    for row in reader:
+        rows += 1
+        for h in hooks:
+            h.row(row)
+        if len(row) != width:
+            ragged += 1
+        for i in range(width):
+            v = row[i] if i < len(row) else ""
+            s = cols[i]
+            if v in NULLS:
+                s["nulls"] += 1
+                continue
+            t = classify(v)
+            if s["type"] is None or RANK[t] > RANK[s["type"]]:
+                s["type"] = t
+            if t in ("int", "float") and s["type"] in ("int", "float"):
+                x = float(v)
+                s["min"] = x if s["min"] is None or x < s["min"] else s["min"]
+                s["max"] = x if s["max"] is None or x > s["max"] else s["max"]
+        if key_idx is not None:
+            digest = hashlib.blake2b("\x1f".join(row[i] if i < len(row) else "" for i in key_idx).encode(), digest_size=8).digest()
+            if digest in seen:
+                duplicates += 1
+            else:
+                seen.add(digest)
+        if year_idx is not None and year_idx < len(row) and row[year_idx] not in NULLS:
+            years[row[year_idx]] = years.get(row[year_idx], 0) + 1
+        if pos_idx is not None and pos_idx < len(row) and row[pos_idx] not in NULLS:
+            positions[row[pos_idx]] = positions.get(row[pos_idx], 0) + 1
     columns = []
     for name, s in stats.items():
         numeric = s["type"] in ("int", "float")

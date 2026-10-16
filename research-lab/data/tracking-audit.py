@@ -78,90 +78,117 @@ class Running:
                 "min": self.lo, "max": self.hi, "buckets": dict(zip(labels, self.buckets))}
 
 
-def audit(path):
-    with open(path, newline="", encoding="utf-8-sig") as f:
-        reader = csv.reader(f)
-        header = next(reader, None) or []
+TRACKING_REQUIRED = ("game_id", "play_id", "frame_id", "x", "y")
+
+
+def is_tracking(header):
+    names = {norm(c) for c in header}
+    return all(norm(c) in names for c in TRACKING_REQUIRED)
+
+
+class TrackingAuditor:
+    """Streaming audit: header(header) once, row(row) per data row, result(name) at the end.
+    Holds one previous point per track, so it streams files of any length."""
+
+    def header(self, header):
         col = {norm(c): i for i, c in enumerate(header)}
         pick = lambda *names: next((col[norm(n)] for n in names if norm(n) in col), None)
-        g, p, e, fr = pick("game_id", "gameId"), pick("play_id", "playId"), pick("nfl_id", "nflId", "entity_id", "id"), pick("frame_id", "frameId")
-        t, x, y, s, a, dis, d, o, kind = (pick("time", "timestamp"), pick("x"), pick("y"), pick("s", "speed"), pick("a", "acc", "acceleration"),
-                                          pick("dis", "distance"), pick("dir", "direction"), pick("o", "orientation"), pick("entity_type", "entityType", "club_type"))
-        missing = [n for n, i in (("game_id", g), ("play_id", p), ("frame_id", fr), ("x", x), ("y", y)) if i is None]
+        self.g, self.p, self.e, self.fr = pick("game_id", "gameId"), pick("play_id", "playId"), pick("nfl_id", "nflId", "entity_id", "id"), pick("frame_id", "frameId")
+        self.t, self.x, self.y, self.s, self.a, self.dis, self.d, self.o, self.kind = (
+            pick("time", "timestamp"), pick("x"), pick("y"), pick("s", "speed"), pick("a", "acc", "acceleration"),
+            pick("dis", "distance"), pick("dir", "direction"), pick("o", "orientation"), pick("entity_type", "entityType", "club_type"))
+        missing = [n for n, i in (("game_id", self.g), ("play_id", self.p), ("frame_id", self.fr), ("x", self.x), ("y", self.y)) if i is None]
         if missing:
-            raise SystemExit("Not a tracking file; missing columns: " + ", ".join(missing))
-        rows = 0
-        prev = {}
-        frame_steps = Running([0, 1, 2, 5])
-        time_steps = Running([0.0, 0.05, 0.1, 0.11, 0.2, 1.0])
-        non_monotonic = 0
-        dis_gap = Running([0.01, 0.05, 0.1, 0.25, 1.0])
-        dir_votes = {"zero_plus_y_clockwise": 0, "zero_plus_x_counterclockwise": 0, "neither": 0}
-        entity = {}
-        oob = {"x_below_0": 0, "x_above_120": 0, "y_below_0": 0, "y_above_53_3": 0}
-        a_n = a_neg = 0
-        sample, sample_key = [], None
+            raise ValueError("Not a tracking file; missing columns: " + ", ".join(missing))
+        self.rows = 0
+        self.prev = {}
+        self.frame_steps = Running([0, 1, 2, 5])
+        self.time_steps = Running([0.0, 0.05, 0.1, 0.11, 0.2, 1.0])
+        self.non_monotonic = 0
+        self.dis_gap = Running([0.01, 0.05, 0.1, 0.25, 1.0])
+        self.dir_votes = {"zero_plus_y_clockwise": 0, "zero_plus_x_counterclockwise": 0, "neither": 0}
+        self.entity = {}
+        self.oob = {"x_below_0": 0, "x_above_120": 0, "y_below_0": 0, "y_above_53_3": 0}
+        self.a_n = self.a_neg = 0
+        self.sample, self.sample_key = [], None
+
+    def row(self, row):
+        self.rows += 1
+        e = self.e if self.e is not None else self.g
+        key = tuple(row[i] if i < len(row) else "" for i in (self.g, self.p, e))
+        label = row[self.kind] if self.kind is not None and self.kind < len(row) else "unlabelled"
+        self.entity[label] = self.entity.get(label, 0) + 1
+        fx, fy = num(row, self.x), num(row, self.y)
+        if fx is not None:
+            self.oob["x_below_0"] += fx < 0
+            self.oob["x_above_120"] += fx > FIELD_X
+        if fy is not None:
+            self.oob["y_below_0"] += fy < 0
+            self.oob["y_above_53_3"] += fy > FIELD_Y
+        av = num(row, self.a)
+        if av is not None:
+            self.a_n += 1
+            self.a_neg += av < 0
+        cur = {"frame": num(row, self.fr), "time": row[self.t] if self.t is not None and self.t < len(row) else None, "x": fx, "y": fy}
+        before = self.prev.get(key)
+        if before is not None and cur["frame"] is not None and before["frame"] is not None:
+            step = cur["frame"] - before["frame"]
+            self.frame_steps.add(step)
+            if step <= 0:
+                self.non_monotonic += 1
+            tt = _seconds(cur["time"]), _seconds(before["time"])
+            if None not in tt:
+                self.time_steps.add(round(tt[0] - tt[1], 4))
+            if None not in (fx, fy, before["x"], before["y"]):
+                dx, dy = fx - before["x"], fy - before["y"]
+                moved = math.hypot(dx, dy)
+                dv = num(row, self.dis)
+                if dv is not None:
+                    self.dis_gap.add(round(abs(dv - moved), 4))
+                dv_dir = num(row, self.d)
+                if dv_dir is not None and moved > 0.05:
+                    heading_y_cw = math.degrees(math.atan2(dx, dy)) % 360.0
+                    heading_x_ccw = math.degrees(math.atan2(dy, dx)) % 360.0
+                    if angle_diff(dv_dir, heading_y_cw) <= 30:
+                        self.dir_votes["zero_plus_y_clockwise"] += 1
+                    elif angle_diff(dv_dir, heading_x_ccw) <= 30:
+                        self.dir_votes["zero_plus_x_counterclockwise"] += 1
+                    else:
+                        self.dir_votes["neither"] += 1
+        self.prev[key] = cur
+        if self.sample_key is None:
+            self.sample_key = key
+        if key == self.sample_key and len(self.sample) < SAMPLE_ROWS:
+            self.sample.append({n: num(row, i) for n, i in (("frame_id", self.fr), ("x", self.x), ("y", self.y), ("s", self.s), ("a", self.a), ("dis", self.dis), ("dir", self.d), ("o", self.o))})
+
+    def result(self, name):
+        voted = sum(self.dir_votes.values())
+        return {
+            "kind": "bdb-tracking-audit", "version": 1, "file": name, "rows": self.rows, "tracks": len(self.prev),
+            "frame_steps": self.frame_steps.out(), "non_monotonic_steps": self.non_monotonic,
+            "time_steps_seconds": self.time_steps.out() if self.time_steps.n else None,
+            "dis_minus_coordinate_delta": self.dis_gap.out() if self.dis_gap.n else None,
+            "dir_convention_votes": self.dir_votes,
+            "dir_convention_share": {k: round(v / voted, 4) for k, v in self.dir_votes.items()} if voted else None,
+            "entity_type_counts": self.entity,
+            "out_of_bounds": self.oob, "out_of_bounds_policy": "reported, not clipped",
+            "a_negative_share": round(self.a_neg / self.a_n, 6) if self.a_n else None,
+            "orientation_column_present": self.o is not None,
+            "sample_track": {"note": "Numeric columns of the first track only; identifiers omitted. Stays beside the source.", "rows": self.sample},
+        }
+
+
+def audit(path):
+    auditor = TrackingAuditor()
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        reader = csv.reader(f)
+        try:
+            auditor.header(next(reader, None) or [])
+        except ValueError as e:
+            raise SystemExit(str(e))
         for row in reader:
-            rows += 1
-            key = tuple(row[i] if i < len(row) else "" for i in (g, p, e if e is not None else g))
-            label = row[kind] if kind is not None and kind < len(row) else "unlabelled"
-            entity[label] = entity.get(label, 0) + 1
-            fx, fy = num(row, x), num(row, y)
-            if fx is not None:
-                oob["x_below_0"] += fx < 0
-                oob["x_above_120"] += fx > FIELD_X
-            if fy is not None:
-                oob["y_below_0"] += fy < 0
-                oob["y_above_53_3"] += fy > FIELD_Y
-            av = num(row, a)
-            if av is not None:
-                a_n += 1
-                a_neg += av < 0
-            cur = {"frame": num(row, fr), "time": row[t] if t is not None and t < len(row) else None, "x": fx, "y": fy}
-            before = prev.get(key)
-            if before is not None and cur["frame"] is not None and before["frame"] is not None:
-                step = cur["frame"] - before["frame"]
-                frame_steps.add(step)
-                if step <= 0:
-                    non_monotonic += 1
-                tt = _seconds(cur["time"]), _seconds(before["time"])
-                if None not in tt:
-                    time_steps.add(round(tt[0] - tt[1], 4))
-                if None not in (fx, fy, before["x"], before["y"]):
-                    dx, dy = fx - before["x"], fy - before["y"]
-                    moved = math.hypot(dx, dy)
-                    dv = num(row, dis)
-                    if dv is not None:
-                        dis_gap.add(round(abs(dv - moved), 4))
-                    dv_dir = num(row, d)
-                    if dv_dir is not None and moved > 0.05:
-                        heading_y_cw = math.degrees(math.atan2(dx, dy)) % 360.0
-                        heading_x_ccw = math.degrees(math.atan2(dy, dx)) % 360.0
-                        if angle_diff(dv_dir, heading_y_cw) <= 30:
-                            dir_votes["zero_plus_y_clockwise"] += 1
-                        elif angle_diff(dv_dir, heading_x_ccw) <= 30:
-                            dir_votes["zero_plus_x_counterclockwise"] += 1
-                        else:
-                            dir_votes["neither"] += 1
-            prev[key] = cur
-            if sample_key is None:
-                sample_key = key
-            if key == sample_key and len(sample) < SAMPLE_ROWS:
-                sample.append({n: num(row, i) for n, i in (("frame_id", fr), ("x", x), ("y", y), ("s", s), ("a", a), ("dis", dis), ("dir", d), ("o", o))})
-    voted = sum(dir_votes.values())
-    return {
-        "kind": "bdb-tracking-audit", "version": 1, "file": os.path.basename(path), "rows": rows, "tracks": len(prev),
-        "frame_steps": frame_steps.out(), "non_monotonic_steps": non_monotonic,
-        "time_steps_seconds": time_steps.out() if time_steps.n else None,
-        "dis_minus_coordinate_delta": dis_gap.out() if dis_gap.n else None,
-        "dir_convention_votes": dir_votes,
-        "dir_convention_share": {k: round(v / voted, 4) for k, v in dir_votes.items()} if voted else None,
-        "entity_type_counts": entity,
-        "out_of_bounds": oob, "out_of_bounds_policy": "reported, not clipped",
-        "a_negative_share": round(a_neg / a_n, 6) if a_n else None,
-        "orientation_column_present": o is not None,
-        "sample_track": {"note": "Numeric columns of the first track only; identifiers omitted. Stays beside the source.", "rows": sample},
-    }
+            auditor.row(row)
+    return auditor.result(os.path.basename(path))
 
 
 def _seconds(value):
