@@ -2669,12 +2669,15 @@ async function readBody(request) {
 /* =============================== Nightly backup =========================== */
 // The RTDB is the only copy of every Bozo pick, account and draft room. Code
 // can be rebuilt; a season of results cannot. So once a day the cron trigger
-// snapshots the ENTIRE database (auth=FB_SECRET reads "/", which includes the
+// reads the ENTIRE database (auth=FB_SECRET reads "/", which includes the
 // Worker-only /users and /bozoauth) into KV beside the rate-limit counters,
 // prefixed so nothing can collide:
 //   backup:<YYYY-MM-DD>  — dated snapshot, expires after 180 days
 //   backup:latest        — same payload, never expires
 //   backup:lasterror     — written only when a run fails, for post-mortems
+// /privatePounds is excluded from BOTH general snapshot forms. Each owner's copy
+// uses pound-backup:v1:<uid>:<day>, always expiring 30 days after the write.
+// There is no perpetual Pound latest key. Existing backups are never deleted.
 // ⚠️ The snapshot contains password hashes and session material. NOTHING may
 // serve these keys: no route, no MCP tool, and never the public repo.
 // Retrieval is the Cloudflare dashboard or API, already behind Kap's account.
@@ -2691,9 +2694,29 @@ async function runBackup(env, nowMs) {
   // HOSTNAME and DNS-fails as a 530. Caught live 8/7 on the first cron fire.
   const { data } = await fbGet(env, "/");                 // whole DB, one read
   const taken = new Date(nowMs).toISOString();
-  const body = JSON.stringify({ taken, db: data });
+  // Copy only the root: never mutate the active database object or its records.
+  const general = data && typeof data === "object" ? { ...data } : data;
+  if (general) delete general.privatePounds;
+  const body = JSON.stringify({ taken, db: general });
   await kv.put("backup:" + taken.slice(0, 10), body, { expirationTtl: 15552000 });
   await kv.put("backup:latest", body);
+  // General disaster recovery completes even if a private copy fails. Fail the job
+  // visibly on a partial private run; a retry overwrites the same per-owner day keys.
+  const pounds = data && data.privatePounds;
+  if (pounds != null) {
+    if (typeof pounds !== "object" || Array.isArray(pounds)) throw new Error("Private workspace backup shape invalid");
+    for (const [uid, record] of Object.entries(pounds)) {
+      if (!/^u_[A-Za-z0-9_-]{1,100}$/.test(uid) || !record || record.owner_uid !== uid || typeof record.payload !== "string")
+        throw new Error("Private workspace backup record invalid");
+      const copy = JSON.stringify({ version: 1, taken, owner_uid: uid, workspace: record });
+      try {
+        await kv.put("pound-backup:v1:" + uid + ":" + taken.slice(0, 10), copy, { expirationTtl: 2592000 });
+      } catch {
+        // Provider errors must not leak a private key or payload into cron logs.
+        throw new Error("Private workspace backup write failed");
+      }
+    }
+  }
   return { day: taken.slice(0, 10), bytes: body.length };
 }
 

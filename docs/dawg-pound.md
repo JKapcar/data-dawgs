@@ -25,8 +25,9 @@ Before enabling, obtain explicit approval and verify:
    The existing Worker has logging enabled. This PR does **not** claim route-level
    suppression exists. Keep activation closed if adequate isolation requires a separately
    approved Worker/logging configuration. No broad logging changes are part of this PR.
-3. Review RTDB quota, retention and backup policy for this private namespace. This code
-   creates no service or paid resource; do not assume that existing capacity is unlimited.
+3. The owner approved separate private backup copies with rolling 30-day retention.
+   Review capacity for the existing KV namespace before activation. This code creates
+   no service or credential and does not alter access permissions.
 4. Approve the exact frontend/Worker release and any required security configuration.
    Then use the complete manifest and existing Worker deploy runbook. Enable the flag
    only after the preceding checks pass. Do not enable agent access or vault storage.
@@ -91,6 +92,32 @@ only in memory, bound to the original session and edit revision. Revalidation pr
 restoration; account changes and page navigation erase drafts. Another tab's edit causes
 a conflict, not an overwrite. Archived-thread drafts retain their original thread and
 remain available to copy; they never move to a different task.
+
+## Private backups
+
+The nightly job still reads RTDB once. It omits the top-level `privatePounds` subtree
+from both newly written general backups (`backup:<day>` and `backup:latest`). All other
+database content and its existing retention behavior remain unchanged: general dated
+copies expire in 180 days; the general latest copy remains without expiry.
+
+Each private workspace is copied separately to the existing private `RL` KV binding at
+`pound-backup:v1:<verified-record-owner-uid>:<YYYY-MM-DD>`. Each write sets
+`expirationTtl: 2592000` (30 days). No Pound `latest` key is created. Same-day retries
+replace that day's key and restart its 30-day TTL; different days have independently
+expiring copies. The snapshot includes its capture time, schema version, owner UID
+and exact saved workspace record, including context history and revision.
+
+These are separate logical backup objects in the existing namespace, not a new namespace
+or permission boundary. No HTTP/MCP retrieval route is added. Access remains through
+the owner's existing Cloudflare administrative access. No security-setting change,
+credential, new resource or data deletion is required by this implementation.
+
+General backup writes complete before private copies. A private write failure fails the
+cron with a sanitized error; it never falls back to embedding Pound in general backups.
+Earlier successful owner copies may remain after a partial run; retry uses the same keys.
+The job has no RTDB write/delete operation and never expires active workspace records.
+It does not delete or rewrite historical backups to remove any old content. This policy
+only governs newly written backup copies after an explicitly approved deployment.
 
 ## Verification
 

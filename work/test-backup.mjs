@@ -116,5 +116,58 @@ const T0 = Date.parse("2026-09-15T09:00:00Z");
   ok("missing KV binding throws by name", threw);
 }
 
+// -- Pound copies: private per-owner keys, 30-day expiry, no indefinite copy --
+{
+  WHOLE_DB.privatePounds = {
+    u_one: {owner_uid: "u_one", payload: JSON.stringify({revision: 3, text: "Owner one private context"})},
+    u_two: {owner_uid: "u_two", payload: JSON.stringify({revision: 7, text: "Owner two private context"})},
+  };
+  const original = JSON.stringify(WHOLE_DB), kv = makeKV();
+  kv.store.set("backup:historic", "existing backup must survive");
+  await worker.scheduled({scheduledTime: T0}, {FB_SECRET: "s", RL: kv}, {});
+  const general = kv.puts.filter(p => p.k.startsWith("backup:") && p.k !== "backup:lasterror");
+  ok("both new general backup forms exclude privatePounds", general.length === 2 && general.every(p => !Object.hasOwn(JSON.parse(p.v).db, "privatePounds")));
+  const expected = {...WHOLE_DB};delete expected.privatePounds;
+  ok("unrelated database content preserved exactly", general.every(p => JSON.stringify(JSON.parse(p.v).db) === JSON.stringify(expected)));
+  const privateCopies = kv.puts.filter(p => p.k.startsWith("pound-backup:"));
+  ok("one private snapshot per verified owner and date", privateCopies.length === 2 && privateCopies.every(p => /^pound-backup:v1:u_(one|two):2026-09-15$/.test(p.k)));
+  ok("every private snapshot expires in exactly 30 days", privateCopies.every(p => p.opts?.expirationTtl === 30 * 86400));
+  ok("no everlasting private latest copy", !kv.puts.some(p => p.k.startsWith("pound-backup:") && (!p.opts?.expirationTtl || p.k.endsWith(":latest"))));
+  ok("owner copies contain exact payloads and never the other owner's record", privateCopies.every(p => {const v=JSON.parse(p.v);return v.taken === new Date(T0).toISOString() && v.version === 1 && JSON.stringify(v.workspace) === JSON.stringify(WHOLE_DB.privatePounds[v.owner_uid]) && !Object.hasOwn(v, "db");}));
+  ok("active workspace input remains untouched", JSON.stringify(WHOLE_DB) === original);
+  ok("existing historical backup untouched", kv.store.get("backup:historic") === "existing backup must survive");
+  ok("Pound backup uses only existing RL binding", privateCopies.length === 2);
+  await worker.scheduled({scheduledTime: T0}, {FB_SECRET: "s", RL: kv}, {});
+  ok("same-day retry replaces identical private day keys", [...kv.store.keys()].filter(k => k.startsWith("pound-backup:")).length === 2);
+  await worker.scheduled({scheduledTime: T0+86400000}, {FB_SECRET: "s", RL: kv}, {});
+  ok("following day creates independently expiring private copies", [...kv.store.keys()].filter(k => k.startsWith("pound-backup:")).length === 4 && kv.puts.filter(p=>p.k.startsWith("pound-backup:")).every(p=>p.opts.expirationTtl===2592000));
+  ok("private backup never writes or deletes active Firebase records", fbRequests.every(r=>r.method === "GET"));
+  // Simulate provider TTL expiry: the records in RTDB remain independently active.
+  const expired = new Map(privateCopies.map(p => [p.k,{value:p.v,expires:T0+p.opts.expirationTtl*1000}]));
+  ok("private copies expire at day 30 while active records remain", [...expired.values()].every(p=>T0+30*86400000>=p.expires) && JSON.stringify(WHOLE_DB)===original);
+  delete WHOLE_DB.privatePounds;
+}
+
+// -- private copy failure must not contaminate general backups or expose content --
+{
+  WHOLE_DB.privatePounds={u_one:{owner_uid:"u_one",payload:"private-canary"}};
+  const kv=makeKV(),basePut=kv.put.bind(kv);kv.put=async(k,v,o)=>{if(k.startsWith("pound-backup:"))throw new Error("provider exposed private-canary");return basePut(k,v,o);};
+  let message="";try{await worker.scheduled({scheduledTime:T0},{FB_SECRET:"s",RL:kv},{});}catch(e){message=e.message;}
+  ok("private failure propagates with a sanitized message",message==="Private workspace backup write failed");
+  ok("failure leaves general backup working and Pound-free",kv.store.has("backup:latest")&&!Object.hasOwn(JSON.parse(kv.store.get("backup:latest")).db,"privatePounds"));
+  ok("post-mortem never contains private provider payload",!kv.store.get("backup:lasterror").includes("private-canary"));
+  ok("failed private snapshot never becomes an unbounded fallback",!kv.puts.some(p=>p.k.startsWith("pound-backup:")));
+  delete WHOLE_DB.privatePounds;
+}
+
+// -- malformed owner records fail closed without leaking into general snapshots --
+{
+  WHOLE_DB.privatePounds={u_one:{owner_uid:"u_other",payload:"private-canary"}};
+  const kv=makeKV();let threw=false;try{await worker.scheduled({scheduledTime:T0},{FB_SECRET:"s",RL:kv},{});}catch{threw=true;}
+  ok("mismatched owner is not written under another owner's key",threw&&!kv.puts.some(p=>p.k.startsWith("pound-backup:")));
+  ok("malformed private records remain excluded from general backups",!Object.hasOwn(JSON.parse(kv.store.get("backup:latest")).db,"privatePounds"));
+  delete WHOLE_DB.privatePounds;
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
