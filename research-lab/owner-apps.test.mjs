@@ -121,3 +121,9 @@ test('WO-03 no key label, or a different label on reauth, never reaches storage'
  assert.equal(f.writes.length,before);assert.ok((await f.run('dd_owner_pound_read')).workspace,'reads need no write label');});
 test('WO-03 lab transitions stamp credential_label null for signed sessions and synthetic runs',async()=>{const s=initialState();const signed={tenant:'test',id:'u_owner',subject:'u_owner',capabilities:['hypothesis:write'],signedOwner:true};
  const out=await transition(s,signed,{type:'hypothesis',key:'signed-h1',payload:{title:'T',method:'M'}},1000,'a'.repeat(64));assert.equal(out.state.hypotheses[0].revisions[0].credential_label,null);assert.equal(out.state.audit[0].credential_label,null);});
+test('WO-02 connector task writes carry the planning fields; only the signed owner cancels',async()=>{const f=rig();await f.enable('pound');
+ await f.run('dd_owner_pound_write',{...task,data:{...task.data,status:'blocked',blocked_reason:{code:'waiting_data'},planned_start:'2026-10-20',estimate_hours:3}});const t=JSON.parse(f.db.get(p).payload).tasks[0];
+ assert.deepEqual([t.status,t.blocked_reason.code,t.planned_start,t.estimate_hours,t.status_source],['blocked','waiting_data','2026-10-20',3,'owner_connector_reported']);
+ await assert.rejects(f.run('dd_owner_pound_write',{...task,expected_revision:1,request_id:'task_cancel_000000001',data:{...task.data,id:t.id,expected_task_revision:1,status:'canceled'}}),e=>e.poundStatus===403);
+ await assert.rejects(f.run('dd_owner_pound_write',{...task,expected_revision:1,request_id:'task_block_0000000001',data:{...task.data,status:'blocked'}}),e=>e.poundStatus===400);
+ assert.match((await f.api.list(f.env,caller)).find(x=>x.name==='dd_owner_pound_write').inputSchema.description,/review\|done\|blocked\|canceled/);});
