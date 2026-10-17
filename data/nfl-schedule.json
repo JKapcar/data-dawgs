@@ -1,6 +1,6 @@
 {
- "as_of": "2026-10-16",
- "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 24e5d5b094f41504108027d13228f45255951273.",
+ "as_of": "2026-10-17",
+ "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit dc7aa8efec23e395effb69951938e219600ad3bc.",
  "tier": "labs",
  "graded": false,
  "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts.",
@@ -10,10 +10,10 @@
   "loader_license": "MIT",
   "source_repository": "nflverse/nfldata",
   "source_url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-  "source_commit": "24e5d5b094f41504108027d13228f45255951273",
-  "source_committed_at": "2026-10-16T04:05:13Z",
+  "source_commit": "dc7aa8efec23e395effb69951938e219600ad3bc",
+  "source_committed_at": "2026-10-17T13:15:14Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-10-16T04:23:04.134248Z"
+  "captured_at": "2026-10-17T13:43:01.184442Z"
  },
  "integrity": {
   "snapshot_id": "sha256:dd5d0ee0486893638d8a537eaca004626315bfcdecf2ad251d0a4068cf342403",
@@ -4651,6 +4651,6 @@
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-16",
+ "built": "2026-10-17",
  "canonical_url": "https://datadawgs216.com/data/nfl-schedule.json"
 }

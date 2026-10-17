@@ -1,6 +1,6 @@
 {
- "as_of": "2026-10-16",
- "source": "Data Dawgs reimplementation of FiveThirtyEight 538 Classic Elo at commit fbec1afa38ece5befe24fb21be8ddba8eb160fe6; state extended with nflverse/nfldata at 24e5d5b094f41504108027d13228f45255951273.",
+ "as_of": "2026-10-17",
+ "source": "Data Dawgs reimplementation of FiveThirtyEight 538 Classic Elo at commit fbec1afa38ece5befe24fb21be8ddba8eb160fe6; state extended with nflverse/nfldata at dc7aa8efec23e395effb69951938e219600ad3bc.",
  "tier": "labs",
  "graded": false,
  "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority.",
@@ -14,7 +14,7 @@
   "methodology_url": "https://datadawgs216.com/data/538-classic-methodology.md"
  },
  "provenance": {
-  "generated_at": "2026-10-16T04:23:05.175638Z",
+  "generated_at": "2026-10-17T13:43:02.007368Z",
   "official_reference": {
    "repository": "fivethirtyeight/nfl-elo-game",
    "commit": "fbec1afa38ece5befe24fb21be8ddba8eb160fe6",
@@ -24,9 +24,9 @@
   },
   "modern_history": {
    "repository": "nflverse/nfldata",
-   "commit": "24e5d5b094f41504108027d13228f45255951273",
+   "commit": "dc7aa8efec23e395effb69951938e219600ad3bc",
    "source_data_license": "not-verified-for-nfldata-repository",
-   "games_sha256": "59c8ffca5ade71456eb14a9dea17deff5c971e00ac4c2335749ba5f4733ae92b",
+   "games_sha256": "fa1dca9aa00ac7e2f16aa72526f1e9ea1ecd449bba16f43901540128648fa100",
    "games_replayed": 1424,
    "first_game": "2021_01_DAL_TB",
    "last_game": "2025_22_SEA_NE",
@@ -50,8 +50,8 @@
    },
    "modern_history": {
     "repository": "nflverse/nfldata",
-    "commit": "24e5d5b094f41504108027d13228f45255951273",
-    "games_sha256": "59c8ffca5ade71456eb14a9dea17deff5c971e00ac4c2335749ba5f4733ae92b",
+    "commit": "dc7aa8efec23e395effb69951938e219600ad3bc",
+    "games_sha256": "fa1dca9aa00ac7e2f16aa72526f1e9ea1ecd449bba16f43901540128648fa100",
     "games_replayed": 1424
    },
    "schedule_snapshot_id": "sha256:dd5d0ee0486893638d8a537eaca004626315bfcdecf2ad251d0a4068cf342403",
@@ -196,7 +196,7 @@
   "note": "This proves the published mathematics were reproduced; it does not establish current predictive skill or betting profitability."
  },
  "integrity": {
-  "input_snapshot_id": "sha256:622432f4ab79c6cbc06c31b86295ef72b72d381a7b0783a1d4f75d212bde57af",
+  "input_snapshot_id": "sha256:d286ef3ebea7ef9d0abe0b02d9a4148658ea40c17a7badd372dd8a6bcdb438d8",
   "snapshot_id": "sha256:64b9f9e81410b5d5ae64e26d0f03a2a73229f66afbf81d00fe56a01b7df1d179",
   "forecast_rows": 192,
   "team_rows": 32
@@ -2833,6 +2833,6 @@
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-16",
+ "built": "2026-10-17",
  "canonical_url": "https://datadawgs216.com/data/538-classic.json"
 }
