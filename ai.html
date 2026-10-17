@@ -380,7 +380,8 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 }
 /* The smallest supported phones need another few pixels, but still keep the same row. */
 @media(max-width:359px){
-  .sitenav{gap:0 6px}
+  /* Leave room for platform font differences at the 320px minimum width. */
+  .sitenav{gap:0 4px}
   .sitenav .brand img{width:20px;height:25px}
   .sitenav .navauth .authbtn{padding:3px 5px;font-size:9.5px;max-width:64px}
   .sitenav .links{justify-content:flex-start;gap:2px}
