@@ -1,4 +1,8 @@
-# Dawg Pound — private owner workspace, phase one
+# RoboKap — Mission Control for the Pack
+
+RoboKap is the shared-brain vision for DataDawgs216.com: goals, shared knowledge, priorities, human decisions, collaborator routing, evidence-backed results and reusable research methods. Dispatch describes its task/project view. Start with the [competition sourcebook](../research-lab/sourcebook.html) for Big Data Bowl research. This naming update does not add autonomous execution, shared access or voting.
+
+## Private owner workspace, phase one
 
 `dawg-pound.html` is a standalone private workspace shell. The historical `pound.html`
 redirect remains unchanged. Existing sign-in supplies the session; there is no second

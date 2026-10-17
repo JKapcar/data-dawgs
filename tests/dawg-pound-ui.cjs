@@ -90,7 +90,7 @@ let browser;
   // Diagnostics reads /owner-apps/v1 only when opened and shows reason codes.
   await page.locator('#diagnostics > summary').click();await page.locator('#diagOut').filter({hasText:'research: tenant_unconfigured'}).waitFor();assert.match(await page.locator('#diagOut').textContent(),/pound: on · mode until_revoked · grant v3/);await page.locator('#diagnostics > summary').click();
   ownerApps={status:403,body:{error:'configured_owner_required'}};await page.locator('#diagnostics > summary').click();await page.locator('#diagOut').filter({hasText:'not_owner'}).waitFor();await page.locator('#diagnostics > summary').click();
-  // Dispatch layout: fixed order, only stored fields, unavailable capabilities labelled rather than inferred.
+  // RoboKap layout: fixed order, only stored fields, unavailable capabilities labelled rather than inferred.
   assert.deepEqual(await page.locator('.segments button').allTextContents(),['Work','Needs you','Context']);
   assert.match(await page.locator('#needsYou').textContent(),/Not tracked yet.*nothing here is inferred\.Saved questions and decisions · resolution untracked/);
   assert.match(await page.locator('.capability-note').textContent(),/Unavailable here: project and milestone records.*votes/);assert.match(await page.locator('.capability-note').textContent(),/never typed/);
@@ -144,7 +144,7 @@ let browser;
   const shapes={};for(const width of [390,320]){await page.setViewportSize({width,height:844});await page.waitForTimeout(100);shapes[width]=await headerShape(page);headerHashes[width]=shapes[width].brand.slice(0,12)+'/'+shapes[width].account.slice(0,12);}
   await page.goto(origin+'/base/dawg-pound.html');await page.locator('#workspace:not([hidden])').waitFor();
   for(const width of [390,320]){await page.setViewportSize({width,height:844});await page.waitForTimeout(100);const base=await headerShape(page),now=shapes[width],tag=width+'px vs '+BASE_REF.slice(0,7)+': ';
-    assert.equal(now.label,'Dispatch ▾',tag+'switcher label');assert.equal(now.aria,'Switch app: Dispatch',tag+'switcher accessible name');assert.equal(base.label,'Dawg Pound ▾',tag+'baseline still renders the old label');
+    assert.equal(now.label,'RoboKap ▾',tag+'switcher label');assert.equal(now.aria,'Switch app: RoboKap',tag+'switcher accessible name');assert.equal(base.label,'Dawg Pound ▾',tag+'baseline still renders the old label');
     for(const q of ['header.dd-shell','.dd-brand','.dd-account']){assert.ok(now.boxes[q].x>=0&&now.boxes[q].x+now.boxes[q].w<=width,tag+q+' inside viewport');}
     assert.ok(now.boxes['.dd-brand'].h>=44,tag+'brand target');assert.ok(now.boxes['.dd-account'].h>=44,tag+'account target');
     const a=now.boxes['.dd-apps > summary'],b=base.boxes['.dd-apps > summary'];assert.deepEqual([a.y,a.h,a.x+a.w],[b.y,b.h,b.x+b.w],tag+'switcher row, height and right edge');assert.ok(a.w>=44,tag+'switcher touch target');}
