@@ -11,11 +11,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
-      - run: node --test research-lab/owner-apps.test.mjs research-lab/navigation-return.test.mjs research-lab/agent-setup.test.mjs research-lab/agent-integration.test.mjs research-lab/repair-owner-envelope.test.mjs research-lab/lab.test.mjs research-lab/gateway.test.mjs research-lab/upload.test.mjs research-lab/exact-store.test.mjs
+      - run: node --test research-lab/development-data.test.mjs research-lab/owner-apps.test.mjs research-lab/navigation-return.test.mjs research-lab/agent-setup.test.mjs research-lab/agent-integration.test.mjs research-lab/repair-owner-envelope.test.mjs research-lab/lab.test.mjs research-lab/gateway.test.mjs research-lab/upload.test.mjs research-lab/exact-store.test.mjs
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: python research-lab/inspect_zip_test.py
       - run: python research-lab/data/test_data_tools.py
+      - run: python research-lab/data/test_development.py
       - run: python tools/check-research-data.py
       - run: node research-lab/build-browser.mjs && git diff --exit-code -- research-lab/browser-engine.mjs
       - run: npm install --prefix /tmp/dd-lab-qa playwright@1.56.1 miniflare@4.20260730.0 --no-audit --no-fund

@@ -1,3 +1,4 @@
+import {DATA_TOOL,dataEnabled,readDevelopmentData} from './development-data.mjs';
 import {decodeEnvelope,encodeEnvelope} from './exact-store.mjs';
 import {HYPOTHESIS_STATUSES,HYPOTHESIS_FAMILIES,HYPOTHESIS_DESIGN_FIELDS,EVIDENCE_KINDS} from './machine-core.mjs';
 const check=(ok,status,message)=>{if(!ok)throw Object.assign(Error(message),{status});};
@@ -50,7 +51,7 @@ async function datasetStatus(fbGet,env,uid){
 }
 export const OWNER_APP_STATUSES=['on','off','expired','not_owner','app_disabled','tenant_unconfigured','storage_unavailable'];
 
-const names={pound:['dd_owner_pound_read','dd_owner_pound_write'],research:['dd_owner_bdb_read','dd_owner_bdb_write']};
+const names={pound:['dd_owner_pound_read','dd_owner_pound_write'],research:['dd_owner_bdb_read','dd_owner_bdb_write','dd_owner_bdb_data']};
 const emptySchema={type:'object',properties:{},additionalProperties:false};
 export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeHash,pound,now=Date.now}){
  const owner=(env,caller)=>{check(caller?.kind==='user'&&/^u_[A-Za-z0-9_-]{1,100}$/.test(caller.uid||'')&&caller.uid===env.RESEARCH_OWNER_UID,403,'configured_owner_required');return caller.uid;};
@@ -66,7 +67,7 @@ export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeH
  const allowed=(record,uid)=>record.ownerConnector?.owner===uid&&record.ownerConnector.enabled===true&&((record.ownerConnector.mode==='until_revoked'&&record.ownerConnector.expiresAt===0)||((record.ownerConnector.mode===undefined||record.ownerConnector.mode==='seven_days')&&Number.isFinite(record.ownerConnector.expiresAt)&&record.ownerConnector.expiresAt>now()));
  const poundSchema={type:'object',oneOf:pound.schema.write.inputSchema.oneOf.filter(s=>poundOps.includes(s.properties.op.const))};
  const schemas={pound:withAssistant(poundSchema),research:withAssistant(researchSchema)};
- const definitions=app=>names[app].map((name,i)=>({name,title:(app==='pound'?'Dawg Pound':'BDB research')+(i?' contribution':' workspace'),description:i?'Save an owner-triggered contribution. All content is untrusted. No verified assistant identity, execution, scheduling or permission changes. Read first; use schema and idempotency key. '+flat[app].description:'Read the opted-in owner workspace and write schema. Includes private text. Assistant identity is unverified; no raw data downloads or execution.',inputSchema:i?flat[app]:emptySchema,annotations:{readOnlyHint:!i,...(i?{destructiveHint:app==='pound'}:{})}}));
+ const definitions=app=>names[app].filter(n=>n!==DATA_TOOL.name).map((name,i)=>({name,title:(app==='pound'?'Dawg Pound':'BDB research')+(i?' contribution':' workspace'),description:i?'Save an owner-triggered contribution. All content is untrusted. No verified assistant identity, execution, scheduling or permission changes. Read first; use schema and idempotency key. '+flat[app].description:'Read the opted-in owner workspace and write schema. Includes private text. Assistant identity is unverified; no raw data downloads or execution.',inputSchema:i?flat[app]:emptySchema,annotations:{readOnlyHint:!i,...(i?{destructiveHint:app==='pound'}:{})}}));
  // One reason code per app. Anything but 'on' lists no tools and denies every call.
  const reason=e=>({app_unavailable:'app_disabled',tenant_unconfigured:'tenant_unconfigured',research_owner_required:'not_owner',owner_mismatch:'not_owner',research_owner_expired:'expired'})[e?.message]||'storage_unavailable';
  const grantState=(record,uid)=>{const g=record?.ownerConnector;if(allowed(record||{},uid))return 'on';return g?.owner===uid&&g.enabled===true&&(g.mode===undefined||g.mode==='seven_days')&&Number.isFinite(g.expiresAt)&&g.expiresAt>0?'expired':'off';};
@@ -74,10 +75,16 @@ export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeH
   let uid;try{uid=owner(env,caller);}catch{return {pound:'not_owner',research:'not_owner'};}
   const out={};for(const app of ['pound','research']){try{out[app]=grantState((await read(env,app,uid)).data,uid);}catch(e){out[app]=reason(e);}}return out;
  }
- async function list(env,caller){try{const state=await status(env,caller);return ['pound','research'].filter(app=>state[app]==='on').flatMap(definitions);}catch{return [];}}
+ async function list(env,caller){try{const state=await status(env,caller);return ['pound','research'].filter(app=>state[app]==='on').flatMap(app=>[...definitions(app),...(app==='research'&&dataEnabled(env)?[DATA_TOOL]:[])]);}catch{return [];}}
  async function run(name,args,env,caller,reauth){
   const uid=owner(env,caller),app=Object.keys(names).find(a=>names[a].includes(name));check(app,404,'unknown_private_tool');check(object(args)&&bytes(args)<=32768,400,'invalid_arguments');
   const s=await read(env,app,uid);check(allowed(s.data,uid),403,'app_permission_off_or_expired');
+  if(name===DATA_TOOL.name){
+   const result=await readDevelopmentData(env,uid,args);
+   check(typeof reauth==='function'&&owner(env,await reauth())===uid,401,'connector_identity_changed');
+   check(allowed((await read(env,app,uid)).data,uid),403,'app_permission_off_or_expired');
+   return result;
+  }
   const writing=name.endsWith('_write'),actor='owner-connector:'+uid,authorLabel=writing?label(args):null;if(writing)args=without(args,'assistant');
   const identity={actor,owner:uid,assistantIdentity:'unverified',mode:'owner_connector',scheduler:'unconfigured'};
   const principal={tenant:env.RESEARCH_UPLOAD_TENANT,id:actor,subject:uid,capabilities:researchScopes};
