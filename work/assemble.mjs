@@ -229,7 +229,7 @@ function transform(input) {
     if (!t.includes(anchor)) fail(what + " not found in " + TARGET);
     if (t.split(anchor).length - 1 !== 1) fail(what + " is ambiguous — appears more than once");
   }
-  t = t.replace(ANCHOR, ANCHOR + "\n" + '    if (url.pathname === "/discord/interactions") return handleDiscordAsk(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/discord/queue") return handleDiscordQueue(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/mcp/discord") return handleDiscordBridge(request, env); // DD-DISCORD-ROUTE\n' + ROUTE);
+  t = t.replace(ANCHOR, ANCHOR + "\n" + '    if (url.pathname === "/mcp/discord-queue") return handleDiscordQueueMcp(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/discord/interactions") return handleDiscordAsk(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/discord/queue") return handleDiscordQueue(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/mcp/discord") return handleDiscordBridge(request, env); // DD-DISCORD-ROUTE\n' + ROUTE);
   t = t.replace(R_ANCHOR, R_ANCHOR + "\n" + R_ROUTE);
   t = t.replace(Y_ANCHOR, Y_ANCHOR + "\n" + Y_ROUTE + "\n" + W_ROUTE);
   t = t.replace(PJ_ANCHOR, PJ_ANCHOR + "\n" + PJ_ROUTE);
