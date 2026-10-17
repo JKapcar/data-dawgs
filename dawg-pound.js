@@ -85,12 +85,12 @@ function refList(refs){
     list.append(li);}
   return list;
 }
-// The first screen answers, in order: what needs you, where the work stands, what is moving,
-// what was last saved, and which context exists. Every figure comes from a stored field; a
-// capability the schema does not hold is shown as unavailable, never inferred from prose.
+// Work is the default view. Saved questions and context open through explicit view controls.
+// Every figure comes from a stored field; unsupported capabilities stay in the compact
+// capability disclosure and are never inferred from prose.
 const STATUS_ORDER=['blocked','working','queued','done'],STATUS_LABEL={blocked:'Blocked',working:'Working',queued:'Queued',done:'Done'};
 const ACTIVITY_LABELS={'agent.save':'Roster updated','task.save':'Task updated','message.add':'Message posted','context.save':'Context version saved','context.archive':'Context archived'};
-function openThread(id){activeTask=id;$('taskSelect').value=id;renderThread();$('messageText').focus();}
+function openThread(id){$('evidenceDrawer').open=true;activeTask=id;$('taskSelect').value=id;renderThread();$('messageText').focus();}
 function openContext(id){activeContext=id;renderReader();if(!$('library').open)$('library').showModal();}
 function unavailable(text){return node('p',text,'unavailable');}
 function renderNow(){
@@ -104,15 +104,15 @@ function renderNow(){
   if(tasks.length){const bar=node('div',null,'status-bar');bar.setAttribute('role','img');bar.setAttribute('aria-label','Stored task status: '+STATUS_ORDER.map(s=>counts[s]+' '+s).join(', '));for(const s of STATUS_ORDER)if(counts[s]){const seg=node('span',null,'seg seg-'+s);seg.style.flexGrow=counts[s];bar.append(seg);}sum.append(bar);}
   const tally=node('dl',null,'tally');for(const s of STATUS_ORDER){const d=node('div',null,'tally-'+s+(s==='blocked'&&counts[s]?' hot':''));d.append(node('dt',STATUS_LABEL[s]),node('dd',String(counts[s])));tally.append(d);}sum.append(tally);
   const assigned=tasks.filter(t=>t.agent_id&&agents.has(t.agent_id)).length;
-  sum.append(node('p',tasks.length?tasks.length+' stored '+(tasks.length===1?'task':'tasks')+' · '+assigned+' assigned to a roster role (an assignment, not accepted ownership)':'No tasks yet. Counts come from stored task status only.','muted'),unavailable('Not in the schema yet: projects, milestones, project owner, blocker reasons.'));
-  // 3. Work, blocked first. Review has no stored status, so it is reserved and labelled, not mapped.
-  const work=$('work');work.replaceChildren(node('p','Statuses are what was saved. Working is not observed execution.','muted'));
+  sum.append(node('p',tasks.length+' stored tasks · '+assigned+' role assignments','muted'));
+  // 3. Work, blocked first. Unsupported review status is explained in the capability disclosure.
+  const work=$('work');work.replaceChildren(node('p','Saved statuses · working is self-reported.','muted'));
   const groups=[...STATUS_ORDER.map(s=>[STATUS_LABEL[s],s,tasks.filter(t=>t.status===s)]),['Status not saved','none',tasks.filter(t=>!STATUS_ORDER.includes(t.status))]];
   for(const [label,s,rows] of groups){if(!rows.length)continue;const group=node('section',null,'work-group work-'+s);const ol=node('ol');
     for(const t of rows){const li=node('li'),agent=agents.get(t.agent_id);li.append(action(t.title,()=>openThread(t.id),'quiet item'),node('span',' '+(t.status||'no status'),'badge'),node('small',(agent?'Assigned: '+agent.name+(agent.archived?' (archived)':''):'Unassigned')+' · saved '+date(t.updated_at||t.created_at),'meta'));ol.append(li);}
     group.append(node('h4',label+' · '+rows.length),ol);work.append(group);}
   if(!tasks.length)work.append(node('p','No tasks yet.','empty'));
-  const review=node('section',null,'work-group work-review');review.append(node('h4','Review'),unavailable('No review status is stored, and blocked work is not treated as review.'));work.append(review);
+
   // 4. Dependencies and last verified activity.
   const verified=$('verified'),acts=[...state.activity].slice(-3).reverse();verified.replaceChildren(unavailable('Dependencies: not tracked. Tasks have no dependency field.'));
   if(acts.length){const ol=node('ol',null,'compact');for(const e of acts)ol.append(node('li',(ACTIVITY_LABELS[e.operation]||e.operation)+' · '+who(e)+' · '+date(e.at)));verified.append(node('h4','Last saved activity'),ol);}
@@ -179,6 +179,7 @@ $('diagnostics').addEventListener('toggle',async()=>{
     $('diagOut').textContent=body.apps.map(a=>a.app+': '+(a.status||(a.enabled?'on':'off'))+(a.available===false?' · '+(a.error||''):'')+(a.mode?' · mode '+a.mode:'')+(a.version!==undefined?' · grant v'+a.version:'')).join('\n')+'\nAssistant identity: '+body.assistantIdentity+'.';
   }catch{if(generation===epoch)$('diagOut').textContent='owner-apps/v1 unreachable · storage_unavailable or offline';}
 });
+for(const name of ['Work','Needs','Context'])$('view'+name).onclick=()=>{for(const [n,p] of [['Work','workPane'],['Needs','needsPane'],['Context','contextPane']]){$('view'+n).setAttribute('aria-pressed',String(n===name));$(p).hidden=n!==name;}};
 $('taskSelect').onchange=()=>{activeTask=$('taskSelect').value;$('messageText').value='';renderThread();};
 $('contextVersions').onchange=readVersion;
 $('refresh').onclick=load;$('addAgent').onclick=()=>editor('agent');$('addTask').onclick=()=>editor('task');$('addContext').onclick=()=>editor('context');
