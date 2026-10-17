@@ -31,7 +31,7 @@ export async function readDevelopmentV3({m,args,root,manifestSha,load,check,env,
  for(let level=0;level<=6;level++){
   const {value:n}=await load(env.RESEARCH_UPLOADS,root+current+'.json',current,65536);
   check(n.version===3&&n.kind==='lookup'&&n.sourceSha256===sourceSha&&n.table===table,'invalid_index');
-  check((Array.isArray(n.children)&&!n.entries&&n.children.length>0&&n.children.length<=16)||(Array.isArray(n.entries)&&!n.children&&n.entries.length<=32),'invalid_index');
+  check((Array.isArray(n.children)&&!n.entries&&n.children.length>0&&n.children.length<=16)||(Array.isArray(n.entries)&&!n.children&&n.entries.length<=128),'invalid_index');
   if(n.children)check(n.children.every(c=>c&&typeof c.prefix==='string'&&/^[a-f0-9]$/.test(c.prefix)&&hash(c.sha256))&&new Set(n.children.map(c=>c.prefix)).size===n.children.length,'invalid_index');
   if(args.op==='index'){
    if(level===path.length)return {manifestSha256:manifestSha,indexSha256:current,path,...n};

@@ -16,6 +16,7 @@ YEARS = ('2023', '2024')
 WR_POLICY = 'wr-draft-season-reg-v1'
 POLICY = 'all-position-development-v1'
 MAX_ROWS, MAX_RAW, MAX_GZIP = 2048, 1048576, 262144
+MAX_INDEX_ENTRIES = 128  # The independent 64 KiB byte cap still applies.
 
 def selector(table, r):
     if table == 'games':
@@ -92,7 +93,11 @@ def prepare(source, out, expected_sha=SOURCE_SHA, expected_size=SOURCE_SIZE, pol
                     if table in ('players', 'combine_results', 'combine_tracking'):
                         if table == 'players' and wr_only and r['nfl_position'] != 'WR':
                             continue
-                        if r['draft_year'] not in YEARS or r['nfl_id'] not in players:
+                        if r['draft_year'] not in YEARS:
+                            continue
+                        if r['nfl_id'] not in players:
+                            if not wr_only:
+                                raise ValueError('development cohort join failed')
                             continue
                         if r['draft_year'] != players[r['nfl_id']]['draft_year']:
                             raise ValueError('cohort year mismatch')
@@ -215,7 +220,7 @@ def prepare(source, out, expected_sha=SOURCE_SHA, expected_size=SOURCE_SIZE, pol
                     keyed.append(indexed)
                 def index(items, depth=0):
                     leaf = dict(version=3, kind='lookup', sourceSha256=digest, table=table, entries=items)
-                    if len(items) <= 32 and len(canonical(leaf)) <= 65536:
+                    if len(items) <= MAX_INDEX_ENTRIES and len(canonical(leaf)) <= 65536:
                         return persist(out, leaf)
                     if depth >= 6:
                         raise ValueError('lookup index exceeds depth/entry bound')

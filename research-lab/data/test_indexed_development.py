@@ -12,6 +12,36 @@ def prepare(*args, **kwargs):
     return export(*args, policy=WR_POLICY, **kwargs)
 
 class IndexedDevelopmentTests(unittest.TestCase):
+    def test_compact_leaf_uses_128_entry_and_independent_byte_bounds(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);source=root/'compact.zip'
+            with zipfile.ZipFile(source,'w') as z:
+                z.writestr('players.csv','nfl_id,draft_year,nfl_position\n'+''.join(f'p{i},2023,QB\n' for i in range(70)))
+                z.writestr('games.csv','game_id,season,season_type\n')
+                z.writestr('combine_results.csv','nfl_id,draft_year\n')
+                z.writestr('combine_tracking.csv','nfl_id,draft_year,time\n')
+                z.writestr('player_play.csv','game_id,play_id,nfl_id\n')
+                for year in (2023,2024):z.writestr(f'game_tracking_{year}.csv','game_id,play_id,nfl_id,time\n')
+            _,m=export(source,root/'out',expected_sha=hashlib.sha256(source.read_bytes()).hexdigest(),expected_size=source.stat().st_size)
+            node=json.loads((root/'out'/(m['tables']['players']['root']+'.json')).read_text())
+            self.assertGreater(len(node['entries']),32)
+            self.assertLessEqual(len(node['entries']),128)
+            for p in (root/'out').glob('*.json'):self.assertLessEqual(p.stat().st_size,65536)
+
+    def test_all_population_rejects_orphan_combine_join(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);source,_=self.make(root)
+            for table in ('combine_results','combine_tracking'):
+                bad=root/(table+'.zip')
+                with zipfile.ZipFile(source) as src,zipfile.ZipFile(bad,'w') as dst:
+                    for name in src.namelist():
+                        raw=src.read(name)
+                        dst.writestr(name,raw+b'orphan,2023,1\n' if name==table+'.csv' else raw)
+                kwargs=dict(expected_sha=hashlib.sha256(bad.read_bytes()).hexdigest(),expected_size=bad.stat().st_size)
+                with self.assertRaisesRegex(ValueError,'cohort join failed'):export(bad,root/('all-'+table),**kwargs)
+                # An explicit study may exclude other development athletes.
+                prepare(bad,root/('wr-'+table),**kwargs)
+
     def make(self, root, drift=False):
         source=root/'source.zip'
         with zipfile.ZipFile(source,'w') as z:

@@ -12,46 +12,63 @@ const sha=b=>createHash('sha256').update(b).digest('hex');
 const cache=new Map(),reached=new Set();let reads=0;
 const env={RESEARCH_DEVELOPMENT_DATA_ENABLED:'true',RESEARCH_DEVELOPMENT_MANIFEST_SHA:pin,RESEARCH_UPLOAD_TENANT:'offline',RESEARCH_UPLOADS:{async get(key){
  const name=key.split('/').at(-1);if(!/^[a-f0-9]{64}\.(json|gz)$/.test(name))throw Error('invalid filename');
- let raw=cache.get(name);if(!raw){raw=await readFile(path.join(directory,name));if(name.endsWith('.json'))cache.set(name,raw);}
+ let raw=cache.get(name);if(raw){cache.delete(name);cache.set(name,raw);}else{raw=await readFile(path.join(directory,name));if(name.endsWith('.json')){cache.set(name,raw);if(cache.size>1024)cache.delete(cache.keys().next().value);}}
  reached.add(name);reads++;return {size:raw.length,body:new Response(raw).body};
 }}};
 const call=args=>readDevelopmentData(env,'local-verification',args);
 const m=await call({op:'catalog'}),report={manifestSha256:pin,policy:m.policy,localOnly:true,authenticatedClientProof:false,tables:{}};
+const canonical=s=>JSON.stringify(Object.fromEntries(Object.keys(s).sort().map(k=>[k,s[k]])));
+report.verificationMethod='Every index via production reader; complete prefix/page graph and descriptor ranges; each unique shard via production artifact reader once; every original range checked; representative lookup/row pagination. Source population equality is a separate sorted-row-fingerprint proof.';
 for(const table of Object.keys(m.tables)){
- let rows=0,partitions=0,descriptorOccurrences=0,lookups=0,sampleLookupObjectReads=null,samplePreviewObjectReads=null;
- const decodedCache=new Map();
- const shards=new Set();
- async function visit(selector){
-  let page=0;
-  do{
-   const beforeLookup=reads;
-   const result=await call({op:'lookup',table,selector,page});lookups++;
-   if(!result.found){if(m.tables[table].rows!==0)throw Error('missing partition');return;}
-   if(result.children){for(const child of result.children)await visit(child);}
-   else{
-    if(sampleLookupObjectReads===null)sampleLookupObjectReads=reads-beforeLookup;
-    if(page===0)partitions++;
-    for(const d of result.shards){
-     const base={table,selector,page,artifact:d.sha256};
-     let decoded=decodedCache.get(d.sha256);
-     if(!decoded){
-      const a=await call({op:'artifact',...base}),compressed=Buffer.from(a.data,'base64');
-      if(sha(compressed)!==d.sha256)throw Error('compressed hash mismatch');
-      const raw=gunzipSync(compressed,{maxOutputLength:1048576});if(sha(raw)!==d.decodedSha256)throw Error('decoded hash mismatch');
-      decoded=JSON.parse(raw);decodedCache.set(d.sha256,decoded);if(decodedCache.size>64)decodedCache.delete(decodedCache.keys().next().value);
-     }
-     const selected=decoded.rows.slice(d.start,d.start+d.count);
-     if(selected.length!==d.count||!selected.every(r=>Object.entries(selector).every(([k,v])=>r[k==='season'&&table!=='games'?'dd_season':k==='season_type'&&table!=='games'?'dd_season_type':k]===v)))throw Error('partition mismatch');
-     rows+=selected.length;descriptorOccurrences++;shards.add(d.sha256);
-     if(partitions===1){let offset=0,got=[];do{const before=reads;const r=await call({op:'rows',...base,offset});if(samplePreviewObjectReads===null)samplePreviewObjectReads=reads-before;got.push(...r.rows);offset=r.nextOffset;}while(offset!==null);if(JSON.stringify(got)!==JSON.stringify(selected))throw Error('pagination mismatch');}
-    }
-   }
-   page=result.nextPage;
-  }while(page!==null);
+ let rows=0,partitions=0,descriptorOccurrences=0,lookups=0,sampleLookupObjectReads=null,samplePreviewObjectReads=null,indexCalls=0;
+ const entries=new Map(),references=new Map(),visited=new Set();
+ async function indexes(p){
+  const n=await call({op:'index',table,path:p});indexCalls++;
+  if(n.children){for(let i=0;i<n.children.length;i++)await indexes([...p,i]);return;}
+  for(const e of n.entries){const key=canonical(e.selector);if(sha(Buffer.from(key))!==e.key||entries.has(key))throw Error('duplicate or invalid selector identity');entries.set(key,e);}
  }
- await visit({});
+ await indexes([]);
+ async function discover(selector){
+  const key=canonical(selector),e=entries.get(key);
+  if(!e){if(m.tables[table].rows===0&&Object.keys(selector).length===0)return;throw Error('missing prefix');}
+  if(visited.has(key))throw Error('repeated discovery child');visited.add(key);
+  const fields=m.tables[table].selector,n=Object.keys(selector).length;
+  if(n>fields.length||!fields.slice(0,n).every(k=>Object.hasOwn(selector,k)))throw Error('invalid selector prefix');
+  const pages=e.values?[e.values]:[];
+  if(e.pages){for(let page=0;page<e.pages.length;page++){const r=await call({op:'lookup',table,selector,page});lookups++;if(!r.found||r.nextPage!==(page+1<e.pages.length?page+1:null))throw Error('incomplete page links');pages.push(r[e.kind]);}}
+  if(e.kind==='children'){
+   for(const values of pages){if(!values||values.length>64)throw Error('child page bound');for(const child of values){if(Object.keys(child).length!==n+1||!Object.keys(selector).every(k=>child[k]===selector[k]))throw Error('child prefix mismatch');await discover(child);}}
+  }else if(e.kind==='shards'){
+   if(n!==fields.length)throw Error('incomplete full selector');partitions++;let total=0;
+   if(sampleLookupObjectReads===null){const before=reads,r=await call({op:'lookup',table,selector});lookups++;sampleLookupObjectReads=reads-before;if(!r.found||!r.shards)throw Error('lookup failed');}
+   for(let page=0;page<pages.length;page++)for(const d of pages[page]){
+    if(!Number.isSafeInteger(d.count)||d.count<1||!Number.isSafeInteger(d.start)||d.start<0||d.start+d.count>d.rows)throw Error('invalid range');
+    const list=references.get(d.sha256)||[];list.push({d,selector,page});references.set(d.sha256,list);descriptorOccurrences++;total+=d.count;
+   }
+   if(total!==e.rows)throw Error('partition row total');
+  }else throw Error('invalid entry kind');
+ }
+ await discover({});if(visited.size!==entries.size)throw Error('unreachable selector entry');
+ let checkedPagination=false;
+ for(const [hash,occurrences] of references){
+  const first=occurrences[0],base={table,selector:first.selector,page:first.page,artifact:hash};
+  const exact=await call({op:'artifact',...base}),compressed=Buffer.from(exact.data,'base64');
+  if(sha(compressed)!==hash)throw Error('compressed hash mismatch');
+  const raw=gunzipSync(compressed,{maxOutputLength:1048576});if(sha(raw)!==first.d.decodedSha256)throw Error('decoded hash mismatch');
+  const decoded=JSON.parse(raw);
+  for(const {d,selector} of occurrences){
+   if(['decodedSha256','compressedBytes','decodedBytes','rows'].some(k=>d[k]!==first.d[k]))throw Error('conflicting shared descriptor');
+   const selected=decoded.rows.slice(d.start,d.start+d.count);
+   if(selected.length!==d.count||!selected.every(r=>Object.entries(selector).every(([k,v])=>r[k==='season'&&table!=='games'?'dd_season':k==='season_type'&&table!=='games'?'dd_season_type':k]===v)))throw Error('partition mismatch');
+   rows+=selected.length;
+  }
+  if(!checkedPagination){
+   let offset=0,got=[];do{const before=reads,r=await call({op:'rows',...base,offset});if(samplePreviewObjectReads===null)samplePreviewObjectReads=reads-before;got.push(...r.rows);offset=r.nextOffset;}while(offset!==null);
+   if(JSON.stringify(got)!==JSON.stringify(decoded.rows.slice(first.d.start,first.d.start+first.d.count)))throw Error('pagination mismatch');checkedPagination=true;
+  }
+ }
  if(rows!==m.tables[table].rows||partitions!==m.tables[table].partitions)throw Error('incomplete table '+table);
- report.tables[table]={rows,partitions,shards:shards.size,descriptorOccurrences,lookups,sampleLookupObjectReads,samplePreviewObjectReads};
+ report.tables[table]={rows,partitions,shards:references.size,descriptorOccurrences,lookups,indexCalls,sampleLookupObjectReads,samplePreviewObjectReads};
  console.error(table+': '+rows+' verified rows');
 }
 const inventory=[];

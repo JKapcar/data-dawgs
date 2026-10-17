@@ -2,9 +2,9 @@
 
 This is local preparation. Production remains on its existing manifest pin.
 No upload, deployment, archive promotion, permissions or credentials are changed.
-The earlier WR-only candidate must not replace the all-position catalog. The corrected
-all-position code is synthetic-tested; its full real-data V3 package is not yet built.
-The existing verified V2 full-development package remains a separate all-position candidate.
+The earlier WR-only candidate must not replace the all-position catalog. Activation
+requires the exact private full-package inventory and successful population/readback
+receipts. The verified V2 full-development package remains a separate all-position candidate.
 
 ## Population and meaning
 
@@ -65,15 +65,20 @@ returned, including adjacent partitions in the same shard.
 
 Small metadata pages are inline. Larger lists use immutable pages of at most
 64 children/descriptors, with at most 256 pages per entry. The hash trie has at
-most six edges and 16 children per node; each metadata object is at most 64 KiB.
+most six edges, 16 children per branch and 128 entries per leaf; each metadata
+object is independently capped at 64 KiB.
 An exact lookup needs the manifest, at most seven trie nodes and at most one
 external metadata page. Reading rows/artifacts adds one compressed object.
 There is no SQL, execution, URL, caller-supplied bucket key or public endpoint.
 Owner identity and research/connector grants are rechecked after I/O.
 
 `verify-local-v3.mjs` traverses prefix and descriptor pagination, validates all
-compressed/decoded hashes and selected row totals, checks representative row
-pagination, and produces a private inventory. It is an offline readback, not
+compressed/decoded hashes and every selected row range, checks representative
+lookup/row pagination, and produces a private inventory. Shared shards are decoded
+once while every descriptor occurrence is retained. `data/verify_indexed_population.py`
+separately compares sorted SHA-256 fingerprints of every original-column row
+occurrence against the pinned V2 full export, preserving duplicate multiplicity
+and checking the added eligibility joins. It is an offline readback, not
 an authenticated live-client proof. Synthetic tests cover holdout boundaries,
 all-position PRE/POST/cross-draft-year retention, explicit WR-study filtering, missingness, unmatched retention, deterministic
 output, schema drift, empty tables, repeated references, bounds and corruption.
@@ -85,3 +90,28 @@ selected population and missing contextual/outcome definitions first. Separately
 approve upload of that exact inventory, verify every stored object, and approve
 the packaged Worker release plus exact manifest pin. Raw archive promotion is a
 separate action. Do not expose this version simply because local tests pass.
+
+## Research readiness gate
+
+The shared catalog is all-position development data. A WR drill/separation audit is
+one filtered study, not the population contract and not a fitted baseline.
+Descriptive counts, missingness, source identity and join coverage are available.
+Predictive fitting remains blocked on these specific definitions and evidence:
+
+- Authoritative units/time conventions for tracking x/y/s/a/dis and source time,
+  and the definition of separation_at_pass_forward. No conversion or derived
+  physical threshold is justified by the column names alone.
+- Verified drill protocols and cut-phase/event labels. Source year-specific tags
+  remain distinct; observed trials do not establish completed standardized trials.
+- A position-appropriate target, observation window and exposure denominator.
+  Player-play rows alone do not establish full snap share; career totals are
+  excluded and cannot substitute for rookie outcomes. Source selected-player
+  tracking does not establish complete ball/defender context.
+- Historical coverage, timestamp provenance, authoritative dictionaries and ID
+  mapping for any proposed PFF/ETR/nflverse join. Existing project documentation
+  establishes prior ranking/projection and nflverse-derived work, not a verified
+  current private raw-data inventory or a join-ready 2023-2024 panel.
+
+Resolve these before selecting model features or fitting a baseline. Keep 2025
+sealed. Any later study must pin its target, cohort/filter, temporal split, missing
+value treatment, baseline comparator and source hashes before evaluation.

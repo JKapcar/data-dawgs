@@ -58,3 +58,10 @@ test('all-position policy preserves non-WR, PRE/POST and cross-draft-year season
  const f=v3Fixture({policy:'all-position-development-v1',position:'QB',draftYear:'2025'});
  await assert.rejects(f.call({op:'rows',table:'game_tracking',selector:f.selector,artifact:f.descriptor.sha256}),/non_development/);
 });
+
+test('V3 metadata leaves accept 128 entries but reject 129 within the byte cap',async()=>{
+ const f=v3Fixture();
+ while(f.node.entries.length<128){const i=f.node.entries.length;f.node.entries.push({key:sha('synthetic-'+i),selector:{season:'2024',season_type:'REG',game_id:'g'+i},kind:'children',rows:null,values:[{season:'2024',season_type:'REG',game_id:'g'+i,play_id:'p'}]});}
+ f.repin();assert.ok((await f.call({op:'lookup',table:'game_tracking',selector:f.selector})).shards.length);
+ f.node.entries.push(f.node.entries[0]);f.repin();await assert.rejects(f.call({op:'lookup',table:'game_tracking',selector:f.selector}),/invalid_index/);
+});

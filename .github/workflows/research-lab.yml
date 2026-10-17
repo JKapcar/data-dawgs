@@ -20,6 +20,8 @@ jobs:
       - run: python research-lab/data/test_full_development.py
       - run: python research-lab/data/test_wr_audit.py
       - run: python research-lab/data/test_indexed_development.py
+      - run: python research-lab/data/test_indexed_population.py
+      - run: python -m py_compile research-lab/data/verify_indexed_population.py
       - run: node --check research-lab/verify-local-development.mjs
       - run: node --check research-lab/verify-local-v3.mjs
       - run: python tools/check-research-data.py
