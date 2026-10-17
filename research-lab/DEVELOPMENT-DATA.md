@@ -27,7 +27,7 @@ This supplies real combine data for inspection, not a complete baseline-ready da
 - `{op:"rows",artifact:"<catalog SHA-256>",filters:{draft_year:"2023"},offset:0,limit:100}`
   returns exact-match filtered rows from one artifact. Filters accept strings or null
   and at most four known columns. Pagination is within that artifact; iterate catalog
-  artifacts for the table. Limit 1–100; offset 0–256.
+  artifacts for the table. Limit 1-100; offset 0-256.
 - `{op:"artifact",artifact:"<catalog SHA-256>"}` returns exact UTF-8 canonical JSON text
   and its SHA-256. This text reproduces the input bytes; no signed download URL exists.
 
