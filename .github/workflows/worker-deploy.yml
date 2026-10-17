@@ -74,6 +74,7 @@ jobs:
       - run: node work/test-mcp.mjs
       - run: node work/test-agent-feedback.mjs
       - run: node work/test-agent-board.mjs
+      - run: node --test tests/discord-inbound.test.cjs tests/discord-bridge.test.cjs tests/bozo-mcp-auth-status.test.js
       - run: node work/test-nhl-workspace.mjs
       - run: node --test tests/nhl-private.test.cjs tests/nhl-ownership.test.cjs tests/nhl-source-import.test.cjs
       - run: node work/test-dfs-workspace.mjs
