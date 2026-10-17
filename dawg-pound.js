@@ -90,7 +90,7 @@ function refList(refs){
 // capability disclosure and are never inferred from prose.
 const STATUS_ORDER=['blocked','working','queued','done'],STATUS_LABEL={blocked:'Blocked',working:'Working',queued:'Queued',done:'Done'};
 const ACTIVITY_LABELS={'agent.save':'Roster updated','task.save':'Task updated','message.add':'Message posted','context.save':'Context version saved','context.archive':'Context archived'};
-function openThread(id){$('evidenceDrawer').open=true;activeTask=id;$('taskSelect').value=id;renderThread();$('messageText').focus();}
+function openThread(id){$('evidenceDrawer').open=true;activeTask=id;$('taskSelect').value=id;renderThread();const detail=$('taskDetail');detail.focus({preventScroll:true});detail.scrollIntoView({block:'start',behavior:'instant'});}
 function openContext(id){activeContext=id;renderReader();if(!$('library').open)$('library').showModal();}
 function unavailable(text){return node('p',text,'unavailable');}
 function renderNow(){
