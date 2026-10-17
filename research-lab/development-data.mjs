@@ -1,6 +1,7 @@
+import {readIndexedDevelopment} from './development-index.mjs';
 // Read-only, bounded, immutable development artifacts. No caller-selected storage keys.
 export const SOURCE_SHA='27d52f594d6d31d4f617f9c94b0b37d11e280397ad8293c0987da5f91a8d0ced';
-export const DATA_TOOL={name:'dd_owner_bdb_data',description:'Read private development (draft classes 2023-2024) artifacts. catalog lists schemas, missingness and explicitly unverified units. rows reads one catalog artifact with optional exact string/null filters, offset and limit. artifact returns its exact canonical JSON text and SHA-256 for reproduction. No SQL, URLs, holdout or execution. Only players and combine_results are currently prepared; career outcomes and tracking are unavailable.',inputSchema:{type:'object',additionalProperties:false,required:['op'],properties:{op:{enum:['catalog','rows','artifact']},artifact:{type:'string',pattern:'^[a-f0-9]{64}$'},filters:{type:'object',maxProperties:4,additionalProperties:{type:['string','null']}},offset:{type:'integer',minimum:0,maximum:256},limit:{type:'integer',minimum:1,maximum:100}}},annotations:{readOnlyHint:true}};
+export const DATA_TOOL={name:'dd_owner_bdb_data',description:'Read private development (draft classes 2023-2024) artifacts. catalog lists schemas, missingness and explicitly unverified units. rows reads one catalog artifact with optional exact string/null filters, offset and limit. artifact returns its exact canonical JSON text and SHA-256 for reproduction. No SQL, URLs, holdout or execution. Use catalog for the active tables. V2 index traverses bounded table/path pages; rows/artifact require their leaf path and hash. Filters apply within one artifact; enumerate every index page for a complete scan. Career outcomes are excluded.',inputSchema:{type:'object',additionalProperties:false,required:['op'],properties:{op:{enum:['catalog','index','rows','artifact']},table:{enum:['players','combine_results','combine_tracking','games','player_play','game_tracking']},path:{type:'array',maxItems:6,items:{type:'integer',minimum:0,maximum:63}},artifact:{type:'string',pattern:'^[a-f0-9]{64}$'},filters:{type:'object',maxProperties:4,additionalProperties:{type:['string','null']}},offset:{type:'integer',minimum:0,maximum:256},limit:{type:'integer',minimum:1,maximum:100}}},annotations:{readOnlyHint:true}};
 const check=(ok,message)=>{if(!ok)throw Object.assign(Error(message),{status:400});};
 const sha=async b=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',b)),x=>x.toString(16).padStart(2,'0')).join('');
 export const dataEnabled=env=>env.RESEARCH_DEVELOPMENT_DATA_ENABLED==='true'&&!!env.RESEARCH_UPLOADS&&/^[a-f0-9]{64}$/.test(env.RESEARCH_DEVELOPMENT_MANIFEST_SHA||'');
@@ -14,11 +15,14 @@ async function load(bucket,key,hash,max){
 export async function readDevelopmentData(env,uid,args){
  check(dataEnabled(env),'development_data_disabled');
  check(args&&typeof args==='object'&&!Array.isArray(args),'invalid_arguments');
- const keys=Object.keys(args),op=args.op;check(['catalog','rows','artifact'].includes(op),'invalid_operation');
- check(keys.every(k=>(op==='catalog'?['op']:op==='artifact'?['op','artifact']:['op','artifact','filters','offset','limit']).includes(k)),'unexpected_arguments');
+ const keys=Object.keys(args),op=args.op;check(['catalog','index','rows','artifact'].includes(op),'invalid_operation');
+ check(keys.every(k=>(op==='catalog'?['op']:op==='index'?['op','table','path']:op==='artifact'?['op','table','path','artifact']:['op','table','path','artifact','filters','offset','limit']).includes(k)),'unexpected_arguments');
  const root='development/'+uid+'/'+env.RESEARCH_UPLOAD_TENANT+'/'+SOURCE_SHA+'/';
  const manifestSha=env.RESEARCH_DEVELOPMENT_MANIFEST_SHA;
  const {value:m}=await load(env.RESEARCH_UPLOADS,root+manifestSha+'.json',manifestSha,65536);
+ check(m.sourceSha256===SOURCE_SHA&&JSON.stringify(m.classes)==='["2023","2024"]'&&m.holdoutRead===false,'invalid_manifest');
+ if(m.version===2)return readIndexedDevelopment({m,args,root,manifestSha,load,check,env,sourceSha:SOURCE_SHA});
+ check(!['table','path'].some(k=>Object.hasOwn(args,k))&&op!=='index','invalid_v1_arguments');
  check(m.version===1&&m.sourceSha256===SOURCE_SHA&&JSON.stringify(m.classes)===JSON.stringify(['2023','2024'])&&m.holdoutRead===false&&Array.isArray(m.artifacts)&&m.artifacts.length<=32,'invalid_manifest');
  const seen=new Set();for(const a of m.artifacts){check(/^[a-f0-9]{64}$/.test(a.sha256)&&!seen.has(a.sha256)&&['players','combine_results'].includes(a.table)&&Number.isSafeInteger(a.rows)&&a.rows>0&&a.rows<=256,'invalid_manifest');seen.add(a.sha256);}
  if(op==='catalog')return {manifestSha256:manifestSha,...m};

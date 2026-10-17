@@ -18,6 +18,27 @@ async function boot({grants=true,dataBindings={}}={}){const directory=mkdtempSyn
  return {mf,rpc,db,state,token,other,uid,grant,close};}
 const callText=r=>JSON.parse(r.body.result.content[0].text);
 
+test('packaged v2 indexed data uses existing owner permissions for both catalogs',async()=>{
+ const objects=new Map(),put=v=>{const text=JSON.stringify(v),h=createHash('sha256').update(text).digest('hex');objects.set(h,text);return h;};
+ const artifact=put({version:2,sourceSha256:SOURCE_SHA,table:'players',columns:['draft_year','nfl_id'],rows:[{draft_year:'2023',nfl_id:'synthetic'}]});
+ const root=put({version:2,kind:'index',sourceSha256:SOURCE_SHA,table:'players',artifacts:[{sha256:artifact,rows:1}]});
+ const tables=Object.fromEntries(['players','combine_results','combine_tracking','games','player_play','game_tracking'].map(t=>[t,{root,depth:0,rows:1,columns:[{name:'draft_year'},{name:'nfl_id'}]}]));
+ const pin=put({version:2,sourceSha256:SOURCE_SHA,classes:['2023','2024'],seasons:['2023','2024'],policy:'development-cohort-only-v1',holdoutRead:false,tables});
+ const w=await boot({dataBindings:{RESEARCH_DEVELOPMENT_DATA_ENABLED:'true',RESEARCH_DEVELOPMENT_MANIFEST_SHA:pin}});
+ try{
+  const bucket=await w.mf.getR2Bucket('RESEARCH_UPLOADS');for(const [h,text] of objects)await bucket.put('development/'+w.uid+'/test/'+SOURCE_SHA+'/'+h+'.json',text);
+  const args={op:'rows',table:'players',path:[],artifact};
+  for(const catalog of ['core','full']){
+   assert.ok((await w.rpc('tools/list',{},{catalog})).body.result.tools.some(t=>t.name==='dd_owner_bdb_data'));
+   assert.equal(callText(await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:args},{catalog})).rows.length,1);
+  }
+  for(const credential of [w.other,'synthetic-shared'])assert.equal((await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:args},{credential})).body.result.isError,true);
+  w.db.get('/researchLab/v1/tenants/test').ownerConnector={...w.grant,enabled:false};
+  assert.equal((await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:args})).body.result.isError,true);
+  assert.equal(w.state.writes,0);
+ }finally{await w.close();}
+});
+
 test('packaged initialize count, tools/list and dd_whoami agree for owner, non-owner and shared',async()=>{const w=await boot();try{
  for(const catalog of ['core','full'])for(const header of [false,true]){
   const init=await w.rpc('initialize',{protocolVersion:'2025-06-18'},{catalog,header}),list=(await w.rpc('tools/list',{},{catalog,header})).body.result.tools,full=(await w.rpc('tools/list',{},{catalog:'full',header})).body.result.tools;
