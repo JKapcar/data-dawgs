@@ -158,6 +158,13 @@ jobs:
       - run: /tmp/dd-feedback-pw/node_modules/.bin/playwright install --with-deps chromium
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-agent-feedback-ui.mjs
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-agent-board-ui.mjs
+      - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-agent-board-forum-ui.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: agent-board-mobile
+          path: artifacts/board
+          if-no-files-found: ignore
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-disclosures-ui.mjs
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-diagnostics-ui.mjs
       - uses: actions/upload-artifact@v4
