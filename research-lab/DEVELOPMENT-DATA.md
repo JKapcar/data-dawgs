@@ -81,7 +81,82 @@ expire `quarantine/` objects after 30 days and abort incomplete multipart upload
 configuration changes were made. A current authenticated owner-MCP metadata read was
 unavailable in this execution environment; do not infer promotion from source code.
 
-Validation: 42 reader/owner unit tests, two exporter tests and seven packaged Worker
+Validation: 44 reader/owner unit tests, four exporter tests and seven packaged Worker
 MCP/R2 tests passed. Packaged runtime tests required sandbox escalation because workerd
 could not start inside the Windows sandbox. The browser automation runtime failed before
 opening a tab, so no provider-account connection was verified.
+
+
+## Exact scope and activation inventory
+
+The 674 rows are **all eligible rows**, not samples: 337 rows from each of the two
+source tables with draft_year exactly 2023 or 2024, with all original columns. The
+exporter applies no position filter, completeness exclusion, row sampling or truncation;
+nulls are retained. Chunk sizes are 256 + 81 per table. This is not 674 distinct athletes
+and does not mean all development project tables are accessible.
+
+Private bucket: `datadawgs-research-private`.
+Exact common object prefix (append each filename below):
+
+`development/u_y9Pgnfml5AlhtotzlailibDR/jason-bdb/27d52f594d6d31d4f617f9c94b0b37d11e280397ad8293c0987da5f91a8d0ced/`
+
+| Object filename | Content | Bytes |
+|---|---|---:|
+| `6ca60e1ac3e84350dabef39d7d5104b8cb88c2e06c5842c924b5a776eac7a181.json` | Manifest | 3405 |
+| `dc0cc7639b41231b46293047c09a5066d2a8f1d6692e8191bb870578e76f8e02.json` | Players, 256 rows | 68231 |
+| `94fd69feec4a8f326765127ba1185c1966355545abb04cc4794cb3e9231c963d.json` | Players, 81 rows | 21898 |
+| `86dec011a902a6438323f60a6d1aeb4870702a9a68c4bbcd5eb8e30971bdb0c8.json` | Combine results, 256 rows | 100132 |
+| `348ad1a7c12dc1a82ea47d2798f3510ae11bd680cb5a6abb6a374e5dc3d7e629.json` | Combine results, 81 rows | 31910 |
+
+Each filename stem is the expected SHA-256 of the exact UTF-8 file bytes. None is a
+public URL. The original archive is not one of these five objects.
+
+Existing prerequisites remain unchanged: `RESEARCH_LAB_ENABLED=true`, owner
+`u_y9Pgnfml5AlhtotzlailibDR`, tenant `jason-bdb`, and the existing `RESEARCH_UPLOADS`
+binding. The tenant envelope must already grant this user enabled owner access with
+`research:read` and no expired owner access, and `ownerConnector` must already be enabled
+for this owner with a valid existing persistent or unexpired timed permission. The
+change never creates, renews, extends or upgrades those records.
+
+**Audience is account-wide, not five-client-only.** Both the owner's primary MCP key and
+any labeled key authenticate as the same owner. `keyLabel` and assistant labels are not
+checked by this reader. Enabling the flag exposes the slice to every current or future
+holder of a valid owner MCP key while that same research permission is on, including
+clients other than dot, Claude, Gemini, Grok and Muse. It does not grant another user,
+a shared pass, or a delegated `da1_` agent access. Restricting this to five named clients
+would require a separate reviewed authorization design; labels alone cannot prove
+provider identity. The flag does not install or contact any provider.
+
+## Remaining full-development-data work (not included or activated)
+
+A cards-only activation does **not** fulfill full project-data access. Keep PR284 a
+reviewed first slice; prepare and review the following expansion before calling the
+project data shared. No new table is read or exposed merely by approving this plan.
+
+1. Freeze a partition contract distinguishing draft class from game season. Use the
+   2023-2024 player identity set for the target cohort; fail closed on unknown/ambiguous
+   joins. No 2025 class measurements, 2025 games, or 2025 tracking member may enter.
+2. Add full `combine_tracking` for draft_year 2023-2024, preserving event, athlete,
+   drill, attempt and time keys. Stream/export every eligible row. Confirm units and
+   timing conventions against an authoritative dictionary before numerical analysis.
+3. Build a development `games` index from season 2023-2024. Export eligible `player_play`
+   rows only after the game and cohort checks, inspecting partition/join cells before
+   measurement fields. Add `game_tracking_2023` and `_2024` for the same allowed games
+   and players; do not open `_2025`. If a study needs the ball, defenders or other
+   contextual players outside the target cohort, define and separately review that
+   context policy before including them. Reject orphan IDs rather than guessing.
+4. Keep `player_career_successes` unavailable until its time horizon is verified. It has
+   no year column, and career totals for a 2023/2024 draftee can include later seasons.
+   Joining on a development player ID alone cannot establish a 2024 cutoff. Require a
+   documented permitted outcome horizon or construct season-bounded outcomes from
+   eligible play data. Never relabel career totals as rookie snap share.
+5. Replace the current small flat catalog with hash-pinned paged indexes by table and
+   event/game/play/athlete. Preserve per-call byte/row bounds and exact artifact hashes;
+   do not raise the 32-artifact limit and scan the entire corpus per request. Add bounded
+   indexed filters, complete pagination, join-coverage/missingness/unit receipts and
+   artifact lineage. No SQL or public downloads are needed.
+6. Test synthetic mixed-season and mixed-class adversarial fixtures, unknown joins,
+   contextual-entity exclusions, holdout-member non-opening, timestamp cutoffs, complete
+   pagination, corrupted/missing pages, auth revocation and response limits. Then run
+   local real-development proof without outputting data, review the new exact manifest,
+   approve its private upload/pin separately, and prove reads in each actual client.

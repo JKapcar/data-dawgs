@@ -96,3 +96,12 @@ test('development reader stays off and rechecks owner permission after object I/
  await assert.rejects(f.run('dd_owner_bdb_data',{op:'catalog'}),/permission_off/);
  assert.ok(!(await f.api.list(f.env,caller)).some(t=>t.name==='dd_owner_bdb_data'));
 });
+
+for(const mode of ['credential_revoked','owner_expired'])test('development read denies '+mode+' during object I/O',async()=>{
+ const f=rig();await f.enable('research');
+ const manifest=JSON.stringify({version:1,sourceSha256:'27d52f594d6d31d4f617f9c94b0b37d11e280397ad8293c0987da5f91a8d0ced',classes:['2023','2024'],holdoutRead:false,artifacts:[]});
+ f.env.RESEARCH_DEVELOPMENT_DATA_ENABLED='true';
+ f.env.RESEARCH_DEVELOPMENT_MANIFEST_SHA=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(manifest))),b=>b.toString(16).padStart(2,'0')).join('');
+ f.env.RESEARCH_UPLOADS={get:async()=>{if(mode==='credential_revoked')f.revoke();else f.db.get(r).access.users.u_owner.expiresAt=999;return {size:manifest.length,body:new Response(manifest).body};}};
+ await assert.rejects(f.run('dd_owner_bdb_data',{op:'catalog'}),mode==='credential_revoked'?/configured_owner_required|connector_identity_changed/:/research_owner_expired/);
+});
