@@ -17,6 +17,26 @@ async function boot({grants=true,dataBindings={}}={}){const directory=mkdtempSyn
  const close=async()=>{await mf.dispose();const resolved=path.resolve(directory);assert.ok(resolved.startsWith(path.resolve(os.tmpdir())+path.sep));rmSync(resolved,{recursive:true,force:true});};
  return {mf,rpc,db,state,token,other,uid,grant,close};}
 const callText=r=>JSON.parse(r.body.result.content[0].text);
+import {v3Fixture} from './development-v3-fixture.mjs';
+test('packaged v3 compressed partitions preserve owner auth, pagination and revocation',async()=>{
+ const f=v3Fixture(),w=await boot({dataBindings:{RESEARCH_DEVELOPMENT_DATA_ENABLED:'true',RESEARCH_DEVELOPMENT_MANIFEST_SHA:f.env.RESEARCH_DEVELOPMENT_MANIFEST_SHA}});
+ try{
+  const bucket=await w.mf.getR2Bucket('RESEARCH_UPLOADS');
+  for(const [name,bytes] of f.objects)await bucket.put('development/'+w.uid+'/test/'+SOURCE_SHA+'/'+name,bytes);
+  const args={op:'rows',table:'game_tracking',selector:f.selector,artifact:f.descriptor.sha256};
+  for(const catalog of ['core','full']){
+   assert.ok((await w.rpc('tools/list',{},{catalog})).body.result.tools.some(t=>t.name==='dd_owner_bdb_data'));
+   const discovery=callText(await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:{op:'lookup',table:'game_tracking',selector:{}}},{catalog}));assert.deepEqual(discovery.children,[{season:'2023'}]);
+   const first=callText(await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:args},{catalog}));assert.equal(first.rows.length,100);assert.equal(first.nextOffset,100);assert.ok(first.rows.every(r=>r.nfl_id==='wr'));
+   const last=callText(await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:{...args,offset:200}},{catalog}));assert.equal(last.rows.length,1);assert.equal(last.nextOffset,null);
+   const exact=callText(await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:{...args,op:'artifact'}},{catalog}));assert.equal(createHash('sha256').update(Buffer.from(exact.data,'base64')).digest('hex'),f.descriptor.sha256);
+  }
+  for(const credential of [w.other,'synthetic-shared'])assert.equal((await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:args},{credential})).body.result.isError,true);
+  w.db.get('/researchLab/v1/tenants/test').ownerConnector.enabled=false;
+  assert.equal((await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:args})).body.result.isError,true);
+  assert.ok(!(await w.rpc('tools/list')).body.result.tools.some(t=>t.name==='dd_owner_bdb_data'));assert.equal(w.state.writes,0);
+ }finally{await w.close();}
+});
 
 test('packaged v2 indexed data uses existing owner permissions for both catalogs',async()=>{
  const objects=new Map(),put=v=>{const text=JSON.stringify(v),h=createHash('sha256').update(text).digest('hex');objects.set(h,text);return h;};
