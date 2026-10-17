@@ -48,3 +48,8 @@ existing promotion operation for the current upload ID and source SHA-256.
 Personal MCP tokens cannot call this route. Read back status and confirm the
 durable key, size, SHA-256 and verification provenance. Preparation and tests do
 not perform that production action.
+
+This patch is prepared separately from the full development-reader release. If
+that release activates first, integrate this patch onto its approved code and
+rebuild/test the combined Worker before requesting deployment approval. Do not
+deploy a standalone build from an older base that omits the active reader.
