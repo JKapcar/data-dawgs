@@ -43,8 +43,8 @@ let browser;
   });
   await page.goto(origin+'/dawg-pound.html');await page.getByText('Sign in to open your private workspace.',{exact:true}).waitFor();
   await page.evaluate(()=>localStorage.setItem('dd-bozo-sess','u_demo.'+'x'.repeat(43)));await page.reload();await page.locator('#workspace:not([hidden])').waitFor();
-  // Roster, diagnostics and limits live behind <details>; the default screen is context, open work and recent messages.
-  assert.equal(await page.locator('#rosterDrawer').evaluate(d=>d.open),false);assert.equal(await page.locator('#diagnostics').evaluate(d=>d.open),false);assert.ok(await page.locator('#activeContext').isVisible()&&await page.locator('#openTasks').isVisible()&&await page.locator('#recentMessages').isVisible());
+  // Roster, diagnostics and limits live behind <details>; the default screen is needs-you, summary, work, verified activity, context shelf, then discussion.
+  assert.equal(await page.locator('#rosterDrawer').evaluate(d=>d.open),false);assert.equal(await page.locator('#diagnostics').evaluate(d=>d.open),false);for(const id of ['#needsYou','#projectSummary','#work','#verified','#contextShelf','#recentMessages'])assert.ok(await page.locator(id).isVisible(),id);assert.equal(await page.locator('#addTask').isDisabled(),false);
   await page.locator('#rosterDrawer > summary').click();
   async function createAgent(name,role,fn,caps){await page.locator('#addAgent').click();await page.locator('[name=name]').fill(name);await page.locator('[name=role]').fill(role);await page.locator('[name=function]').fill(fn);await page.locator('[name=capabilities]').fill(caps);await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});}
   await createAgent('Scout','Research & discovery','Find primary sources and bring back the useful details.','Source review · concise research notes');
@@ -59,26 +59,35 @@ let browser;
   const stored=JSON.parse(db.get('/privatePounds/u_demo').payload).messages;assert.deepEqual(stored.slice(1).map(m=>m.kind),refs.map((_,i)=>i%2?'finding':'question'));assert.equal(stored[0].kind,'note');
   assert.equal(await page.locator('#recentMessages li').count(),5);assert.match(await page.locator('#recentMessages li').first().textContent(),/Ref check 7/);
   await page.locator('#openLibrary').click();await page.locator('#addContext').click();await page.locator('[name=title]').fill('How we work');await page.locator('[name=text]').fill('Start with evidence.\nName the uncertainty.\nKeep the next step clear.');await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});await page.locator('#closeLibrary').click();
-  assert.match(await page.locator('#activeContext').textContent(),/How we work · version 1[\s\S]*Start with evidence/);
-  // Task edits quote the task revision; open work sorts ahead of done work.
+  assert.match(await page.locator('#contextShelf').textContent(),/How we work.*Version 1 of 1/);assert.doesNotMatch(await page.locator('#now-grid, .now-grid').textContent(),/Start with evidence/,'full context opens on demand, not on the first screen');
+  // Task edits quote the task revision; open work sorts ahead of done work, grouped by stored status.
   await page.locator('#addTask').click();await page.locator('[name=title]').fill('Finished item');await page.locator('[name=status]').selectOption('done');await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});
-  assert.match(await page.locator('#openTasks li').first().textContent(),/Build the next research brief/);
+  assert.match(await page.locator('#work .work-group li').first().textContent(),/Build the next research brief.*Assigned: Scout/);assert.match(await page.locator('#work .work-done').textContent(),/Done · 1.*Finished item.*Unassigned/);
   await page.locator('#taskSelect').selectOption({label:'Build the next research brief'});await page.locator('#taskDetail button',{hasText:'Edit task'}).click();await page.locator('[name=status]').selectOption('working');await page.locator('[name=refs]').fill('https://github.com/JKapcar/data-dawgs\nplain citation');await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});
   const edited=JSON.parse(db.get('/privatePounds/u_demo').payload).tasks.find(t=>t.title==='Build the next research brief');assert.equal(edited.revision,2);assert.equal(edited.status,'working');assert.deepEqual(edited.refs,['https://github.com/JKapcar/data-dawgs','plain citation']);
   // Diagnostics reads /owner-apps/v1 only when opened and shows reason codes.
   await page.locator('#diagnostics > summary').click();await page.locator('#diagOut').filter({hasText:'research: tenant_unconfigured'}).waitFor();assert.match(await page.locator('#diagOut').textContent(),/pound: on · mode until_revoked · grant v3/);await page.locator('#diagnostics > summary').click();
   ownerApps={status:403,body:{error:'configured_owner_required'}};await page.locator('#diagnostics > summary').click();await page.locator('#diagOut').filter({hasText:'not_owner'}).waitFor();await page.locator('#diagnostics > summary').click();
+  // Dispatch layout: fixed order, only stored fields, unavailable capabilities labelled rather than inferred.
+  assert.deepEqual(await page.locator('.now-card > h3').allTextContents(),['Needs you','Project summary','Work','Dependencies and last verified activity','Context library','Latest discussion · last 5 messages']);
+  assert.match(await page.locator('#needsYou').textContent(),/Not tracked yet.*nothing here is inferred\.Saved questions and decisions · resolution untracked/);
+  assert.match(await page.locator('#work .work-review').textContent(),/Review.*No review status is stored, and blocked work is not treated as review\./);
+  assert.match(await page.locator('#projectSummary').textContent(),/projects, milestones, project owner, blocker reasons/);
+  assert.match(await page.locator('#verified').textContent(),/Dependencies: not tracked.*Last successful refresh · .+not that any agent ran\./);
+  {const shown=await page.evaluate(()=>[...document.querySelectorAll('.tally dd')].reduce((n,d)=>n+Number(d.textContent),0)),stored=JSON.parse(db.get('/privatePounds/u_demo').payload).tasks.filter(t=>!t.archived).length;assert.equal(shown,stored,'tally equals stored unarchived tasks');assert.equal(await page.locator('#work .work-group li').count(),stored);}
+  await page.locator('#contextShelf button').first().click();assert.ok(await page.locator('#library').evaluate(d=>d.open));assert.equal(await page.locator('#contextReader').isHidden(),false);await page.locator('#closeLibrary').click();
   const out=path.resolve(process.env.POUND_SCREENSHOTS||'../pound-preview');fs.mkdirSync(out,{recursive:true});
   await page.screenshot({path:path.join(out,'dawg-pound-desktop.png'),fullPage:true});
   const headerHashes={};
   for(const width of [390,320]){await page.setViewportSize({width,height:844});await page.waitForTimeout(100);
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),width+'px has no horizontal overflow');
     await page.locator('#messageText').scrollIntoViewIfNeeded();assert.ok(await page.locator('#messageForm').isVisible()&&await page.locator('#sendMessage').isVisible()&&await page.locator('#messageKind').isVisible()&&await page.locator('#messageRef').isVisible(),width+'px composer visible');
+    const needs=await page.locator('#needsYou').boundingBox(),workBox=await page.locator('#work').boundingBox(),add=await page.locator('#addTask').boundingBox();assert.ok(needs.y<workBox.y,width+'px needs-you above work');await page.evaluate(()=>scrollTo(0,0));assert.ok((await page.locator('#addTask').boundingBox()).y<844,width+'px New task above the fold');void add;
     const box=await page.locator('#messageForm').boundingBox();assert.ok(box.x>=0&&box.x+box.width<=width+1,width+'px composer inside the viewport');
     await page.screenshot({path:path.join(out,'dawg-pound-'+width+'.png'),fullPage:true});
     headerHashes[width]=createHash('sha256').update(await page.locator('header.dd-shell').screenshot()).digest('hex');}
   await page.setViewportSize({width:390,height:844});
-  await page.locator('#openLibrary').click();await page.getByRole('button',{name:'How we work',exact:true}).click();await page.screenshot({path:path.join(out,'dawg-pound-context.png'),fullPage:true});await page.locator('#closeLibrary').click();
+  await page.locator('#openLibrary').click();await page.locator('#contextList').getByRole('button',{name:'How we work',exact:true}).click();await page.screenshot({path:path.join(out,'dawg-pound-context.png'),fullPage:true});await page.locator('#closeLibrary').click();
   // Inert rendering of adversarial text in all user-controlled display surfaces.
   await createAgent('<img src=x onerror=alert(1)>','<script>bad()</script>','Untrusted text','<svg onload=bad()>');assert.equal(await page.locator('#roster img,#roster script,#roster svg').count(),0);
   // Mobile app switch removes sensitive DOM, preserves only in-memory drafts, then revalidates.
@@ -113,5 +122,5 @@ let browser;
     for(const q of ['header.dd-shell','.dd-brand','.dd-account'])assert.deepEqual(now.boxes[q],base.boxes[q],tag+q+' geometry');
     assert.equal(now.brand,base.brand,tag+'brand pixels');assert.equal(now.account,base.account,tag+'account pixels');
     const a=now.boxes['.dd-apps > summary'],b=base.boxes['.dd-apps > summary'];assert.deepEqual([a.y,a.h,a.x+a.w],[b.y,b.h,b.x+b.w],tag+'switcher row, height and right edge');assert.ok(a.w>=44,tag+'switcher touch target');}
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,headerHashes,checks:['signed-out','default screen: context, open tasks, last 5 messages; roster/diagnostics behind details','kind picker + allowlisted refs','task revision on edit','diagnostics reason codes','390/320 no overflow + composer visible','header geometry, brand and account pixels equal baseline; switcher renamed Dispatch','owner workspace CRUD','truthful disconnected status','mobile no overflow','safe rendering','mobile draft suspension','uncertain commit replay','cross-account clearing','same-document identity change','repeated visibility during delayed revalidation','restored edit concurrency','archived thread draft binding'],screenshots:out,liveRequests:0},null,2));
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,headerHashes,checks:['signed-out','default screen: needs you, summary, work, verified activity, context shelf, discussion; roster/diagnostics behind details','kind picker + allowlisted refs','task revision on edit','diagnostics reason codes','390/320 no overflow + composer visible','Dispatch order: needs you above work at 390/320; unavailable fields labelled; tallies equal stored tasks','header geometry, brand and account pixels equal baseline; switcher renamed Dispatch','owner workspace CRUD','truthful disconnected status','mobile no overflow','safe rendering','mobile draft suspension','uncertain commit replay','cross-account clearing','same-document identity change','repeated visibility during delayed revalidation','restored edit concurrency','archived thread draft binding'],screenshots:out,liveRequests:0},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await browser?.close();server.close();});

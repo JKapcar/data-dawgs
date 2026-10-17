@@ -5,18 +5,18 @@ const WORKER='https://toto.jkapcar4.workers.dev',API=WORKER+'/api/pound', $=id=>
 // References are inert text unless they are https links to one of these hosts.
 const LINK_HOSTS=['datadawgs216.com','www.datadawgs216.com','github.com','www.github.com','kaggle.com','www.kaggle.com'];
 const OPEN=['queued','working','blocked'];
-let state=null,epoch=0,controller=null,busy=false,activeTask='',activeContext='',edit=null,pending=null,loadedToken='',suspended=null;
+let state=null,retrievedAt=0,epoch=0,controller=null,busy=false,activeTask='',activeContext='',edit=null,pending=null,loadedToken='',suspended=null;
 const session=()=>{try{return localStorage.getItem('dd-bozo-sess')||'';}catch{return '';}};
 const node=(tag,text,cls)=>{const el=document.createElement(tag);el.textContent=text??'';if(cls)el.className=cls;return el;};
 const date=value=>value?new Date(value).toLocaleString(): 'Never';
 const action=(label,fn,cls='quiet')=>{const b=node('button',label,cls);b.type='button';b.onclick=fn;return b;};
 function note(text){$('status').textContent=text;}
 function clear(){
-  epoch++;controller?.abort();controller=null;state=null;busy=false;edit=null;pending=null;activeTask='';activeContext='';loadedToken='';setBusy(false);
-  for(const id of ['roster','taskSelect','taskDetail','messages','activity','contextList','contextVersions','editorFields','activeContext','openTasks','recentMessages','diagOut'])$(id).replaceChildren();
+  epoch++;controller?.abort();controller=null;state=null;retrievedAt=0;busy=false;edit=null;pending=null;activeTask='';activeContext='';loadedToken='';setBusy(false);
+  for(const id of ['roster','taskSelect','taskDetail','messages','activity','contextList','contextVersions','editorFields','needsYou','projectSummary','work','verified','contextShelf','recentMessages','diagOut'])$(id).replaceChildren();
   $('messageText').value='';$('messageRef').value='';$('messageKind').value='note';$('diagnostics').open=false;$('contextText').textContent='';$('contextHash').textContent='';$('editorError').textContent='';
   for(const id of ['editor','library'])if($(id).open)$(id).close();
-  $('workspace').hidden=true;$('welcome').hidden=false;$('contextReader').hidden=true;$('openLibrary').disabled=true;$('contextCount').textContent='0';$('agentCount').textContent='0 / 24';globalThis.DDAccount?.reset();
+  $('workspace').hidden=true;$('welcome').hidden=false;$('contextReader').hidden=true;$('openLibrary').disabled=true;$('addTask').disabled=true;$('contextCount').textContent='0';$('agentCount').textContent='0 / 24';globalThis.DDAccount?.reset();
 }
 async function request(method,body,generation,token){
   const res=await fetch(API,{method,cache:'no-store',credentials:'omit',redirect:'error',signal:controller.signal,headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
@@ -30,7 +30,7 @@ async function load(){
   if(draft?.token!==token)suspended=null;
   if(!token){note('Sign in to open your private workspace.');return;}
   controller=new AbortController();note('Opening your workspace…');
-  try{const result=await request('GET',null,generation,token);state=result.workspace;loadedToken=token;render();note('Private workspace · saved '+(state.updated_at?date(state.updated_at):'when you add your first item'));if(draft?.token===token)restoreDraft(draft);suspended=null;}
+  try{const result=await request('GET',null,generation,token);state=result.workspace;retrievedAt=Date.now();loadedToken=token;render();note('Private workspace · saved '+(state.updated_at?date(state.updated_at):'when you add your first item'));if(draft?.token===token)restoreDraft(draft);suspended=null;}
   catch(e){if(generation===epoch&&e.name!=='AbortError'){if(e.status===401||e.status===403)suspended=null;globalThis.DDAccount?.failed(e.status);note(e.message);}}
 }
 function suspend(){
@@ -53,7 +53,7 @@ async function save(op,data,baseRevision=state?.revision){
   if(!pending||pending.signature!==signature)pending={signature,body:{op,data,expected_revision:baseRevision,request_id:crypto.randomUUID()}};
   setBusy(true);$('editorError').textContent='';note('Saving…');
   try{
-    const result=await request('POST',pending.body,generation,token);state=result.workspace;pending=null;
+    const result=await request('POST',pending.body,generation,token);state=result.workspace;retrievedAt=Date.now();pending=null;
     if(op==='task.save')activeTask=result.receipt.item_id;
     if(op==='context.save')activeContext=result.receipt.item_id;
     render();note('Saved · '+date(state.updated_at));return true;
@@ -66,15 +66,14 @@ async function save(op,data,baseRevision=state?.revision){
   }finally{if(generation===epoch)setBusy(false);}
 }
 function render(){
-  $('workspace').hidden=false;$('welcome').hidden=true;$('openLibrary').disabled=false;globalThis.DDAccount?.verified(loadedToken);
+  $('workspace').hidden=false;$('welcome').hidden=true;$('openLibrary').disabled=false;$('addTask').disabled=busy;globalThis.DDAccount?.verified(loadedToken);
   const agents=state.agents.filter(a=>!a.archived);$('agentCount').textContent=state.agents.length+' / 24';$('roster').replaceChildren();
   for(const a of agents){const card=node('article',null,'agent'),bar=node('div',null,'bar');bar.append(node('h3',a.name),action('Edit',()=>editor('agent',a)));card.append(bar,node('p',a.role),node('p',a.function,'muted'),node('p','Declared capabilities: '+(a.capabilities||'Not specified'),'muted'),node('span','Not connected','badge'),node('p','Last seen: never','muted'));$('roster').append(card);}
   if(!agents.length)$('roster').append(node('p','Start with a name and a role. Your roster stays private.','empty'));
   const tasks=state.tasks.filter(t=>!t.archived);if(!tasks.some(t=>t.id===activeTask)){activeTask=tasks[0]?.id||'';$('messageText').value='';}
   $('taskSelect').replaceChildren();for(const t of tasks){const option=node('option',t.title);option.value=t.id;$('taskSelect').append(option);}$('taskSelect').value=activeTask;$('taskSelect').disabled=!tasks.length;
   renderThread();renderNow();$('activity').replaceChildren();
-  const labels={'agent.save':'Roster updated','task.save':'Task updated','message.add':'Message posted','context.save':'Context version saved','context.archive':'Context archived'};
-  for(const event of [...state.activity].reverse())$('activity').append(node('div',labels[event.operation]+' · '+who(event)+' · '+date(event.at),'event'));
+  for(const event of [...state.activity].reverse())$('activity').append(node('div',ACTIVITY_LABELS[event.operation]+' · '+who(event)+' · '+date(event.at),'event'));
   renderLibrary();
 }
 // Who wrote it, honestly: the signed owner, or the owner's connector with a self-reported label.
@@ -86,14 +85,45 @@ function refList(refs){
     list.append(li);}
   return list;
 }
+// The first screen answers, in order: what needs you, where the work stands, what is moving,
+// what was last saved, and which context exists. Every figure comes from a stored field; a
+// capability the schema does not hold is shown as unavailable, never inferred from prose.
+const STATUS_ORDER=['blocked','working','queued','done'],STATUS_LABEL={blocked:'Blocked',working:'Working',queued:'Queued',done:'Done'};
+const ACTIVITY_LABELS={'agent.save':'Roster updated','task.save':'Task updated','message.add':'Message posted','context.save':'Context version saved','context.archive':'Context archived'};
+function openThread(id){activeTask=id;$('taskSelect').value=id;renderThread();$('messageText').focus();}
+function openContext(id){activeContext=id;renderReader();if(!$('library').open)$('library').showModal();}
+function unavailable(text){return node('p',text,'unavailable');}
 function renderNow(){
-  const contexts=state.contexts.filter(c=>!c.archived).sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at))),c=contexts[0];$('activeContext').replaceChildren();
-  if(c){const v=c.versions.find(v=>v.version===(c.active_version||c.versions.length))||c.versions.at(-1);$('activeContext').append(node('p',c.title+' · version '+v.version+' · '+who(v),'muted'),node('pre',v.text,'context-text'));if(v.refs)$('activeContext').append(refList(v.refs));}
-  else $('activeContext').append(node('p','No context yet. Open the context library to add a brief.','empty'));
-  const tasks=state.tasks.filter(t=>!t.archived).sort((a,b)=>(OPEN.includes(a.status)?0:1)-(OPEN.includes(b.status)?0:1)||OPEN.indexOf(a.status)-OPEN.indexOf(b.status));$('openTasks').replaceChildren();
-  for(const t of tasks){const li=node('li'),b=action(t.title,()=>{activeTask=t.id;$('taskSelect').value=t.id;renderThread();$('messageText').focus();});li.append(b,node('span',' '+t.status,'badge'));$('openTasks').append(li);}
-  if(!tasks.length)$('openTasks').append(node('li','No tasks yet.','empty'));
-  const live=new Set(tasks.map(t=>t.id)),recent=state.messages.filter(m=>live.has(m.thread_id)&&m.text.trim()).slice(-5).reverse();$('recentMessages').replaceChildren();
+  const tasks=state.tasks.filter(t=>!t.archived),live=new Set(tasks.map(t=>t.id)),agents=new Map(state.agents.map(a=>[a.id,a]));
+  // 1. Needs you. Messages carry no recipient, pending or resolved field, so nothing is inferred from kind.
+  const needs=$('needsYou');needs.replaceChildren(node('span','Not tracked yet','chip'),node('p','No recipient or resolved field is stored, so nothing here is inferred.','muted'));
+  const asks=state.messages.filter(m=>live.has(m.thread_id)&&(m.kind==='question'||m.kind==='decision')&&m.text.trim()).slice(-3).reverse();
+  if(asks.length){const ol=node('ol',null,'compact');for(const m of asks){const li=node('li'),task=tasks.find(t=>t.id===m.thread_id);li.append(node('small',m.kind+' · '+(task?task.title:'')+' · '+who(m)+' · '+date(m.created_at),'kind kind-'+m.kind),action(m.text.length>140?m.text.slice(0,140)+'…':m.text,()=>openThread(m.thread_id),'quiet item'));ol.append(li);}needs.append(node('h4','Saved questions and decisions · resolution untracked'),ol);}
+  // 2. Project summary: stored task status only.
+  const counts=Object.fromEntries(STATUS_ORDER.map(s=>[s,tasks.filter(t=>t.status===s).length])),sum=$('projectSummary');sum.replaceChildren();
+  if(tasks.length){const bar=node('div',null,'status-bar');bar.setAttribute('role','img');bar.setAttribute('aria-label','Stored task status: '+STATUS_ORDER.map(s=>counts[s]+' '+s).join(', '));for(const s of STATUS_ORDER)if(counts[s]){const seg=node('span',null,'seg seg-'+s);seg.style.flexGrow=counts[s];bar.append(seg);}sum.append(bar);}
+  const tally=node('dl',null,'tally');for(const s of STATUS_ORDER){const d=node('div',null,'tally-'+s+(s==='blocked'&&counts[s]?' hot':''));d.append(node('dt',STATUS_LABEL[s]),node('dd',String(counts[s])));tally.append(d);}sum.append(tally);
+  const assigned=tasks.filter(t=>t.agent_id&&agents.has(t.agent_id)).length;
+  sum.append(node('p',tasks.length?tasks.length+' stored '+(tasks.length===1?'task':'tasks')+' · '+assigned+' assigned to a roster role (an assignment, not accepted ownership)':'No tasks yet. Counts come from stored task status only.','muted'),unavailable('Not in the schema yet: projects, milestones, project owner, blocker reasons.'));
+  // 3. Work, blocked first. Review has no stored status, so it is reserved and labelled, not mapped.
+  const work=$('work');work.replaceChildren(node('p','Statuses are what was saved. Working is not observed execution.','muted'));
+  const groups=[...STATUS_ORDER.map(s=>[STATUS_LABEL[s],s,tasks.filter(t=>t.status===s)]),['Status not saved','none',tasks.filter(t=>!STATUS_ORDER.includes(t.status))]];
+  for(const [label,s,rows] of groups){if(!rows.length)continue;const group=node('section',null,'work-group work-'+s);const ol=node('ol');
+    for(const t of rows){const li=node('li'),agent=agents.get(t.agent_id);li.append(action(t.title,()=>openThread(t.id),'quiet item'),node('span',' '+(t.status||'no status'),'badge'),node('small',(agent?'Assigned: '+agent.name+(agent.archived?' (archived)':''):'Unassigned')+' · saved '+date(t.updated_at||t.created_at),'meta'));ol.append(li);}
+    group.append(node('h4',label+' · '+rows.length),ol);work.append(group);}
+  if(!tasks.length)work.append(node('p','No tasks yet.','empty'));
+  const review=node('section',null,'work-group work-review');review.append(node('h4','Review'),unavailable('No review status is stored, and blocked work is not treated as review.'));work.append(review);
+  // 4. Dependencies and last verified activity.
+  const verified=$('verified'),acts=[...state.activity].slice(-3).reverse();verified.replaceChildren(unavailable('Dependencies: not tracked. Tasks have no dependency field.'));
+  if(acts.length){const ol=node('ol',null,'compact');for(const e of acts)ol.append(node('li',(ACTIVITY_LABELS[e.operation]||e.operation)+' · '+who(e)+' · '+date(e.at)));verified.append(node('h4','Last saved activity'),ol);}
+  else verified.append(node('p','No saved activity yet.','empty'));
+  verified.append(node('p','Last successful refresh · '+(retrievedAt?date(retrievedAt):'not yet')+'. This confirms the page retrieved your saved workspace, not that any agent ran.','muted'));
+  // 5. Context library on demand: titles, versions and dates; full text opens in the reader.
+  const docs=state.contexts.filter(c=>!c.archived).sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at))),shelf=$('contextShelf');shelf.replaceChildren();
+  if(docs.length){const ol=node('ol',null,'compact');for(const c of docs.slice(0,5)){const li=node('li');li.append(action(c.title,()=>openContext(c.id),'quiet item'),node('small','Version '+(c.active_version||c.versions.length)+' of '+c.versions.length+' · '+date(c.updated_at),'meta'));ol.append(li);}shelf.append(ol);if(docs.length>5)shelf.append(node('p','+'+(docs.length-5)+' more in the context library','muted'));}
+  else shelf.append(node('p','No context yet. Open the context library to add a brief.','empty'));
+  // 6. Discussion stays secondary to the work.
+  const recent=state.messages.filter(m=>live.has(m.thread_id)&&m.text.trim()).slice(-5).reverse();$('recentMessages').replaceChildren();
   for(const m of recent){const li=node('li'),task=state.tasks.find(t=>t.id===m.thread_id);li.append(node('small',(m.kind||'note')+' · '+(task?task.title:'')+' · '+who(m),'kind kind-'+(m.kind||'note')),node('p',m.text.length>240?m.text.slice(0,240)+'…':m.text));$('recentMessages').append(li);}
   if(!recent.length)$('recentMessages').append(node('li','Nothing posted yet.','empty'));
 }
