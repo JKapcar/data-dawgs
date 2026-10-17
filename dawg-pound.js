@@ -4,7 +4,7 @@
 const WORKER='https://toto.jkapcar4.workers.dev',API=WORKER+'/api/pound', $=id=>document.getElementById(id);
 // References are inert text unless they are https links to one of these hosts.
 const LINK_HOSTS=['datadawgs216.com','www.datadawgs216.com','github.com','www.github.com','kaggle.com','www.kaggle.com'];
-const OPEN=['queued','working','blocked'];
+const OPEN=['queued','working','review','blocked'];
 let state=null,retrievedAt=0,epoch=0,controller=null,busy=false,activeTask='',activeContext='',edit=null,pending=null,loadedToken='',suspended=null;
 const session=()=>{try{return localStorage.getItem('dd-bozo-sess')||'';}catch{return '';}};
 const node=(tag,text,cls)=>{const el=document.createElement(tag);el.textContent=text??'';if(cls)el.className=cls;return el;};
@@ -77,7 +77,8 @@ function render(){
   renderLibrary();
 }
 // Who wrote it, honestly: the signed owner, or the owner's connector with a self-reported label.
-function who(row){return row.actor_kind==='owner_connector'?'your connector'+(row.author_label?' · "'+row.author_label+'" (unverified)':''):'you';}
+// Verified key label first (from the server), then the caller's self-reported name, marked as such.
+function who(row){if(row.actor_kind==='agent')return 'delegated agent '+row.actor_uid+' (verified credential)';if(row.actor_kind!=='owner_connector')return 'you';return 'your connector · '+(row.credential_label?'key '+row.credential_label+' (verified)':'key not recorded')+(row.author_label?' · says "'+row.author_label+'" (unverified)':'');}
 function refList(refs){
   const list=node('ul',null,'refs');
   for(const ref of refs||[]){const li=node('li');let url=null;try{url=new URL(ref);}catch{}
@@ -88,7 +89,10 @@ function refList(refs){
 // Work is the default view. Saved questions and context open through explicit view controls.
 // Every figure comes from a stored field; unsupported capabilities stay in the compact
 // capability disclosure and are never inferred from prose.
-const STATUS_ORDER=['blocked','working','queued','done'],STATUS_LABEL={blocked:'Blocked',working:'Working',queued:'Queued',done:'Done'};
+const STATUS_ORDER=['blocked','review','working','queued','done','canceled'],STATUS_LABEL={blocked:'Blocked',review:'In review',working:'Working',queued:'Queued',done:'Done',canceled:'Not planned'};
+const TASK_STATUSES=['queued','working','review','done','blocked','canceled'],BLOCKED_CODES={waiting_task:'Waiting on a task',waiting_owner:'Waiting on you',waiting_data:'Waiting on data',waiting_access:'Waiting on access',external:'External'};
+// One line of stored planning facts for a task. Nothing here is inferred.
+function plan(t,tasks){const bits=[];if(t.status==='blocked'&&t.blocked_reason)bits.push(BLOCKED_CODES[t.blocked_reason.code]+(t.blocked_reason.note?': '+t.blocked_reason.note:''));if(t.planned_start||t.planned_end)bits.push('planned '+(t.planned_start||'?')+' → '+(t.planned_end||'?'));if(t.status==='canceled')bits.push(t.actual_end?'canceled '+date(t.actual_end):'canceled');else if(t.actual_start||t.actual_end)bits.push('actual '+(t.actual_start?date(t.actual_start):'start not recorded')+' → '+(t.actual_end?date(t.actual_end):'open'));if(t.blocks?.length)bits.push('blocks '+t.blocks.map(id=>tasks.find(x=>x.id===id)?.title||'an unknown task').join(', '));if(t.review?.verdict)bits.push('review: '+t.review.verdict+(t.review.reviewed_by?' by '+t.review.reviewed_by:''));else if(t.status==='review'&&t.review?.requested_by)bits.push('review requested by '+t.review.requested_by);if(t.assignment?.proposed_role)bits.push('proposed role '+t.assignment.proposed_role);if(t.estimate_hours!=null)bits.push('estimate '+t.estimate_hours+' h');return bits.join(' · ');}
 const ACTIVITY_LABELS={'agent.save':'Roster updated','task.save':'Task updated','message.add':'Message posted','context.save':'Context version saved','context.archive':'Context archived'};
 function openThread(id){$('evidenceDrawer').open=true;activeTask=id;$('taskSelect').value=id;renderThread();const detail=$('taskDetail');detail.focus({preventScroll:true});detail.scrollIntoView({block:'start',behavior:'instant'});}
 function openContext(id){activeContext=id;renderReader();if(!$('library').open)$('library').showModal();}
@@ -105,16 +109,18 @@ function renderNow(){
   const tally=node('dl',null,'tally');for(const s of STATUS_ORDER){const d=node('div',null,'tally-'+s+(s==='blocked'&&counts[s]?' hot':''));d.append(node('dt',STATUS_LABEL[s]),node('dd',String(counts[s])));tally.append(d);}sum.append(tally);
   const assigned=tasks.filter(t=>t.agent_id&&agents.has(t.agent_id)).length;
   sum.append(node('p',tasks.length+' stored tasks · '+assigned+' role assignments','muted'));
-  // 3. Work, blocked first. Unsupported review status is explained in the capability disclosure.
+  // 3. Work, blocked first. Canceled work is shown as not planned, never as done.
   const work=$('work');work.replaceChildren(node('p','Saved statuses · working is self-reported.','muted'));
   const groups=[...STATUS_ORDER.map(s=>[STATUS_LABEL[s],s,tasks.filter(t=>t.status===s)]),['Status not saved','none',tasks.filter(t=>!STATUS_ORDER.includes(t.status))]];
   for(const [label,s,rows] of groups){if(!rows.length)continue;const group=node('section',null,'work-group work-'+s);const ol=node('ol');
-    for(const t of rows){const li=node('li'),agent=agents.get(t.agent_id);li.append(action(t.title,()=>openThread(t.id),'quiet item'),node('span',' '+(t.status||'no status'),'badge'),node('small',(agent?'Assigned: '+agent.name+(agent.archived?' (archived)':''):'Unassigned')+' · saved '+date(t.updated_at||t.created_at),'meta'));ol.append(li);}
+    for(const t of rows){const li=node('li'),agent=agents.get(t.agent_id),facts=plan(t,tasks);li.append(action(t.title,()=>openThread(t.id),'quiet item'),node('span',' '+(STATUS_LABEL[t.status]||t.status||'no status'),'badge'),node('small',(agent?'Assigned: '+agent.name+(agent.archived?' (archived)':''):'Unassigned')+' · saved '+date(t.updated_at||t.created_at),'meta'));if(facts)li.append(node('small',facts,'meta plan'));ol.append(li);}
     group.append(node('h4',label+' · '+rows.length),ol);work.append(group);}
   if(!tasks.length)work.append(node('p','No tasks yet.','empty'));
 
   // 4. Dependencies and last verified activity.
-  const verified=$('verified'),acts=[...state.activity].slice(-3).reverse();verified.replaceChildren(unavailable('Dependencies: not tracked. Tasks have no dependency field.'));
+  const verified=$('verified'),acts=[...state.activity].slice(-3).reverse(),deps=tasks.filter(t=>t.blocks?.length);verified.replaceChildren();
+  if(deps.length){const ol=node('ol',null,'compact');for(const t of deps)ol.append(node('li',t.title+' blocks '+t.blocks.map(id=>tasks.find(x=>x.id===id)?.title||'an unknown task').join(', ')));verified.append(node('h4','Stored dependencies'),ol);}
+  else verified.append(node('p','No stored dependencies. A task lists the tasks it blocks.','empty'));
   if(acts.length){const ol=node('ol',null,'compact');for(const e of acts)ol.append(node('li',(ACTIVITY_LABELS[e.operation]||e.operation)+' · '+who(e)+' · '+date(e.at)));verified.append(node('h4','Last saved activity'),ol);}
   else verified.append(node('p','No saved activity yet.','empty'));
   verified.append(node('p','Last successful refresh · '+(retrievedAt?date(retrievedAt):'not yet')+'. This confirms the page retrieved your saved workspace, not that any agent ran.','muted'));
@@ -133,7 +139,8 @@ function renderThread(){
   if(!task){$('taskDetail').append(node('h3','Make room for the next good idea.'),node('p','Create a task to keep its brief, decisions and notes in one thread.','muted'));return;}
   const bar=node('div',null,'bar');bar.append(node('h2',task.title),action('Edit task',()=>editor('task',task)));$('taskDetail').append(bar,node('p',task.body));
   const agent=state.agents.find(a=>a.id===task.agent_id);
-  $('taskDetail').append(node('span',task.status+' · owner reported','badge'),node('p',(agent?'Assigned role: '+agent.name:'No role assigned')+' · no agent has been contacted','muted'));
+  $('taskDetail').append(node('span',(STATUS_LABEL[task.status]||task.status)+' · '+(task.status_source==='owner_connector_reported'?'connector reported':'owner reported'),'badge'),node('p',(agent?'Assigned role: '+agent.name:'No role assigned')+' · no agent has been contacted','muted'));
+  const facts=plan(task,state.tasks);if(facts)$('taskDetail').append(node('p',facts,'muted plan'));if(task.actual_source)$('taskDetail').append(node('p','Actual dates come from the last 60 saved changes, not from typed input.','muted'));
   const messages=state.messages.filter(m=>m.thread_id===task.id);if(!messages.length)$('messages').append(node('p','The thread is ready. Add your first note below.','empty'));
   for(const message of messages){const card=node('article',null,'message');card.append(node('small',(message.kind||'note')+' · '+who(message)+' · '+date(message.created_at),'kind kind-'+(message.kind||'note')),node('p',message.text));if(message.refs)card.append(refList(message.refs));$('messages').append(card);}
   if(task.refs)$('taskDetail').append(refList(task.refs));
@@ -149,11 +156,13 @@ function renderReader(){
   for(const v of [...c.versions].reverse()){const option=node('option','Version '+v.version+' · '+v.title+' · '+date(v.created_at));option.value=v.version;$('contextVersions').append(option);}readVersion();
 }
 function readVersion(){const c=state?.contexts.find(c=>c.id===activeContext),v=c?.versions.find(v=>v.version===Number($('contextVersions').value));$('contextText').textContent=v?.text||'';$('contextHash').textContent=v?'SHA-256 · '+v.sha256:'';}
-function field(key,label,value,max,multiline=false,choices=null){
+const OPTIONAL=['capabilities','body','refs','project_id','milestone_id','planned_start','planned_end','estimate_hours','blocked_note','proposed_role','review_requested_by','review_reviewed_by'];
+function field(key,label,value,max,multiline=false,choices=null,type='text'){
   const wrap=node('label',label),input=document.createElement(choices?'select':multiline?'textarea':'input');input.name=key;
-  if(choices)for(const [value,text] of choices){const o=node('option',text);o.value=value;input.append(o);}
-  else{input.maxLength=max;input.autocomplete='off';input.required=!['capabilities','body','refs'].includes(key);}
-  input.value=value??'';wrap.append(input);$('editorFields').append(wrap);
+  const selected=type==='multiple'&&Array.isArray(value)?value:[];
+  if(choices){input.multiple=type==='multiple';for(const [optionValue,text] of choices){const o=node('option',text);o.value=optionValue;o.selected=selected.includes(optionValue);input.append(o);}}
+  else{if(type!=='text')input.type=type;if(type==='number'){input.min='0';input.max='1000';input.step='0.25';}else if(type!=='date')input.maxLength=max;input.autocomplete='off';input.required=!OPTIONAL.includes(key);}
+  if(type!=='multiple')input.value=value??'';wrap.append(input);$('editorFields').append(wrap);
 }
 function editor(kind,row){
   if(busy)return;edit={kind,id:row?.id,baseRevision:state.revision,taskRevision:kind==='task'&&row?row.revision||1:undefined};$('editorFields').replaceChildren();$('editorError').textContent='';
@@ -162,14 +171,32 @@ function editor(kind,row){
     field('name','Name',row?.name,60);field('role','Role',row?.role,100);field('function','What this role does',row?.function,500,true);field('capabilities','Declared capabilities',row?.capabilities,500,true);
     $('editorHint').textContent='Registers a role. No connection or access is created.';
   }else if(kind==='task'){
-    field('title','Task title',row?.title,120);field('body','Brief',row?.body,2000,true);field('agent_id','Assigned role',row?.agent_id,0,false,[['','Unassigned'],...state.agents.filter(a=>!a.archived||a.id===row?.agent_id).map(a=>[a.id,a.name])]);field('status','Status · reported by you',row?.status||'queued',0,false,['queued','working','done','blocked'].map(s=>[s,s]));field('refs','References · one per line, up to 8',(row?.refs||[]).join('\n'),2700,true);$('editorHint').textContent='A queued task waits here. It does not start an agent.';
+    field('title','Task title',row?.title,120);field('body','Brief',row?.body,2000,true);field('agent_id','Assigned role',row?.agent_id,0,false,[['','Unassigned'],...state.agents.filter(a=>!a.archived||a.id===row?.agent_id).map(a=>[a.id,a.name])]);field('status','Status · reported by you',row?.status||'queued',0,false,TASK_STATUSES.map(s=>[s,STATUS_LABEL[s]]));
+    field('blocked_code','Blocked because · required when blocked',row?.blocked_reason?.code||'',0,false,[['','Not blocked'],...Object.entries(BLOCKED_CODES)]);field('blocked_note','Blocker note',row?.blocked_reason?.note,300);
+    field('planned_start','Planned start',row?.planned_start,0,false,null,'date');field('planned_end','Planned end',row?.planned_end,0,false,null,'date');field('estimate_hours','Estimate · hours',row?.estimate_hours,0,false,null,'number');
+    const others=state.tasks.filter(t=>t.id!==row?.id&&(!t.archived||row?.blocks?.includes(t.id)));if(others.length)field('blocks','Blocks · tasks waiting on this one',row?.blocks||[],0,false,others.map(t=>[t.id,t.title]),'multiple');
+    field('proposed_role','Proposed role',row?.assignment?.proposed_role,60);field('review_requested_by','Review requested by',row?.review?.requested_by,100);field('review_verdict','Review verdict',row?.review?.verdict||'',0,false,[['','No verdict'],['accept','Accept'],['revise','Revise'],['reject','Reject']]);field('review_reviewed_by','Reviewed by',row?.review?.reviewed_by,100);
+    field('project_id','Project id',row?.project_id,63);field('milestone_id','Milestone id',row?.milestone_id,38);
+    field('refs','References · one per line, up to 8',(row?.refs||[]).join('\n'),2700,true);$('editorHint').textContent='A queued task waits here. It does not start an agent. Done after review needs an accept verdict and a reviewer.';
   }else{
     const latest=row?.versions.at(-1);field('title','Document title',row?.title,120);field('text','Context · up to 8,000 characters',latest?.text,8000,true);$('editorHint').textContent='Saves an immutable version. Plain text only.';
   }
   if(row&&kind!=='context')field('archived','Visibility',String(row.archived||false),0,false,[['false','Active'],['true','Archived']]);
   $('editor').showModal();$('editorFields').querySelector('input,textarea')?.focus();
 }
-$('editForm').onsubmit=async event=>{event.preventDefault();if(!edit)return;const current={...edit},data=Object.fromEntries(new FormData(event.target));if(current.id)data.id=current.id;if(current.kind!=='context')data.archived=data.archived==='true';if(current.kind==='task'){const refs=String(data.refs||'').split('\n').map(r=>r.trim()).filter(Boolean);delete data.refs;if(refs.length)data.refs=refs;if(current.id)data.expected_task_revision=current.taskRevision;}const op=current.kind+'.save';if(await save(op,data,current.baseRevision)){if($('editor').open)$('editor').close();edit=null;}};
+$('editForm').onsubmit=async event=>{event.preventDefault();if(!edit)return;const current={...edit},data=Object.fromEntries(new FormData(event.target));if(current.id)data.id=current.id;if(current.kind!=='context')data.archived=data.archived==='true';if(current.kind==='task'){const refs=String(data.refs||'').split('\n').map(r=>r.trim()).filter(Boolean);delete data.refs;if(refs.length)data.refs=refs;if(current.id)data.expected_task_revision=current.taskRevision;Object.assign(data,taskFields(event.target,data,Boolean(current.id)));}const op=current.kind+'.save';if(await save(op,data,current.baseRevision)){if($('editor').open)$('editor').close();edit=null;}};
+// Optional planning fields: blank is omitted on create and sent as null (clear) on update,
+// so an edit never silently keeps a value the form no longer shows.
+function taskFields(form,data,updating){
+  const out={},take=k=>{const v=String(data[k]??'').trim();delete data[k];return v;},set=(k,v)=>{if(v!==''&&v!=null)out[k]=v;else if(updating)out[k]=null;};
+  for(const k of ['project_id','milestone_id','planned_start','planned_end'])set(k,take(k));
+  const hours=take('estimate_hours');set('estimate_hours',hours===''?'':Number(hours));
+  const blocks=form.elements.blocks?[...form.elements.blocks.selectedOptions].map(o=>o.value):[];delete data.blocks;set('blocks',blocks.length?blocks:'');
+  const code=take('blocked_code'),note=take('blocked_note');if(data.status==='blocked'&&code)out.blocked_reason={code,...(note?{note}:{})};else if(updating&&data.status!=='blocked')out.blocked_reason=null;
+  const role=take('proposed_role');set('assignment',role?{proposed_role:role}:'');
+  const requested=take('review_requested_by'),verdict=take('review_verdict'),reviewer=take('review_reviewed_by');set('review',requested?{requested_by:requested,...(verdict?{verdict}:{}),...(reviewer?{reviewed_by:reviewer}:{})}:'');
+  return out;
+}
 $('messageForm').onsubmit=async event=>{event.preventDefault();const text=$('messageText').value,thread_id=activeTask,kind=$('messageKind').value,ref=$('messageRef').value.trim(),data={thread_id,text,kind};if(ref)data.refs=[ref];if(await save('message.add',data)){$('messageText').value='';$('messageRef').value='';$('messageKind').value='note';}};
 // Diagnostics: read-only permission state with reason codes. Never sent anywhere else.
 $('diagnostics').addEventListener('toggle',async()=>{

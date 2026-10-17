@@ -91,7 +91,8 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
   const replay=s.idempotency.find(x=>x.tenant===tenant && x.actor===principal.id && x.key===key);
   if(replay) {requireThat(replay.fingerprint===fingerprint,'Idempotency key conflict');return {state:s,result:structuredClone(replay.result)};}
   const own=(collection,id)=>{const x=s[collection].find(x=>x.tenant===tenant&&x.id===id);requireThat(x,'Resource unavailable');return x;};
-  const stamp={tenant,actor:principal.id,subject:principal.subject||principal.id,at:new Date(now).toISOString(),...(principal.authorLabel?{author_label:principal.authorLabel,author_label_trust:'unverified'}:{})};
+  // credential_label: server-verified connector key label; null for signed sessions and synthetic runs.
+  const stamp={tenant,actor:principal.id,subject:principal.subject||principal.id,at:new Date(now).toISOString(),credential_label:typeof principal.credentialLabel==='string'?principal.credentialLabel:null,...(principal.authorLabel?{author_label:principal.authorLabel,author_label_trust:'unverified'}:{})};
   let result;
   if(type==='hypothesis') {
     const previous=p.id?own('hypotheses',p.id):null;
@@ -172,4 +173,4 @@ export async function transition(...args){
   return step.value;
 }
 
-export const codeHash='2a0b95e93ea93ed93182aec97c7a09efd0400582ddeb9de53877d700d3666ee6';
+export const codeHash='5296d4e3d803e7e543c2fded11deb5f29cc040f4b121801b47122a93f98cf2cb';
