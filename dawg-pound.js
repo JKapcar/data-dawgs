@@ -30,7 +30,7 @@ async function load(){
   if(draft?.token!==token)suspended=null;
   if(!token){note('Sign in to open your private workspace.');return;}
   controller=new AbortController();note('Opening your workspace…');
-  try{const result=await request('GET',null,generation,token);state=result.workspace;retrievedAt=Date.now();loadedToken=token;render();note('Private workspace · saved '+(state.updated_at?date(state.updated_at):'when you add your first item'));if(draft?.token===token)restoreDraft(draft);suspended=null;}
+  try{const result=await request('GET',null,generation,token);state=result.workspace;retrievedAt=Date.now();loadedToken=token;render();note('Saved · '+(state.updated_at?date(state.updated_at):'when you add your first item'));if(draft?.token===token)restoreDraft(draft);suspended=null;}
   catch(e){if(generation===epoch&&e.name!=='AbortError'){if(e.status===401||e.status===403)suspended=null;globalThis.DDAccount?.failed(e.status);note(e.message);}}
 }
 function suspend(){
