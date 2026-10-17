@@ -81,7 +81,9 @@
         "advertised",
         "claimIds",
         "price",
-        "packTestDate"
+        "packTestDate",
+        "apiId",
+        "identityNote"
       ],
       "properties": {
         "id": {
@@ -105,7 +107,8 @@
             "historical",
             "verified",
             "unknown",
-            "version-changed"
+            "version-changed",
+            "provider-listed"
           ]
         },
         "category": {
@@ -136,7 +139,8 @@
             "transcription",
             "image",
             "browser",
-            "execution"
+            "execution",
+            "voice"
           ],
           "properties": {
             "coding": {
@@ -180,6 +184,13 @@
                 "unknown",
                 "unavailable"
               ]
+            },
+            "voice": {
+              "enum": [
+                "verified",
+                "unknown",
+                "unavailable"
+              ]
             }
           }
         },
@@ -195,7 +206,8 @@
           "items": {
             "type": "string",
             "minLength": 1
-          }
+          },
+          "minItems": 1
         },
         "price": {
           "type": "null"
@@ -210,6 +222,16 @@
               "type": "null"
             }
           ]
+        },
+        "apiId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "identityNote": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },
@@ -275,7 +297,8 @@
         "status",
         "scope",
         "claim",
-        "caveats"
+        "caveats",
+        "sourceDateNote"
       ],
       "properties": {
         "id": {
@@ -301,8 +324,15 @@
           ]
         },
         "sourceDate": {
-          "type": "string",
-          "format": "date"
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "checkedAt": {
           "type": "string",
@@ -336,6 +366,10 @@
           "minLength": 1
         },
         "caveats": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceDateNote": {
           "type": "string",
           "minLength": 1
         }

@@ -14,11 +14,10 @@ revisions. All objects reject unknown fields. No private agent configuration, pr
 records, account identifiers, permissions or credentials belong in this catalog.
 This feature does not export private records into `/data` or any public surface.
 
-The first five profiles are deliberately historical: GPT-4.1, Claude Sonnet 4,
+Five retained profiles are deliberately historical: GPT-4.1, Claude Sonnet 4,
 Gemini 2.5 Pro Experimental, gpt-4o-transcribe and launch-era GPT-4o image generation.
 These cover general coding/reasoning, multimodal input, transcription and image
-generation. They are not a current frontier census. Current model versions, prices,
-availability, local tool access and task-fit performance are unverified. A persona
+generation. The default view now shows seven current provider listings checked on 2026-10-17, detailed below. The catalog is not exhaustive. Exact deployment snapshots, account access, prices, installed harness versions, local tool access and task-fit performance remain unverified. A persona
 does not create a new model. A harness change warrants a new setup record.
 
 Source publication/version date, source checked date, and actual test date are
@@ -95,3 +94,30 @@ Shared merge surface: the existing site-map strings in 34 HTML pages and the cac
 version in `sw.js`. Other pages receive only that map description. Recompute the
 cache key after integrating concurrent work; do not overwrite Dispatch or private
 workspace changes. No Worker, deployment manifest or security settings change here.
+
+## Current coverage and independent review (2026-10-17)
+
+The seven current provider listings are GPT-6 Astra (gpt-6-astra), GPT-6.1 Sol
+(gpt-6.1-sol), Claude Opus 5.5 (product identity confirmed; API ID unverified),
+Claude Sonnet 5.5 (claude-sonnet-5-5), Gemini 4 Argon (gemini-4-argon),
+GPT-Image-2.5 Sunburst (gpt-image-2.5-sunburst), and GPT-Live 1 (gpt-live-1).
+Official documentation supplies the identities; API aliases are not pinned
+snapshots. Codex CLI and Claude Code have separate official harness evidence.
+Undated living documentation has a null publication date with an explanation;
+the check date is never substituted for a release or test date.
+
+The historical-only first pass was incomplete for current selection, not blocked
+by retrieval. Current official sources were accessible and have been added with
+these limits. Historical performance is not transferred to newer versions.
+
+A separate read-only reviewer found two P2 issues: conflated claim/evidence IDs
+and absent feature CI. Both are fixed. Rendering follows profile -> claim ->
+evidence, with distinct-ID regression coverage and nonempty profile claim lists.
+A dedicated PR-only workflow runs all Pack checks with pinned test dependencies
+and captures public-only screenshots. No deployment or schedule trigger exists.
+
+Nine logic/privacy regressions pass. Schema checks reject seven invalid catalog
+mutations plus empty run/outcome/revision objects. No Pack model evaluations ran.
+Latest main c68a5e05 merged cleanly; its private development-data files do not
+overlap the feature. Shared map/cache edits remain the coordination points with
+concurrent unmerged Dispatch work.

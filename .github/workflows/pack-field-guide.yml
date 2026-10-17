@@ -1,0 +1,38 @@
+name: Pack Field Guide checks
+
+on:
+  pull_request:
+    paths:
+      - 'ai.html'
+      - 'pack-*'
+      - 'schemas/pack-catalog.schema.json'
+      - 'tests/pack-*'
+      - 'work/test-pack-guide-ui.mjs'
+      - 'work/playwright-loader.mjs'
+      - '.github/workflows/pack-field-guide.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  pack-guide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DD_NODE_MODULES: /tmp/pack-qa/node_modules
+      PACK_SCREENSHOTS: /tmp/pack-screenshots
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --prefix /tmp/pack-qa --no-audit --no-fund playwright@1.64.1 @axe-core/playwright@4.14.0 ajv@8.20.0 ajv-formats@3.0.1
+      - run: /tmp/pack-qa/node_modules/.bin/playwright install --with-deps chromium
+      - run: node --test tests/pack-field-guide.test.cjs
+      - run: node tests/pack-schema.cjs
+      - run: node work/test-pack-guide-ui.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pack-guide-screenshots
+          path: /tmp/pack-screenshots

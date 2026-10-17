@@ -29,6 +29,17 @@ test('catalog references resolve and all capability statements carry evidence',(
  for(const collection of [db.profiles,db.claims,db.evidence])assert.equal(new Set(collection.map(x=>x.id)).size,collection.length);
  assert.equal(db.runs.length+db.pairedOutcomes.length+db.reviewedRevisions.length,0);
 });
+test('profiles resolve claims through evidence IDs, without assuming equal identifiers',()=>{
+ const fixture={claims:[{id:'claim-a',evidenceIds:['source-a','source-b']}],evidence:[{id:'source-a'},{id:'source-b'}]};
+ assert.deepEqual(core.profileEvidence(fixture,{claimIds:['claim-a']}).map(e=>e.id),['source-a','source-b']);
+ for(const p of db.profiles)assert(core.profileEvidence(db,p).length>0);
+});
+test('current provider listings are distinct from historical records and local verification',()=>{
+ assert.equal(db.profiles.filter(p=>p.versionStatus==='provider-listed').length,7);
+ assert.equal(db.profiles.filter(p=>p.versionStatus!=='provider-listed').length,5);
+ for(const p of db.profiles){assert.equal(p.packTestDate,null);assert.equal(p.toolsTested.length,0);}
+ for(const e of db.evidence.filter(e=>e.sourceDate===null))assert.match(e.sourceDateNote,/Undated/);
+});
 test('public feature has no account reads, private transports or persistence',()=>{
  const code=['pack-guide.js','pack-core.js','pack-catalog.js'].map(f=>fs.readFileSync(require('node:path').join(__dirname,'..',f),'utf8')).join('\n');
  for(const pattern of [/localStorage/,/sessionStorage/,/document\.cookie/,/fetch\s*\(/,/XMLHttpRequest/,/\/api\/pound/,/\/privatePounds/,/Authorization/,/Bearer /,/sk-[a-zA-Z0-9]{20}/])assert(!pattern.test(code),String(pattern));
