@@ -203,8 +203,9 @@ test('owner route never accepts or invents an assistant label; connector labels 
   const out=await r.send(r.command('message.add',{thread_id:t.body.receipt.item_id,text:'Owner note'},1));assert.equal(out.status,200);
   for(const row of [out.body.workspace.messages[0],...out.body.workspace.activity])assert.equal(row.author_label,undefined);
   const context={crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array};vm.createContext(context);vm.runInContext(source+'\nthis.write=poundWrite;this.empty=poundEmpty;',context);
-  const state=context.empty();await context.write(state,{op:'task.save',data:task},'u_one','owner_connector','Gemini');const id=state.tasks[0].id;
-  await context.write(state,{op:'message.add',data:{thread_id:id,text:'Finding'}},'u_one','owner_connector','Gemini');await context.write(state,{op:'context.save',data:{title:'Brief',text:'Body'}},'u_one','owner_connector','Gemini');
+  const state=context.empty();await assert.rejects(context.write(state,{op:'task.save',data:task},'u_one','owner_connector','Gemini'),e=>e.poundStatus===401,'a connector write without a verified key label never lands');assert.equal(state.tasks.length,0);
+  await context.write(state,{op:'task.save',data:task},'u_one','owner_connector','Gemini','primary');const id=state.tasks[0].id;
+  await context.write(state,{op:'message.add',data:{thread_id:id,text:'Finding'}},'u_one','owner_connector','Gemini','primary');await context.write(state,{op:'context.save',data:{title:'Brief',text:'Body'}},'u_one','owner_connector','Gemini','primary');
   assert.equal(state.messages[0].author_label,'Gemini');assert.equal(state.messages[0].author_label_trust,'unverified');assert.equal(state.contexts[0].versions[0].author_label,'Gemini');
   assert.ok(state.activity.every(a=>a.author_label==='Gemini'&&a.author_label_trust==='unverified'&&a.actor_uid==='u_one'));
 });
@@ -251,4 +252,89 @@ test('Dispatch rename changes display copy only; URLs, API, tools and storage st
   for(const f of fs.readdirSync('.').filter(f=>f.endsWith('.html'))){const s=read(f);assert.doesNotMatch(s,/Dawg Pound workspace/,f);if(s.includes('const NAV = ['))assert.equal(s.split('["dawg-pound.html","Dispatch","dawg-pound"]').length-1,1,f);}
   assert.match(read('pound.html'),/dawghouse\.html/,'historical pound.html redirect untouched');
   assert.match(read('dawgs.html'),/<h1 id="poundTitle">Dawg Pound<\/h1>/,'public Dawg Pound community page keeps its name');
+});
+
+// ---- Verified actor stamp (WO-03). Synthetic records only. ----
+test('WO-03 J.4-20 owner-session writes stamp credential_label null on every record they create',async()=>{
+  const r=rig(),t=await r.send(r.command('task.save',task,0)),id=t.body.receipt.item_id;
+  await r.send(r.command('message.add',{thread_id:id,text:'Owner note'},1));await r.send(r.command('context.save',{title:'Brief',text:'Body'},2));
+  const s=JSON.parse(r.db.get('/privatePounds/u_one').payload);
+  for(const row of [s.messages[0],s.contexts[0].versions[0],...s.activity,s.tasks[0].updated_by]){assert.equal(Object.hasOwn(row,'credential_label'),true);assert.equal(row.credential_label,null);assert.equal(row.actor_uid,'u_one');assert.equal(row.actor_kind,'owner');}
+  assert.equal((await r.send({...r.command('message.add',{thread_id:id,text:'x'},3),credential_label:'primary'})).status,400,'the owner route never accepts a caller-supplied label');
+});
+test('WO-03 J.4-20/24 connector writes carry the verified key label; contribution counts equal a direct count per credential',async()=>{
+  const context={crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array};vm.createContext(context);vm.runInContext(source+'\nthis.write=poundWrite;this.empty=poundEmpty;this.view=poundView;',context);
+  const s=context.empty(),w=(data,op,kind,label,cred)=>context.write(s,{op,data},'u_one',kind,label,cred);
+  await w(task,'task.save','owner',null,null);const id=s.tasks[0].id;
+  for(const bad of [undefined,null,'',' x','has space','x'.repeat(25)])await assert.rejects(w({thread_id:id,text:'x'},'message.add','owner_connector','Claude',bad),e=>e.poundStatus===401,String(bad));
+  await assert.rejects(w({thread_id:id,text:'x'},'message.add','owner','Claude','primary'),e=>e.poundStatus===401,'an owner session never carries a key label');
+  const plan=[['owner',null,null],['owner_connector','Claude','primary'],['owner_connector','Claude','primary'],['owner_connector','Gemini','Muse'],['owner_connector',null,'Muse'],['owner_connector','Claude','Muse']];
+  for(const [i,[kind,label,cred]] of plan.entries())await w({thread_id:id,text:'Synthetic '+i},'message.add',kind,label,cred);
+  await w({title:'Brief',text:'Body'},'context.save','owner_connector','Grok','grok_key');
+  s.messages.push({id:'p_'+webcrypto.randomUUID(),thread_id:id,text:'Agent note',actor_uid:'agent:synthetic',actor_kind:'agent',created_at:new Date().toISOString()});
+  const m=s.messages.find(x=>x.credential_label==='Muse'&&x.author_label==='Gemini');assert.equal(m.author_label_trust,'unverified');assert.equal(m.actor_kind,'owner_connector');
+  assert.equal(s.activity.at(-1).credential_label,'grok_key');assert.equal(s.contexts[0].versions[0].credential_label,'grok_key');
+  const counts=JSON.parse(JSON.stringify(context.view(s).contributions)),direct={};
+  for(const x of [...s.messages.map(r=>[r,'messages']),...s.contexts.flatMap(c=>c.versions.map(v=>[v,'context_versions']))]){const [r,k]=x,key=r.actor_kind==='owner'?'owner_session':r.actor_kind==='agent'?'agent:'+r.actor_uid:r.actor_kind+':'+r.credential_label;(direct[key]??={messages:0,context_versions:0})[k]++;}
+  assert.deepEqual(counts,direct);assert.deepEqual(counts['owner_connector:primary'],{messages:2,context_versions:0});assert.deepEqual(counts['owner_connector:Muse'],{messages:3,context_versions:0});assert.deepEqual(counts['agent:agent:synthetic'],{messages:1,context_versions:0});
+  // Records written before WO-03 count honestly as unrecorded, never as primary.
+  s.messages.push({id:'p_'+webcrypto.randomUUID(),thread_id:id,text:'Legacy',actor_uid:'u_one',actor_kind:'owner_connector',created_at:'2026-10-01T00:00:00Z'});assert.equal(context.view(s).contributions['owner_connector:unrecorded'].messages,1);
+});
+
+// ---- Research Ops task fields (WO-02). Synthetic records only. ----
+const latest=(r)=>JSON.parse(r.db.get('/privatePounds/u_one').payload);
+async function twoTasks(){const r=rig();const a=await r.send(r.command('task.save',{...task,title:'A'},0)),b=await r.send(r.command('task.save',{...task,title:'B'},1));return {r,a:a.body.receipt.item_id,b:b.body.receipt.item_id};}
+test('WO-02 PR 276 task payloads still validate unchanged and gain no new fields',async()=>{
+  const r=rig(),out=await r.send(r.command('task.save',task,0));assert.equal(out.status,200);
+  const t=latest(r).tasks[0];for(const k of ['project_id','milestone_id','planned_start','planned_end','blocks','blocked_reason','assignment','estimate_hours','review','claim_expires_at'])assert.equal(Object.hasOwn(t,k),false,k);
+  for(const status of ['queued','working','done'])assert.equal((await r.send(r.command('task.save',{...task,status,id:t.id,expected_task_revision:latest(r).tasks[0].revision},latest(r).revision))).status,200,status);
+});
+test('WO-02 all optional fields round-trip; schema advertises them; null clears on update',async()=>{
+  const {r,a,b}=await twoTasks(),full={...task,title:'Planned',project_id:'bdb-2027',milestone_id:'r_'+webcrypto.randomUUID(),planned_start:'2026-10-20',planned_end:'2026-10-24',blocks:[a,b],assignment:{proposed_role:'coordinator',accepted_by:'dot',accepted_at:'2026-10-17T10:12:00-04:00',verified_ref:'CROSS-CLIENT-PROOF row 3'},estimate_hours:2.5,review:{requested_by:'owner',requested_at:'2026-10-17T14:00:00Z'},claim_expires_at:'2026-10-19T14:00:00Z'};
+  const out=await r.send(r.command('task.save',full,2));assert.equal(out.status,200,JSON.stringify(out.body));
+  const id=out.body.receipt.item_id,t=latest(r).tasks.find(x=>x.id===id);for(const k of Object.keys(full))assert.deepEqual(t[k],full[k],k);
+  const props=r.schema.write.inputSchema.oneOf.find(s=>s.properties.op.const==='task.save').properties.data.properties;assert.deepEqual(props.status.enum,['queued','working','review','done','blocked','canceled']);assert.ok(props.blocked_reason&&props.claim_expires_at);
+  const cleared=await r.send(r.command('task.save',{...task,title:'Planned',id,expected_task_revision:1,planned_start:null,planned_end:null,blocks:null,estimate_hours:null},3));assert.equal(cleared.status,200);
+  const c=latest(r).tasks.find(x=>x.id===id);for(const k of ['planned_start','planned_end','blocks','estimate_hours'])assert.equal(Object.hasOwn(c,k),false,k);assert.equal(c.project_id,'bdb-2027');
+});
+test('WO-02 J.1-4 a blocks cycle (A→B→A) and self-blocks are rejected; unknown blocked tasks are 404',async()=>{
+  const {r,a,b}=await twoTasks(),before=r.writes.length;
+  assert.equal((await r.send(r.command('task.save',{...task,title:'A',id:a,expected_task_revision:1,blocks:[b]},2))).status,200);
+  const cyc=await r.send(r.command('task.save',{...task,title:'B',id:b,expected_task_revision:1,blocks:[a]},3));assert.equal(cyc.status,400);assert.equal(cyc.body.error,'blocks cycle');
+  assert.equal((await r.send(r.command('task.save',{...task,title:'A',id:a,expected_task_revision:2,blocks:[a]},3))).status,400);
+  assert.equal((await r.send(r.command('task.save',{...task,title:'A',id:a,expected_task_revision:2,blocks:[b,b]},3))).status,400);
+  assert.equal((await r.send(r.command('task.save',{...task,title:'C',blocks:['p_'+webcrypto.randomUUID()]},3))).status,404);
+  assert.equal(r.writes.length,before+1);
+});
+test('WO-02 J.1-4 blocked requires a reason code; the reason is dropped when the task unblocks',async()=>{
+  const r=rig();const none=await r.send(r.command('task.save',{...task,status:'blocked'},0));assert.equal(none.status,400);assert.match(none.body.error,/blocked_reason/);
+  assert.equal((await r.send(r.command('task.save',{...task,status:'blocked',blocked_reason:{note:'no code'}},0))).status,400);
+  assert.equal((await r.send(r.command('task.save',{...task,status:'blocked',blocked_reason:{code:'waiting_for_godot'}},0))).status,400);
+  assert.equal((await r.send(r.command('task.save',{...task,status:'queued',blocked_reason:{code:'external'}},0))).status,400);
+  const ok=await r.send(r.command('task.save',{...task,status:'blocked',blocked_reason:{code:'waiting_owner',note:'Needs the owner'}},0));assert.equal(ok.status,200);const id=ok.body.receipt.item_id;
+  assert.equal((await r.send(r.command('task.save',{...task,status:'blocked',id,expected_task_revision:1},1))).status,200,'a stored reason carries over');
+  assert.equal((await r.send(r.command('task.save',{...task,status:'working',id,expected_task_revision:2},2))).status,200);assert.equal(Object.hasOwn(latest(r).tasks[0],'blocked_reason'),false);
+});
+test('WO-02 review→done needs an accept verdict and reviewer; dates and numbers are validated',async()=>{
+  const r=rig(),id=(await r.send(r.command('task.save',{...task,status:'review',review:{requested_by:'owner'}},0))).body.receipt.item_id;
+  assert.equal((await r.send(r.command('task.save',{...task,status:'done',id,expected_task_revision:1},1))).status,400);
+  assert.equal((await r.send(r.command('task.save',{...task,status:'done',id,expected_task_revision:1,review:{requested_by:'owner',verdict:'revise',reviewed_by:'critic'}},1))).status,400);
+  assert.equal((await r.send(r.command('task.save',{...task,status:'done',id,expected_task_revision:1,review:{requested_by:'owner',verdict:'accept',reviewed_by:'critic'}},1))).status,200);
+  for(const bad of [{planned_start:'2026-02-30'},{planned_start:'Oct 20'},{planned_start:'2026-10-24',planned_end:'2026-10-20'},{estimate_hours:-1},{estimate_hours:1e9},{estimate_hours:'2'},{claim_expires_at:'tomorrow'},{project_id:'Bad Slug'},{assignment:{accepted_by:'x'}},{review:{requested_by:'o',verdict:'maybe'}}])
+    assert.equal((await r.send(r.command('task.save',{...task,...bad},2))).status,400,JSON.stringify(bad));
+});
+test('WO-02 J.1-5 canceling counts as not planned, never done; only the owner cancels',async()=>{
+  const r=rig(),id=(await r.send(r.command('task.save',task,0))).body.receipt.item_id;
+  assert.equal((await r.send(r.command('task.save',{...task,status:'canceled',id,expected_task_revision:1},1))).status,200);
+  const view=(await r.send()).body.workspace;assert.equal(view.tasks[0].status,'canceled');assert.equal(view.tasks.filter(t=>t.status==='done').length,0);
+  const context={crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array};vm.createContext(context);vm.runInContext(source+'\nthis.write=poundWrite;this.empty=poundEmpty;',context);
+  const st=context.empty();await context.write(st,{op:'task.save',data:{...task}},'u_one','owner_connector',null,'primary');
+  await assert.rejects(context.write(st,{op:'task.save',data:{...task,status:'canceled',id:st.tasks[0].id,expected_task_revision:1}},'u_one','owner_connector',null,'primary'),e=>e.poundStatus===403&&/Only the owner cancels/.test(e.message));
+});
+test('WO-02 actual_start/actual_end derive from activity, are never accepted as input, and read null once the ring forgets',async()=>{
+  const r=rig(),id=(await r.send(r.command('task.save',task,0))).body.receipt.item_id;
+  assert.equal((await r.send(r.command('task.save',{...task,actual_start:'2026-10-01T00:00:00Z'},1))).status,400);
+  await r.send(r.command('task.save',{...task,status:'working',id,expected_task_revision:1},1));await r.send(r.command('task.save',{...task,status:'done',id,expected_task_revision:2},2));
+  const s=latest(r),[,w,d]=s.activity;let t=(await r.send()).body.workspace.tasks[0];assert.equal(t.actual_start,w.at);assert.equal(t.actual_end,d.at);assert.equal(t.actual_source,'activity');assert.equal(Object.hasOwn(s.tasks[0],'actual_start'),false,'never stored');
+  s.activity=s.activity.slice(-1);r.db.get('/privatePounds/u_one').payload=JSON.stringify(s);t=(await r.send()).body.workspace.tasks[0];assert.equal(t.actual_start,null);assert.equal(t.actual_end,d.at);
 });

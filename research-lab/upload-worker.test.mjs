@@ -70,6 +70,12 @@ test('promotion is a verified, idempotent copy into durable private storage that
   // A lost metadata write after a successful copy: the retry reuses the verified destination.
   const rec=record();delete rec.durable;rows.set('/researchUploads/v1/u_owner',{version:1,owner_uid:'u_owner',payload:JSON.stringify(rec)});versions.set('/researchUploads/v1/u_owner',(versions.get('/researchUploads/v1/u_owner')||0)+1);
   assert.equal((await promote(sha)).status,200);assert.equal(record().durable.key,dest);assert.deepEqual(await keys(),[dest,quarantine].sort());
+  // A separately preserved copy with no SHA metadata is verified by native streaming
+  // readback, without rewriting it. These are synthetic local R2 objects only.
+  const missing=record();delete missing.durable;rows.set('/researchUploads/v1/u_owner',{version:1,owner_uid:'u_owner',payload:JSON.stringify(missing)});
+  await bucket.put(dest,whole);const copied=await bucket.head(dest);assert.equal(copied.checksums.sha256,undefined);
+  const reconciled=await promote(sha);assert.equal(reconciled.status,200,JSON.stringify(reconciled.body));assert.match(reconciled.body.durable.verification,/Full object readback/);
+  assert.equal((await bucket.head(dest)).version,copied.version);assert.deepEqual(await keys(),[dest,quarantine].sort());
   // Downloads read the durable copy; delete is refused while a durable copy exists.
   const dl=await call('download');assert.equal(dl.status,200);assert.deepEqual(new Uint8Array(await dl.arrayBuffer()),whole);
   await bucket.delete(quarantine);assert.equal((await call('download')).status,200);

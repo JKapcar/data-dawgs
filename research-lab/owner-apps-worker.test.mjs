@@ -17,6 +17,47 @@ async function boot({grants=true,dataBindings={}}={}){const directory=mkdtempSyn
  const close=async()=>{await mf.dispose();const resolved=path.resolve(directory);assert.ok(resolved.startsWith(path.resolve(os.tmpdir())+path.sep));rmSync(resolved,{recursive:true,force:true});};
  return {mf,rpc,db,state,token,other,uid,grant,close};}
 const callText=r=>JSON.parse(r.body.result.content[0].text);
+import {v3Fixture} from './development-v3-fixture.mjs';
+test('packaged v3 compressed partitions preserve owner auth, pagination and revocation',async()=>{
+ const f=v3Fixture({policy:'all-position-development-v1',seasonType:'POST',position:'QB',draftYear:'2024'}),w=await boot({dataBindings:{RESEARCH_DEVELOPMENT_DATA_ENABLED:'true',RESEARCH_DEVELOPMENT_MANIFEST_SHA:f.env.RESEARCH_DEVELOPMENT_MANIFEST_SHA}});
+ try{
+  const bucket=await w.mf.getR2Bucket('RESEARCH_UPLOADS');
+  for(const [name,bytes] of f.objects)await bucket.put('development/'+w.uid+'/test/'+SOURCE_SHA+'/'+name,bytes);
+  const args={op:'rows',table:'game_tracking',selector:f.selector,artifact:f.descriptor.sha256};
+  for(const catalog of ['core','full']){
+   assert.ok((await w.rpc('tools/list',{},{catalog})).body.result.tools.some(t=>t.name==='dd_owner_bdb_data'));
+   const discovery=callText(await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:{op:'lookup',table:'game_tracking',selector:{}}},{catalog}));assert.deepEqual(discovery.children,[{season:'2023'}]);
+   const first=callText(await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:args},{catalog}));assert.equal(first.rows.length,100);assert.equal(first.nextOffset,100);assert.ok(first.rows.every(r=>r.nfl_id==='wr'));
+   const last=callText(await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:{...args,offset:200}},{catalog}));assert.equal(last.rows.length,1);assert.equal(last.nextOffset,null);
+   const exact=callText(await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:{...args,op:'artifact'}},{catalog}));assert.equal(createHash('sha256').update(Buffer.from(exact.data,'base64')).digest('hex'),f.descriptor.sha256);
+  }
+  for(const credential of [w.other,'synthetic-shared'])assert.equal((await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:args},{credential})).body.result.isError,true);
+  w.db.get('/researchLab/v1/tenants/test').ownerConnector.enabled=false;
+  assert.equal((await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:args})).body.result.isError,true);
+  assert.ok(!(await w.rpc('tools/list')).body.result.tools.some(t=>t.name==='dd_owner_bdb_data'));assert.equal(w.state.writes,0);
+ }finally{await w.close();}
+});
+
+test('packaged v2 indexed data uses existing owner permissions for both catalogs',async()=>{
+ const objects=new Map(),put=v=>{const text=JSON.stringify(v),h=createHash('sha256').update(text).digest('hex');objects.set(h,text);return h;};
+ const artifact=put({version:2,sourceSha256:SOURCE_SHA,table:'players',columns:['draft_year','nfl_id'],rows:[{draft_year:'2023',nfl_id:'synthetic'}]});
+ const root=put({version:2,kind:'index',sourceSha256:SOURCE_SHA,table:'players',artifacts:[{sha256:artifact,rows:1}]});
+ const tables=Object.fromEntries(['players','combine_results','combine_tracking','games','player_play','game_tracking'].map(t=>[t,{root,depth:0,rows:1,columns:[{name:'draft_year'},{name:'nfl_id'}]}]));
+ const pin=put({version:2,sourceSha256:SOURCE_SHA,classes:['2023','2024'],seasons:['2023','2024'],policy:'development-cohort-only-v1',holdoutRead:false,tables});
+ const w=await boot({dataBindings:{RESEARCH_DEVELOPMENT_DATA_ENABLED:'true',RESEARCH_DEVELOPMENT_MANIFEST_SHA:pin}});
+ try{
+  const bucket=await w.mf.getR2Bucket('RESEARCH_UPLOADS');for(const [h,text] of objects)await bucket.put('development/'+w.uid+'/test/'+SOURCE_SHA+'/'+h+'.json',text);
+  const args={op:'rows',table:'players',path:[],artifact};
+  for(const catalog of ['core','full']){
+   assert.ok((await w.rpc('tools/list',{},{catalog})).body.result.tools.some(t=>t.name==='dd_owner_bdb_data'));
+   assert.equal(callText(await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:args},{catalog})).rows.length,1);
+  }
+  for(const credential of [w.other,'synthetic-shared'])assert.equal((await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:args},{credential})).body.result.isError,true);
+  w.db.get('/researchLab/v1/tenants/test').ownerConnector={...w.grant,enabled:false};
+  assert.equal((await w.rpc('tools/call',{name:'dd_owner_bdb_data',arguments:args})).body.result.isError,true);
+  assert.equal(w.state.writes,0);
+ }finally{await w.close();}
+});
 
 test('packaged initialize count, tools/list and dd_whoami agree for owner, non-owner and shared',async()=>{const w=await boot();try{
  for(const catalog of ['core','full'])for(const header of [false,true]){
@@ -114,3 +155,28 @@ test('packaged development data uses existing MCP auth, R2 and revocation withou
   assert.ok(!(await w.rpc('tools/list')).body.result.tools.some(t=>t.name==='dd_owner_bdb_data'));assert.equal(w.state.writes,0);
  }finally{await w.close();}
 });
+
+test('WO-03 packaged: the primary key stamps primary and a labeled key stamps its label on stored records',async()=>{const w=await boot();try{
+ const write=(credential,n,text)=>w.rpc('tools/call',{name:'dd_owner_pound_write',arguments:{op:'context.save',expected_revision:n,request_id:'packaged_stamp_00000'+n,data:{title:'Synthetic brief',text},assistant:'Claude'}},{credential});
+ assert.equal(callText(await write(w.token,0,'From the primary key')).identity.credential_label,'primary');
+ assert.equal(callText(await write('u_synthetic-unlisted',1,'From the labeled key')).identity.credential_label,'unlisted_client');
+ const s=JSON.parse(w.db.get('/privatePounds/'+w.uid).payload),versions=s.contexts.flatMap(c=>c.versions);
+ assert.deepEqual(versions.map(v=>[v.text,v.credential_label,v.author_label,v.author_label_trust]),[['From the primary key','primary','Claude','unverified'],['From the labeled key','unlisted_client','Claude','unverified']]);
+ assert.deepEqual(s.activity.map(a=>a.credential_label),['primary','unlisted_client']);
+ const read=callText(await w.rpc('tools/call',{name:'dd_owner_pound_read',arguments:{}}));assert.deepEqual(read.workspace.contributions,{'owner_connector:primary':{messages:0,context_versions:1},'owner_connector:unlisted_client':{messages:0,context_versions:1}});
+}finally{await w.close();}});
+
+test('packaged research project tools: flag-gated discovery, verified key label stamped on the stored record',async()=>{const off=await boot();try{assert.ok(!(await off.rpc('tools/list')).body.result.tools.some(t=>t.name.startsWith('dd_owner_project_')));}finally{await off.close();}
+ const w=await boot({dataBindings:{RESEARCH_PROJECTS_ENABLED:'true'}});try{
+ const at='2026-10-17T00:00:00.000Z',stamp={uid:w.uid,actor_kind:'owner',credential_label:null,author_label:null,author_label_trust:'unverified'};
+ const state={record:'dd-project/1',project_id:'bdb-pkg',tenant:'test',revision:1,updated_at:at,project:{id:'r_00000000-0000-4000-8000-000000000001',type:'project',project_id:'bdb-pkg',revision:1,title:'Synthetic packaged study',created_at:at,updated_at:at,created_by:stamp,actor:stamp,request_id:'synthetic_charter_0001'},milestones:[],checks:[],questions:[],decisions:[],votes:[],roles:[],policies:[],audit:[],receipts:[]};
+ const path='/researchProjects/v1/test/bdb-pkg';w.db.set(path,{version:1,tenant:'test',project_id:'bdb-pkg',owner_uid:w.uid,payload:JSON.stringify(state)});
+ const names=(await w.rpc('tools/list')).body.result.tools.map(t=>t.name).filter(n=>n.startsWith('dd_owner_project_'));assert.deepEqual(names,['dd_owner_project_read','dd_owner_project_write']);
+ const write=(credential,n)=>w.rpc('tools/call',{name:'dd_owner_project_write',arguments:{project_id:'bdb-pkg',op:'question.save',expected_revision:n,request_id:'packaged_question_000'+n,data:{text:'Synthetic packaged question?',priority:'normal'},assistant:'Claude'}},{credential});
+ const first=callText(await write(w.token,1));assert.equal(first.identity.credential_label,'primary');
+ const second=callText(await write('u_synthetic-unlisted',2));assert.equal(second.identity.credential_label,'unlisted_client');
+ const stored=JSON.parse(w.db.get(path).payload).questions.map(q=>q.actor);assert.deepEqual(stored.map(a=>a.credential_label),['primary','unlisted_client']);assert.ok(stored.every(a=>a.actor_kind==='owner_connector'&&a.author_label==='Claude'&&a.author_label_trust==='unverified'));
+ const read=callText(await w.rpc('tools/call',{name:'dd_owner_project_read',arguments:{project_id:'bdb-pkg',section:'questions'}}));assert.equal(read.project.total,2);
+ for(const credential of [w.other,'synthetic-shared'])assert.equal((await w.rpc('tools/call',{name:'dd_owner_project_read',arguments:{project_id:'bdb-pkg'}},{credential})).body.result.isError,true);
+ const denied=await w.rpc('tools/call',{name:'dd_owner_project_write',arguments:{project_id:'bdb-pkg',op:'project.health',expected_revision:3,request_id:'packaged_health_00001',data:{value:'off_track'}}});assert.equal(denied.body.result.isError,true);assert.match(denied.body.result.content[0].text,/owner_only/);
+}finally{await w.close();}});
