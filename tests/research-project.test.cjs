@@ -41,7 +41,7 @@ async function seeded(){
 // One valid payload per v1 op, against the seeded project above.
 function samples(s){const st=s.r.state(),dv=st.decisions[0].proposal_version;return {
   'project.save':{...charter,expected_record_revision:st.project.revision},
-  'project.health':{value:'amber',note:'synthetic'},
+  'project.health':{value:'at_risk',note:'synthetic'},
   'milestone.save':{title:'Second synthetic milestone',due_planned:'2026-12-15'},
   'check.set':{milestone_id:s.milestone,text:'Synthetic check',verifier:'owner',evidence_required:'receipt',status:'unchecked'},
   'question.save':{text:'Another synthetic question?',priority:'low'},
@@ -152,7 +152,7 @@ test('J.1-9 an automation write naming no, a disabled, a mismatched or an uneval
   // Only automation may name a policy, and automation never performs a binding action.
   const ownerWithPolicy=await r.send({...r.command('question.save',{text:'Q',priority:'low'}),policy_id:open});assert.equal(ownerWithPolicy.status,400);
   await r.send(r.command('policy.save',{action:'project.health',trigger_check:[],required_evidence:'',credential:'dot',max_per_day:1,status:'enabled'}));
-  const health=await attempt(r.state().policies.at(-1).id,'project.health',{value:'red'});assert.equal(health.message,'owner_only:project.health');
+  const health=await attempt(r.state().policies.at(-1).id,'project.health',{value:'off_track'});assert.equal(health.message,'owner_only:project.health');
 });
 
 // ---- J.4 20: provenance stamp ----
@@ -234,4 +234,11 @@ test('section reads page lists and the summary reports capacity against the 1 Mi
   const sum=api.projectRead(st,{});assert.equal(sum.section,'summary');assert.equal(sum.counts.milestones,1);assert.equal(sum.capacity.target,1048576);assert.equal(sum.capacity.over_target,false);
   const audit=api.projectRead(st,{section:'audit',offset:0,limit:2});assert.equal(audit.total,5);assert.equal(audit.items.length,2);assert.equal(audit.items[0].op,'role.propose');
   for(const bad of [{section:'secrets'},{limit:0},{limit:201},{offset:-1}])assert.throws(()=>api.projectRead(st,bad),e=>e.projectStatus===400);
+});
+test('project.health uses on_track / at_risk / off_track; the old colour names are rejected',async()=>{
+  const {r}=await seeded(),props=r.api.PROJECT_SCHEMA.write.inputSchema.oneOf.find(s=>s.properties.op.const==='project.health').properties.data.properties;
+  assert.deepEqual(clone(props.value.enum),['on_track','at_risk','off_track']);
+  for(const old of ['green','amber','red']){const out=await r.send(r.command('project.health',{value:old}));assert.equal(out.status,400,old);assert.equal(out.body.error,'invalid_value:value');}
+  for(const value of ['on_track','at_risk','off_track'])assert.equal((await r.send(r.command('project.health',{value}))).status,200,value);
+  assert.equal(r.state().project.health.value,'off_track');assert.equal(r.state().project.health.set_by.actor_kind,'owner');
 });

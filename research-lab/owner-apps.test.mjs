@@ -158,7 +158,7 @@ test('connector project writes are proposals stamped with the verified key label
  assert.equal((await f.run('dd_owner_project_write',{...question(1),assistant:'Claude'})).replayed,true);assert.equal(f.state().questions.length,1);
  const writes=f.writes.length;
  await assert.rejects(f.run('dd_owner_project_write',question(2),{kind:'user',uid:'u_owner'}),e=>e.status===401&&/verified_credential_label_required/.test(e.message));
- await assert.rejects(f.run('dd_owner_project_write',{...question(2),op:'project.health',data:{value:'red'}}),e=>e.status===403&&/owner_only/.test(e.message));
+ await assert.rejects(f.run('dd_owner_project_write',{...question(2),op:'project.health',data:{value:'off_track'}}),e=>e.status===403&&/owner_only/.test(e.message));
  await assert.rejects(f.run('dd_owner_project_write',{...question(2),owner:'u_other'}),/unexpected_arguments/);
  await assert.rejects(f.run('dd_owner_project_write',{...question(2),policy_id:'r_00000000-0000-4000-8000-000000000000'}),/unexpected_arguments/);
  f.relabel('Gemini');await assert.rejects(f.run('dd_owner_project_write',question(2)),/connector_identity_changed/);f.relabel('primary');
