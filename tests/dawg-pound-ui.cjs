@@ -58,6 +58,10 @@ let browser;
   for(const [ref,linked] of refs){const anchors=page.locator('#messages a',{hasText:ref});if(linked){assert.equal(await anchors.count(),1,ref);assert.equal(await anchors.getAttribute('rel'),'noopener noreferrer');assert.equal(await anchors.getAttribute('target'),'_blank');}else{assert.equal(await anchors.count(),0,ref);assert.equal(await page.locator('#messages li',{hasText:ref}).count(),1,ref);}}
   const stored=JSON.parse(db.get('/privatePounds/u_demo').payload).messages;assert.deepEqual(stored.slice(1).map(m=>m.kind),refs.map((_,i)=>i%2?'finding':'question'));assert.equal(stored[0].kind,'note');
   assert.equal(await page.locator('#recentMessages li').count(),5);assert.match(await page.locator('#recentMessages li').first().textContent(),/Ref check 7/);
+  // WO-03: a connector-written row shows the verified key label first, the self-reported name second.
+  {const row=db.get('/privatePounds/u_demo'),s=JSON.parse(row.payload);s.messages.push({id:'p_'+webcrypto.randomUUID(),thread_id:s.tasks[0].id,text:'Synthetic connector finding',kind:'finding',actor_uid:'u_demo',actor_kind:'owner_connector',credential_label:'Muse',author_label:'Claude',author_label_trust:'unverified',created_at:new Date().toISOString()});s.revision++;row.payload=JSON.stringify(s);revision++;}
+  await page.locator('#refresh').click();await page.locator('#messages').getByText('Synthetic connector finding',{exact:true}).waitFor();
+  assert.match(await page.locator('#messages article').last().textContent(),/finding · your connector · key Muse \(verified\) · says "Claude" \(unverified\)/);
   await page.locator('#openLibrary').click();await page.locator('#addContext').click();await page.locator('[name=title]').fill('How we work');await page.locator('[name=text]').fill('Start with evidence.\nName the uncertainty.\nKeep the next step clear.');await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});await page.locator('#closeLibrary').click();
   assert.match(await page.locator('#contextShelf').textContent(),/How we work.*Version 1 of 1/);assert.doesNotMatch(await page.locator('#now-grid, .now-grid').textContent(),/Start with evidence/,'full context opens on demand, not on the first screen');
   // Task edits quote the task revision; open work sorts ahead of done work, grouped by stored status.
@@ -65,15 +69,33 @@ let browser;
   assert.match(await page.locator('#work .work-group li').first().textContent(),/Build the next research brief.*Assigned: Scout/);assert.match(await page.locator('#work .work-done').textContent(),/Done · 1.*Finished item.*Unassigned/);
   await page.locator('#taskSelect').selectOption({label:'Build the next research brief'});await page.locator('#taskDetail button',{hasText:'Edit task'}).click();await page.locator('[name=status]').selectOption('working');await page.locator('[name=refs]').fill('https://github.com/JKapcar/data-dawgs\nplain citation');await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});
   const edited=JSON.parse(db.get('/privatePounds/u_demo').payload).tasks.find(t=>t.title==='Build the next research brief');assert.equal(edited.revision,2);assert.equal(edited.status,'working');assert.deepEqual(edited.refs,['https://github.com/JKapcar/data-dawgs','plain citation']);
+  // WO-02 task fields through the real editor: a blocked task must carry a reason code; the
+  // planning fields, dependency and estimate are stored exactly; canceled reads "Not planned".
+  await page.locator('#addTask').click();await page.locator('[name=title]').fill('Gather synthetic data');await page.locator('[name=status]').selectOption('blocked');await page.locator('#saveEdit').click();
+  await page.locator('#editorError').filter({hasText:'blocked requires blocked_reason.code'}).waitFor();assert.ok(await page.locator('#editor').evaluate(d=>d.open),'editor stays open with the server error');
+  await page.locator('[name=blocked_code]').selectOption('waiting_data');await page.locator('[name=blocked_note]').fill('Synthetic sample not staged');await page.locator('[name=planned_start]').fill('2026-10-20');await page.locator('[name=planned_end]').fill('2026-10-24');await page.locator('[name=estimate_hours]').fill('2.5');
+  await page.locator('[name=blocks]').selectOption({label:'Build the next research brief'});await page.locator('[name=proposed_role]').fill('coordinator');await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});
+  {const t=JSON.parse(db.get('/privatePounds/u_demo').payload).tasks.find(t=>t.title==='Gather synthetic data'),brief=JSON.parse(db.get('/privatePounds/u_demo').payload).tasks.find(t=>t.title==='Build the next research brief');
+   assert.deepEqual([t.status,t.blocked_reason,t.planned_start,t.planned_end,t.estimate_hours,t.blocks,t.assignment],['blocked',{code:'waiting_data',note:'Synthetic sample not staged'},'2026-10-20','2026-10-24',2.5,[brief.id],{proposed_role:'coordinator'}]);
+   for(const k of ['project_id','milestone_id','review'])assert.equal(Object.hasOwn(t,k),false,'blank optional '+k+' is omitted on create');}
+  assert.match(await page.locator('#work .work-blocked').textContent(),/Gather synthetic data.*Blocked.*Waiting on data: Synthetic sample not staged · planned 2026-10-20 → 2026-10-24 · blocks Build the next research brief/);
+  // Unblocking through the editor clears the reason and a blanked field is cleared, not kept.
+  await page.locator('#taskSelect').selectOption({label:'Gather synthetic data'});await page.locator('#taskDetail button',{hasText:'Edit task'}).click();await page.locator('[name=status]').selectOption('working');await page.locator('[name=estimate_hours]').fill('');await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});
+  {const t=JSON.parse(db.get('/privatePounds/u_demo').payload).tasks.find(t=>t.title==='Gather synthetic data');assert.equal(t.status,'working');assert.equal(Object.hasOwn(t,'blocked_reason'),false);assert.equal(Object.hasOwn(t,'estimate_hours'),false);assert.equal(t.planned_end,'2026-10-24');}
+  await page.locator('#taskSelect').selectOption({label:'Gather synthetic data'});await page.locator('#taskDetail button',{hasText:'Edit task'}).click();await page.locator('[name=status]').selectOption('blocked');await page.locator('[name=blocked_code]').selectOption('waiting_data');await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});
+  assert.match(await page.locator('#taskDetail').textContent(),/Blocked · owner reported.*Waiting on data.*actual .+ → open.*last 60 saved changes/);
+  await page.locator('#taskSelect').selectOption({label:'Finished item'});await page.locator('#taskDetail button',{hasText:'Edit task'}).click();await page.locator('[name=status]').selectOption('canceled');await page.locator('#saveEdit').click();await page.locator('#editor').waitFor({state:'hidden'});
+  assert.match(await page.locator('#work .work-canceled').textContent(),/Not planned · 1.*Finished item.*canceled \d/);assert.doesNotMatch(await page.locator('#work .work-canceled').textContent(),/actual/);assert.equal(await page.locator('#work .work-done').count(),0,'canceled is never counted as done');
+  assert.equal(await page.locator('.tally-done dd').textContent(),'0');assert.equal(await page.locator('.tally-canceled dd').textContent(),'1');
   // Diagnostics reads /owner-apps/v1 only when opened and shows reason codes.
   await page.locator('#diagnostics > summary').click();await page.locator('#diagOut').filter({hasText:'research: tenant_unconfigured'}).waitFor();assert.match(await page.locator('#diagOut').textContent(),/pound: on · mode until_revoked · grant v3/);await page.locator('#diagnostics > summary').click();
   ownerApps={status:403,body:{error:'configured_owner_required'}};await page.locator('#diagnostics > summary').click();await page.locator('#diagOut').filter({hasText:'not_owner'}).waitFor();await page.locator('#diagnostics > summary').click();
   // Dispatch layout: fixed order, only stored fields, unavailable capabilities labelled rather than inferred.
   assert.deepEqual(await page.locator('.segments button').allTextContents(),['Work','Needs you','Context']);
   assert.match(await page.locator('#needsYou').textContent(),/Not tracked yet.*nothing here is inferred\.Saved questions and decisions · resolution untracked/);
-  assert.match(await page.locator('.capability-note').textContent(),/Unavailable:.*review status, votes and dependencies/);
-  assert.match(await page.locator('.capability-note').textContent(),/projects, milestones, project owner/);
-  assert.match(await page.locator('#verified').textContent(),/Dependencies: not tracked.*Last successful refresh · .+not that any agent ran\./);
+  assert.match(await page.locator('.capability-note').textContent(),/Unavailable here: project and milestone records.*votes/);assert.match(await page.locator('.capability-note').textContent(),/never typed/);
+  assert.match(await page.locator('.capability-note').textContent(),/project owner and votes/);
+  assert.match(await page.locator('#verified').textContent(),/Stored dependencies.*Gather synthetic data blocks Build the next research brief.*Last successful refresh · .+not that any agent ran\./);
   {const shown=await page.evaluate(()=>[...document.querySelectorAll('.tally dd')].reduce((n,d)=>n+Number(d.textContent),0)),stored=JSON.parse(db.get('/privatePounds/u_demo').payload).tasks.filter(t=>!t.archived).length;assert.equal(shown,stored,'tally equals stored unarchived tasks');assert.equal(await page.locator('#work .work-group li').count(),stored);}
   await page.locator('#viewContext').click();await page.locator('#contextShelf button').first().click();assert.ok(await page.locator('#library').evaluate(d=>d.open));assert.equal(await page.locator('#contextReader').isHidden(),false);await page.locator('#closeLibrary').click();
   await page.locator('#viewWork').click();
@@ -88,6 +110,9 @@ let browser;
     await page.screenshot({path:path.join(out,'dawg-pound-'+width+'.png'),fullPage:true});
     headerHashes[width]=createHash('sha256').update(await page.locator('header.dd-shell').screenshot()).digest('hex');}
   await page.setViewportSize({width:390,height:844});
+  // WO-02 editor fields fit a phone: no horizontal overflow inside the dialog, every control reachable.
+  await page.locator('#addTask').click();for(const k of ['status','blocked_code','planned_start','planned_end','estimate_hours','blocks','proposed_role','review_verdict','project_id','milestone_id'])assert.ok(await page.locator('[name='+k+']').count(),k);
+  assert.ok(await page.locator('#editor').evaluate(d=>d.scrollWidth<=d.clientWidth+1),'390px editor has no horizontal overflow');await page.screenshot({path:path.join(out,'dawg-pound-editor-390.png')});await page.locator('#closeEditor').click();
   await page.locator('#openLibrary').click();await page.locator('#contextList').getByRole('button',{name:'How we work',exact:true}).click();await page.screenshot({path:path.join(out,'dawg-pound-context.png'),fullPage:true});await page.locator('#closeLibrary').click();
   // Inert rendering of adversarial text in all user-controlled display surfaces.
   await createAgent('<img src=x onerror=alert(1)>','<script>bad()</script>','Untrusted text','<svg onload=bad()>');assert.equal(await page.locator('#roster img,#roster script,#roster svg').count(),0);

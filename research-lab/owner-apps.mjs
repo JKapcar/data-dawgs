@@ -16,8 +16,17 @@ const poundOps=['task.save','message.add','context.save'];
 // Tool inputSchemas are ONE flat object each: several clients reject a top-level oneOf.
 // The exact per-op shapes stay in the read result's writeSchema and in server validation.
 const flat={
- pound:{type:'object',additionalProperties:false,required:['op','expected_revision','request_id','data'],description:'One Pound write. Read first (dd_owner_pound_read) for expected_revision and the exact per-op writeSchema. data shapes by op: task.save {title 1-120, body 0-2000, agent_id "" or p_<uuid>, status queued|working|done|blocked, archived boolean, refs? up to 8 strings of 1-300, id? p_<uuid> to update, expected_task_revision required with id (the task\'s revision from the read; a mismatch is 409 task_revision_conflict)}; message.add {thread_id p_<uuid> of a task, text 1-2000, kind? question|finding|challenge|decision|note (default note), refs?}; context.save {title 1-120, text 1-8000, refs?, id? p_<uuid> to add a version}. Unknown fields are rejected.',properties:{op:{enum:poundOps},expected_revision:{type:'integer',minimum:0,description:'workspace.revision from the latest read'},request_id:{type:'string',pattern:'^[A-Za-z0-9_-]{16,80}$',description:'Idempotency key, 16-80 chars. Resend the exact same call to replay safely.'},data:{type:'object',description:'Per-op fields; see this tool description or writeSchema from the read tool.'},assistant}},
+ pound:{type:'object',additionalProperties:false,required:['op','expected_revision','request_id','data'],description:'One Pound write. Read first (dd_owner_pound_read) for expected_revision and the exact per-op writeSchema. data shapes by op: task.save {title 1-120, body 0-2000, agent_id "" or p_<uuid>, status queued|working|review|done|blocked|canceled (blocked needs blocked_reason {code waiting_task|waiting_owner|waiting_data|waiting_access|external, note?}; canceled is the signed owner\'s; done after review needs review {verdict accept, reviewed_by}), archived boolean, refs? up to 8 strings of 1-300, id? p_<uuid> to update, expected_task_revision required with id (the task\'s revision from the read; a mismatch is 409 task_revision_conflict); optional planning fields, null clears on update: project_id, milestone_id, planned_start/planned_end YYYY-MM-DD, blocks up to 8 task ids (no cycles), assignment {proposed_role}, estimate_hours 0-1000, review {requested_by, verdict?, reviewed_by?}, claim_expires_at; actual_start/actual_end are derived, never written}; message.add {thread_id p_<uuid> of a task, text 1-2000, kind? question|finding|challenge|decision|note (default note), refs?}; context.save {title 1-120, text 1-8000, refs?, id? p_<uuid> to add a version}. Unknown fields are rejected.',properties:{op:{enum:poundOps},expected_revision:{type:'integer',minimum:0,description:'workspace.revision from the latest read'},request_id:{type:'string',pattern:'^[A-Za-z0-9_-]{16,80}$',description:'Idempotency key, 16-80 chars. Resend the exact same call to replay safely.'},data:{type:'object',description:'Per-op fields; see this tool description or writeSchema from the read tool.'},assistant}},
  research:{type:'object',additionalProperties:false,required:['type','key','payload'],description:'One BDB research contribution. payload shapes by type: hypothesis {title 1-200, method 1-4000, id? + expectedVersion? to revise, status? exploratory|withdrawn (registered, confirmatory and verdicts are the signed owner\'s, not this connector\'s), family? speed-retention|accel-decel-cut|missingness|external-market|other, optional design text up to 500 each: target, predictionTime, cohort, featureCutoff, splitPolicy, baseline, metric, exclusions}; evidence {url http(s) 1-2000, title 1-200, excerpt 1-4000, kind? paper|data|code|post|other}; discussion {hypothesisId, kind note|challenge, body 1-4000, evidenceIds array of up to 30 ids}. Tasks, claims, runs and permission changes are denied.',properties:{type:{enum:Object.keys(researchFields)},key:{...str(160),description:'Idempotency key; resend the exact call to replay safely.'},payload:{type:'object',description:'Per-type fields; see this tool description or writeSchema from the read tool.'},assistant}}
+};
+// Research project tools (WO-01). Listed only when the research app is on AND the Worker has
+// RESEARCH_PROJECTS_ENABLED=true; they ride the research grant, so revoking it removes them.
+const projectNames=['dd_owner_project_read','dd_owner_project_write'];
+const projectArg={type:'string',pattern:'^[a-z0-9][a-z0-9-]{1,62}$',description:'Project slug, e.g. bdb-2027.'};
+const projectOps=['project.save','project.health','milestone.save','check.set','question.save','question.answer','decision.save','decision.resolve','vote.cast','role.propose','role.accept','policy.save'];
+const projectFlat={
+ read:{type:'object',additionalProperties:false,description:'Read one research project record. Omit project_id to get only the write schema and section list. section: summary (default) | milestones | checks | questions | decisions | votes | roles | policies | audit; offset/limit page the list sections (limit 1-200).',properties:{project_id:projectArg,section:{type:'string',enum:['summary','milestones','checks','questions','decisions','votes','roles','policies','audit']},offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:200}}},
+ write:{type:'object',additionalProperties:false,required:['project_id','op','expected_revision','request_id','data'],description:'One research project write. Read first for expected_revision (the project revision) and the exact per-op writeSchema. Proposals only: project.save, project.health, question.answer, decision.resolve, role.accept and policy.save are the signed owner\'s and are refused here. check.set may set unchecked or evidence_attached (with evidence_refs) only; votes are advisory. vote.cast {decision_id, proposal_version (from the read), value 1|0|-1|abstain, rationale required for -1}. Updates quote expected_record_revision. After 409 revision_conflict re-read and retry with a NEW request_id; resend the identical call only after a lost response. Unknown fields are rejected.',properties:{project_id:projectArg,op:{enum:projectOps},expected_revision:{type:'integer',minimum:0,description:'project revision from the latest read'},request_id:{type:'string',pattern:'^[A-Za-z0-9_-]{16,80}$',description:'Idempotency key, 16-80 chars.'},data:{type:'object',description:'Per-op fields; see writeSchema from the read tool.'},assistant}}
 };
 const withAssistant=schema=>({...schema,oneOf:schema.oneOf.map(s=>({...s,properties:{...s.properties,assistant}}))});
 const label=args=>{if(!Object.hasOwn(args,'assistant'))return null;const v=args.assistant;check(typeof v==='string'&&v.trim().length>=1&&v.length<=40&&!/[\u0000-\u001f\u007f]/.test(v),400,'invalid_assistant_label');return v;};
@@ -53,7 +62,7 @@ export const OWNER_APP_STATUSES=['on','off','expired','not_owner','app_disabled'
 
 const names={pound:['dd_owner_pound_read','dd_owner_pound_write'],research:['dd_owner_bdb_read','dd_owner_bdb_write','dd_owner_bdb_data']};
 const emptySchema={type:'object',properties:{},additionalProperties:false};
-export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeHash,pound,now=Date.now}){
+export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeHash,pound,project,now=Date.now}){
  const owner=(env,caller)=>{check(caller?.kind==='user'&&/^u_[A-Za-z0-9_-]{1,100}$/.test(caller.uid||'')&&caller.uid===env.RESEARCH_OWNER_UID,403,'configured_owner_required');return caller.uid;};
  const path=(env,app,uid)=>app==='pound'?'/privatePounds/'+uid:'/researchLab/v1/tenants/'+env.RESEARCH_UPLOAD_TENANT;
  const read=async(env,app,uid)=>{
@@ -75,9 +84,36 @@ export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeH
   let uid;try{uid=owner(env,caller);}catch{return {pound:'not_owner',research:'not_owner'};}
   const out={};for(const app of ['pound','research']){try{out[app]=grantState((await read(env,app,uid)).data,uid);}catch(e){out[app]=reason(e);}}return out;
  }
- async function list(env,caller){try{const state=await status(env,caller);return ['pound','research'].filter(app=>state[app]==='on').flatMap(app=>[...definitions(app),...(app==='research'&&dataEnabled(env)?[DATA_TOOL]:[])]);}catch{return [];}}
+ const projectOn=env=>Boolean(project)&&project.enabled(env);
+ const projectDefinitions=()=>[{name:projectNames[0],title:'Research project',description:'Read an opted-in research project record (milestones, checks, questions, decisions, votes, roles, policies). Includes private text. Assistant identity is unverified. '+projectFlat.read.description,inputSchema:projectFlat.read,annotations:{readOnlyHint:true}},{name:projectNames[1],title:'Research project contribution',description:'Propose or revise project records as the owner\'s connector. Writes are stamped with the verified credential label; binding actions stay with the signed owner. '+projectFlat.write.description,inputSchema:projectFlat.write,annotations:{readOnlyHint:false,destructiveHint:false}}];
+ async function list(env,caller){try{const state=await status(env,caller);return ['pound','research'].filter(app=>state[app]==='on').flatMap(app=>[...definitions(app),...(app==='research'&&dataEnabled(env)?[DATA_TOOL]:[]),...(app==='research'&&projectOn(env)?projectDefinitions():[])]);}catch{return [];}}
+ // Grant and expiry are checked before storage I/O, then again after it: before returning a
+ // read and immediately before a commit (J.5 27).
+ const researchGrant=async(env,uid)=>{const s=await read(env,'research',uid);check(allowed(s.data,uid),403,'app_permission_off_or_expired');return s;};
+ const regrant=(s,uid)=>{check(allowed(s.data,uid),403,'app_permission_expired');const g=s.data.access.users[uid];check(g.enabled===true&&g.owner===true&&g.capabilities.includes('research:read')&&(g.expiresAt==null||g.expiresAt>now()),403,'research_owner_expired');};
+ async function runProject(name,args,env,caller,reauth,uid){
+  check(projectOn(env),503,'app_unavailable');const grant=await researchGrant(env,uid);
+  const identity={actor:'owner-connector:'+uid,owner:uid,assistantIdentity:'unverified',credential_label:caller.keyLabel??null,mode:'owner_connector'};
+  if(name===projectNames[0]){
+   check(Object.keys(args).every(k=>Object.hasOwn(projectFlat.read.properties,k)),400,'unexpected_arguments');
+   if(!Object.hasOwn(args,'project_id'))return {writeSchema:project.schema.write.inputSchema,sections:project.sections,limits:project.limits,identity};
+   const {state}=await project.load(env,args.project_id,uid);const result={project:project.read(state,args,now()),writeSchema:project.schema.write.inputSchema,identity};
+   regrant(grant,uid);check(bytes(result)<=524288,507,'response_capacity');return result;
+  }
+  const authorLabel=label(args);args=without(args,'assistant');
+  check(Object.keys(args).every(k=>Object.hasOwn(projectFlat.write.properties,k)),400,'unexpected_arguments');check(typeof args.project_id==='string',400,'project_id_required');
+  const {project_id,...input}=args,loaded=await project.load(env,project_id,uid);
+  const out=await project.apply(loaded.state,input,{uid,actor_kind:'owner_connector',credential_label:caller.keyLabel??null,author_label:authorLabel},now());
+  const stamped=authorLabel?{...identity,author_label:authorLabel,author_label_trust:'unverified'}:identity;
+  if(out.replayed||out.unchanged)return {...out,as_of:loaded.state.updated_at,identity:stamped};
+  const again=typeof reauth==='function'?await reauth():null;check(owner(env,again)===uid&&(again.keyLabel??null)===(caller.keyLabel??null),401,'connector_identity_changed');
+  regrant(grant,uid);
+  check(await project.commit(env,project_id,loaded.saved,loaded.state,uid),409,'revision_conflict');
+  return {...out,as_of:loaded.state.updated_at,identity:stamped};
+ }
  async function run(name,args,env,caller,reauth){
-  const uid=owner(env,caller),app=Object.keys(names).find(a=>names[a].includes(name));check(app,404,'unknown_private_tool');check(object(args)&&bytes(args)<=32768,400,'invalid_arguments');
+  const uid=owner(env,caller);if(projectNames.includes(name)){check(object(args)&&bytes(args)<=32768,400,'invalid_arguments');return runProject(name,args,env,caller,reauth,uid);}
+  const app=Object.keys(names).find(a=>names[a].includes(name));check(app,404,'unknown_private_tool');check(object(args)&&bytes(args)<=32768,400,'invalid_arguments');
   const s=await read(env,app,uid);check(allowed(s.data,uid),403,'app_permission_off_or_expired');
   if(name===DATA_TOOL.name){
    const result=await readDevelopmentData(env,uid,args);
@@ -86,22 +122,25 @@ export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeH
    return result;
   }
   const writing=name.endsWith('_write'),actor='owner-connector:'+uid,authorLabel=writing?label(args):null;if(writing)args=without(args,'assistant');
-  const identity={actor,owner:uid,assistantIdentity:'unverified',mode:'owner_connector',scheduler:'unconfigured'};
-  const principal={tenant:env.RESEARCH_UPLOAD_TENANT,id:actor,subject:uid,capabilities:researchScopes};
+  // The verified key label from mcpAuth (work/mcp-block.js). Display and attribution only: it
+  // grants nothing, and every authorization check below is unchanged.
+  const credentialLabel=caller.keyLabel??null;if(writing)check(typeof credentialLabel==='string'&&/^[A-Za-z0-9_-]{1,24}$/.test(credentialLabel),401,'verified_credential_label_required');
+  const identity={actor,owner:uid,assistantIdentity:'unverified',credential_label:credentialLabel,mode:'owner_connector',scheduler:'unconfigured'};
+  const principal={tenant:env.RESEARCH_UPLOAD_TENANT,id:actor,subject:uid,capabilities:researchScopes,credentialLabel};
   if(!writing){check(Object.keys(args).length===0,400,'unexpected_arguments');const workspace=app==='pound'?pound.view(JSON.parse(s.data.payload)):view(decodeEnvelope(s.data).state,principal);if(app==='research')for(const task of workspace.tasks)if(task.lease)task.lease={owner:task.lease.owner,expiresAt:task.lease.expiresAt};const result={workspace,writeSchema:schemas[app],identity,holdout:'unavailable',rawData:'not_exposed',...(app==='research'?{dataset:await datasetStatus(fbGet,env,uid)}:{})};check(bytes(result)<=524288,507,'response_capacity');return result;}
   let next,result;
   if(app==='pound'){
    check(poundOps.includes(args.op),403,'operation_denied');pound.validate(args,pound.schema.write.inputSchema);
    const state=JSON.parse(s.data.payload),fingerprint=await pound.hash(pound.canonical(args));const previous=state.receipts.find(r=>r.agent===actor&&r.request_id===args.request_id);
    if(previous){check(previous.fingerprint===fingerprint,409,'idempotency_conflict');return {receipt:previous.result,replayed:true,identity};}
-   check(args.expected_revision===state.revision,409,'revision_conflict');result=await pound.write(state,args,uid,'owner_connector',authorLabel);
+   check(args.expected_revision===state.revision,409,'revision_conflict');result=await pound.write(state,args,uid,'owner_connector',authorLabel,credentialLabel);
    state.receipts.push({agent:actor,request_id:args.request_id,fingerprint,result});state.receipts=state.receipts.slice(-128);next={...s.data,payload:JSON.stringify(state)};check(bytes(state)<=524288,413,'workspace_capacity');
   }else{
    check(Object.keys(args).length===3&&['type','key','payload'].every(k=>Object.hasOwn(args,k))&&['hypothesis','evidence','discussion'].includes(args.type),403,'operation_denied');
    const envelope=decodeEnvelope(s.data);const schema=researchSchema.oneOf.find(x=>x.properties.type.const===args.type);pound.validate(args,schema);if(args.type==='discussion')check(Array.isArray(args.payload.evidenceIds)&&args.payload.evidenceIds.length<=30&&args.payload.evidenceIds.every(id=>typeof id==='string'&&id.length>0&&id.length<=100),400,'invalid_evidence_ids');let changed;try{changed=await transition(envelope.state,authorLabel?{...principal,authorLabel}:principal,args,now(),codeHash);}catch(e){check(false,/conflict/i.test(e.message)?409:400,e.message);}result=changed.result;
    check(bytes(view(changed.state,principal))<=500000,507,'response_capacity');next=encodeEnvelope({...envelope,state:changed.state});check(bytes(next)<=2097152,507,'workspace_capacity');
   }
-  check(typeof reauth==='function'&&owner(env,await reauth())===uid,401,'connector_identity_changed');check(allowed(s.data,uid),403,'app_permission_expired');if(app==='research'){const g=s.data.access.users[uid];check(g.enabled===true&&g.owner===true&&g.capabilities.includes('research:read')&&(g.expiresAt==null||g.expiresAt>now()),403,'research_owner_expired');}
+  {const again=typeof reauth==='function'?await reauth():null;check(owner(env,again)===uid&&(again.keyLabel??null)===credentialLabel,401,'connector_identity_changed');}check(allowed(s.data,uid),403,'app_permission_expired');if(app==='research'){const g=s.data.access.users[uid];check(g.enabled===true&&g.owner===true&&g.capabilities.includes('research:read')&&(g.expiresAt==null||g.expiresAt>now()),403,'research_owner_expired');}
   check(await fbPut(env,path(env,app,uid),next,s.etag),409,'workspace_changed_retry_same_key');return {result,identity:authorLabel?{...identity,author_label:authorLabel,author_label_trust:'unverified'}:identity};
  }
  async function permissions(request,env){

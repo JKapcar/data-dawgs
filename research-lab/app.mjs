@@ -20,12 +20,14 @@ function form(container,fields,submitLabel,submit) {
   for(const [name,label,type='text']of fields){const l=el('label',label);const input=el(type==='textarea'?'textarea':'input');if(type!=='textarea')input.type=type;input.name=name;input.required=true;input.maxLength=type==='textarea'?4000:2000;l.append(input);f.append(l);}
   const b=el('button',submitLabel);b.type='submit';f.append(b);f.onsubmit=async e=>{e.preventDefault();b.disabled=true;try{await submit(Object.fromEntries(new FormData(f)));$('#drawer').close();await refresh();}catch(error){notice(error.message,true);let err=f.querySelector('[role=alert]');if(!err){err=el('p');err.setAttribute('role','alert');f.append(err);}err.textContent=error.message;}finally{b.disabled=false;}};container.append(f);return f;
 }
+// Verified key label (server-stamped) first, then the self-reported assistant name, marked as such.
+function who(x){return x.actor+(x.credential_label?` · key ${x.credential_label} (verified)`:'')+(x.author_label?` · says "${x.author_label}" (unverified)`:'');}
 function hypothesisDetails(h) {const latest=h.revisions.at(-1);drawer(latest.title,c=>{
   c.append(el('p',`Revision ${latest.version} · ${latest.status||'exploratory'} · ${latest.family||'other'} · ${['supported','null','inconclusive'].includes(latest.status)?'owner-recorded verdict':'no verified/falsified verdict'}`),el('p',latest.method));
   const design=['target','predictionTime','cohort','featureCutoff','splitPolicy','baseline','metric','exclusions'].filter(k=>latest[k]);if(design.length){const dl=el('dl');for(const k of design)dl.append(el('dt',k),el('dd',latest[k]));c.append(dl);}
   c.append(action('Queue descriptive audit',async()=>{await command('task',{hypothesisId:h.id,split:'discovery',budgetMs:5000,maxObservations:10000});$('#drawer').close();await refresh();}));
   c.append(el('h3','Discussion & independent challenges'));
-  for(const d of state.discussions.filter(d=>d.hypothesisId===h.id)){c.append(el('p',`${d.kind} · ${d.independent?'independent author':'same author / not independent'} · ${d.actor}`,'meta'),el('p',d.body));}
+  for(const d of state.discussions.filter(d=>d.hypothesisId===h.id)){c.append(el('p',`${d.kind} · ${d.independent?'independent author':'same author / not independent'} · ${who(d)}`,'meta'),el('p',d.body));}
   const f=form(c,[['body','Challenge or observation','textarea']],'Record challenge',async p=>command('discussion',{...p,hypothesisId:h.id,kind:'challenge',evidenceIds:[]}));
   f.prepend(el('p','Independence compares verified account identities, not model names. Multiple AIs using one account are the same author.'));
   const history=el('details');history.append(el('summary','Revision history'),el('pre',JSON.stringify(h.revisions,null,2)));c.append(history);
@@ -41,7 +43,7 @@ async function refresh() {
     const receipt=await command('run',{taskId:t.id,leaseToken:claimed.lease.token,tracking});notice(`Receipt recorded: ${receipt.outcome}. Synthetic discovery; no hypothesis verdict.`);await refresh();
   }));return n;}));
   $('#receipts').replaceChildren(...state.receipts.map(r=>{const d=el('details'),s=el('summary');s.append(...(r.synthetic?[el('span','SYNTHETIC','tag synthetic-badge'),' ']:[]),`${r.outcome.toUpperCase()}${r.reason?' ('+r.reason+')':''} · ${r.at} · ${r.id.slice(0,8)}`);d.append(s,el('pre',JSON.stringify(r,null,2)));return d;}));
-  $('#evidence').replaceChildren(...state.evidence.map(e=>{const n=el('article'),a=el('a',e.title);a.href=e.url;a.target='_blank';a.rel='noopener noreferrer';n.append(a,el('p',e.excerpt),el('span',e.assessment,'meta'));return n;}));
+  $('#evidence').replaceChildren(...state.evidence.map(e=>{const n=el('article'),a=el('a',e.title);a.href=e.url;a.target='_blank';a.rel='noopener noreferrer';n.append(a,el('p',e.excerpt),el('span',e.assessment+' · '+who(e),'meta'));return n;}));
   if(!state.evidence.length)$('#evidence').append(el('p','No cited evidence yet. Add a source and excerpt; claims remain unverified.'));
   $('#audit').replaceChildren(el('pre',JSON.stringify(state.audit,null,2)));
 }

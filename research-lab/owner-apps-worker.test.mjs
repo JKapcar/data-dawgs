@@ -155,3 +155,28 @@ test('packaged development data uses existing MCP auth, R2 and revocation withou
   assert.ok(!(await w.rpc('tools/list')).body.result.tools.some(t=>t.name==='dd_owner_bdb_data'));assert.equal(w.state.writes,0);
  }finally{await w.close();}
 });
+
+test('WO-03 packaged: the primary key stamps primary and a labeled key stamps its label on stored records',async()=>{const w=await boot();try{
+ const write=(credential,n,text)=>w.rpc('tools/call',{name:'dd_owner_pound_write',arguments:{op:'context.save',expected_revision:n,request_id:'packaged_stamp_00000'+n,data:{title:'Synthetic brief',text},assistant:'Claude'}},{credential});
+ assert.equal(callText(await write(w.token,0,'From the primary key')).identity.credential_label,'primary');
+ assert.equal(callText(await write('u_synthetic-unlisted',1,'From the labeled key')).identity.credential_label,'unlisted_client');
+ const s=JSON.parse(w.db.get('/privatePounds/'+w.uid).payload),versions=s.contexts.flatMap(c=>c.versions);
+ assert.deepEqual(versions.map(v=>[v.text,v.credential_label,v.author_label,v.author_label_trust]),[['From the primary key','primary','Claude','unverified'],['From the labeled key','unlisted_client','Claude','unverified']]);
+ assert.deepEqual(s.activity.map(a=>a.credential_label),['primary','unlisted_client']);
+ const read=callText(await w.rpc('tools/call',{name:'dd_owner_pound_read',arguments:{}}));assert.deepEqual(read.workspace.contributions,{'owner_connector:primary':{messages:0,context_versions:1},'owner_connector:unlisted_client':{messages:0,context_versions:1}});
+}finally{await w.close();}});
+
+test('packaged research project tools: flag-gated discovery, verified key label stamped on the stored record',async()=>{const off=await boot();try{assert.ok(!(await off.rpc('tools/list')).body.result.tools.some(t=>t.name.startsWith('dd_owner_project_')));}finally{await off.close();}
+ const w=await boot({dataBindings:{RESEARCH_PROJECTS_ENABLED:'true'}});try{
+ const at='2026-10-17T00:00:00.000Z',stamp={uid:w.uid,actor_kind:'owner',credential_label:null,author_label:null,author_label_trust:'unverified'};
+ const state={record:'dd-project/1',project_id:'bdb-pkg',tenant:'test',revision:1,updated_at:at,project:{id:'r_00000000-0000-4000-8000-000000000001',type:'project',project_id:'bdb-pkg',revision:1,title:'Synthetic packaged study',created_at:at,updated_at:at,created_by:stamp,actor:stamp,request_id:'synthetic_charter_0001'},milestones:[],checks:[],questions:[],decisions:[],votes:[],roles:[],policies:[],audit:[],receipts:[]};
+ const path='/researchProjects/v1/test/bdb-pkg';w.db.set(path,{version:1,tenant:'test',project_id:'bdb-pkg',owner_uid:w.uid,payload:JSON.stringify(state)});
+ const names=(await w.rpc('tools/list')).body.result.tools.map(t=>t.name).filter(n=>n.startsWith('dd_owner_project_'));assert.deepEqual(names,['dd_owner_project_read','dd_owner_project_write']);
+ const write=(credential,n)=>w.rpc('tools/call',{name:'dd_owner_project_write',arguments:{project_id:'bdb-pkg',op:'question.save',expected_revision:n,request_id:'packaged_question_000'+n,data:{text:'Synthetic packaged question?',priority:'normal'},assistant:'Claude'}},{credential});
+ const first=callText(await write(w.token,1));assert.equal(first.identity.credential_label,'primary');
+ const second=callText(await write('u_synthetic-unlisted',2));assert.equal(second.identity.credential_label,'unlisted_client');
+ const stored=JSON.parse(w.db.get(path).payload).questions.map(q=>q.actor);assert.deepEqual(stored.map(a=>a.credential_label),['primary','unlisted_client']);assert.ok(stored.every(a=>a.actor_kind==='owner_connector'&&a.author_label==='Claude'&&a.author_label_trust==='unverified'));
+ const read=callText(await w.rpc('tools/call',{name:'dd_owner_project_read',arguments:{project_id:'bdb-pkg',section:'questions'}}));assert.equal(read.project.total,2);
+ for(const credential of [w.other,'synthetic-shared'])assert.equal((await w.rpc('tools/call',{name:'dd_owner_project_read',arguments:{project_id:'bdb-pkg'}},{credential})).body.result.isError,true);
+ const denied=await w.rpc('tools/call',{name:'dd_owner_project_write',arguments:{project_id:'bdb-pkg',op:'project.health',expected_revision:3,request_id:'packaged_health_00001',data:{value:'off_track'}}});assert.equal(denied.body.result.isError,true);assert.match(denied.body.result.content[0].text,/owner_only/);
+}finally{await w.close();}});
