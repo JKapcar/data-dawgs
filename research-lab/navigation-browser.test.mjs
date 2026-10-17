@@ -4,7 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import {loadPlaywright,chromiumExecutable} from '../work/playwright-loader.mjs';
 const root=path.resolve(import.meta.dirname,'..'),output=process.env.LAB_SCREENSHOTS||path.join(os.tmpdir(),'dd-navigation-preview');mkdirSync(output,{recursive:true});
-const pages=[['/dawg-pound.html','Dawg Pound'],['/research-lab/','Lab'],['/research-lab/private.html','My Lab'],['/research-lab/upload.html','Uploads'],['/research-lab/agent-setup.html','Connections']];
+const pages=[['/dawg-pound.html','Dispatch'],['/research-lab/','Lab'],['/research-lab/private.html','My Lab'],['/research-lab/upload.html','Uploads'],['/research-lab/agent-setup.html','Connections']];
 const {chromium}=loadPlaywright(),browser=await chromium.launch({headless:true,executablePath:chromiumExecutable(chromium)});
 let checkedLinks=0;
 try{

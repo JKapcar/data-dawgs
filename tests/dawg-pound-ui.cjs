@@ -3,11 +3,15 @@
  * POUND_CHROME may point to an installed browser. Screenshots go outside the repository. */
 const fs=require('node:fs'),http=require('node:http'),vm=require('node:vm'),path=require('node:path'),assert=require('node:assert/strict');
 const {webcrypto,createHash}=require('node:crypto'),{execFileSync}=require('node:child_process');
-// The header must stay pixel-identical to the page before this release. The baseline page is
-// read from git (POUND_HEADER_BASE, default the release-plan start commit) and rendered in
-// the same browser, so the comparison does not depend on fonts installed on the machine.
+// The header must keep the geometry of the page before this release. The approved Dispatch
+// rename changes only the app-switcher label, so brand and account stay pixel-identical and
+// the right-aligned switcher keeps its row, height and right edge. The baseline page is read
+// from git (POUND_HEADER_BASE, default the release-plan start commit) and rendered in the same
+// browser, so the comparison does not depend on fonts installed on the machine.
 const BASE_REF=process.env.POUND_HEADER_BASE||'d5d48369a412fd7263c751e42b6108ba498a798a';
 const baseFile=f=>execFileSync('git',['show',BASE_REF+':'+f],{encoding:'utf8'});
+const shot=async l=>createHash('sha256').update(await l.screenshot()).digest('hex');
+const headerShape=async page=>({boxes:await page.evaluate(()=>Object.fromEntries(['header.dd-shell','.dd-brand','.dd-account','.dd-apps > summary'].map(q=>{const r=document.querySelector(q).getBoundingClientRect();return [q,{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}];}))),brand:await shot(page.locator('.dd-brand')),account:await shot(page.locator('.dd-account')),label:(await page.locator('.dd-apps > summary').textContent()).trim(),aria:await page.locator('.dd-apps > summary').getAttribute('aria-label')});
 let ownerApps={status:200,body:{owner:'u_demo',apps:[{app:'pound',status:'on',enabled:true,mode:'until_revoked',version:3},{app:'research',available:false,status:'tenant_unconfigured',error:'tenant_unconfigured'}],assistantIdentity:'unverified'}};
 const {chromium}=require(process.env.POUND_PLAYWRIGHT_MODULE||'playwright-core');
 const db=new Map();let revision=0,commits=0,loseResponse=false,heldRead=null;
@@ -102,8 +106,12 @@ let browser;
   await visibility(false);await page.getByText('Your draft belongs to an archived thread. Copy it before refreshing; it has not moved to another task.',{exact:true}).waitFor();assert.match(await page.locator('#taskDetail').textContent(),/Build the next research brief/);assert.equal(await page.locator('#messageText').inputValue(),'This draft belongs to the original thread only');await page.locator('#sendMessage').click();await page.locator('#status').filter({hasText:'Task is archived'}).waitFor();assert.ok(JSON.parse(db.get('/privatePounds/u_demo').payload).messages.every(m=>m.text!=='This draft belongs to the original thread only'));
   // Baseline header, same browser, same identity, same widths, rendered last so it cannot disturb the flow above.
   await page.goto(origin+'/dawg-pound.html');await page.locator('#workspace:not([hidden])').waitFor();
-  for(const width of [390,320]){await page.setViewportSize({width,height:844});await page.waitForTimeout(100);headerHashes[width]=createHash('sha256').update(await page.locator('header.dd-shell').screenshot()).digest('hex');}
+  const shapes={};for(const width of [390,320]){await page.setViewportSize({width,height:844});await page.waitForTimeout(100);shapes[width]=await headerShape(page);headerHashes[width]=shapes[width].brand.slice(0,12)+'/'+shapes[width].account.slice(0,12);}
   await page.goto(origin+'/base/dawg-pound.html');await page.locator('#workspace:not([hidden])').waitFor();
-  for(const width of [390,320]){await page.setViewportSize({width,height:844});await page.waitForTimeout(100);const baseHash=createHash('sha256').update(await page.locator('header.dd-shell').screenshot()).digest('hex');assert.equal(headerHashes[width],baseHash,width+'px header pixels match '+BASE_REF.slice(0,7));}
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,headerHashes,checks:['signed-out','default screen: context, open tasks, last 5 messages; roster/diagnostics behind details','kind picker + allowlisted refs','task revision on edit','diagnostics reason codes','390/320 no overflow + composer visible','header pixel hash equals baseline','owner workspace CRUD','truthful disconnected status','mobile no overflow','safe rendering','mobile draft suspension','uncertain commit replay','cross-account clearing','same-document identity change','repeated visibility during delayed revalidation','restored edit concurrency','archived thread draft binding'],screenshots:out,liveRequests:0},null,2));
+  for(const width of [390,320]){await page.setViewportSize({width,height:844});await page.waitForTimeout(100);const base=await headerShape(page),now=shapes[width],tag=width+'px vs '+BASE_REF.slice(0,7)+': ';
+    assert.equal(now.label,'Dispatch ▾',tag+'switcher label');assert.equal(now.aria,'Switch app: Dispatch',tag+'switcher accessible name');assert.equal(base.label,'Dawg Pound ▾',tag+'baseline still renders the old label');
+    for(const q of ['header.dd-shell','.dd-brand','.dd-account'])assert.deepEqual(now.boxes[q],base.boxes[q],tag+q+' geometry');
+    assert.equal(now.brand,base.brand,tag+'brand pixels');assert.equal(now.account,base.account,tag+'account pixels');
+    const a=now.boxes['.dd-apps > summary'],b=base.boxes['.dd-apps > summary'];assert.deepEqual([a.y,a.h,a.x+a.w],[b.y,b.h,b.x+b.w],tag+'switcher row, height and right edge');assert.ok(a.w>=44,tag+'switcher touch target');}
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,headerHashes,checks:['signed-out','default screen: context, open tasks, last 5 messages; roster/diagnostics behind details','kind picker + allowlisted refs','task revision on edit','diagnostics reason codes','390/320 no overflow + composer visible','header geometry, brand and account pixels equal baseline; switcher renamed Dispatch','owner workspace CRUD','truthful disconnected status','mobile no overflow','safe rendering','mobile draft suspension','uncertain commit replay','cross-account clearing','same-document identity change','repeated visibility during delayed revalidation','restored edit concurrency','archived thread draft binding'],screenshots:out,liveRequests:0},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await browser?.close();server.close();});

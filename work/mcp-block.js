@@ -2147,7 +2147,7 @@ const mcpCatalogTools = catalog => catalog === "full" ? MCP_TOOLS : MCP_TOOLS.fi
 // an opted-in owner, so initialize must count them too. Counting MCP_TOOLS alone told a
 // live client "88 of 88" while it listed 92. Outside the packaged research build
 // ddOwnerApps does not exist and every private app reports app_disabled.
-const MCP_OWNER_APP_NAMES = { pound: "Dawg Pound", research: "BDB research" };
+const MCP_OWNER_APP_NAMES = { pound: "Dispatch", research: "BDB research" };
 async function mcpOwnerAppStatus(env, caller) {
   if (typeof ddOwnerApps === "undefined") return { pound: "app_disabled", research: "app_disabled" };
   try { return await ddOwnerApps.status(env, caller); }
@@ -5536,7 +5536,7 @@ const MCP_TOOLS = [
         // Owner-only. Listed so an opted-in owner's assistant knows where its writes land;
         // reachable through the dd_owner_* tools only while dd_whoami.private_apps says "on".
         privateSurfaces: {
-          "dawg-pound.html": "Dawg Pound — the owner's private workspace (tasks, messages, versioned context). Connector-reachable via dd_owner_pound_read/dd_owner_pound_write when the owner opts in. Not public.",
+          "dawg-pound.html": "Data Dawgs Dispatch (Dispatch in navigation) — the owner's private AI project workspace (tasks, messages, versioned context). Connector-reachable via dd_owner_pound_read/dd_owner_pound_write when the owner opts in. Not public.",
           "research-lab/private.html": "My Lab — the owner's private BDB research workspace (hypotheses, evidence, discussion). Connector-reachable via dd_owner_bdb_read/dd_owner_bdb_write when the owner opts in. Not public; no raw data or execution over MCP.",
         },
         notServedHere: {
