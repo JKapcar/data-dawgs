@@ -181,7 +181,7 @@ async function handlePound(request,env){
     poundCheck(['/api/pound','/api/pound/schema'].includes(url.pathname),404,'Route not found');
     const uid=await poundIdentity(request,env);
     if(url.pathname==='/api/pound/schema'){poundCheck(request.method==='GET',405,'GET required');return reply(POUND_SCHEMA);}
-    poundCheck(env.DAWG_POUND_ENABLED==='true',503,'Dispatch is awaiting private workspace setup');
+    poundCheck(env.DAWG_POUND_ENABLED==='true',503,'RoboKap is awaiting private workspace setup');
     poundCheck(request.method==='GET'||request.method==='POST',405,'GET or POST required');
     const writing=request.method==='POST',input=writing?await poundBody(request):null;
     if(writing)poundValidate(input,POUND_SCHEMA.write.inputSchema);
