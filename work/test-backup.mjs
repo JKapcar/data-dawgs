@@ -182,6 +182,20 @@ const T0 = Date.parse("2026-09-15T09:00:00Z");
   ok('research payloads retained exactly and active data unchanged',JSON.stringify(WHOLE_DB)===original&&JSON.parse(copies[0].v).record.payload===WHOLE_DB.researchLab.v1.tenants.jason_bdb.payload);
   delete WHOLE_DB.researchLab;delete WHOLE_DB.researchUploads;
 }
+// Research project envelopes (WO-01): same rule, one expiring copy per project. Synthetic.
+{
+  WHOLE_DB.researchProjects={v1:{synthetic:{'bdb-test':{version:1,tenant:'synthetic',project_id:'bdb-test',owner_uid:'u_owner',payload:'{"questions":[{"text":"private synthetic"}]}'}}}};
+  const original=JSON.stringify(WHOLE_DB),kv=makeKV();
+  await worker.scheduled({scheduledTime:T0},{FB_SECRET:'s',RL:kv},{});
+  const copies=kv.puts.filter(p=>p.k.startsWith('research-backup:v1:project:'));
+  ok('each research project gets one 30-day private copy',copies.length===1&&copies[0].k==='research-backup:v1:project:synthetic:bdb-test:'+new Date(T0).toISOString().slice(0,10)&&copies[0].opts.expirationTtl===2592000);
+  ok('research projects never enter dated or permanent general backups',kv.puts.filter(p=>p.k.startsWith('backup:')).every(p=>!JSON.parse(p.v).db?.researchProjects&&!p.v.includes('private synthetic')));
+  ok('project payload retained exactly and active data unchanged',JSON.stringify(WHOLE_DB)===original&&JSON.parse(copies[0].v).record.payload===WHOLE_DB.researchProjects.v1.synthetic['bdb-test'].payload);
+  WHOLE_DB.researchProjects.v1.synthetic['bdb-test'].tenant='other';const bad=makeKV();
+  let threw=false;try{await worker.scheduled({scheduledTime:T0},{FB_SECRET:'s',RL:bad},{});}catch{threw=true;}
+  ok('a project copy whose envelope names another tenant is refused, never written',threw&&!bad.puts.some(p=>p.k.startsWith('research-backup:v1:project:'))&&!JSON.parse(bad.store.get('backup:latest')).db.researchProjects);
+  delete WHOLE_DB.researchProjects;
+}
 // Actual incident shape: the complete tenant envelope was stored as a STRING.
 // Use synthetic content only. Rejection must preserve data and never leak it.
 {

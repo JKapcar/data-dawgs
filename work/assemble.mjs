@@ -31,6 +31,16 @@ const agentBoard = readFileSync("agent-board.js", "utf8").trimEnd();
 const P_START = "/* ===== DD-POUND START - generated from work/dawg-pound.js ===== */";
 const P_END = "/* ===== DD-POUND END ===== */";
 const pound = readFileSync("dawg-pound.js", "utf8").trimEnd();
+/* Research project envelope (WO-01). Sits directly after Pound because it reuses Pound's
+ * identity, body reader and canonical hash, and above the MCP write-scope boundary because
+ * it commits with fbPut. Its route is injected after the Pound route and is default off. */
+const PJ_START = "/* ===== DD-PROJECT START - generated from work/research-project.js ===== */";
+const PJ_END = "/* ===== DD-PROJECT END ===== */";
+const project = readFileSync("research-project.js", "utf8").trimEnd();
+const PJ_ROUTE =
+  '    if (setupPath === "/api/project" || setupPath.startsWith("/api/project/")) return handleProject(request, env); // DD-PROJECT-ROUTE';
+const PJ_ANCHOR =
+  '    if (setupPath === "/api/pound" || setupPath.startsWith("/api/pound/") || setupPath === "/mcp/pound" || setupPath.startsWith("/mcp/pound/")) return handlePound(request, env);';
 const TARGET = "../dawg-bot-worker.js";
 const START = "/* ===== DD-MCP-BLOCK START — generated from work/mcp-block.js; edit THERE ===== */";
 const END   = "/* ===== DD-MCP-BLOCK END ===== */";
@@ -128,6 +138,8 @@ function transform(input) {
   t=t.slice(0,ri)+repairStart+'\nconst DD_OWNER_REPAIR = (()=>{\n'+repair+'\nreturn repairOwnerEnvelope;\n})();\n'+repairEnd+t.slice(rj+repairEnd.length);
   const ps=t.indexOf(P_START), pe=t.indexOf(P_END);
   if(ps>=0 && pe>ps)t=t.slice(0,ps)+t.slice(pe+P_END.length);
+  const pjs=t.indexOf(PJ_START), pje=t.indexOf(PJ_END);
+  if(pjs>=0 && pje>pjs)t=t.slice(0,pjs)+t.slice(pje+PJ_END.length);
   const es = t.indexOf(E_START), ee = t.indexOf(E_END);
   if (es >= 0 && ee > es) t = t.slice(0, es) + t.slice(ee + E_END.length).replace(/^\n\n/, "");
   if (t.includes("async function runBozoLiveScores("))
@@ -173,6 +185,7 @@ function transform(input) {
     .split("\n")
     .filter(line => {
       if (line.includes("DD-WARROOM-ROUTE")) return false;
+      if (line.includes("DD-PROJECT-ROUTE")) return false;
       if (line.includes("DD-MCP-ROUTE")) return false;
       if (/if \(url\.pathname === "\/mcp"/.test(line)) return false;
       // the legacy one-line comment that used to sit above the route
@@ -193,22 +206,26 @@ function transform(input) {
     fail("strip left a handleRankings reference behind — the markers did not cover everything");
   if (t.includes("handleYahoo"))
     fail("strip left a handleYahoo reference behind — the markers did not cover everything");
+  if (t.includes("handleProject"))
+    fail("strip left a handleProject reference behind — the markers did not cover everything");
 
   /* 6. inject the routes. Each anchor must appear EXACTLY once: an anchor that has drifted
    * into two places would put a live route somewhere nobody is looking, which is the same
    * failure the sitewide nav edits guard with assert s.count(old) == 1. */
   for (const [anchor, what] of [[ANCHOR, "MCP route anchor"], [R_ANCHOR, "rankings route anchor"],
-                                [Y_ANCHOR, "Yahoo route anchor"]]) {
+                                [Y_ANCHOR, "Yahoo route anchor"], [PJ_ANCHOR, "project route anchor"]]) {
     if (!t.includes(anchor)) fail(what + " not found in " + TARGET);
     if (t.split(anchor).length - 1 !== 1) fail(what + " is ambiguous — appears more than once");
   }
   t = t.replace(ANCHOR, ANCHOR + "\n" + ROUTE);
   t = t.replace(R_ANCHOR, R_ANCHOR + "\n" + R_ROUTE);
   t = t.replace(Y_ANCHOR, Y_ANCHOR + "\n" + Y_ROUTE + "\n" + W_ROUTE);
+  t = t.replace(PJ_ANCHOR, PJ_ANCHOR + "\n" + PJ_ROUTE);
 
   /* 7. inject the blocks, Yahoo and rankings before MCP's write-scope boundary */
   return t.replace(/\s+$/, "")
     + "\n\n" + P_START + "\n" + pound + "\n" + P_END
+    + "\n\n" + PJ_START + "\n" + project + "\n" + PJ_END
     + "\n\n" + AB_START + "\n" + agentBoard + "\n" + AB_END
     + "\n\n" + AF_START + "\n" + agentFeedback + "\n" + AF_END
     + "\n\n" + Y_START + "\n" + yahoo + "\n" + Y_END
@@ -236,6 +253,11 @@ if (!(out.indexOf(E_START) < out.indexOf(E_ANCHOR) && out.indexOf(E_START) > out
 once(P_START, "private pound block");
 once("async function handlePound(", "private pound handler");
 if(out.indexOf(P_START)>out.indexOf(START)) fail("Pound writes must precede MCP boundary");
+once(PJ_START, "research project block start");
+once(PJ_END, "research project block end");
+once("async function handleProject(", "research project handler");
+once("DD-PROJECT-ROUTE", "research project route");
+if(!(out.indexOf(P_START)<out.indexOf(PJ_START)&&out.indexOf(PJ_START)<out.indexOf(START))) fail("project block must follow Pound (shared helpers) and precede the MCP write-scope boundary");
 once(AB_START, "agent board block start");
 once(AB_END, "agent board block end");
 once("async function handleAgentBoard(", "agent board handler");
