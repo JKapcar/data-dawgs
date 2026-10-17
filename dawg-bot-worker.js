@@ -12559,14 +12559,24 @@ async function poundIdentity(request,env){
 function poundEmpty(){return {revision:0,updated_at:null,agents:[],tasks:[],messages:[],contexts:[],activity:[],receipts:[]};}
 // Tasks saved before task revisions existed read as revision 1, which is what the next
 // update must quote. Nothing is rewritten until that update commits.
-function poundView(state){const {receipts,...view}=state;return {...view,tasks:view.tasks.map(t=>({...t,revision:t.revision||1})),agent_access_enabled:false};}
+// Contributions per verified credential, counted directly from stored records (messages and
+// context versions). Records written before labels were persisted count as "unrecorded".
+function poundContributions(state){
+  // Delegated agents (research-lab/pound-agent-gateway.mjs) are identified by their verified agent id.
+  const out={},add=(row,kind)=>{const key=row.actor_kind==='owner'?'owner_session':row.actor_kind==='agent'?'agent:'+row.actor_uid:row.actor_kind+':'+(row.credential_label??'unrecorded');(out[key]??={messages:0,context_versions:0})[kind]++;};
+  for(const m of state.messages)add(m,'messages');for(const c of state.contexts)for(const v of c.versions)add(v,'context_versions');
+  return out;
+}
+function poundView(state){const {receipts,...view}=state;return {...view,tasks:view.tasks.map(t=>({...t,revision:t.revision||1})),contributions:poundContributions(state),agent_access_enabled:false};}
 function poundItem(rows,id){const row=rows.find(r=>r.id===id);poundCheck(row,404,'Item not found');return row;}
 async function poundHash(value){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));return Array.from(new Uint8Array(bytes),x=>x.toString(16).padStart(2,'0')).join('');}
 function poundCanonical(v){return v&&typeof v==='object'?(Array.isArray(v)?'['+v.map(poundCanonical).join(',')+']':'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+poundCanonical(v[k])).join(',')+'}'):JSON.stringify(v);}
-async function poundWrite(state,input,uid,actorKind='owner',authorLabel=null){
+async function poundWrite(state,input,uid,actorKind='owner',authorLabel=null,credentialLabel=null){
   const now=new Date().toISOString(),d=input.data,op=input.op;
-  // Self-reported by the connector caller; recorded for humans, never trusted for access.
-  const author=authorLabel?{author_label:authorLabel,author_label_trust:'unverified'}:{};
+  // credential_label is the server-verified key label (null only for the signed site session);
+  // author_label is self-reported by the caller, recorded for humans, never trusted for access.
+  poundCheck(actorKind==='owner'?credentialLabel===null:typeof credentialLabel==='string'&&/^[A-Za-z0-9_-]{1,24}$/.test(credentialLabel),401,'Verified credential required');
+  const author={credential_label:credentialLabel,...(authorLabel?{author_label:authorLabel,author_label_trust:'unverified'}:{})};
   const makeId=()=> 'p_'+crypto.randomUUID();let id=d.id;
   if(op==='agent.save'||op==='task.save'){
     const isAgent=op==='agent.save',rows=isAgent?state.agents:state.tasks;
@@ -12581,7 +12591,7 @@ async function poundWrite(state,input,uid,actorKind='owner',authorLabel=null){
     if(!isAgent)row.revision=(row.revision||(row.updated_at?1:0))+1;
     Object.assign(row,fields,{updated_at:now});id=row.id;
     if(isAgent)Object.assign(row,{connection_status:'not_connected',last_seen:null,capabilities_source:'owner_declared'});
-    else row.status_source=actorKind==='owner'?'owner_reported':'owner_connector_reported';
+    else{row.status_source=actorKind==='owner'?'owner_reported':'owner_connector_reported';row.updated_by={actor_uid:uid,actor_kind:actorKind,...author};}
   }else if(op==='message.add'){
     poundCheck(!poundItem(state.tasks,d.thread_id).archived,409,'Task is archived');
     poundCheck(state.messages.length<POUND_LIMITS.messages,409,'Message limit reached');

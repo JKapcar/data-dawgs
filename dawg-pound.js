@@ -77,7 +77,8 @@ function render(){
   renderLibrary();
 }
 // Who wrote it, honestly: the signed owner, or the owner's connector with a self-reported label.
-function who(row){return row.actor_kind==='owner_connector'?'your connector'+(row.author_label?' · "'+row.author_label+'" (unverified)':''):'you';}
+// Verified key label first (from the server), then the caller's self-reported name, marked as such.
+function who(row){if(row.actor_kind==='agent')return 'delegated agent '+row.actor_uid+' (verified credential)';if(row.actor_kind!=='owner_connector')return 'you';return 'your connector · '+(row.credential_label?'key '+row.credential_label+' (verified)':'key not recorded')+(row.author_label?' · says "'+row.author_label+'" (unverified)':'');}
 function refList(refs){
   const list=node('ul',null,'refs');
   for(const ref of refs||[]){const li=node('li');let url=null;try{url=new URL(ref);}catch{}

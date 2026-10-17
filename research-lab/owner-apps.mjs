@@ -86,22 +86,25 @@ export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeH
    return result;
   }
   const writing=name.endsWith('_write'),actor='owner-connector:'+uid,authorLabel=writing?label(args):null;if(writing)args=without(args,'assistant');
-  const identity={actor,owner:uid,assistantIdentity:'unverified',mode:'owner_connector',scheduler:'unconfigured'};
-  const principal={tenant:env.RESEARCH_UPLOAD_TENANT,id:actor,subject:uid,capabilities:researchScopes};
+  // The verified key label from mcpAuth (work/mcp-block.js). Display and attribution only: it
+  // grants nothing, and every authorization check below is unchanged.
+  const credentialLabel=caller.keyLabel??null;if(writing)check(typeof credentialLabel==='string'&&/^[A-Za-z0-9_-]{1,24}$/.test(credentialLabel),401,'verified_credential_label_required');
+  const identity={actor,owner:uid,assistantIdentity:'unverified',credential_label:credentialLabel,mode:'owner_connector',scheduler:'unconfigured'};
+  const principal={tenant:env.RESEARCH_UPLOAD_TENANT,id:actor,subject:uid,capabilities:researchScopes,credentialLabel};
   if(!writing){check(Object.keys(args).length===0,400,'unexpected_arguments');const workspace=app==='pound'?pound.view(JSON.parse(s.data.payload)):view(decodeEnvelope(s.data).state,principal);if(app==='research')for(const task of workspace.tasks)if(task.lease)task.lease={owner:task.lease.owner,expiresAt:task.lease.expiresAt};const result={workspace,writeSchema:schemas[app],identity,holdout:'unavailable',rawData:'not_exposed',...(app==='research'?{dataset:await datasetStatus(fbGet,env,uid)}:{})};check(bytes(result)<=524288,507,'response_capacity');return result;}
   let next,result;
   if(app==='pound'){
    check(poundOps.includes(args.op),403,'operation_denied');pound.validate(args,pound.schema.write.inputSchema);
    const state=JSON.parse(s.data.payload),fingerprint=await pound.hash(pound.canonical(args));const previous=state.receipts.find(r=>r.agent===actor&&r.request_id===args.request_id);
    if(previous){check(previous.fingerprint===fingerprint,409,'idempotency_conflict');return {receipt:previous.result,replayed:true,identity};}
-   check(args.expected_revision===state.revision,409,'revision_conflict');result=await pound.write(state,args,uid,'owner_connector',authorLabel);
+   check(args.expected_revision===state.revision,409,'revision_conflict');result=await pound.write(state,args,uid,'owner_connector',authorLabel,credentialLabel);
    state.receipts.push({agent:actor,request_id:args.request_id,fingerprint,result});state.receipts=state.receipts.slice(-128);next={...s.data,payload:JSON.stringify(state)};check(bytes(state)<=524288,413,'workspace_capacity');
   }else{
    check(Object.keys(args).length===3&&['type','key','payload'].every(k=>Object.hasOwn(args,k))&&['hypothesis','evidence','discussion'].includes(args.type),403,'operation_denied');
    const envelope=decodeEnvelope(s.data);const schema=researchSchema.oneOf.find(x=>x.properties.type.const===args.type);pound.validate(args,schema);if(args.type==='discussion')check(Array.isArray(args.payload.evidenceIds)&&args.payload.evidenceIds.length<=30&&args.payload.evidenceIds.every(id=>typeof id==='string'&&id.length>0&&id.length<=100),400,'invalid_evidence_ids');let changed;try{changed=await transition(envelope.state,authorLabel?{...principal,authorLabel}:principal,args,now(),codeHash);}catch(e){check(false,/conflict/i.test(e.message)?409:400,e.message);}result=changed.result;
    check(bytes(view(changed.state,principal))<=500000,507,'response_capacity');next=encodeEnvelope({...envelope,state:changed.state});check(bytes(next)<=2097152,507,'workspace_capacity');
   }
-  check(typeof reauth==='function'&&owner(env,await reauth())===uid,401,'connector_identity_changed');check(allowed(s.data,uid),403,'app_permission_expired');if(app==='research'){const g=s.data.access.users[uid];check(g.enabled===true&&g.owner===true&&g.capabilities.includes('research:read')&&(g.expiresAt==null||g.expiresAt>now()),403,'research_owner_expired');}
+  {const again=typeof reauth==='function'?await reauth():null;check(owner(env,again)===uid&&(again.keyLabel??null)===credentialLabel,401,'connector_identity_changed');}check(allowed(s.data,uid),403,'app_permission_expired');if(app==='research'){const g=s.data.access.users[uid];check(g.enabled===true&&g.owner===true&&g.capabilities.includes('research:read')&&(g.expiresAt==null||g.expiresAt>now()),403,'research_owner_expired');}
   check(await fbPut(env,path(env,app,uid),next,s.etag),409,'workspace_changed_retry_same_key');return {result,identity:authorLabel?{...identity,author_label:authorLabel,author_label_trust:'unverified'}:identity};
  }
  async function permissions(request,env){

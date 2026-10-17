@@ -114,3 +114,13 @@ test('packaged development data uses existing MCP auth, R2 and revocation withou
   assert.ok(!(await w.rpc('tools/list')).body.result.tools.some(t=>t.name==='dd_owner_bdb_data'));assert.equal(w.state.writes,0);
  }finally{await w.close();}
 });
+
+test('WO-03 packaged: the primary key stamps primary and a labeled key stamps its label on stored records',async()=>{const w=await boot();try{
+ const write=(credential,n,text)=>w.rpc('tools/call',{name:'dd_owner_pound_write',arguments:{op:'context.save',expected_revision:n,request_id:'packaged_stamp_00000'+n,data:{title:'Synthetic brief',text},assistant:'Claude'}},{credential});
+ assert.equal(callText(await write(w.token,0,'From the primary key')).identity.credential_label,'primary');
+ assert.equal(callText(await write('u_synthetic-unlisted',1,'From the labeled key')).identity.credential_label,'unlisted_client');
+ const s=JSON.parse(w.db.get('/privatePounds/'+w.uid).payload),versions=s.contexts.flatMap(c=>c.versions);
+ assert.deepEqual(versions.map(v=>[v.text,v.credential_label,v.author_label,v.author_label_trust]),[['From the primary key','primary','Claude','unverified'],['From the labeled key','unlisted_client','Claude','unverified']]);
+ assert.deepEqual(s.activity.map(a=>a.credential_label),['primary','unlisted_client']);
+ const read=callText(await w.rpc('tools/call',{name:'dd_owner_pound_read',arguments:{}}));assert.deepEqual(read.workspace.contributions,{'owner_connector:primary':{messages:0,context_versions:1},'owner_connector:unlisted_client':{messages:0,context_versions:1}});
+}finally{await w.close();}});

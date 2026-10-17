@@ -203,8 +203,9 @@ test('owner route never accepts or invents an assistant label; connector labels 
   const out=await r.send(r.command('message.add',{thread_id:t.body.receipt.item_id,text:'Owner note'},1));assert.equal(out.status,200);
   for(const row of [out.body.workspace.messages[0],...out.body.workspace.activity])assert.equal(row.author_label,undefined);
   const context={crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array};vm.createContext(context);vm.runInContext(source+'\nthis.write=poundWrite;this.empty=poundEmpty;',context);
-  const state=context.empty();await context.write(state,{op:'task.save',data:task},'u_one','owner_connector','Gemini');const id=state.tasks[0].id;
-  await context.write(state,{op:'message.add',data:{thread_id:id,text:'Finding'}},'u_one','owner_connector','Gemini');await context.write(state,{op:'context.save',data:{title:'Brief',text:'Body'}},'u_one','owner_connector','Gemini');
+  const state=context.empty();await assert.rejects(context.write(state,{op:'task.save',data:task},'u_one','owner_connector','Gemini'),e=>e.poundStatus===401,'a connector write without a verified key label never lands');assert.equal(state.tasks.length,0);
+  await context.write(state,{op:'task.save',data:task},'u_one','owner_connector','Gemini','primary');const id=state.tasks[0].id;
+  await context.write(state,{op:'message.add',data:{thread_id:id,text:'Finding'}},'u_one','owner_connector','Gemini','primary');await context.write(state,{op:'context.save',data:{title:'Brief',text:'Body'}},'u_one','owner_connector','Gemini','primary');
   assert.equal(state.messages[0].author_label,'Gemini');assert.equal(state.messages[0].author_label_trust,'unverified');assert.equal(state.contexts[0].versions[0].author_label,'Gemini');
   assert.ok(state.activity.every(a=>a.author_label==='Gemini'&&a.author_label_trust==='unverified'&&a.actor_uid==='u_one'));
 });
@@ -251,4 +252,31 @@ test('Dispatch rename changes display copy only; URLs, API, tools and storage st
   for(const f of fs.readdirSync('.').filter(f=>f.endsWith('.html'))){const s=read(f);assert.doesNotMatch(s,/Dawg Pound workspace/,f);if(s.includes('const NAV = ['))assert.equal(s.split('["dawg-pound.html","Dispatch","dawg-pound"]').length-1,1,f);}
   assert.match(read('pound.html'),/dawghouse\.html/,'historical pound.html redirect untouched');
   assert.match(read('dawgs.html'),/<h1 id="poundTitle">Dawg Pound<\/h1>/,'public Dawg Pound community page keeps its name');
+});
+
+// ---- Verified actor stamp (WO-03). Synthetic records only. ----
+test('WO-03 J.4-20 owner-session writes stamp credential_label null on every record they create',async()=>{
+  const r=rig(),t=await r.send(r.command('task.save',task,0)),id=t.body.receipt.item_id;
+  await r.send(r.command('message.add',{thread_id:id,text:'Owner note'},1));await r.send(r.command('context.save',{title:'Brief',text:'Body'},2));
+  const s=JSON.parse(r.db.get('/privatePounds/u_one').payload);
+  for(const row of [s.messages[0],s.contexts[0].versions[0],...s.activity,s.tasks[0].updated_by]){assert.equal(Object.hasOwn(row,'credential_label'),true);assert.equal(row.credential_label,null);assert.equal(row.actor_uid,'u_one');assert.equal(row.actor_kind,'owner');}
+  assert.equal((await r.send({...r.command('message.add',{thread_id:id,text:'x'},3),credential_label:'primary'})).status,400,'the owner route never accepts a caller-supplied label');
+});
+test('WO-03 J.4-20/24 connector writes carry the verified key label; contribution counts equal a direct count per credential',async()=>{
+  const context={crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array};vm.createContext(context);vm.runInContext(source+'\nthis.write=poundWrite;this.empty=poundEmpty;this.view=poundView;',context);
+  const s=context.empty(),w=(data,op,kind,label,cred)=>context.write(s,{op,data},'u_one',kind,label,cred);
+  await w(task,'task.save','owner',null,null);const id=s.tasks[0].id;
+  for(const bad of [undefined,null,'',' x','has space','x'.repeat(25)])await assert.rejects(w({thread_id:id,text:'x'},'message.add','owner_connector','Claude',bad),e=>e.poundStatus===401,String(bad));
+  await assert.rejects(w({thread_id:id,text:'x'},'message.add','owner','Claude','primary'),e=>e.poundStatus===401,'an owner session never carries a key label');
+  const plan=[['owner',null,null],['owner_connector','Claude','primary'],['owner_connector','Claude','primary'],['owner_connector','Gemini','Muse'],['owner_connector',null,'Muse'],['owner_connector','Claude','Muse']];
+  for(const [i,[kind,label,cred]] of plan.entries())await w({thread_id:id,text:'Synthetic '+i},'message.add',kind,label,cred);
+  await w({title:'Brief',text:'Body'},'context.save','owner_connector','Grok','grok_key');
+  s.messages.push({id:'p_'+webcrypto.randomUUID(),thread_id:id,text:'Agent note',actor_uid:'agent:synthetic',actor_kind:'agent',created_at:new Date().toISOString()});
+  const m=s.messages.find(x=>x.credential_label==='Muse'&&x.author_label==='Gemini');assert.equal(m.author_label_trust,'unverified');assert.equal(m.actor_kind,'owner_connector');
+  assert.equal(s.activity.at(-1).credential_label,'grok_key');assert.equal(s.contexts[0].versions[0].credential_label,'grok_key');
+  const counts=JSON.parse(JSON.stringify(context.view(s).contributions)),direct={};
+  for(const x of [...s.messages.map(r=>[r,'messages']),...s.contexts.flatMap(c=>c.versions.map(v=>[v,'context_versions']))]){const [r,k]=x,key=r.actor_kind==='owner'?'owner_session':r.actor_kind==='agent'?'agent:'+r.actor_uid:r.actor_kind+':'+r.credential_label;(direct[key]??={messages:0,context_versions:0})[k]++;}
+  assert.deepEqual(counts,direct);assert.deepEqual(counts['owner_connector:primary'],{messages:2,context_versions:0});assert.deepEqual(counts['owner_connector:Muse'],{messages:3,context_versions:0});assert.deepEqual(counts['agent:agent:synthetic'],{messages:1,context_versions:0});
+  // Records written before WO-03 count honestly as unrecorded, never as primary.
+  s.messages.push({id:'p_'+webcrypto.randomUUID(),thread_id:id,text:'Legacy',actor_uid:'u_one',actor_kind:'owner_connector',created_at:'2026-10-01T00:00:00Z'});assert.equal(context.view(s).contributions['owner_connector:unrecorded'].messages,1);
 });
