@@ -41,6 +41,12 @@ const PJ_ROUTE =
   '    if (setupPath === "/api/project" || setupPath.startsWith("/api/project/")) return handleProject(request, env); // DD-PROJECT-ROUTE';
 const PJ_ANCHOR =
   '    if (setupPath === "/api/pound" || setupPath.startsWith("/api/pound/") || setupPath === "/mcp/pound" || setupPath.startsWith("/mcp/pound/")) return handlePound(request, env);';
+const DC_START = "/* ===== DD-DISCORD START ===== */";
+const DC_END = "/* ===== DD-DISCORD END ===== */";
+const discordBridge = readFileSync("discord-bridge.js", "utf8").trimEnd();
+const DQ_START = "/* ===== DD-DISCORD-QUEUE START ===== */";
+const DQ_END = "/* ===== DD-DISCORD-QUEUE END ===== */";
+const discordInbound = readFileSync("discord-inbound.js", "utf8").trimEnd();
 const TARGET = "../dawg-bot-worker.js";
 const START = "/* ===== DD-MCP-BLOCK START — generated from work/mcp-block.js; edit THERE ===== */";
 const END   = "/* ===== DD-MCP-BLOCK END ===== */";
@@ -146,6 +152,10 @@ function transform(input) {
     fail("runBozoLiveScores is generated from work/bozo-espn-scores.js — remove the hand-written copy");
   if (t.split(E_ANCHOR).length - 1 !== 1) fail("ESPN scores anchor must appear exactly once");
   t = t.replace(E_ANCHOR, E_START + "\n" + espnScores + "\n" + E_END + "\n\n" + E_ANCHOR);
+  const dqs=t.indexOf(DQ_START), dqe=t.indexOf(DQ_END);
+  if(dqs>=0 && dqe>dqs)t=t.slice(0,dqs)+t.slice(dqe+DQ_END.length);
+  const dcs=t.indexOf(DC_START), dce=t.indexOf(DC_END);
+  if(dcs>=0 && dce>dcs)t=t.slice(0,dcs)+t.slice(dce+DC_END.length);
   const abs = t.indexOf(AB_START), abe = t.indexOf(AB_END);
   if (abs >= 0 && abe > abs) t = t.slice(0,abs) + t.slice(abe + AB_END.length);
   const afs = t.indexOf(AF_START), afe = t.indexOf(AF_END);
@@ -184,6 +194,8 @@ function transform(input) {
   t = t
     .split("\n")
     .filter(line => {
+      if (line.includes("DD-DISCORD-QUEUE-ROUTE")) return false;
+      if (line.includes("DD-DISCORD-ROUTE")) return false;
       if (line.includes("DD-WARROOM-ROUTE")) return false;
       if (line.includes("DD-PROJECT-ROUTE")) return false;
       if (line.includes("DD-MCP-ROUTE")) return false;
@@ -217,13 +229,15 @@ function transform(input) {
     if (!t.includes(anchor)) fail(what + " not found in " + TARGET);
     if (t.split(anchor).length - 1 !== 1) fail(what + " is ambiguous — appears more than once");
   }
-  t = t.replace(ANCHOR, ANCHOR + "\n" + ROUTE);
+  t = t.replace(ANCHOR, ANCHOR + "\n" + '    if (url.pathname === "/mcp/discord-queue") return handleDiscordQueueMcp(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/discord/interactions") return handleDiscordAsk(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/discord/queue") return handleDiscordQueue(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/mcp/discord") return handleDiscordBridge(request, env); // DD-DISCORD-ROUTE\n' + ROUTE);
   t = t.replace(R_ANCHOR, R_ANCHOR + "\n" + R_ROUTE);
   t = t.replace(Y_ANCHOR, Y_ANCHOR + "\n" + Y_ROUTE + "\n" + W_ROUTE);
   t = t.replace(PJ_ANCHOR, PJ_ANCHOR + "\n" + PJ_ROUTE);
 
   /* 7. inject the blocks, Yahoo and rankings before MCP's write-scope boundary */
   return t.replace(/\s+$/, "")
+    + "\n\n" + DQ_START + "\n" + discordInbound + "\n" + DQ_END
+    + "\n\n" + DC_START + "\n" + discordBridge + "\n" + DC_END
     + "\n\n" + P_START + "\n" + pound + "\n" + P_END
     + "\n\n" + PJ_START + "\n" + project + "\n" + PJ_END
     + "\n\n" + AB_START + "\n" + agentBoard + "\n" + AB_END
