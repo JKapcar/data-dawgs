@@ -44,7 +44,11 @@ function card(row){
  paragraph(detail,'Dependent work:',d.dependent_work.length?d.dependent_work.join(' · '):'None recorded.');paragraph(detail,'Review valid until:',d.valid_until);
  detail.append(el('h3','Sources & what they support'));if(!d.sources.length)detail.append(el('p','No sources attached; research is incomplete.'));
  for(const s of d.sources){const p=el('p');p.append(link(s.url,s.title),el('small',' · checked '+s.checked_at),el('br'),document.createTextNode(s.claim));detail.append(p);}n.append(detail);
- const response=(row.responses||[]).at(-1);if(response){const p=el('p',`Last record: ${response.disposition.replaceAll('_',' ')} · ${response.at} · ${response.by?.actor_kind||'unknown actor'} · ${response.by?.uid||'unknown'}${response.proposal_version!==row.proposal_version?' · earlier proposal version':''}`,'receipt');n.append(p);}
+ const response=(row.responses||[]).at(-1);if(response){const p=el('p',`Last record: ${response.disposition.replaceAll('_',' ')} · ${response.at} · ${response.by?.actor_kind||'unknown actor'} · ${response.by?.uid||'unknown'}${response.proposal_version!==row.proposal_version?' · earlier proposal version':''}`,'receipt');n.append(p);
+  const context=response.answer_context||(response.proposal_version===row.proposal_version?{control:d.control,options:row.options}:null);
+  if(response.disposition==='answer'&&context)n.append(el('pre','Recorded answer\n'+answerLabel(context.control,context.options,response.answer)));
+  paragraph(n,'Recorded rationale:',response.rationale);
+ }
  if(d.authorization.intent_only){const p=el('p','This is an intent record. The consequential action still needs its separate approval. ','warning');p.append(link(d.authorization.approval_url,'Open required approval'));n.append(p);}
  const form=el('form',undefined,'answer'),fieldset=el('fieldset');fieldset.append(el('legend',mechanisms[d.control.kind]?.label||'Unsupported control'));
  const ready=d.stage==='ready_for_decision'&&Date.parse(d.valid_until)>Date.now();
