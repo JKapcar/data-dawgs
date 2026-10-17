@@ -338,15 +338,15 @@
     "url": "https://datadawgs216.com/data/models.json",
     "bytes": 3267,
     "as_of": "2026-10-17",
-    "sha256": "8dc857722e415df038b003291652bca8a1c2f2daa082396d711e4d9f7bacbc61",
+    "sha256": "92714e77e9ea0b34da3d78de55f251a93858c08131005698c99df8d16bc9d649",
     "note": "Survivor uses nfelo published probabilities or nfelo-season-v1, not the legacy margin model below. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
     "path": "/data/nfelo.json",
     "url": "https://datadawgs216.com/data/nfelo.json",
-    "bytes": 134064,
+    "bytes": 134068,
     "as_of": "2026-10-17",
-    "sha256": "69e9f1c541a3c34414b2a50a612f947a877627efb15803bec5430fa66a67796a",
+    "sha256": "6ea8a225fca04cd872dbcc2b947dff11cfc3bce0c1cb2be038aec22660a491be",
     "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp)."
    },
    {
@@ -442,7 +442,7 @@
     "url": "https://datadawgs216.com/data/survivor.json",
     "bytes": 116033,
     "as_of": "2026-10-17",
-    "sha256": "57cc14641725ae0d0c32a749fded1a3f584ee709cb59ad6c19e68acd0f699822",
+    "sha256": "478cc53ecfd815bc7c399ecf047ca18171591bd4ac8f31db828be0936631ac58",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"nfelo\" = published nfelo forecast without an extra blend; \"nfelo-season\" = nfelo pre-market calculation with current team/QB strength and game-specific HFA. Ownership is modelled, not observed."
    },
    {
