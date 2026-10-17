@@ -12931,6 +12931,62 @@ const projectDate = {type:'string',pattern:'^\\d{4}-\\d{2}-\\d{2}$'};
 const projectSha = {type:'string',pattern:'^[a-f0-9]{64}$'};
 const projectRev = {type:'integer',minimum:1};
 const projectList = (maxItems,items,minItems=0)=>({type:'array',minItems,maxItems,items});
+
+// Additive decision brief contract. Controls describe canonical answers, not rendering.
+const deckObject=(properties,required=Object.keys(properties))=>({type:'object',additionalProperties:false,required,properties});
+const deckKey={type:'string',pattern:'^[a-z0-9_-]{1,20}$'};
+const deckInteger={type:'integer',minimum:0,maximum:1000000};
+const deckTime={type:'string',pattern:'^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?Z$'};
+const PROJECT_DECK_SCHEMA=deckObject({
+ version:{const:1},stage:{enum:['proposed','needs_research','ready_for_decision']},
+ why_now:projectStr(600),deadline:projectStr(100,0),consequence:projectStr(600),lesson:projectStr(4000),
+ recommendation:projectStr(1000),counterargument:projectStr(1000),uncertainty:projectStr(1000),
+ dependent_work:projectList(12,projectStr(300)),researched_at:deckTime,valid_until:deckTime,
+ sources:projectList(12,deckObject({title:projectStr(200),url:projectStr(2000),checked_at:deckTime,claim:projectStr(1000)})),
+ authorization:deckObject({intent_only:{type:'boolean'},approval_url:projectStr(2000,0)}),
+ control:deckObject({kind:{enum:['choice','scale','rank','budget','buckets']},unit:projectStr(50,0),min:deckInteger,max:deckInteger,step:{type:'integer',minimum:1,maximum:1000000},total:deckInteger,buckets:projectList(8,deckObject({id:deckKey,label:projectStr(100)}),2)},['kind'])
+});
+const PROJECT_DECK_ANSWER=deckObject({choice:deckKey,number:deckInteger,order:projectList(8,deckKey,2),allocations:projectList(8,deckObject({id:deckKey,amount:deckInteger}),2),assignments:projectList(8,deckObject({id:deckKey,bucket:deckKey}),2)},[]);
+function projectDeckValidate(deck,options,nowMs){
+ projectValidate(deck,PROJECT_DECK_SCHEMA,'deck');
+ const date=x=>Number.isFinite(Date.parse(x));
+ projectCheck(date(deck.researched_at)&&date(deck.valid_until)&&Date.parse(deck.valid_until)>Date.parse(deck.researched_at),400,'invalid_research_dates');
+ const https=x=>{try{const u=new URL(x);return u.protocol==='https:'&&!u.username&&!u.password;}catch{return false;}};
+ projectCheck(deck.sources.every(s=>https(s.url)&&date(s.checked_at)&&Date.parse(s.checked_at)<=nowMs),400,'invalid_source');
+ projectCheck(Date.parse(deck.researched_at)<=nowMs,400,'future_research_date');
+ projectCheck(!deck.authorization.intent_only||https(deck.authorization.approval_url),400,'approval_link_required');
+ projectCheck(!deck.authorization.approval_url||https(deck.authorization.approval_url),400,'invalid_approval_link');
+ projectCheck(new Set(options.map(o=>o.id)).size===options.length,400,'duplicate_option');
+ const c=deck.control,allowed={choice:['kind'],rank:['kind'],scale:['kind','unit','min','max','step'],budget:['kind','unit','total'],buckets:['kind','buckets']}[c.kind];
+ projectCheck(Object.keys(c).every(k=>allowed.includes(k))&&allowed.every(k=>Object.hasOwn(c,k)),400,'invalid_control_fields');
+ if(c.kind==='scale')projectCheck(c.unit.trim()&&c.max>c.min&&(c.max-c.min)%c.step===0,400,'invalid_scale');
+ if(c.kind==='budget')projectCheck(c.unit.trim()&&c.total>0,400,'invalid_budget');
+ if(c.kind==='buckets')projectCheck(new Set(c.buckets.map(b=>b.id)).size===c.buckets.length,400,'duplicate_bucket');
+ if(deck.stage==='ready_for_decision')projectCheck(deck.sources.length>0&&Date.parse(deck.valid_until)>nowMs&&options.every(o=>o.consequences?.trim()),400,'decision_research_incomplete');
+}
+function projectDeckStatus(row,nowMs){
+ if(!row.deck)return 'proposed';
+ const response=(row.responses||[]).at(-1);
+ if(response?.proposal_version===row.proposal_version){if(response.disposition==='answer')return 'answered';if(response.disposition==='defer')return 'deferred';return 'needs_research';}
+ if(response||Date.parse(row.deck.valid_until)<=nowMs)return 'stale';
+ return row.deck.stage;
+}
+function projectDeckAnswer(row,data,nowMs){
+ const disposition=data.disposition,answer=data.answer||{};
+ projectCheck(disposition==='answer'||Object.keys(answer).length===0,400,'answer_not_applicable');
+ if(disposition!=='answer')return {};
+ projectCheck(row.deck.stage==='ready_for_decision'&&Date.parse(row.deck.valid_until)>nowMs,409,'research_not_ready');
+ const c=row.deck.control,key={choice:'choice',scale:'number',rank:'order',budget:'allocations',buckets:'assignments'}[c.kind];
+ projectCheck(Object.keys(answer).length===1&&Object.hasOwn(answer,key),400,'answer_control_mismatch');
+ const ids=row.options.map(o=>o.id),permutation=xs=>xs.length===ids.length&&new Set(xs).size===ids.length&&xs.every(id=>ids.includes(id));
+ if(c.kind==='choice')projectCheck(ids.includes(answer.choice),400,'unknown_option');
+ if(c.kind==='scale')projectCheck(answer.number>=c.min&&answer.number<=c.max&&(answer.number-c.min)%c.step===0,400,'invalid_scale_answer');
+ if(c.kind==='rank')projectCheck(permutation(answer.order),400,'invalid_ranking');
+ if(c.kind==='budget')projectCheck(permutation(answer.allocations.map(a=>a.id))&&answer.allocations.reduce((n,a)=>n+a.amount,0)===c.total,400,'invalid_allocation');
+ if(c.kind==='buckets')projectCheck(permutation(answer.assignments.map(a=>a.id))&&answer.assignments.every(a=>c.buckets.some(b=>b.id===a.bucket)),400,'invalid_bucket_assignment');
+ return answer;
+}
+
 const projectFields = {
   'project.save': {title:projectStr(120),question:projectStr(300),audience:projectStr(300),success_criteria:projectList(8,projectStr(300),1),scope:{type:'object',additionalProperties:false,required:['in','out'],properties:{in:projectList(20,projectStr(200)),out:projectList(20,projectStr(200))}},status:{enum:['proposed','active','paused','submitted','archived']},records_reliable_from:projectDate,started_planned:projectDate,target_date:projectDate,template:{type:'object',additionalProperties:false,required:['name','version'],properties:{name:projectStr(60),version:projectStr(20)}},expected_record_revision:projectRev},
   'project.health': {value:{enum:['on_track','at_risk','off_track']},note:projectStr(300,0),expected_record_revision:projectRev},
@@ -12945,11 +13001,14 @@ const projectFields = {
   'role.accept': {id:projectRecordId,expected_record_revision:projectRev,status:{enum:['accepted','revoked']},verification_ref:projectStr(300)},
   'policy.save': {id:projectRecordId,expected_record_revision:projectRev,action:{enum:[]},trigger_check:projectList(8,projectStr(120)),required_evidence:projectStr(300,0),credential:projectStr(100),max_per_day:{type:'integer',minimum:0,maximum:1000},status:{enum:['draft','enabled','disabled']}},
 };
+projectFields['decision.save'].deck=PROJECT_DECK_SCHEMA;
+projectFields['decision.respond']={id:projectRecordId,expected_record_revision:projectRev,proposal_version:projectSha,disposition:{enum:['answer','defer','need_information']},answer:PROJECT_DECK_ANSWER,rationale:projectStr(2000)};
 projectFields['policy.save'].action.enum = Object.keys(projectFields);
 const projectRequired = {'project.save':['title','question','audience','success_criteria','scope','status','target_date'],'project.health':['value'],'milestone.save':['title','due_planned'],'check.set':['milestone_id','text','verifier','evidence_required','status'],'question.save':['text','priority'],'question.answer':['id','expected_record_revision','text'],'decision.save':['title','options','proposal_text'],'decision.resolve':['id','expected_record_revision','proposal_version','status','rationale'],'vote.cast':['decision_id','proposal_version','value'],'role.propose':['role_name','principal','responsibilities'],'role.accept':['id','expected_record_revision','status'],'policy.save':['action','trigger_check','required_evidence','credential','max_per_day','status']};
+projectRequired['decision.respond']=['id','expected_record_revision','proposal_version','disposition','rationale'];
 // Binding actions (E.2). Every other op is open to any authenticated contributor, with the
 // per-record limits enforced in the op itself (check statuses, accepted milestones, authorship).
-const PROJECT_OWNER_ONLY = new Set(['project.save','project.health','question.answer','decision.resolve','role.accept','policy.save']);
+const PROJECT_OWNER_ONLY = new Set(['project.save','project.health','question.answer','decision.resolve','decision.respond','role.accept','policy.save']);
 const PROJECT_SCHEMA = {
   version:1,record:'dd-project/1',transport:'/api/project/v1/<project_id>',enabled_flag:'RESEARCH_PROJECTS_ENABLED',
   authentication:{header:'Authorization',scheme:'Bearer',credential:'existing_signed_site_session',owner_uid:'RESEARCH_OWNER_UID',rejected_headers:['X-Dawg-Session','X-Bozo-Session','X-Dawg-Pass'],query_credentials:false},
@@ -13022,7 +13081,7 @@ function projectCycle(rows,id,deps){
   const seen=new Set(),walk=(n,path)=>{if(path.has(n))return true;if(seen.has(n))return false;seen.add(n);path.add(n);for(const m of edges.get(n)||[])if(walk(m,path))return true;path.delete(n);return false;};
   return walk(id,new Set());
 }
-async function projectProposalVersion(d){return poundHash(poundCanonical({title:d.title,context:d.context,drivers:d.drivers,options:d.options,proposal_text:d.proposal_text}));}
+async function projectProposalVersion(d){return poundHash(poundCanonical({title:d.title,context:d.context,drivers:d.drivers,options:d.options,proposal_text:d.proposal_text,...(d.deck?{deck:d.deck}:{})}));}
 async function projectApply(state,input,principal,nowMs=Date.now()){
   projectValidate(input,PROJECT_SCHEMA.write.inputSchema);
   const actor=projectActor(principal),owner=actor.actor_kind==='owner',now=new Date(nowMs).toISOString(),d=input.data,op=input.op,credential=projectCredential(actor);
@@ -13082,13 +13141,22 @@ async function projectApply(state,input,principal,nowMs=Date.now()){
   }else if(op==='decision.save'){
     row=upsert('decisions','decision');
     if(row.revision>0){projectCheck(['proposed','voting'].includes(row.status),409,'decision_closed');projectCheck(fields.status!=='withdrawn'||sameAuthor(row),403,'author_or_owner_only');}
-    const body={title:fields.title,context:fields.context||'',drivers:fields.drivers||[],options:fields.options,proposal_text:fields.proposal_text};
+    const body={title:fields.title,context:fields.context||'',drivers:fields.drivers||[],options:fields.options,proposal_text:fields.proposal_text,...(fields.deck||row.deck?{deck:fields.deck||row.deck}:{})};
+    if(body.deck)projectDeckValidate(body.deck,body.options,nowMs);
     const version=await projectProposalVersion(body);
     const history=row.proposal_history||[];if(row.proposal_version!==version)history.push({proposal_version:version,at:now,by:actor});
     Object.assign(row,body,{status:fields.status||'proposed',proposal_version:version,proposal_history:history,outcome:null,decided_by:null,decided_at:null});
+  }else if(op==='decision.respond'){
+    row=find(state.decisions,id,'decision');projectCheck(expected===row.revision,409,'record_revision_conflict');
+    projectCheck(row.deck&&['proposed','voting'].includes(row.status),409,'decision_not_available');
+    projectCheck(fields.proposal_version===row.proposal_version,409,'proposal_changed');
+    const answer=projectDeckAnswer(row,fields,nowMs);
+    projectCheck((row.responses||[]).length<100,409,'decision_response_capacity');
+    row.responses=[...(row.responses||[]),{id:'r_'+crypto.randomUUID(),proposal_version:row.proposal_version,disposition:fields.disposition,answer,answer_context:{title:row.title,control:row.deck.control,options:row.options},rationale:fields.rationale,by:actor,at:now,request_id:input.request_id,intent_only:row.deck.authorization.intent_only,execution:'not_executed'}];
   }else if(op==='decision.resolve'){
     row=find(state.decisions,id,'decision');projectCheck(expected===row.revision,409,'record_revision_conflict');
     projectCheck(['proposed','voting'].includes(row.status),409,'decision_closed');projectCheck(fields.proposal_version===row.proposal_version,409,'proposal_changed');
+    projectCheck(!row.deck,409,'use_decision_respond');
     projectCheck(fields.status!=='accepted'||row.options.some(o=>o.id===fields.option_id),400,'option_required');
     Object.assign(row,{status:fields.status,outcome:{option_id:fields.option_id||null,rationale:fields.rationale,proposal_version:row.proposal_version},decided_by:actor,decided_at:now});
   }else if(op==='vote.cast'){
@@ -13139,7 +13207,7 @@ function projectMilestone(state,m,today){
 }
 function projectView(state,nowMs=Date.now()){
   const {receipts,...view}=state,today=new Date(nowMs).toISOString().slice(0,10);
-  return {...view,milestones:state.milestones.map(m=>projectMilestone(state,m,today)),decisions:state.decisions.map(d=>({...d,status:d.status==='proposed'&&state.votes.some(v=>v.decision_id===d.id&&v.proposal_version===d.proposal_version)?'voting':d.status,tally:projectTally(state,d)}))};
+  return {...view,milestones:state.milestones.map(m=>projectMilestone(state,m,today)),decisions:state.decisions.map(d=>({...d,...(d.deck?{deck_status:projectDeckStatus(d,nowMs)}:{}),status:d.status==='proposed'&&state.votes.some(v=>v.decision_id===d.id&&v.proposal_version===d.proposal_version)?'voting':d.status,tally:projectTally(state,d)}))};
 }
 function projectRead(state,{section='summary',offset=0,limit=50}={},nowMs=Date.now()){
   projectCheck(PROJECT_SECTIONS.includes(section),400,'invalid_section');
