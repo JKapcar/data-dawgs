@@ -45,3 +45,27 @@ async function handleDiscordBridge(request,env){
   return reply({jsonrpc:'2.0',id,result:{content:[{type:'text',text:JSON.stringify(receipt)}]}});
  }catch(e){const safe=/^(bridge_|post_|dedicated_|permission_|configuration_|body_|invalid_|unknown_|links_|receipt_|idempotency_|hourly_)/.test(e.message);return reply({jsonrpc:'2.0',id,error:{code:-32000,message:safe?e.message:'backend_unavailable_retry_same_key'}});}
 }
+
+// Queue-only adapter. Caller must first persist a one-shot delivery reservation.
+// Unlike general outbound posts, this creates one request-named public thread.
+async function dcPublishQueueAnswer(env,job,label,text){
+ const receipt={delivery:'uncertain',thread_id:null,message_id:null,notice:'Do not retry delivery or create a replacement request; inspect Discord manually.'};
+ try{
+  dcCheck(env.DISCORD_QUEUE_DELIVERY_ENABLED==='true'&&env.DISCORD_BOT_TOKEN,'delivery_disabled');
+  dcCheck(/^\d{17,20}$/.test(job.id)&&/^\d{17,20}$/.test(job.guild_id)&&/^\d{17,20}$/.test(job.channel_id)&&job.guild_id===env.DISCORD_GUILD_ID&&job.channel_id===env.DISCORD_CHANNEL_ID,'destination_denied');
+  const headers={Authorization:'Bot '+env.DISCORD_BOT_TOKEN,'Content-Type':'application/json'};
+  const call=(suffix,body)=>fetch('https://discord.com/api/v10/channels/'+suffix,{headers,redirect:'error',signal:AbortSignal.timeout(10000),...(body?{method:'POST',body:JSON.stringify(body)}:{})});
+  const origin=await call(job.channel_id),parent=origin.ok?await origin.json():null;
+  dcCheck(parent?.id===job.channel_id&&parent?.guild_id===job.guild_id&&parent?.type===0,'destination_verification_failed');
+  const created=await call(job.channel_id+'/threads',{name:'ask-'+job.id,type:11,auto_archive_duration:1440,rate_limit_per_user:5});
+  const thread=created.ok?await created.json():null;
+  dcCheck(/^\d{17,20}$/.test(thread?.id)&&thread?.guild_id===job.guild_id&&thread?.parent_id===job.channel_id&&thread?.type===11,'thread_creation_uncertain');
+  receipt.thread_id=thread.id;
+  const content='[Request '+job.id+' | '+label+' | credential label; model unverified]\n'+text;
+  dcCheck(content.length<=2000,'answer_too_large');
+  const sent=await call(thread.id+'/messages',{content,allowed_mentions:{parse:[],users:[],roles:[],replied_user:false},flags:4});
+  const message=sent.ok?await sent.json():null;
+  if(/^\d{17,20}$/.test(message?.id)&&message.channel_id===thread.id)Object.assign(receipt,{delivery:'delivered',message_id:message.id,url:'https://discord.com/channels/'+job.guild_id+'/'+thread.id+'/'+message.id,notice:'Discord accepted this answer in the request thread.'});
+ }catch{}
+ return receipt;
+}
