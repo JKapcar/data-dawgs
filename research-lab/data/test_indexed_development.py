@@ -6,7 +6,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import zipfile
-from indexed_development import prepare
+from indexed_development import prepare as export, WR_POLICY
+
+def prepare(*args, **kwargs):
+    return export(*args, policy=WR_POLICY, **kwargs)
 
 class IndexedDevelopmentTests(unittest.TestCase):
     def make(self, root, drift=False):
@@ -22,6 +25,26 @@ class IndexedDevelopmentTests(unittest.TestCase):
             z.writestr('game_tracking_2025.csv','NEVER OPEN')
             z.writestr('player_career_successes.csv','NEVER OPEN')
         return source,dict(expected_sha=hashlib.sha256(source.read_bytes()).hexdigest(),expected_size=source.stat().st_size)
+
+    def test_default_all_positions_preserves_full_development_population(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); source,kwargs=self.make(root)
+            original=zipfile.ZipFile.open
+            def guarded(z,name,*a,**kw):
+                self.assertNotIn('2025',str(name)); self.assertNotIn('career',str(name)); return original(z,name,*a,**kw)
+            with patch.object(zipfile.ZipFile,'open',guarded):
+                pin,m=export(source,root/'all',**kwargs)
+            self.assertEqual(m['policy'],'all-position-development-v1')
+            self.assertEqual({t:m['tables'][t]['rows'] for t in m['tables']},dict(players=3,combine_results=3,combine_tracking=2,games=4,player_play=6,game_tracking=5006))
+            rows=[]
+            for p in (root/'all').glob('*.gz'):
+                a=json.loads(gzip.decompress(p.read_bytes()))
+                if a['table']=='game_tracking': rows.extend(a['rows'])
+            self.assertEqual(len(rows),5006)
+            self.assertEqual({r['dd_season_type'] for r in rows},{'PRE','REG','POST'})
+            self.assertIn('QB',{r['dd_nfl_position'] for r in rows})
+            self.assertTrue(any(r['dd_season']=='2024' and r['dd_draft_year']=='2023' for r in rows))
+            self.assertEqual(sum(r['play_id']=='unmatched' for r in rows),1)
 
     def test_complete_scoped_export_ranges_hashes_and_determinism(self):
         with tempfile.TemporaryDirectory() as tmp:

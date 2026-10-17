@@ -19,7 +19,7 @@ async function boot({grants=true,dataBindings={}}={}){const directory=mkdtempSyn
 const callText=r=>JSON.parse(r.body.result.content[0].text);
 import {v3Fixture} from './development-v3-fixture.mjs';
 test('packaged v3 compressed partitions preserve owner auth, pagination and revocation',async()=>{
- const f=v3Fixture(),w=await boot({dataBindings:{RESEARCH_DEVELOPMENT_DATA_ENABLED:'true',RESEARCH_DEVELOPMENT_MANIFEST_SHA:f.env.RESEARCH_DEVELOPMENT_MANIFEST_SHA}});
+ const f=v3Fixture({policy:'all-position-development-v1',seasonType:'POST',position:'QB',draftYear:'2024'}),w=await boot({dataBindings:{RESEARCH_DEVELOPMENT_DATA_ENABLED:'true',RESEARCH_DEVELOPMENT_MANIFEST_SHA:f.env.RESEARCH_DEVELOPMENT_MANIFEST_SHA}});
  try{
   const bucket=await w.mf.getR2Bucket('RESEARCH_UPLOADS');
   for(const [name,bytes] of f.objects)await bucket.put('development/'+w.uid+'/test/'+SOURCE_SHA+'/'+name,bytes);

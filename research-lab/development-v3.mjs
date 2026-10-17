@@ -1,6 +1,6 @@
-// Private, immutable WR draft-season REG partitions. No storage key or URL input.
+// Private, immutable partitions under an explicit development population policy. No storage key or URL input.
 const TABLES=['players','combine_results','combine_tracking','games','player_play','game_tracking'];
-const POLICY='wr-draft-season-reg-v1';
+const WR_POLICY='wr-draft-season-reg-v1',ALL_POLICY='all-position-development-v1';
 const FIELDS=t=>t==='games'?['season','season_type','game_id']:['player_play','game_tracking'].includes(t)?['season','season_type','game_id','play_id','nfl_id']:['draft_year','nfl_id'];
 const hash=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
 const canonical=s=>JSON.stringify(Object.fromEntries(Object.keys(s).sort().map(k=>[k,s[k]])));
@@ -13,7 +13,8 @@ async function bounded(stream,max,check){
 }
 function base64(bytes){let s='';for(let i=0;i<bytes.length;i+=8192)s+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(s);}
 export async function readDevelopmentV3({m,args,root,manifestSha,load,check,env,sourceSha}){
- check(m.policy===POLICY&&JSON.stringify(m.seasons)==='["2023","2024"]'&&m.tables&&Object.keys(m.tables).length===TABLES.length&&TABLES.every(t=>Object.hasOwn(m.tables,t)),'invalid_manifest');
+ const policy=m.policy,wrOnly=policy===WR_POLICY;
+ check([WR_POLICY,ALL_POLICY].includes(policy)&&JSON.stringify(m.seasons)==='["2023","2024"]'&&m.tables&&Object.keys(m.tables).length===TABLES.length&&TABLES.every(t=>Object.hasOwn(m.tables,t)),'invalid_manifest');
  for(const t of TABLES){const d=m.tables[t];check(d&&hash(d.root)&&integer(d.rows,0,Number.MAX_SAFE_INTEGER)&&Array.isArray(d.columns)&&d.columns.length<=100&&JSON.stringify(d.selector)===JSON.stringify(FIELDS(t)),'invalid_manifest');}
  if(args.op==='catalog')return {manifestSha256:manifestSha,...m};
  check(TABLES.includes(args.table),'invalid_table');
@@ -22,7 +23,7 @@ export async function readDevelopmentV3({m,args,root,manifestSha,load,check,env,
  check(select&&typeof select==='object'&&!Array.isArray(select)&&Object.keys(select).length<=fields.length&&fields.slice(0,Object.keys(select).length).every(k=>Object.hasOwn(select,k))&&Object.entries(select).every(([k,v])=>fields.includes(k)&&typeof v==='string'&&v.length>0&&v.length<=200),'invalid_selector');
  if(Object.hasOwn(select,'season'))check(['2023','2024'].includes(select.season),'non_development_selector');
  if(Object.hasOwn(select,'draft_year'))check(['2023','2024'].includes(select.draft_year),'non_development_selector');
- if(Object.hasOwn(select,'season_type'))check(select.season_type==='REG','non_development_selector');
+ if(Object.hasOwn(select,'season_type'))check((wrOnly?['REG']:['PRE','REG','POST']).includes(select.season_type),'non_development_selector');
  const path=args.path??[];check(Array.isArray(path)&&path.length<=6&&path.every(x=>integer(x,0,15)),'invalid_path');
  check(args.op==='index'||!Object.hasOwn(args,'path'),'unexpected_arguments');
  const key=await digest(new TextEncoder().encode(canonical(select)));let current=schema.root;
@@ -72,17 +73,17 @@ export async function readDevelopmentV3({m,args,root,manifestSha,load,check,env,
  check(raw.byteLength===descriptor.decodedBytes&&await digest(raw)===descriptor.decodedSha256,'decoded_integrity_failed');
  const a=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw)),cols=schema.columns.map(c=>c.name);
  check(cols.every(c=>typeof c==='string'&&/^[a-z][a-z0-9_]*$/.test(c))&&new Set(cols).size===cols.length,'invalid_columns');
- check(a.version===3&&a.sourceSha256===sourceSha&&a.policy===POLICY&&a.table===table&&JSON.stringify(a.columns)===JSON.stringify(cols)&&Array.isArray(a.rows)&&a.rows.length===descriptor.rows,'invalid_artifact');
+ check(a.version===3&&a.sourceSha256===sourceSha&&a.policy===policy&&a.table===table&&JSON.stringify(a.columns)===JSON.stringify(cols)&&Array.isArray(a.rows)&&a.rows.length===descriptor.rows,'invalid_artifact');
  for(const r of a.rows){
   check(r&&typeof r==='object'&&!Array.isArray(r)&&Object.keys(r).length===cols.length&&cols.every(c=>Object.hasOwn(r,c)&&(r[c]===null||typeof r[c]==='string')),'invalid_row');
-  if(table==='games')check(['2023','2024'].includes(r.season)&&r.season_type==='REG','non_development_row');
-  else if(['player_play','game_tracking'].includes(table))check(['2023','2024'].includes(r.dd_season)&&r.dd_season===r.dd_draft_year&&r.dd_season_type==='REG'&&r.dd_nfl_position==='WR','non_development_row');
-  else check(['2023','2024'].includes(r.draft_year)&&(table==='players'?r.nfl_position:r.dd_nfl_position)==='WR','non_development_row');
+  if(table==='games')check(['2023','2024'].includes(r.season)&&(wrOnly?['REG']:['PRE','REG','POST']).includes(r.season_type),'non_development_row');
+  else if(['player_play','game_tracking'].includes(table))check(['2023','2024'].includes(r.dd_season)&&['2023','2024'].includes(r.dd_draft_year)&&(wrOnly?(r.dd_season===r.dd_draft_year&&r.dd_season_type==='REG'&&r.dd_nfl_position==='WR'):['PRE','REG','POST'].includes(r.dd_season_type)),'non_development_row');
+  else check(['2023','2024'].includes(r.draft_year)&&(!wrOnly||(table==='players'?r.nfl_position:r.dd_nfl_position)==='WR'),'non_development_row');
  }
  const selected=a.rows.slice(descriptor.start,descriptor.start+descriptor.count);
  function rowSelector(r){if(table==='games')return Object.fromEntries(fields.map(k=>[k,r[k]]));if(['player_play','game_tracking'].includes(table))return {season:r.dd_season,season_type:r.dd_season_type,game_id:r.game_id,play_id:r.play_id,nfl_id:r.nfl_id};return {draft_year:r.draft_year,nfl_id:r.nfl_id};}
  check(selected.every(r=>canonical(rowSelector(r))===canonical(select)),'partition_range_mismatch');
- if(args.op==='artifact')return {...info,encoding:'gzip+base64',sha256:descriptor.sha256,decodedSha256:descriptor.decodedSha256,compressedBytes:compressed.length,decodedBytes:raw.length,range:{start:descriptor.start,count:descriptor.count},scope:'Shared shard may contain adjacent eligible WR partitions; range selects the requested partition.',data:base64(compressed)};
+ if(args.op==='artifact')return {...info,encoding:'gzip+base64',sha256:descriptor.sha256,decodedSha256:descriptor.decodedSha256,compressedBytes:compressed.length,decodedBytes:raw.length,range:{start:descriptor.start,count:descriptor.count},scope:'Shared shard may contain adjacent eligible partitions under the catalog policy; range selects the requested partition.',data:base64(compressed)};
  check(args.op==='rows','invalid_operation');
  const offset=args.offset??0,limit=args.limit??100,filters=args.filters??{};
  check(integer(offset,0,2048)&&integer(limit,1,100),'invalid_bounds');

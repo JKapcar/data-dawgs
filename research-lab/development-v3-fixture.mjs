@@ -5,14 +5,14 @@ import {readDevelopmentData,SOURCE_SHA} from './development-data.mjs';
 globalThis.crypto??=webcrypto;
 export const canonicalSelector=s=>JSON.stringify(Object.fromEntries(Object.keys(s).sort().map(k=>[k,s[k]])));
 export const sha=b=>createHash('sha256').update(b).digest('hex');
-export function v3Fixture(){
+export function v3Fixture({policy='wr-draft-season-reg-v1',seasonType='REG',position='WR',draftYear='2023'}={}){
  const objects=new Map(),reads=[];
  const put=(value,extension='json')=>{const raw=extension==='json'?Buffer.from(JSON.stringify(value)):Buffer.from(value),hash=sha(raw);objects.set(hash+'.'+extension,raw);return hash;};
- const table='game_tracking',policy='wr-draft-season-reg-v1';
- const selector={season:'2023',season_type:'REG',game_id:'game',play_id:'play',nfl_id:'wr'};
+ const table='game_tracking';
+ const selector={season:'2023',season_type:seasonType,game_id:'game',play_id:'play',nfl_id:'wr'};
  const fields=Object.keys(selector);
  const columns=['game_id','play_id','nfl_id','time','dd_season','dd_season_type','dd_draft_year','dd_nfl_position'];
- const row=(id,time)=>({game_id:'game',play_id:'play',nfl_id:id,time:String(time),dd_season:'2023',dd_season_type:'REG',dd_draft_year:'2023',dd_nfl_position:'WR'});
+ const row=(id,time)=>({game_id:'game',play_id:'play',nfl_id:id,time:String(time),dd_season:'2023',dd_season_type:seasonType,dd_draft_year:draftYear,dd_nfl_position:position});
  const rows=[row('adjacent',0),...Array.from({length:201},(_,i)=>row('wr',i))];
  const artifact={version:3,sourceSha256:SOURCE_SHA,policy,table,columns,rows};
  const raw=Buffer.from(JSON.stringify(artifact)),compressed=gzipSync(raw);

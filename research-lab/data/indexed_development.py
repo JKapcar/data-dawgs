@@ -1,4 +1,4 @@
-"""Local V3 WR draft-season REG export. No upload, activation, outcomes or holdout reads."""
+"""Local indexed development export. All positions/seasons by default; WR is an explicit study."""
 import argparse
 import csv
 import gzip
@@ -13,17 +13,21 @@ from development import SOURCE_SHA, SOURCE_SIZE, NULLS, canonical, persist
 
 TABLES = ('players', 'combine_results', 'combine_tracking', 'games', 'player_play', 'game_tracking')
 YEARS = ('2023', '2024')
-POLICY = 'wr-draft-season-reg-v1'
+WR_POLICY = 'wr-draft-season-reg-v1'
+POLICY = 'all-position-development-v1'
 MAX_ROWS, MAX_RAW, MAX_GZIP = 2048, 1048576, 262144
 
 def selector(table, r):
     if table == 'games':
         return {k: r[k] for k in ('season', 'season_type', 'game_id')}
     if table in ('player_play', 'game_tracking'):
-        return dict(season=r['dd_season'], season_type='REG', game_id=r['game_id'], play_id=r['play_id'], nfl_id=r['nfl_id'])
+        return dict(season=r['dd_season'], season_type=r['dd_season_type'], game_id=r['game_id'], play_id=r['play_id'], nfl_id=r['nfl_id'])
     return {k: r[k] for k in ('draft_year', 'nfl_id')}
 
-def prepare(source, out, expected_sha=SOURCE_SHA, expected_size=SOURCE_SIZE):
+def prepare(source, out, expected_sha=SOURCE_SHA, expected_size=SOURCE_SIZE, policy=POLICY):
+    if policy not in (POLICY, WR_POLICY):
+        raise ValueError('unknown population policy')
+    wr_only = policy == WR_POLICY
     source, out = Path(source).resolve(), Path(out).resolve()
     if any((p/'.git').exists() for p in (out, *out.parents)):
         raise ValueError('output must be outside Git')
@@ -35,9 +39,9 @@ def prepare(source, out, expected_sha=SOURCE_SHA, expected_size=SOURCE_SIZE):
         raise ValueError('source identity mismatch')
     out.mkdir(parents=True, exist_ok=True)
     manifest = dict(version=3, sourceSha256=digest, classes=list(YEARS), seasons=list(YEARS),
-                    holdoutRead=False, policy=POLICY, tables={},
-                    limitations=['WR defined by players.nfl_position, not player_play alignment.',
-                    'NFL scope is REG season equal to athlete draft_year; cohort players only, no ball/context players.',
+                    holdoutRead=False, policy=policy, tables={},
+                    limitations=[('WR study: REG season equals draft_year.' if wr_only else 'All source positions; PRE/REG/POST and cross-draft-year development seasons retained.'),
+                    'Draft classes and NFL seasons 2023-2024 only; cohort players only, no ball/context players.',
                     'Tracking without player_play match is retained. No outcome construction.',
                     'Units and timestamp timezone unverified. Nulls preserved without imputation.',
                     'Prefix lookup discovers bounded child-selector pages; full selectors address row ranges.',
@@ -64,7 +68,7 @@ def prepare(source, out, expected_sha=SOURCE_SHA, expected_size=SOURCE_SIZE):
                 if r['nfl_id'] in player_ids:
                     raise ValueError('duplicate player identity across partitions')
                 player_ids.add(r['nfl_id'])
-            if r['draft_year'] not in YEARS or r['nfl_position'] != 'WR':
+            if r['draft_year'] not in YEARS or (wr_only and r['nfl_position'] != 'WR'):
                 continue
             if r['nfl_id'] in NULLS or r['nfl_id'] in players:
                 raise ValueError('missing or duplicate player identity')
@@ -74,8 +78,10 @@ def prepare(source, out, expected_sha=SOURCE_SHA, expected_size=SOURCE_SIZE):
                 if r['game_id'] in game_ids:
                     raise ValueError('duplicate game identity across partitions')
                 game_ids.add(r['game_id'])
-            if r['season'] not in YEARS or r['season_type'] != 'REG':
+            if r['season'] not in YEARS or (wr_only and r['season_type'] != 'REG'):
                 continue
+            if r['season_type'] not in ('PRE', 'REG', 'POST'):
+                raise ValueError('unknown season type')
             if r['game_id'] in NULLS or r['game_id'] in games:
                 raise ValueError('missing or duplicate game identity')
             games[r['game_id']] = r
@@ -84,24 +90,24 @@ def prepare(source, out, expected_sha=SOURCE_SHA, expected_size=SOURCE_SIZE):
             for name in sources:
                 for r in rows(name):
                     if table in ('players', 'combine_results', 'combine_tracking'):
-                        if table == 'players' and r['nfl_position'] != 'WR':
+                        if table == 'players' and wr_only and r['nfl_position'] != 'WR':
                             continue
                         if r['draft_year'] not in YEARS or r['nfl_id'] not in players:
                             continue
                         if r['draft_year'] != players[r['nfl_id']]['draft_year']:
                             raise ValueError('cohort year mismatch')
                         if table != 'players':
-                            r['dd_nfl_position'] = 'WR'
+                            r['dd_nfl_position'] = players[r['nfl_id']]['nfl_position']
                     elif table == 'games':
-                        if r['season'] not in YEARS or r['season_type'] != 'REG' or r['game_id'] not in games:
+                        if r['season'] not in YEARS or (wr_only and r['season_type'] != 'REG') or r['game_id'] not in games:
                             continue
                     else:
                         p, g = players.get(r['nfl_id']), games.get(r['game_id'])
-                        if p is None or g is None or p['draft_year'] != g['season']:
+                        if p is None or g is None or (wr_only and p['draft_year'] != g['season']):
                             continue
                         if table == 'game_tracking' and g['season'] != name[-4:]:
                             raise ValueError('tracking season mismatch')
-                        r.update(dd_season=g['season'], dd_season_type='REG', dd_draft_year=p['draft_year'], dd_nfl_position='WR')
+                        r.update(dd_season=g['season'], dd_season_type=g['season_type'], dd_draft_year=p['draft_year'], dd_nfl_position=p['nfl_position'])
                     yield {k: None if v in NULLS else v for k, v in r.items()}
         db = sqlite3.connect(str(Path(stage)/'rows.sqlite'))
         try:
@@ -136,7 +142,7 @@ def prepare(source, out, expected_sha=SOURCE_SHA, expected_size=SOURCE_SIZE):
                     nonlocal estimated
                     if not chunk:
                         return
-                    obj = dict(version=3, sourceSha256=digest, policy=POLICY, table=table, columns=columns, rows=chunk)
+                    obj = dict(version=3, sourceSha256=digest, policy=policy, table=table, columns=columns, rows=chunk)
                     raw = canonical(obj)
                     compressed = gzip.compress(raw, compresslevel=6, mtime=0)
                     if len(raw) > MAX_RAW or len(compressed) > MAX_GZIP:
@@ -229,6 +235,7 @@ def prepare(source, out, expected_sha=SOURCE_SHA, expected_size=SOURCE_SIZE):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('source'); parser.add_argument('--out', required=True)
+    parser.add_argument('--policy', choices=(POLICY, WR_POLICY), default=POLICY)
     args = parser.parse_args()
-    pin, manifest = prepare(args.source, args.out)
+    pin, manifest = prepare(args.source, args.out, policy=args.policy)
     print(json.dumps(dict(manifestSha256=pin, tables={t:dict(rows=d['rows'],partitions=d['partitions']) for t,d in manifest['tables'].items()})))

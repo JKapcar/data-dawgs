@@ -46,3 +46,15 @@ test('V3 enforces streaming decoded bound before JSON parse',async()=>{
  Object.assign(f.descriptor,{sha256:f.put(gz,'gz'),compressedBytes:gz.length,decodedBytes:1048576,decodedSha256:sha(raw)});f.repin();
  await assert.rejects(f.call({op:'artifact',table:'game_tracking',selector:f.selector,artifact:f.descriptor.sha256}),/artifact_too_large/);
 });
+
+
+test('all-position policy preserves non-WR, PRE/POST and cross-draft-year seasons; rejects holdout',async()=>{
+ for(const seasonType of ['PRE','REG','POST']){
+  const f=v3Fixture({policy:'all-position-development-v1',seasonType,position:'CB',draftYear:'2024'});
+  const args={op:'rows',table:'game_tracking',selector:f.selector,artifact:f.descriptor.sha256};
+  const r=await f.call(args);assert.equal(r.rows.length,100);assert.ok(r.rows.every(x=>x.dd_nfl_position==='CB'&&x.dd_season_type===seasonType&&x.dd_draft_year==='2024'&&x.dd_season==='2023'));
+  await assert.rejects(f.call({...args,selector:{...f.selector,season:'2025'}}),/non_development/);
+ }
+ const f=v3Fixture({policy:'all-position-development-v1',position:'QB',draftYear:'2025'});
+ await assert.rejects(f.call({op:'rows',table:'game_tracking',selector:f.selector,artifact:f.descriptor.sha256}),/non_development/);
+});
