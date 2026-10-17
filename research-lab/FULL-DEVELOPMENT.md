@@ -31,6 +31,8 @@ outside the development cohort. Games retain season context. Player-play is
 preserved as player-level data, not a fabricated one-row-per-play table. Tracking
 does not require a player-play match; use a left join and account for unmatched
 observations explicitly. An audit of join completeness must accompany a model.
+The season filter retains PRE, REG and POST games. It does not imply regular
+season only; an analysis must explicitly select its intended season types.
 
 `time` is the source timestamp, not `frame_id`. Observed timestamps have
 millisecond precision without a timezone suffix. Neither timezone nor coordinate,
