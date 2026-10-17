@@ -29,8 +29,8 @@ export function createPortraitGateway({fbGet,fbPut,ownerIdentity,now=()=>new Dat
   const send=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
   try{
    const origin=request.headers.get('Origin');check(!origin||['https://datadawgs216.com','https://www.datadawgs216.com'].includes(origin),403,'origin_denied');if(origin)Object.assign(headers,{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Allow-Methods':'GET, POST, OPTIONS'});
-   check(env.POUND_PORTRAITS_ENABLED==='true'&&env.DAWG_POUND_ENABLED==='true'&&env.RESEARCH_UPLOADS,503,'portraits_disabled');
    const url=new URL(request.url),m=url.pathname.match(/^\/pound-portraits\/v1\/(contexts|agents)\/(p_[a-f0-9-]{36})(?:\/image\/([A-Za-z0-9_-]{16,80}))?$/);check(m&&!url.search,404,'not_found');if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
+   check(env.POUND_PORTRAITS_ENABLED==='true'&&env.DAWG_POUND_ENABLED==='true'&&env.RESEARCH_UPLOADS,503,'portraits_disabled');
    check(['GET','POST'].includes(request.method)&&(!m[3]||request.method==='GET'),405,'method_denied');
    const uid=await ownerIdentity(request,env),path='/privatePounds/'+uid,target=m[1]+':'+m[2];
    const authorize=async()=>check(await ownerIdentity(request,env)===uid,401,'account_changed');
