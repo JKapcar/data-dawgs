@@ -390,8 +390,8 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 }
 /* Desktop's compact brand lockup belongs on phones too. Stack the tagline under
    DATA DAWGS so it costs height, not horizontal room. The dog-only fallback remains
-   below 360px, where the full lockup and six domains cannot coexist legibly. */
-@media(min-width:360px) and (max-width:519px){
+   below 420px, where platform fonts can make the full lockup exceed the row. */
+@media(min-width:420px) and (max-width:519px){
   /* Pull the lockup into the wrapper gutter. Its negative margin also returns those
      pixels to the middle group instead of shrinking the tap targets. */
   .sitenav .brand{display:grid;grid-template-columns:22px auto;
