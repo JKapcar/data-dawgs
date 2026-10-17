@@ -12,6 +12,7 @@ const date=value=>value?new Date(value).toLocaleString(): 'Never';
 const action=(label,fn,cls='quiet')=>{const b=node('button',label,cls);b.type='button';b.onclick=fn;return b;};
 function note(text){$('status').textContent=text;}
 function clear(){
+  globalThis.DDPortraits?.clear();$('contextPortrait').replaceChildren();
   epoch++;controller?.abort();controller=null;state=null;retrievedAt=0;busy=false;edit=null;pending=null;activeTask='';activeContext='';loadedToken='';setBusy(false);
   for(const id of ['roster','taskSelect','taskDetail','messages','activity','contextList','contextVersions','editorFields','needsYou','projectSummary','work','verified','contextShelf','recentMessages','diagOut'])$(id).replaceChildren();
   $('messageText').value='';$('messageRef').value='';$('messageKind').value='note';$('diagnostics').open=false;$('contextText').textContent='';$('contextHash').textContent='';$('editorError').textContent='';
@@ -68,7 +69,7 @@ async function save(op,data,baseRevision=state?.revision){
 function render(){
   $('workspace').hidden=false;$('welcome').hidden=true;$('openLibrary').disabled=false;$('addTask').disabled=busy;globalThis.DDAccount?.verified(loadedToken);
   const agents=state.agents.filter(a=>!a.archived);$('agentCount').textContent=state.agents.length+' / 24';$('roster').replaceChildren();
-  for(const a of agents){const card=node('article',null,'agent'),bar=node('div',null,'bar');bar.append(node('h3',a.name),action('Edit',()=>editor('agent',a)));card.append(bar,node('p',a.role),node('p',a.function,'muted'),node('p','Declared capabilities: '+(a.capabilities||'Not specified'),'muted'),node('span','Not connected','badge'),node('p','Last seen: never','muted'));$('roster').append(card);}
+  for(const a of agents){const card=node('article',null,'agent'),bar=node('div',null,'bar');bar.append(node('h3',a.name),action('Edit',()=>editor('agent',a)));card.append(bar,node('p',a.role),node('p',a.function,'muted'),node('p','Declared capabilities: '+(a.capabilities||'Not specified'),'muted'),node('span','Not connected','badge'),node('p','Last seen: never','muted'));card.append(globalThis.DDPortraits?.mount('agents',a.id,a.name,{session,changed:load})||node('span'));$('roster').append(card);}
   if(!agents.length)$('roster').append(node('p','Start with a name and a role. Your roster stays private.','empty'));
   const tasks=state.tasks.filter(t=>!t.archived);if(!tasks.some(t=>t.id===activeTask)){activeTask=tasks[0]?.id||'';$('messageText').value='';}
   $('taskSelect').replaceChildren();for(const t of tasks){const option=node('option',t.title);option.value=t.id;$('taskSelect').append(option);}$('taskSelect').value=activeTask;$('taskSelect').disabled=!tasks.length;
@@ -152,8 +153,9 @@ function renderLibrary(){
   renderReader();
 }
 function renderReader(){
+  $('contextPortrait').replaceChildren();
   const c=state?.contexts.find(c=>c.id===activeContext&&!c.archived);$('contextReader').hidden=!c;$('contextVersions').replaceChildren();$('contextText').textContent='';$('contextHash').textContent='';if(!c)return;
-  for(const v of [...c.versions].reverse()){const option=node('option','Version '+v.version+' · '+v.title+' · '+date(v.created_at));option.value=v.version;$('contextVersions').append(option);}readVersion();
+  for(const v of [...c.versions].reverse()){const option=node('option','Version '+v.version+' · '+v.title+' · '+date(v.created_at));option.value=v.version;$('contextVersions').append(option);}readVersion();$('contextPortrait').append(globalThis.DDPortraits?.mount('contexts',c.id,c.title,{session,changed:async()=>{const id=c.id;await load();activeContext=id;renderLibrary();if(!$('library').open)$('library').showModal();}})||node('span'));
 }
 function readVersion(){const c=state?.contexts.find(c=>c.id===activeContext),v=c?.versions.find(v=>v.version===Number($('contextVersions').value));$('contextText').textContent=v?.text||'';$('contextHash').textContent=v?'SHA-256 · '+v.sha256:'';}
 const OPTIONAL=['capabilities','body','refs','project_id','milestone_id','planned_start','planned_end','estimate_hours','blocked_note','proposed_role','review_requested_by','review_reviewed_by'];
