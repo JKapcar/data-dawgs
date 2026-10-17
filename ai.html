@@ -380,7 +380,8 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 }
 /* The smallest supported phones need another few pixels, but still keep the same row. */
 @media(max-width:359px){
-  .sitenav{gap:0 6px}
+  /* Leave room for platform font differences at the 320px minimum width. */
+  .sitenav{gap:0 4px}
   .sitenav .brand img{width:20px;height:25px}
   .sitenav .navauth .authbtn{padding:3px 5px;font-size:9.5px;max-width:64px}
   .sitenav .links{justify-content:flex-start;gap:2px}
@@ -389,8 +390,8 @@ body{margin:0;background:var(--page);color:var(--ink-1);
 }
 /* Desktop's compact brand lockup belongs on phones too. Stack the tagline under
    DATA DAWGS so it costs height, not horizontal room. The dog-only fallback remains
-   below 360px, where the full lockup and six domains cannot coexist legibly. */
-@media(min-width:360px) and (max-width:519px){
+   below 420px, where platform fonts can make the full lockup exceed the row. */
+@media(min-width:420px) and (max-width:519px){
   /* Pull the lockup into the wrapper gutter. Its negative margin also returns those
      pixels to the middle group instead of shrinking the tap targets. */
   .sitenav .brand{display:grid;grid-template-columns:22px auto;
@@ -816,6 +817,7 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .ddfacet svg{width:100%;height:auto;display:block;overflow:visible}
 .nav-section{padding:9px 13px 3px;color:var(--accent);font:800 10px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}.nav-section:not(:first-child){margin-top:5px;border-top:1px solid var(--grid);padding-top:10px}.grpmenu a[class*="kennel-"]{font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;font-weight:800;letter-spacing:.01em}.grpmenu a.kennel-scoreboard{color:#8ed6ff}.grpmenu a.kennel-nfeloml{color:#c9b3ff}.grpmenu a.kennel-qb{color:#ffc06a}.grpmenu a.kennel-wepa{color:#7ce7b0}.grpmenu a.kennel-srs{color:#ff9bb4}.grpmenu a.kennel-hfa{color:#ffe082}.grpmenu a.kennel-units{color:#8ee8e3}.grpmenu a.kennel-receipts{color:#f2c4ff}.grpmenu a.kennel-regimes{color:#a8d88c}</style>
 <link rel="stylesheet" href="install-help.css">
+<link rel="stylesheet" href="pack-guide.css">
 </head>
 <body>
 <div class="wrap">
@@ -1802,7 +1804,7 @@ datadawg-dollars.html — DataDawg$: our OWN converted auction dollars for one l
 strategy.html — the 2026 draft thesis, a dated snapshot of one analyst's argument.
 nfl.html — the NFL hub. stats.html — the EPA explorer. nfelo.html — nfelo power ratings and their backtest. calculators.html — ten deterministic calculators, nothing stored. fourth-down.html — Fourth Down Lab: opens on a real fourth down from this week's games (or the previous captured week); pick any game and play, or edit the situation by hand. nfl4th go/field-goal/punt win probabilities, conversion break-even, a goal lens that re-scores the same outcomes under other objectives (a modelled path; never the recommendation), shareable scenarios, and delayed weekly decisions. Model estimates; no fourth-down MCP tool.
 cfb.html — the College Football lab: 2025 results, one retrodictive Elo, a matchup calculator. Its build roadmap is at cfb.html#roadmap and is our own planning surface, not a public destination.
-markets.html — the prediction-markets section, its own top-level group labelled Markets. ai.html — the A.I. Model Board, its own top-level group. Both are deliberately near-empty and say so above the fold; do not imply either has tools yet.
+markets.html — the prediction-markets section, its own top-level group labelled Markets. ai.html - the A.I. Model Board and Pack Field Guide (#pack-guide): current provider listings and historical model profiles, cited evidence, comparison and an advisory team builder. No Pack test results, verified current setups or agent dispatch. Both sections retain their top-level groups.
 data.html — the Library: every machine-readable file, shelved by the surface that owns it. explore.html — the Data Explorer (Pup): in-browser DuckDB SQL and a simple chart builder over the public /data JSON; pure query, no forecasts, every result cites its file and as_of; no public closing-market line exists for an nfelo-vs-close query. connect.html — forwards to the connector card on signon.html#connect, which is where you point your own AI (Claude, ChatGPT, Gemini or any MCP client) at the site.
 signon.html — sign in, sign up, recover an account, and join a Bozo league by searching its name and entering its shared password; every other page's sign-in chip lands here. dawgs.html — the Dawg Pound: Rollo, the OG Data Dawg, DDCC Profile, SwoleDawg and DateDawg. swoledawg.html — body and training. datedawg.html — local-only reciprocal-acceptance analysis of a Hinge export; no upload or backend memory. fantasy-warroom.html — the fantasy league war room. Its Money sheet selects the best legal current-week Sleeper lineup, shows projected points and weekly rank, and uses that lineup for dollar starter/bench splits. Full-roster dollar rank includes the bench; season grades and simulations remain separate.
 rankings.html — the Dog Track: ranking services graded against actual finishes. draft-leagues.html — create or join a draft league, import Sleeper, connect public Yahoo, or connect ESPN. cfb-power.html — CFB conference power curves. radar.html — the radar view.
@@ -2472,6 +2474,13 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 </script>
 
 <main>
+<section id="pack-guide" aria-label="The Pack Field Guide">
+<h2>The Pack Field Guide</h2><p role="status">Loading public research profiles…</p>
+<noscript>This guide needs JavaScript for filters and comparisons. No Pack tests have run. Historical source records are available in <a href="pack-catalog.js">the public catalog</a>.</noscript>
+</section>
+<script src="pack-core.js"></script>
+<script src="pack-catalog.js"></script>
+<script src="pack-guide.js"></script>
   <header class="p-hero">
     <div class="p-kicker">A.I. · bring your own dawg, and then grade it</div>
     <h1>The A.I. work. <a class="tierchip" data-tier="labs" href="index.html#tiers" title="Why this page is a Pup">Pup</a></h1>
@@ -3177,7 +3186,8 @@ window.DD_BOTCTX = {
     ['Which models are actually on the price/intelligence frontier?','The frontier'],
     ['How much should I trust that intelligence score?','Trust the score?'],
     ['What is this section going to grade?','What is planned']]},
-  sys: `RIGHT NOW you are on the A.I. page. Half of it is real and running: this site is built so any assistant can read it. The other half — logging what several models say before an event and grading them like forecasters — is a PLAN. What is on the page today is a model catalogue with prices and a price-against-intelligence view.
+  sys: `PACK FIELD GUIDE: ai.html#pack-guide is a public capability library with current provider listings and historical profiles with evidence drawers, comparison and an advisory team builder. No Pack tests or paired review results exist. Unknown is not zero. Official product names and some API aliases are source-verified; exact deployed snapshots, account access, prices and local tools are unverified. Vendor claims are not Pack test results. Personas are not models. Mandatory capabilities that are missing or unverified block a recommendation. Pair selection never grants access or dispatches work. Co-failure, same-wrong-answer agreement, independent rescue opportunity and actual review repair are distinct. Sources checked 2026-10-17; historical source dates are separate from unreported test dates.
+RIGHT NOW you are on the A.I. page. Half of it is real and running: this site is built so any assistant can read it. The other half — logging what several models say before an event and grading them like forecasters — is a PLAN. What is on the page today is a model catalogue with prices and a price-against-intelligence view.
 - ⚠️ NOTHING HERE GRADES ANY MODEL. No benchmark on this page is ours and no scoreboard has resolved a single question. A language model producing a confident number is not evidence the number is good — which is the entire reason to make it write the number down first.
 - ⚠️ THE INTELLIGENCE INDEX IS NOT OURS. It is Artificial Analysis' composite — one vendor's weighting of one set of benchmarks, carried through OpenRouter's payload, shipped with no error bar. Small vertical gaps between models mean nothing at all. Never rank two close models on it.
 - THE PRICE AXIS IS LIST PRICE PER MILLION OUTPUT TOKENS, NOT VALUE. It cannot see throughput, latency, rate limits, context-window quality, or whether a model burns four times the tokens to reach the same answer — which is the single biggest reason a cheap model can cost more in practice. Models priced asymmetrically for input sit in the wrong place for most workloads.
