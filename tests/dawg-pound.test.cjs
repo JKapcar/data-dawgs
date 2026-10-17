@@ -241,15 +241,15 @@ test('message kinds and refs, context predecessor and active version',async()=>{
   assert.deepEqual(b.body.workspace.messages.map(m=>m.kind),['question','finding','challenge','decision','note']);
 });
 test('limits are unchanged by the additive fields',()=>{const r=rig();assert.deepEqual(r.schema.limits,{agents:24,tasks:40,messages:100,contexts:16,versions:8,activity:60,receipts:128,body_bytes:32768,state_bytes:524288});});
-test('Dispatch rename changes display copy only; URLs, API, tools and storage stay compatible',()=>{
+test('RoboKap rename changes display copy only; URLs, API, tools and storage stay compatible',()=>{
   const read=f=>fs.readFileSync(f,'utf8'),html=read('dawg-pound.html'),client=read('dawg-pound.js'),worker=read('dawg-bot-worker.js'),mcp=read('work/mcp-block.js'),owner=read('research-lab/owner-apps.mjs');
-  assert.match(html,/<title>Data Dawgs Dispatch<\/title>/);assert.match(html,/<h1>Dispatch<span class="title-dot">\.<\/span><\/h1>/);
-  assert.match(html,/<summary aria-label="Switch app: Dispatch">Dispatch </);assert.doesNotMatch(html,/Dawg Pound/);
-  assert.match(client,/API=WORKER\+'\/api\/pound'/);assert.match(client,/'Dispatch is awaiting private workspace setup\.'/);assert.doesNotMatch(client,/Dawg Pound/);
-  assert.match(source,/'\/privatePounds\/'/,'stored record path unchanged');assert.match(source,/'Dispatch is awaiting private workspace setup'/);
+  assert.match(html,/<title>RoboKap — Mission Control for the Pack<\/title>/);assert.match(html,/<h1>RoboKap<span class="title-dot">\.<\/span><\/h1>/);
+  assert.match(html,/<summary aria-label="Switch app: RoboKap">RoboKap </);assert.doesNotMatch(html,/Dawg Pound/);
+  assert.match(client,/API=WORKER\+'\/api\/pound'/);assert.match(client,/'RoboKap is awaiting private workspace setup\.'/);assert.doesNotMatch(client,/Dawg Pound/);
+  assert.match(source,/'\/privatePounds\/'/,'stored record path unchanged');assert.match(source,/'RoboKap is awaiting private workspace setup'/);
   for(const name of ['dd_owner_pound_read','dd_owner_pound_write'])assert.ok(worker.includes(name)&&owner.includes(name),name+' unchanged');
-  assert.match(worker,/\/mcp\/pound/);assert.match(mcp,/pound: "Dispatch", research/);assert.match(owner,/\(app==='pound'\?'Dispatch':'BDB research'\)/);
-  for(const f of fs.readdirSync('.').filter(f=>f.endsWith('.html'))){const s=read(f);assert.doesNotMatch(s,/Dawg Pound workspace/,f);if(s.includes('const NAV = ['))assert.equal(s.split('["dawg-pound.html","Dispatch","dawg-pound"]').length-1,1,f);}
+  assert.match(worker,/\/mcp\/pound/);assert.match(mcp,/pound: "RoboKap", research/);assert.match(owner,/\(app==='pound'\?'RoboKap':'BDB research'\)/);
+  for(const f of fs.readdirSync('.').filter(f=>f.endsWith('.html'))){const s=read(f);assert.doesNotMatch(s,/Dawg Pound workspace/,f);if(s.includes('const NAV = ['))assert.equal(s.split('["dawg-pound.html","RoboKap","dawg-pound"]').length-1,1,f);}
   assert.match(read('pound.html'),/dawghouse\.html/,'historical pound.html redirect untouched');
   assert.match(read('dawgs.html'),/<h1 id="poundTitle">Dawg Pound<\/h1>/,'public Dawg Pound community page keeps its name');
 });
