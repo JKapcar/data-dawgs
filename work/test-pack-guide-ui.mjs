@@ -21,7 +21,9 @@ try{
   await page.setViewportSize({width,height:1000});await page.goto('http://127.0.0.1:'+server.address().port+'/ai.html#pack-guide');
   await page.locator('.pk-card').first().waitFor();
   assert.equal(await page.locator('.pk-card').count(),7);
-  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'page overflow at '+width);
+  await page.screenshot({path:path.join(out,`pack-${width}.png`),fullPage:false});
+  const overflow=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,elements:[...document.querySelectorAll('body *')].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.right>innerWidth+1&&getComputedStyle(e).position!=='fixed';}).map(e=>({tag:e.tagName,id:e.id,class:e.className,right:e.getBoundingClientRect().right,text:e.textContent.slice(0,70)})).slice(0,12)}));
+  assert.equal(overflow.scroll>overflow.width,false,'page overflow at '+width+': '+JSON.stringify(overflow));
   const axe=await new AxeBuilder({page}).include('#pack-guide').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();assert.deepEqual(axe.violations.map(v=>({id:v.id,nodes:v.nodes.map(n=>n.target)})),[]);
   await page.screenshot({path:path.join(out,`pack-${width}.png`),fullPage:false});
  }
