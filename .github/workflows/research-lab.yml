@@ -18,6 +18,7 @@ jobs:
       - run: python research-lab/data/test_data_tools.py
       - run: python research-lab/data/test_development.py
       - run: python research-lab/data/test_full_development.py
+      - run: node --check research-lab/verify-local-development.mjs
       - run: python tools/check-research-data.py
       - run: node research-lab/build-browser.mjs && git diff --exit-code -- research-lab/browser-engine.mjs
       - run: npm install --prefix /tmp/dd-lab-qa playwright@1.56.1 miniflare@4.20260730.0 --no-audit --no-fund

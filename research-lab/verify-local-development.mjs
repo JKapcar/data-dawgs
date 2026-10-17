@@ -12,7 +12,7 @@ const env={RESEARCH_DEVELOPMENT_DATA_ENABLED:'true',RESEARCH_DEVELOPMENT_MANIFES
  const file=path.join(directory,h);let raw=cache.get(h);
  if(!raw){raw=await readFile(file);if(raw.length<=65536&&(!raw.includes(Buffer.from('"rows":['))))cache.set(h,raw);}
  reads++;return {size:(await stat(file)).size,body:new Response(raw).body};
-}};
+}}};
 const call=args=>readDevelopmentData(env,'local-verification',args);
 const m=await call({op:'catalog'}),report={manifestSha256:pin,localOnly:true,authenticatedClientProof:false,tables:{}};
 for(const table of Object.keys(m.tables)){
