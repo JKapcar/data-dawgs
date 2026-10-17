@@ -1,0 +1,648 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://datadawgs216.com/schemas/pack-catalog.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "asOf",
+    "note",
+    "profiles",
+    "claims",
+    "evidence",
+    "runs",
+    "pairedOutcomes",
+    "reviewedRevisions"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "asOf": {
+      "type": "string",
+      "format": "date"
+    },
+    "note": {
+      "type": "string",
+      "minLength": 1
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/profile"
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/claim"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "runs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/run"
+      }
+    },
+    "pairedOutcomes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/pairedOutcome"
+      }
+    },
+    "reviewedRevisions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/reviewedRevision"
+      }
+    }
+  },
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "provider",
+        "family",
+        "version",
+        "versionStatus",
+        "category",
+        "harness",
+        "persona",
+        "toolsTested",
+        "capabilities",
+        "advertised",
+        "claimIds",
+        "price",
+        "packTestDate",
+        "apiId",
+        "identityNote"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider": {
+          "type": "string",
+          "minLength": 1
+        },
+        "family": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "versionStatus": {
+          "enum": [
+            "historical",
+            "verified",
+            "unknown",
+            "version-changed",
+            "provider-listed"
+          ]
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1
+        },
+        "harness": {
+          "type": "string",
+          "minLength": 1
+        },
+        "persona": {
+          "type": "string",
+          "minLength": 1
+        },
+        "toolsTested": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "coding",
+            "vision",
+            "transcription",
+            "image",
+            "browser",
+            "execution",
+            "voice"
+          ],
+          "properties": {
+            "coding": {
+              "enum": [
+                "verified",
+                "unknown",
+                "unavailable"
+              ]
+            },
+            "vision": {
+              "enum": [
+                "verified",
+                "unknown",
+                "unavailable"
+              ]
+            },
+            "transcription": {
+              "enum": [
+                "verified",
+                "unknown",
+                "unavailable"
+              ]
+            },
+            "image": {
+              "enum": [
+                "verified",
+                "unknown",
+                "unavailable"
+              ]
+            },
+            "browser": {
+              "enum": [
+                "verified",
+                "unknown",
+                "unavailable"
+              ]
+            },
+            "execution": {
+              "enum": [
+                "verified",
+                "unknown",
+                "unavailable"
+              ]
+            },
+            "voice": {
+              "enum": [
+                "verified",
+                "unknown",
+                "unavailable"
+              ]
+            }
+          }
+        },
+        "advertised": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "claimIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "price": {
+          "type": "null"
+        },
+        "packTestDate": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "apiId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "identityNote": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "profileId",
+        "text",
+        "evidenceIds",
+        "kind"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profileId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidenceIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "kind": {
+          "enum": [
+            "strength",
+            "weakness",
+            "use-case",
+            "research"
+          ]
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "url",
+        "type",
+        "sourceDate",
+        "checkedAt",
+        "testDate",
+        "status",
+        "scope",
+        "claim",
+        "caveats",
+        "sourceDateNote"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://"
+        },
+        "type": {
+          "enum": [
+            "vendor claim",
+            "independent benchmark",
+            "self-report",
+            "Pack test",
+            "editorial inference"
+          ]
+        },
+        "sourceDate": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checkedAt": {
+          "type": "string",
+          "format": "date"
+        },
+        "testDate": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "verified",
+            "unknown",
+            "stale",
+            "version-changed"
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claim": {
+          "type": "string",
+          "minLength": 1
+        },
+        "caveats": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceDateNote": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "setup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "profileId",
+        "modelVersion",
+        "harnessVersion",
+        "persona",
+        "toolVersions",
+        "configuration"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profileId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "modelVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "harnessVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "persona": {
+          "type": "string",
+          "minLength": 1
+        },
+        "toolVersions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "configuration": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "suite",
+        "suiteVersion",
+        "testDate",
+        "setups",
+        "taskIds",
+        "scoringRule",
+        "groundTruthSource",
+        "blinded",
+        "budget",
+        "exclusions",
+        "uncertaintyMethod",
+        "replication",
+        "publicReviewed"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "suite": {
+          "type": "string",
+          "minLength": 1
+        },
+        "suiteVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "testDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "setups": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/setup"
+          }
+        },
+        "taskIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "scoringRule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "groundTruthSource": {
+          "type": "string",
+          "minLength": 1
+        },
+        "blinded": {
+          "type": "boolean"
+        },
+        "budget": {
+          "type": "string",
+          "minLength": 1
+        },
+        "exclusions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "uncertaintyMethod": {
+          "type": "string",
+          "minLength": 1
+        },
+        "replication": {
+          "enum": [
+            "pilot",
+            "held-out"
+          ]
+        },
+        "publicReviewed": {
+          "const": true
+        }
+      }
+    },
+    "pairedOutcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runId",
+        "taskId",
+        "aSetupId",
+        "bSetupId",
+        "aPassed",
+        "bPassed",
+        "sameWrongAnswer",
+        "excludedReason"
+      ],
+      "properties": {
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "taskId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "aSetupId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bSetupId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "aPassed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "bPassed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "sameWrongAnswer": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "excludedReason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "reviewedRevision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "runId",
+        "taskId",
+        "builderSetupId",
+        "reviewerSetupId",
+        "beforePassed",
+        "afterPassed",
+        "beforeArtifactHash",
+        "afterArtifactHash",
+        "reviewedAt",
+        "excludedReason"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "taskId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "builderSetupId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewerSetupId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "beforePassed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "afterPassed": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "beforeArtifactHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "afterArtifactHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "reviewedAt": {
+          "type": "string",
+          "format": "date"
+        },
+        "excludedReason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
