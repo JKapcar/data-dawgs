@@ -30,13 +30,16 @@ function rig(){
 }
 const charter={title:'Synthetic study',question:'Does a synthetic signal hold?',audience:'Test readers',success_criteria:['One measurable synthetic criterion'],scope:{in:['synthetic'],out:['real data']},status:'active',target_date:'2027-01-08'};
 const decisionBody={title:'Pick a synthetic option',options:[{id:'a',text:'Option A'},{id:'b',text:'Option B'}],proposal_text:'Adopt option A for the synthetic study.'};
+const deckFixture=(control={kind:'choice'})=>({version:1,stage:'ready_for_decision',why_now:'Synthetic study needs an explicit choice.',deadline:'No fixed deadline',consequence:'Only this synthetic test changes.',lesson:'An invented lesson for tests, not a research claim.',recommendation:'Compare both options.',counterargument:'More evidence could change the choice.',uncertainty:'Synthetic inputs only.',dependent_work:[],researched_at:'2026-01-01T00:00:00Z',valid_until:'2099-01-01T00:00:00Z',sources:[{title:'Synthetic source',url:'https://example.com/research',checked_at:'2026-01-01T00:00:00Z',claim:'Fixture only.'}],authorization:{intent_only:false,approval_url:''},control});
+const deckBody=control=>({...decisionBody,options:decisionBody.options.map(o=>({...o,consequences:'Synthetic tradeoff.'})),deck:deckFixture(control)});
 async function seeded(){
   const r=rig();assert.equal((await r.send(r.command('project.save',charter,0))).status,200);
   const m=await r.send(r.command('milestone.save',{title:'Synthetic milestone',due_planned:'2026-12-01'}));
   const d=await r.send(r.command('decision.save',decisionBody));
   const q=await r.send(r.command('question.save',{text:'Synthetic question?',priority:'normal'}));
   const role=await r.send(r.command('role.propose',{role_name:'coordinator',principal:'synthetic-agent',responsibilities:['keep records complete']}));
-  return {r,milestone:m.body.receipt.item_id,decision:d.body.receipt.item_id,question:q.body.receipt.item_id,role:role.body.receipt.item_id};
+  const deck=await r.send(r.command('decision.save',deckBody()));assert.equal(deck.status,200,JSON.stringify(deck.body));
+  return {r,deck:deck.body.receipt.item_id,milestone:m.body.receipt.item_id,decision:d.body.receipt.item_id,question:q.body.receipt.item_id,role:role.body.receipt.item_id};
 }
 // One valid payload per v1 op, against the seeded project above.
 function samples(s){const st=s.r.state(),dv=st.decisions[0].proposal_version;return {
@@ -47,6 +50,7 @@ function samples(s){const st=s.r.state(),dv=st.decisions[0].proposal_version;ret
   'question.save':{text:'Another synthetic question?',priority:'low'},
   'question.answer':{id:s.question,expected_record_revision:1,text:'Synthetic answer'},
   'decision.save':{...decisionBody,title:'Second synthetic decision'},
+  'decision.respond':{id:s.deck,expected_record_revision:1,proposal_version:st.decisions.find(d=>d.id===s.deck).proposal_version,disposition:'answer',answer:{choice:'a'},rationale:'Synthetic informed choice'},
   'decision.resolve':{id:s.decision,expected_record_revision:1,proposal_version:dv,status:'accepted',option_id:'a',rationale:'Synthetic rationale'},
   'vote.cast':{decision_id:s.decision,proposal_version:dv,value:1},
   'role.propose':{role_name:'critic',principal:'synthetic-critic',responsibilities:['review']},
@@ -177,7 +181,7 @@ test('J.4-22 read-back: the returned record_sha256 is the hash of the canonical 
 test('connector proposals: binding ops 403, checks limited to evidence states, accepted milestones locked',async()=>{
   const s=await seeded(),r=s.r,api=r.api,conn={uid:OWNER,actor_kind:'owner_connector',credential_label:'primary'};
   const data=samples(s);
-  for(const op of ['project.save','project.health','question.answer','decision.resolve','role.accept','policy.save']){const st=r.state();await assert.rejects(api.projectApply(st,r.command(op,data[op],st.revision),conn),e=>e.projectStatus===403&&e.message==='owner_only:'+op,op);}
+  for(const op of ['project.save','project.health','question.answer','decision.resolve','decision.respond','role.accept','policy.save']){const st=r.state();await assert.rejects(api.projectApply(st,r.command(op,data[op],st.revision),conn),e=>e.projectStatus===403&&e.message==='owner_only:'+op,op);}
   let st=r.state();await assert.rejects(api.projectApply(st,r.command('check.set',{...data['check.set'],status:'passed',evidence_refs:['receipt:x']},st.revision),conn),/verifier_required/);
   st=r.state();await assert.rejects(api.projectApply(st,r.command('check.set',{...data['check.set'],status:'evidence_attached'},st.revision),conn),/evidence_required/);
   st=r.state();await api.projectApply(st,r.command('check.set',{...data['check.set'],status:'evidence_attached',evidence_refs:['receipt:synthetic']},st.revision),conn);
@@ -232,7 +236,7 @@ test('J.5-27 a record stored under another tenant or owner is refused; session r
 test('section reads page lists and the summary reports capacity against the 1 MiB target',async()=>{
   const {r}=await seeded(),st=r.state(),api=r.api;
   const sum=api.projectRead(st,{});assert.equal(sum.section,'summary');assert.equal(sum.counts.milestones,1);assert.equal(sum.capacity.target,1048576);assert.equal(sum.capacity.over_target,false);
-  const audit=api.projectRead(st,{section:'audit',offset:0,limit:2});assert.equal(audit.total,5);assert.equal(audit.items.length,2);assert.equal(audit.items[0].op,'role.propose');
+  const audit=api.projectRead(st,{section:'audit',offset:0,limit:2});assert.equal(audit.total,6);assert.equal(audit.items.length,2);assert.equal(audit.items[0].op,'decision.save');
   for(const bad of [{section:'secrets'},{limit:0},{limit:201},{offset:-1}])assert.throws(()=>api.projectRead(st,bad),e=>e.projectStatus===400);
 });
 test('project.health uses on_track / at_risk / off_track; the old colour names are rejected',async()=>{
@@ -241,4 +245,41 @@ test('project.health uses on_track / at_risk / off_track; the old colour names a
   for(const old of ['green','amber','red']){const out=await r.send(r.command('project.health',{value:old}));assert.equal(out.status,400,old);assert.equal(out.body.error,'invalid_value:value');}
   for(const value of ['on_track','at_risk','off_track'])assert.equal((await r.send(r.command('project.health',{value}))).status,200,value);
   assert.equal(r.state().project.health.value,'off_track');assert.equal(r.state().project.health.set_by.actor_kind,'owner');
+});
+
+
+test('decision deck: five answer contracts reject invalid values and stamp intent-only owner responses',async()=>{
+ const cases=[
+  [{kind:'choice'},{choice:'a'},{choice:'missing'}],
+  [{kind:'scale',min:10,max:20,step:2,unit:'trials'},{number:14},{number:13}],
+  [{kind:'rank'},{order:['b','a']},{order:['a','a']}],
+  [{kind:'budget',unit:'hours',total:10},{allocations:[{id:'a',amount:3},{id:'b',amount:7}]},{allocations:[{id:'a',amount:3},{id:'b',amount:8}]}],
+  [{kind:'buckets',buckets:[{id:'now',label:'Now'},{id:'later',label:'Later'}]},{assignments:[{id:'a',bucket:'now'},{id:'b',bucket:'later'}]},{assignments:[{id:'a',bucket:'missing'},{id:'b',bucket:'later'}]}]
+ ];
+ for(const [control,answer,bad] of cases){const {r}=await seeded(),body=deckBody(control);body.deck.authorization={intent_only:true,approval_url:'https://example.com/approval'};
+  const created=await r.send(r.command('decision.save',body));assert.equal(created.status,200,JSON.stringify(created.body));const row=r.state().decisions.at(-1);
+  const payload={id:row.id,expected_record_revision:row.revision,proposal_version:row.proposal_version,disposition:'answer',answer,rationale:'Synthetic rationale'};
+  assert.equal((await r.send(r.command('decision.respond',{...payload,answer:bad}))).status,400);
+  const command=r.command('decision.respond',payload),result=await r.send(command);assert.equal(result.status,200,JSON.stringify(result.body));
+  assert.equal((await r.send(command)).body.replayed,true);const stored=r.state().decisions.at(-1);assert.equal(stored.responses.length,1);assert.deepEqual(stored.responses[0].answer,answer);assert.equal(stored.responses[0].by.uid,OWNER);assert.equal(stored.responses[0].intent_only,true);assert.equal(stored.responses[0].execution,'not_executed');
+  assert.equal((await r.send()).body.project.decisions.at(-1).deck_status,'answered');
+ }
+});
+test('decision deck: complete research, valid control and source dates required; legacy proposals remain valid',async()=>{
+ const {r}=await seeded();
+ for(const mutate of [d=>d.sources=[],d=>d.sources[0].url='javascript:alert(1)',d=>d.valid_until='not-a-date',d=>d.sources[0].checked_at='2099-01-01T00:00:00Z',d=>d.control={kind:'forecast'},d=>d.control={kind:'scale',min:10,max:5,step:1,unit:'hours'},d=>d.authorization={intent_only:true,approval_url:''}]){const b=deckBody();mutate(b.deck);assert.equal((await r.send(r.command('decision.save',b))).status,400);}
+ assert.equal((await r.send(r.command('decision.save',decisionBody))).status,200);
+});
+test('decision deck: deferred, research-needed and stale states; old proposal and racing writes cannot answer',async()=>{
+ const {r,deck}=await seeded();let row=r.state().decisions.find(d=>d.id===deck);
+ const payload=()=>({id:deck,expected_record_revision:row.revision,proposal_version:row.proposal_version,disposition:'defer',answer:{},rationale:'Need time.'});
+ assert.equal((await r.send(r.command('decision.respond',payload()))).status,200);assert.equal((await r.send()).body.project.decisions.find(d=>d.id===deck).deck_status,'deferred');
+ row=r.state().decisions.find(d=>d.id===deck);assert.equal((await r.send(r.command('decision.respond',{...payload(),disposition:'need_information'}))).status,200);assert.equal((await r.send()).body.project.decisions.find(d=>d.id===deck).deck_status,'needs_research');
+ row=r.state().decisions.find(d=>d.id===deck);const old=row.proposal_version;
+ const changed=deckBody();changed.deck.lesson='Updated lesson changes the proposal hash.';assert.equal((await r.send(r.command('decision.save',{...changed,id:deck,expected_record_revision:row.revision}))).status,200);
+ row=r.state().decisions.find(d=>d.id===deck);assert.notEqual(row.proposal_version,old);assert.equal((await r.send()).body.project.decisions.find(d=>d.id===deck).deck_status,'stale');
+ assert.equal((await r.send(r.command('decision.respond',{...payload(),proposal_version:old}))).status,409);
+ r.race();assert.equal((await r.send(r.command('decision.respond',payload()))).status,409);
+ const stale=deckBody();stale.deck.valid_until='2026-01-02T00:00:00Z';stale.deck.stage='needs_research';assert.equal((await r.send(r.command('decision.save',stale))).status,200);const late=r.state().decisions.at(-1);
+ assert.equal((await r.send(r.command('decision.respond',{id:late.id,expected_record_revision:late.revision,proposal_version:late.proposal_version,disposition:'answer',answer:{choice:'a'},rationale:'Cannot answer stale.'}))).status,409);
 });
