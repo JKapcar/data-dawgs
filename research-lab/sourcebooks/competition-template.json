@@ -1,0 +1,338 @@
+{
+  "schema_version": 1,
+  "kind": "template",
+  "competition": {
+    "id": "replace-competition-id",
+    "name": "Competition name",
+    "official_url": null,
+    "rules_url": null,
+    "objective": "Define objective and scope.",
+    "display_timezones": [
+      "UTC",
+      "America/New_York"
+    ]
+  },
+  "checked_on": null,
+  "verification_note": "Replace placeholders with current competition sources. Never carry rules or completion forward.",
+  "requirements": [
+    {
+      "id": "SUB-001",
+      "category": "Submission",
+      "text": "Verify submission components, format and strict limits.",
+      "classification": "to_verify",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "SUB-002",
+      "category": "Submission",
+      "text": "Verify submission components, format and strict limits.",
+      "classification": "to_verify",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "DATA-001",
+      "category": "Data",
+      "text": "Verify data requirements and rights.",
+      "classification": "to_verify",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "SCOPE-001",
+      "category": "Scope",
+      "text": "Verify scope and objective.",
+      "classification": "to_verify",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "SUB-003",
+      "category": "Submission",
+      "text": "Verify submission components, format and strict limits.",
+      "classification": "to_verify",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "PUB-001",
+      "category": "Publication",
+      "text": "Verify publication obligations and complete data rights review.",
+      "classification": "to_verify",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "TEAM-001",
+      "category": "Team & eligibility",
+      "text": "Verify eligibility, team rules and deadlines.",
+      "classification": "to_verify",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "TEAM-002",
+      "category": "Team & eligibility",
+      "text": "Verify eligibility, team rules and deadlines.",
+      "classification": "to_verify",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "TEAM-003",
+      "category": "Team & eligibility",
+      "text": "Verify eligibility, team rules and deadlines.",
+      "classification": "to_verify",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "DATA-002",
+      "category": "Data",
+      "text": "Verify data requirements and rights.",
+      "classification": "to_verify",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "PUB-002",
+      "category": "Publication",
+      "text": "Verify publication obligations and complete data rights review.",
+      "classification": "internal",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "AI-001",
+      "category": "Disclosure",
+      "text": "Verify competition-specific AI or contribution disclosures.",
+      "classification": "to_verify",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "CREDIT-001",
+      "category": "Disclosure",
+      "text": "Verify competition-specific AI or contribution disclosures.",
+      "classification": "to_verify",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "FINAL-001",
+      "category": "Submission",
+      "text": "Verify submission components, format and strict limits.",
+      "classification": "to_verify",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "JUDGE-001",
+      "category": "Judging",
+      "text": "Verify judging criteria and weights.",
+      "classification": "to_verify",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "TIME-001",
+      "category": "Timeline",
+      "text": "Verify timeline and interim obligations.",
+      "classification": "to_verify",
+      "source": {
+        "url": null,
+        "section": null,
+        "checked_on": null,
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    }
+  ],
+  "timeline": [],
+  "open_questions": [
+    "Verify all current competition rules."
+  ],
+  "lifecycle": [
+    {
+      "id": "LIFE-01",
+      "title": "Idea intake",
+      "required_record": "Record question, rationale and source before promoting an idea.",
+      "existing_surface": null,
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-02",
+      "title": "Hypotheses",
+      "required_record": "Register falsifiable claim, scope and falsification test.",
+      "existing_surface": null,
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-03",
+      "title": "Methods",
+      "required_record": "Record protocol, metrics, assumptions and version before running.",
+      "existing_surface": null,
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-04",
+      "title": "Data",
+      "required_record": "Record provenance, license, allowed use and access boundary; keep private data private.",
+      "existing_surface": null,
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-05",
+      "title": "Experiments",
+      "required_record": "Link protocol and data versions to an immutable result or failure receipt.",
+      "existing_surface": null,
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-06",
+      "title": "Independent review",
+      "required_record": "Record reviewer, evidence, objections and disposition in a private record.",
+      "existing_surface": null,
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-07",
+      "title": "Findings",
+      "required_record": "Record supported and unsupported conclusions, uncertainty and evidence links.",
+      "existing_surface": null,
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-08",
+      "title": "Contribution credit",
+      "required_record": "Maintain private role/contribution records; verify required public disclosures.",
+      "existing_surface": null,
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-09",
+      "title": "Final submission",
+      "required_record": "Review requirements, public notebook, data rights and final submission receipt.",
+      "existing_surface": null,
+      "status": "unknown",
+      "classification": "internal"
+    }
+  ],
+  "change_history": []
+}
