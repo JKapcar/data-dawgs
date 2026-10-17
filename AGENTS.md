@@ -105,6 +105,13 @@ Rules that are not optional:
 
 ## House style for anything user-facing
 
+- Follow [Visual and interaction design](docs/visual-interaction-design.md) for site UI,
+  design proposals and AI-produced explanations for this repository. Jason's durable
+  preference is abundant useful visuals and tactile controls: "538 meets Apple," with
+  amusement-park energy and analytical clarity. Preserve truthful data, accessibility
+  and verified outcomes. This guidance does not authorize account configuration or
+  changes to other agents' instructions.
+
 - Values are labelled **MV / Market Value**. Do not add new vendor-name instances, and do not
   claim "consensus methodology" until the blend actually ships.
 - Numbers carry their date. Simulation output is labelled as simulation. Modelled inputs are
