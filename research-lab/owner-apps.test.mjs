@@ -98,6 +98,18 @@ test('development reader stays off and rechecks owner permission after object I/
  assert.ok(!(await f.api.list(f.env,caller)).some(t=>t.name==='dd_owner_bdb_data'));
 });
 
+test('v2 revocation during a deep index read denies the completed response',async()=>{
+ const f=rig();await f.enable('research');const sourceSha256='27d52f594d6d31d4f617f9c94b0b37d11e280397ad8293c0987da5f91a8d0ced',objects=new Map();
+ const put=async value=>{const text=JSON.stringify(value),hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text))),b=>b.toString(16).padStart(2,'0')).join('');objects.set(hash,text);return hash;};
+ const leaf=await put({version:2,kind:'index',sourceSha256,table:'players',artifacts:[]});
+ const branch=await put({version:2,kind:'index',sourceSha256,table:'players',children:[leaf]});
+ const root=await put({version:2,kind:'index',sourceSha256,table:'players',children:[branch]});
+ const tables=Object.fromEntries(['players','combine_results','combine_tracking','games','player_play','game_tracking'].map(t=>[t,{root,depth:2,rows:0,columns:[]} ]));
+ f.env.RESEARCH_DEVELOPMENT_DATA_ENABLED='true';f.env.RESEARCH_DEVELOPMENT_MANIFEST_SHA=await put({version:2,sourceSha256,classes:['2023','2024'],seasons:['2023','2024'],policy:'development-cohort-only-v1',holdoutRead:false,tables});
+ f.env.RESEARCH_UPLOADS={get:async key=>{const hash=key.split('/').at(-1).slice(0,-5),text=objects.get(hash);if(hash===leaf)f.db.get(r).ownerConnector.enabled=false;return {size:text.length,body:new Response(text).body};}};
+ await assert.rejects(f.run('dd_owner_bdb_data',{op:'index',table:'players',path:[0,0]}),/permission_off/);
+});
+
 for(const mode of ['credential_revoked','owner_expired'])test('development read denies '+mode+' during object I/O',async()=>{
  const f=rig();await f.enable('research');
  const manifest=JSON.stringify({version:1,sourceSha256:'27d52f594d6d31d4f617f9c94b0b37d11e280397ad8293c0987da5f91a8d0ced',classes:['2023','2024'],holdoutRead:false,artifacts:[]});

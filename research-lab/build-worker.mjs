@@ -4,7 +4,7 @@ import {readFileSync,writeFileSync,mkdirSync,copyFileSync} from 'node:fs';
 import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';
 const root=path.dirname(fileURLToPath(import.meta.url));
 export function buildWorker(destination=path.join(root,'../work/artifacts/research-lab')) {
-  const modules=['tracking.mjs','machine-core.mjs','worker-core.mjs','gateway.mjs','upload-gateway.mjs','exact-store.mjs','agent-identity.mjs','pound-agent-gateway.mjs','agent-setup.mjs','owner-apps.mjs','development-data.mjs'];
+  const modules=['tracking.mjs','machine-core.mjs','worker-core.mjs','gateway.mjs','upload-gateway.mjs','exact-store.mjs','agent-identity.mjs','pound-agent-gateway.mjs','agent-setup.mjs','owner-apps.mjs','development-data.mjs','development-index.mjs','development-v3.mjs'];
   const worker=readFileSync(path.join(root,'../dawg-bot-worker.js'),'utf8');
   const anchor='  async fetch(request, env) {';
   if(worker.split(anchor).length!==2)throw new Error('Worker entry changed; review integration before rebuilding');
