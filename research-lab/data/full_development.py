@@ -35,6 +35,7 @@ def prepare(source, out, expected_sha=SOURCE_SHA, expected_size=SOURCE_SIZE):
                                  'time is a source timestamp, not an invented frame_id.',
                                  'player_play preserves player-level rows; no fabricated play outcome.'])
     with zipfile.ZipFile(source) as z:
+        headers = {}
         def source_rows(table):
             names = [n for n in z.namelist() if Path(n).name == table + '.csv']
             if len(names) != 1:
@@ -44,6 +45,7 @@ def prepare(source, out, expected_sha=SOURCE_SHA, expected_size=SOURCE_SIZE):
                 columns = next(reader)
                 if len(columns) != len(set(columns)) or any(c.startswith('dd_') for c in columns):
                     raise ValueError('invalid schema')
+                headers[table] = columns
                 for values in reader:
                     if len(values) != len(columns):
                         raise ValueError('malformed row')
@@ -128,6 +130,13 @@ def prepare(source, out, expected_sha=SOURCE_SHA, expected_size=SOURCE_SIZE):
                 count += 1
             flush()
             flush_leaf()
+            if table == 'game_tracking' and headers['game_tracking_2023'] != headers['game_tracking_2024']:
+                raise ValueError('tracking member schema drift')
+            if columns is None:
+                columns = headers['game_tracking_2023' if table == 'game_tracking' else table].copy()
+                if table in ('game_tracking', 'player_play'):
+                    columns += ['dd_season', 'dd_draft_year']
+                missing = dict.fromkeys(columns, 0)
             if not leaves:
                 leaves.append(persist(out, dict(version=2, kind='index', sourceSha256=digest, table=table, artifacts=[])))
             depth = 0

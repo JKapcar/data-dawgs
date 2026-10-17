@@ -13,7 +13,7 @@ function fixture(year='2023'){
  const tables=Object.fromEntries(['players','combine_results','combine_tracking','games','player_play','game_tracking'].map(t=>[t,{root,depth:1,rows:256,columns:cols.map(name=>({name}))}]));
  const pin=put({version:2,sourceSha256:SOURCE_SHA,classes:['2023','2024'],seasons:['2023','2024'],policy:'development-cohort-only-v1',holdoutRead:false,tables});
  const env={RESEARCH_DEVELOPMENT_DATA_ENABLED:'true',RESEARCH_DEVELOPMENT_MANIFEST_SHA:pin,RESEARCH_UPLOAD_TENANT:'synthetic',RESEARCH_UPLOADS:{async get(key){reads++;assert.match(key,/^development\/owner\/synthetic\//);const text=objects.get(key.split('/').at(-1).slice(0,-5));return text===undefined?null:{size:Buffer.byteLength(text),body:new Response(text).body};}}};
- return {env,artifact,leaf,objects,reads:()=>reads,call:a=>readDevelopmentData(env,'owner',a)};
+ return {env,artifact,leaf,objects,put,cols,reads:()=>reads,call:a=>readDevelopmentData(env,'owner',a)};
 }
 test('v2 traversal, full row pagination, filtering and exact artifact',async()=>{
  const f=fixture();assert.equal((await f.call({op:'catalog'})).version,2);
@@ -32,4 +32,17 @@ test('v2 denies invalid paths, tables, hashes, SQL and bounds without arbitrary 
 });
 test('v2 hash-valid holdout rows fail closed',async()=>{
  const f=fixture('2025');await assert.rejects(f.call({op:'artifact',table:'game_tracking',path:[0],artifact:f.artifact}),/non_development/);
+});
+
+
+test('v2 multi-level pages preserve repeated content and final partial chunks',async()=>{
+ const f=fixture(),descriptor={sha256:f.artifact,rows:256};
+ const partial=f.put({version:2,sourceSha256:SOURCE_SHA,table:'game_tracking',columns:f.cols,rows:[{nfl_id:'synthetic',dd_season:'2024',dd_draft_year:'2023',time:'last'}]});
+ const leaf=f.put({version:2,kind:'index',sourceSha256:SOURCE_SHA,table:'game_tracking',artifacts:[descriptor,descriptor,{sha256:partial,rows:1}]});
+ const branch=f.put({version:2,kind:'index',sourceSha256:SOURCE_SHA,table:'game_tracking',children:[leaf,leaf]});
+ const root=f.put({version:2,kind:'index',sourceSha256:SOURCE_SHA,table:'game_tracking',children:[branch]});
+ const manifest=JSON.parse(f.objects.get(f.env.RESEARCH_DEVELOPMENT_MANIFEST_SHA));manifest.tables.game_tracking={...manifest.tables.game_tracking,root,depth:2,rows:1026};f.env.RESEARCH_DEVELOPMENT_MANIFEST_SHA=f.put(manifest);
+ let count=0,last=0;
+ async function walk(path){const n=await f.call({op:'index',table:'game_tracking',path});if(n.children){for(let i=0;i<n.children.length;i++)await walk([...path,i]);return;}for(const a of n.artifacts){let offset=0;do{const page=await f.call({op:'rows',table:'game_tracking',path,artifact:a.sha256,offset});count+=page.rows.length;last+=page.rows.filter(r=>r.time==='last').length;offset=page.nextOffset;}while(offset!==null);}}
+ await walk([]);assert.equal(count,1026);assert.equal(last,2);
 });

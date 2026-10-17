@@ -83,3 +83,34 @@ label, and career snap totals do not supply it. A valid baseline needs a declare
 estimand, an authoritative unit dictionary and an approved outcome construction
 with a denominator and season/rookie boundaries. Do not report a substitute
 combine correlation as that baseline or a client success.
+
+## Independent review: research fitness remains blocked
+
+The supplied development tracking and player-play members contain cohort
+athletes only. The exporter is not withholding a full-field tracking layer.
+Cohort defenders may appear, but absent non-cohort defenders and ball tracks
+prevent reconstruction of complete nearest-defender or ball-relative metrics.
+Source-provided separation/cushion columns are distinct measurements whose
+definitions, units and missingness must be established before selecting an outcome.
+
+Current indexes support complete enumeration, not selective discovery: a caller
+may need to scan a whole table to find a game, play or athlete. Do not activate
+this shape merely because individual calls are bounded. A useful next iteration
+needs hash-pinned partition metadata for season/type, game/play and athlete,
+while retaining small row previews and explicit cohort/context flags. REG-only
+and rookie-only analysis must be deliberate selections, not implicit defaults.
+
+Larger bounded shards can reduce object/read overhead. Compressed artifacts can
+reduce transfer size, but neither supplies selective discovery or missing context.
+Any new compressed format must pin compressed and decoded hashes, bound both
+byte sizes and row count, reject decompression overruns, and retain owner/grant
+rechecks. No arbitrary query execution, public URL or unbounded download is needed.
+This is a proposed local design direction, not an activated format or expanded
+sharing policy. Full-field context would require another authorized source and
+an explicit development-only contextual scope.
+
+The review fixes preserve repeated content references as row occurrences, retain
+empty-table headers, reject tracking-member header drift even with empty eligible
+partitions, and test revocation during deep index traversal. Existing full-data
+evidence verifies every artifact; real row pagination was sampled per table.
+Synthetic multi-level tests cover repeated pages and the final partial chunk.

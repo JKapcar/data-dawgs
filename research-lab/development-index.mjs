@@ -13,7 +13,8 @@ export async function readIndexedDevelopment({m,args,root,manifestSha,load,check
   check(n.version===2&&n.kind==='index'&&n.sourceSha256===sourceSha&&n.table===args.table,'invalid_index');
   const leaf=level===schema.depth;
   check(leaf?Array.isArray(n.artifacts)&&n.artifacts.length<=64&&!n.children:Array.isArray(n.children)&&n.children.length>0&&n.children.length<=64&&n.children.every(hash)&&!n.artifacts,'invalid_index');
-  if(leaf){const seen=new Set();for(const a of n.artifacts){check(hash(a.sha256)&&!seen.has(a.sha256)&&Number.isSafeInteger(a.rows)&&a.rows>0&&a.rows<=256,'invalid_index');seen.add(a.sha256);}}
+  // Repeated descriptors preserve source row multiplicity; hashes identify content, not occurrences.
+  if(leaf)for(const a of n.artifacts)check(hash(a.sha256)&&Number.isSafeInteger(a.rows)&&a.rows>0&&a.rows<=256,'invalid_index');
   if(level===path.length){
    if(args.op==='index')return {manifestSha256:manifestSha,indexSha256:current,path,...n};
    check(leaf,'leaf_path_required');

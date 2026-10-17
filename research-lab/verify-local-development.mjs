@@ -19,7 +19,7 @@ for(const table of Object.keys(m.tables)){
  let rows=0,artifacts=0;const visited=new Set();
  async function walk(p){
   const index=await call({op:'index',table,path:p});
-  if(visited.has(index.indexSha256))throw Error('duplicate index');visited.add(index.indexSha256);
+  visited.add(index.indexSha256); // The same immutable page can occur at multiple paths.
   if(index.children){for(let i=0;i<index.children.length;i++)await walk([...p,i]);return;}
   for(const a of index.artifacts){
    const exact=await call({op:'artifact',table,path:p,artifact:a.sha256});
