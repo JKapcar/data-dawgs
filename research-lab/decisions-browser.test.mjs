@@ -34,18 +34,18 @@ try{
  const first=page.locator('.card').first();await first.locator('summary').click();await first.screenshot({path:path.join(out,'detail-390.png')});
  await first.locator('input[type=radio]').first().check();await first.locator('textarea').fill('Synthetic rationale.');await first.getByText('Preview answer',{exact:true}).click();
  assert.equal(writes.length,0);assert.equal(await page.locator('#back').evaluate(e=>e===document.activeElement),true);await page.locator('#back').click();assert.equal(writes.length,0);
- await first.getByText('Preview answer',{exact:true}).click();lose=true;await page.locator('#confirm').click();await page.getByText('Retry & verify',{exact:true}).waitFor();await page.locator('#confirm').click();await page.getByText(/Saved and read back/).waitFor();
+ await first.getByText('Preview answer',{exact:true}).click();lose=true;await page.locator('#confirm').click();await page.getByText('Retry & verify',{exact:true}).waitFor();await page.locator('#confirm').click();await page.locator('#preview').waitFor({state:'hidden'});await page.getByText(/Saved and read back/).waitFor();
  assert.equal(writes.length,2);assert.equal(writes[0].request_id,writes[1].request_id);assert.equal(state.decisions[0].responses.length,1);
  for(const i of [1,2,3,4]){const card=page.locator('.card').nth(i);
   if(i===1)await card.locator('input[type=number]').fill('6');
   if(i===2){await card.locator('select').nth(0).selectOption('2');await card.locator('select').nth(1).selectOption('1');}
   if(i===3){await card.locator('input[type=number]').nth(0).fill('3');await card.locator('input[type=number]').nth(1).fill('7');}
   if(i===4){await card.locator('select').nth(0).selectOption('now');await card.locator('select').nth(1).selectOption('later');}
-  await card.locator('textarea').fill('Synthetic rationale.');await card.getByText('Preview answer',{exact:true}).click();await page.locator('#confirm').click();await page.getByText(/Saved and read back/).waitFor();
+  await card.locator('textarea').fill('Synthetic rationale.');await card.getByText('Preview answer',{exact:true}).click();await page.locator('#confirm').click();await page.locator('#preview').waitFor({state:'hidden'});await page.getByText(/Saved and read back/).waitFor();
  }
  assert.deepEqual(state.decisions[1].responses[0].answer,{number:6});assert.deepEqual(state.decisions[2].responses[0].answer,{order:['b','a']});
  await page.setViewportSize({width:320,height:780});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:path.join(out,'deck-320.png')});
- const card=page.locator('.card').first();await card.locator('textarea').fill('Need a better source.');await card.getByText('Need more information',{exact:true}).click();await page.locator('#confirm').click();await page.getByText(/Saved and read back/).waitFor();assert.equal(state.decisions[0].deck_status,'needs_research');
+ const card=page.locator('.card').first();await card.locator('textarea').fill('Need a better source.');await card.getByText('Need more information',{exact:true}).click();await page.locator('#confirm').click();await page.locator('#preview').waitFor({state:'hidden'});await page.getByText(/Saved and read back/).waitFor();assert.equal(state.decisions[0].deck_status,'needs_research');
  await page.locator('.card').first().locator('textarea').fill('Defer synthetic case.');await page.locator('.card').first().getByText('Defer',{exact:true}).click();conflict=true;await page.locator('#confirm').click();await page.getByText(/project or proposal changed/).waitFor();assert.equal(await page.locator('.card').count(),0);
  conflict=false;disabled=true;await page.getByText('Open project',{exact:true}).click();await page.getByText(/Decision storage is not enabled/).waitFor();assert.equal(await page.locator('.card').count(),0);
  assert.deepEqual(errors,[]);await context.close();
