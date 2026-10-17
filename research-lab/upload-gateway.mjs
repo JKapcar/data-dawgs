@@ -3,6 +3,38 @@ export const PART_BYTES=8*1024*1024, MAX_BYTES=10*1024*1024*1024;
 const fail=(status,message)=>{throw Object.assign(new Error(message),{status});};
 const hex=bytes=>Array.from(new Uint8Array(bytes),b=>b.toString(16).padStart(2,'0')).join('');
 const digest=async bytes=>hex(await crypto.subtle.digest('SHA-256',bytes));
+export const RECONCILE_MAX_BYTES=512*1024*1024, RECONCILE_TIMEOUT_MS=20000;
+const sameObject=(a,b)=>!!a&&!!b&&typeof a.version==='string'&&a.version.length>0&&typeof a.etag==='string'&&a.etag.length>0&&a.version===b.version&&a.etag===b.etag&&a.size===b.size;
+// Existing server-side copies may have CRC metadata only. Never trust a caller's
+// receipt or buffer the archive: native DigestStream retains only hash state.
+export async function verifyExistingArchive(bucket,key,head,size,sha,signal,timeoutMs=RECONCILE_TIMEOUT_MS){
+ if(!Number.isSafeInteger(size)||size<22||size>RECONCILE_MAX_BYTES)fail(413,'archive_verification_size_limit');
+ if(!sameObject(head,head)||head.size!==size||head.checksums?.sha256)fail(409,'destination_conflict');
+ if(typeof crypto.DigestStream!=='function')fail(503,'streaming_digest_unavailable');
+ const controller=new AbortController();let timer;
+ const cancel=()=>controller.abort(Object.assign(new Error('archive_verification_cancelled'),{status:408}));
+ signal?.addEventListener('abort',cancel,{once:true});if(signal?.aborted)cancel();
+ const stopped=new Promise((_,reject)=>{const abort=()=>reject(controller.signal.reason);controller.signal.addEventListener('abort',abort,{once:true});if(controller.signal.aborted)abort();});
+ timer=setTimeout(()=>controller.abort(Object.assign(new Error('archive_verification_timeout'),{status:408})),Math.min(timeoutMs,RECONCILE_TIMEOUT_MS));
+ const work=async()=>{
+  if(controller.signal.aborted)throw controller.signal.reason;
+  const object=await bucket.get(key,{onlyIf:{etagMatches:head.etag}});
+  if(controller.signal.aborted){object?.body?.cancel().catch(()=>{});throw controller.signal.reason;}
+  if(!sameObject(head,object)||!object.body){object?.body?.cancel().catch(()=>{});fail(409,'destination_changed');}
+  let bytes=0;const sink=new crypto.DigestStream('SHA-256');sink.digest.catch(()=>{});
+  const boundedStream=new TransformStream({transform(chunk,c){
+   if(!(chunk instanceof Uint8Array)||chunk.byteLength>1024*1024)fail(413,'archive_verification_chunk_limit');
+   bytes+=chunk.byteLength;if(bytes>size)fail(422,'object_size_mismatch');c.enqueue(chunk);
+  }});
+  await object.body.pipeThrough(boundedStream).pipeTo(sink,{signal:controller.signal});
+  if(bytes!==size||hex(await sink.digest)!==sha)fail(422,'checksum_mismatch');
+  const current=await bucket.head(key);
+  if(controller.signal.aborted)throw controller.signal.reason;
+  if(!sameObject(head,current)||(current.checksums?.sha256&&hex(current.checksums.sha256)!==sha))fail(409,'destination_changed');
+  return current;
+ };
+ try{return await Promise.race([work(),stopped]);}finally{clearTimeout(timer);signal?.removeEventListener('abort',cancel);}
+}
 async function bounded(request,max,timeout=60000){
  const reader=request.body?.getReader();if(!reader)fail(400,'body_required');let size=0,timer;
  const chunks=[],deadline=new Promise((_,reject)=>{timer=setTimeout(()=>{reader.cancel().catch(()=>{});reject(Object.assign(new Error('body_timeout'),{status:408}));},timeout);});
@@ -63,8 +95,13 @@ export function createUploadGateway({fbGet,fbPut,sessionAuth,now=Date.now}){
     const sha=body.sha256,dest='datasets/'+identity.uid+'/'+sha+'.zip';
     if(d.durable&&d.durable.sha256!==sha)fail(409,'durable_copy_has_other_checksum');
     const verified=h=>!!h&&h.size===d.size&&!!h.checksums?.sha256&&hex(h.checksums.sha256)===sha;
-    let head=await bucket.head(dest);
-    if(head&&!verified(head))fail(409,'destination_conflict');
+    let head=await bucket.head(dest),verification='R2 checked SHA-256 on write; size and stored checksum re-read before marking durable';
+    if(head&&!verified(head)){
+     // An explicit wrong checksum or size stays a hard conflict, without reads/writes.
+     if(head.size!==d.size||head.checksums?.sha256)fail(409,'destination_conflict');
+     head=await verifyExistingArchive(bucket,dest,head,d.size,sha,request.signal);
+     verification='Full object readback SHA-256 and exact size verified; R2 version and ETag rechecked before conditional status update';
+    }
     if(!head){
      const source=await bucket.get(d.key);if(!source)fail(410,'object_expired');if(source.size!==d.size)fail(422,'object_size_mismatch');
      await authorize();
@@ -75,9 +112,13 @@ export function createUploadGateway({fbGet,fbPut,sessionAuth,now=Date.now}){
      if(!verified(head))fail(422,'destination_verification_failed');
     }
     for(let attempt=0;attempt<5;attempt++){
-     snapshot=await read();await authorize();if(snapshot.data?.id!==d.id||snapshot.data.status!=='complete')fail(409,'upload_changed');
+     snapshot=await read();await authorize();if(snapshot.data?.id!==d.id||snapshot.data.status!=='complete'||snapshot.data.size!==d.size||snapshot.data.key!==d.key)fail(409,'upload_changed');
+     const current=await bucket.head(dest);
+     if(request.signal.aborted)fail(408,'archive_verification_cancelled');
+     if(!sameObject(head,current)||(current.checksums?.sha256&&hex(current.checksums.sha256)!==sha))fail(409,'destination_changed');
+     await authorize();
      if(snapshot.data.durable?.sha256===sha&&snapshot.data.durable.key===dest)return send(project(snapshot.data));
-     const next={...snapshot.data,durable:{key:dest,sha256:sha,size:head.size,etag:head.etag,promotedAt:now(),verification:'R2 checked SHA-256 on write; size and stored checksum re-read before marking durable'}};
+     const next={...snapshot.data,durable:{key:dest,sha256:sha,size:head.size,etag:head.etag,promotedAt:now(),verification}};
      if(await write(snapshot,next))return send(project(next));
     }
     fail(409,'retry_promote');
