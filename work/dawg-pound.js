@@ -106,7 +106,7 @@ function poundActuals(task,activity){
   const start=moves.find(e=>e.status==='working'),end=['done','canceled'].includes(task.status)?moves.filter(e=>e.status===task.status).at(-1):null;
   return {actual_start:start?start.at:null,actual_end:end?end.at:null,actual_source:'activity'};
 }
-function poundView(state){const {receipts,...view}=state;return {...view,tasks:view.tasks.map(t=>({...t,revision:t.revision||1,...poundActuals(t,view.activity)})),contributions:poundContributions(state),agent_access_enabled:false};}
+function poundView(state){const {receipts,portraitUploads,...view}=state;return {...view,tasks:view.tasks.map(t=>({...t,revision:t.revision||1,...poundActuals(t,view.activity)})),contributions:poundContributions(state),agent_access_enabled:false};}
 function poundBlocksCycle(tasks,id,blocks){
   const edges=new Map(tasks.map(t=>[t.id,t.id===id?blocks:t.blocks||[]]));if(!edges.has(id))edges.set(id,blocks);
   const seen=new Set(),walk=(n,path)=>{if(path.has(n))return true;if(seen.has(n))return false;seen.add(n);path.add(n);for(const m of edges.get(n)||[])if(walk(m,path))return true;path.delete(n);return false;};

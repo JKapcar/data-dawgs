@@ -71,3 +71,7 @@ The website and the owner connector are one owner on one storage key per app. Pi
 - Uploaded archives live under the owner uid, not under a tenant prefix. The bucket lifecycle
   expires `quarantine/` objects after 30 days (PRIVATE-ACTIVATION.md), while the metadata record
   stays until deleted.
+
+## Private Pack portraits
+
+Portraits use a separate signed-owner upload/read flow, not these connector write tools. Existing context text/version operations remain unchanged. Do not put base64 images, public URLs, or session credentials in context text/refs. See [private portrait contract](../docs/private-pack-portraits.md) for limits, resumable requests, private storage, and the disabled-by-default release gate.
