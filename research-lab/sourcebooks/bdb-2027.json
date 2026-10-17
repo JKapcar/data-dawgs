@@ -1,0 +1,414 @@
+{
+  "schema_version": 1,
+  "kind": "competition",
+  "competition": {
+    "id": "nfl-big-data-bowl-2027",
+    "name": "NFL Big Data Bowl 2027",
+    "official_url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027",
+    "rules_url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/rules",
+    "objective": "Connect Combine measures to regular-season performance using player tracking data.",
+    "display_timezones": [
+      "UTC",
+      "America/New_York"
+    ]
+  },
+  "checked_on": "2026-10-17",
+  "verification_note": "Official indexed extracts supplied in the research handoff on 2026-10-17. Direct submission page returned no readable body; rules returned Internal Error. Indexed extracts are not full live-rule verification. No interim submissions or recurring check-ins were found in the published timeline; inaccessible rules may contain more obligations.",
+  "requirements": [
+    {
+      "id": "SUB-001",
+      "category": "Submission",
+      "text": "At most 2,000 words.",
+      "classification": "required",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/overview/submission-requirements",
+        "section": "submission-requirements",
+        "checked_on": "2026-10-17",
+        "evidence_level": "official_indexed_extract"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": {
+        "operator": "<=",
+        "value": 2000,
+        "unit": "words"
+      }
+    },
+    {
+      "id": "SUB-002",
+      "category": "Submission",
+      "text": "Fewer than 10 tables/figures in total.",
+      "classification": "required",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/overview/submission-requirements",
+        "section": "submission-requirements",
+        "checked_on": "2026-10-17",
+        "evidence_level": "official_indexed_extract"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": {
+        "operator": "<",
+        "value": 10,
+        "unit": "tables_and_figures"
+      }
+    },
+    {
+      "id": "DATA-001",
+      "category": "Data",
+      "text": "Use player tracking data.",
+      "classification": "required",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/overview/submission-requirements",
+        "section": "submission-requirements",
+        "checked_on": "2026-10-17",
+        "evidence_level": "official_indexed_extract"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "SCOPE-001",
+      "category": "Scope",
+      "text": "Explicitly connect Combine performance to regular-season performance.",
+      "classification": "required",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/overview/submission-requirements",
+        "section": "submission-requirements",
+        "checked_on": "2026-10-17",
+        "evidence_level": "official_indexed_extract"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "SUB-003",
+      "category": "Submission",
+      "text": "Use readable Markdown and embedded visuals.",
+      "classification": "required",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/overview/evaluation",
+        "section": "evaluation",
+        "checked_on": "2026-10-17",
+        "evidence_level": "official_indexed_extract"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "PUB-001",
+      "category": "Publication",
+      "text": "Attach a PUBLIC Kaggle Notebook for completeness; publication readiness is unknown pending data rights review.",
+      "classification": "required",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/overview/evaluation",
+        "section": "evaluation",
+        "checked_on": "2026-10-17",
+        "evidence_level": "official_indexed_extract"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "TEAM-001",
+      "category": "Team & eligibility",
+      "text": "Verify eligibility and any geographic or age restrictions.",
+      "classification": "to_verify",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/rules",
+        "section": "rules",
+        "checked_on": "2026-10-17",
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "TEAM-002",
+      "category": "Team & eligibility",
+      "text": "Verify team-size cap and team-merger deadline.",
+      "classification": "to_verify",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/rules",
+        "section": "rules",
+        "checked_on": "2026-10-17",
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "TEAM-003",
+      "category": "Team & eligibility",
+      "text": "Verify separate entry deadline.",
+      "classification": "to_verify",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/rules",
+        "section": "rules",
+        "checked_on": "2026-10-17",
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "DATA-002",
+      "category": "Data",
+      "text": "Verify external-data permissions, licenses, redistribution and publication constraints.",
+      "classification": "to_verify",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/rules",
+        "section": "rules",
+        "checked_on": "2026-10-17",
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "PUB-002",
+      "category": "Publication",
+      "text": "Complete data rights review before publishing any notebook or derived material.",
+      "classification": "internal",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/rules",
+        "section": "rules",
+        "checked_on": "2026-10-17",
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "AI-001",
+      "category": "Disclosure",
+      "text": "Verify competition-specific AI use and disclosure policy; no restriction assumed.",
+      "classification": "to_verify",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/rules",
+        "section": "rules",
+        "checked_on": "2026-10-17",
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "CREDIT-001",
+      "category": "Disclosure",
+      "text": "Verify competition-specific role and contribution disclosure requirements.",
+      "classification": "to_verify",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/rules",
+        "section": "rules",
+        "checked_on": "2026-10-17",
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "FINAL-001",
+      "category": "Submission",
+      "text": "Verify finalist obligations and any additional submission components or limits.",
+      "classification": "to_verify",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/rules",
+        "section": "rules",
+        "checked_on": "2026-10-17",
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "JUDGE-001",
+      "category": "Judging",
+      "text": "Verify full judging criteria, weights, tie-breaks and completeness conditions.",
+      "classification": "to_verify",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/rules",
+        "section": "rules",
+        "checked_on": "2026-10-17",
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    },
+    {
+      "id": "TIME-001",
+      "category": "Timeline",
+      "text": "Verify whether inaccessible rules add recurring check-ins or interim submissions.",
+      "classification": "to_verify",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/rules",
+        "section": "rules",
+        "checked_on": "2026-10-17",
+        "evidence_level": "unverified"
+      },
+      "readiness": "unknown",
+      "completion_evidence": null,
+      "constraint": null
+    }
+  ],
+  "timeline": [
+    {
+      "id": "DATE-01",
+      "title": "Competition starts",
+      "date": "2026-10-06",
+      "instant": null,
+      "end_date": null,
+      "classification": "official",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/overview/timeline",
+        "section": "Timeline",
+        "checked_on": "2026-10-17",
+        "evidence_level": "official_indexed_extract"
+      },
+      "note": "Organizers may change dates. Date-only entries have no verified time or timezone."
+    },
+    {
+      "id": "DATE-02",
+      "title": "Final submission deadline",
+      "date": null,
+      "instant": "2027-01-06T23:59:00Z",
+      "end_date": null,
+      "classification": "official",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/overview/timeline",
+        "section": "Timeline",
+        "checked_on": "2026-10-17",
+        "evidence_level": "official_indexed_extract"
+      },
+      "note": "Organizers may change dates. Date-only entries have no verified time or timezone."
+    },
+    {
+      "id": "DATE-03",
+      "title": "Judging (subject to change)",
+      "date": "2027-01-07",
+      "instant": null,
+      "end_date": "2027-01-25",
+      "classification": "official",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/overview/timeline",
+        "section": "Timeline",
+        "checked_on": "2026-10-17",
+        "evidence_level": "official_indexed_extract"
+      },
+      "note": "Organizers may change dates. Date-only entries have no verified time or timezone."
+    },
+    {
+      "id": "DATE-04",
+      "title": "Anticipated results",
+      "date": "2027-01-26",
+      "instant": null,
+      "end_date": null,
+      "classification": "official",
+      "source": {
+        "url": "https://www.kaggle.com/competitions/nfl-big-data-bowl-2027/overview/timeline",
+        "section": "Timeline",
+        "checked_on": "2026-10-17",
+        "evidence_level": "official_indexed_extract"
+      },
+      "note": "Organizers may change dates. Date-only entries have no verified time or timezone."
+    }
+  ],
+  "open_questions": [
+    "Resolve eligibility, team size, merger and entry deadlines from accessible current-year rules.",
+    "Resolve data rights, AI policy, contribution disclosures and finalist obligations.",
+    "No conflicting dates identified in available evidence; inaccessible rules remain a verification gap."
+  ],
+  "lifecycle": [
+    {
+      "id": "LIFE-01",
+      "title": "Idea intake",
+      "required_record": "Record question, rationale and source before promoting an idea.",
+      "existing_surface": "private.html#hypotheses",
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-02",
+      "title": "Hypotheses",
+      "required_record": "Register falsifiable claim, scope and falsification test.",
+      "existing_surface": "private.html#hypotheses",
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-03",
+      "title": "Methods",
+      "required_record": "Record protocol, metrics, assumptions and version before running.",
+      "existing_surface": "private.html",
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-04",
+      "title": "Data",
+      "required_record": "Record provenance, license, allowed use and access boundary; keep private data private.",
+      "existing_surface": "upload.html",
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-05",
+      "title": "Experiments",
+      "required_record": "Link protocol and data versions to an immutable result or failure receipt.",
+      "existing_surface": "private.html",
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-06",
+      "title": "Independent review",
+      "required_record": "Record reviewer, evidence, objections and disposition in a private record.",
+      "existing_surface": null,
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-07",
+      "title": "Findings",
+      "required_record": "Record supported and unsupported conclusions, uncertainty and evidence links.",
+      "existing_surface": "private.html",
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-08",
+      "title": "Contribution credit",
+      "required_record": "Maintain private role/contribution records; verify required public disclosures.",
+      "existing_surface": null,
+      "status": "unknown",
+      "classification": "internal"
+    },
+    {
+      "id": "LIFE-09",
+      "title": "Final submission",
+      "required_record": "Review requirements, public notebook, data rights and final submission receipt.",
+      "existing_surface": null,
+      "status": "unknown",
+      "classification": "internal"
+    }
+  ],
+  "change_history": [
+    {
+      "date": "2026-10-17",
+      "summary": "Initial public sourcebook from official indexed evidence; all readiness remains unknown."
+    }
+  ]
+}
