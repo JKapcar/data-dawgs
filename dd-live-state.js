@@ -13,7 +13,11 @@
     const events = options.events || globalThis;
     const navigatorRef = options.navigator || globalThis.navigator;
     const pollMs = options.pollMs || 15000, staleMs = options.staleMs || 45000;
+    // Realtime already delivers changes. Keep an occasional full reconciliation,
+    // but use the fast fallback only while the stream is unavailable.
+    const streamPollMs = Math.max(pollMs, options.streamPollMs || 300000);
     let active=false, generation=0, revision=0, inFlight=null, queued=false, stream=null, timer=null;
+    let streamConnected=false, lastProbeAt=null;
     let lastSuccessAt=null, state='loading', reason=null, controller=null;
     const snapshot = ()=>({state, reason, lastSuccessAt});
     function status(next, why=null){
@@ -34,6 +38,7 @@
     async function refresh(){
       if(!active) return;
       if(inFlight) return inFlight;
+      lastProbeAt=clock();
       const startGeneration=generation, startRevision=revision;
       controller=new AbortController();
       const requestController=controller;
@@ -45,9 +50,11 @@
           if(!response.ok) throw new Error('http_'+response.status);
           value=valid(await response.json());
         }catch(error){
-          if(active && generation===startGeneration && revision===startRevision)
+          if(active && generation===startGeneration && revision===startRevision){
+            streamConnected=false;
             status(navigatorRef?.onLine===false ? 'offline' : lastSuccessAt===null ? 'error' : 'stale',
               /^http_\d+$/.test(error.message) ? error.message : 'unavailable');
+          }
           return;
         }
         if(active && generation===startGeneration && revision===startRevision) accept(value);
@@ -68,15 +75,19 @@
       else void refresh();
     }
     function online(){ if(active) void refresh(); }
-    function offline(){ if(active) status('offline', 'network_offline'); }
+    function offline(){ if(active){streamConnected=false;status('offline', 'network_offline');} }
     function start(){
       if(active) return;
       active=true; generation++;
+      streamConnected=false;lastProbeAt=null;
       status(navigatorRef?.onLine===false ? 'offline' : 'loading');
       const currentGeneration=generation;
       if(Stream){
         try{
           stream=new Stream(options.url);
+          stream.addEventListener('open', ()=>{
+            if(active && generation===currentGeneration) streamConnected=true;
+          });
           stream.addEventListener('put', event=>{
             if(!active || generation!==currentGeneration) return;
             let message, value;
@@ -85,6 +96,7 @@
               if(message.path==='/') value=valid(message.data);
             }catch{ refreshAfterChange(); return; }
             if(message.path!=='/'){ refreshAfterChange(); return; }
+            streamConnected=true;
             accept(value);
           });
           stream.addEventListener('patch', ()=>{
@@ -92,6 +104,7 @@
           });
           stream.onerror=()=>{
             if(active && generation===currentGeneration){
+              streamConnected=false;
               if(lastSuccessAt===null || clock()-lastSuccessAt>=staleMs)
                 status(navigatorRef?.onLine===false ? 'offline' : 'stale', 'stream_unavailable');
               void refresh();
@@ -102,7 +115,8 @@
       events.addEventListener?.('online', online);
       events.addEventListener?.('offline', offline);
       timer=every(()=>{
-        if(lastSuccessAt!==null && clock()-lastSuccessAt>=staleMs)
+        if(streamConnected && lastProbeAt!==null && clock()-lastProbeAt<streamPollMs) return;
+        if(!streamConnected && lastSuccessAt!==null && clock()-lastSuccessAt>=staleMs)
           status(navigatorRef?.onLine===false ? 'offline' : 'stale', 'refresh_due');
         void refresh();
       }, pollMs);
@@ -110,6 +124,7 @@
     }
     function stop(){
       active=false; generation++; queued=false;
+      streamConnected=false;
       controller?.abort(); controller=null; inFlight=null;
       stream?.close(); stream=null;
       if(timer!==null) cancel(timer); timer=null;
