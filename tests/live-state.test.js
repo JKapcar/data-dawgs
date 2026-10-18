@@ -129,3 +129,25 @@ test('failed periodic reconciliation marks stale and restores fast polling',asyn
   h.advance(300000);for(const fn of h.intervals.values())fn();h.reads[1].reject(new Error('network'));await tick();assert.equal(h.reader.snapshot().state,'stale');
   h.advance(15000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,3);h.reads[2].resolve({});await tick();
 });
+test('late open and error events from a stopped stream cannot change current polling',async t=>{
+  const h=harness();t.after(()=>h.reader.stop());h.reader.start();h.reader.stop();h.reader.start();
+  h.reads[1].resolve({});await tick();h.streams[0].emit('open',{});
+  h.advance(15000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,3);
+  h.reads[2].resolve({});await tick();h.streams[1].emit('open',{});h.streams[0].onerror();
+  h.advance(15000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,3);
+});
+test('offline during reconciliation and online recovery retain fast fallback until stream reconnects',async t=>{
+  const h=harness();t.after(()=>h.reader.stop());h.reader.start();h.streams[0].emit('open',{});h.reads[0].resolve({});await tick();
+  h.advance(300000);for(const fn of h.intervals.values())fn();h.navigator.onLine=false;h.events.get('offline')();
+  h.reads[1].reject(new Error('offline'));await tick();assert.equal(h.reader.snapshot().state,'offline');
+  h.navigator.onLine=true;h.events.get('online')();assert.equal(h.reads.length,3);h.reads[2].resolve({});await tick();
+  h.advance(15000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,4);h.reads[3].resolve({});await tick();
+  h.streams[0].emit('open',{});h.advance(15000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,4);
+});
+test('a delayed background timer reconciles once on resume without catch-up requests',async t=>{
+  const h=harness();t.after(()=>h.reader.stop());h.reader.start();h.streams[0].emit('open',{});h.reads[0].resolve({});await tick();
+  h.advance(1800000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,2);
+  for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,2,'coalesce pending reconciliation');
+  h.reads[1].resolve({resumed:true});await tick();h.advance(15000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,2);
+  assert.deepEqual(h.values.at(-1),{resumed:true});
+});
