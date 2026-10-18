@@ -7343,7 +7343,7 @@
     "par_delta": -0.63,
     "internal_games": 4,
     "sd_sim": 4.62,
-    "sd_model": 2.935,
+    "sd_model": 2.936,
     "picks_remaining": 0
    },
    "Chris": {
@@ -7361,7 +7361,7 @@
     "par_delta": -1.86,
     "internal_games": 2,
     "sd_sim": 4.58,
-    "sd_model": 3.177,
+    "sd_model": 3.179,
     "picks_remaining": 0
    },
    "Tyler": {
@@ -7379,7 +7379,7 @@
     "par_delta": 1.59,
     "internal_games": 1,
     "sd_sim": 4.7,
-    "sd_model": 3.267,
+    "sd_model": 3.268,
     "picks_remaining": 0
    },
    "Kap": {
@@ -7433,7 +7433,7 @@
     "par_delta": -4.15,
     "internal_games": 2,
     "sd_sim": 5.08,
-    "sd_model": 2.969,
+    "sd_model": 2.97,
     "picks_remaining": 0
    }
   },
@@ -8874,7 +8874,7 @@
    }
   },
   "diagnostics": {
-   "checked_at_as_of": "2026-10-17",
+   "checked_at_as_of": "2026-10-18",
    "hard_failures": [],
    "checks": [
     {
@@ -9010,7 +9010,7 @@
      "label": "Two roster standard deviations, and they disagree",
      "ok": true,
      "detail": "The upstream simulation and the quadrature-plus-head-to-head calculation sit within 2.11 wins of each other (worst: Alan). They diverge most for rosters with internal games, and the simulation is the smaller of the two — it also draws correlated team strength, which quadrature cannot see. The page shows the simulated figure wherever it exists and says when it is falling back.",
-     "value": 2.111,
+     "value": 2.11,
      "severity": "info"
     }
    ]
