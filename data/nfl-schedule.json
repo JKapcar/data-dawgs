@@ -1,6 +1,6 @@
 {
  "as_of": "2026-10-18",
- "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit d6899a95163e7d44a1ce52fd12edda4e1c921902.",
+ "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 6b3f5838566d4137bea2e7047df0db73f0e84e3c.",
  "tier": "labs",
  "graded": false,
  "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts.",
@@ -10,13 +10,13 @@
   "loader_license": "MIT",
   "source_repository": "nflverse/nfldata",
   "source_url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-  "source_commit": "d6899a95163e7d44a1ce52fd12edda4e1c921902",
-  "source_committed_at": "2026-10-18T20:00:38Z",
+  "source_commit": "6b3f5838566d4137bea2e7047df0db73f0e84e3c",
+  "source_committed_at": "2026-10-18T20:20:20Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-10-18T20:09:29.546785Z"
+  "captured_at": "2026-10-18T20:20:58.435201Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:e3006d51b962e710644ff3c1d478143b81c3d3b773be2d621f76b8b15434794a",
+  "snapshot_id": "sha256:eb2b98b20571103be7ecfa0d4b418c90ecc0ebf54b2a6c064e149a75a198d225",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -1482,9 +1482,9 @@
     "divisional": true,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 19,
+    "home_score": 26
    },
    {
     "game_id": "2026_06_PIT_TB",
@@ -1516,9 +1516,9 @@
     "divisional": true,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 26,
+    "home_score": 20
    },
    {
     "game_id": "2026_06_ARI_LAR",
