@@ -26,7 +26,7 @@ async function handleDiscordAsk(request,env){
   const options=event.data.options;
   dqCheck(Array.isArray(options)&&options.length===1&&options[0].name==='question'&&options[0].type===3&&typeof options[0].value==='string'&&options[0].value.trim().length>0&&options[0].value.length<=2000,400,'invalid_question');
   const uid=event.member.user.id,links=JSON.parse(env.DISCORD_USER_LINKS||'[]');
-  const smoke=env.DISCORD_OWNER_SMOKE_ENABLED==='true'&&uid===env.DISCORD_SMOKE_USER_ID;
+  const smoke=env.DISCORD_OWNER_SMOKE_ENABLED==='true';
   const link=smoke?dsAdmission(env,event):links.find(x=>x.discord_user_id===uid);
   dqCheck(smoke||link?.project_id!=='jason-discord-smoke',403,'reserved_smoke_namespace');
   dqCheck(link&&link.scope==='discord:ask'&&dqProject(link.project_id)&&link.principal==='discord-user:'+uid&&dqPrincipal(link.principal)&&Date.parse(link.expires_at)>Date.now(),403,'linked_user_required');
