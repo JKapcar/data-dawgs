@@ -20,7 +20,7 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
   requireThat(command&&typeof command==='object'&&!Array.isArray(command)&&Object.keys(command).every(k=>['type','key','payload'].includes(k)),'Invalid command');
   const s=structuredClone(state), tenant=principal.tenant;
   const {type, key, payload:p={}}=command;
-  const fields={hypothesis:['id','expectedVersion','title','method','status','family',...HYPOTHESIS_DESIGN_FIELDS],evidence:['url','title','excerpt','kind'],discussion:['hypothesisId','kind','body','evidenceIds'],task:['hypothesisId','split','budgetMs','maxObservations'],claim:['taskId','leaseMs'],run:['taskId','leaseToken','tracking']}[type];
+  const fields={hypothesis:['id','expectedVersion','title','method','status','family',...HYPOTHESIS_DESIGN_FIELDS],evidence:['url','title','excerpt','kind'],discussion:['hypothesisId','kind','body','evidenceIds','hypothesisVersion','tracking','receiptId','receiptHash','reviewId','findingId','disposition'],task:['hypothesisId','split','budgetMs','maxObservations','dataCheckId'],claim:['taskId','leaseMs'],run:['taskId','leaseToken','tracking']}[type];
   requireThat(fields&&p&&typeof p==='object'&&!Array.isArray(p)&&Object.keys(p).every(k=>fields.includes(k)),'Invalid payload fields');
   text(key,160);
   const scope={hypothesis:'hypothesis:write',evidence:'evidence:write',discussion:'discussion:write',task:'task:write',claim:'task:claim',run:'experiment:run'}[type];
@@ -50,9 +50,54 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
   }
   if(type==='discussion') {
     const h=own('hypotheses',p.hypothesisId);
-    requireThat(['note','challenge'].includes(p.kind),'Discussion kind required');
+    requireThat(['note','challenge','data_check','review','finding','owner_decision'].includes(p.kind),'Discussion kind required');
     requireThat(Array.isArray(p.evidenceIds)&&p.evidenceIds.length<=30,'Evidence IDs required');p.evidenceIds.forEach(id=>own('evidence',id));
-    result={id:crypto.randomUUID(),...stamp,hypothesisId:h.id,kind:p.kind,body:text(p.body),evidenceIds:p.evidenceIds,
+    const workflow=['data_check','review','finding','owner_decision'].includes(p.kind);
+    const extra={};
+    if(workflow){
+      requireThat(p.hypothesisVersion===h.revisions.length,'Stale hypothesis version');
+      requireThat(h.revisions.at(-1).status!=='withdrawn','Hypothesis withdrawn');
+      extra.hypothesisVersion=p.hypothesisVersion;
+      extra.workflow='bounded-synthetic-v1';
+      const allowed={data_check:['tracking'],review:['receiptId','receiptHash','disposition'],finding:['receiptId','receiptHash','reviewId'],owner_decision:['receiptId','receiptHash','reviewId','findingId','disposition']}[p.kind];
+      requireThat(Object.keys(p).every(k=>['hypothesisId','kind','body','evidenceIds','hypothesisVersion',...allowed].includes(k)),'Fields do not match workflow stage');
+      if(p.kind==='data_check'){
+        const d=validateTracking(p.tracking);
+        requireThat(d.provenance.kind==='synthetic'&&d.split==='discovery','Synthetic discovery only');
+        extra.codeHash=codeHash;extra.dataHash=yield p.tracking;extra.synthetic=true;extra.baseline_fit=false;
+        extra.observations=d.frames.reduce((n,f)=>n+f.entities.length,0);
+      }else{
+        const r=own('receipts',p.receiptId),task=own('tasks',r.taskId);
+        requireThat(r.hypothesisId===h.id&&r.hypothesisVersion===p.hypothesisVersion&&r.receiptHash===p.receiptHash,'Receipt version mismatch');
+        const {receiptHash,...receiptBody}=r;
+        requireThat((yield receiptBody)===receiptHash,'Receipt integrity mismatch');
+        requireThat(r.hashes.code===codeHash,'Receipt code changed; rerun current implementation');
+        requireThat(task.dataCheckId&&r.synthetic===true&&r.outcome!=='failure','Bounded successful synthetic attempt required');
+        Object.assign(extra,{receiptId:r.id,receiptHash:r.receiptHash,synthetic:true,baseline_fit:false});
+        if(p.kind==='review'){
+          const subject=principal.subject||principal.id;
+          requireThat(!subject.startsWith('agent:'),'Delegated agent identity does not establish a separate account reviewer');
+          requireThat(!h.revisions.some(v=>(v.subject||v.actor)===subject)&&(r.subject||r.actor)!==subject,'Separate verified subject required; labels do not establish independence');
+          requireThat(['ready','changes_requested'].includes(p.disposition),'Review disposition required');
+          extra.separation='distinct_account_subject_only';extra.disposition=p.disposition;
+        }else{
+          const review=own('discussions',p.reviewId);
+          requireThat(review.kind==='review'&&review.receiptId===r.id&&review.receiptHash===r.receiptHash&&review.hypothesisVersion===p.hypothesisVersion&&review.disposition==='ready','Ready receipt-specific review required');
+          requireThat(s.discussions.filter(d=>d.kind==='review'&&d.receiptId===r.id).at(-1)?.id===review.id,'Review superseded');
+          extra.reviewId=review.id;
+          if(p.kind==='owner_decision'){
+            requireThat(principal.signedOwner===true,'Signed owner decision required');
+            const finding=own('discussions',p.findingId);
+            requireThat(finding.kind==='finding'&&finding.reviewId===review.id&&finding.receiptId===r.id&&finding.hypothesisVersion===p.hypothesisVersion,'Current finding required');
+            requireThat(s.discussions.filter(d=>d.kind==='finding'&&d.reviewId===review.id).at(-1)?.id===finding.id,'Finding superseded');
+            requireThat(['accept_descriptive','revise','defer'].includes(p.disposition),'Owner disposition required');
+            requireThat(!s.discussions.some(d=>d.kind==='owner_decision'&&d.findingId===finding.id),'Finding already decided');
+            Object.assign(extra,{findingId:finding.id,disposition:p.disposition,ownerAuthorized:true,execution:'not_executed'});
+          }
+        }
+      }
+    }else requireThat(Object.keys(p).every(k=>['hypothesisId','kind','body','evidenceIds'].includes(k)),'Fields do not match discussion');
+    result={id:crypto.randomUUID(),...stamp,...extra,hypothesisId:h.id,kind:p.kind,body:text(p.body),evidenceIds:p.evidenceIds,
       independent:p.kind==='challenge'&&!h.revisions.some(r=>(r.subject||r.actor)===(principal.subject||principal.id)),trust:'untrusted content'};s.discussions.push(result);
   }
   if(type==='task') {
@@ -60,7 +105,14 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
     requireThat(p.split==='discovery','Held-out execution unavailable');
     requireThat(Number.isInteger(p.budgetMs)&&p.budgetMs>=1&&p.budgetMs<=5000,'Runtime budget must be 1–5000ms');
     requireThat(Number.isInteger(p.maxObservations)&&p.maxObservations>=1&&p.maxObservations<=100000,'Observation budget invalid');
-    result={id:crypto.randomUUID(),...stamp,hypothesisId:h.id,hypothesisVersion:h.revisions.length,method:'descriptive-cohorts-v1',split:p.split,
+    if(p.dataCheckId!==undefined){
+      const check=own('discussions',p.dataCheckId);
+      requireThat(check.kind==='data_check'&&check.hypothesisId===h.id&&check.hypothesisVersion===h.revisions.length&&check.synthetic===true,'Current synthetic data check required');
+      requireThat(check.codeHash===codeHash,'Data check code changed');
+      requireThat(check.observations<=p.maxObservations,'Observation budget exceeded');
+      requireThat(h.revisions.at(-1).status!=='withdrawn','Hypothesis withdrawn');
+    }
+    result={id:crypto.randomUUID(),...stamp,...(p.dataCheckId?{dataCheckId:p.dataCheckId}:{}),hypothesisId:h.id,hypothesisVersion:h.revisions.length,method:'descriptive-cohorts-v1',split:p.split,
       requiredCapabilities:['experiment:run'],budgetMs:p.budgetMs,maxObservations:p.maxObservations,status:'queued',lease:null};s.tasks.push(result);
   }
   if(type==='claim') {
@@ -73,9 +125,15 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
   if(type==='run') {
     const task=own('tasks',p.taskId);
     requireThat(task.status==='claimed'&&task.lease?.owner===principal.id&&task.lease.token===p.leaseToken&&task.lease.expiresAt>now,'Valid owned lease required');
+    if(task.dataCheckId){
+      requireThat(own('discussions',task.dataCheckId).codeHash===codeHash,'Data check code changed');
+      const h=own('hypotheses',task.hypothesisId);
+      requireThat(h.revisions.length===task.hypothesisVersion&&h.revisions.at(-1).status!=='withdrawn','Stale task; recheck current hypothesis');
+    }
     const started=performance.now();let outcome='success',summary=null,error=null,provenance=null,reason=null;
     try {
       const d=validateTracking(p.tracking);provenance=d.provenance;
+      if(task.dataCheckId)requireThat((yield p.tracking)===own('discussions',task.dataCheckId).dataHash,'Data changed since check');
       requireThat(d.provenance.kind==='synthetic','Verified-data adapter is not configured');
       requireThat(d.frames.reduce((n,f)=>n+f.entities.length,0)<=task.maxObservations,'Observation budget exceeded');
       summary=summarize(d);

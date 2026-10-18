@@ -1,3 +1,4 @@
+import {workflowGraph,renderWorkflow} from './workflow.mjs';
 import config from './client-config.mjs';
 import {createClient} from './client.mjs';
 const client=createClient(config,{onInvalidated:clearVisibleState,onVerified:t=>globalThis.DDAccount?.verified(t),onRejected:s=>globalThis.DDAccount?.failed(s)});
@@ -22,12 +23,32 @@ function form(container,fields,submitLabel,submit) {
 }
 // Verified key label (server-stamped) first, then the self-reported assistant name, marked as such.
 function who(x){return x.actor+(x.credential_label?` · key ${x.credential_label} (verified)`:'')+(x.author_label?` · says "${x.author_label}" (unverified)`:'');}
+function workflowDetails(h){drawer('Bounded research workflow',c=>{
+ const graph=workflowGraph(state,h.id),box=el('div');renderWorkflow(box,graph,state);c.append(box);
+ const [question,check,experiment,review,finding,decision]=graph.nodes;
+ const base={hypothesisId:h.id,hypothesisVersion:h.revisions.length,evidenceIds:[]};
+ c.append(action('Check current synthetic input',async()=>{await command('discussion',{...base,kind:'data_check',body:'Schema and provenance check of the loaded synthetic discovery fixture. Not real development data.',tracking});await refresh();workflowDetails(state.hypotheses.find(x=>x.id===h.id));}));
+ if(check.status==='recorded')c.append(action('Queue bounded synthetic audit',async()=>{await command('task',{hypothesisId:h.id,dataCheckId:check.record.id,split:'discovery',budgetMs:5000,maxObservations:10000});await refresh();workflowDetails(state.hypotheses.find(x=>x.id===h.id));}));
+ if(experiment.status==='recorded'){
+  const r=experiment.record,refs={...base,receiptId:r.id,receiptHash:r.receiptHash};
+  c.append(action('Submit separate review',()=>drawer('Review this synthetic receipt',c=>{
+   c.append(el('p','Requires a verified account subject distinct from the question authors and runner. Same-account assistants cannot satisfy this gate.'));
+   form(c,[['body','Review rationale and limitations','textarea'],['disposition','Disposition: ready or changes_requested']],'Record review',p=>command('discussion',{...refs,...p,kind:'review'}));
+  })));
+  if(review.status==='recorded')c.append(action('Record descriptive finding',()=>drawer('Descriptive finding',c=>form(c,[['body','Finding and limitations; no scientific verdict','textarea']],'Record finding',p=>command('discussion',{...refs,...p,kind:'finding',reviewId:review.record.id})))));
+  if(finding.status==='recorded'&&!decision.record)c.append(action('Owner decision',()=>drawer('Signed owner decision',c=>{
+   c.append(el('p','This records a disposition only. It does not authorize model fitting, access, deployment, or holdout use.'));
+   form(c,[['body','Rationale','textarea'],['disposition','Disposition: accept_descriptive, revise, or defer']],'Record owner decision',p=>command('discussion',{...refs,...p,kind:'owner_decision',reviewId:review.record.id,findingId:finding.record.id}));
+  })));
+ }
+});}
 function hypothesisDetails(h) {const latest=h.revisions.at(-1);drawer(latest.title,c=>{
   c.append(el('p',`Revision ${latest.version} · ${latest.status||'exploratory'} · ${latest.family||'other'} · ${['supported','null','inconclusive'].includes(latest.status)?'owner-recorded verdict':'no verified/falsified verdict'}`),el('p',latest.method));
   const design=['target','predictionTime','cohort','featureCutoff','splitPolicy','baseline','metric','exclusions'].filter(k=>latest[k]);if(design.length){const dl=el('dl');for(const k of design)dl.append(el('dt',k),el('dd',latest[k]));c.append(dl);}
+  c.append(action('Open dependency and evidence graph',()=>workflowDetails(h)));
   c.append(action('Queue descriptive audit',async()=>{await command('task',{hypothesisId:h.id,split:'discovery',budgetMs:5000,maxObservations:10000});$('#drawer').close();await refresh();}));
   c.append(el('h3','Discussion & independent challenges'));
-  for(const d of state.discussions.filter(d=>d.hypothesisId===h.id)){c.append(el('p',`${d.kind} · ${d.independent?'independent author':'same author / not independent'} · ${who(d)}`,'meta'),el('p',d.body));}
+  for(const d of state.discussions.filter(d=>d.hypothesisId===h.id)){c.append(el('p',`${d.kind} · ${d.separation|| (d.independent?'distinct account author; independence unproven':'same author / not independent')} · ${who(d)}`,'meta'),el('p',d.body));}
   const f=form(c,[['body','Challenge or observation','textarea']],'Record challenge',async p=>command('discussion',{...p,hypothesisId:h.id,kind:'challenge',evidenceIds:[]}));
   f.prepend(el('p','Independence compares verified account identities, not model names. Multiple AIs using one account are the same author.'));
   const history=el('details');history.append(el('summary','Revision history'),el('pre',JSON.stringify(h.revisions,null,2)));c.append(history);
@@ -98,5 +119,5 @@ async function loadRealData(){
   for(const f of summary.files){const tr=el('tr');for(const v of [f.file,f.bytes?.toLocaleString?.()??f.bytes,f.rows?.toLocaleString?.()??f.rows,f.columns,f.key_unique===undefined?'—':String(f.key_unique),f.max_null_share===undefined?'—':String(f.max_null_share),f.sha256?f.sha256.slice(0,12)+'…':'—'])tr.append(el('td',v===undefined||v===null?'—':String(v)));table.append(tr);}
   box.replaceChildren(head,table,el('p','Counts and shapes only. Not a finding, not a fitted baseline, and not evidence for any hypothesis.','meta'));
 }
-function clearVisibleState(){globalThis.DDAccount?.reset();state=null;stop();$('.machine-status').dataset.ready='false';for(const id of ['hypothesis-grid','tasks','receipts','evidence','audit'])$('#'+id).replaceChildren();if($('#real-data')){$('#real-data').replaceChildren();realData=false;}$('#receipt-count').textContent='State cleared';$('#drawer').close();notice('Identity changed. Reload to verify research access.',true);}
+function clearVisibleState(){globalThis.DDAccount?.reset();state=null;stop();$('.machine-status').dataset.ready='false';for(const id of ['hypothesis-grid','tasks','receipts','evidence','audit'])$('#'+id).replaceChildren();if($('#real-data')){$('#real-data').replaceChildren();realData=false;}$('#receipt-count').textContent='State cleared';$('#drawer').close();$('#drawer-content').replaceChildren();notice('Identity changed. Reload to verify research access.',true);}
 window.addEventListener('storage',e=>{if(e.key==='dd-bozo-sess'||e.key===null)client.invalidate();});

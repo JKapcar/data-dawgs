@@ -12,7 +12,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
       - run: node --test research-lab/development-v3.test.mjs research-lab/development-index.test.mjs research-lab/development-data.test.mjs research-lab/owner-apps.test.mjs research-lab/navigation-return.test.mjs research-lab/agent-setup.test.mjs research-lab/agent-integration.test.mjs research-lab/repair-owner-envelope.test.mjs research-lab/lab.test.mjs research-lab/gateway.test.mjs research-lab/upload.test.mjs research-lab/archive-reconcile.test.mjs research-lab/exact-store.test.mjs
-      - run: node --test research-lab/sourcebook.test.mjs
+      - run: node --test research-lab/sourcebook.test.mjs research-lab/workflow.test.mjs
       - run: node --test tests/research-project.test.cjs research-lab/decision-controls.test.mjs research-lab/pound-portraits.test.mjs
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
@@ -34,6 +34,7 @@ jobs:
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/portraits-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/discord-smoke-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/browser.test.mjs
+      - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/workflow-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node --test research-lab/discord-smoke-worker.test.mjs research-lab/portraits-worker.test.mjs research-lab/owner-apps-worker.test.mjs research-lab/worker.test.mjs research-lab/upload-worker.test.mjs research-lab/archive-reconcile-worker.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node research-lab/hosted-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node research-lab/public-browser.test.mjs

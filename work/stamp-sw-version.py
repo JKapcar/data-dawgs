@@ -23,6 +23,8 @@ h = hashlib.md5()
 # network-first html, and the pair mismatch killed the rig. verify-sw.mjs mirrors this
 # set exactly — if you widen one side, widen the other in the same commit.
 files = sorted(REPO.glob("*.html")) + sorted(p for p in REPO.glob("*.js") if p.name != "sw.js")
+# Research UI is modular; include its pages and module/style assets as well.
+files += sorted(p for p in (REPO / 'research-lab').iterdir() if p.suffix in ('.html', '.mjs', '.css') and '.test.' not in p.name)
 for f in files:
     # Git stores these text assets with LF even when core.autocrlf checks them out as
     # CRLF on Windows. Hash the canonical form so this script matches verify-sw.mjs,

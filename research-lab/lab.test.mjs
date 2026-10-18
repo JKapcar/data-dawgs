@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {fileURLToPath} from 'node:url';
 import {mkdtempSync,rmSync,readFileSync} from 'node:fs';
 import os from 'node:os';import path from 'node:path';
 import http from 'node:http';
@@ -44,7 +45,7 @@ test('one cohort with speed is inconclusive with a reason; non-synthetic input s
  const r=run(one);assert.equal(r.outcome,'inconclusive');assert.equal(r.reason,'fewer_than_two_cohorts_with_speed_observations');assert.equal(r.synthetic,true);
  const real=syntheticTracking();real.provenance={...real.provenance,kind:'verified'};const f=run(real);assert.equal(f.outcome,'failure');assert.equal(f.reason,null);});
 test('v1 journal written by d5d4836 still verifies, recomputes and accepts new commands; replay refuses to claim a reproduction',()=>{
- const dir=new URL('./fixtures/journal-v1-d5d4836/',import.meta.url).pathname,id='fc2a27c7-07b4-45fb-aedf-f8bd21fc726d';
+ const dir=fileURLToPath(new URL('./fixtures/journal-v1-d5d4836/',import.meta.url)),id='fc2a27c7-07b4-45fb-aedf-f8bd21fc726d';
  assert.throws(()=>replay(dir,id),/Code changed/);
  const lines=readFileSync(path.join(dir,'journal.jsonl'),'utf8').trim().split('\n');let state,tail=null;for(const line of lines){const {checksum,...body}=JSON.parse(line);assert.equal(hash(body),checksum);assert.equal(body.previous,tail);tail=checksum;state=body.state;}
  assert.equal(state.version,1);const receipt=state.receipts.find(r=>r.id===id);const {receiptHash,...body}=receipt;assert.equal(hash(body),receiptHash);assert.equal(receipt.outcome,'success');assert.equal(receipt.reason,undefined);
