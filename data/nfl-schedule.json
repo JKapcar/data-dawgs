@@ -1,6 +1,6 @@
 {
  "as_of": "2026-10-18",
- "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 7d22eecedd048268a298a52a671c6c8885e93d98.",
+ "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 8c6272a06a76bc6d44e965ef3558e2fc646fbafa.",
  "tier": "labs",
  "graded": false,
  "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts.",
@@ -10,13 +10,13 @@
   "loader_license": "MIT",
   "source_repository": "nflverse/nfldata",
   "source_url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-  "source_commit": "7d22eecedd048268a298a52a671c6c8885e93d98",
-  "source_committed_at": "2026-10-18T20:23:24Z",
+  "source_commit": "8c6272a06a76bc6d44e965ef3558e2fc646fbafa",
+  "source_committed_at": "2026-10-18T20:30:36Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-10-18T20:28:41.800006Z"
+  "captured_at": "2026-10-18T20:35:21.588948Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:912971e3cdded2201a14a500ba87c83200ce15299ed5ba95ae7f2618d3fd6a49",
+  "snapshot_id": "sha256:224636326ed2f7b6684a625ed4c58e05960da797bc2b633696fc3dc53276bb70",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -1431,9 +1431,9 @@
     "divisional": false,
     "away_rest_days": 14,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 25,
+    "home_score": 14
    },
    {
     "game_id": "2026_06_CHI_ATL",
@@ -1465,9 +1465,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 34,
+    "home_score": 27
    },
    {
     "game_id": "2026_06_NYJ_NE",
