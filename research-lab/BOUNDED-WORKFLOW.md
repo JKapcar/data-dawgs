@@ -1,95 +1,150 @@
 # Bounded research workflow
 
-This slice derives a dependency/evidence graph from the existing research-lab v1
-hypotheses, discussions, tasks and immutable receipts. There is no new workflow
-store, duplicated project charter, assignment record, scheduler or provider.
-Project milestones and `depends_on` in `work/research-project.js` remain the
-project-level source of truth; this graph describes one research attempt, not
-project milestone acceptance. `RESEARCH_PROJECTS_ENABLED` stays false.
+The dependency/evidence graph is derived from existing research-lab v1 hypotheses,
+discussions, tasks and immutable receipts. It adds no workflow store, project
+charter, assignment record, scheduler or provider. Project milestones and
+`depends_on` in `work/research-project.js` remain the project-level source of
+truth. `RESEARCH_PROJECTS_ENABLED` stays false.
 
-Open a hypothesis in the Lab or My Lab, then **Open dependency and evidence graph**.
-The browser demo is memory-only. The loopback runner persists to its existing
-private journal; My Lab uses the existing authenticated tenant gateway.
+Open a hypothesis in Lab or My Lab, then **Open dependency and evidence graph**.
+The public demo is memory-only; the loopback runner uses its existing private
+journal; My Lab uses the existing authenticated tenant gateway.
 
 1. Question: an existing hypothesis revision.
 2. Data check: `discussion.kind=data_check`, current `hypothesisVersion`, and
-   synthetic discovery `tracking`. The existing validator checks schema; the
-   discussion stores a data hash, implementation hash and observation count, not
-   the tracking rows. This is explicitly NOT real development-data validation.
-3. Experiment: `task.dataCheckId` binds the check. Existing claim/lease, observation
-   (maximum 100,000) and runtime (maximum 5,000ms) limits apply. The input hash must
-   match. Changed input yields a failed receipt; changed question/code refuses the
-   stale task. Legacy tasks remain readable but cannot satisfy the bounded chain.
-4. Separate review: a `review` discussion binds hypothesis version, receipt ID and
-   receipt hash, with `ready` or `changes_requested`. The authenticated subject
-   must differ from every question author and the runner. Delegated agent IDs and
-   assistant labels do not establish a separate account reviewer. Distinct
-   accounts still do not prove scientific independence. No review is fabricated.
-5. Finding: a `finding` discussion binds the latest ready review and receipt.
-   It is descriptive, with limitations in its body, not a hypothesis verdict.
-6. Owner disposition: an `owner_decision` discussion binds the latest finding and
-   review. Only a signed owner may `accept_descriptive`, `revise` or `defer`; each
-   finding is decided once. It records `execution=not_executed`. Acceptance grants
-   no access, triggers no work and does not set a scientific hypothesis verdict.
+   synthetic discovery `tracking`. The existing validator checks the schema. The
+   stored record contains hashes and observation count, not tracking rows. This
+   does not validate real development data.
+3. Experiment: `task.dataCheckId` binds the check. Claim/lease, observation (at most
+   100,000) and runtime (at most 5,000ms) limits apply. Input hashes must match.
+   Legacy tasks cannot satisfy the bounded chain. If the question, withdrawal
+   status or implementation invalidates a task, claiming terminates it as `stale`.
+   An already leased stale run records a terminal failed refusal with
+   `execution=not_executed`, clears the lease and marks the task stale. It archives
+   no input. History remains; stale tasks leave active counts and cannot rerun.
+4. Review has two explicitly different modes:
+   - `review` requires a distinct authenticated account subject from the question
+     authors and runner, and a receipt-bound `ready` or `changes_requested`
+     disposition. Delegated agent IDs and assistant labels cannot establish that
+     separation. Even account separation is not proof of scientific independence.
+   - `advisory_review` accepts same-owner Pack contributions under the existing
+     discussion scope. It is server-stamped `advisory_not_independent`,
+     `authority=nonbinding`, `independent=false`. It requires the current question
+     version. Optional receipt ID/hash must be a matching pair; only a
+     receipt-bound advisory can support a workflow finding.
+5. Finding: a `finding` discussion binds the latest receipt-specific review.
+   A ready separate-account review or an explicit advisory may support a
+   descriptive finding. Advisory-derived findings retain their non-independent
+   label and cannot be silently upgraded by a different assistant name.
+6. Owner disposition: `owner_decision` binds the latest finding and review. Only a
+   signed owner may `accept_descriptive`, `revise` or `defer`; each finding is
+   decided once. It preserves `reviewMode`, `separateAccountReviewSatisfied`,
+   `scientificGate=not_satisfied`, `holdout=unavailable`, and
+   `execution=not_executed`. It sets no scientific hypothesis verdict and grants
+   no access, execution, fitting or deployment permission.
 
-All new discussions use the existing `discussion:write` gate, tenant isolation,
-idempotency, audit trail and storage compare-and-swap. Reference checks are
-server-side. No additional capabilities or credentials are issued. The owner-apps
-connector retains its existing note/challenge schema; these workflow operations
-are available through the research gateway and dashboard, not implicitly added to
-that connector. Existing owner-only hypothesis status operations remain separate.
+The local signed-owner runner can finish the advisory path without inventing a
+second reviewer. The public demo can record advice/findings but cannot invent a
+signed owner. Owner-connected Pack tools can write advisory reviews and findings;
+owner decisions remain with the signed owner. Existing notes/challenges remain
+valid. No existing policy prohibits non-independent advice: owner-apps already
+permits discussion contributions and explicitly denies binding owner actions.
+This slice makes advice and its limitations typed and visible.
 
-The graph is a read-only projection, with linked prerequisite nodes, expandable
-source records and safe citation links. Missing records, stale question/code,
-failed execution, active leases, requested review changes and owner deferral are
-shown separately. It uses a keyboard-accessible ordered list and mobile single
-column, with text labels as well as border styles. Identity invalidation clears
-its drawer. No private evidence is embedded in the public demo.
+The existing tenant isolation, idempotency, audit, capacity and compare-and-swap
+rules still apply. No new capability strings, credentials, grants or permission
+flags are issued. The owner-apps read schema describes advisory/finding fields;
+its write schema still rejects `review`, `owner_decision`, tasks, claims and runs.
+Existing owner-only hypothesis status operations remain separate.
 
-## October 18 readiness evidence and activation
+The graph provides linked prerequisites, expandable records, safe citation links,
+text status labels, keyboard access and a mobile single column. The attempt
+selector preserves every data-check/task chain. A current accepted attempt stays
+selected by default after another check; a user can explicitly select the new
+attempt or any historical chain. A check/queue button selects the attempt it just
+created. Question/code changes visibly stale historical records rather than
+rewriting them. Identity invalidation clears the drawer.
 
-The private readiness files were inspected locally, not copied into this public
-repository. Receipt-to-report, receipt-to-inventory and configuration hashes match.
-The receipt's code hash does NOT match the current local readiness audit script;
-its hypothesis IDs have not been verified against live state. It therefore has
-not been imported or labeled a verified development run. Its recorded status is
-`descriptive_only_target_unresolved`, `baseline_fit=false`, `holdout_access=false`.
-Recover the exact source matching the receipt hash and verify the live hypothesis
-revision before designing a separately reviewed real receipt adapter. Hash matches
-alone do not attest origin, source units, target validity, or scientific quality.
+## October 18 private receipt reconciliation
 
-Unresolved owner design decisions: breaking-route mapping, T1 over-expected
-construction and exposure weighting, source units/separation definition, and T2
-snap denominator. Draft pick belongs only in a separately timed post-draft
-comparison. No new predictive model fit is required before these decisions.
+No private outputs were copied into this public repository. The 18:39 readiness
+receipt's report, inventory and configuration hashes match, but its source hash
+differs from the current script; the exact earlier source snapshot was not found.
+That historical receipt is preserved unchanged.
 
-Required future actions, none performed by this PR:
+A later 18:42 receipt in the private measurement artifacts DOES match the current
+script byte-for-byte. Its report, inventory, configuration and private athlete
+output hashes also verify. The later report equals the earlier report after
+removing only the newly added equal-athlete summaries. Its run timestamps and
+athlete-output hash explain the expanded receipt format. This is evidence of a
+later script/run version, not grounds to rewrite the earlier receipt.
 
-- Merge the reviewed PR to publish Pages (main pushes deploy the site).
-- Build `node research-lab/build-worker.mjs <private-candidate-directory>`, review
-  its manifest/code hash, then explicitly authorize deployment of that candidate
-  through the existing Worker release procedure. The generated candidate is not
-  deployed by preparing this branch. Verify the private gateway after deployment.
-- If no eligible separate account already has a valid research grant, the review
-  stage stays blocked. Report and approve any exact grant change separately;
-  this PR does not create a reviewer, accept an assignment or expand access.
-- Verify old private receipt source/schema/provenance and current hypothesis
-  bindings before approving a real development receipt adapter. That adapter is
-  intentionally unconfigured; the synthetic adapter is not real modeling.
-- No project flag, delegated-agent flag, credentials, persistent access, 2025
-  holdout access/unlock, raw data publication, production deploy or merge is part
-  of this implementation. Project-envelope activation is not needed for this
-  per-hypothesis workflow and remains a separate owner decision.
+A separate private reconciliation assessment and exact source snapshot were saved
+outside Git. Only the pinned 2023–2024 development manifest metadata was read to
+check its hash and class/season/holdout declarations. No raw table or archive was
+opened, no 2025 access occurred, and no new audit/model run was necessary. The
+assessment verifies local artifact integrity, not independent execution attestation
+or scientific correctness. Source archive hash remains inherited, not rehashed.
+Both runs are descriptive, `baseline_fit=false`, target unresolved, with no MAE/R2.
+Historical reported dictionary definitions are not a verified release-linked
+source snapshot; measurement-unit and target caveats remain.
 
-## Verification
+## Real descriptive adapter: feasible, not activated
 
-`node --test research-lab/workflow.test.mjs` exercises the full synthetic chain,
-authenticated gateway, cross-tenant denial, self-review and label spoofing,
-receipt hash/tamper checks, stale question/code, failed input, superseded review,
-owner gate, repeated decision refusal, and exclusion of legacy tasks.
+A descriptive receipt adapter does not need to fit or choose T1. It can safely
+represent coverage, missingness, duplicate-key checks and descriptive measurement
+summaries with `synthetic=false`, `baseline_fit=false`, no model metrics, and
+explicit unresolved target/units. It must be a distinct, reviewed method/schema;
+the current synthetic tracking adapter must never be relabeled as real modeling.
+The existing machine still rejects real tracking runs. No live import was made.
 
-`node research-lab/workflow-browser.test.mjs` checks real dashboard interactions,
-record links, blocked self-review, 1200/390/320px layout and page errors. Existing
-lab, gateway, project, owner-apps, and exact-store regression suites are retained.
-All test subjects, grants, data and results are synthetic fixtures. They are not
-accepted real assignments or a completed real research review.
+Before a schema-valid import or real run can be recorded, require:
+
+- An authenticated read of the intended tenant and canonical hypothesis ID, its
+  latest revision/version and design fingerprint. The prior local seed IDs are
+  not verified live bindings. The owner must confirm whether the old descriptive
+  audit is evidence for that question; do not retroactively claim it tested T1.
+- A bounded task/method explicitly representing a readiness audit, bound to that
+  revision, the pinned development manifest, exact code/config hashes, table and
+  year allowlists, and budgets. An imported historical receipt must state
+  `historical_import`, original run timestamps and later import time separately;
+  never fabricate a lease, execution actor, assignment, or earlier binding.
+- Strict receipt/report/config/inventory schema validation, expected source and
+  method pins supplied independently of the uploaded claims, byte hashes and
+  private-output checks. Reject unknown flags, fitting/target claims, 2025 scope,
+  non-null predictive metrics and unresolved/mismatched bindings. A client JSON
+  assertion alone is not trusted provenance.
+- References to private evidence, not raw rows, per-athlete exports, local file
+  URLs or public archive links. Hash consistency is necessary but does not prove
+  source units, scientific validity or independent execution.
+- A fresh version/CAS check at import and an idempotency key. Preserve original
+  receipts as immutable evidence and keep advisory versus separate-account
+  review labels through any subsequent finding/owner disposition.
+
+No authenticated BDB read tool was available in this execution context, so no live
+hypothesis revision, task binding or reviewer availability is asserted. There is
+no reason to rerun an audit just to compensate for an unverified live binding.
+
+Owner design decisions still needed: breaking-route taxonomy, T1 over-expected
+construction and exposure weighting, release-linked units/separation definition,
+and T2 denominator. Draft pick is only a separately timed post-draft comparator.
+No target selection or predictive fit is made here.
+
+## Activation and verification
+
+After code review: merge to publish Pages (main deploys the site); separately
+build/review and authorize deployment of the Worker candidate using
+`node research-lab/build-worker.mjs <private-candidate-directory>`. New connector
+schemas become live only with that approved deployment. Existing Pack note/challenge
+contributions remain available before it. If separate-account review is required
+and no eligible grant exists, report the exact missing grant for approval; the
+advisory path does not create or replace that grant. Real receipt import requires
+the bindings and separately reviewed adapter above. No flags need changing for
+this per-hypothesis slice. No deployment, merge, access change or holdout unlock
+was performed.
+
+Core and gateway tests cover both review modes, owner gates, hashes, stale tasks,
+immutable attempt history, and unchanged connector grants. Browser tests exercise
+successful advisory and separate-account review/finding/owner flows, self-review
+refusal, stale queue removal, history selection, and 320/390px layouts. Test data,
+subjects and grants are explicitly synthetic and do not constitute real review.

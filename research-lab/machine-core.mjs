@@ -31,6 +31,14 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
   const own=(collection,id)=>{const x=s[collection].find(x=>x.tenant===tenant&&x.id===id);requireThat(x,'Resource unavailable');return x;};
   // credential_label: server-verified connector key label; null for signed sessions and synthetic runs.
   const stamp={tenant,actor:principal.id,subject:principal.subject||principal.id,at:new Date(now).toISOString(),credential_label:typeof principal.credentialLabel==='string'?principal.credentialLabel:null,...(principal.authorLabel?{author_label:principal.authorLabel,author_label_trust:'unverified'}:{})};
+  const staleTaskReason=task=>{
+    if(!task.dataCheckId)return null;
+    const h=own('hypotheses',task.hypothesisId),check=own('discussions',task.dataCheckId);
+    if(h.revisions.length!==task.hypothesisVersion)return 'hypothesis_version_changed';
+    if(h.revisions.at(-1).status==='withdrawn')return 'hypothesis_withdrawn';
+    if(check.codeHash!==codeHash)return 'implementation_changed';
+    return null;
+  };
   let result;
   if(type==='hypothesis') {
     const previous=p.id?own('hypotheses',p.id):null;
@@ -50,7 +58,7 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
   }
   if(type==='discussion') {
     const h=own('hypotheses',p.hypothesisId);
-    requireThat(['note','challenge','data_check','review','finding','owner_decision'].includes(p.kind),'Discussion kind required');
+    requireThat(['note','challenge','data_check','review','finding','owner_decision','advisory_review'].includes(p.kind),'Discussion kind required');
     requireThat(Array.isArray(p.evidenceIds)&&p.evidenceIds.length<=30,'Evidence IDs required');p.evidenceIds.forEach(id=>own('evidence',id));
     const workflow=['data_check','review','finding','owner_decision'].includes(p.kind);
     const extra={};
@@ -82,9 +90,10 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
           extra.separation='distinct_account_subject_only';extra.disposition=p.disposition;
         }else{
           const review=own('discussions',p.reviewId);
-          requireThat(review.kind==='review'&&review.receiptId===r.id&&review.receiptHash===r.receiptHash&&review.hypothesisVersion===p.hypothesisVersion&&review.disposition==='ready','Ready receipt-specific review required');
-          requireThat(s.discussions.filter(d=>d.kind==='review'&&d.receiptId===r.id).at(-1)?.id===review.id,'Review superseded');
-          extra.reviewId=review.id;
+          const advisory=review.kind==='advisory_review';
+          requireThat((advisory||review.kind==='review'&&review.disposition==='ready')&&review.receiptId===r.id&&review.receiptHash===r.receiptHash&&review.hypothesisVersion===p.hypothesisVersion,'Ready receipt-specific review or explicit advisory required');
+          requireThat(s.discussions.filter(d=>['review','advisory_review'].includes(d.kind)&&d.receiptId===r.id).at(-1)?.id===review.id,'Review superseded');
+          Object.assign(extra,{reviewId:review.id,reviewMode:advisory?'advisory_not_independent':'distinct_account_subject_only',separateAccountReviewSatisfied:!advisory,scientificGate:'not_satisfied',holdout:'unavailable'});
           if(p.kind==='owner_decision'){
             requireThat(principal.signedOwner===true,'Signed owner decision required');
             const finding=own('discussions',p.findingId);
@@ -95,6 +104,16 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
             Object.assign(extra,{findingId:finding.id,disposition:p.disposition,ownerAuthorized:true,execution:'not_executed'});
           }
         }
+      }
+    }else if(p.kind==='advisory_review'){
+      requireThat(Object.keys(p).every(k=>['hypothesisId','hypothesisVersion','kind','body','evidenceIds','receiptId','receiptHash'].includes(k)),'Fields do not match advisory review');
+      requireThat(p.hypothesisVersion===h.revisions.length,'Stale hypothesis version');
+      Object.assign(extra,{hypothesisVersion:p.hypothesisVersion,separation:'advisory_not_independent',authority:'nonbinding'});
+      if(p.receiptId!==undefined||p.receiptHash!==undefined){
+        const r=own('receipts',p.receiptId),{receiptHash,...body}=r;
+        requireThat(r.hypothesisId===h.id&&r.hypothesisVersion===p.hypothesisVersion&&r.receiptHash===p.receiptHash,'Receipt version mismatch');
+        requireThat((yield body)===receiptHash,'Receipt integrity mismatch');
+        Object.assign(extra,{receiptId:r.id,receiptHash,sourceCodeHash:r.hashes.code});
       }
     }else requireThat(Object.keys(p).every(k=>['hypothesisId','kind','body','evidenceIds'].includes(k)),'Fields do not match discussion');
     result={id:crypto.randomUUID(),...stamp,...extra,hypothesisId:h.id,kind:p.kind,body:text(p.body),evidenceIds:p.evidenceIds,
@@ -118,20 +137,23 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
   if(type==='claim') {
     const task=own('tasks',p.taskId);
     requireThat(task.requiredCapabilities.every(c=>principal.capabilities.includes(c)),'Runner capability denied');
-    requireThat(task.status!=='completed'&&(!task.lease||task.lease.expiresAt<=now),'Task unavailable');
+    requireThat(!['completed','stale'].includes(task.status),'Task unavailable');
     requireThat(Number.isInteger(p.leaseMs)&&p.leaseMs>=100&&p.leaseMs<=60000,'Lease must be 100–60000ms');
-    task.status='claimed';task.lease={owner:principal.id,token:crypto.randomUUID(),expiresAt:now+p.leaseMs};result=task;
+    const staleReason=staleTaskReason(task);
+    if(staleReason)Object.assign(task,{status:'stale',lease:null,staleReason,staleAt:stamp.at});
+    else {
+      requireThat(!task.lease||task.lease.expiresAt<=now,'Task unavailable');
+      task.status='claimed';task.lease={owner:principal.id,token:crypto.randomUUID(),expiresAt:now+p.leaseMs};
+    }
+    result=task;
   }
   if(type==='run') {
     const task=own('tasks',p.taskId);
     requireThat(task.status==='claimed'&&task.lease?.owner===principal.id&&task.lease.token===p.leaseToken&&task.lease.expiresAt>now,'Valid owned lease required');
-    if(task.dataCheckId){
-      requireThat(own('discussions',task.dataCheckId).codeHash===codeHash,'Data check code changed');
-      const h=own('hypotheses',task.hypothesisId);
-      requireThat(h.revisions.length===task.hypothesisVersion&&h.revisions.at(-1).status!=='withdrawn','Stale task; recheck current hypothesis');
-    }
+    const staleReason=staleTaskReason(task);
     const started=performance.now();let outcome='success',summary=null,error=null,provenance=null,reason=null;
     try {
+      requireThat(!staleReason,'Stale task: '+staleReason);
       const d=validateTracking(p.tracking);provenance=d.provenance;
       if(task.dataCheckId)requireThat((yield p.tracking)===own('discussions',task.dataCheckId).dataHash,'Data changed since check');
       requireThat(d.provenance.kind==='synthetic','Verified-data adapter is not configured');
@@ -142,13 +164,15 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
       else if(summary.filter(x=>x.speedCount>0).length<2){outcome='inconclusive';reason='fewer_than_two_cohorts_with_speed_observations';}
       requireThat(performance.now()-started<=task.budgetMs,'Runtime budget exceeded');
     } catch(e) {outcome='failure';error=e.message;summary=null;reason=null;}
-    result={id:crypto.randomUUID(),...stamp,taskId:task.id,hypothesisId:task.hypothesisId,hypothesisVersion:task.hypothesisVersion,
+    if(staleReason)reason=staleReason;
+    result={id:crypto.randomUUID(),...stamp,...(staleReason?{execution:'not_executed'}:{}),taskId:task.id,hypothesisId:task.hypothesisId,hypothesisVersion:task.hypothesisVersion,
       split:task.split,synthetic:provenance?.kind==='synthetic',provenance,outcome,reason,error,summary,
       hashes:{data:(yield p.tracking),code:codeHash,config:(yield {method:task.method,split:task.split,budgetMs:task.budgetMs,maxObservations:task.maxObservations})},
       baseline:{kind:'none',note:'Cohort means are descriptive, not fitted baselines.'},
       uncertainty:{interval:null,note:'Repeated frame observations are dependent; no inferential interval or hypothesis verdict.'},
       limits:{runtimeMs:task.budgetMs,maxObservations:task.maxObservations},elapsedMs:performance.now()-started};
-    result.receiptHash=yield result;s.receipts.push(result);task.status='completed';task.lease=null;
+    result.receiptHash=yield result;s.receipts.push(result);task.status=staleReason?'stale':'completed';task.lease=null;
+    if(staleReason)Object.assign(task,{staleReason,staleAt:stamp.at});
   }
   s.audit.push({id:crypto.randomUUID(),...stamp,type,resourceId:result.id,previousHash:s.audit.at(-1)?.hash||null});
   s.audit.at(-1).hash=yield s.audit.at(-1);

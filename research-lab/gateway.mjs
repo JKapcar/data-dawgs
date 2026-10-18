@@ -153,7 +153,7 @@ export function createResearchGateway({fbGet,fbPut,sessionAuth,mcpAuth,transitio
           const before=snapshot.data.state.tasks.find(t=>t.tenant===tenant&&t.id===command.payload.taskId);
           if(before?.status==='claimed'&&before.lease?.expiresAt<=now())fail(409,'lease_expired_before_commit');
         }
-        if(command.type==='claim'&&next.result.lease.expiresAt<=now())fail(409,'lease_expired_before_commit');
+        if(command.type==='claim'&&next.result.lease&&next.result.lease.expiresAt<=now())fail(409,'lease_expired_before_commit');
         authorize(snapshot.data);
         if(await fbPut(env,path,envelope,snapshot.etag))return response;
       }

@@ -35,6 +35,7 @@ jobs:
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/discord-smoke-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/workflow-browser.test.mjs
+      - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node research-lab/workflow-hosted-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node --test research-lab/discord-smoke-worker.test.mjs research-lab/portraits-worker.test.mjs research-lab/owner-apps-worker.test.mjs research-lab/worker.test.mjs research-lab/upload-worker.test.mjs research-lab/archive-reconcile-worker.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node research-lab/hosted-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node research-lab/public-browser.test.mjs

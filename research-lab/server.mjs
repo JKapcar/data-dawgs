@@ -27,7 +27,7 @@ export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-l
   let tail=existsSync(journal)?JSON.parse(readFileSync(journal,'utf8').trim().split('\n').at(-1)).checksum:null;
   const execute=command=>{
     const next=transition(state,principal,command,Date.now(),codeHash);
-    if(command.type==='run') {
+    if(command.type==='run'&&next.result.execution!=='not_executed') {
       const artifact=path.join(directory,`${next.result.hashes.data}.input.json`);
       if(!existsSync(artifact))writeFileSync(artifact,JSON.stringify({tracking:command.payload.tracking}),{flag:'wx',flush:true});
     }

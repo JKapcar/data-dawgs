@@ -82,3 +82,43 @@ test('stale code and tampered receipts cannot satisfy review',()=>{
 test('delegated agent labels cannot substitute for a separate account review',()=>{
  const x=fixture();assert.throws(()=>x.call('discussion',{...x.refs,kind:'review',disposition:'ready'},{...reviewer,subject:'agent:synthetic-test'}),/Delegated agent identity/);
 });
+test('same-owner advisory can inform a descriptive finding and owner disposition without independence',()=>{
+ const x=fixture(),advice=x.call('discussion',{...x.refs,kind:'advisory_review'});
+ assert.equal(advice.independent,false);assert.equal(advice.authority,'nonbinding');
+ const finding=x.call('discussion',{...x.refs,kind:'finding',reviewId:advice.id});
+ const decision=x.call('discussion',{...x.refs,kind:'owner_decision',reviewId:advice.id,findingId:finding.id,disposition:'accept_descriptive'},owner);
+ for(const d of [finding,decision]){assert.equal(d.reviewMode,'advisory_not_independent');assert.equal(d.separateAccountReviewSatisfied,false);assert.equal(d.scientificGate,'not_satisfied');assert.equal(d.holdout,'unavailable');}
+ assert.equal(workflowGraph(x.state(),x.h.id).nodes[3].status,'advisory');assert.equal(x.state().hypotheses[0].revisions[0].status,'exploratory');
+ assert.throws(()=>x.call('discussion',{...x.refs,kind:'advisory_review',independent:true}),/Invalid payload/);
+});
+test('accepted attempt remains selectable and default after identical recheck; no record is erased',()=>{
+ const x=fixture(),advice=x.call('discussion',{...x.refs,kind:'advisory_review'}),finding=x.call('discussion',{...x.refs,kind:'finding',reviewId:advice.id});
+ x.call('discussion',{...x.refs,kind:'owner_decision',reviewId:advice.id,findingId:finding.id,disposition:'accept_descriptive'},owner);
+ const before=structuredClone(x.state());const next=x.call('discussion',{...x.base,kind:'data_check',tracking:x.tracking});
+ const selected=workflowGraph(x.state(),x.h.id);assert.equal(selected.nodes[5].status,'accepted');assert.equal(selected.attemptId,x.t.id);assert.equal(selected.attempts.length,2);
+ const pending=workflowGraph(x.state(),x.h.id,1000,next.id);assert.equal(pending.nodes[2].status,'blocked');assert.equal(pending.nodes[1].record.id,next.id);
+ assert.deepEqual(x.state().receipts,before.receipts);assert.deepEqual(x.state().discussions.slice(0,-1),before.discussions);
+});
+for(const engine of ['machine','browser-engine'])for(const stage of ['claim','run'])test(`${engine}: stale ${stage} terminates bounded task and retains audit history`,async()=>{
+ const m=await import(`./${engine}.mjs`);let state=m.initialState(),i=0;
+ const call=async(type,payload,code='a'.repeat(64))=>{const result=await m.transition(state,owner,{type,payload,key:String(++i)},1000,code);state=result.state;return result.result;};
+ const h=await call('hypothesis',{title:'Synthetic stale task',method:'No inference'}),d=syntheticTracking();
+ const c=await call('discussion',{hypothesisId:h.id,hypothesisVersion:1,kind:'data_check',body:'Synthetic',evidenceIds:[],tracking:d});
+ const t=await call('task',{hypothesisId:h.id,dataCheckId:c.id,split:'discovery',budgetMs:5000,maxObservations:10000});
+ const lease=stage==='run'?await call('claim',{taskId:t.id,leaseMs:1000}):null;
+ await call('hypothesis',{id:h.id,expectedVersion:1,title:'Revised question',method:'Changed scope'});
+ const result=stage==='claim'?await call('claim',{taskId:t.id,leaseMs:1000}):await call('run',{taskId:t.id,leaseToken:lease.lease.token,tracking:d});
+ assert.equal(state.tasks[0].status,'stale');assert.equal(state.tasks[0].lease,null);assert.equal(state.tasks[0].staleReason,'hypothesis_version_changed');assert.equal(state.hypotheses[0].revisions.length,2);
+ if(stage==='run'){assert.equal(result.outcome,'failure');assert.equal(result.execution,'not_executed');assert.equal(result.reason,'hypothesis_version_changed');assert.equal(result.summary,null);assert.equal(state.receipts.length,1);}
+ else{assert.equal(result.status,'stale');assert.equal(state.receipts.length,0);}
+ await assert.rejects(call('claim',{taskId:t.id,leaseMs:1000}),/Task unavailable/);
+ // A second bounded task invalidated only by implementation change also terminates.
+ const ck=await call('discussion',{hypothesisId:h.id,hypothesisVersion:2,kind:'data_check',body:'Synthetic',evidenceIds:[],tracking:d});
+ const t2=await call('task',{hypothesisId:h.id,dataCheckId:ck.id,split:'discovery',budgetMs:5000,maxObservations:10000});
+ assert.equal((await call('claim',{taskId:t2.id,leaseMs:1000},'b'.repeat(64))).staleReason,'implementation_changed');
+});
+test('gateway stale claim commits a terminal state without dereferencing a missing lease',async()=>{
+ const x=await gatewayFixture();const call=async(type,payload)=>{const response=await x.command(type,payload);const result=await response.json();assert.equal(response.status,200,JSON.stringify(result));return result;};
+ const h=await call('hypothesis',{title:'Synthetic',method:'Question'}),c=await call('discussion',{hypothesisId:h.id,hypothesisVersion:1,kind:'data_check',body:'Check',evidenceIds:[],tracking:syntheticTracking()}),t=await call('task',{hypothesisId:h.id,dataCheckId:c.id,split:'discovery',budgetMs:5000,maxObservations:10000});
+ await call('hypothesis',{id:h.id,expectedVersion:1,title:'Changed',method:'New question'});assert.equal((await call('claim',{taskId:t.id,leaseMs:1000})).status,'stale');
+});

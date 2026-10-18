@@ -184,3 +184,24 @@ test('J.5-27 project reads are tenant-bound; an expired research grant is refuse
  f.onReauth(null);f.clock(1000);const g=projectRig();await g.enable();await g.charter();g.db.get(r).access.users.u_owner.expiresAt=5000;
  const slow=createOwnerApps({pound,project:{...(()=>{const c={crypto,TextEncoder,TextDecoder,Uint8Array,Date,fbGet:async(e,p)=>{if(p===pj)now=6000;return {data:structuredClone(g.db.get(p)||null),etag:'0'};},fbPut:async()=>true};vm.createContext(c);vm.runInContext(projectSource+'\nthis.p={enabled:projectEnabled,load:projectLoad,apply:projectApply,read:projectRead,commit:projectCommit,schema:PROJECT_SCHEMA,sections:PROJECT_SECTIONS,limits:PROJECT_LIMITS};',c);return c.p;})()},transition,view,codeHash:'a'.repeat(64),now:()=>now,ownerIdentity:async()=>'u_owner',fbGet:async(e,p)=>({data:structuredClone(g.db.get(p)||null),etag:'0'}),fbPut:async()=>true});
  let now=1000;await assert.rejects(slow.run('dd_owner_project_read',{project_id:'bdb-test'},g.env,keyed,async()=>keyed),/research_owner_expired/,'a read is refused if the grant expired during the project I/O');});
+test('owner connector permits explicitly advisory reviews and findings, never binding decisions',async()=>{
+ const f=rig();await f.enable('research');const h=await f.run('dd_owner_bdb_write',hypothesis),before=structuredClone(f.db.get(r).ownerConnector),access=structuredClone(f.db.get(r).access);
+ const advisory=await f.run('dd_owner_bdb_write',{type:'discussion',key:'advisory-1',assistant:'Pack helper',payload:{hypothesisId:h.result.id,hypothesisVersion:1,kind:'advisory_review',body:'Non-independent method advice',evidenceIds:[]}});
+ assert.equal(advisory.result.independent,false);assert.equal(advisory.result.separation,'advisory_not_independent');assert.equal(advisory.result.authority,'nonbinding');assert.equal(advisory.result.subject,'u_owner');
+ assert.deepEqual(f.db.get(r).ownerConnector,before);assert.deepEqual(f.db.get(r).access,access);
+ const schema=(await f.run('dd_owner_bdb_read')).writeSchema.oneOf.find(s=>s.properties.type.const==='discussion');assert(schema.properties.payload.properties.kind.enum.includes('finding'));
+ await assert.rejects(f.run('dd_owner_bdb_write',{type:'discussion',key:'owner-decision-denied',payload:{hypothesisId:h.result.id,hypothesisVersion:1,kind:'owner_decision',body:'Cannot bind owner',evidenceIds:[]}}),/Invalid status/);
+ await assert.rejects(f.run('dd_owner_bdb_write',{type:'discussion',key:'fake-independent',payload:{hypothesisId:h.result.id,hypothesisVersion:1,kind:'advisory_review',body:'Cannot spoof',evidenceIds:[],independent:true}}),/Unknown field/);
+});
+test('Pack connector records receipt-bound advisory finding without acquiring execution or owner authority',async()=>{
+ const f=rig();await f.enable('research');const h=(await f.run('dd_owner_bdb_write',hypothesis)).result,base={hypothesisId:h.id,hypothesisVersion:1,body:'Synthetic only',evidenceIds:[]};
+ const before=decodeEnvelope(f.db.get(r)),actor={tenant:'test',id:'signed-owner-fixture',subject:'u_owner',signedOwner:true,capabilities:['discussion:write','task:write','task:claim','experiment:run']};let state=before.state,i=0;
+ const call=async(type,payload)=>{const result=await transition(state,actor,{type,key:'fixture-'+(++i),payload},1000,'a'.repeat(64));state=result.state;return result.result;};
+ const tracking=(await import('./tracking.mjs')).syntheticTracking(),check=await call('discussion',{...base,kind:'data_check',tracking}),task=await call('task',{hypothesisId:h.id,dataCheckId:check.id,split:'discovery',budgetMs:5000,maxObservations:10000}),lease=await call('claim',{taskId:task.id,leaseMs:1000}),receipt=await call('run',{taskId:task.id,leaseToken:lease.lease.token,tracking});
+ f.db.set(r,encodeEnvelope({...before,state}));const refs={...base,receiptId:receipt.id,receiptHash:receipt.receiptHash};
+ const review=(await f.run('dd_owner_bdb_write',{type:'discussion',key:'pack-review',payload:{...refs,kind:'advisory_review'}})).result;
+ const finding=(await f.run('dd_owner_bdb_write',{type:'discussion',key:'pack-finding',payload:{...refs,kind:'finding',reviewId:review.id}})).result;
+ assert.equal(finding.reviewMode,'advisory_not_independent');assert.equal(finding.separateAccountReviewSatisfied,false);assert.equal(finding.scientificGate,'not_satisfied');assert.equal(finding.holdout,'unavailable');
+ const after=decodeEnvelope(f.db.get(r));assert.deepEqual(after.access,before.access);assert.equal(after.state.receipts.length,1);assert.equal(after.state.hypotheses[0].revisions.length,1);
+ for(const type of ['task','claim','run'])await assert.rejects(f.run('dd_owner_bdb_write',{type,key:'no-'+type,payload:{}}),/operation_denied/);
+});
