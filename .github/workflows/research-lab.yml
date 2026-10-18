@@ -34,8 +34,9 @@ jobs:
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules VAULT_SCREENSHOTS=/tmp/dd-lab-screenshots/owner-vault node tests/owner-vault-browser.test.cjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/decisions-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/portraits-browser.test.mjs
+      - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/discord-smoke-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/browser.test.mjs
-      - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node --test research-lab/portraits-worker.test.mjs research-lab/owner-apps-worker.test.mjs research-lab/worker.test.mjs research-lab/upload-worker.test.mjs research-lab/archive-reconcile-worker.test.mjs
+      - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node --test research-lab/discord-smoke-worker.test.mjs research-lab/portraits-worker.test.mjs research-lab/owner-apps-worker.test.mjs research-lab/worker.test.mjs research-lab/upload-worker.test.mjs research-lab/archive-reconcile-worker.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node research-lab/hosted-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node research-lab/public-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/upload-browser.test.mjs
