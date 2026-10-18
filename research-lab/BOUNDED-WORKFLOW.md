@@ -65,29 +65,13 @@ attempt or any historical chain. A check/queue button selects the attempt it jus
 created. Question/code changes visibly stale historical records rather than
 rewriting them. Identity invalidation clears the drawer.
 
-## October 18 private receipt reconciliation
+## Private evidence
 
-No private outputs were copied into this public repository. The 18:39 readiness
-receipt's report, inventory and configuration hashes match, but its source hash
-differs from the current script; the exact earlier source snapshot was not found.
-That historical receipt is preserved unchanged.
-
-A later 18:42 receipt in the private measurement artifacts DOES match the current
-script byte-for-byte. Its report, inventory, configuration and private athlete
-output hashes also verify. The later report equals the earlier report after
-removing only the newly added equal-athlete summaries. Its run timestamps and
-athlete-output hash explain the expanded receipt format. This is evidence of a
-later script/run version, not grounds to rewrite the earlier receipt.
-
-A separate private reconciliation assessment and exact source snapshot were saved
-outside Git. Only the pinned 2023–2024 development manifest metadata was read to
-check its hash and class/season/holdout declarations. No raw table or archive was
-opened, no 2025 access occurred, and no new audit/model run was necessary. The
-assessment verifies local artifact integrity, not independent execution attestation
-or scientific correctness. Source archive hash remains inherited, not rehashed.
-Both runs are descriptive, `baseline_fit=false`, target unresolved, with no MAE/R2.
-Historical reported dictionary definitions are not a verified release-linked
-source snapshot; measurement-unit and target caveats remain.
+Private receipt reconciliation belongs in the owner's private evidence records,
+not this public repository. No private source snapshots, receipts, inventories,
+per-athlete outputs or reconciliation details are included here. Local artifact
+integrity does not itself establish scientific correctness or a live hypothesis
+binding. Historical evidence must remain immutable.
 
 ## Real descriptive adapter: feasible, not activated
 
