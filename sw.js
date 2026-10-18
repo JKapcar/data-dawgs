@@ -1,11 +1,10 @@
 // Data Dawgs service worker — draft-night insurance.
-// VERSION = md5 of every *.html and *.js in the repo root (sw.js itself excluded),
-// concatenated in sorted order, first 10 hex. It covers the scripts as well as the
-// pages because the draft rig's behaviour lives in draft-*.js: hashing only the HTML
-// meant a JS-only fix never invalidated a phone's cache.
+// VERSION hashes sorted root HTML/JS (excluding sw.js), then direct research-lab
+// HTML/module/style assets (tests excluded). Both stamping and verification use
+// this set so changes to the modular research UI also invalidate the cache key.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "8210912805";
+const VERSION = "22d23ed0ec";
 // A cache revision also invalidates old images when only precached artwork changes.
 const CACHE = "dd-" + VERSION + "-public-v3";
 

@@ -115,7 +115,7 @@ export function createResearchGateway({fbGet,fbPut,sessionAuth,mcpAuth,transitio
       const project=state=>{
         const result=view(state,principal);
         for(const task of result.tasks)if(task.lease?.owner!==actor&&task.lease)task.lease={owner:task.lease.owner,expiresAt:task.lease.expiresAt};
-        return {...result,storage:'conditional-tenant-store',identity:{actor,tenant,kind},adapters:{scheduler:'unconfigured',verifiedData:'unconfigured',holdout:'disabled'}};
+        return {...result,codeHash,storage:'conditional-tenant-store',identity:{actor,tenant,kind},adapters:{scheduler:'unconfigured',verifiedData:'unconfigured',holdout:'disabled'}};
       };
       if(operation==='read'){
         if(!principal.capabilities.includes('research:read'))fail(403,'read_scope_required');
@@ -153,7 +153,7 @@ export function createResearchGateway({fbGet,fbPut,sessionAuth,mcpAuth,transitio
           const before=snapshot.data.state.tasks.find(t=>t.tenant===tenant&&t.id===command.payload.taskId);
           if(before?.status==='claimed'&&before.lease?.expiresAt<=now())fail(409,'lease_expired_before_commit');
         }
-        if(command.type==='claim'&&next.result.lease.expiresAt<=now())fail(409,'lease_expired_before_commit');
+        if(command.type==='claim'&&next.result.lease&&next.result.lease.expiresAt<=now())fail(409,'lease_expired_before_commit');
         authorize(snapshot.data);
         if(await fbPut(env,path,envelope,snapshot.etag))return response;
       }

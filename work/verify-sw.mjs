@@ -23,6 +23,9 @@ function git(args){
 const rootOnly=p=>git(["ls-files",p]).toString().trim().split(/\r?\n/)
   .filter(Boolean).filter(f=>!f.includes("/")).sort();
 const files=[...rootOnly("*.html"),...rootOnly("*.js").filter(f=>f!=="sw.js")];
+// Match stamp-sw-version.py: direct research-lab pages, modules and styles.
+files.push(...git(["ls-files","research-lab"]).toString().trim().split(/\r?\n/)
+ .filter(f=>/^research-lab\/[^/]+\.(html|mjs|css)$/.test(f)&&!f.includes('.test.')).sort());
 const hash=createHash("md5");
 for(const file of files) hash.update(git(["show",":"+file]));
 const expected=hash.digest("hex").slice(0,10);

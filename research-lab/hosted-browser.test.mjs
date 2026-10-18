@@ -13,7 +13,7 @@ try{
   assert.equal(url.origin,site,'test must not contact external services');
   let file=url.pathname.split('/').at(-1)||'index.html';if(file==='data-dawgs-site-logo-560.png')file='brand.png';
   if(file==='client-config.mjs')return route.fulfill({contentType:'text/javascript',body:`export default {mode:'hosted',workerOrigin:'${worker}',tenant:'demo'};`});
-  assert(['install-help.js','install-help.css','index.html','app.mjs','client.mjs','tracking.mjs','style.css','instrument.css','brand.png','navigation.css','navigation.js'].includes(file),file);
+  assert(['workflow.mjs','workflow.css','install-help.js','install-help.css','index.html','app.mjs','client.mjs','tracking.mjs','style.css','instrument.css','brand.png','navigation.css','navigation.js'].includes(file),file);
   return route.fulfill({contentType:/\.(mjs|js)$/.test(file)?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'text/html',body:readFileSync(new URL(file==='brand.png'?'../assets/data-dawgs-site-logo-560.png':file.startsWith('install-help.')?'../'+file:file,import.meta.url))});
  });
  await page.goto(site+'/research-lab/');await page.getByText('Shared runner ready.',{exact:false}).waitFor();assert.equal(await page.locator('#hypothesis-grid article').count(),1);

@@ -1,3 +1,4 @@
+import {workflowGraph,renderWorkflow} from './workflow.mjs';
 import config from './client-config.mjs';
 import {createClient} from './client.mjs';
 const client=createClient(config,{onInvalidated:clearVisibleState,onVerified:t=>globalThis.DDAccount?.verified(t),onRejected:s=>globalThis.DDAccount?.failed(s)});
@@ -22,12 +23,40 @@ function form(container,fields,submitLabel,submit) {
 }
 // Verified key label (server-stamped) first, then the self-reported assistant name, marked as such.
 function who(x){return x.actor+(x.credential_label?` · key ${x.credential_label} (verified)`:'')+(x.author_label?` · says "${x.author_label}" (unverified)`:'');}
+function workflowDetails(h,attemptId=null){drawer('Bounded research workflow',c=>{
+ const graph=workflowGraph(state,h.id,Date.now(),attemptId),box=el('div');
+ if(graph.attempts.length){const label=el('label','Research attempt history'),select=el('select');select.id='workflow-attempt';for(const a of graph.attempts){const option=el('option',a.label);option.value=a.id;option.selected=a.id===graph.attemptId;select.append(option);}select.onchange=()=>workflowDetails(h,select.value);label.append(select);c.append(label);}
+ renderWorkflow(box,graph,state);c.append(box);
+ const [question,check,experiment,review,finding,decision]=graph.nodes;
+ const base={hypothesisId:h.id,hypothesisVersion:h.revisions.length,evidenceIds:[]};
+ c.append(action('Add non-independent advisory review',()=>drawer('Advisory review',c=>{
+  c.append(el('p','Pack contributions are welcome under existing discussion access. This is non-independent advice. A receipt-bound advisory may inform a descriptive finding and owner disposition, but cannot satisfy scientific or holdout gates.'));
+  const r=experiment.record,refs=r?.receiptHash&&r.hypothesisVersion===h.revisions.length?{receiptId:r.id,receiptHash:r.receiptHash}:{};
+  form(c,[['body','Advice, concerns and limitations','textarea']],'Record advisory review',p=>command('discussion',{...base,...refs,...p,kind:'advisory_review'}));
+ })));
+ c.append(action('Check current synthetic input',async()=>{const checked=await command('discussion',{...base,kind:'data_check',body:'Schema and provenance check of the loaded synthetic discovery fixture. Not real development data.',tracking});await refresh();workflowDetails(state.hypotheses.find(x=>x.id===h.id),checked.id);}));
+ if(check.status==='recorded')c.append(action('Queue bounded synthetic audit',async()=>{const queued=await command('task',{hypothesisId:h.id,dataCheckId:check.record.id,split:'discovery',budgetMs:5000,maxObservations:10000});await refresh();workflowDetails(state.hypotheses.find(x=>x.id===h.id),queued.id);}));
+ if(experiment.status==='recorded'){
+  const r=experiment.record,refs={...base,receiptId:r.id,receiptHash:r.receiptHash};
+  c.append(action('Submit separate review',()=>drawer('Review this synthetic receipt',c=>{
+   c.append(el('p','Requires a verified account subject distinct from the question authors and runner. Same-account assistants cannot satisfy this gate.'));
+   form(c,[['body','Review rationale and limitations','textarea'],['disposition','Disposition: ready or changes_requested']],'Record review',p=>command('discussion',{...refs,...p,kind:'review'}));
+  })));
+  if(['recorded','advisory'].includes(review.status))c.append(action('Record descriptive finding',()=>drawer('Descriptive finding',c=>form(c,[['body','Finding and limitations; no scientific verdict','textarea']],'Record finding',p=>command('discussion',{...refs,...p,kind:'finding',reviewId:review.record.id})))));
+  if(finding.status==='recorded'&&!decision.record)c.append(action('Owner decision',()=>drawer('Signed owner decision',c=>{
+   c.append(el('p',review.record.kind==='advisory_review'?'Review basis: NON-INDEPENDENT advisory. Separate-account review is not satisfied.':'Review basis: distinct account subject only; scientific independence is not established.'));
+   c.append(el('p','This records a disposition only. It does not authorize model fitting, access, deployment, or holdout use.'));
+   form(c,[['body','Rationale','textarea'],['disposition','Disposition: accept_descriptive, revise, or defer']],'Record owner decision',p=>command('discussion',{...refs,...p,kind:'owner_decision',reviewId:review.record.id,findingId:finding.record.id}));
+  })));
+ }
+});}
 function hypothesisDetails(h) {const latest=h.revisions.at(-1);drawer(latest.title,c=>{
   c.append(el('p',`Revision ${latest.version} · ${latest.status||'exploratory'} · ${latest.family||'other'} · ${['supported','null','inconclusive'].includes(latest.status)?'owner-recorded verdict':'no verified/falsified verdict'}`),el('p',latest.method));
   const design=['target','predictionTime','cohort','featureCutoff','splitPolicy','baseline','metric','exclusions'].filter(k=>latest[k]);if(design.length){const dl=el('dl');for(const k of design)dl.append(el('dt',k),el('dd',latest[k]));c.append(dl);}
+  c.append(action('Open dependency and evidence graph',()=>workflowDetails(h)));
   c.append(action('Queue descriptive audit',async()=>{await command('task',{hypothesisId:h.id,split:'discovery',budgetMs:5000,maxObservations:10000});$('#drawer').close();await refresh();}));
   c.append(el('h3','Discussion & independent challenges'));
-  for(const d of state.discussions.filter(d=>d.hypothesisId===h.id)){c.append(el('p',`${d.kind} · ${d.independent?'independent author':'same author / not independent'} · ${who(d)}`,'meta'),el('p',d.body));}
+  for(const d of state.discussions.filter(d=>d.hypothesisId===h.id)){c.append(el('p',`${d.kind} · ${d.separation|| (d.independent?'distinct account author; independence unproven':'same author / not independent')} · ${who(d)}`,'meta'),el('p',d.body));}
   const f=form(c,[['body','Challenge or observation','textarea']],'Record challenge',async p=>command('discussion',{...p,hypothesisId:h.id,kind:'challenge',evidenceIds:[]}));
   f.prepend(el('p','Independence compares verified account identities, not model names. Multiple AIs using one account are the same author.'));
   const history=el('details');history.append(el('summary','Revision history'),el('pre',JSON.stringify(h.revisions,null,2)));c.append(history);
@@ -35,11 +64,12 @@ function hypothesisDetails(h) {const latest=h.revisions.at(-1);drawer(latest.tit
 });}
 async function refresh() {
   state=await client.state();$('.machine-status').dataset.ready='true';$('#receipt-count').textContent=`${state.receipts.length} ${state.receipts.length===1?'receipt':'receipts'}`;
-  const active=state.tasks.filter(t=>t.status!=='completed'),claimed=active.filter(t=>t.lease?.expiresAt>Date.now()).length;$('#queue-count').textContent=active.length;$('#active-tasks').textContent=`${active.length} active ${active.length===1?'task':'tasks'} / ${claimed} leased / ${active.length-claimed} awaiting claim`;
+  const active=state.tasks.filter(t=>!['completed','stale'].includes(t.status)),claimed=active.filter(t=>t.lease?.expiresAt>Date.now()).length;$('#queue-count').textContent=active.length;$('#active-tasks').textContent=`${active.length} active ${active.length===1?'task':'tasks'} / ${claimed} leased / ${active.length-claimed} awaiting claim`;
   const groups=FAMILIES.map(([family,label])=>[label,state.hypotheses.filter(h=>(h.revisions.at(-1).family||'other')===family)]).filter(([,list])=>list.length);
   $('#hypothesis-grid').replaceChildren(...groups.map(([label,list])=>{const g=el('section',undefined,'family-group'),grid=el('div',undefined,'grid');g.append(el('h3',`${label} · ${list.length}`,'eyebrow'),grid);grid.append(...list.map(h=>{const r=h.revisions.at(-1),n=el('article',undefined,'card');n.dataset.status=r.status||'exploratory';n.append(chip(r.status||'exploratory'),el('span',` v${r.version}`,'meta'),el('h3',r.title),el('p',r.method),action('Open research record ↗',()=>hypothesisDetails(h)));return n;}));return g;}));
-  $('#tasks').replaceChildren(...state.tasks.map(t=>{const n=el('article',undefined,'task'),d=el('div');n.dataset.status=t.status;d.append(el('strong',state.hypotheses.find(h=>h.id===t.hypothesisId)?.revisions[t.hypothesisVersion-1]?.title||t.hypothesisId),el('small',`${t.status} · discovery · ${t.budgetMs}ms / ${t.maxObservations} observations · requires experiment:run`));n.append(d);if(t.status!=='completed')n.append(action(t.lease&&t.lease.expiresAt>Date.now()?'Resume owned lease':client.mode==='hosted'?'Claim & run shared audit':client.mode==='browser'?'Run synthetic demo':'Claim & run locally',async()=>{
+  $('#tasks').replaceChildren(...state.tasks.map(t=>{const n=el('article',undefined,'task'),d=el('div');n.dataset.status=t.status;d.append(el('strong',state.hypotheses.find(h=>h.id===t.hypothesisId)?.revisions[t.hypothesisVersion-1]?.title||t.hypothesisId),el('small',`${t.status}${t.staleReason?' / '+t.staleReason:''} · discovery · ${t.budgetMs}ms / ${t.maxObservations} observations · requires experiment:run`));n.append(d);if(!['completed','stale'].includes(t.status))n.append(action(t.lease&&t.lease.expiresAt>Date.now()?'Resume owned lease':client.mode==='hosted'?'Claim & run shared audit':client.mode==='browser'?'Run synthetic demo':'Claim & run locally',async()=>{
     let claimed=t;if(!t.lease||t.lease.expiresAt<=Date.now())claimed=await command('claim',{taskId:t.id,leaseMs:60000});
+    if(claimed.status==='stale'){notice('Task closed as stale: '+claimed.staleReason+'. Recheck the current question before queuing again.');await refresh();return;}
     const receipt=await command('run',{taskId:t.id,leaseToken:claimed.lease.token,tracking});notice(`Receipt recorded: ${receipt.outcome}. Synthetic discovery; no hypothesis verdict.`);await refresh();
   }));return n;}));
   $('#receipts').replaceChildren(...state.receipts.map(r=>{const d=el('details'),s=el('summary');s.append(...(r.synthetic?[el('span','SYNTHETIC','tag synthetic-badge'),' ']:[]),`${r.outcome.toUpperCase()}${r.reason?' ('+r.reason+')':''} · ${r.at} · ${r.id.slice(0,8)}`);d.append(s,el('pre',JSON.stringify(r,null,2)));return d;}));
@@ -98,5 +128,5 @@ async function loadRealData(){
   for(const f of summary.files){const tr=el('tr');for(const v of [f.file,f.bytes?.toLocaleString?.()??f.bytes,f.rows?.toLocaleString?.()??f.rows,f.columns,f.key_unique===undefined?'—':String(f.key_unique),f.max_null_share===undefined?'—':String(f.max_null_share),f.sha256?f.sha256.slice(0,12)+'…':'—'])tr.append(el('td',v===undefined||v===null?'—':String(v)));table.append(tr);}
   box.replaceChildren(head,table,el('p','Counts and shapes only. Not a finding, not a fitted baseline, and not evidence for any hypothesis.','meta'));
 }
-function clearVisibleState(){globalThis.DDAccount?.reset();state=null;stop();$('.machine-status').dataset.ready='false';for(const id of ['hypothesis-grid','tasks','receipts','evidence','audit'])$('#'+id).replaceChildren();if($('#real-data')){$('#real-data').replaceChildren();realData=false;}$('#receipt-count').textContent='State cleared';$('#drawer').close();notice('Identity changed. Reload to verify research access.',true);}
+function clearVisibleState(){globalThis.DDAccount?.reset();state=null;stop();$('.machine-status').dataset.ready='false';for(const id of ['hypothesis-grid','tasks','receipts','evidence','audit'])$('#'+id).replaceChildren();if($('#real-data')){$('#real-data').replaceChildren();realData=false;}$('#receipt-count').textContent='State cleared';$('#drawer').close();$('#drawer-content').replaceChildren();notice('Identity changed. Reload to verify research access.',true);}
 window.addEventListener('storage',e=>{if(e.key==='dd-bozo-sess'||e.key===null)client.invalidate();});
