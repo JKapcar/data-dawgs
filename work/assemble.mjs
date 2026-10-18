@@ -31,6 +31,9 @@ const agentBoard = readFileSync("agent-board.js", "utf8").trimEnd();
 const P_START = "/* ===== DD-POUND START - generated from work/dawg-pound.js ===== */";
 const P_END = "/* ===== DD-POUND END ===== */";
 const pound = readFileSync("dawg-pound.js", "utf8").trimEnd();
+const OV_START = "/* ===== DD-OWNER-VAULT START ===== */";
+const OV_END = "/* ===== DD-OWNER-VAULT END ===== */";
+const ownerVault = readFileSync("owner-vault.js", "utf8").trimEnd();
 /* Research project envelope (WO-01). Sits directly after Pound because it reuses Pound's
  * identity, body reader and canonical hash, and above the MCP write-scope boundary because
  * it commits with fbPut. Its route is injected after the Pound route and is default off. */
@@ -144,6 +147,8 @@ function transform(input) {
   t=t.slice(0,ri)+repairStart+'\nconst DD_OWNER_REPAIR = (()=>{\n'+repair+'\nreturn repairOwnerEnvelope;\n})();\n'+repairEnd+t.slice(rj+repairEnd.length);
   const ps=t.indexOf(P_START), pe=t.indexOf(P_END);
   if(ps>=0 && pe>ps)t=t.slice(0,ps)+t.slice(pe+P_END.length);
+  const ovs=t.indexOf(OV_START), ove=t.indexOf(OV_END);
+  if(ovs>=0 && ove>ovs)t=t.slice(0,ovs)+t.slice(ove+OV_END.length);
   const pjs=t.indexOf(PJ_START), pje=t.indexOf(PJ_END);
   if(pjs>=0 && pje>pjs)t=t.slice(0,pjs)+t.slice(pje+PJ_END.length);
   const es = t.indexOf(E_START), ee = t.indexOf(E_END);
@@ -239,6 +244,7 @@ function transform(input) {
     + "\n\n" + DQ_START + "\n" + discordInbound + "\n" + DQ_END
     + "\n\n" + DC_START + "\n" + discordBridge + "\n" + DC_END
     + "\n\n" + P_START + "\n" + pound + "\n" + P_END
+    + "\n\n" + OV_START + "\n" + ownerVault + "\n" + OV_END
     + "\n\n" + PJ_START + "\n" + project + "\n" + PJ_END
     + "\n\n" + AB_START + "\n" + agentBoard + "\n" + AB_END
     + "\n\n" + AF_START + "\n" + agentFeedback + "\n" + AF_END

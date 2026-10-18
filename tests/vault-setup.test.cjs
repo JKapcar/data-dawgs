@@ -1,5 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
-test('every storage and sharing operation fails closed even with enabling-looking configuration',async()=>{
+test('sharing and MCP remain closed; conflicting credentials cannot reach owner storage',async()=>{
  const worker=(await import('../dawg-bot-worker.js')).default;let touched=0;const env={VAULT_ENABLED:'true',VAULT_SHARING_ENABLED:'true',VAULT_OWNER_UID:'u_owner',VAULT_BUCKET:new Proxy({},{get(){touched++;throw Error('must not touch storage');}})};
  for(const path of ['/api/vault','/api/vault/access','/mcp/vault'])for(const op of ['list','read','stage_upload','stage_delete','commit','invite','accept','create_ai','set_permissions','revoke']){
   const r=await worker.fetch(new Request('https://worker.test'+path,{method:'POST',headers:{'X-Dawg-Session':'fixture',Authorization:'Bearer fixture'},body:JSON.stringify({op,args:{}})}),env);assert.equal(r.status,503);assert.match(r.headers.get('cache-control'),/private, no-store/);

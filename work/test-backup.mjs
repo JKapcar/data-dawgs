@@ -127,7 +127,7 @@ const T0 = Date.parse("2026-09-15T09:00:00Z");
   await worker.scheduled({scheduledTime: T0}, {FB_SECRET: "s", RL: kv}, {});
   const general = kv.puts.filter(p => p.k.startsWith("backup:") && p.k !== "backup:lasterror");
   ok("both new general backup forms exclude privatePounds", general.length === 2 && general.every(p => !Object.hasOwn(JSON.parse(p.v).db, "privatePounds")));
-  const expected = {...WHOLE_DB};delete expected.privatePounds;
+    const expected = {...WHOLE_DB};delete expected.privatePounds;
   ok("unrelated database content preserved exactly", general.every(p => JSON.stringify(JSON.parse(p.v).db) === JSON.stringify(expected)));
   const privateCopies = kv.puts.filter(p => p.k.startsWith("pound-backup:"));
   ok("one private snapshot per verified owner and date", privateCopies.length === 2 && privateCopies.every(p => /^pound-backup:v1:u_(one|two):2026-09-15$/.test(p.k)));
@@ -214,6 +214,13 @@ const T0 = Date.parse("2026-09-15T09:00:00Z");
  ok('native envelope backup keeps exact inner payload and 30-day expiry',copies.length===1&&copies[0].opts.expirationTtl===2592000&&JSON.parse(copies[0].v).record.payload===envelope.payload);
  ok('successful backup does not alter repaired active data',JSON.stringify(WHOLE_DB)===repaired);
  delete WHOLE_DB.researchLab;
+}
+{
+ WHOLE_DB.ownerVaults={u_fixture:{owner_uid:'u_fixture',payload:'synthetic private filenames and receipts'}};
+ const before=JSON.stringify(WHOLE_DB),kv=makeKV();await worker.scheduled({scheduledTime:T0},{FB_SECRET:'s',RL:kv},{});
+ ok('vault catalog excluded from both general backups',kv.puts.filter(p=>p.k==='backup:latest'||p.k==='backup:2026-09-15').every(p=>!Object.hasOwn(JSON.parse(p.v).db,'ownerVaults')));
+ ok('vault exclusion does not mutate live state or create a new backup policy',JSON.stringify(WHOLE_DB)===before&&!kv.puts.some(p=>p.k.startsWith('vault-backup:')));
+ delete WHOLE_DB.ownerVaults;
 }
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
