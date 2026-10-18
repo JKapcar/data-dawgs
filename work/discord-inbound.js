@@ -1,5 +1,5 @@
 /* Signed Discord /ask ingestion and constrained queue bookkeeping; never executes prompts. */
-const DQ_PATH='discord_queue_v1';
+const DQ_PATH='/discord_queue_v1';
 const dqSnow=x=>typeof x==='string'&&/^\d{17,20}$/.test(x);
 const dqProject=x=>typeof x==='string'&&/^[a-z0-9][a-z0-9-]{1,62}$/.test(x)&&!['owner','admin','root'].includes(x);
 const dqPrincipal=x=>typeof x==='string'&&/^discord-user:[0-9]{17,20}$/.test(x);
@@ -25,17 +25,21 @@ async function handleDiscordAsk(request,env){
   dqCheck(event.type===2&&event.data?.type===1&&event.data?.name==='ask'&&dqSnow(event.id)&&dqSnow(event.member?.user?.id)&&event.member.user.bot!==true,400,'unsupported_interaction');
   const options=event.data.options;
   dqCheck(Array.isArray(options)&&options.length===1&&options[0].name==='question'&&options[0].type===3&&typeof options[0].value==='string'&&options[0].value.trim().length>0&&options[0].value.length<=2000,400,'invalid_question');
-  const uid=event.member.user.id,links=JSON.parse(env.DISCORD_USER_LINKS||'[]'),link=links.find(x=>x.discord_user_id===uid);
+  const uid=event.member.user.id,links=JSON.parse(env.DISCORD_USER_LINKS||'[]');
+  const smoke=env.DISCORD_OWNER_SMOKE_ENABLED==='true'&&uid===env.DISCORD_SMOKE_USER_ID;
+  const link=smoke?dsAdmission(env,event):links.find(x=>x.discord_user_id===uid);
+  dqCheck(smoke||link?.project_id!=='jason-discord-smoke',403,'reserved_smoke_namespace');
   dqCheck(link&&link.scope==='discord:ask'&&dqProject(link.project_id)&&link.principal==='discord-user:'+uid&&dqPrincipal(link.principal)&&Date.parse(link.expires_at)>Date.now(),403,'linked_user_required');
   dqCheck(env.FB_SECRET,503,'queue_configuration_required');
   const question=options[0].value,fingerprint=await dcHash(JSON.stringify([event.guild_id,event.channel_id,uid,link.project_id,link.principal,question]));
   for(let n=0;n<4;n++){
    const snap=await fbGet(env,DQ_PATH,true);dqCheck(snap.etag,503,'queue_store_unavailable');const s=dqStore(snap.data),old=s.jobs[event.id];
    if(old){dqCheck(old.fingerprint===fingerprint,409,'interaction_conflict');return dqReply(dqAck(event.id,old.state,old.delivery));}
+   if(smoke){dsPolicy(env);dqCheck(!Object.values(s.jobs).some(j=>j.owner_smoke===true),409,'smoke_already_used');}
    dqCheck(Object.keys(s.jobs).length<1000,503,'queue_capacity_reached');
    const hour=Math.floor(Date.now()/3600000),w=s.window.hour===hour?s.window:{hour,total:0,users:{}};
    dqCheck(w.total<60&&(w.users[uid]||0)<10,429,'queue_rate_limit');w.total++;w.users[uid]=(w.users[uid]||0)+1;s.window=w;
-   s.jobs[event.id]={id:event.id,fingerprint,state:'queued',question,question_trust:'untrusted_discord_user_text',project_id:link.project_id,principal:link.principal,discord_user_id:uid,guild_id:event.guild_id,channel_id:event.channel_id,correlation_id:event.id,thread_id:null,created_at:new Date().toISOString(),execution:'not_started',delivery:'not_sent'};
+   s.jobs[event.id]={...(smoke?{owner_smoke:true}:{}),id:event.id,fingerprint,state:'queued',question,question_trust:'untrusted_discord_user_text',project_id:link.project_id,principal:link.principal,discord_user_id:uid,guild_id:event.guild_id,channel_id:event.channel_id,correlation_id:event.id,thread_id:null,created_at:new Date().toISOString(),execution:'not_started',delivery:'not_sent'};
    if(await fbPut(env,DQ_PATH,s,snap.etag))return dqReply(dqAck(event.id));
   }
   dqFail(503,'queue_conflict_retry_same_interaction');
@@ -55,7 +59,7 @@ async function handleDiscordQueue(request,env){
    const snap=await fbGet(env,DQ_PATH,true);dqCheck(snap.etag,503,'queue_store_unavailable');const s=dqStore(snap.data);
    // Linking is rechecked on each read/write, so revoked user/project access stops processing.
    const links=JSON.parse(env.DISCORD_USER_LINKS||'[]');
-   const allowed=j=>j.guild_id===env.DISCORD_GUILD_ID&&j.channel_id===env.DISCORD_CHANNEL_ID&&j.project_id===grant.project_id&&links.some(l=>l.discord_user_id===j.discord_user_id&&l.principal===j.principal&&l.project_id===j.project_id&&l.scope==='discord:ask'&&Date.parse(l.expires_at)>Date.now());
+   const allowed=j=>j.owner_smoke!==true&&j.guild_id===env.DISCORD_GUILD_ID&&j.channel_id===env.DISCORD_CHANNEL_ID&&j.project_id===grant.project_id&&links.some(l=>l.discord_user_id===j.discord_user_id&&l.principal===j.principal&&l.project_id===j.project_id&&l.scope==='discord:ask'&&Date.parse(l.expires_at)>Date.now());
    if(a.action==='list'){const jobs=Object.values(s.jobs).filter(j=>allowed(j)&&(j.state==='queued'||(j.state==='claimed'&&j.claimed_by===grant.id))&&(!a.after||j.id>a.after)).sort((a,b)=>a.id.localeCompare(b.id));return dqReply({jobs:jobs.slice(0,20),next_cursor:jobs.length>20?jobs[19].id:null,notice:'Untrusted text only. Claiming does not execute it. Answer publishes only when separately enabled and permitted.'});}
    const j=s.jobs[a.id];dqCheck(j&&allowed(j),403,'job_denied');
    if(a.action==='read')return dqReply({job:j});

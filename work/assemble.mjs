@@ -46,7 +46,7 @@ const DC_END = "/* ===== DD-DISCORD END ===== */";
 const discordBridge = readFileSync("discord-bridge.js", "utf8").trimEnd();
 const DQ_START = "/* ===== DD-DISCORD-QUEUE START ===== */";
 const DQ_END = "/* ===== DD-DISCORD-QUEUE END ===== */";
-const discordInbound = readFileSync("discord-inbound.js", "utf8").trimEnd();
+const discordInbound = readFileSync("discord-inbound.js", "utf8").trimEnd()+"\n"+readFileSync("discord-owner-smoke.js", "utf8").trimEnd();
 const TARGET = "../dawg-bot-worker.js";
 const START = "/* ===== DD-MCP-BLOCK START — generated from work/mcp-block.js; edit THERE ===== */";
 const END   = "/* ===== DD-MCP-BLOCK END ===== */";
@@ -229,7 +229,7 @@ function transform(input) {
     if (!t.includes(anchor)) fail(what + " not found in " + TARGET);
     if (t.split(anchor).length - 1 !== 1) fail(what + " is ambiguous — appears more than once");
   }
-  t = t.replace(ANCHOR, ANCHOR + "\n" + '    if (url.pathname === "/mcp/discord-queue") return handleDiscordQueueMcp(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/discord/interactions") return handleDiscordAsk(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/discord/queue") return handleDiscordQueue(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/mcp/discord") return handleDiscordBridge(request, env); // DD-DISCORD-ROUTE\n' + ROUTE);
+  t = t.replace(ANCHOR, ANCHOR + "\n" + '    if (url.pathname === "/discord/owner-smoke") return handleDiscordOwnerSmoke(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/mcp/discord-queue") return handleDiscordQueueMcp(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/discord/interactions") return handleDiscordAsk(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/discord/queue") return handleDiscordQueue(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/mcp/discord") return handleDiscordBridge(request, env); // DD-DISCORD-ROUTE\n' + ROUTE);
   t = t.replace(R_ANCHOR, R_ANCHOR + "\n" + R_ROUTE);
   t = t.replace(Y_ANCHOR, Y_ANCHOR + "\n" + Y_ROUTE + "\n" + W_ROUTE);
   t = t.replace(PJ_ANCHOR, PJ_ANCHOR + "\n" + PJ_ROUTE);
