@@ -39,6 +39,7 @@ jobs:
       - run: node --check dawg-bot-worker.js
       - run: node --test tests/discord-bridge.test.cjs tests/discord-inbound.test.cjs tests/discord-owner-smoke.test.cjs tests/bozo-mcp-auth-status.test.js
       - run: node --test tests/dawg-pound.test.cjs
+      - run: node --test tests/owner-vault.test.cjs tests/owner-vault-ui.test.cjs tests/vault-setup.test.cjs
       - run: node --test tests/research-project.test.cjs
       - run: node --test tests/bozo-correction.test.cjs
       - run: node --test tests/bozo-menu*.test.mjs

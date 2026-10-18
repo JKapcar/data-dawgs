@@ -1,7 +1,7 @@
 name: Research lab contracts and preview
 on:
   pull_request:
-    paths: ['install-help.js', 'install-help.css', 'tests/install-help.test.mjs', 'tests/dawg-pound-ui.cjs', 'tests/dispatch-visual-preview.cjs', 'tools/check-research-data.py', 'research-lab/**', 'dawg-pound.html', 'dawg-pound.js', 'pound-portraits.js', 'pound-portraits.css', 'signon.html', '.github/workflows/research-lab.yml']
+    paths: ['vault.html', 'vault-owner.js', 'work/owner-vault.js', 'tests/owner-vault*', 'install-help.js', 'install-help.css', 'tests/install-help.test.mjs', 'tests/dawg-pound-ui.cjs', 'tests/dispatch-visual-preview.cjs', 'tools/check-research-data.py', 'research-lab/**', 'dawg-pound.html', 'dawg-pound.js', 'pound-portraits.js', 'pound-portraits.css', 'signon.html', '.github/workflows/research-lab.yml']
 permissions:
   contents: read
 jobs:
@@ -30,6 +30,8 @@ jobs:
       - run: node research-lab/build-browser.mjs && git diff --exit-code -- research-lab/browser-engine.mjs
       - run: npm install --prefix /tmp/dd-lab-qa playwright@1.56.1 miniflare@4.20260730.0 --no-audit --no-fund
       - run: /tmp/dd-lab-qa/node_modules/.bin/playwright install --with-deps chromium
+      - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node --test tests/owner-vault-worker.test.mjs
+      - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules VAULT_SCREENSHOTS=/tmp/dd-lab-screenshots/owner-vault node tests/owner-vault-browser.test.cjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/decisions-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/portraits-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/discord-smoke-browser.test.mjs
