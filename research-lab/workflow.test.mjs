@@ -122,3 +122,14 @@ test('gateway stale claim commits a terminal state without dereferencing a missi
  const h=await call('hypothesis',{title:'Synthetic',method:'Question'}),c=await call('discussion',{hypothesisId:h.id,hypothesisVersion:1,kind:'data_check',body:'Check',evidenceIds:[],tracking:syntheticTracking()}),t=await call('task',{hypothesisId:h.id,dataCheckId:c.id,split:'discovery',budgetMs:5000,maxObservations:10000});
  await call('hypothesis',{id:h.id,expectedVersion:1,title:'Changed',method:'New question'});assert.equal((await call('claim',{taskId:t.id,leaseMs:1000})).status,'stale');
 });
+test('new advice on an accepted receipt preserves linked review, finding and owner history',()=>{
+ const x=fixture(),review=x.call('discussion',{...x.refs,kind:'advisory_review'}),finding=x.call('discussion',{...x.refs,kind:'finding',reviewId:review.id});
+ const decision=x.call('discussion',{...x.refs,kind:'owner_decision',reviewId:review.id,findingId:finding.id,disposition:'accept_descriptive'},owner),before=structuredClone(x.state());
+ const advice=x.call('discussion',{...x.refs,kind:'advisory_review',body:'New concern on same receipt'}),g=workflowGraph(x.state(),x.h.id);
+ assert.equal(g.attemptId,x.t.id);assert.match(g.attempts[0].label,/last recorded: accept_descriptive/);assert.equal(g.nodes[3].record.id,advice.id);assert.equal(g.nodes[5].status,'blocked');assert.equal(g.nodes[5].record,null);assert.match(g.nodes[5].reason,/Earlier owner dispositions remain/);
+ assert.deepEqual(g.history.map(d=>d.id),[review.id,finding.id,decision.id,advice.id]);assert.deepEqual(g.recordedDecision,decision);assert.deepEqual(x.state().discussions.slice(0,-1),before.discussions);
+ const nextFinding=x.call('discussion',{...x.refs,kind:'finding',reviewId:advice.id}),nextDecision=x.call('discussion',{...x.refs,kind:'owner_decision',reviewId:advice.id,findingId:nextFinding.id,disposition:'defer'},owner);
+ const next=workflowGraph(x.state(),x.h.id);assert.equal(next.nodes[5].status,'defer');assert.deepEqual(next.history.filter(d=>d.kind==='owner_decision').map(d=>d.id),[decision.id,nextDecision.id]);
+ // A new check has its own history and does not inherit any owner disposition.
+ const check=x.call('discussion',{...x.base,kind:'data_check',tracking:x.tracking});assert.equal(workflowGraph(x.state(),x.h.id,1000,check.id).history.length,0);
+});

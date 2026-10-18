@@ -63,7 +63,11 @@ selector preserves every data-check/task chain. A current accepted attempt stays
 selected by default after another check; a user can explicitly select the new
 attempt or any historical chain. A check/queue button selects the attempt it just
 created. Question/code changes visibly stale historical records rather than
-rewriting them. Identity invalidation clears the drawer.
+rewriting them. Each attempt also retains linked review/finding/decision history.
+New advice leaves the earlier disposition visible as a historical record while
+the current path honestly waits for its own finding and owner decision. Attempt
+labels explicitly describe the last recorded disposition, not approval of newer
+advice. Identity invalidation clears the drawer.
 
 ## Private evidence
 
