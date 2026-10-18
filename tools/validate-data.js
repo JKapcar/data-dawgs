@@ -690,7 +690,11 @@ console.log('\nllms.txt');
   if (!fs.existsSync(p)) fail('llms.txt missing');
   else {
     const t = fs.readFileSync(p, 'utf8');
-    const kb = Buffer.byteLength(t) / 1024;
+    const contract = require('./llms-contract').validateLlms(ROOT, t);
+    for (const error of contract.errors) fail(error);
+    if (!contract.errors.length) ok(`source MCP: ${contract.tools} tools, ${contract.writes} not read-only`);
+    if (contract.bytes > 5.5 * 1024) warn(`llms.txt has only ${6144 - contract.bytes} bytes of headroom`);
+    const kb = contract.bytes / 1024;
     /* ⚠️ 6 KB, RAISED FROM 5 ON PURPOSE — read this before lowering it back.
        llms.txt is the front door for machines, and the ceiling was reached: main sat at
        5102 bytes against a 5120 limit, so the site could not add another machine surface

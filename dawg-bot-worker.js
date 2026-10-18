@@ -1854,7 +1854,7 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/discord/owner-smoke") return handleDiscordOwnerSmoke(request, env); // DD-DISCORD-QUEUE-ROUTE
     if (url.pathname === "/mcp/discord-queue") return handleDiscordQueueMcp(request, env); // DD-DISCORD-QUEUE-ROUTE
-    if (url.pathname === "/discord/interactions") return handleDiscordAsk(request, env); // DD-DISCORD-QUEUE-ROUTE
+    if (url.pathname === "/discord/interactions") return handleDiscordAsk(request, env, arguments[2]); // DD-DISCORD-QUEUE-ROUTE
     if (url.pathname === "/discord/queue") return handleDiscordQueue(request, env); // DD-DISCORD-QUEUE-ROUTE
     if (url.pathname === "/mcp/discord") return handleDiscordBridge(request, env); // DD-DISCORD-ROUTE
     // DD-MCP-ROUTE — matched before ANY Origin-gated handler; see the block at the bottom.
@@ -12522,9 +12522,20 @@ function dqFail(status,message){throw Object.assign(new Error(message),{dqStatus
 const dqCheck=(ok,status,message)=>{if(!ok)dqFail(status,message);};
 const dqReply=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 async function dqBytes(request){const r=request.body?.getReader();dqCheck(r,400,'body_required');let n=0,parts=[];for(;;){const {done,value}=await r.read();if(done)break;n+=value.length;if(n>16384){await r.cancel();dqFail(413,'body_too_large');}parts.push(value);}const bytes=new Uint8Array(n);let p=0;for(const v of parts){bytes.set(v,p);p+=v.length;}return bytes;}
-function dqStore(data){const s=data||{version:1,jobs:{},window:{}};dqCheck(s.version===1&&s.jobs&&s.window,503,'queue_store_invalid');return s;}
+function dqStore(data){
+ const object=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
+ if(data===null||data===undefined)return {version:1,jobs:{},window:{}};
+ dqCheck(object(data)&&data.version===1,503,'queue_store_invalid');
+ // RTDB omits empty maps. Normalize absent maps in memory without replacing records.
+ for(const key of ['jobs','window'])dqCheck(data[key]===undefined||object(data[key]),503,'queue_store_invalid');
+ const s={...data,jobs:data.jobs??{},window:{...(data.window??{})}};
+ dqCheck(s.window.users===undefined||object(s.window.users),503,'queue_store_invalid');
+ if(s.window.hour!==undefined&&s.window.users===undefined)s.window.users={};
+ return s;
+}
 function dqAck(id,state='queued',delivery='not_sent'){return {type:4,data:{content:'Request '+id+' is '+state+'. '+(state==='queued'?'No agent has run. An authorized session must claim it.':state==='claimed'?'An authorized session claimed it; execution is not verified.':'Completion is claimant-reported, not independently verified.')+(delivery==='delivered'?' Discord accepted the answer in thread ask-'+id+'.':delivery==='uncertain'?' Delivery is uncertain; do not submit a replacement request.':' No Discord answer has been sent by this queue.'),flags:64,allowed_mentions:{parse:[]}}};}
-async function handleDiscordAsk(request,env){
+async function handleDiscordAsk(request,env,execution){
+ let verified=false;
  try{
   dqCheck(env.DISCORD_INBOUND_ENABLED==='true',503,'inbound_disabled');dqCheck(request.method==='POST',405,'post_required');
   const stamp=request.headers.get('X-Signature-Timestamp'),sig=request.headers.get('X-Signature-Ed25519');
@@ -12536,6 +12547,7 @@ async function handleDiscordAsk(request,env){
   dqCheck(await crypto.subtle.verify('Ed25519',key,hex(sig),signed),401,'invalid_signature');
   const event=JSON.parse(new TextDecoder().decode(raw));dqCheck(event.application_id===env.DISCORD_APPLICATION_ID,403,'application_denied');
   if(event.type===1)return dqReply({type:1});
+  verified=true;
   dqCheck(dqSnow(env.DISCORD_GUILD_ID)&&dqSnow(env.DISCORD_CHANNEL_ID)&&event.guild_id===env.DISCORD_GUILD_ID&&event.channel_id===env.DISCORD_CHANNEL_ID,403,'destination_denied');
   dqCheck(event.type===2&&event.data?.type===1&&event.data?.name==='ask'&&dqSnow(event.id)&&dqSnow(event.member?.user?.id)&&event.member.user.bot!==true,400,'unsupported_interaction');
   const options=event.data.options;
@@ -12547,6 +12559,7 @@ async function handleDiscordAsk(request,env){
   dqCheck(link&&link.scope==='discord:ask'&&dqProject(link.project_id)&&link.principal==='discord-user:'+uid&&dqPrincipal(link.principal)&&Date.parse(link.expires_at)>Date.now(),403,'linked_user_required');
   dqCheck(env.FB_SECRET,503,'queue_configuration_required');
   const question=options[0].value,fingerprint=await dcHash(JSON.stringify([event.guild_id,event.channel_id,uid,link.project_id,link.principal,question]));
+  const persist=async()=>{
   for(let n=0;n<4;n++){
    const snap=await fbGet(env,DQ_PATH,true);dqCheck(snap.etag,503,'queue_store_unavailable');const s=dqStore(snap.data),old=s.jobs[event.id];
    if(old){dqCheck(old.fingerprint===fingerprint,409,'interaction_conflict');return dqReply(dqAck(event.id,old.state,old.delivery));}
@@ -12558,7 +12571,16 @@ async function handleDiscordAsk(request,env){
    if(await fbPut(env,DQ_PATH,s,snap.etag))return dqReply(dqAck(event.id));
   }
   dqFail(503,'queue_conflict_retry_same_interaction');
- }catch(e){return dqReply({error:e.dqStatus?e.message:'queue_unavailable'},e.dqStatus||503);}
+  };
+  if(execution?.waitUntil){
+   execution.waitUntil(persist().catch(e=>console.warn('discord_queue_admission_failed',{request_id:event.id,code:e.dqStatus?e.message:'queue_unavailable'})));
+   return dqReply({type:4,data:{content:'Received request '+event.id+'. Queue admission is not yet confirmed. Do not resubmit; check the owner test page or authorized queue status.',flags:64,allowed_mentions:{parse:[]}}});
+  }
+  return await persist();
+ }catch(e){
+  if(verified&&execution?.waitUntil)return dqReply({type:4,data:{content:'Request not accepted: '+(e.dqStatus?e.message:'queue_unavailable')+'. Do not resubmit; check owner test status.',flags:64,allowed_mentions:{parse:[]}}});
+  return dqReply({error:e.dqStatus?e.message:'queue_unavailable'},e.dqStatus||503);
+ }
 }
 async function handleDiscordQueue(request,env){
  try{
@@ -12657,12 +12679,21 @@ async function handleDiscordOwnerSmoke(request,env){
  try{
   const origin=request.headers.get('Origin');dqCheck(!origin||['https://datadawgs216.com','https://www.datadawgs216.com'].includes(origin),403,'origin_denied');
   if(origin)Object.assign(headers,{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Allow-Methods':'GET, POST, OPTIONS'});
-  const url=new URL(request.url);dqCheck(url.pathname==='/discord/owner-smoke'&&!url.search,404,'not_found');
+  const url=new URL(request.url),inspect=url.search==='?inspect=command';dqCheck(url.pathname==='/discord/owner-smoke'&&(!url.search||(inspect&&['GET','OPTIONS'].includes(request.method))),404,'not_found');
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
   dqCheck(['GET','POST'].includes(request.method),405,'method_denied');
   const p=dsPolicy(env);
   const authorize=async()=>{dsPolicy(env);let uid;try{uid=await poundIdentity(request,env);}catch{dqFail(401,'site_session_required');}dqCheck(uid===p.owner,403,'owner_required');};
   await authorize();
+  if(inspect){
+   dqCheck(env.DISCORD_BOT_TOKEN,503,'bot_configuration_required');
+   const response=await fetch('https://discord.com/api/v10/applications/'+env.DISCORD_APPLICATION_ID+'/guilds/'+env.DISCORD_GUILD_ID+'/commands',{method:'GET',headers:{Authorization:'Bot '+env.DISCORD_BOT_TOKEN},redirect:'manual',signal:AbortSignal.timeout(10000)});
+   dqCheck(response.ok,502,'command_inspection_unavailable');const commands=await response.json();dqCheck(Array.isArray(commands),502,'command_inspection_invalid');
+   const matches=commands.filter(c=>c?.name==='ask'&&c.type===1);dqCheck(matches.length<=1,502,'command_inspection_ambiguous');const command=matches[0];
+   if(command)dqCheck(dqSnow(command.id)&&command.application_id===env.DISCORD_APPLICATION_ID&&command.guild_id===env.DISCORD_GUILD_ID,502,'command_inspection_identity_mismatch');
+   const option=command?.options?.[0];const definitionMatches=!!command&&command.default_member_permissions==='0'&&command.description==='Submit a request to an authorized manual session'&&Array.isArray(command.options)&&command.options.length===1&&option.name==='question'&&option.description==='Question for the manual session'&&option.type===3&&option.required===true&&option.max_length===2000&&!option.autocomplete&&!option.choices?.length&&!option.min_length;
+   await authorize();return send({checked_at:new Date().toISOString(),exists:!!command,command_id:command?.id||null,definition_matches:definitionMatches,registration_receipt_unchanged:true,notice:'Read-only Discord observation. Does not confirm channel permissions, queue admission or reply delivery.'});
+  }
   const path='/discord_queue_v1';
   const read=async()=>{const s=await fbGet(env,path,true);dqCheck(s.etag,503,'queue_store_unavailable');return {...s,data:dqStore(s.data)};};
   const allowed=j=>j.owner_smoke===true&&j.project_id===DS_PROJECT&&j.discord_user_id===p.user&&j.principal==='discord-user:'+p.user&&j.guild_id===env.DISCORD_GUILD_ID&&j.channel_id===env.DISCORD_CHANNEL_ID&&j.question===DS_QUESTION;

@@ -101,3 +101,53 @@ test('consumer rendering failures remain visible instead of being reported as a 
   assert.throws(()=>h.streams[0].emit('put',{path:'/',data:{}}),/render bug/);
   h.reader.stop();await tick();
 });
+test('healthy realtime keeps immediate updates but reduces periodic full reads to twelve per hour',async t=>{
+  const h=harness();t.after(()=>h.reader.stop());h.reader.start();h.streams[0].emit('open',{});
+  h.reads[0].resolve({revision:1});await tick();
+  for(let n=1;n<=240;n++){
+    const before=h.reads.length;h.advance(15000);for(const fn of h.intervals.values())fn();
+    if(h.reads.length>before){h.reads.at(-1).resolve({revision:1});await tick();}
+  }
+  assert.equal(h.reads.length,13,'one initial read plus twelve five-minute checks');
+  assert.equal(h.reader.snapshot().state,'fresh');
+  h.streams[0].emit('put',{path:'/',data:{revision:2}});assert.deepEqual(h.values.at(-1),{revision:2});
+});
+test('stream failure restores immediate read and fast fallback without waiting five minutes',async t=>{
+  const h=harness();t.after(()=>h.reader.stop());h.reader.start();h.streams[0].emit('open',{});h.reads[0].resolve({});await tick();
+  h.advance(15000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,1);
+  h.streams[0].onerror();assert.equal(h.reads.length,2);h.reads[1].resolve({});await tick();
+  h.advance(15000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,3);h.reads[2].resolve({});await tick();
+  h.streams[0].emit('open',{});h.advance(15000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,3);
+});
+test('manual refresh and partial stream changes bypass healthy-stream polling delay',async t=>{
+  const h=harness();t.after(()=>h.reader.stop());h.reader.start();h.streams[0].emit('open',{});h.reads[0].resolve({});await tick();
+  const manual=h.reader.refresh();assert.equal(h.reads.length,2);h.reads[1].resolve({});await manual;
+  h.streams[0].emit('patch',{path:'/members',data:{a:true}});assert.equal(h.reads.length,3);h.reads[2].resolve({members:{a:true}});await tick();
+});
+test('failed periodic reconciliation marks stale and restores fast polling',async t=>{
+  const h=harness();t.after(()=>h.reader.stop());h.reader.start();h.streams[0].emit('open',{});h.reads[0].resolve({});await tick();
+  h.advance(300000);for(const fn of h.intervals.values())fn();h.reads[1].reject(new Error('network'));await tick();assert.equal(h.reader.snapshot().state,'stale');
+  h.advance(15000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,3);h.reads[2].resolve({});await tick();
+});
+test('late open and error events from a stopped stream cannot change current polling',async t=>{
+  const h=harness();t.after(()=>h.reader.stop());h.reader.start();h.reader.stop();h.reader.start();
+  h.reads[1].resolve({});await tick();h.streams[0].emit('open',{});
+  h.advance(15000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,3);
+  h.reads[2].resolve({});await tick();h.streams[1].emit('open',{});h.streams[0].onerror();
+  h.advance(15000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,3);
+});
+test('offline during reconciliation and online recovery retain fast fallback until stream reconnects',async t=>{
+  const h=harness();t.after(()=>h.reader.stop());h.reader.start();h.streams[0].emit('open',{});h.reads[0].resolve({});await tick();
+  h.advance(300000);for(const fn of h.intervals.values())fn();h.navigator.onLine=false;h.events.get('offline')();
+  h.reads[1].reject(new Error('offline'));await tick();assert.equal(h.reader.snapshot().state,'offline');
+  h.navigator.onLine=true;h.events.get('online')();assert.equal(h.reads.length,3);h.reads[2].resolve({});await tick();
+  h.advance(15000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,4);h.reads[3].resolve({});await tick();
+  h.streams[0].emit('open',{});h.advance(15000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,4);
+});
+test('a delayed background timer reconciles once on resume without catch-up requests',async t=>{
+  const h=harness();t.after(()=>h.reader.stop());h.reader.start();h.streams[0].emit('open',{});h.reads[0].resolve({});await tick();
+  h.advance(1800000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,2);
+  for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,2,'coalesce pending reconciliation');
+  h.reads[1].resolve({resumed:true});await tick();h.advance(15000);for(const fn of h.intervals.values())fn();assert.equal(h.reads.length,2);
+  assert.deepEqual(h.values.at(-1),{resumed:true});
+});

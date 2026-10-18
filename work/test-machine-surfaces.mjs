@@ -47,7 +47,10 @@ ok("surfaces.json is internally consistent: live + staged = registered",
    the real live count. Scanning for the NUMBER rather than for one fixed sentence means a
    rewording of the prose cannot smuggle a stale figure back in. */
 const liveClaims = [...llms.matchAll(/(\d+)\s+live[^.\n]{0,60}?MCP tools/gi)].map(m => +m[1]);
-ok("llms.txt states a live MCP tool count at all", liveClaims.length > 0);
+// Production counts require authenticated verification; source counts are independently checked.
+const { validateLlms } = await import("../tools/llms-contract.js");
+const llmsContract = validateLlms(ROOT, llms);
+ok("llms.txt source counts and byte budget", !llmsContract.errors.length, llmsContract.errors.join("; "));
 ok("every live-MCP-tool count in llms.txt equals the registry",
    liveClaims.every(n => n === counts.mcp_tools_live),
    `claims ${JSON.stringify(liveClaims)} vs registry ${counts.mcp_tools_live}`);

@@ -3,15 +3,15 @@
 > Forecasting, fantasy football, betting markets and EPA with receipts.
 > Paths relative to https://datadawgs216.com/
 
-Start with [`/data/index.json`](/data/index.json): dates and hashes. Cite `as_of` with numbers.
+[`/data/index.json`](/data/index.json): dates + hashes. Cite `as_of` with numbers.
 
-[`/data/surfaces.json`](/data/surfaces.json): pages+tools; `planned`=unavailable. Source MCP: 86 tools; 25 not read-only (`read_only_false`). `dd_submit_bozo_leg`: two-phase, own leg or commissioner proxy, never backdated. [Sign in](/signon.html) · [instructions](/data/dawg-project-instructions.md).
+[`/data/surfaces.json`](/data/surfaces.json): pages+tools; `planned`=unavailable. Source MCP: 88 tools; 26 not read-only (`read_only_false`). `dd_submit_bozo_leg`: two-phase, own leg or commissioner proxy, never backdated. [Sign in](/signon.html) · [instructions](/data/dawg-project-instructions.md).
 
 Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHouse, stopped.
 
 ## The DawgHouse
 
-- [The shelf](/dawghouse.html) + [inventory](/data/pound-tools.json): blocked NFL work + exact blockers + 44 CFB ideas. Fourteen CFB tools ARE MCP-callable; roadmap ideas are not.
+- [The shelf](/dawghouse.html) + [inventory](/data/pound-tools.json): NFL blockers + 44 CFB ideas. Fourteen CFB tools ARE MCP-callable; roadmap ideas are not.
 - [Contracts](/data/model-contracts.json): forecast fields, receipt rules, calculator I/O.
 - [Provenance](/data/upstream-models.json): repos, commits, dates, licenses, integration mode.
 - [NFL schedule](/data/nfl-schedule.json): 272 validated 2026 games, locked snapshot.
@@ -23,9 +23,9 @@ Tiers: `labs`=Pup, unvalidated; `dawg`=Working Dawg, validated; `pound`=DawgHous
 ## Hubs
 
 - [DateDawg](/datedawg.html): local ZIP/JSON reciprocal-acceptance dashboard; no upload, backend memory or observed Hinge cohort.
-- [Arena](/arena.html): games vs other people: Bozo, Guillotine, Survivor, DFS,
+- [Arena](/arena.html): multiplayer: Bozo, Guillotine, Survivor, DFS,
 the live draft rig, a [32-team wins pool](/teamdraft.html).
-- [Library](/data.html): each index.json file by owning surface, plus sources read, not republished; owns no data.
+- [Library](/data.html): index.json by surface; includes sources read, not republished; owns no data.
 - [Data Explorer](/explore.html): browser SQL + charts over /data; cites file + as_of.
 - [NFL](/nfl.html): EPA, nfelo, calculators, blocked NFL work + blockers.
 - [NFL Weather](/weather.html) + [stadiums](/data/nfl-stadiums.json) + [method](/data/weather-method.md): NWS hourly at kickoff (Pup; not impact model).
@@ -33,7 +33,7 @@ the live draft rig, a [32-team wins pool](/teamdraft.html).
 ## College football
 
 - [CFB Lab](/cfb.html): efficiency, results, Elo, matchup, divergence, roadmap.
-- [Efficiency](/data/cfb-efficiency.json): latest cfbfastR 3.0 FBS season summary (file states season); modelled, ungraded, not a forecast/DD rating.
+- [Efficiency](/data/cfb-efficiency.json): cfbfastR 3.0 FBS summary (season in file); modelled, ungraded, not a forecast/DD rating.
 - [2025 results](/data/cfb-schedule.json), [latest games](/data/cfb-games-latest.json), [latest periods](/data/cfb-team-week-latest.json), [ratings](/data/cfb-teams.json).
 - [Book market](/data/cfb-market.json): timestamp unknown; not closing lines, so no CLV.
 - [CFB Elo](/data/cfb-elo.json), [registry](/data/cfb-ratings.json) and [card](/data/cfb-model-cards.json): end-2025; retrodictive, modelled, ungraded, not consensus/forecast.
@@ -46,7 +46,7 @@ the live draft rig, a [32-team wins pool](/teamdraft.html).
 - [Dynasty ranks](/data/dynasty-ranks.json): 334 players/picks; 1QB + SF/TE-premium ranks + values, not observed prices.
 - [League](/data/league.json): 14 teams, $200, 15 spots, derived `half14`, no kicker.
 - [2026 strategy](/data/strategy.md): positional curves + format playbooks; testable structure apart from analyst priors.
-- [War Room](/fantasy-warroom.html): private Yahoo/ESPN/Sleeper league context, DataDawg$ + replacement levels. Deployed `dd_war_room` and `dd_fantasy_leagues` let personal AIs pick saved leagues. No public account data.
+- [War Room](/fantasy-warroom.html): private Yahoo/ESPN/Sleeper league context, DataDawg$ + replacement levels. Deployed `dd_war_room` + `dd_fantasy_leagues`: personal AI saved-league access. No public account data.
 
 ## Models and data
 
@@ -57,7 +57,7 @@ the live draft rig, a [32-team wins pool](/teamdraft.html).
 
 ## Receipts and method
 
-- [Pre-registered forecasts](/data/receipts.json): 272 calls locked 2026-08-06; the lock is `integrity.sha256`.
+- [Pre-registered forecasts](/data/receipts.json): 272 calls locked 2026-08-06; lock: `integrity.sha256`.
 - [Survivor receipts](/data/survivor-receipts.json): pre-kickoff top pick, graded after.
 - [DFS week objects](/data/dfs-weeks.json): locked week receipts (lineup hashes + expectations; realized:null until Monday ingest). Aggregates only — never player lists/projections/ownership (I3).
 - [Rankings report card](/data/rankings-grades.json): rankers graded vs actual PPR finishes; pre-registered, derived scores only, ungraded until W1.
@@ -68,19 +68,19 @@ the live draft rig, a [32-team wins pool](/teamdraft.html).
 
 ## Agent notes
 
-- If a dated number is stale enough to matter, say so.
+- Flag materially stale numbers.
 - `def_epa_play` is EPA allowed: lower is better.
-- Simulation and modelled output are labelled; never present either as observation.
+- Label simulation/modelled output; never call it observed.
 - Nothing here is betting advice.
 - `/data/` is public, static and CORS-open.
 
 ## DFS Labs
 
-[Playbook](/docs/dfs-playbook.md): start here for evidence rules, tools, lobby builds and checks. [App](/dfs.html#dfsPlaybook): Copy AI starter. Use personal access and live `dd_dfs_schema`; [MCP reference](/docs/dfs-mcp-workspace.md).
+[Playbook](/docs/dfs-playbook.md): evidence rules, tools, lobby builds, checks. [App](/dfs.html#dfsPlaybook): Copy AI starter. Use personal access and live `dd_dfs_schema`; [MCP reference](/docs/dfs-mcp-workspace.md).
 
 ## Bozo Menu
 
-[Full public menu](/bozo-menu.html). Follow its text/JSON feeds; include all rows, actual week and quote timestamps.
+[Full public menu](/bozo-menu.html). Use text/JSON feeds: all rows, actual week + quote timestamps.
 
 Agent forum: /agent-board.html. Unverified, advisory votes; /docs/agent-board-pilot.md.
 
