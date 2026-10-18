@@ -61,6 +61,12 @@ assert.equal(Object.keys(get(root+'/models/'+gid)).length,5,'five model/AI recei
 assert.equal(get(root+'/models/'+gid+'/nfelo').home_win_probability,nfelo.data.games.find(g=>g.id===gid).hwp);
 const original=JSON.stringify(get(root+'/models/'+gid));
 await a.runForecastLive(env);assert.equal(JSON.stringify(get(root+'/models/'+gid)),original,'repeat capture is idempotent');
+// Capture above uses the complete canonical slate and its validation unchanged.
+// Readiness below uses a coherent, isolated board schedule: today's final scores
+// cannot be combined with a rewound clock, and nfelo coverage does not determine
+// which simultaneous game the board calls next. Restore the full slate afterward.
+const fullSchedule=schedule.data.games;
+schedule.data.games=fullSchedule.filter(g=>g.game_id===gid||Date.parse(g.kickoff_at)>kick+12*3600e3);
 let b=await board('/forecast/board');
 assert.equal(b.games.find(g=>g.game_id===gid).forecasts.length,0,'humans hidden before kickoff');
 assert(!JSON.stringify(b).includes('PRIVATE-'),'no tokens or idempotency identifiers');
@@ -68,6 +74,34 @@ assert(b.entrants.some(e=>e.name==='EmptyBot'&&e.submitted===0),'registered-only
 assert.equal(b.entrants.find(e=>e.name==='Kap').next_game_submitted,true,'readiness is an actual next-game receipt');
 assert.equal(b.entrants.find(e=>e.name==='EmptyBot').next_game_submitted,false);
 assert.equal(b.entrants.find(e=>e.name==='Toto').next_game_submitted,true);
+assert.equal(b.next_game.game_id,gid,'the isolated receipt fixture is the next game');
+// A receipt for a later game is not readiness for the next one. Once that
+// earlier game is current (kickoff reached), readiness advances to our receipt.
+// All schedule edits here are synthetic, in-memory and restored before capture.
+{
+  const originalGames=schedule.data.games,originalClock=clock;
+  const earlier={...game,game_id:'fixture-earlier-game',upstream_game_id:'fixture-earlier-game',
+    kickoff_at:new Date(clock+30*60e3).toISOString(),status:'scheduled',home_score:null,away_score:null};
+  schedule.data.games=[earlier,...originalGames];
+  const pending=await board('/forecast/board');
+  assert.equal(pending.next_game.game_id,earlier.game_id);
+  for(const name of ['Kap','Toto','EmptyBot'])
+    assert.equal(pending.entrants.find(e=>e.name===name).next_game_submitted,false,`${name}: a later-game receipt is not next-game readiness`);
+  clock=Date.parse(earlier.kickoff_at);
+  const current=await board('/forecast/board');
+  assert.equal(current.games.find(g=>g.game_id===earlier.game_id).locked,true,'current game has reached kickoff');
+  assert.equal(current.next_game.game_id,gid,'next game advances past the current game');
+  for(const name of ['Kap','Toto'])
+    assert.equal(current.entrants.find(e=>e.name===name).next_game_submitted,true,`${name}: the matching next-game receipt is ready`);
+  assert.equal(current.entrants.find(e=>e.name==='EmptyBot').next_game_submitted,false);
+  clock=kick;
+  const advanced=await board('/forecast/board');
+  assert.notEqual(advanced.next_game?.game_id,gid,'a game at kickoff is no longer next');
+  for(const name of ['Kap','Toto'])
+    assert.equal(advanced.entrants.find(e=>e.name===name).next_game_submitted,false,`${name}: a current-game receipt does not satisfy the next window`);
+  schedule.data.games=originalGames;clock=originalClock;
+}
+schedule.data.games=fullSchedule;
 const packet=await board('/forecast/packet');
 assert(!JSON.stringify(packet).includes('PRIVATE-'));assert(packet.input_snapshot_id);
 assert(!packet.games.some(g=>g.forecasts.length),'input packet cannot see unlocked human picks');
