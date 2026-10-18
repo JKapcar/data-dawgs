@@ -1,5 +1,5 @@
 /* Dedicated outbound MCP: no owner credentials, private reads or caller-selected destinations. */
-const DC_PATH='discord_bridge_v1';
+const DC_PATH='/discord_bridge_v1';
 const dcCheck=(ok,message)=>{if(!ok)throw new Error(message);};
 async function dcHash(s){return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))),b=>b.toString(16).padStart(2,'0')).join('');}
 const DC_TOOL={name:'dd_discord_post',description:'Send explicitly authorized text to the configured Data Dawgs channel. Never auto-copy private records. Retry only with the same request_id; uncertain delivery must not be resubmitted with a new key. Labels identify credentials, not verified models.',inputSchema:{type:'object',additionalProperties:false,required:['request_id','message'],properties:{request_id:{type:'string',pattern:'^[A-Za-z0-9_-]{16,80}$'},message:{type:'string',minLength:1,maxLength:1600},record_link:{type:'string',maxLength:300}}},annotations:{readOnlyHint:false,destructiveHint:false,idempotentHint:true,openWorldHint:true}};
@@ -35,10 +35,10 @@ async function handleDiscordBridge(request,env){
   dcCheck(state,'receipt_conflict_retry_same_key');let receipt=state.receipts[key];
   try{
    const headers={Authorization:'Bot '+env.DISCORD_BOT_TOKEN,'Content-Type':'application/json'};
-   const target=await fetch('https://discord.com/api/v10/channels/'+channel,{headers,redirect:'error',signal:AbortSignal.timeout(10000)}),meta=target.ok?await target.json():null;
+   const target=await fetch('https://discord.com/api/v10/channels/'+channel,{headers,redirect:'manual',signal:AbortSignal.timeout(10000)}),meta=target.ok?await target.json():null;
    dcCheck(meta?.guild_id===guild&&meta?.id===channel&&meta?.type===0,'destination_verification_failed');
    const content='['+grant.label+' | credential label; model unverified]\n'+a.message+(a.record_link?'\nRecord (access required): <'+a.record_link+'>':'');
-   const sent=await fetch('https://discord.com/api/v10/channels/'+channel+'/messages',{method:'POST',headers,redirect:'error',signal:AbortSignal.timeout(10000),body:JSON.stringify({content,allowed_mentions:{parse:[],users:[],roles:[],replied_user:false},flags:4})}),result=sent.ok?await sent.json():null;
+   const sent=await fetch('https://discord.com/api/v10/channels/'+channel+'/messages',{method:'POST',headers,redirect:'manual',signal:AbortSignal.timeout(10000),body:JSON.stringify({content,allowed_mentions:{parse:[],users:[],roles:[],replied_user:false},flags:4})}),result=sent.ok?await sent.json():null;
    if(sent.ok&&/^\d{17,20}$/.test(result?.id)&&result.channel_id===channel)receipt={...receipt,status:'delivered',message_id:result.id,url:'https://discord.com/channels/'+guild+'/'+channel+'/'+result.id};
   }catch{}
   for(let n=0;n<4;n++){const s=await fbGet(env,DC_PATH,true);if(!s.etag)break;if(await fbPut(env,DC_PATH,{...s.data,receipts:{...s.data.receipts,[key]:receipt}},s.etag))break;}
@@ -54,7 +54,7 @@ async function dcPublishQueueAnswer(env,job,label,text){
   dcCheck(env.DISCORD_QUEUE_DELIVERY_ENABLED==='true'&&env.DISCORD_BOT_TOKEN,'delivery_disabled');
   dcCheck(/^\d{17,20}$/.test(job.id)&&/^\d{17,20}$/.test(job.guild_id)&&/^\d{17,20}$/.test(job.channel_id)&&job.guild_id===env.DISCORD_GUILD_ID&&job.channel_id===env.DISCORD_CHANNEL_ID,'destination_denied');
   const headers={Authorization:'Bot '+env.DISCORD_BOT_TOKEN,'Content-Type':'application/json'};
-  const call=(suffix,body)=>fetch('https://discord.com/api/v10/channels/'+suffix,{headers,redirect:'error',signal:AbortSignal.timeout(10000),...(body?{method:'POST',body:JSON.stringify(body)}:{})});
+  const call=(suffix,body)=>fetch('https://discord.com/api/v10/channels/'+suffix,{headers,redirect:'manual',signal:AbortSignal.timeout(10000),...(body?{method:'POST',body:JSON.stringify(body)}:{})});
   const origin=await call(job.channel_id),parent=origin.ok?await origin.json():null;
   dcCheck(parent?.id===job.channel_id&&parent?.guild_id===job.guild_id&&parent?.type===0,'destination_verification_failed');
   const created=await call(job.channel_id+'/threads',{name:'ask-'+job.id,type:11,auto_archive_duration:1440,rate_limit_per_user:5});
