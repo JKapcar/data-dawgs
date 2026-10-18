@@ -12676,7 +12676,7 @@ async function handleDiscordOwnerSmoke(request,env){
  try{
   const origin=request.headers.get('Origin');dqCheck(!origin||['https://datadawgs216.com','https://www.datadawgs216.com'].includes(origin),403,'origin_denied');
   if(origin)Object.assign(headers,{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Allow-Methods':'GET, POST, OPTIONS'});
-  const url=new URL(request.url),inspect=url.search==='?inspect=command';dqCheck(url.pathname==='/discord/owner-smoke'&&(!url.search||(inspect&&request.method==='GET')),404,'not_found');
+  const url=new URL(request.url),inspect=url.search==='?inspect=command';dqCheck(url.pathname==='/discord/owner-smoke'&&(!url.search||(inspect&&['GET','OPTIONS'].includes(request.method))),404,'not_found');
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
   dqCheck(['GET','POST'].includes(request.method),405,'method_denied');
   const p=dsPolicy(env);
@@ -12688,7 +12688,7 @@ async function handleDiscordOwnerSmoke(request,env){
    dqCheck(response.ok,502,'command_inspection_unavailable');const commands=await response.json();dqCheck(Array.isArray(commands),502,'command_inspection_invalid');
    const matches=commands.filter(c=>c?.name==='ask'&&c.type===1);dqCheck(matches.length<=1,502,'command_inspection_ambiguous');const command=matches[0];
    if(command)dqCheck(dqSnow(command.id)&&command.application_id===env.DISCORD_APPLICATION_ID&&command.guild_id===env.DISCORD_GUILD_ID,502,'command_inspection_identity_mismatch');
-   const option=command?.options?.[0];const definitionMatches=!!command&&command.default_member_permissions==='0'&&command.description==='Submit a request to an authorized manual session'&&Array.isArray(command.options)&&command.options.length===1&&option.name==='question'&&option.type===3&&option.required===true&&option.max_length===2000&&!option.autocomplete&&!option.choices?.length&&!option.min_length;
+   const option=command?.options?.[0];const definitionMatches=!!command&&command.default_member_permissions==='0'&&command.description==='Submit a request to an authorized manual session'&&Array.isArray(command.options)&&command.options.length===1&&option.name==='question'&&option.description==='Question for the manual session'&&option.type===3&&option.required===true&&option.max_length===2000&&!option.autocomplete&&!option.choices?.length&&!option.min_length;
    await authorize();return send({checked_at:new Date().toISOString(),exists:!!command,command_id:command?.id||null,definition_matches:definitionMatches,registration_receipt_unchanged:true,notice:'Read-only Discord observation. Does not confirm channel permissions, queue admission or reply delivery.'});
   }
   const path='/discord_queue_v1';
