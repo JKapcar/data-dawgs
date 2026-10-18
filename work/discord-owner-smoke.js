@@ -20,12 +20,21 @@ async function handleDiscordOwnerSmoke(request,env){
  try{
   const origin=request.headers.get('Origin');dqCheck(!origin||['https://datadawgs216.com','https://www.datadawgs216.com'].includes(origin),403,'origin_denied');
   if(origin)Object.assign(headers,{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Allow-Methods':'GET, POST, OPTIONS'});
-  const url=new URL(request.url);dqCheck(url.pathname==='/discord/owner-smoke'&&!url.search,404,'not_found');
+  const url=new URL(request.url),inspect=url.search==='?inspect=command';dqCheck(url.pathname==='/discord/owner-smoke'&&(!url.search||(inspect&&request.method==='GET')),404,'not_found');
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
   dqCheck(['GET','POST'].includes(request.method),405,'method_denied');
   const p=dsPolicy(env);
   const authorize=async()=>{dsPolicy(env);let uid;try{uid=await poundIdentity(request,env);}catch{dqFail(401,'site_session_required');}dqCheck(uid===p.owner,403,'owner_required');};
   await authorize();
+  if(inspect){
+   dqCheck(env.DISCORD_BOT_TOKEN,503,'bot_configuration_required');
+   const response=await fetch('https://discord.com/api/v10/applications/'+env.DISCORD_APPLICATION_ID+'/guilds/'+env.DISCORD_GUILD_ID+'/commands',{method:'GET',headers:{Authorization:'Bot '+env.DISCORD_BOT_TOKEN},redirect:'manual',signal:AbortSignal.timeout(10000)});
+   dqCheck(response.ok,502,'command_inspection_unavailable');const commands=await response.json();dqCheck(Array.isArray(commands),502,'command_inspection_invalid');
+   const matches=commands.filter(c=>c?.name==='ask'&&c.type===1);dqCheck(matches.length<=1,502,'command_inspection_ambiguous');const command=matches[0];
+   if(command)dqCheck(dqSnow(command.id)&&command.application_id===env.DISCORD_APPLICATION_ID&&command.guild_id===env.DISCORD_GUILD_ID,502,'command_inspection_identity_mismatch');
+   const option=command?.options?.[0];const definitionMatches=!!command&&command.default_member_permissions==='0'&&command.description==='Submit a request to an authorized manual session'&&Array.isArray(command.options)&&command.options.length===1&&option.name==='question'&&option.type===3&&option.required===true&&option.max_length===2000&&!option.autocomplete&&!option.choices?.length&&!option.min_length;
+   await authorize();return send({checked_at:new Date().toISOString(),exists:!!command,command_id:command?.id||null,definition_matches:definitionMatches,registration_receipt_unchanged:true,notice:'Read-only Discord observation. Does not confirm channel permissions, queue admission or reply delivery.'});
+  }
   const path='/discord_queue_v1';
   const read=async()=>{const s=await fbGet(env,path,true);dqCheck(s.etag,503,'queue_store_unavailable');return {...s,data:dqStore(s.data)};};
   const allowed=j=>j.owner_smoke===true&&j.project_id===DS_PROJECT&&j.discord_user_id===p.user&&j.principal==='discord-user:'+p.user&&j.guild_id===env.DISCORD_GUILD_ID&&j.channel_id===env.DISCORD_CHANNEL_ID&&j.question===DS_QUESTION;
