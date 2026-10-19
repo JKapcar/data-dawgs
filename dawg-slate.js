@@ -46,10 +46,10 @@
         title: "Your AI connector",
         href: "signon.html#connect",
         deadline: null,
-        status: "Active",
-        action: "Your personal connector is active.",
+        status: "Credential created",
+        action: "Test your connection in your AI.",
         actionLabel: "Manage",
-        detail: "Personal credential"
+        detail: "Creation recorded on this device; connection and current grants not verified."
       });
     }
 

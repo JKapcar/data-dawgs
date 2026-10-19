@@ -35,4 +35,11 @@ ok("unknown settings degrade honestly with no invented deadline", () => {
   assert.equal(row.action, "Nothing needs you right now.");
 });
 
+ok("a local credential flag never claims a tested connection", () => {
+  const row = slate.summarize({connector:{active:true}})[0];
+  assert.equal(row.status, "Credential created");
+  assert.match(row.detail, /not verified/);
+  assert.match(row.action, /Test your connection/);
+});
+
 console.log(`\n${pass} passed, 0 failed\n`);
