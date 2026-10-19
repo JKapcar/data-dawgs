@@ -3862,7 +3862,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
         <p>The biggest favorite in the pool. The chalkiest leg on the ticket, if it lost, is the
           first one anybody looks at.</p></div></li>
       <li class="act"><span class="no">II</span><div><h3>Worst Beat</h3>
-        <p>Moneylines measure the shortfall from a modelled expected margin derived from paired entry odds.
+        <p>The expectation-adjusted rule applies only to an explicitly approved season/week. Unstamped completed weeks keep their prior rule. Under the new rule, moneylines measure the shortfall from a modelled expected margin derived from paired entry odds.
           Missing or unverified pairs are unmeasurable; no opposite price is invented.
           Spreads and totals measure the miss from their posted line. All use standard deviations &mdash; so a blowout
           in a low-variance market counts for more than a blowout anywhere. A half or quarter leg
@@ -4351,7 +4351,7 @@ const SESS_K = 'dd-bozo-sess';
 // it does not grant anything. The repo is public; this was never a secret.
 const ADMIN = 'Kap';
 
-const SPORTS = {nfl:{n:'NFL',sd:13.5,tot:10.5}, cfb:{n:'CFB',sd:16.5,tot:13},
+const SPORTS = {nfl:{n:'NFL',sd:13.5,tot:10.5}, cfb:{n:'CFB',sd:16,tot:14},
   nba:{n:'NBA',sd:11.5,tot:17}, cbb:{n:'CBB',sd:10.5,tot:13},
   mlb:{n:'MLB',sd:4.4,tot:4.2}, nhl:{n:'NHL',sd:2.3,tot:2.1}};
 const ESPN_PATH = {nfl:'football/nfl', cfb:'football/college-football',
@@ -4509,7 +4509,8 @@ function invNorm(p){
 // so the simulator and the live chop agree on what "worst" means for a 1H leg.
 const PERIOD_FRACTION = {game:1,'1h':.5,'2h':.5,'1q':.25,'2q':.25,'3q':.25,'4q':.25};
 const isManualLeg = x => !!x && (x.mkt==='prop' || x.mkt==='other' || (x.period && x.period!=='game'));
-function sdOf(x){ const s=SPORTS[x.sport] || SPORTS.nfl;
+function sdOf(x, rule = worstBeatRuleFor(typeof S === 'undefined' ? null : S)){
+  const s=rule==='entry-normal-v2' && x.sport==='cfb' ? {sd:16.5,tot:13} : (SPORTS[x.sport] || SPORTS.nfl);
   // ⚠️ "other" inherits the PROP guess (line x 0.55) because that is honestly all we
   // know about an arbitrary number. It is flagged as soft everywhere props are.
   if(x.mkt==='prop' || x.mkt==='other') return Math.max(Math.abs(x.line)*.55,1);
@@ -4824,6 +4825,22 @@ function gradeLeg(mkt, dir, line, margin, total){
 /* Moneyline Worst Beat v2: recorded two-way entry only. This is a normal-model
    expected margin, not an observed spread. Keep verbatim in page and Worker;
    tests compare both copies and their callers. See docs/bozo-worst-beat.md. */
+/* No implicit rollout: an owner-approved policy must name this exact season/week.
+   Completed weeks use their stamped version; unstamped historical records stay legacy. */
+function worstBeatRuleFor(state) {
+  if (!state) return 'legacy-v1';
+  const receipt = state.worstBeatReceipt;
+  if (receipt && receipt.season === state.season && receipt.week === state.week)
+    return receipt.version === 'entry-normal-v2' ? 'entry-normal-v2' : 'legacy-v1';
+  const rows = Object.values(state.results || {});
+  if (state.status === 'graded' || state.bozoWhy || rows.some(r => r && r.worstBeatRule)) {
+    return rows.length && rows.every(r => r && r.worstBeatRule === 'entry-normal-v2') ? 'entry-normal-v2' : 'legacy-v1';
+  }
+  const p = state.worstBeatPolicy;
+  return p && p.version === 'entry-normal-v2' && p.season === state.season && p.week === state.week
+    && Number.isInteger(p.season) && Number.isInteger(p.week) ? 'entry-normal-v2' : 'legacy-v1';
+}
+
 function moneylineBeat(x, r, sd, inverseNormal) {
   if (!r || (r.result != null && r.result !== 'lost') || (r.result == null && r.won === true)) return { v: null, basis: 'not-lost' };
   if (r.actual == null || String(r.actual).trim() === '' || !Number.isFinite(Number(r.actual))) return { v: null, basis: 'no-result' };
@@ -4897,9 +4914,9 @@ function binaryBeatOf(p){
    ⚠️ THE ZERO CHECK COERCES. `r.actual === 0` is false for the string "0", which is what a
    text box stores, so the floor silently did not apply to the exact leg it was written
    for. Whether it fires should not depend on which control last wrote the number. */
-function beatOf(x, r, sd){
+function beatOf(x, r, sd, rule = worstBeatRuleFor(typeof S === 'undefined' ? null : S)){
   if(!x) return null;
-  if(x.mkt === 'ml') return moneylineBeat(x, r, sd == null ? sdOf(x) : sd, invNorm).v;
+  if(x.mkt === 'ml' && rule === 'entry-normal-v2') return moneylineBeat(x, r, sd == null ? sdOf(x, rule) : sd, invNorm).v;
   /* ⚠️ A BINARY LEG TAKES ITS MARGIN FROM ITS OWN DE-VIGGED PRICE, in BOTH formats.
      Kap's call, 2026-09-12, and it replaces three rules that disagreed about one leg:
      decide() floored a binary leg at 999 — the WORST possible beat — simulate() ranked it
@@ -4944,7 +4961,7 @@ function beatOf(x, r, sd){
   // Spreads/totals are measured from their posted line.
   return beatDeficit(x.mkt, dirOf(x), x.mkt==='ml' ? 0 : x.line,
                      x.mkt==='total' ? null : a, x.mkt==='total' ? a : null,
-                     sd == null ? sdOf(x) : sd);
+                     sd == null ? sdOf(x, rule) : sd);
 }
 
 /* The leg exactly as the board will print it. ONE definition, used by the live preview
@@ -6995,6 +7012,16 @@ const devig = x => x && x.verificationStatus !== 'unverified' ? devigP(x.price, 
 const fairParlay = live => live.every(x=>devig(x)!=null) ? 1/live.reduce((a,x)=>a*devig(x),1) : null;
 
 function simulate(live, levers){
+  if(worstBeatRuleFor(S)==='entry-normal-v2' && levers.includes(1)){
+    const missing=live.filter(x=>{
+      if(x.mkt!=='ml') return false;
+      const r=legRow(x), outcome=r.result || (r.won===true?'won':r.won===false?'lost':null);
+      if(['won','push','void'].includes(outcome)) return false;
+      return moneylineBeat(x, outcome==='lost' ? r : {actual:0}, sdOf(x), invNorm).v==null;
+    });
+    if(missing.length) return {blocked:true, missing:missing.map(x=>x.p), reason:'Worst Beat is unmeasurable: verify the recorded entry pair and settled margin.'};
+  }
+
   const n = live.length;
   const res = S.results || {};
   const L = live.map(x=>{
@@ -7014,7 +7041,7 @@ function simulate(live, levers){
     const outcome = r.result || (r.won===true?'won':r.won===false?'lost':null);
     return {
       sd: sdOf(x), base: x.mkt==='ml' ? 0 : x.line, exp: expected(x),
-      ml: x.mkt==='ml', mlModel: x.mkt==='ml' ? moneylineBeat(x, {actual:0}, sdOf(x), invNorm) : null,
+      ml: x.mkt==='ml' && worstBeatRuleFor(S)==='entry-normal-v2', mlModel: x.mkt==='ml' ? moneylineBeat(x, {actual:0}, sdOf(x), invNorm) : null,
       under: dirOf(x)==='under', odds: imp(x.price), last: x.ts||0,
       /* ⚠️ The zero floor the grader applies. Without it the odds ranked a prop that
          finished 0 at about half an SD while decide() ranked it 999 — the worst possible
@@ -7048,7 +7075,7 @@ function simulate(live, levers){
       // makes you the bozo, and it does not stop the rest of the ticket cashing.
       settled: outcome==='won' ? 'won' : outcome==='lost' ? 'lost'
              : (outcome==='push'||outcome==='void') ? 'void' : null,
-      actual: Number.isFinite(+r.actual) ? +r.actual : null
+      actual: (worstBeatRuleFor(S)!=='entry-normal-v2' || (r.actual!=null && String(r.actual).trim()!=='')) && Number.isFinite(+r.actual) ? +r.actual : null
     };
   });
   /* ⚠️ THE HIERARCHY IS A FACT ONCE IT IS DRAWN, and this simulation was still rolling
@@ -7201,13 +7228,14 @@ function simulate(live, levers){
    outlives the fact that invalidated it. */
 const simKeyFor = (live, levers, status) =>
   live.map(x=>{ const r=legRow(x);
-    return `${x.p}:${x.price}:${x.entryPriceOpp??x.priceOpp??''}:${x.verificationStatus??''}:${x.clvEligible??''}:${r.closeOppSource??''}:${x.ts}:${x.line}:${x.mkt}:${x.side}:${r.close??''}:${r.closeOpp??''}`
+    return `${x.p}:${x.price}:${x.entryPriceOpp??x.priceOpp??''}:${x.verificationStatus??''}:${x.entryOppSource??''}:${x.period??''}:${x.clvEligible??''}:${r.closeOppSource??''}:${x.ts}:${x.line}:${x.mkt}:${x.side}:${r.close??''}:${r.closeOpp??''}`
          + `:${r.result??''}:${r.won===true?1:r.won===false?0:''}:${r.actual??''}:${r.clvPts??''}`; }).join('|')
   + '#' + levers.join(',') + '#' + status
   /* ⚠️ The drawn hierarchy is part of what the sim reads, so it is part of what makes a
      cached run stale. Without it the run computed BEFORE the lock — when every
      permutation was still in play — stayed on screen after the draw, under a note
      claiming it walks the cascade the grader walks. */
+  + '#' + worstBeatRuleFor(S)
   + '#' + (Array.isArray(S.order) ? S.order.join(',') : 'undrawn')
   /* ⚠️ The model draws each unplayed leg's CLV from its player's own past, so the size of
      that history is an input. Without it, a week that has just been graded — adding a CLV
@@ -7410,6 +7438,14 @@ function paintDiag(live, players, status){
   const key = simKeyFor(live, levers, status);
   if(key!==simKey){ simKey=key; simOut=simulate(live,levers); }
   const R=simOut;
+  if(R.blocked){
+    document.getElementById('dgMeta').textContent='Worst Beat needs verified inputs';
+    document.getElementById('dgTiles').innerHTML='';
+    document.getElementById('dgFlags').textContent=R.reason+' '+R.missing.join(', ');
+    document.querySelector('#dgTable tbody').innerHTML='';
+    document.getElementById('dgNote').textContent='No Bozo probability is shown while a moneyline candidate is unmeasurable.';
+    restoreHelpFocus(); return;
+  }
 
 
   const offDec  = live.reduce((a,x)=>a*dec(x.price),1);
@@ -7751,6 +7787,7 @@ THE GAME: each member submits ONE leg. Every leg goes on ONE real parlay at Draf
 - Favorites only, inside the league's price band. No exact duplicate legs. The ticket LOCKS the moment the last leg lands; that moment is the close.
 - Only legs that LOST are eligible to be the bozo. Nobody who cashed can wear it, no matter how bad the price was.
 - Each week the tiebreaker hierarchy is a FRESH RANDOM PERMUTATION of the league's live levers, drawn on the server and written once. It is not a weighted score and not a fixed cascade. Walk the drawn order; the first lever that isolates one person names the bozo; ties fall to the next lever down.
+- The expectation-adjusted Worst Beat rule is inactive without an exact-week approved policy; completed unstamped weeks retain the legacy zero-margin rule and old SDs. Never claim v2 is active just because this page supports it. Missing required inputs block a reached v2 Worst Beat comparison; no final grade is allowed.
 - The four levers: Shortest Odds (biggest favorite in the pool), Worst Beat (moneylines: shortfall from a normal-model expected margin using de-vigged paired recorded entry odds, unavailable if the pair is missing, assumed or unverified; spreads/totals: miss from posted line; all in sport/period SDs; never describe the modelled margin as an observed spread), Last In (final leg submitted), Worst CLV (price moved most against it).
 - The randomisation is the design, not decoration: it keeps each lever legible while making the meta unsolvable. Do not suggest replacing it with a composite score — that was considered and rejected, because any weighted blend is just a new deterministic objective someone will solve.
 HOW TO TALK ABOUT THE NUMBERS:
@@ -8456,6 +8493,10 @@ async function decide(){
   let why='';
   for(const li of (S.order||[0,1,2,3])){
     const k=LEVERS[li].k;
+    if(k==='beat' && pool.length>1 && worstBeatRuleFor(S)==='entry-normal-v2'){
+      const missing=pool.filter(p=>picks[p].mkt==='ml' && M[p].beat==null);
+      if(missing.length){ gradeErr('Worst Beat cannot decide: verify entry pair and settled margin for '+missing.join(', ')+'. No grade was written.'); return; }
+    }
     // Drop what this lever cannot score, then rank what is left. An empty set means the
     // lever is unmeasurable for this pool and the hierarchy moves on — which is a
     // different failure from a tie, and the verdict says which.
@@ -8948,10 +8989,10 @@ function royalePool(player){
       entryPriceOpp: l.entryPriceOpp, entryOppSource: l.entryOppSource, verificationStatus: l.verificationStatus };
     const binary = l.mkt === 'prop' || l.mkt === 'other' || l.actual == null;
     let beat;
-    if(shape.mkt === 'ml') beat = beatOf(shape, {actual:l.actual});
+    if(shape.mkt === 'ml' && l.worstBeatRule === 'entry-normal-v2') beat = l.period == null || l.entryOppSource == null ? null : beatOf(shape, {actual:l.actual}, null, 'entry-normal-v2');
     else if(binary) beat = invNorm(p);
     else {
-      const sd = sdOf(shape), exp = shape.mkt==='ml' ? 0 : shape.line;
+      const sd = sdOf(shape, l.worstBeatRule || 'legacy-v1'), exp = shape.mkt==='ml' ? 0 : shape.line;
       beat = sd > 0 ? (dirOf(shape)==='under' ? (l.actual - exp) : (exp - l.actual)) / sd : 0;
     }
     out.push({
@@ -8980,6 +9021,8 @@ function simulateRoyale(){
 
   const levers = (settings().levers || [0,1,2,3]).slice();
   // ⚠️ Always, in Royale. The cost is a price, not a switch — see royaleStatus.
+  if(levers.includes(1) && players.some(p=>pools[p].some(l=>l.raw.worstBeatRule==='entry-normal-v2' && l.beat==null)))
+    return {tooEarly:true,need:'verified period, entry provenance and actual margin for version-2 historical moneylines'};
   const redeploys = true;
   const status = royaleStatus_page();
 

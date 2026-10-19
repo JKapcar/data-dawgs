@@ -654,7 +654,7 @@ write('bozo-rules.json', {
         'objective someone will solve.',
       levers: [
         { key: 'odds', name: 'Shortest Odds', desc: 'biggest favorite in the pool' },
-        { key: 'beat', name: 'Worst Beat', desc: 'moneylines: shortfall from modelled expected margin using paired de-vigged entry odds (missing or unverified pair is unmeasurable); spreads/totals: miss from posted line; in sport/period standard deviations' },
+        { key: 'beat', name: 'Worst Beat', desc: 'Approved entry-normal-v2 weeks only (otherwise legacy zero-margin ML): moneylines: shortfall from modelled expected margin using paired de-vigged entry odds (missing or unverified pair is unmeasurable); spreads/totals: miss from posted line; in sport/period standard deviations' },
         { key: 'last', name: 'Last In', desc: 'final leg submitted' },
         { key: 'clv', name: 'Worst CLV', desc: 'price moved most against it' },
       ],

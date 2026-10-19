@@ -2,6 +2,11 @@
 
 **Review required before merge or deploy. No regrading or live data writes.**
 
+**Inactive by default.** This formula is `entry-normal-v2`, selected only for an
+explicitly approved season/week. Unstamped historical records use `legacy-v1`.
+The [release safety review](bozo-worst-beat-release-review.md) documents version
+receipts, missing-input grade blocks, historical provenance, and baseline failures.
+
 For a moneyline, let `I(a) = -a / (100-a)` for negative American odds and
 `I(a) = 100 / (100+a)` for positive odds. Use the recorded entry quote and the
 recorded opposite quote from the same two-way market and period:
@@ -37,7 +42,7 @@ same period units as the entered actual, never the full-game score for a half.
 
 The Worker table is authoritative per `docs/bozo-sd.json`: NFL 13.5, CFB 16.5,
 NBA 11.5, CBB 10.5, MLB 4.4, NHL 2.3. These are existing uncalibrated assumptions,
-not newly fitted values. The page adopts CFB 16.5 instead of 16, and CFB total SD
+not newly fitted values. For v2 only, the page adopts CFB 16.5 instead of 16, and CFB total SD
 13 instead of 14, so both paths agree. This explicit normalization also changes
 page-only CFB spread/total scores and simulation distributions; Worker spread/total
 rules do not change. Half SD = game SD × sqrt(.5); quarter SD = game SD × .5.
@@ -61,8 +66,9 @@ losers are checked; Tony scores .720321 and ItzBornLegend .111111 SD.
 
 The existing tie cascade remains discrepant: the Worker restarts each lever with
 all losers, while the page narrows to ties plus unmeasurable legs. The standard
-auto-grader also invokes that Worker cascade. Missing prices can therefore produce
-different final decisions despite identical per-leg scores. The old Worker at SF
+auto-grader also invokes that Worker cascade. Under v2, missing moneyline inputs
+now block a reached Worst Beat comparison in both paths. Fully measurable ties
+retain the separate cascade discrepancy. The old Worker at SF
 -9 selects Tony after a Worst Beat tie; the old UI selects Will outright because
 of its CFB SD. This patch documents and tests that discrepancy without changing it.
 
@@ -70,8 +76,8 @@ Before release, review (1) the entry-only/missing-price policy, (2) the intentio
 CFB SD normalization, (3) which week the rule becomes effective, including whether
 to apply it to the already-open week 6, and (4) a separate tie-cascade fix. A merge
 deploys Pages; Worker promotion is separate. Coordinate both only after approval
-to avoid a period where their rules differ. Historical displays recompute scores;
-stored verdicts are not migrated. Five completed-week ledger replays preserve
+to avoid a period where their rules differ. Historical displays use their own
+version; unstamped rows remain legacy. Stored verdicts are not migrated. Five completed-week ledger replays preserve
 baseline Worker selections, but week 1 already differs from its stored verdict
 and all historical ledger rows omit period. This is not sufficient evidence for
 retroactive regrading, and no other leagues were audited.
@@ -86,10 +92,11 @@ actual browser simulator. `node tools/bozo-rule-impact.cjs` reproduces the impac
 report entirely offline from a minimal public scoring snapshot and baseline Git
 commit. It has no live-write path.
 
-Validation on 2026-10-19: 9 new scoring/decision tests pass; browser simulation
-81/81, auto-grade 61/61, close-fill 38/38, CLV plumbing 19/19, override 28/28.
-The broad Bozo suite runs with temporary jsdom dependencies: 305/313 pass, with
-the same 8 failures reproduced on unchanged main (296/304). Those existing failures
+Validation on 2026-10-19 includes new scoring/decision and rollout safety tests;
+20/20 pass, including exact baseline scores for all 40 completed snapshot rows.
+browser simulation 87/87, auto-grade 61/61, close-fill 38/38, CLV plumbing 19/19,
+override 28/28. The broad Bozo suite is 316/324; its eight failures reproduce on unchanged
+main (296/304); no required check is bypassed. Those existing failures
 are two lever-standings assertions, one stale period/manual-leg assertion, one
 period-capture assertion, and four roster assertions including outdated client
 build fixtures. No new broad-suite failures remain. Data validation passes with

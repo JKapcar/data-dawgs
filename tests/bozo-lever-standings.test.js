@@ -25,7 +25,7 @@ function standings(picks, results) {
   const sandbox = { S: { results }, kEnc: n => n, sdOf: () => 10, dirOf: () => 'over',
     beatDeficit: (m, d, line, margin) => (margin - line) / -10 };
   const c = vm.createContext(sandbox);
-  vm.runInContext(['imp', 'devigP', 'invNorm', 'moneylineBeat', 'binaryBeatOf', 'legRow', 'beatOf', 'clvDeltaOf', 'rankRows', 'leverStandings'].map(lift).join('\n')
+  vm.runInContext(['imp', 'devigP', 'invNorm', 'worstBeatRuleFor', 'moneylineBeat', 'binaryBeatOf', 'legRow', 'beatOf', 'clvDeltaOf', 'rankRows', 'leverStandings'].map(lift).join('\n')
     + '\nthis.RESULT = leverStandings(PICKS);', Object.assign(c, { PICKS: picks }));
   return sandbox.RESULT;
 }

@@ -40,5 +40,5 @@
  "period_rule": "SD(period) = SD(game) x sqrt(period_fraction). beatBasis = \"scaled-sd\" for spread/total; ML uses \"entry-normal\" with period-scaled SD. A model, not a measurement: it assumes segment variance adds independently. Pending Phase 4.3 calibration per (sport, period, market).",
  "calibrated_periods": {},
  "props_and_other": "max(|line| x 0.55, 1) \u2014 an openly placeholder guess, flagged everywhere.",
- "known_gap": "Resolved in proposed moneyline expectation rule: page adopts authoritative Worker CFB sd 16.5 and total SD 13.0. These remain model assumptions, not newly calibrated measurements."
+ "known_gap": "Legacy page CFB 16/14 and Worker 16.5/13 remain unchanged for unstamped historical weeks. Approved entry-normal-v2 weeks use Worker 16.5/13 in both paths. No implicit rollout or recalibration."
 }

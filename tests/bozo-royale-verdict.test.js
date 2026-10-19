@@ -20,7 +20,7 @@ function setup(unsettled=false) {
     bozoGradeConfirmCode:async(_env,p)=>{signed=p;return 'test-confirm';},
     LG:l=>'/bozo/leagues/'+l,json:(v,s=200)=>new Response(JSON.stringify(v),{status:s})
   });
-  vm.runInContext(slice('function royaleApplyLever(', '/* ---------------- roster state')+'\n'+slice('async function bozoGrade(', 'async function bozoNext('),c);
+  vm.runInContext(slice('function worstBeatRuleFor(', 'function moneylineBeat(')+'\n'+slice('function royaleApplyLever(', '/* ---------------- roster state')+'\n'+slice('async function bozoGrade(', 'async function bozoNext('),c);
   return {c,get signed(){return signed;}};
 }
 test('Royale signs refreshed -258 loser, not stale browser -250 verdict',async()=>{

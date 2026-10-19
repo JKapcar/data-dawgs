@@ -4,7 +4,7 @@ Source: https://data-dawgs-draft-default-rtdb.firebaseio.com/bozo/leagues/main.j
 
 ## Week 6: SF hypothetical loss
 
-All four losing candidates included. Other winners excluded. SF remains pending in the source; these are scenarios.
+Hypothetical entry-normal-v2 only; no live policy is activated. All four losing candidates included. Other winners excluded. SF remains pending in the source; these are scenarios.
 
 | SF loses by | Old UI Kap SD | Old Worker Kap SD | Proposed Kap SD | Will SD | Tony SD | ItzBornLegend SD | Proposed Worker selection |
 |---:|---:|---:|---:|---:|---:|---:|---|
@@ -26,16 +26,16 @@ All four losing candidates included. Other winners excluded. SF remains pending 
 
 Old UI Will = 0.687500; old Worker Will = 0.666667. Old UI threshold: 10; old Worker: tie at 9, Kap at 10+. Proposed threshold: 5.
 
-At SF -9 the old Worker ties Kap/Will at 2/3 SD and restarts Last In across all losers, selecting Tony. The old UI uses CFB SD 16 (Will = 0.6875), so Will wins outright. Even after SD alignment, UI narrows to ties/unmeasurable legs while Worker restarts all losers. This PR preserves that cascade discrepancy; missing-price legs can also expose it.
+At SF -9 the old Worker ties Kap/Will at 2/3 SD and restarts Last In across all losers, selecting Tony. The old UI uses CFB SD 16 (Will = 0.6875), so Will wins outright. Even after SD alignment, UI narrows to ties/unmeasurable legs while Worker restarts all losers. This PR preserves the fully measurable tie discrepancy. Version 2 now blocks a reached Worst Beat comparison when a moneyline candidate is unmeasurable.
 
 ## Completed-week replay from available ledger fields
 
-| Week | Recorded bozo | Baseline Worker replay | Proposed Worker replay | Losing ML scores changed |
+| Week | Recorded bozo | Baseline Worker replay | Versioned legacy replay | Losing ML scores changed |
 |---:|---|---|---|---|
-| 1 | WBeamen | Squatch | Squatch | BUTTS: 1.481481 → 1.831677 |
+| 1 | WBeamen | Squatch | Squatch | none |
 | 2 | ItzBornLegend | ItzBornLegend | ItzBornLegend | none |
 | 3 | Squatch | Squatch | Squatch | none |
-| 4 | Squatch | Squatch | Squatch | Squatch: 0.222222 → 0.811252 |
+| 4 | Squatch | Squatch | Squatch | none |
 | 5 | ItzBornLegend | ItzBornLegend | ItzBornLegend | none |
 
-Scope: 40 completed ledger rows, 5 stored historical bozos, plus 8 current picks. No proposed Worker selection changes in this limited replay. Week 1 already disagrees with its stored bozo under the baseline; do not infer historical correctness from this replay. Historical ledger rows omit period and may omit quote provenance (all 40 lack period), so archived full-state evidence is needed before any retrospective ruling. Numeric historical displays may change when recomputed: BUTTS week 1 and Squatch week 4 moneylines, plus CFB page SD normalization. Stored records are untouched. No other leagues audited.
+Scope: 40 completed ledger rows, 5 stored historical bozos, plus 8 current picks. No proposed Worker selection changes in this limited replay. Week 1 already disagrees with its stored bozo under the baseline; do not infer historical correctness from this replay. Historical ledger rows omit period and may omit quote provenance (all 40 lack period), so archived full-state evidence is needed before any retrospective ruling. Versioned historical displays now retain legacy arithmetic and SDs. The first draft would have changed BUTTS week 1 and Squatch week 4 moneyline scores; the new exact-week resolver prevents that retrospective change. Stored records are untouched. No other leagues audited.
