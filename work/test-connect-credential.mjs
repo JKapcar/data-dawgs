@@ -1,4 +1,4 @@
-// Connect Your Dawg credential panel: header form primary, URL fallback, same token, rotate.
+// Connect Your Dawg credential panel: private URL primary, optional header form, same token, rotate.
 // Synthetic only — the Worker is mocked and the token is invented. Run: node test-connect-credential.mjs
 import { chromiumExecutable, loadPlaywright } from "./playwright-loader.mjs";
 import http from "http"; import fs from "fs"; import path from "path"; import { fileURLToPath } from "url";
@@ -21,10 +21,11 @@ ok("rotate is hidden until a credential exists",await p.locator("#cRotate").isHi
 await p.click("#cMint");await p.waitForTimeout(150);
 ok("endpoint is the full catalog without a credential",await p.locator("#cEndpoint").inputValue()==="https://toto.jkapcar4.workers.dev/mcp/full");
 ok("header form carries the token",await p.locator("#cHeader").inputValue()==="Authorization: Bearer "+TOKENS[0]);
-ok("URL fallback carries the same token under /mcp/full/",await p.locator("#cUrl").inputValue()==="https://toto.jkapcar4.workers.dev/mcp/full/"+TOKENS[0]);
-const order=await p.evaluate(()=>{const a=document.getElementById("cHeader"),b=document.getElementById("cUrl");return !!(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING);});ok("header form is shown before the URL fallback",order);
+ok("private URL carries the same token under /mcp/full/",await p.locator("#cUrl").inputValue()==="https://toto.jkapcar4.workers.dev/mcp/full/"+TOKENS[0]);
+const order=await p.evaluate(()=>{const a=document.getElementById("cHeader"),b=document.getElementById("cUrl");return !!(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_PRECEDING);});ok("private URL is shown before advanced header form",order);
 ok("rotate sits beside mint once a credential exists",await p.locator("#cRotate").isVisible()&&await p.locator("#cMint").isHidden());
-for(const prov of ["claude","gemini","grok","muse"]){await p.click(`[data-prov="${prov}"]`);ok(prov+" setup note is marked unverified",/Unverified/.test(await p.locator("#stepAddP").innerText()));}
+for(const prov of ["claude","gemini","grok","muse"]){await p.selectOption("#providerChoice",prov);ok(prov+" setup note is available",(await p.locator("#stepAddP").innerText()).length>50);}
+ok("public guide marks provider compatibility untested",/not yet tested end to end/.test(await p.locator("#connectionGuide").innerText()));
 ok("the warning names issues, PRs, screenshots and shared docs",/issue, a pull request, a screenshot, a shared doc/.test(await p.locator("#pConnect").innerText()));
 p.once("dialog",d=>d.dismiss());await p.click("#cRotate");await p.waitForTimeout(150);ok("dismissed rotate does not mint",mints===1&&await p.locator("#cHeader").inputValue().then(v=>v.endsWith(TOKENS[0])));
 p.once("dialog",d=>d.accept());await p.click("#cRotate");await p.waitForTimeout(150);ok("confirmed rotate replaces both forms together",mints===2&&(await p.locator("#cHeader").inputValue()).endsWith(TOKENS[1])&&(await p.locator("#cUrl").inputValue()).endsWith("/mcp/full/"+TOKENS[1]));

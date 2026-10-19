@@ -1,0 +1,31 @@
+name: Connector setup regression
+on:
+  pull_request:
+    paths:
+      - signon.html
+      - connect.html
+      - dawg-slate.js
+      - tests/connector-setup.browser.cjs
+      - work/test-connect-credential.mjs
+      - work/test-dawg-slate.mjs
+      - .github/workflows/connector-setup.yml
+permissions:
+  contents: read
+jobs:
+  synthetic-setup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --prefix /tmp/dd-connector playwright@1.56.1 --no-audit --no-fund
+      - run: /tmp/dd-connector/node_modules/.bin/playwright install --with-deps chromium
+      - run: node work/test-dawg-slate.mjs
+      - run: node --test tests/account-self.test.cjs tests/bozo-mcp-auth-status.test.js tests/service-worker.test.js
+      - run: DD_NODE_MODULES=/tmp/dd-connector/node_modules node work/test-connect-credential.mjs
+      - run: PLAYWRIGHT_MODULE=/tmp/dd-connector/node_modules/playwright CONNECTOR_PREVIEW=/tmp/dd-connector-preview node tests/connector-setup.browser.cjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: connector-setup-redacted-previews
+          path: /tmp/dd-connector-preview
