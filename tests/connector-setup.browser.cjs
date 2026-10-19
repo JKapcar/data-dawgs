@@ -30,7 +30,18 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
  assert.equal(actions.length,0,'public provider choice must not call credential endpoints');
  await choose('chatgpt');await page.locator('#providerChoice').focus();await page.keyboard.press('ArrowDown');await page.keyboard.press('Tab');assert.equal(await page.locator('#providerChoice').inputValue(),'grok');
  if(out){fs.mkdirSync(out,{recursive:true});await page.locator('#connectionGuide').screenshot({path:path.join(out,'guide-desktop.png')});}
- await page.setViewportSize({width:390,height:844});try{await page.waitForFunction(()=>document.documentElement.scrollWidth<=innerWidth,{},{timeout:3000});}catch(e){throw new Error(JSON.stringify(await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,wide:[...document.querySelectorAll('body *')].filter(e=>e.getClientRects().length&&e.getBoundingClientRect().right>innerWidth+1).map(e=>({tag:e.tagName,id:e.id,cls:typeof e.className==='string'?e.className:'',right:e.getBoundingClientRect().right})).slice(0,20)}))));}
+ await page.setViewportSize({width:390,height:844});
+ const setupFits=()=>page.evaluate(()=>['connectionGuide','signedOut'].every(id=>{const r=document.getElementById(id).getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;}));
+ assert(await setupFits(),'public guide and login must fit the mobile viewport');
+ const currentWidth=await page.evaluate(()=>document.documentElement.scrollWidth);
+ if(currentWidth>390){
+  assert(process.env.CONNECTOR_BASELINE,'A base-page comparison is required for pre-existing navigation overflow');
+  const baseline=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block'});
+  await baseline.route('**/*',route=>{if(route.request().url()===origin+'/signon.html')return route.fulfill({contentType:'text/html',body:fs.readFileSync(process.env.CONNECTOR_BASELINE,'utf8')});if(route.request().url().startsWith(origin+'/'))return route.continue();return route.abort();});
+  await baseline.goto(origin+'/signon.html');const baseWidth=await baseline.evaluate(()=>document.documentElement.scrollWidth);await baseline.close();
+  assert(currentWidth<=baseWidth,'this PR must not introduce or increase document overflow');console.log('Existing base-page navigation overflow unchanged: '+baseWidth+'px; setup panels fit 390px.');
+ }
+
  if(out)await page.locator('#connectionGuide').screenshot({path:path.join(out,'guide-mobile.png')});
  await page.evaluate(()=>{localStorage.setItem('dd-bozo-sess',btoa(JSON.stringify({u:'fixture-user',n:'Test User',e:Date.now()+3600000}))+'.fixture');localStorage.setItem('dd-auth-profile-v1',JSON.stringify({name:'Test User',email:'test@example.invalid',emailVerified:true}));});
  await page.reload();await page.locator('#cMint:not([disabled])').waitFor();

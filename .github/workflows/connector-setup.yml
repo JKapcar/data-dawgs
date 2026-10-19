@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -24,7 +26,8 @@ jobs:
       - run: node work/test-dawg-slate.mjs
       - run: node --test tests/account-self.test.cjs tests/bozo-mcp-auth-status.test.js tests/service-worker.test.js
       - run: DD_NODE_MODULES=/tmp/dd-connector/node_modules node work/test-connect-credential.mjs
-      - run: PLAYWRIGHT_MODULE=/tmp/dd-connector/node_modules/playwright CONNECTOR_PREVIEW=/tmp/dd-connector-preview node tests/connector-setup.browser.cjs
+      - run: git show "${{ github.event.pull_request.base.sha }}:signon.html" > /tmp/dd-connector-base.html
+      - run: CONNECTOR_BASELINE=/tmp/dd-connector-base.html PLAYWRIGHT_MODULE=/tmp/dd-connector/node_modules/playwright CONNECTOR_PREVIEW=/tmp/dd-connector-preview node tests/connector-setup.browser.cjs
       - uses: actions/upload-artifact@v4
         with:
           name: connector-setup-redacted-previews
