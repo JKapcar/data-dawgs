@@ -3,6 +3,7 @@ const src=fs.readFileSync('dawg-bot-worker.js','utf8');
 const cut=(a,b)=>src.slice(src.indexOf(a),src.indexOf(b,src.indexOf(a)));
 const fixture=n=>JSON.parse(fs.readFileSync(`tests/fixtures/odds-api-${n}-20260924.json`,'utf8'));
 const bills=fixture('bills'), lions=fixture('lions'), clemson=fixture('clemson'), history=fixture('lions-history');
+const {buildPick,assertHistorical}=require('./fixtures/bozo-provenance-pipeline.cjs');
 const seed=fs.readFileSync('bozo-team-registry.mjs','utf8').match(/export const BOZO_ESPN_TEAM_SEED = ([\s\S]*);\s*$/)[1];
 function rig(fetcher=async()=>{throw Error('Unexpected fetch')}) {
  const logs=[], ctx={Request,Response,URL,AbortController,setTimeout,clearTimeout,Date,fetch:fetcher,console:{log:(...x)=>logs.push(x)},BOZO_CLOSE_BOOK:'draftkings',SEASON:2026};
@@ -54,6 +55,17 @@ test('paid-provider failure falls back to SGO and then actionable unverified man
  const out=await r.bozoCaptureEntry({ODDS_API_KEY:'test-key'},{...bp,typedPrice:-259});
  assert.equal(sgo,1);assert.equal(out.p.priceSource,'self');assert.equal(out.p.clvEligible,false);
  assert.ok(!JSON.stringify(r.logs).includes('test-key'));
+});
+
+test('observed ML capture survives real pick builder, ledger, CLV and historical v2 scorer',async()=>{
+ const fresh=structuredClone(clemson.data);fresh.bookmakers[0].markets.forEach(m=>m.last_update=new Date().toISOString());
+ const r=rig(async url=>Response.json(String(url).includes('/odds?')?fresh:[fresh]));
+ const out=await r.bozoCaptureEntry({ODDS_API_KEY:'test-key'},{sport:'cfb',mkt:'ml',side:'CLEM',line:0,
+  game:'CLEM @ CAL',eventId:'espn-clemson',startsAt:fresh.commence_time,label:'CLEM ML',typedPrice:-112,entryOppSource:'forged'});
+ assert.equal(out.ok,true);assert.equal(out.p.entryOppSource,'captured');assert.equal(out.p.price,-112);assert.equal(out.p.priceOpp,-108);
+ const pick=buildPick(out.p);assert.equal(pick.entryOppSource,'captured');
+ await assertHistorical(pick,'captured');
+ assert.equal(buildPick({...out.p,entryOppSource:undefined}).entryOppSource,null,'old frozen captures are not backfilled');
 });
 test('historical retrieval requests a pre-kickoff snapshot; in-play/stale history rejected',async()=>{
  // Shift the real historical response and kickoff together so this tests the close window.

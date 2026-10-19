@@ -57,12 +57,23 @@ no actual. JWhite's week-1 winning moneyline also has no actual and is ineligibl
 for Worst Beat. All 40 completed ledger rows lack period, and all nine historical
 moneylines lack an explicit `entryOppSource` field. None is silently promoted to v2.
 
+Verified provider capture now stamps `entryOppSource: "captured"` only after the
+actual paired quote passes validation. The real pick builder preserves that stamp;
+unverified fallback clears it and submitter-supplied provenance is stripped.
+Explicit two-phase manager verification stamps `"manual-verified"`, distinguished
+from a provider observation, with its existing original-quote audit receipt.
 Future ledger creation copies the pick's period and `entryOppSource`, and `/bozo/clv`
-forwards them plus the stored rule version. Missing source provenance remains null,
-including in new data; no source is fabricated. A v2 historical row without period
+forwards them plus the stored rule version. Unknown historical provenance and old
+frozen captures remain null; no automatic backfill occurs. A v2 historical row without period
 or provenance is unmeasurable for resampling, even if its live paired-price score
 was available. The user must review verified source evidence before filling gaps;
 this patch supplies no repair or historical backfill operation.
+
+Production-path fixtures exercise real provider capture and new-pick construction,
+and fallback capture followed by explicit manager verification, through ledger,
+CLV, and historical scoring. Both produce exactly the live UI/Worker score. The
+focused scoring/safety/provider/verification suite passes 47/47; capture and
+correction regression tests pass 38/38. These fixtures make no live writes.
 
 ## Eight baseline failures
 
@@ -74,7 +85,7 @@ removed and no required check was bypassed.
 | Lever standings: score lands | Fixture supplies `actual` but no losing outcome. Current renderer intentionally requires `won === false`. | Existing fixture contract mismatch; new tests cover explicit losing outcomes. |
 | Lever standings: CLV missing pair | Behavioral assertions pass; final source regex expects inline CLV arithmetic that was moved into `clvDeltaOf`. | Stale structural assertion, not a new CLV behavior regression. |
 | Period grade: SD document/page | SD equality assertions pass; later regex expects obsolete `const need = live.filter(isManualLeg);`. | Does not indicate an SD mismatch introduced here; v2 SD parity is independently exercised. |
-| Period market: SGO capture | Signature regex omits the existing trailing `options = {}` parameter. | Stale signature assertion; capture logic is unchanged by this PR. |
+| Period market: SGO capture | Signature regex omits the existing trailing `options = {}` parameter. | Stale signature assertion; paired-quote selection is unchanged by this PR. |
 | Pending seat submission | Fixture omits required `clientBuild`; returns `page_out_of_date` before membership validation. | Does not exercise its intended membership path. |
 | Leaving seat submission | Same missing-build failure precedes the expected leaving-seat error. | Same fixture problem. |
 | Active seat submission | Missing build returns 409 rather than expected 200. | Same fixture problem. |

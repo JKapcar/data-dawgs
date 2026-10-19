@@ -7490,6 +7490,7 @@ function buildBozoLeg(name, p, via = null, by = null) {
     startsAt: typeof p.startsAt === "string" && !isNaN(Date.parse(p.startsAt)) ? p.startsAt : null,
     priceOpp: entryPriceOpp,
     entryPriceOpp,
+    entryOppSource: p.priceSource === "captured" && p.entryOppSource === "captured" ? "captured" : null,
     entryBook: "draftkings",        // league rule: there is no other book at either end
     entryProvider: p.entryProvider || null,
     entrySnapshotAt: p.entrySnapshotAt || null,
@@ -9177,7 +9178,7 @@ function bozoSelfPricedEntry(p, reason, code = "market_missing") {
   if (typed === null) return { ok: false, reason: "manual_price_required",
     error: "The odds checker could not verify this pick. Enter the DraftKings odds in the price box and submit again; your pick will be marked UNVERIFIED for manager review." };
   return { ok: true, p: { ...p, price: typed, priceOpp: null, priceSource: "self",
-    entryBook: BOZO_CLOSE_BOOK, entryProvider: null, entrySnapshotAt: null,
+    entryBook: BOZO_CLOSE_BOOK, entryProvider: null, entrySnapshotAt: null, entryOppSource: null,
     fairEntry: null, entryHold: null, clvEligible: false,
     verificationStatus: "unverified", captureFailureCode: code, captureFailureReason: String(reason).slice(0, 300),
     entryVerification: null, providerEventIds: {}, canonicalKey: p.canonicalKey || null,
@@ -9192,7 +9193,7 @@ async function bozoCaptureEntry(env, input, options = {}) {
   const p = { ...input };
   // These are server-authored, never assertions accepted from a submitter.
   for (const key of ["verificationStatus", "entryVerification", "captureFailureReason", "captureFailureCode", "captureAttempts", "clvEligible",
-    "priceSource", "entrySnapshotAt", "entryProvider", "providerEventIds", "canonicalKey", "espnEventId", "fairEntry", "entryHold"]) delete p[key];
+    "priceSource", "entrySnapshotAt", "entryProvider", "entryOppSource", "providerEventIds", "canonicalKey", "espnEventId", "fairEntry", "entryHold"]) delete p[key];
   p.period = bozoPeriodOf(p);
   const periodErr = bozoPeriodError(p);
   if (periodErr) return { ok: false, reason: "bad_period", error: periodErr };
@@ -9276,6 +9277,7 @@ async function bozoCaptureEntry(env, input, options = {}) {
   return { ok: true, p: { ...p,
     period: p.period, label: bozoLabelWithPeriod(p.label, p.period),
     line: quote.line, price: quote.price, priceOpp: quote.opp,
+    entryOppSource: "captured",
     priceSource: "captured", verificationStatus: "verified", entryBook: BOZO_CLOSE_BOOK, entryProvider: backup ? "odds_api" : "sgo",
     entrySnapshotAt: quote.snapshotAt || events.fetchedAt || new Date().toISOString(),
     fairEntry: facts.fair, entryHold: facts.hold, clvEligible: true,
@@ -11698,7 +11700,7 @@ async function bozoVerifyEntryCore(env, auth, body, via = "site") {
       verifiedVia: pending.via, evidence: pending.evidence,
       originalSubmittedAt: new Date(pick.ts).toISOString(), price: pick.price, priceOpp: pending.opposite };
     const fields = { ...(pending.identityFields || {}), priceOpp: pending.opposite, entryPriceOpp: pending.opposite,
-      priceSource: "manual", verificationStatus: "verified", clvEligible: true,
+      priceSource: "manual", verificationStatus: "verified", clvEligible: true, entryOppSource: "manual-verified",
       entryProvider: "manual", entryVerification: verification, fairEntry: facts.fair, entryHold: facts.hold };
     const next = { ...pick, ...fields };
     const out = { ok: true, verificationStatus: "verified", league: lid, forUid: key, ts: next.ts,
