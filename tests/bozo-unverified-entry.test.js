@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
+const {buildPick,assertHistorical}=require('./fixtures/bozo-provenance-pipeline.cjs');
 const crypto = require('node:crypto').webcrypto;
 const worker = fs.readFileSync('dawg-bot-worker.js','utf8');
 const page = fs.readFileSync('bozo.html','utf8');
@@ -44,9 +45,10 @@ function rig(){
   capture:p=>ctx.api.bozoCaptureEntry(env,{...base,...p})};
 }
 test('429/network failures accept manual odds; blank price remains actionable and provenance cannot be forged',async()=>{
- const r=rig();const out=await r.capture({verificationStatus:'verified',priceSource:'captured',entryVerification:{byName:'forged'},clvEligible:true});
+ const r=rig();const out=await r.capture({verificationStatus:'verified',priceSource:'captured',entryOppSource:'captured',entryVerification:{byName:'forged'},clvEligible:true});
  assert.equal(out.ok,true);assert.equal(out.p.price,-150);assert.equal(out.p.verificationStatus,'unverified');
  assert.equal(out.p.priceSource,'self');assert.equal(out.p.clvEligible,false);assert.equal(out.p.entryVerification,null);
+ assert.equal(out.p.entryOppSource,null);assert.equal(buildPick(out.p).entryOppSource,null);
  assert.equal(out.p.priceOpp,null);assert.match(out.p.captureFailureReason,/429/);assert.equal(r.writes(),0);
  const empty=await r.capture({typedPrice:undefined});assert.equal(empty.ok,false);assert.match(empty.error,/Enter the DraftKings odds/);
  const v=r.api.validatePick; const band={ceil:-100,floor:-500};
@@ -79,6 +81,16 @@ test('changed pick/week and concurrent writes cannot verify the wrong entry',asy
  }
  const r=rig(),p=await r.post({forUid:'pat',week:4,ts:base.ts,price:-150,priceOpp:130});r.conflict();
  assert.equal((await r.post({forUid:'pat',confirm:p.body.confirm_code})).status,409);assert.equal(r.writes(),0);
+});
+
+test('explicit verification of a new fallback pick preserves provenance through historical scoring',async()=>{
+ const r=rig(),out=await r.capture({period:'1h'}),pick=buildPick(out.p);
+ r.change(s=>{s.picks.pat=pick;});
+ const proposed=await r.post({forUid:'pat',week:4,ts:pick.ts,price:-150,priceOpp:130,evidence:'Original first-half DK slip'});
+ assert.equal(proposed.status,200);
+ assert.equal((await r.post({forUid:'pat',confirm:proposed.body.confirm_code})).status,200);
+ assert.equal(r.state().ledger['2026-w4-pat'].entryOppSource,'manual-verified');
+ await assertHistorical(r.state().picks.pat,'manual-verified');
 });
 test('unverified entries do not gain automatic CLV; manual verification enables it with both closing sides; overrides survive',()=>{
  const ctx={devigP:(a,b)=>a==null||b==null?null:(a<0?-a/(100-a):100/(100+a))/((a<0?-a/(100-a):100/(100+a))+(b<0?-b/(100-b):100/(100+b)))};

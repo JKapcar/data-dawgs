@@ -1,0 +1,10 @@
+[
+ {"name":"SF five point loss","pick":{"sport":"nfl","mkt":"ml","price":-395,"entryPriceOpp":310},"result":{"actual":-5,"result":"lost"},"expected":1.0957881139},
+ {"name":"Baylor eleven point loss","pick":{"sport":"cfb","mkt":"ml","price":-218,"entryPriceOpp":180},"result":{"actual":-11,"result":"lost"},"expected":1.0722489513},
+ {"name":"string prices and margin","pick":{"sport":"nfl","mkt":"ml","price":"-395","entryPriceOpp":"310"},"result":{"actual":"-5","result":"lost"},"expected":1.0957881139},
+ {"name":"missing opposite","pick":{"sport":"nfl","mkt":"ml","price":-395},"result":{"actual":-5},"expected":null},
+ {"name":"missing actual","pick":{"sport":"nfl","mkt":"ml","price":-395,"entryPriceOpp":310},"result":{"result":"lost"},"expected":null},
+ {"name":"empty actual","pick":{"sport":"nfl","mkt":"ml","price":-395,"entryPriceOpp":310},"result":{"actual":""},"expected":null},
+ {"name":"spread still line based","pick":{"sport":"nfl","mkt":"spread","line":-14.5,"price":-257},"result":{"actual":-16,"result":"lost"},"expected":0.1111111111111111},
+ {"name":"CFB total uses Worker SD","pick":{"sport":"cfb","mkt":"total","dir":"over","line":50},"result":{"actual":37},"expected":1}
+]

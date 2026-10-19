@@ -95,7 +95,7 @@ test('Worst Beat: a period leg divides by game SD × √fraction and reports sca
   assert.equal(api.bozoBeatBasis({ mkt: 'spread' }), 'sd');
   assert.equal(api.bozoBeatBasis({ mkt: 'spread', period: '1h' }), 'scaled-sd');
   assert.equal(api.bozoBeatBasis({ mkt: 'prop', price: -150 }, { close: -160, closeOpp: 130 }), 'close');
-  assert.match(worker, /row\.beatSd = rSd\(p\);\s*row\.beatBasis = bozoBeatBasis\(p, row\);/);
+  assert.match(worker, /row\.beatSd = rSd\(p\);\s*row\.beatBasis = bozoBeatBasis\(p, row, rule\);/);
 });
 
 test('docs/bozo-sd.json is pinned to the grader, and the page scales the same way', () => {

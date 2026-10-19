@@ -1,0 +1,930 @@
+{
+  "source": "https://data-dawgs-draft-default-rtdb.firebaseio.com/bozo/leagues/main.json",
+  "as_of": "2026-10-19",
+  "note": "Read-only snapshot projection: scoring fields and display names only. Ledger rows may lack period/provenance. Never used to write grades.",
+  "weeks": [
+    {
+      "week": 1,
+      "order": [
+        3,
+        1,
+        2,
+        0
+      ],
+      "recorded": "WBeamen",
+      "picks": {
+        "Kap": {
+          "sport": "nfl",
+          "mkt": "total",
+          "line": 53.5,
+          "price": -240,
+          "priceOpp": 174,
+          "side": "under",
+          "dir": "under",
+          "ts": 1788887978232
+        },
+        "Squatch": {
+          "sport": "nfl",
+          "mkt": "other",
+          "line": 0.5,
+          "price": -145,
+          "side": "over",
+          "dir": "over",
+          "ts": 1789081191928
+        },
+        "Roger": {
+          "sport": "nfl",
+          "mkt": "ml",
+          "line": 0,
+          "price": -166,
+          "priceOpp": 140,
+          "side": "LV",
+          "dir": "over",
+          "ts": 1789054193721
+        },
+        "JWhite": {
+          "sport": "nfl",
+          "mkt": "ml",
+          "line": 0,
+          "price": -230,
+          "priceOpp": 190,
+          "side": "PHI",
+          "dir": "over",
+          "ts": 1789080773776
+        },
+        "Tony": {
+          "sport": "cfb",
+          "mkt": "spread",
+          "line": 5.5,
+          "price": -110,
+          "priceOpp": -110,
+          "side": "OU",
+          "dir": "over",
+          "ts": 1788965178629
+        },
+        "BUTTS": {
+          "sport": "nfl",
+          "mkt": "ml",
+          "line": 0,
+          "price": -198,
+          "priceOpp": 164,
+          "side": "LAR",
+          "dir": "over",
+          "ts": 1788915465785
+        },
+        "WBeamen": {
+          "sport": "cfb",
+          "mkt": "ml",
+          "line": 0,
+          "price": -270,
+          "priceOpp": 220,
+          "side": "UAB",
+          "dir": "over",
+          "ts": 1789080993468
+        },
+        "ItzBornLegend": {
+          "sport": "nfl",
+          "mkt": "spread",
+          "line": -7.5,
+          "price": -229,
+          "priceOpp": 167,
+          "side": "CAR",
+          "dir": "over",
+          "ts": 1789052803783
+        }
+      },
+      "results": {
+        "Kap": {
+          "actual": 96,
+          "result": "lost",
+          "won": false,
+          "close": -247,
+          "closeOpp": 179
+        },
+        "Squatch": {
+          "actual": 0.01,
+          "result": "lost",
+          "won": false,
+          "close": -145,
+          "closeOpp": 200,
+          "clvPts": 0
+        },
+        "Roger": {
+          "actual": 14,
+          "result": "won",
+          "won": true,
+          "close": -170,
+          "closeOpp": 142
+        },
+        "JWhite": {
+          "result": "won",
+          "won": true,
+          "close": -218,
+          "closeOpp": 176
+        },
+        "Tony": {
+          "result": "lost",
+          "won": false,
+          "close": -108,
+          "closeOpp": -112
+        },
+        "BUTTS": {
+          "actual": -20,
+          "result": "lost",
+          "won": false,
+          "close": -218,
+          "closeOpp": 180
+        },
+        "WBeamen": {
+          "result": "lost",
+          "won": false,
+          "close": -265,
+          "closeOpp": 215
+        },
+        "ItzBornLegend": {
+          "actual": -22,
+          "result": "lost",
+          "won": false,
+          "close": -232,
+          "closeOpp": 169
+        }
+      }
+    },
+    {
+      "week": 2,
+      "order": [
+        1,
+        3,
+        0,
+        2
+      ],
+      "recorded": "ItzBornLegend",
+      "picks": {
+        "Kap": {
+          "sport": "nfl",
+          "mkt": "total",
+          "line": 53.5,
+          "price": -223,
+          "priceOpp": 163,
+          "side": "under",
+          "dir": "under",
+          "ts": 1789500111077
+        },
+        "Squatch": {
+          "sport": "cfb",
+          "mkt": "spread",
+          "line": -10.5,
+          "price": -115,
+          "priceOpp": -105,
+          "side": "SYR",
+          "dir": "over",
+          "ts": 1789501788009
+        },
+        "Roger": {
+          "sport": "nfl",
+          "mkt": "ml",
+          "line": 0,
+          "price": -278,
+          "priceOpp": 225,
+          "side": "KC",
+          "dir": "over",
+          "ts": 1789650758634
+        },
+        "JWhite": {
+          "sport": "nfl",
+          "mkt": "spread",
+          "line": 1.5,
+          "price": -276,
+          "priceOpp": 197,
+          "side": "PHI",
+          "dir": "over",
+          "ts": 1789659694945
+        },
+        "Tony": {
+          "sport": "nfl",
+          "mkt": "spread",
+          "line": 8.5,
+          "price": -112,
+          "priceOpp": -108,
+          "side": "TB",
+          "dir": "over",
+          "ts": 1789505710671
+        },
+        "BUTTS": {
+          "sport": "nfl",
+          "mkt": "spread",
+          "line": 2.5,
+          "price": -288,
+          "priceOpp": 205,
+          "side": "BAL",
+          "dir": "over",
+          "ts": 1789661571331
+        },
+        "WBeamen": {
+          "sport": "nfl",
+          "mkt": "ml",
+          "line": 0,
+          "price": -218,
+          "priceOpp": 180,
+          "side": "NE",
+          "dir": "over",
+          "ts": 1789564751833
+        },
+        "ItzBornLegend": {
+          "sport": "nfl",
+          "mkt": "total",
+          "line": 60.5,
+          "price": -236,
+          "priceOpp": 172,
+          "side": "under",
+          "dir": "under",
+          "ts": 1789615889395
+        }
+      },
+      "results": {
+        "Kap": {
+          "actual": 12,
+          "result": "won",
+          "won": true,
+          "close": -290,
+          "closeOpp": 207
+        },
+        "Squatch": {
+          "actual": -14,
+          "result": "lost",
+          "won": false,
+          "close": -108,
+          "closeOpp": -112
+        },
+        "Roger": {
+          "actual": 3,
+          "result": "won",
+          "won": true,
+          "close": -265,
+          "closeOpp": 215
+        },
+        "JWhite": {
+          "actual": 4,
+          "result": "won",
+          "won": true,
+          "close": -275,
+          "closeOpp": 197
+        },
+        "Tony": {
+          "actual": -4,
+          "result": "lost",
+          "won": false,
+          "close": -105,
+          "closeOpp": -115
+        },
+        "BUTTS": {
+          "actual": -7,
+          "result": "lost",
+          "won": false,
+          "close": -308,
+          "closeOpp": 217
+        },
+        "WBeamen": {
+          "actual": 17,
+          "result": "won",
+          "won": true,
+          "close": -225,
+          "closeOpp": 185
+        },
+        "ItzBornLegend": {
+          "actual": 72,
+          "result": "lost",
+          "won": false,
+          "close": -231,
+          "closeOpp": 168
+        }
+      }
+    },
+    {
+      "week": 3,
+      "order": [
+        2,
+        1,
+        3,
+        0
+      ],
+      "recorded": "Squatch",
+      "picks": {
+        "Kap": {
+          "sport": "nfl",
+          "mkt": "ml",
+          "line": 0,
+          "price": -455,
+          "priceOpp": 350,
+          "side": "SF",
+          "dir": "over",
+          "ts": 1790196093614
+        },
+        "Squatch": {
+          "sport": "cfb",
+          "mkt": "spread",
+          "line": 4,
+          "price": -110,
+          "priceOpp": -110,
+          "side": "TEX",
+          "dir": "over",
+          "ts": 1790254716599
+        },
+        "Roger": {
+          "sport": "cfb",
+          "mkt": "ml",
+          "line": 0,
+          "price": -112,
+          "priceOpp": -108,
+          "entryPriceOpp": -108,
+          "verificationStatus": "verified",
+          "side": "CLEM",
+          "dir": "over",
+          "ts": 1790276716690
+        },
+        "JWhite": {
+          "sport": "nfl",
+          "mkt": "spread",
+          "line": 1.5,
+          "price": -263,
+          "priceOpp": 189,
+          "entryPriceOpp": 189,
+          "verificationStatus": "verified",
+          "side": "DET",
+          "dir": "over",
+          "ts": 1790257766586
+        },
+        "Tony": {
+          "sport": "cfb",
+          "mkt": "total",
+          "line": 45.5,
+          "price": -179,
+          "priceOpp": 133,
+          "side": "over",
+          "dir": "over",
+          "ts": 1790158244612
+        },
+        "BUTTS": {
+          "sport": "nfl",
+          "mkt": "spread",
+          "line": 2.5,
+          "price": -263,
+          "priceOpp": 189,
+          "entryPriceOpp": 189,
+          "verificationStatus": "verified",
+          "side": "BUF",
+          "dir": "over",
+          "ts": 1790265642555
+        },
+        "WBeamen": {
+          "sport": "cfb",
+          "mkt": "total",
+          "line": 45.5,
+          "price": -257,
+          "priceOpp": 185,
+          "side": "under",
+          "dir": "under",
+          "ts": 1790254283205
+        },
+        "ItzBornLegend": {
+          "sport": "nfl",
+          "mkt": "spread",
+          "line": -7.5,
+          "price": -238,
+          "priceOpp": 192,
+          "entryPriceOpp": 192,
+          "verificationStatus": "verified",
+          "side": "TEN",
+          "dir": "over",
+          "ts": 1790260272251
+        }
+      },
+      "results": {
+        "Kap": {
+          "actual": 6,
+          "result": "won",
+          "won": true,
+          "close": -410,
+          "closeOpp": 320,
+          "clvPts": 1.5
+        },
+        "Squatch": {
+          "actual": 3,
+          "result": "lost",
+          "won": false,
+          "clvPts": -0.05
+        },
+        "Roger": {
+          "actual": 14,
+          "result": "won",
+          "won": true,
+          "close": -142,
+          "closeOpp": 120
+        },
+        "JWhite": {
+          "actual": 7,
+          "result": "won",
+          "won": true,
+          "close": -286,
+          "closeOpp": 204
+        },
+        "Tony": {
+          "actual": 52,
+          "result": "won",
+          "won": true,
+          "close": -182,
+          "closeOpp": 135
+        },
+        "BUTTS": {
+          "actual": 8,
+          "result": "won",
+          "won": true,
+          "close": -248,
+          "closeOpp": 179
+        },
+        "WBeamen": {
+          "actual": 39,
+          "result": "won",
+          "won": true,
+          "close": -229,
+          "closeOpp": 167
+        },
+        "ItzBornLegend": {
+          "actual": -5,
+          "result": "won",
+          "won": true,
+          "close": -302,
+          "closeOpp": 210
+        }
+      }
+    },
+    {
+      "week": 4,
+      "order": [
+        2,
+        3,
+        0,
+        1
+      ],
+      "recorded": "Squatch",
+      "picks": {
+        "Kap": {
+          "sport": "cfb",
+          "mkt": "spread",
+          "line": -23.5,
+          "price": -301,
+          "priceOpp": 213,
+          "verificationStatus": "verified",
+          "side": "IOWA",
+          "dir": "over",
+          "ts": 1790729926576
+        },
+        "Squatch": {
+          "sport": "nfl",
+          "mkt": "ml",
+          "line": 0,
+          "price": -305,
+          "priceOpp": 245,
+          "verificationStatus": "verified",
+          "side": "BUF",
+          "dir": "over",
+          "ts": 1790895077092
+        },
+        "Roger": {
+          "sport": "nfl",
+          "mkt": "spread",
+          "line": 6.5,
+          "price": -199,
+          "priceOpp": 147,
+          "verificationStatus": "verified",
+          "side": "MIN",
+          "dir": "over",
+          "ts": 1790874714854
+        },
+        "JWhite": {
+          "sport": "nfl",
+          "mkt": "spread",
+          "line": -4.5,
+          "price": -302,
+          "priceOpp": 214,
+          "verificationStatus": "verified",
+          "side": "HOU",
+          "dir": "over",
+          "ts": 1790741767080
+        },
+        "Tony": {
+          "sport": "nfl",
+          "mkt": "spread",
+          "line": 4.5,
+          "price": -250,
+          "verificationStatus": "unverified",
+          "side": "IND",
+          "dir": "over",
+          "ts": 1790795865154
+        },
+        "BUTTS": {
+          "sport": "nfl",
+          "mkt": "prop",
+          "line": 20,
+          "price": -293,
+          "verificationStatus": "unverified",
+          "side": "over",
+          "dir": "over",
+          "ts": 1790730068826
+        },
+        "WBeamen": {
+          "sport": "nfl",
+          "mkt": "prop",
+          "line": 6.6,
+          "price": -141,
+          "verificationStatus": "unverified",
+          "side": "under",
+          "dir": "under",
+          "ts": 1790893540203
+        },
+        "ItzBornLegend": {
+          "sport": "cfb",
+          "mkt": "total",
+          "line": 54.5,
+          "price": -288,
+          "priceOpp": 205,
+          "verificationStatus": "verified",
+          "side": "under",
+          "dir": "under",
+          "ts": 1790872632075
+        }
+      },
+      "results": {
+        "Kap": {
+          "actual": -17,
+          "result": "won",
+          "won": true,
+          "close": -293,
+          "closeOpp": 208
+        },
+        "Squatch": {
+          "actual": -3,
+          "result": "lost",
+          "won": false,
+          "close": -345,
+          "closeOpp": 275
+        },
+        "Roger": {
+          "actual": 5,
+          "result": "lost",
+          "won": false,
+          "close": -185,
+          "closeOpp": 137
+        },
+        "JWhite": {
+          "actual": -4,
+          "result": "won",
+          "won": true,
+          "close": -326,
+          "closeOpp": 228
+        },
+        "Tony": {
+          "actual": 17,
+          "result": "won",
+          "won": true,
+          "clvPts": 0
+        },
+        "BUTTS": {
+          "actual": 22,
+          "result": "won",
+          "won": true,
+          "clvPts": 0
+        },
+        "WBeamen": {
+          "result": "push"
+        },
+        "ItzBornLegend": {
+          "actual": 63,
+          "result": "lost",
+          "won": false,
+          "close": -293,
+          "closeOpp": 208
+        }
+      }
+    },
+    {
+      "week": 5,
+      "order": [
+        2,
+        1,
+        3,
+        0
+      ],
+      "recorded": "ItzBornLegend",
+      "picks": {
+        "Kap": {
+          "sport": "cfb",
+          "mkt": "spread",
+          "line": 4.5,
+          "price": -320,
+          "priceOpp": 224,
+          "verificationStatus": "verified",
+          "side": "LIB",
+          "dir": "over",
+          "ts": 1791237813886
+        },
+        "Squatch": {
+          "sport": "nfl",
+          "mkt": "spread",
+          "line": -14.5,
+          "price": -485,
+          "priceOpp": 315,
+          "verificationStatus": "verified",
+          "side": "BUF",
+          "dir": "over",
+          "ts": 1791493913515
+        },
+        "Roger": {
+          "sport": "nfl",
+          "mkt": "spread",
+          "line": 6.5,
+          "price": -176,
+          "priceOpp": 131,
+          "verificationStatus": "verified",
+          "side": "DAL",
+          "dir": "over",
+          "ts": 1791468539740
+        },
+        "JWhite": {
+          "sport": "cfb",
+          "mkt": "spread",
+          "line": 2.5,
+          "price": -284,
+          "priceOpp": 202,
+          "verificationStatus": "verified",
+          "side": "TEX",
+          "dir": "over",
+          "ts": 1791378597364
+        },
+        "Tony": {
+          "sport": "cfb",
+          "mkt": "spread",
+          "line": 27.5,
+          "price": -424,
+          "priceOpp": 284,
+          "verificationStatus": "verified",
+          "side": "ND",
+          "dir": "over",
+          "ts": 1791294099635
+        },
+        "BUTTS": {
+          "sport": "nfl",
+          "mkt": "prop",
+          "line": 4.5,
+          "price": -382,
+          "verificationStatus": "unverified",
+          "side": "over",
+          "dir": "over",
+          "ts": 1791405337804
+        },
+        "WBeamen": {
+          "sport": "cfb",
+          "mkt": "spread",
+          "line": -3.5,
+          "price": -157,
+          "priceOpp": 118,
+          "verificationStatus": "verified",
+          "side": "UGA",
+          "dir": "over",
+          "ts": 1791426463403
+        },
+        "ItzBornLegend": {
+          "sport": "nfl",
+          "mkt": "total",
+          "line": 64.5,
+          "price": -356,
+          "priceOpp": 246,
+          "verificationStatus": "verified",
+          "side": "under",
+          "dir": "under",
+          "ts": 1791482652194
+        }
+      },
+      "results": {
+        "Kap": {
+          "actual": 32,
+          "result": "won",
+          "won": true,
+          "close": -319,
+          "closeOpp": 224
+        },
+        "Squatch": {
+          "actual": 3,
+          "result": "won",
+          "won": true,
+          "close": -502,
+          "closeOpp": 324
+        },
+        "Roger": {
+          "actual": -8,
+          "result": "lost",
+          "won": false,
+          "close": -180,
+          "closeOpp": 134
+        },
+        "JWhite": {
+          "actual": -3,
+          "result": "lost",
+          "won": false,
+          "close": -295,
+          "closeOpp": 209
+        },
+        "Tony": {
+          "actual": 51,
+          "result": "won",
+          "won": true,
+          "close": -493,
+          "closeOpp": 319
+        },
+        "BUTTS": {
+          "result": "lost",
+          "won": false
+        },
+        "WBeamen": {
+          "result": "lost",
+          "won": false,
+          "close": -160,
+          "closeOpp": 120
+        },
+        "ItzBornLegend": {
+          "actual": 71,
+          "result": "lost",
+          "won": false,
+          "close": -319,
+          "closeOpp": 223
+        }
+      }
+    },
+    {
+      "week": 6,
+      "order": [
+        1,
+        2,
+        3,
+        0
+      ],
+      "picks": {
+        "Kap": {
+          "sport": "nfl",
+          "mkt": "ml",
+          "line": 0,
+          "price": -395,
+          "priceOpp": 310,
+          "entryPriceOpp": 310,
+          "verificationStatus": "verified",
+          "period": "game",
+          "side": "SF",
+          "dir": "over",
+          "ts": 1791902389129
+        },
+        "Squatch": {
+          "sport": "cfb",
+          "mkt": "ml",
+          "line": 0,
+          "price": -310,
+          "priceOpp": 250,
+          "entryPriceOpp": 250,
+          "verificationStatus": "verified",
+          "period": "game",
+          "side": "NU",
+          "dir": "over",
+          "ts": 1792075660322
+        },
+        "Roger": {
+          "sport": "nfl",
+          "mkt": "spread",
+          "line": 6.5,
+          "price": -158,
+          "priceOpp": 118,
+          "entryPriceOpp": 118,
+          "verificationStatus": "verified",
+          "period": "game",
+          "side": "KC",
+          "dir": "over",
+          "ts": 1792073675267
+        },
+        "JWhite": {
+          "sport": "cfb",
+          "mkt": "ml",
+          "line": 0,
+          "price": -225,
+          "priceOpp": 185,
+          "entryPriceOpp": 185,
+          "verificationStatus": "verified",
+          "period": "game",
+          "side": "MISS",
+          "dir": "over",
+          "ts": 1791970340866
+        },
+        "Tony": {
+          "sport": "nfl",
+          "mkt": "ml",
+          "line": 0,
+          "price": -258,
+          "priceOpp": 210,
+          "entryPriceOpp": 210,
+          "verificationStatus": "verified",
+          "period": "game",
+          "side": "BAL",
+          "dir": "over",
+          "ts": 1792069849711
+        },
+        "BUTTS": {
+          "sport": "nfl",
+          "mkt": "spread",
+          "line": -1.5,
+          "price": -403,
+          "priceOpp": 272,
+          "entryPriceOpp": 272,
+          "verificationStatus": "verified",
+          "period": "game",
+          "side": "NE",
+          "dir": "over",
+          "ts": 1792087675781
+        },
+        "WBeamen": {
+          "sport": "cfb",
+          "mkt": "ml",
+          "line": 0,
+          "price": -218,
+          "priceOpp": 180,
+          "entryPriceOpp": 180,
+          "verificationStatus": "verified",
+          "period": "game",
+          "side": "BAY",
+          "dir": "over",
+          "ts": 1792069287740
+        },
+        "ItzBornLegend": {
+          "sport": "nfl",
+          "mkt": "spread",
+          "line": -14.5,
+          "price": -257,
+          "priceOpp": 185,
+          "entryPriceOpp": 185,
+          "verificationStatus": "verified",
+          "period": "game",
+          "side": "LAC",
+          "dir": "over",
+          "ts": 1792069827384
+        }
+      },
+      "results": {
+        "Squatch": {
+          "actual": 3,
+          "result": "won",
+          "won": true,
+          "close": -310,
+          "closeOpp": 250
+        },
+        "Roger": {
+          "actual": 16,
+          "result": "won",
+          "won": true,
+          "close": -144,
+          "closeOpp": 108
+        },
+        "JWhite": {
+          "actual": 28,
+          "result": "won",
+          "won": true,
+          "close": -185,
+          "closeOpp": 154
+        },
+        "Tony": {
+          "actual": -3,
+          "result": "lost",
+          "won": false,
+          "close": -170,
+          "closeOpp": 142
+        },
+        "BUTTS": {
+          "actual": 7,
+          "result": "won",
+          "won": true,
+          "close": -412,
+          "closeOpp": 277
+        },
+        "WBeamen": {
+          "actual": -11,
+          "result": "lost",
+          "won": false,
+          "close": -185,
+          "closeOpp": 154
+        },
+        "ItzBornLegend": {
+          "actual": -16,
+          "result": "lost",
+          "won": false,
+          "close": -295,
+          "closeOpp": 210
+        }
+      }
+    }
+  ]
+}

@@ -7381,6 +7381,9 @@ async function bozoGuardedPatch(env, lid, expected, patch) {
   const { data: live, etag } = await fbGet(env, LG(lid), true);
   if (!live || !etag || (live.week || 1) !== (expected.week || 1) || (live.season || SEASON) !== (expected.season || SEASON) ||
       !bozoSame(live.picks || {}, expected.picks || {})) return false;
+  // A grading policy/receipt change invalidates the snapshot before its CAS write.
+  if (!bozoSame(live.worstBeatPolicy || null, expected.worstBeatPolicy || null) ||
+      !bozoSame(live.worstBeatReceipt || null, expected.worstBeatReceipt || null)) return false;
   for (const [path, value] of Object.entries(patch)) {
     const parts = path.split("/"); let node = live;
     for (const part of parts.slice(0, -1)) node = node[part] ||= {};
@@ -7487,6 +7490,7 @@ function buildBozoLeg(name, p, via = null, by = null) {
     startsAt: typeof p.startsAt === "string" && !isNaN(Date.parse(p.startsAt)) ? p.startsAt : null,
     priceOpp: entryPriceOpp,
     entryPriceOpp,
+    entryOppSource: p.priceSource === "captured" && p.entryOppSource === "captured" ? "captured" : null,
     entryBook: "draftkings",        // league rule: there is no other book at either end
     entryProvider: p.entryProvider || null,
     entrySnapshotAt: p.entrySnapshotAt || null,
@@ -8199,6 +8203,7 @@ function ledgerEntries(lid, season, week, picks, order) {
       season, week, player: x.who || playerName(n),
       sport: x.sport, eventId: x.eventId, game: x.game,
       mkt: x.mkt, side: x.side, dir: x.dir,
+      period: x.period || "game", entryOppSource: x.entryOppSource ?? null,
       priceSource: x.priceSource || "self",     // see the note in bozoPick
       verificationStatus: x.verificationStatus || null,
       entryVerification: x.entryVerification || null,
@@ -8291,6 +8296,7 @@ function ledgerGradeUpdate(season, week, results, bozo, picks, have) {
       upd[`${k}/won`] = result === "won" ? true : result === "lost" ? false : null;
     }
     if (r.actual !== undefined) upd[`${k}/actual`] = r.actual ?? null;
+    if (r.worstBeatRule) upd[`${k}/worstBeatRule`] = r.worstBeatRule;
 
     /* ⚠️ A CAPTURED CLOSE IS IMMUTABLE AND OUTRANKS ANYTHING TYPED IN LATER. The cron
        snapped it at kickoff off a licensed feed and stamped a server clock; a manager
@@ -9172,7 +9178,7 @@ function bozoSelfPricedEntry(p, reason, code = "market_missing") {
   if (typed === null) return { ok: false, reason: "manual_price_required",
     error: "The odds checker could not verify this pick. Enter the DraftKings odds in the price box and submit again; your pick will be marked UNVERIFIED for manager review." };
   return { ok: true, p: { ...p, price: typed, priceOpp: null, priceSource: "self",
-    entryBook: BOZO_CLOSE_BOOK, entryProvider: null, entrySnapshotAt: null,
+    entryBook: BOZO_CLOSE_BOOK, entryProvider: null, entrySnapshotAt: null, entryOppSource: null,
     fairEntry: null, entryHold: null, clvEligible: false,
     verificationStatus: "unverified", captureFailureCode: code, captureFailureReason: String(reason).slice(0, 300),
     entryVerification: null, providerEventIds: {}, canonicalKey: p.canonicalKey || null,
@@ -9187,7 +9193,7 @@ async function bozoCaptureEntry(env, input, options = {}) {
   const p = { ...input };
   // These are server-authored, never assertions accepted from a submitter.
   for (const key of ["verificationStatus", "entryVerification", "captureFailureReason", "captureFailureCode", "captureAttempts", "clvEligible",
-    "priceSource", "entrySnapshotAt", "entryProvider", "providerEventIds", "canonicalKey", "espnEventId", "fairEntry", "entryHold"]) delete p[key];
+    "priceSource", "entrySnapshotAt", "entryProvider", "entryOppSource", "providerEventIds", "canonicalKey", "espnEventId", "fairEntry", "entryHold"]) delete p[key];
   p.period = bozoPeriodOf(p);
   const periodErr = bozoPeriodError(p);
   if (periodErr) return { ok: false, reason: "bad_period", error: periodErr };
@@ -9271,6 +9277,7 @@ async function bozoCaptureEntry(env, input, options = {}) {
   return { ok: true, p: { ...p,
     period: p.period, label: bozoLabelWithPeriod(p.label, p.period),
     line: quote.line, price: quote.price, priceOpp: quote.opp,
+    entryOppSource: "captured",
     priceSource: "captured", verificationStatus: "verified", entryBook: BOZO_CLOSE_BOOK, entryProvider: backup ? "odds_api" : "sgo",
     entrySnapshotAt: quote.snapshotAt || events.fetchedAt || new Date().toISOString(),
     fairEntry: facts.fair, entryHold: facts.hold, clvEligible: true,
@@ -9447,6 +9454,7 @@ async function bozoClv(request, url, env, cors) {
       player: r.player, sport: r.sport,
       eventId: r.eventId, game: r.game,
       mkt: r.mkt, side: r.side, line: r.line ?? null, prop: r.prop || null,
+      period: r.period ?? null, entryOppSource: r.entryOppSource ?? null, worstBeatRule: r.worstBeatRule || "legacy-v1",
       label: r.label, selectionKey: r.selectionKey || null,
       dkSgpEligible: r.dkSgpEligible || null,
 
@@ -9632,8 +9640,8 @@ const rDir = x => ((x && (x.dir || x.side)) === "under") ? "under" : "over";
 // Which legs are hand-graded: props, `other`, and (Phase 2.8b) any period leg.
 const bozoIsManualLeg = p => !!p && (p.mkt === "prop" || p.mkt === "other" || bozoPeriodOf(p) !== "game");
 // Where a leg's Worst Beat SD comes from — see the stamp in bozoGrade.
-function bozoBeatBasis(p, row) {
-  if (p.mkt === "prop" || p.mkt === "other") return royaleBeatDeficit(p, row || {}).basis;
+function bozoBeatBasis(p, row, rule = "legacy-v1") {
+  if ((p.mkt === "ml" && rule === "entry-normal-v2") || p.mkt === "prop" || p.mkt === "other") return royaleBeatDeficit(p, row || {}, rule).basis;
   return bozoPeriodOf(p) === "game" ? "sd" : "scaled-sd";
 }
 /* ⚠️ PERIOD LEGS USE A SCALED SD (D21). A half is modelled as game SD × √0.5 and a
@@ -9652,6 +9660,40 @@ function rSd(x) {
   const base = x.mkt === "total" ? s.tot : s.sd;
   return base * Math.sqrt(BOZO_PERIOD_FRACTION[period] ?? 1);
 }
+/* Moneyline Worst Beat v2: recorded two-way entry only. This is a normal-model
+   expected margin, not an observed spread. Keep verbatim in page and Worker;
+   tests compare both copies and their callers. See docs/bozo-worst-beat.md. */
+/* No implicit rollout: an owner-approved policy must name this exact season/week.
+   Completed weeks use their stamped version; unstamped historical records stay legacy. */
+function worstBeatRuleFor(state) {
+  if (!state) return 'legacy-v1';
+  const receipt = state.worstBeatReceipt;
+  if (receipt && receipt.season === state.season && receipt.week === state.week)
+    return receipt.version === 'entry-normal-v2' ? 'entry-normal-v2' : 'legacy-v1';
+  const rows = Object.values(state.results || {});
+  if (state.status === 'graded' || state.bozoWhy || rows.some(r => r && r.worstBeatRule)) {
+    return rows.length && rows.every(r => r && r.worstBeatRule === 'entry-normal-v2') ? 'entry-normal-v2' : 'legacy-v1';
+  }
+  const p = state.worstBeatPolicy;
+  return p && p.version === 'entry-normal-v2' && p.season === state.season && p.week === state.week
+    && Number.isInteger(p.season) && Number.isInteger(p.week) ? 'entry-normal-v2' : 'legacy-v1';
+}
+
+function moneylineBeat(x, r, sd, inverseNormal) {
+  if (!r || (r.result != null && r.result !== 'lost') || (r.result == null && r.won === true)) return { v: null, basis: 'not-lost' };
+  if (r.actual == null || String(r.actual).trim() === '' || !Number.isFinite(Number(r.actual))) return { v: null, basis: 'no-result' };
+  if (!(sd > 0) || !Number.isFinite(sd)) return { v: null, basis: 'no-sd' };
+  const prices = [x.price, x.entryPriceOpp ?? x.priceOpp];
+  if (x.verificationStatus === 'unverified' || x.entryOppSource === 'assumed' ||
+      prices.some(a => a == null || String(a).trim() === '' || !Number.isFinite(Number(a)) || Math.abs(Number(a)) < 100)) return { v: null, basis: 'entry-unpriced' };
+  const implied = a => a < 0 ? -a / (-a + 100) : 100 / (a + 100);
+  const [a, b] = prices.map(Number).map(implied);
+  const p = a / (a + b);
+  if (!(p > 0 && p < 1)) return { v: null, basis: 'entry-unpriced' };
+  const expectedMargin = sd * inverseNormal(p);
+  return { v: (expectedMargin - Number(r.actual)) / sd, basis: 'entry-normal', p, expectedMargin, sd };
+}
+
 function rExpected(x) {
   const sd = rSd(x), fair = rDevig(x.price, x.entryPriceOpp ?? x.priceOpp);
   if (fair == null || x.verificationStatus === "unverified") return null;
@@ -9681,7 +9723,8 @@ function rExpected(x) {
    Worst CLV does NOT get the same fallback, because Worst CLV is *about* the close;
    substituting the entry price there would make every uncapturable leg score exactly
    zero movement, which is a fabricated number, not a missing one. */
-function royaleBeatDeficit(x, r) {
+function royaleBeatDeficit(x, r, rule = "legacy-v1") {
+  if (x.mkt === "ml" && rule === "entry-normal-v2") return moneylineBeat(x, r, rSd(x), rInvNorm);
   if (x.mkt === "prop" || x.mkt === "other") {
     const pClose = r?.closeOppSource === "assumed" ? null : rDevig(r && r.close, r && r.closeOpp);
     const pEntry = rDevig(x.price, x.entryPriceOpp);
@@ -9706,20 +9749,7 @@ function royaleBeatDeficit(x, r) {
     const v = (Math.exp(-k * k / 2) / Math.sqrt(2 * Math.PI)) / (1 - p);
     return { v: Number.isFinite(v) ? v : null, basis };
   }
-  /* Margin markets: how far under ITS OWN NUMBER the leg finished, in SDs.
-
-     ⚠️ FROM THE NUMBER, NOT FROM THE PRICE. This measured the gap to rExpected(), which
-     folds the price in — so the same miss scored worse for a −400 favourite than for a
-     −110. But SHORTEST ODDS is already the lever that punishes taking chalk, and pricing
-     it in here made two of the four levers measure overlapping things. A randomised
-     hierarchy is only interesting while its levers are independent.
-     data/bozo-rules.json says "finished furthest under its number, in standard
-     deviations", and this now is that.
-
-     ⚠️ It is the grader's own edge, negated — you lost by exactly the amount you missed
-     by, with no second definition of "missed" to drift from the first. `line` is what
-     this side gives up, so margin − line is the edge in both directions, including an
-     MLB/NHL dog at +1.5 stored as −1.5. */
+  // Spreads/totals retain their posted-line deficit; ML is handled above.
   if (r == null || r.actual == null) return { v: null, basis: "no-result" };
   const sd = rSd(x);
   if (!(sd > 0)) return { v: null, basis: "no-sd" };
@@ -9738,14 +9768,16 @@ function royaleBeatDeficit(x, r) {
    ⚠️ A tie and an unmeasurable lever are DIFFERENT FAILURES and are recorded as such.
    A tie is bad luck. An unmeasurable lever is a hole in the data, and the whole reason
    §8.3 exists. Reporting them as one thing hides the second behind the first. */
-function royaleApplyLever(leverIdx, losers, picks, results) {
+function royaleApplyLever(leverIdx, losers, picks, results, rule = "legacy-v1") {
   const scored = [];
   for (const key of losers) {
     const x = picks[key], r = (results || {})[key] || {};
     let v = null;
     switch (leverIdx) {
       case 0: v = rImp(x.price); break;                            // biggest favourite = worst
-      case 1: v = royaleBeatDeficit(x, r).v; break;                // furthest under = worst
+      case 1: v = royaleBeatDeficit(x, r, rule).v;
+        if (rule === "entry-normal-v2" && x.mkt === "ml" && v == null) return { blocked: true, missing: key, reason: "Moneyline entry pair or settled margin is unmeasurable" };
+        break;                // furthest under = worst
       case 2: v = x.ts || null; break;                             // latest in = worst
       case 3: {                                                    // price moved most against = worst
         /* ⚠️ Needs BOTH sides at BOTH ends, OR a manager's override. Kap's call: a leg
@@ -9795,7 +9827,8 @@ function royaleDecideChop(state, order) {
     return out;
   }
   for (const li of (Array.isArray(order) && order.length ? order : [0, 1, 2, 3])) {
-    const r = royaleApplyLever(li, losers, picks, results);
+    const r = royaleApplyLever(li, losers, picks, results, worstBeatRuleFor(state));
+    if (r.blocked) return { ...out, blocked: true, missing: r.missing, reason: r.reason };
     if (r.key) { out.chopped = playerName(r.key); out.choppedKey = r.key; out.decidedBy = ROYALE_LEVER_NAMES[li]; return out; }
     out.leversPassed.push({ lever: ROYALE_LEVER_NAMES[li], why: r.pass });
   }
@@ -9883,6 +9916,7 @@ async function royaleResolveWeek(env, lid, state) {
   const status = royaleStatus(state);
   const before = royaleRoster(state);
   const decided = royaleDecideChop(state, state.order);
+  if (decided.blocked) return { blocked: true, reason: decided.reason, missing: decided.missing };
 
   const rec = {
     week, season: state.season || SEASON,
@@ -11463,6 +11497,11 @@ async function requireAdmin(request, env) {
    differently on one real-world fact. It never flips status — the caller does that,
    because only the caller knows whether the week is finished. */
 async function bozoCommitGrade(env, lid, state, body, status) {
+  const rule = worstBeatRuleFor(state);
+  if (body.graded && rule === "entry-normal-v2") {
+    const decision = royaleDecideChop({ ...state, results: body.results || state.results }, state.order);
+    if (decision.blocked) return { conflict: decision.reason + ": " + decision.missing, blocked: true };
+  }
   /* ⚠️ ONE EVENT, ONE OUTCOME. A game's margin and total are read once per eventId, so
      moneylines, spreads and totals cannot disagree with themselves. Props and `other`
      are hand-graded per player, and nothing stopped two people on the SAME selection
@@ -11506,11 +11545,12 @@ async function bozoCommitGrade(env, lid, state, body, status) {
       const row = body.results[rk];
       if (!row || typeof row !== "object") continue;
       row.beatSd = rSd(p);
-      row.beatBasis = bozoBeatBasis(p, row);
+      row.beatBasis = bozoBeatBasis(p, row, rule);
+      row.worstBeatRule = rule;
     }
   }
   // Results and grading fence land atomically against the picks that were graded.
-  const gradePatch = { gradeStartedWeek: state.week || 1 };
+  const gradePatch = { gradeStartedWeek: state.week || 1, worstBeatReceipt: {version:rule,season:state.season || SEASON,week:state.week || 1} };
   if (body.results && typeof body.results === "object") gradePatch.results = body.results;
   if (body.bozo !== undefined) gradePatch.bozo = body.bozo;
   if (body.bozoWhy !== undefined) gradePatch.bozoWhy = String(body.bozoWhy).slice(0, 200);
@@ -11660,7 +11700,7 @@ async function bozoVerifyEntryCore(env, auth, body, via = "site") {
       verifiedVia: pending.via, evidence: pending.evidence,
       originalSubmittedAt: new Date(pick.ts).toISOString(), price: pick.price, priceOpp: pending.opposite };
     const fields = { ...(pending.identityFields || {}), priceOpp: pending.opposite, entryPriceOpp: pending.opposite,
-      priceSource: "manual", verificationStatus: "verified", clvEligible: true,
+      priceSource: "manual", verificationStatus: "verified", clvEligible: true, entryOppSource: "manual-verified",
       entryProvider: "manual", entryVerification: verification, fairEntry: facts.fair, entryHold: facts.hold };
     const next = { ...pick, ...fields };
     const out = { ok: true, verificationStatus: "verified", league: lid, forUid: key, ts: next.ts,
@@ -11870,6 +11910,7 @@ async function bozoAutoGradeOne(env, lid, lg, nowMs) {
      results just written and the lever order already drawn for this week. */
   const withResults = { ...lg, results: automatic.results };
   const decided = royaleDecideChop(withResults, lg.order);
+  if (decided.blocked) return { league: lid, week, graded: false, blocked: true, pending: [decided.missing + ": " + decided.reason] };
 
   const committed = await bozoCommitGrade(env, lid, withResults, {
     results: automatic.results,
@@ -11940,7 +11981,7 @@ async function bozoGrade(request, env, cors) {
       const proposal = await readBozoGradeConfirm(env, body.confirm);
       if (!proposal || proposal.lid !== lid)
         return json({ error: "That grade confirmation is invalid or expired. Preview it again." }, 409, cors);
-      if (proposal.week !== (state.week || 1) || proposal.status !== status || !bozoSame(proposal.picks, state.picks || {}))
+      if ((proposal.worstBeatRule || "legacy-v1") !== worstBeatRuleFor(state) || proposal.week !== (state.week || 1) || proposal.status !== status || !bozoSame(proposal.picks, state.picks || {}))
         return json({ error: "The board changed after the grade preview. Preview it again." }, 409, cors);
       // Phase two uses only the signed, frozen phase-one values. It does not read a score
       // source again, and no value supplied beside `confirm` can alter the write.
@@ -11960,7 +12001,7 @@ async function bozoGrade(request, env, cors) {
           pending: automatic.pending, retryable: true }, 409, cors);
       // Royale must name the same person it chops. The browser can have an older
       // loser set than the refreshed results above; never sign its stale verdict.
-      if (body.graded && state.format === "royale") {
+      if (body.graded && (state.format === "royale" || worstBeatRuleFor(state) === "entry-normal-v2")) {
         const pending = Object.keys(state.picks || {}).filter(k => {
           const r = body.results[k] || {};
           return r.result == null && r.won == null;
@@ -11968,11 +12009,15 @@ async function bozoGrade(request, env, cors) {
         if (pending.length)
           return json({ error: "Manual results are still pending.", pending, retryable: true }, 409, cors);
         const decided = royaleDecideChop({ ...state, results: body.results }, state.order);
+        if (decided.blocked) return json({ error: decided.reason, missing: decided.missing, code: "worst_beat_unmeasurable" }, 409, cors);
+        // Keep the existing standard-league tie semantics; this change only gates unknown inputs.
+        if (state.format === "royale") {
         body.bozo = decided.choppedKey || null;
         body.bozoWhy = decided.ticketCashed ? "Ticket cashed — every leg won."
           : `${decided.decidedBy} · lost ${state.picks[body.bozo].label} at ${state.picks[body.bozo].price} · funds next week`;
+        }
       }
-      const proposal = { v: 1, lid, week: state.week || 1, status, picks: state.picks || {},
+      const proposal = { v: 1, lid, worstBeatRule: worstBeatRuleFor(state), week: state.week || 1, status, picks: state.picks || {},
         expiresAt: Date.now() + 5 * 60 * 1000,
         body: { results: body.results || {}, bozo: body.bozo ?? null,
           bozoWhy: body.bozoWhy == null ? "" : String(body.bozoWhy).slice(0, 200),

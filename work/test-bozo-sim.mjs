@@ -32,7 +32,8 @@ function grab(startMarker, endMarker) {
 /* ⚠️ legRow is lifted in rather than stubbed. It is how the simulation finds a leg's
    results row, and stubbing it would let the suite keep passing if that lookup broke —
    which is exactly the failure that put a hand-set CLV on one screen and nowhere else. */
-const src = grab("function beatDeficit(mkt, dir, line, margin, total, sd){", "\n/* The leg exactly as the board")
+const src = grab("function worstBeatRuleFor(", "\n/* Spreads and totals")
+  + "\n" + grab("function beatDeficit(mkt, dir, line, margin, total, sd){", "\n/* The leg exactly as the board")
   + "\n" + grab("function clvHistory(player, week){", "\n/* The beat a binary leg carries")
   + "\n" + grab("function binaryBeatOf(p){", "\n/* ⚠️ ONE WORST-BEAT RULE")
   + "\n" + grab("function legRow(x){", "/* ⚠️ A HAND-SET CLV OUTRANKS")
@@ -354,23 +355,21 @@ ok(clvDeltaOf({ price: -150, entryPriceOpp: 130 }, { clvPts: 1, close: -200, clo
      "and the rule is the same in Standard and Royale, not two rules");
 }
 
-/* ⚠️ AND THE MARGIN IS MEASURED FROM THE LEG'S OWN NUMBER, not from the price-shifted
- * expectation. Folding the price in made the same miss score worse for a heavy favourite
- * than for a coin flip, so Worst Beat duplicated Shortest Odds — and a randomised
- * hierarchy is only interesting while its levers are independent.
- *
- * Asserted on the formula rather than on bozo odds, deliberately: a leg's price sets BOTH
- * how often it loses and (under the old rule) how far under it scores, so any behavioural
- * comparison entangles the two and can pass while the bug is live. The property is simply
- * that the index does not read the expectation at all. */
+/* Moneyline uses paired-entry expectation; spreads/totals keep their line. */
 {
-  const simSrc = page.slice(page.indexOf("function simulate(live, levers){"),
-                            page.indexOf("\n// One definition of"));
-  const idxLine = simSrc.slice(simSrc.indexOf("idx[i] ="), simSrc.indexOf(";", simSrc.indexOf("idx[i] =")));
-  ok(!/l\.exp/.test(idxLine),
-     "the Bozo Index is measured from the leg's own number, never from the price-shifted expectation");
-  ok(/l\.base/.test(idxLine), "...which is l.base — the line the leg was taken at");
-  ok(/l\.binary/.test(idxLine), "and a binary leg is left unscored for the cascade to carry forward");
+  const fixture = JSON.parse(readFileSync(resolve(WORK, '../tests/fixtures/bozo-main-impact.json'), 'utf8'));
+  const week = fixture.weeks.find(w=>w.week===6);
+  const live = Object.entries(week.picks).map(([p,x])=>({...x,p,exp:0}));
+  const savedSd=ctx.sdOf, savedS=ctx.S, savedSims=ctx.SIMS;
+  ctx.sdOf=x=>x.sport==='cfb'?16.5:13.5;
+  ctx.SIMS=10; // All actuals/outcomes are fixed; every run must be identical.
+  for(let loss=1;loss<=15;loss++){
+    ctx.S={...week,season:2026,worstBeatPolicy:{version:'entry-normal-v2',season:2026,week:6},results:{...week.results,Kap:{actual:-loss,result:'lost',won:false}}};
+    const out=simulate(live,[1,2,3,0]);
+    const winner=loss>=5?'Kap':'WBeamen';
+    ok(out.bozo[live.findIndex(x=>x.p===winner)]===1, 'week 6 all-losers simulation: SF -'+loss+' selects '+winner);
+  }
+  ctx.sdOf=savedSd;ctx.S=savedS;ctx.SIMS=savedSims;
 }
 
 /* ---- the grader stopped scoring an unmeasurable leg as the safest ---- */
@@ -462,6 +461,23 @@ const manual = legs.map(x=>({...x, entryPriceOpp:null, verificationStatus:'unver
 const manualRun = simulate(manual,[0,1,2,3]);
 ok(manualRun.n===manual.length && manualRun.win.every(Number.isFinite), "all manually priced legs remain simulated and visible");
 ok(clvDeltaOf(manual[0],{close:-180,closeOpp:150})===null, "simulation fallback does not fabricate measured CLV");
+
+/* A settled unknown margin is not a zero and is never sampled as measured evidence. */
+{
+  const oldS=ctx.S;
+  const version={season:2026,week:6,worstBeatPolicy:{version:'entry-normal-v2',season:2026,week:6}};
+  for(const actual of [undefined,null,'','  ']){
+    ctx.S={...version,results:{P0:{result:'lost',won:false,actual}}};
+    const out=simulate(legs,[1,2,0,3]);
+    ok(out.blocked && out.missing.includes('P0'), 'settled missing margin blocks v2 simulation: '+String(actual));
+  }
+  ctx.S={...version,results:{}};
+  ok(simulate(legs,[1,2,0,3]).blocked!==true, 'pending games with valid pairs remain simulated');
+  ctx.S={...version,results:{P0:{result:'lost',won:false,actual:-3}}};
+  const noPair=legs.map((x,i)=>i?x:{...x,entryPriceOpp:null});
+  ok(simulate(noPair,[1,2,0,3]).blocked, 'missing pair cannot silently disappear from simulation');
+  ctx.S=oldS;
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

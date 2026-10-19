@@ -1,7 +1,7 @@
 <!-- mirror of https://datadawgs216.com/bozo.html -->
 ---
 title: Bozo — ruleset and design rationale
-as_of: 2026-08-06
+as_of: 2026-10-19
 source: bozo.html on datadawgs216.com
 canonical_url: https://datadawgs216.com/data/bozo-rules.md
 data: https://datadawgs216.com/data/bozo-rules.json
@@ -34,7 +34,7 @@ The four levers:
 | Lever | Meaning |
 |---|---|
 | Shortest Odds | biggest favorite in the pool |
-| Worst Beat | finished furthest under its number, in standard deviations |
+| Worst Beat | Approved entry-normal-v2 weeks only (otherwise legacy zero-margin ML): moneylines: shortfall from modelled expected margin using paired de-vigged entry odds (missing or unverified pair is unmeasurable); spreads/totals: miss from posted line; in sport/period standard deviations |
 | Last In | final leg submitted |
 | Worst CLV | price moved most against it |
 
@@ -76,3 +76,7 @@ Read this before quoting anything off the board.
 
 Nothing here is betting advice, no bet is guaranteed, and no bot may place, edit or remove
 anyone's leg.
+
+Moneyline conversion assumes normal margins; it is not an observed spread. No raw-price or fixed-juice fallback. See [formula, assumptions and release review](../docs/bozo-worst-beat.md).
+
+The new rule is inactive until an exact season/week is approved. A reached v2 Worst Beat comparison blocks grading if a losing moneyline lacks its entry pair or settled margin. Completed unstamped weeks remain legacy. [Release safety review](../docs/bozo-worst-beat-release-review.md).
