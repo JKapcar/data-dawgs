@@ -7,13 +7,14 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
 (async()=>{await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;try{
  browser=await chromium.launch({headless:true,...(process.env.CHROMIUM_PATH?{executablePath:process.env.CHROMIUM_PATH}:{})});const origin='http://127.0.0.1:'+server.address().port;
  const page=await browser.newPage({viewport:{width:1280,height:900},serviceWorkers:'block'});
- const errors=[],logs=[],sent=[],actions=[];let primary=false,keys=[],denyMint=false,legacyResponse=false;
+ const errors=[],logs=[],sent=[],actions=[];let primary=false,keys=[],denyMint=false,legacyResponse=false,holdList=false,releaseList,listed,failList=false;
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>logs.push(m.text()));
  await page.addInitScript(()=>{window.testClipboard=[];Object.defineProperty(navigator,'clipboard',{value:{writeText:async value=>window.testClipboard.push(value)}});});
  await page.route('**/*',async route=>{const req=route.request(),url=req.url();sent.push({url,data:req.postData()||''});if(url.startsWith(origin+'/'))return route.continue();
   if(url.startsWith('https://toto.jkapcar4.workers.dev/')){let body={};try{body=req.postDataJSON()||{};}catch{}
    let result={},status=200;
-   if(url.endsWith('/auth/mcp-token')){actions.push(body);if(body.action==='list')result={primary,keys};
+   if(url.endsWith('/auth/lookup'))result={known:true};else if(url.endsWith('/auth/login'))result={session:Buffer.from(JSON.stringify({u:'fixture-next',n:'Next User',e:Date.now()+3600000})).toString('base64url')+'.fixture',name:'Next User',email:'next@example.invalid',emailVerified:true};
+   if(url.endsWith('/auth/mcp-token')){actions.push(body);if(body.action==='list'){result={primary,keys:[...keys]};if(failList){status=503;result={error:'Synthetic status failure'};}if(holdList){listed?.();await new Promise(r=>releaseList=r);}}
     if(body.action==='mint'){if(denyMint){status=403;result={error:'Confirm email',verificationRequired:true};}else{primary=true;result=legacyResponse?{url:endpoint+'/u_fixture_primary'}:{token:'u_fixture_primary'};}}
     if(body.action==='add'){keys=[{label:body.label}];result={token:'u_fixture_additional',endpoint:'https://toto.jkapcar4.workers.dev/mcp/core',url:endpoint+'/u_fixture_additional'};}
     if(body.action==='revoke')primary=false;
@@ -29,7 +30,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
  assert.equal(actions.length,0,'public provider choice must not call credential endpoints');
  await choose('chatgpt');await page.locator('#providerChoice').focus();await page.keyboard.press('ArrowDown');await page.keyboard.press('Tab');assert.equal(await page.locator('#providerChoice').inputValue(),'grok');
  if(out){fs.mkdirSync(out,{recursive:true});await page.locator('#connectionGuide').screenshot({path:path.join(out,'guide-desktop.png')});}
- await page.setViewportSize({width:390,height:844});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ await page.setViewportSize({width:390,height:844});await page.waitForFunction(()=>document.documentElement.scrollWidth<=innerWidth,{},{timeout:3000});
  if(out)await page.locator('#connectionGuide').screenshot({path:path.join(out,'guide-mobile.png')});
  await page.evaluate(()=>{localStorage.setItem('dd-bozo-sess',btoa(JSON.stringify({u:'fixture-user',n:'Test User',e:Date.now()+3600000}))+'.fixture');localStorage.setItem('dd-auth-profile-v1',JSON.stringify({name:'Test User',email:'test@example.invalid',emailVerified:true}));});
  await page.reload();await page.locator('#cMint:not([disabled])').waitFor();
@@ -52,6 +53,21 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
  page.once('dialog',d=>d.accept());legacyResponse=false;await page.click('#cRotate');await page.locator('#cUrlBox').waitFor();assert.equal(await page.locator('#cUrl').inputValue(),endpoint+'/u_fixture_primary');
  await page.click('#cRevoke');await page.locator('#cMint').waitFor();assert.equal(await page.locator('#cUrl').inputValue(),'');assert.equal(await page.locator('#cHeader').inputValue(),'');
  await page.click('#meOut');assert.equal(await page.locator('#kToken').inputValue(),'');assert.equal(await page.locator('#kUrl').inputValue(),'');assert(await page.locator('#connectionGuide').isVisible());
+ // A different account must not inherit an enabled creation button while its list is pending.
+ holdList=true;primary=true;const listStarted=new Promise(r=>listed=r);
+ await page.fill('#sEmail','next@example.invalid');await page.click('#lookupGo');await page.fill('#sPw','fixture-password');await page.click('#sGo');await listStarted;
+ assert(await page.locator('#cMint').isDisabled(),'new account must wait for its key list');assert(await page.locator('#kAdd').isDisabled());
+ holdList=false;releaseList();await page.locator('#cRotate:not([disabled])').waitFor();assert.equal(await page.locator('#cMint').isVisible(),false);
+ // A stale account list must not unlock or overwrite the next account's controls.
+ const switchAccount=async uid=>page.evaluate(uid=>window.DDAuth.set(btoa(JSON.stringify({u:uid,n:uid,e:Date.now()+3600000}))+'.fixture'),uid);
+ holdList=true;primary=false;keys=[{label:'STALE_ACCOUNT_LABEL'}];const staleStarted=new Promise(r=>listed=r);
+ await switchAccount('fixture-stale');await staleStarted;const releaseStale=releaseList;
+ holdList=false;primary=true;keys=[{label:'CURRENT_ACCOUNT_LABEL'}];await switchAccount('fixture-current');await page.locator('#kList').filter({hasText:'CURRENT_ACCOUNT_LABEL'}).waitFor();
+ const staleResponse=page.waitForResponse(r=>r.url().endsWith('/auth/mcp-token'));releaseStale();await staleResponse;await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+ assert.equal(await page.locator('#cMint').isVisible(),false);assert.equal(await page.locator('#kList').innerText().then(t=>t.includes('STALE_ACCOUNT_LABEL')),false);
+ failList=true;await switchAccount('fixture-list-failure');await page.locator('#cMintMsg').filter({hasText:'Could not check existing credentials'}).waitFor();
+ for(const id of ['cMint','cRotate','cRevoke','kAdd'])assert(await page.locator('#'+id).isDisabled());
+ assert.equal(await page.locator('#kLabel').inputValue(),'');assert.equal(await page.locator('#kList').innerText(),'');
  assert.equal(sent.some(r=>(r.url+r.data).includes('u_fixture_')),false,'credentials must not leave via telemetry or requests');assert.equal(logs.some(x=>x.includes('u_fixture_')),false);assert.deepEqual(errors,[]);
- console.log('PASS: signed-out guide, keyboard/provider changes, phone layout, email gate, both mint responses, exact clipboard values, collapsed alternatives, independent keys, rotation confirmation, revoke, sign-out cleanup and no secret leakage.');
+ console.log('PASS: signed-out guide, keyboard/provider changes, phone layout, email gate, both mint responses, exact clipboard values, collapsed alternatives, independent keys, rotation confirmation, revoke, sign-out cleanup, account-switch/stale-response/failure guards and no secret leakage.');
 }finally{await browser?.close();server.close();}})().catch(e=>{console.error(e);process.exitCode=1;});
