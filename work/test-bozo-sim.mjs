@@ -32,7 +32,8 @@ function grab(startMarker, endMarker) {
 /* ⚠️ legRow is lifted in rather than stubbed. It is how the simulation finds a leg's
    results row, and stubbing it would let the suite keep passing if that lookup broke —
    which is exactly the failure that put a hand-set CLV on one screen and nowhere else. */
-const src = grab("function beatDeficit(mkt, dir, line, margin, total, sd){", "\n/* The leg exactly as the board")
+const src = grab("function moneylineBeat(", "\n/* Spreads and totals")
+  + "\n" + grab("function beatDeficit(mkt, dir, line, margin, total, sd){", "\n/* The leg exactly as the board")
   + "\n" + grab("function clvHistory(player, week){", "\n/* The beat a binary leg carries")
   + "\n" + grab("function binaryBeatOf(p){", "\n/* ⚠️ ONE WORST-BEAT RULE")
   + "\n" + grab("function legRow(x){", "/* ⚠️ A HAND-SET CLV OUTRANKS")
@@ -354,23 +355,21 @@ ok(clvDeltaOf({ price: -150, entryPriceOpp: 130 }, { clvPts: 1, close: -200, clo
      "and the rule is the same in Standard and Royale, not two rules");
 }
 
-/* ⚠️ AND THE MARGIN IS MEASURED FROM THE LEG'S OWN NUMBER, not from the price-shifted
- * expectation. Folding the price in made the same miss score worse for a heavy favourite
- * than for a coin flip, so Worst Beat duplicated Shortest Odds — and a randomised
- * hierarchy is only interesting while its levers are independent.
- *
- * Asserted on the formula rather than on bozo odds, deliberately: a leg's price sets BOTH
- * how often it loses and (under the old rule) how far under it scores, so any behavioural
- * comparison entangles the two and can pass while the bug is live. The property is simply
- * that the index does not read the expectation at all. */
+/* Moneyline uses paired-entry expectation; spreads/totals keep their line. */
 {
-  const simSrc = page.slice(page.indexOf("function simulate(live, levers){"),
-                            page.indexOf("\n// One definition of"));
-  const idxLine = simSrc.slice(simSrc.indexOf("idx[i] ="), simSrc.indexOf(";", simSrc.indexOf("idx[i] =")));
-  ok(!/l\.exp/.test(idxLine),
-     "the Bozo Index is measured from the leg's own number, never from the price-shifted expectation");
-  ok(/l\.base/.test(idxLine), "...which is l.base — the line the leg was taken at");
-  ok(/l\.binary/.test(idxLine), "and a binary leg is left unscored for the cascade to carry forward");
+  const fixture = JSON.parse(readFileSync(resolve(WORK, '../tests/fixtures/bozo-main-impact.json'), 'utf8'));
+  const week = fixture.weeks.find(w=>w.week===6);
+  const live = Object.entries(week.picks).map(([p,x])=>({...x,p,exp:0}));
+  const savedSd=ctx.sdOf, savedS=ctx.S, savedSims=ctx.SIMS;
+  ctx.sdOf=x=>x.sport==='cfb'?16.5:13.5;
+  ctx.SIMS=10; // All actuals/outcomes are fixed; every run must be identical.
+  for(let loss=1;loss<=15;loss++){
+    ctx.S={...week,results:{...week.results,Kap:{actual:-loss,result:'lost',won:false}}};
+    const out=simulate(live,[1,2,3,0]);
+    const winner=loss>=5?'Kap':'WBeamen';
+    ok(out.bozo[live.findIndex(x=>x.p===winner)]===1, 'week 6 all-losers simulation: SF -'+loss+' selects '+winner);
+  }
+  ctx.sdOf=savedSd;ctx.S=savedS;ctx.SIMS=savedSims;
 }
 
 /* ---- the grader stopped scoring an unmeasurable leg as the safest ---- */

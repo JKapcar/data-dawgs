@@ -1,5 +1,5 @@
 {
- "as_of": "2026-09-10",
+ "as_of": "2026-10-19",
  "what": "The standard deviations Bozo's Worst Beat lever divides by. Full-game values per sport; period legs scale them.",
  "source": "dawg-bot-worker.js ROYALE_SD (the grader) and bozo.html SPORTS (the simulator). The grader's table is authoritative; a test pins this file to it.",
  "game": {
@@ -37,8 +37,8 @@
   "3q": 0.25,
   "4q": 0.25
  },
- "period_rule": "SD(period) = SD(game) x sqrt(period_fraction). beatBasis = \"scaled-sd\". A model, not a measurement: it assumes segment variance adds independently. Pending Phase 4.3 calibration per (sport, period, market).",
+ "period_rule": "SD(period) = SD(game) x sqrt(period_fraction). beatBasis = \"scaled-sd\" for spread/total; ML uses \"entry-normal\" with period-scaled SD. A model, not a measurement: it assumes segment variance adds independently. Pending Phase 4.3 calibration per (sport, period, market).",
  "calibrated_periods": {},
  "props_and_other": "max(|line| x 0.55, 1) \u2014 an openly placeholder guess, flagged everywhere.",
- "known_gap": "bozo.html SPORTS carries cfb sd 16 / tot 14 while the grader carries 16.5 / 13.0; the simulator's Worst Beat therefore differs slightly from the grader's for CFB full-game legs. Recorded, not yet reconciled."
+ "known_gap": "Resolved in proposed moneyline expectation rule: page adopts authoritative Worker CFB sd 16.5 and total SD 13.0. These remain model assumptions, not newly calibrated measurements."
 }

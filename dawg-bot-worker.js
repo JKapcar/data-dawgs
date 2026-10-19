@@ -9633,7 +9633,7 @@ const rDir = x => ((x && (x.dir || x.side)) === "under") ? "under" : "over";
 const bozoIsManualLeg = p => !!p && (p.mkt === "prop" || p.mkt === "other" || bozoPeriodOf(p) !== "game");
 // Where a leg's Worst Beat SD comes from — see the stamp in bozoGrade.
 function bozoBeatBasis(p, row) {
-  if (p.mkt === "prop" || p.mkt === "other") return royaleBeatDeficit(p, row || {}).basis;
+  if (p.mkt === "ml" || p.mkt === "prop" || p.mkt === "other") return royaleBeatDeficit(p, row || {}).basis;
   return bozoPeriodOf(p) === "game" ? "sd" : "scaled-sd";
 }
 /* ⚠️ PERIOD LEGS USE A SCALED SD (D21). A half is modelled as game SD × √0.5 and a
@@ -9652,6 +9652,24 @@ function rSd(x) {
   const base = x.mkt === "total" ? s.tot : s.sd;
   return base * Math.sqrt(BOZO_PERIOD_FRACTION[period] ?? 1);
 }
+/* Moneyline Worst Beat v2: recorded two-way entry only. This is a normal-model
+   expected margin, not an observed spread. Keep verbatim in page and Worker;
+   tests compare both copies and their callers. See docs/bozo-worst-beat.md. */
+function moneylineBeat(x, r, sd, inverseNormal) {
+  if (!r || (r.result != null && r.result !== 'lost') || (r.result == null && r.won === true)) return { v: null, basis: 'not-lost' };
+  if (r.actual == null || String(r.actual).trim() === '' || !Number.isFinite(Number(r.actual))) return { v: null, basis: 'no-result' };
+  if (!(sd > 0) || !Number.isFinite(sd)) return { v: null, basis: 'no-sd' };
+  const prices = [x.price, x.entryPriceOpp ?? x.priceOpp];
+  if (x.verificationStatus === 'unverified' || x.entryOppSource === 'assumed' ||
+      prices.some(a => a == null || String(a).trim() === '' || !Number.isFinite(Number(a)) || Math.abs(Number(a)) < 100)) return { v: null, basis: 'entry-unpriced' };
+  const implied = a => a < 0 ? -a / (-a + 100) : 100 / (a + 100);
+  const [a, b] = prices.map(Number).map(implied);
+  const p = a / (a + b);
+  if (!(p > 0 && p < 1)) return { v: null, basis: 'entry-unpriced' };
+  const expectedMargin = sd * inverseNormal(p);
+  return { v: (expectedMargin - Number(r.actual)) / sd, basis: 'entry-normal', p, expectedMargin, sd };
+}
+
 function rExpected(x) {
   const sd = rSd(x), fair = rDevig(x.price, x.entryPriceOpp ?? x.priceOpp);
   if (fair == null || x.verificationStatus === "unverified") return null;
@@ -9682,6 +9700,7 @@ function rExpected(x) {
    substituting the entry price there would make every uncapturable leg score exactly
    zero movement, which is a fabricated number, not a missing one. */
 function royaleBeatDeficit(x, r) {
+  if (x.mkt === "ml") return moneylineBeat(x, r, rSd(x), rInvNorm);
   if (x.mkt === "prop" || x.mkt === "other") {
     const pClose = r?.closeOppSource === "assumed" ? null : rDevig(r && r.close, r && r.closeOpp);
     const pEntry = rDevig(x.price, x.entryPriceOpp);
@@ -9706,20 +9725,7 @@ function royaleBeatDeficit(x, r) {
     const v = (Math.exp(-k * k / 2) / Math.sqrt(2 * Math.PI)) / (1 - p);
     return { v: Number.isFinite(v) ? v : null, basis };
   }
-  /* Margin markets: how far under ITS OWN NUMBER the leg finished, in SDs.
-
-     ⚠️ FROM THE NUMBER, NOT FROM THE PRICE. This measured the gap to rExpected(), which
-     folds the price in — so the same miss scored worse for a −400 favourite than for a
-     −110. But SHORTEST ODDS is already the lever that punishes taking chalk, and pricing
-     it in here made two of the four levers measure overlapping things. A randomised
-     hierarchy is only interesting while its levers are independent.
-     data/bozo-rules.json says "finished furthest under its number, in standard
-     deviations", and this now is that.
-
-     ⚠️ It is the grader's own edge, negated — you lost by exactly the amount you missed
-     by, with no second definition of "missed" to drift from the first. `line` is what
-     this side gives up, so margin − line is the edge in both directions, including an
-     MLB/NHL dog at +1.5 stored as −1.5. */
+  // Spreads/totals retain their posted-line deficit; ML is handled above.
   if (r == null || r.actual == null) return { v: null, basis: "no-result" };
   const sd = rSd(x);
   if (!(sd > 0)) return { v: null, basis: "no-sd" };

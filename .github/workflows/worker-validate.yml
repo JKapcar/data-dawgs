@@ -64,6 +64,7 @@ jobs:
       - run: node work/test-bozo-close-fill.mjs
       - run: node work/test-bozo-autograde.mjs
       - run: node --test tests/bozo-royale-verdict.test.js tests/bozo-schedule-grade.test.js tests/gh-pacer.test.js
+      - run: node --test tests/bozo-expected-margin.test.cjs
       - run: node work/test-bozo-sim.mjs
       - run: node work/test-bozo-clv-pipes.mjs
       - run: node work/test-bozo-override.mjs
