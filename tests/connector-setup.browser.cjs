@@ -30,17 +30,20 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
  assert.equal(actions.length,0,'public provider choice must not call credential endpoints');
  await choose('chatgpt');await page.locator('#providerChoice').focus();await page.keyboard.press('ArrowDown');await page.keyboard.press('Tab');assert.equal(await page.locator('#providerChoice').inputValue(),'grok');
  if(out){fs.mkdirSync(out,{recursive:true});await page.locator('#connectionGuide').screenshot({path:path.join(out,'guide-desktop.png')});}
- await page.setViewportSize({width:390,height:844});
- const setupFits=()=>page.evaluate(()=>['connectionGuide','signedOut'].every(id=>{const r=document.getElementById(id).getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;}));
- assert(await setupFits(),'public guide and login must fit the mobile viewport');
- const currentWidth=await page.evaluate(()=>document.documentElement.scrollWidth);
- if(currentWidth>390){
-  assert(process.env.CONNECTOR_BASELINE,'A base-page comparison is required for pre-existing navigation overflow');
-  const baseline=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block'});
-  await baseline.route('**/*',route=>{if(route.request().url()===origin+'/signon.html')return route.fulfill({contentType:'text/html',body:fs.readFileSync(process.env.CONNECTOR_BASELINE,'utf8')});if(route.request().url().startsWith(origin+'/'))return route.continue();return route.abort();});
-  await baseline.goto(origin+'/signon.html');const baseWidth=await baseline.evaluate(()=>document.documentElement.scrollWidth);await baseline.close();
-  assert(currentWidth<=baseWidth,'this PR must not introduce or increase document overflow');console.log('Existing base-page navigation overflow unchanged: '+baseWidth+'px; setup panels fit 390px.');
+ async function assertMobileLayout(ids){
+  assert(await page.evaluate(ids=>ids.every(id=>[document.getElementById(id),...document.getElementById(id).querySelectorAll('*')].filter(e=>e.getClientRects().length).every(e=>{const r=e.getBoundingClientRect();return r.left>=-1&&r.right<=innerWidth+1;})),ids),'setup controls and panels must fit the mobile viewport');
+  const currentWidth=await page.evaluate(()=>document.documentElement.scrollWidth);
+  if(currentWidth>390){
+   assert(process.env.CONNECTOR_BASELINE,'A base-page comparison is required for pre-existing navigation overflow');
+   const baseline=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block'});
+   const state=await page.evaluate(()=>Object.fromEntries(Object.entries(localStorage)));
+   await baseline.addInitScript(state=>{for(const [k,v] of Object.entries(state))localStorage.setItem(k,v);},state);
+   await baseline.route('**/*',route=>{if(route.request().url()===origin+'/signon.html')return route.fulfill({contentType:'text/html',body:fs.readFileSync(process.env.CONNECTOR_BASELINE,'utf8')});if(route.request().url().startsWith(origin+'/'))return route.continue();return route.abort();});
+   await baseline.goto(origin+'/signon.html#connect');const baseWidth=await baseline.evaluate(()=>document.documentElement.scrollWidth);await baseline.close();
+   assert(currentWidth<=baseWidth,'this PR must not introduce or increase document overflow');console.log('Existing base-page navigation overflow unchanged: '+baseWidth+'px; setup panels fit 390px.');
+  }
  }
+ await page.setViewportSize({width:390,height:844});await assertMobileLayout(['connectionGuide','signedOut']);
 
  if(out)await page.locator('#connectionGuide').screenshot({path:path.join(out,'guide-mobile.png')});
  await page.evaluate(()=>{localStorage.setItem('dd-bozo-sess',btoa(JSON.stringify({u:'fixture-user',n:'Test User',e:Date.now()+3600000}))+'.fixture');localStorage.setItem('dd-auth-profile-v1',JSON.stringify({name:'Test User',email:'test@example.invalid',emailVerified:true}));});
@@ -56,7 +59,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,'.'+new 
  await page.fill('#kLabel','Grok');await page.click('#kAdd');await page.locator('#kOut').waitFor();await page.click('[data-copy="kUrl"]');assert.equal(await page.evaluate(()=>testClipboard.at(-1)),endpoint+'/u_fixture_additional');assert.equal(await page.locator('#kToken').isVisible(),false);
  await page.locator('#kList').filter({hasText:'Grok'}).waitFor();page.once('dialog',d=>d.dismiss());const mutations=()=>actions.filter(a=>a.action!=='list').length;const before=mutations();await page.click('#kAdd');assert.equal(mutations(),before,'duplicate key replacement must require confirmation');
  page.once('dialog',d=>d.dismiss());await page.click('#cRotate');assert.equal(mutations(),before,'cancel rotation must preserve credentials');
- assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ await assertMobileLayout(['pConnect']);
  // Screenshots contain no credential values, including synthetic credentials.
  await page.evaluate(()=>{for(const id of ['cUrl','cHeader','kUrl','kToken'])document.getElementById(id).value='[private value hidden]';});
  if(out)await page.locator('#pConnect').screenshot({path:path.join(out,'connection-mobile-redacted.png')});
