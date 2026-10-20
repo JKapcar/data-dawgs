@@ -2751,6 +2751,8 @@ return repairOwnerEnvelope;
 // /privatePounds is excluded from BOTH general snapshot forms. Each owner's copy
 // uses pound-backup:v1:<uid>:<day>, always expiring 30 days after the write.
 // There is no perpetual Pound latest key. Existing backups are never deleted.
+// /privateJobs (the job harness, owner and member workspaces) follows the same rule:
+// never in either general form; jobs-backup:v1:<uid>:<day>, expiring after 30 days.
 // ⚠️ The snapshot contains password hashes and session material. NOTHING may
 // serve these keys: no route, no MCP tool, and never the public repo.
 // Retrieval is the Cloudflare dashboard or API, already behind Kap's account.
@@ -2775,6 +2777,7 @@ async function runBackup(env, nowMs) {
     delete general.researchLab;
     delete general.researchUploads;
     delete general.researchProjects;
+    delete general.privateJobs;
   }
   const body = JSON.stringify({ taken, db: general });
   await kv.put("backup:" + taken.slice(0, 10), body, { expirationTtl: 15552000 });
@@ -2794,6 +2797,21 @@ async function runBackup(env, nowMs) {
         // Provider errors must not leak a private key or payload into cron logs.
         throw new Error("Private workspace backup write failed");
       }
+    }
+  }
+  // Job harness workspaces: one expiring copy per verified owner per day, nothing else.
+  // An unknown version key fails visibly instead of silently going unbacked-up.
+  const jobs = data && data.privateJobs;
+  if (jobs != null) {
+    if (typeof jobs !== "object" || Array.isArray(jobs) || Object.keys(jobs).some(k => k !== "v1")) throw new Error("Private job backup shape invalid");
+    const owners = jobs.v1 == null ? {} : jobs.v1;
+    if (typeof owners !== "object" || Array.isArray(owners)) throw new Error("Private job backup shape invalid");
+    for (const [uid, record] of Object.entries(owners)) {
+      if (!/^u_[A-Za-z0-9_-]{1,100}$/.test(uid) || !record || typeof record !== "object" || record.owner_uid !== uid || typeof record.payload !== "string")
+        throw new Error("Private job backup record invalid");
+      try {
+        await kv.put("jobs-backup:v1:" + uid + ":" + taken.slice(0, 10), JSON.stringify({ version: 1, taken, owner_uid: uid, workspace: record }), { expirationTtl: 2592000 });
+      } catch { throw new Error("Private job backup write failed"); }
     }
   }
   // Same existing daily job; no new schedule. Archive bytes live only in private
