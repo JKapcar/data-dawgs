@@ -44,10 +44,12 @@ const PJ_ANCHOR =
 /* Private job harness (docs/job-harness.md). Same placement contract as the project block:
  * it reuses Pound's identity, body reader and canonical hash, and it commits with fbPut, so
  * it must sit above the MCP write-scope boundary. Its route goes between the Pound and
- * project routes; the handler itself is default off (JOB_HARNESS_ENABLED). */
+ * project routes; the handler itself is default off (JOB_HARNESS_ENABLED). The block is
+ * ../jobs-core.js (the history fold the page also loads) followed by work/jobs.js; the
+ * marker keeps its original name so existing assembled output strips cleanly. */
 const JB_START = "/* ===== DD-JOBS START - generated from work/jobs.js ===== */";
 const JB_END = "/* ===== DD-JOBS END ===== */";
-const jobs = readFileSync("jobs.js", "utf8").trimEnd();
+const jobs = readFileSync("../jobs-core.js", "utf8").trimEnd() + "\n" + readFileSync("jobs.js", "utf8").trimEnd();
 const JB_ROUTE =
   '    if (setupPath === "/api/jobs" || setupPath.startsWith("/api/jobs/")) return handleJobs(request, env); // DD-JOBS-ROUTE';
 const DC_START = "/* ===== DD-DISCORD START ===== */";
@@ -290,6 +292,7 @@ if(!(out.indexOf(P_START)<out.indexOf(PJ_START)&&out.indexOf(PJ_START)<out.index
 once(JB_START, "job harness block start");
 once(JB_END, "job harness block end");
 once("async function handleJobs(", "job harness handler");
+once("const JOBS_CORE =", "job harness shared core (one copy, from jobs-core.js)");
 once("DD-JOBS-ROUTE", "job harness route");
 if(!(out.indexOf(PJ_START)<out.indexOf(JB_START)&&out.indexOf(JB_START)<out.indexOf(START))) fail("job harness block must follow the project block (shared Pound helpers) and precede the MCP write-scope boundary — it commits with fbPut");
 if(!(out.indexOf("DD-PROJECT-ROUTE")>out.indexOf("DD-JOBS-ROUTE")&&out.indexOf("DD-JOBS-ROUTE")>out.indexOf(PJ_ANCHOR))) fail("job harness route must sit between the Pound and project routes");
