@@ -11,6 +11,7 @@ on:
       - "bozo-menu.mjs"
       - "tests/bozo-menu*.test.mjs"
       - "tests/discord-*.test.cjs"
+      - "tests/jobs*.test.cjs"
       - "wrangler.jsonc"
       - "work/**"
       - "tools/validate-data.js"
@@ -40,6 +41,7 @@ jobs:
       - run: node --test tests/discord-bridge.test.cjs tests/discord-inbound.test.cjs tests/discord-owner-smoke.test.cjs tests/bozo-mcp-auth-status.test.js
       - run: node --test tests/dawg-pound.test.cjs
       - run: node --test tests/research-project.test.cjs
+      - run: node --test tests/jobs.test.cjs tests/jobs-privacy.test.cjs
       - run: node --test tests/bozo-correction.test.cjs
       - run: node --test tests/bozo-menu*.test.mjs
       - run: node --test tests/bozo-sgo-diagnostics.test.js tests/bozo-sgo-capture.test.js
