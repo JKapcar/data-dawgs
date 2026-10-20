@@ -16,7 +16,7 @@ function worker(){
 }
 const listing=(employer,key,req,role='Analyst')=>({employer_key:key,employer,role,requisition:req,url:'https://example.com/jobs/'+key,url_verified_at:'2026-01-02T12:00:00.000Z',resume_version:'synthetic-v1',next_action:'Review',blocker:''});
 (async()=>{
- const w=worker(),posts=[];let drop=false;
+ const w=worker(),posts=[];let drop=false,fail503=false,hold=null;
  const pine=await w.direct('record.create',listing('Pine Example Co','pine-example','PX-1'));
  await w.direct('event.append',{id:pine,stage:'approved',outcome:'none',occurred_at:'2026-01-03T12:00:00.000Z',verified_at:'2026-01-03T12:00:00.000Z',evidence_url:null,reason_kind:'unknown',reason:'',next_action:'Apply',blocker:'',resume_version:'synthetic-v1'});
  const spruce=await w.direct('record.create',listing('Spruce Example Co','spruce-example','SX-9','Engineer'));
@@ -26,7 +26,9 @@ const listing=(employer,key,req,role='Analyst')=>({employer_key:key,employer,rol
   const context=await browser.newContext({viewport:{width:1280,height:900}}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',d=>{errors.push('dialog:'+d.message());d.dismiss();});
   await context.route('**/*',async route=>{const req=route.request(),url=req.url();
    if(url===api){const h=await req.allHeaders(),init={method:req.method(),headers:{}};for(const k of ['authorization','content-type','origin'])if(h[k])init.headers[k]=h[k];if(req.method()==='POST'){init.body=req.postData();posts.push(JSON.parse(init.body));}
+    if(hold&&req.method()==='POST'){const gate=hold;hold=null;gate.started();await gate.released;}
     const res=await w.context.handle(new Request(api,init),w.env);if(drop&&req.method()==='POST'){drop=false;return route.abort('failed');} // committed, response lost
+    if(fail503&&req.method()==='POST'){fail503=false;return route.fulfill({status:503,headers:Object.fromEntries(res.headers),body:JSON.stringify({error:'jobs_unavailable'})});} // committed, then storage call failed
     return route.fulfill({status:res.status,headers:Object.fromEntries(res.headers),body:await res.text()});}
    if(url.startsWith(origin+'/')){const name=new URL(url).pathname.slice(1);if(page_files.includes(name))return route.fulfill({body:fs.readFileSync(name),contentType:name.endsWith('.html')?'text/html':name.endsWith('.css')?'text/css':'text/javascript'});}
    return route.abort();});
@@ -110,7 +112,33 @@ const listing=(employer,key,req,role='Analyst')=>({employer_key:key,employer,rol
   const out=path.resolve('..','evidence');fs.mkdirSync(out,{recursive:true});
   for(const width of [390,320]){await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no overflow at '+width);await page.screenshot({path:path.join(out,'jobs-history-'+width+'.png'),fullPage:true});}
   await page.setViewportSize({width:1280,height:900});await page.screenshot({path:path.join(out,'jobs-history-desktop.png'),fullPage:true});
+  // 13–16 (review findings) on the restored Spruce record
+  await page.setViewportSize({width:1280,height:900});await $('#filter').selectOption('all');await $('.job').filter({hasText:'Spruce Example Co'}).click();
+  await page.getByRole('button',{name:'Record verified update'}).click();await field('stage').selectOption('submitted');await field('evidence_url').fill('https://example.com/receipt/sx-9');await save('ok');
+  const sx=()=>w.state().records.find(r=>r.id===spruce),sxEvents=()=>sx().events.length;assert.equal(sxEvents(),3);
+  // 13. a save in flight cannot be dismissed; a 503 after the write is reported as unconfirmed, and Save again replays
+  await page.getByRole('button',{name:'Record verified update'}).click();await field('stage').selectOption('submitted');await field('outcome').selectOption('no_later_decision');await field('evidence_url').fill('https://example.com/receipt/sx-9');
+  let started,released;const began=new Promise(r=>started=r);hold={started,released:new Promise(r=>released=r)};fail503=true;
+  await $('#save').click();await began;await page.keyboard.press('Escape');
+  assert.equal(await $('#editor').evaluate(d=>d.open),true,'Escape cannot close a save in flight');assert.equal(await $('#cancel').isDisabled(),true);
+  released();await page.waitForFunction(()=>!document.getElementById('save').disabled);
+  assert.match(await error(),/Could not confirm whether that saved/);assert.doesNotMatch(await error(),/setup pending|No data loaded/);assert.equal(sxEvents(),4,'the write had landed');
+  await save('ok');assert.match(await status(),/^Already saved/);assert.equal(sxEvents(),4);
+  // 14. downgrade by correction; the stage menu then refuses submission stages, and restore is offered
+  await page.getByRole('button',{name:'Correct #3'}).click();await field('stage').selectOption('approved');await field('outcome').selectOption('blocked_not_submitted');await field('blocker').fill('Portal timed out');await field('note').fill('The upload failed');await save('ok');
+  await page.getByRole('button',{name:'Correct #3'}).click();
+  assert.deepEqual(await options('stage'),['opportunity','approved','closed'],'no re-upgrade through a correction');
+  const restore=page.locator('input[name="action"][value="restore"]');assert.equal(await restore.count(),1);await restore.check();
+  assert.equal(await page.locator('fieldset.details').evaluate(f=>f.disabled),true);await field('note').fill('The upload had gone through after all');await save('ok');
+  const back=sx().events.at(-1);assert.equal(back.kind,'correction');assert.deepEqual(back.replacement,Object.fromEntries(Object.entries(sx().events[2]).filter(([k])=>['stage','outcome','occurred_at','verified_at','evidence_url','reason_kind','reason','next_action','blocker','resume_version'].includes(k))),'restore sends the original entry exactly');
+  // 15. a listing fix after a 409 sends only what this tab changed; the other tab's edit survives
+  await page.getByRole('button',{name:'Fix listing details'}).click();await field('requisition').fill('SX-9B');await field('note').fill('Requisition suffix was missing');
+  await w.direct('record.correct',{id:spruce,changes:{role:'Lead Engineer'},note:'Synthetic: other tab'});
+  await save();assert.match(await error(),/changed in another tab/);
+  assert.equal(await field('role').inputValue(),'Lead Engineer','untouched field shows the refreshed value');assert.equal(await field('requisition').inputValue(),'SX-9B');
+  await save('ok');const [conflicted,applied]=posts.slice(-2);assert.equal(conflicted.request_id,applied.request_id);assert.deepEqual(applied.data.changes,{requisition:'SX-9B'});
+  assert.equal(sx().role,'Lead Engineer');assert.equal(sx().requisition,'SX-9B');
   assert.deepEqual(errors,[]);
-  console.log('PASS: real handler end to end — staged update menus, required evidence, lost-response replay (no duplicate), 409 refresh keeps draft and key, backdated refusal, correction keeps original, no correction into submission, listing fix diff, archived duplicate → open → restore, archive, keyboard focus return, inert hostile text and links, 390/320 history layout.');
+  console.log('PASS: real handler end to end — staged update menus, required evidence, lost-response replay (no duplicate), 409 refresh keeps draft and key, backdated refusal, correction keeps original, no correction into submission, listing fix diff, archived duplicate → open → restore, archive, keyboard focus return, inert hostile text and links, 390/320 history layout; in-flight dialog lock, 503-after-commit reported as unconfirmed then replayed, no re-upgrade by correction, exact restore, post-409 listing fix sends only its own change.');
  }finally{await browser.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -55,16 +55,18 @@ const archivedOf=r=>!!C.history(r).archived;
 function clear(){epoch++;controller?.abort();controller=null;state=null;pending=null;mode=null;busy=false;token='';openId=null;confirmUrl='';$('board').replaceChildren();$('detail').replaceChildren();$('detail').hidden=true;$('fields').replaceChildren();$('formTitle').textContent='Add opportunity';$('formHint').textContent='';$('error').textContent='';hideAction();$('editor').close();$('add').disabled=true;$('verified').textContent='Not available';$('health').textContent='Not connected';$('archivedCount').textContent='Archived';$('disclaimer').textContent=DISCLAIMER.owner;}
 function hideAction(){const b=$('errorAction');b.hidden=true;b.textContent='';b.onclick=null;}
 function showAction(text,fn){const b=$('errorAction');b.textContent=text;b.onclick=fn;b.hidden=false;}
-const messageFor=(status,code)=>Object.hasOwn(MESSAGES,code)?MESSAGES[code]:BY_STATUS[status]||'Request could not be verified.';
+const UNCONFIRMED='Could not confirm whether that saved. Save again to retry: it reuses the same request, so it cannot be recorded twice.';
+// A 5xx after a POST may follow a write that landed, so it is reported as unconfirmed, never as "no data".
+const messageFor=(status,code,post)=>Object.hasOwn(MESSAGES,code)?MESSAGES[code]:status>=500?(post?UNCONFIRMED:'The private workspace could not be reached. Nothing changed. Try again.'):BY_STATUS[status]||'Request could not be verified.';
 async function request(body){
  const generation=epoch,captured=token;
  if(captured!==session()){clear();throw Error('Session changed. Reload workspace.');}
  controller=new AbortController();let res,out;
  try{res=await fetch(API,{method:body?'POST':'GET',cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer',signal:controller.signal,headers:{Authorization:'Bearer '+captured,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});out=await res.json();}
- catch{if(generation!==epoch)throw Object.assign(Error('Request superseded.'),{superseded:true});throw Error(body?'Could not confirm whether that saved. Save again to retry: it reuses the same request, so it cannot be recorded twice.':'Request could not be verified. Reload or retry the unchanged request.');}
+ catch{if(generation!==epoch)throw Object.assign(Error('Request superseded.'),{superseded:true});throw Error(body?UNCONFIRMED:'Request could not be verified. Reload or retry the unchanged request.');}
  if(generation!==epoch)throw Object.assign(Error('Request superseded.'),{superseded:true});
  if(captured!==session()||document.hidden){clear();throw Error('Session changed. Reload workspace.');}
- if(!res.ok){const code=typeof out?.error==='string'?out.error:'';throw Object.assign(Error(messageFor(res.status,code)),{status:res.status,code,detail:{duplicate_of:typeof out?.duplicate_of==='string'?out.duplicate_of:null,archived:out?.archived===true}});}
+ if(!res.ok){const code=typeof out?.error==='string'?out.error:'';throw Object.assign(Error(messageFor(res.status,code,!!body)),{status:res.status,code,detail:{duplicate_of:typeof out?.duplicate_of==='string'?out.duplicate_of:null,archived:out?.archived===true}});}
  if(!out?.workspace||!Array.isArray(out.workspace.records))throw Error('Workspace response could not be verified.');
  return out;
 }
@@ -152,7 +154,7 @@ function listingFields(r){
 }
 function statusFields(base,{noSubmission=false,minStage=null}={}){
  const allowed=Object.fromEntries(Object.entries(stageOne).filter(([k])=>!(noSubmission&&C.SUBMISSION_STAGES.includes(k))&&(minStage===null||C.stageRank(k)>=C.stageRank(minStage))));
- const stage=field('stage','Stage',Object.hasOwn(allowed,base.stage)?base.stage:Object.keys(allowed)[0],allowed,noSubmission?'This update was not a submission, so a correction cannot make it one. Record a new update with the evidence instead.':'Submitted means the employer received it. An application that did not go through stays Approved · Blocked.');
+ const stage=field('stage','Stage',Object.hasOwn(allowed,base.stage)?base.stage:Object.keys(allowed)[0],allowed,noSubmission?'This update is not a submission now, so a correction cannot make it one. Record a new update with the evidence instead, or restore the original entry if it was right.':'Submitted means the employer received it. An application that did not go through stays Approved · Blocked.');
  const outcome=field('outcome','Outcome','',{});
  // Defaults never assert an outcome: a closed stage starts on an explicit, required choice.
  const fill=()=>{const keep=outcome.value||base.outcome,choices=C.OUTCOMES_BY_STAGE[stage.value],neutral=choices.includes('none');outcome.replaceChildren();
@@ -177,17 +179,19 @@ function editor(m){
  if(m.op==='record.create'){$('formHint').textContent=zoneNote;listingFields(null);}
  else if(m.op==='event.append'){const c=C.current(r);$('formHint').textContent='Adds a dated entry. To fix an earlier update, use Correct on it instead. '+zoneNote;statusFields({...c,outcome:'none',occurred_at:'',verified_at:'',evidence_url:null,reason_kind:'unknown',reason:''},{minStage:c.stage});}
  else if(m.op==='event.correct'){
-  const original=r.events[m.target],h=C.history(r),effective=h.timeline.find(e=>e.at===m.target)||C.pick(original,C.STATUS_FIELDS);
+  const original=r.events[m.target],h=C.history(r),live=h.timeline.find(e=>e.at===m.target),effective=live||C.pick(original,C.STATUS_FIELDS),superseded=h.superseded.has(m.target);
   $('formHint').textContent='The original entry stays in the history; this adds a dated correction. '+zoneNote;
   const choice=node('fieldset','','choice');choice.append(node('legend','What should happen to #'+(m.target+1)+'?'));
-  for(const [value,text] of [['replace','Replace it with the corrected details'],['void','Remove it from the timeline (it was recorded in error)']]){const l=node('label'),input=document.createElement('input');input.type='radio';input.name='action';input.value=value;input.checked=value==='replace';l.append(input,' '+text);choice.append(l);}
+  const options=[['replace','Replace it with the corrected details'],['void','Remove it from the timeline (it was recorded in error)']];
+  if(superseded)options.push(['restore','Restore it exactly as originally recorded: '+(stageOne[original.stage]||'Unknown stage')+' · '+(outcomes[original.outcome]||'Unknown outcome')]);
+  for(const [value,text] of options){const l=node('label'),input=document.createElement('input');input.type='radio';input.name='action';input.value=value;input.checked=value==='replace';l.append(input,' '+text);choice.append(l);}
   $('fields').append(choice);const details=node('fieldset','','details');$('fields').append(details);
-  const holder=$('fields');statusFields(effective,{noSubmission:!C.SUBMISSION_STAGES.includes(original.stage)});
+  const holder=$('fields');statusFields(effective,{noSubmission:!(live&&C.SUBMISSION_STAGES.includes(live.stage))});
   for(const el of [...holder.children].filter(el=>el.tagName==='LABEL'))details.append(el);
-  choice.onchange=()=>{details.disabled=choice.querySelector('input:checked')?.value==='void';};
+  choice.onchange=()=>{details.disabled=choice.querySelector('input:checked')?.value!=='replace';};
   noteField('What was wrong? (required)',true);
  }
- else if(m.op==='record.correct'){$('formHint').textContent='Only changed fields are saved; the history keeps the old and new values. '+zoneNote;listingFields(r);noteField('What was wrong? (required)',true);}
+ else if(m.op==='record.correct'){m.base=C.pick(r,C.LISTING_FIELDS);$('formHint').textContent='Only changed fields are saved; the history keeps the old and new values. '+zoneNote;listingFields(r);noteField('What was wrong? (required)',true);}
  else{$('formHint').textContent=m.op==='record.archive'?'Archiving hides this from the board. History, receipts, dates and duplicate detection are kept, and you can restore it any time.':'Restoring puts this back on the board with its full history.';noteField('Note (optional)',false);}
  opener=document.activeElement instanceof HTMLElement?document.activeElement:null;$('editor').showModal();
 }
@@ -198,9 +202,21 @@ function collect(){
  const m=mode;
  if(m.op==='record.create')return {employer_key:v('employer_key'),employer:v('employer'),role:v('role'),requisition:v('requisition'),url:v('url'),url_verified_at:iso('url_verified_at'),resume_version:v('resume_version'),next_action:v('next_action'),blocker:v('blocker')};
  if(m.op==='event.append')return {id:m.id,...status()};
- if(m.op==='event.correct'){const action=f.namedItem('action')?.value==='void'?'void':'replace';return {id:m.id,target:m.target,action,replacement:action==='void'?null:status(),note:v('note')};}
- if(m.op==='record.correct'){const r=row(m.id),changes={};for(const k of C.LISTING_FIELDS){const value=k==='url_verified_at'?iso(k):v(k);if(r&&value!==r[k])changes[k]=value;}return {id:m.id,changes,note:v('note')};}
+ if(m.op==='event.correct'){const choice=f.namedItem('action')?.value,original=row(m.id)?.events[m.target];
+  if(choice==='restore'&&original)return {id:m.id,target:m.target,action:'replace',replacement:C.pick(original,C.STATUS_FIELDS),note:v('note')};
+  const action=choice==='void'?'void':'replace';return {id:m.id,target:m.target,action,replacement:action==='void'?null:status(),note:v('note')};}
+ // Diff against what the form opened with, never the latest record: after a 409 refresh an
+ // untouched field must not travel back and undo another tab's edit.
+ if(m.op==='record.correct'){const changes={};for(const k of C.LISTING_FIELDS){const value=k==='url_verified_at'?iso(k):v(k);if(value!==m.base[k])changes[k]=value;}return {id:m.id,changes,note:v('note')};}
  return {id:m.id,note:v('note')};
+}
+// After a 409 refresh: fields the user has not touched take the refreshed values, so the form
+// shows what is stored now; edited fields keep the user's text. The pending request is unchanged.
+function rebaseListing(){
+ if(mode?.op!=='record.correct')return;const r=row(mode.id),f=$('form').elements;if(!r)return;
+ for(const k of C.LISTING_FIELDS){const el=f.namedItem(k);if(!el)continue;const at=k==='url_verified_at',value=at?(el.dataset.iso&&el.value===el.defaultValue?el.dataset.iso:''):el.value.trim();
+  if(value!==mode.base[k]||r[k]===mode.base[k])continue;
+  if(at){el.defaultValue=localInput(r[k]);el.value=el.defaultValue;el.dataset.iso=r[k];}else el.value=r[k];mode.base[k]=r[k];}
 }
 function check(data){
  const stamps=[data.url_verified_at,data.occurred_at,data.verified_at,data.replacement?.occurred_at,data.replacement?.verified_at,data.changes?.url_verified_at].filter(x=>x!==undefined);
@@ -220,17 +236,18 @@ function synthetic(){clear();demo=true;const at='2026-01-10T12:00:00.000Z',later
   if(demo){$('error').textContent='Preview is read-only. Private saving awaits setup and approval.';return;}
   const data=collect(),problem=check(data);hideAction();if(problem){$('error').textContent=problem;return;}
   const op=mode.op,signature=JSON.stringify({op,data});if(!pending||pending.signature!==signature)pending={signature,body:{op,data,expected_revision:state.revision,request_id:crypto.randomUUID()}};
-  busy=true;$('save').disabled=true;
+  busy=true;$('save').disabled=true;$('cancel').disabled=true;
   try{const out=await request(pending.body);state=out.workspace;const saved=out.receipt?.id||mode?.id;pending=null;mode=null;opener=null;$('editor').close();render();if(saved){detail(saved,false);$('detail').querySelector('h2')?.focus();}$('status').textContent=(out.replayed?'Already saved':'Saved to your tracker')+' · revision '+state.revision+'. Saving records evidence; it never submits anything to an employer.';}
   catch(e){if(e.superseded)return;
    if(e.status===401||e.status===403){clear();$('status').textContent=e.message;return;}
-   if(e.code==='revision_conflict'){try{await refresh();if(pending)pending.body.expected_revision=state.revision;}catch(x){if(x.superseded)return;$('error').textContent=x.message;return;}}
+   if(e.code==='revision_conflict'){try{await refresh();rebaseListing();if(pending)pending.body.expected_revision=state.revision;}catch(x){if(x.superseded)return;$('error').textContent=x.message;return;}}
    $('error').textContent=e.message;
    const dup=e.code==='duplicate_requisition'&&e.detail?.duplicate_of;
    if(dup)showAction(e.detail.archived?'Open the archived record':'Open the existing record',()=>{$('editor').close();mode=null;pending=null;if(e.detail.archived)$('filter').value='archived';render();detail(dup,true);});}
-  finally{busy=false;$('save').disabled=false;$('add').disabled=!state;}};
+  finally{busy=false;$('save').disabled=false;$('cancel').disabled=false;$('add').disabled=!state;}};
  $('refresh').onclick=load;$('demo').onclick=synthetic;$('add').onclick=()=>editor({op:'record.create'});$('cancel').onclick=()=>$('editor').close();$('filter').onchange=render;
  // Keyboard users land back on the control that opened the dialog, if it still exists.
+ $('editor').addEventListener('cancel',e=>{if(busy)e.preventDefault();});
  $('editor').addEventListener('close',()=>{if(!busy){mode=null;pending=null;}const back=opener;opener=null;if(back?.isConnected&&!back.disabled)back.focus();});
  addEventListener('storage',e=>{if(e.key===null||e.key==='dd-bozo-sess'){clear();$('status').textContent='Account changed. Reload private workspace.';}});addEventListener('pagehide',clear);document.addEventListener('visibilitychange',()=>{if(document.hidden&&!demo){clear();$('status').textContent='Workspace hidden. Reload to verify access.';}});
 function checkSession(){if(!demo&&token&&token!==session()){clear();$('status').textContent='Account changed. Reload private workspace.';}}
