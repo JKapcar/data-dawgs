@@ -26,3 +26,17 @@ test('public job shell has no analytics, form navigation, embedded records or th
  const urls=[...ui.matchAll(/https:\/\/[^'"`\s]+/g)].map(x=>x[0]);assert.ok(urls.every(u=>u.startsWith('https://example.com/')||u==='https://toto.jkapcar4.workers.dev/api/jobs/v1'));
  assert.ok(!html.includes(sentinel));assert.ok(!ui.includes(sentinel));
 });
+test('provider export cannot silently capture the outbound database credential',()=>{
+ // Workers Traces fetch spans record url.full and url.query, so while fbUrl sends the database
+ // credential as ?auth=, any trace, Logpush, tail or OTLP export would copy it out of the Worker.
+ // Read-only check of the committed manifest; it changes no configuration. docs/job-harness.md.
+ const manifest=JSON.parse(fs.readFileSync('wrangler.jsonc','utf8')),o=manifest.observability||{};
+ const worker=fs.readFileSync('dawg-bot-worker.js','utf8'),credentialInUrl=/const fbUrl = \(env, path\) => `\$\{DB\}\$\{path\}\.json\?auth=\$\{env\.FB_SECRET\}`;/.test(worker);
+ const exporting={traces:o.traces?.enabled===true,logpush:manifest.logpush===true,tail_consumers:(manifest.tail_consumers||[]).length>0,
+  destinations:[o.traces?.destinations,o.logs?.destinations].some(d=>Array.isArray(d)&&d.length>0)};
+ assert.ok(credentialInUrl||!worker.includes('?auth=${env.FB_SECRET}'),'fbUrl changed shape: update this guard to match');
+ if(credentialInUrl)assert.deepEqual(exporting,{traces:false,logpush:false,tail_consumers:false,destinations:false},
+  'An export path is enabled while fbUrl still puts FB_SECRET in the URL. Move the credential out of the URL first, or get explicit approval: see docs/job-harness.md.');
+ // The job module itself never writes logs, whatever the platform keeps.
+ assert.ok(!/console\./.test(fs.readFileSync('work/jobs.js','utf8')));
+});
