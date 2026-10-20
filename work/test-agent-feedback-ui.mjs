@@ -4,7 +4,7 @@ import http from 'node:http';
 import {loadPlaywright,chromiumExecutable} from './playwright-loader.mjs';
 const {chromium}=loadPlaywright();
 const html=readFileSync(new URL('../feedback-inbox.html',import.meta.url));
-const server=http.createServer((req,res)=>{const asset=['/install-help.js','/install-help.css'].includes(req.url)?req.url.slice(1):null;res.writeHead(200,{'Content-Type':asset?(asset.endsWith('.js')?'text/javascript':'text/css'):'text/html'});res.end(asset?readFileSync(new URL('../'+asset,import.meta.url)):html);});
+const server=http.createServer((req,res)=>{const asset=['/presentation-mode.js','/presentation-mode.css','/install-help.js','/install-help.css'].includes(req.url)?req.url.slice(1):null;res.writeHead(200,{'Content-Type':asset?(asset.endsWith('.js')?'text/javascript':'text/css'):'text/html'});res.end(asset?readFileSync(new URL('../'+asset,import.meta.url)):html);});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const browser=await chromium.launch({headless:true,executablePath:process.env.PLAYWRIGHT_CHROMIUM||chromiumExecutable(chromium),args:['--no-sandbox']});
 try{

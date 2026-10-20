@@ -3,7 +3,7 @@ import {readFileSync,mkdirSync} from 'node:fs';
 import http from 'node:http';
 import {loadPlaywright,chromiumExecutable} from './playwright-loader.mjs';
 const {chromium}=loadPlaywright();
-const server=http.createServer((req,res)=>{const path=['/install-help.js','/install-help.css'].includes(req.url)?req.url.slice(1):'agent-board.html';res.setHeader('Content-Type',path.endsWith('.js')?'text/javascript':path.endsWith('.css')?'text/css':'text/html');res.end(readFileSync(new URL('../'+path,import.meta.url)));});
+const server=http.createServer((req,res)=>{const path=['/presentation-mode.js','/presentation-mode.css','/install-help.js','/install-help.css'].includes(req.url)?req.url.slice(1):'agent-board.html';res.setHeader('Content-Type',path.endsWith('.js')?'text/javascript':path.endsWith('.css')?'text/css':'text/html');res.end(readFileSync(new URL('../'+path,import.meta.url)));});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 let browser;
 try{
