@@ -13614,6 +13614,17 @@ const JOB_OPS=Object.assign(Object.create(null),{
   row.events.push({kind:'restore',note:data.note,recorded_at:now,actor_uid:uid});return row.id;
  }
 });
+// Who may use the harness: the configured owner always; anyone else only when the non-secret
+// JOB_HARNESS_MEMBER_UIDS lists their exact uid (comma-separated). Absent or empty means owner
+// only, the v1 behaviour. Each identity gets its own envelope at /privateJobs/v1/<own uid>,
+// derived from the verified session; nothing is shared, and a malformed list admits nobody extra.
+function jobAccess(uid,env){
+ if(uid===env.RESEARCH_OWNER_UID)return 'owner';
+ const raw=typeof env.JOB_HARNESS_MEMBER_UIDS==='string'?env.JOB_HARNESS_MEMBER_UIDS.trim():'';
+ if(!raw)return null;
+ const list=raw.split(',').map(x=>x.trim());
+ return list.every(x=>/^u_[A-Za-z0-9_-]{1,100}$/.test(x))&&list.includes(uid)?'member':null;
+}
 async function handleJobs(request,env){
  const url=new URL(request.url),origin=request.headers.get('Origin');
  const headers={'Content-Type':'application/json','Cache-Control':'private, no-store, max-age=0','Pragma':'no-cache','Vary':'Origin, Authorization','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer','X-Robots-Tag':'noindex, nofollow'};
@@ -13625,13 +13636,13 @@ async function handleJobs(request,env){
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
   jobCheck(['GET','POST'].includes(request.method),405,'method_denied');
   const uid=await poundIdentity(request,env);
-  jobCheck(uid===env.RESEARCH_OWNER_UID,403,'configured_owner_required');
+  const access=jobAccess(uid,env);jobCheck(access,403,'access_not_granted');
   jobCheck(env.JOB_HARNESS_ENABLED==='true',503,'private_setup_pending');
   const path='/privateJobs/v1/'+uid,saved=await fbGet(env,path,true);
   jobCheck(!saved.data||saved.data.owner_uid===uid,403,'owner_mismatch');
   const state=saved.data?JSON.parse(saved.data.payload):jobEmpty(uid);
   jobCheck(state.owner_uid===uid&&state.version===1,403,'owner_mismatch');
-  const view=()=>{const {receipts,...workspace}=state;return {workspace};};
+  const view=()=>{const {receipts,...workspace}=state;return {workspace,access};};
   if(request.method==='GET')return reply(view());
   const input=await poundBody(request);jobFields(input,['op','data','expected_revision','request_id']);
   jobCheck(typeof input.op==='string'&&Object.hasOwn(JOB_OPS,input.op),400,'invalid_operation');

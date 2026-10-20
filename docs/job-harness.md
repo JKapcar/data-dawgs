@@ -4,13 +4,39 @@ Proposed route: `/jobs.html`, consistent with the site's standalone app pages. T
 
 ## Privacy and release gate
 
-The `/api/jobs/v1` route reuses `poundIdentity`: exact signed bearer session, account/revocation verification, and rejection of legacy headers. It then requires the existing configured `RESEARCH_OWNER_UID`. `JOB_HARNESS_ENABLED` must equal `true`; it is deliberately absent from configuration. Other users cannot read or write, even with known record IDs. There is no friend enrollment path.
+The `/api/jobs/v1` route reuses `poundIdentity`: exact signed bearer session, account/revocation verification, and rejection of legacy headers. It then requires the existing configured `RESEARCH_OWNER_UID`, or (only when the separate member list is set; see Friends below) a listed member. `JOB_HARNESS_ENABLED` must equal `true`; it is deliberately absent from configuration. Other users cannot read or write, even with known record IDs. There is no friend enrollment path.
 
 Storage is a separate `/privateJobs/v1/<verified uid>` envelope containing `owner_uid` and a JSON-string payload. Owner identity is checked both outside and inside that payload. No client-supplied tenant or owner is accepted. No job data shares a research tenant, Pound record, or public data file. Responses are private/no-store; the service worker excludes the whole app (`jobs.html`, `jobs.js`, `jobs-core.js`, `jobs.css`) and the API. The browser keeps records only in memory, clears on hide/account change, renders text safely and excludes records from assistant context. It uses only the existing session key; no content is written to browser storage.
 
 The Worker module is generated, not hand-placed: `work/assemble.mjs` injects `jobs-core.js` followed by `work/jobs.js` between the `DD-JOBS` markers, directly after the project block and above the MCP write-scope boundary (the module commits with `fbPut`), and puts the route between the Pound and project routes. Edit the sources, then run `cd work && node assemble.mjs`; CI fails if the committed Worker differs from the assembled output.
 
 **Rules snapshot verified locally:** The parent inspected the complete displayed RTDB rules; the exact SHA-256 9507116bd03e832af8cb9ab084845f82c9e21f2c894cf6aa48ed6718c2b34179 snapshot passed 174 emulator permission checks (160 denials, 14 expected allows). No direct-client grant is needed. This does not verify deployed gateway behavior or rules freshness at release. **Activation remains gated:** deployed logging/privacy handling and private readback have not been verified. Before activating, obtain approval for any necessary security configuration; verify direct database anonymous and other-user reads/writes are denied, then deployed API isolation and private save/readback. This patch neither changes rules nor enables storage. Handler tests prove local behavior; separate rules-emulator tests prove only the inspected snapshot. No real records should be entered until this gate passes. Future friends require a separately reviewed access model and per-user negative tests; never add them to the owner UID or share this owner's envelope.
+
+## Friends: isolated member workspaces (separate gate, off)
+
+Friends get their own workspaces, never access to the owner's. The non-secret variable `JOB_HARNESS_MEMBER_UIDS` lists exact account ids, comma-separated. When it is absent, which is the shipped configuration, behaviour is the owner-only v1 behaviour. A malformed list admits nobody extra, and the owner is never affected. Turning it on is a configuration change that needs its own approval after the owner release has passed its checks. Signup is open, so membership must stay an explicit list, never "any signed-in account".
+
+Every member's workspace is derived only from their verified session: `/privateJobs/v1/<their uid>`, with the same envelope checks as the owner's. No request field, query or path can name a tenant. Records, history, receipts, request keys and duplicate detection are all per workspace. The response carries `access: "owner" | "member"`, and a member sees a disclosure that the site operator administers the database and can technically access stored data. The page does not promise more than that.
+
+Covered by `tests/jobs-members.test.cjs` and `tests/jobs-members-browser.cjs`:
+- default owner-only;
+- malformed lists;
+- each identity sees only its own workspace, and the owner cannot read members through the app;
+- strangers are refused before storage;
+- no cross-member deduplication or inference;
+- another member's record ids answer exactly like random ids;
+- request keys never replay across workspaces;
+- caller-chosen tenants are refused;
+- wrong-uid envelopes are refused;
+- the flag and removal both close access while stored data is kept;
+- in one tab, a slow response for the previous account never repaints the next one.
+
+There are no server-side export or search endpoints; the page's filter runs only over the signed-in account's own loaded workspace. Direct database rules are unchanged and still deny every ordinary client.
+
+Not built, and decisions to make before inviting anyone:
+- how a friend learns the account id to send you;
+- what happens to a removed member's stored data (it is kept; deletion needs its own decision);
+- whether per-member limits should differ from the owner's (300 records, 1 MiB).
 
 ## Stored contract
 
@@ -71,7 +97,7 @@ Limits fail closed at 300 records, 300 log entries per record (corrections and a
 - Corrections keep the original and record before/after; no correction creates a submission; inconsistent timelines refused; archive/restore keeps history, receipts, dates and duplicate detection.
 - Synthetic preview clearly labeled; no private records, inboxes, resumes or client data in fixtures.
 - `tests/jobs-history-browser.cjs` drives the real page against the real handler (in-memory storage): staged menus, required evidence, lost-response replay, 409 recovery, corrections, listing fixes, archived duplicates, archive/restore, keyboard focus return, inert hostile text and links, and 390/320 px history layout.
-- Run `node --test tests/jobs.test.cjs tests/jobs-history.test.cjs tests/jobs-privacy.test.cjs tests/dawg-pound.test.cjs tests/research-project.test.cjs`, then `node tests/jobs-browser.cjs`, `node tests/jobs-privacy-browser.cjs` and `node tests/jobs-history-browser.cjs` with Playwright 1.56.1 on `NODE_PATH`. After any page or Worker change: `cd work && node assemble.mjs && python3 stamp-sw-version.py`, then `node work/verify-sw.mjs`.
+- Run `node --test tests/jobs.test.cjs tests/jobs-history.test.cjs tests/jobs-members.test.cjs tests/jobs-privacy.test.cjs tests/dawg-pound.test.cjs tests/research-project.test.cjs`, then `node tests/jobs-browser.cjs`, `node tests/jobs-privacy-browser.cjs`, `node tests/jobs-history-browser.cjs` and `node tests/jobs-members-browser.cjs` with Playwright 1.56.1 on `NODE_PATH`. After any page or Worker change: `cd work && node assemble.mjs && python3 stamp-sw-version.py`, then `node work/verify-sw.mjs`.
 
 Repository `AGENTS.md` and `docs/visual-interaction-design.md` were read. Independent review was completed for the disabled v1 implementation and rules-emulator evidence; the history and correction layer needs its own review before release. This version has no deployment, production readback, inbox connection, auto-apply, friend access, or external communications.
 
@@ -85,4 +111,4 @@ The job route returns before other dispatch paths, contains no console or analyt
 
 Bounded approval target, once platform logging/privacy checks pass: release only this job page, its style and scripts, the Worker route/module and cache version using the complete existing manifest, then set the non-secret Worker variable `JOB_HARNESS_ENABLED="true"`. Keep `RESEARCH_OWNER_UID` unchanged. The manifest sets `keep_vars: true`, so also confirm no dashboard-only `JOB_HARNESS_ENABLED` already exists. Reuse existing signed sessions and server storage authority; create no credential, grant, database rule or public job data. Verify a synthetic private save/readback and denied signed-out/other-user API access under the approved release test plan before importing real records. Roll back activation by removing the flag or setting it to "false"; preserve stored history. Do not disable worker-wide logs without separate approval.
 
-Friend access remains rejected server-side. Inbox sync, connector access, daily reconciliation writes, new schedules, employer submissions/auto-apply, resume-file upload and any automated correction, deletion or archival remain unavailable; corrections and archival exist only as owner actions in the page. Approval for this release must not imply those capabilities or changes to other applications.
+Friend access remains rejected server-side unless the separate member list is approved and set. Inbox sync, connector access, daily reconciliation writes, new schedules, employer submissions/auto-apply, resume-file upload and any automated correction, deletion or archival remain unavailable; corrections and archival exist only as owner actions in the page. Approval for this release must not imply those capabilities or changes to other applications.

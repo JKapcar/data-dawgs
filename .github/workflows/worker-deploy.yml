@@ -59,7 +59,7 @@ jobs:
       - run: node --check dawg-bot-worker.js
       - run: node --test tests/dawg-pound.test.cjs
       - run: node --test tests/research-project.test.cjs research-lab/decision-controls.test.mjs research-lab/pound-portraits.test.mjs
-      - run: node --test tests/jobs.test.cjs tests/jobs-privacy.test.cjs
+      - run: node --test tests/jobs.test.cjs tests/jobs-history.test.cjs tests/jobs-members.test.cjs tests/jobs-privacy.test.cjs
       - run: node --test tests/bozo-correction.test.cjs
       - run: node --test tests/bozo-sgo-diagnostics.test.js tests/bozo-sgo-capture.test.js tests/bozo-odds-api.test.js tests/bozo-clv-repair.test.js
       - run: node work/test-espn-connections.mjs

@@ -34,8 +34,11 @@ const MESSAGES={
  invalid_blocked_status:'Blocked · not submitted needs a blocker and an Opportunity or Approved stage.',
  canonical_employer_key_required:'The employer key must be 2–80 lowercase letters, numbers and dashes.',
  invalid_text:'Check the text: required fields cannot be empty, and long fields have limits.',
- configured_owner_required:'Private access denied.',private_setup_pending:'Private setup pending. No data loaded.'
+ configured_owner_required:'Private access denied.',access_not_granted:'Private access denied.',private_setup_pending:'Private setup pending. No data loaded.'
 };
+// What the page may promise depends on whose workspace is open; neither claim outruns the server.
+const DISCLAIMER={owner:'No inbox connected. No automatic applications. Friends cannot access this workspace.',
+ member:'This workspace is yours alone in this app: other members cannot see it, and it is not shared with the site owner’s tracker. The site operator administers the database and can technically access stored data. No inbox connected. No automatic applications.'};
 const BY_STATUS={400:'Check the required fields, dates and evidence.',401:'Sign in again.',403:'Private access denied.',404:'Not found. Reload the workspace.',409:'Record changed or duplicated. Reload before trying again.',413:'Workspace limit reached.',503:'Private setup pending. No data loaded.'};
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 const button=(text,fn,cls)=>{const b=node('button',text,cls);b.type='button';b.onclick=fn;return b;};
@@ -49,7 +52,7 @@ const when=iso=>{const t=node('time',iso?new Date(iso).toLocaleString(undefined,
 const zone=()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'local time';}catch{return 'local time';}};
 const row=id=>state?.records.find(r=>r.id===id)||null;
 const archivedOf=r=>!!C.history(r).archived;
-function clear(){epoch++;controller?.abort();controller=null;state=null;pending=null;mode=null;busy=false;token='';openId=null;confirmUrl='';$('board').replaceChildren();$('detail').replaceChildren();$('detail').hidden=true;$('fields').replaceChildren();$('formTitle').textContent='Add opportunity';$('formHint').textContent='';$('error').textContent='';hideAction();$('editor').close();$('add').disabled=true;$('verified').textContent='Not available';$('health').textContent='Not connected';$('archivedCount').textContent='Archived';}
+function clear(){epoch++;controller?.abort();controller=null;state=null;pending=null;mode=null;busy=false;token='';openId=null;confirmUrl='';$('board').replaceChildren();$('detail').replaceChildren();$('detail').hidden=true;$('fields').replaceChildren();$('formTitle').textContent='Add opportunity';$('formHint').textContent='';$('error').textContent='';hideAction();$('editor').close();$('add').disabled=true;$('verified').textContent='Not available';$('health').textContent='Not connected';$('archivedCount').textContent='Archived';$('disclaimer').textContent=DISCLAIMER.owner;}
 function hideAction(){const b=$('errorAction');b.hidden=true;b.textContent='';b.onclick=null;}
 function showAction(text,fn){const b=$('errorAction');b.textContent=text;b.onclick=fn;b.hidden=false;}
 const messageFor=(status,code)=>Object.hasOwn(MESSAGES,code)?MESSAGES[code]:BY_STATUS[status]||'Request could not be verified.';
@@ -65,7 +68,7 @@ async function request(body){
  if(!out?.workspace||!Array.isArray(out.workspace.records))throw Error('Workspace response could not be verified.');
  return out;
 }
-async function load(){demo=false;clear();token=session();if(!token){$('status').textContent='Sign in to open your private workspace.';return;}$('status').textContent='Checking private access…';try{const out=await request();state=out.workspace;render();$('status').textContent='Private workspace loaded. Inbox integration is pending.';}catch(e){if(e.superseded)return;clear();$('status').textContent=e.message;}}
+async function load(){demo=false;clear();token=session();if(!token){$('status').textContent='Sign in to open your private workspace.';return;}$('status').textContent='Checking private access…';try{const out=await request();state=out.workspace;render();$('disclaimer').textContent=out.access==='member'?DISCLAIMER.member:DISCLAIMER.owner;$('status').textContent='Private workspace loaded. Inbox integration is pending.';}catch(e){if(e.superseded)return;clear();$('status').textContent=e.message;}}
 // Same session, fresh data: keeps an open editor and its pending request.
 async function refresh(){const out=await request();state=out.workspace;render();if(openId)detail(openId,false);}
 function render(){
