@@ -13453,10 +13453,11 @@ const JOBS_CORE = (() => {
   const stageRank = stage => STAGES.indexOf(stage);
   const pick = (source, keys) => Object.fromEntries(keys.map(k => [k, source[k]]));
 
-  // Canonical form only — compatibility characters, case and runs of whitespace.
-  // No fuzzy matching, no prefix stripping: "REQ-1" and "1" stay different requisitions.
+  // Canonical form only — compatibility characters, invisible format characters (zero-width
+  // spaces, joiners, bidi marks), case and runs of whitespace. No fuzzy matching, no prefix
+  // stripping: "REQ-1" and "1" stay different requisitions.
   function normalizeRequisition(text) {
-    return String(text).normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
+    return String(text).normalize('NFKC').replace(/\p{Cf}/gu, '').trim().replace(/\s+/g, ' ').toLowerCase();
   }
   function identityOf(listing) {
     return listing.employer_key + '|' + normalizeRequisition(listing.requisition);
@@ -13512,6 +13513,16 @@ const JOBS_CORE = (() => {
     return null;
   }
 
+  // A correction may assert a submission only where one is already effective, or by restoring
+  // the original entry exactly. Anything else that says "it reached the employer" must be a new,
+  // evidenced update. (Checking only the original entry let a submission be downgraded and then
+  // re-upgraded with a new date and evidence.)
+  function correctionMaySubmit(original, effective, replacement) {
+    if (!SUBMISSION_STAGES.includes(replacement.stage)) return true;
+    if (effective && SUBMISSION_STAGES.includes(effective.stage)) return true;
+    return SUBMISSION_STAGES.includes(original.stage) && STATUS_FIELDS.every(k => original[k] === replacement[k]);
+  }
+
   function current(record) {
     const h = history(record);
     return h.current || {stage: 'opportunity', outcome: 'none', occurred_at: null, verified_at: null, evidence_url: null,
@@ -13520,7 +13531,7 @@ const JOBS_CORE = (() => {
   }
 
   return Object.freeze({STAGES, OUTCOMES, SUBMISSION_STAGES, CLOSED_OUTCOMES, OUTCOMES_BY_STAGE, STATUS_FIELDS,
-    LISTING_FIELDS, kindOf, stageRank, pick, normalizeRequisition, identityOf, listingKey, sameFact, history, conflict, current});
+    LISTING_FIELDS, kindOf, stageRank, pick, normalizeRequisition, identityOf, listingKey, sameFact, history, conflict, correctionMaySubmit, current});
 })();
 /* Private job harness. Flattened into the Worker; no connector grants or submissions.
  * Status vocabulary and the history fold are shared with the page through /jobs-core.js
@@ -13530,9 +13541,9 @@ const JOB_OUTCOMES=JOBS_CORE.OUTCOMES;
 // detail carries ids, indices and booleans only — never stored text.
 const jobCheck=(ok,status,message,detail)=>{if(!ok)throw Object.assign(Error(message),{jobStatus:status,jobDetail:detail||null});};
 function jobFields(x,keys){jobCheck(x&&typeof x==='object'&&!Array.isArray(x)&&Object.keys(x).every(k=>keys.includes(k))&&keys.every(k=>Object.hasOwn(x,k)),400,'invalid_fields');}
-function jobText(x,max=200,empty=false){jobCheck(typeof x==='string'&&x.length<=max&&(empty||x.trim().length>0)&&!/[\u0000-\u001f]/.test(x),400,'invalid_text');}
+function jobText(x,max=200,empty=false){jobCheck(typeof x==='string'&&x.length<=max&&(empty||x.trim().length>0)&&!/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(x),400,'invalid_text');}
 function jobDate(x,nullable=false){if(nullable&&x===null)return;jobCheck(typeof x==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(x)&&Number.isFinite(Date.parse(x))&&new Date(x).toISOString()===x&&Date.parse(x)<=Date.now(),400,'invalid_timestamp');}
-function jobURL(x,nullable=false){if(nullable&&x===null)return;let u;try{u=new URL(x);}catch{}jobCheck(u&&u.protocol==='https:'&&!u.username&&!u.password&&x.length<=2000,400,'https_url_required');}
+function jobURL(x,nullable=false){if(nullable&&x===null)return;jobCheck(typeof x==='string'&&x.length<=2000&&x===x.trim()&&!/[\u0000-\u0020\u007f\p{Cf}]/u.test(x),400,'https_url_required');let u;try{u=new URL(x);}catch{}jobCheck(u&&u.protocol==='https:'&&!u.username&&!u.password,400,'https_url_required');}
 // One rule per listing field, shared by record.create and record.correct.
 const JOB_LISTING_RULES=Object.freeze({
  employer_key:x=>jobCheck(typeof x==='string'&&/^[a-z0-9][a-z0-9-]{1,79}$/.test(x),400,'canonical_employer_key_required'),
@@ -13601,7 +13612,7 @@ const JOB_OPS=Object.assign(Object.create(null),{
   }else{
    const r=jobStatus(data.replacement),effective=before.timeline.find(e=>e.at===data.target);
    // Only a NEW update with evidence can say an application reached the employer.
-   jobCheck(JOBS_CORE.SUBMISSION_STAGES.includes(original.stage)||!JOBS_CORE.SUBMISSION_STAGES.includes(r.stage),409,'correction_cannot_create_submission');
+   jobCheck(JOBS_CORE.correctionMaySubmit(original,effective,r),409,'correction_cannot_create_submission');
    jobCheck(!effective||JOBS_CORE.STATUS_FIELDS.some(k=>effective[k]!==r[k]),409,'correction_changes_nothing');
    entry={kind:'correction',target:data.target,action:'replace',replacement:JOBS_CORE.pick(r,JOBS_CORE.STATUS_FIELDS),note:data.note};
   }
@@ -13664,7 +13675,7 @@ async function handleJobs(request,env){
   if(request.method==='GET')return reply(view());
   const input=await poundBody(request);jobFields(input,['op','data','expected_revision','request_id']);
   jobCheck(typeof input.op==='string'&&Object.hasOwn(JOB_OPS,input.op),400,'invalid_operation');
-  jobCheck(Number.isSafeInteger(input.expected_revision)&&input.expected_revision>=0&&/^[A-Za-z0-9_-]{16,80}$/.test(input.request_id),400,'invalid_revision_or_request');
+  jobCheck(Number.isSafeInteger(input.expected_revision)&&input.expected_revision>=0&&typeof input.request_id==='string'&&/^[A-Za-z0-9_-]{16,80}$/.test(input.request_id),400,'invalid_revision_or_request');
   // The key names one logical operation; the revision is only its precondition. A retry
   // after a 409 re-read keeps the key, so an op that already committed replays instead
   // of being applied twice.

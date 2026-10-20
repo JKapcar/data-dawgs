@@ -187,3 +187,34 @@ test('history core is deterministic and agrees with the stored log',()=>{
  for(const [stage,outcomes] of Object.entries(core.OUTCOMES_BY_STAGE))for(const o of core.OUTCOMES)assert.equal(outcomes.includes(o),valid(stage,o),stage+'/'+o);
  function valid(stage,outcome){if(['rejected','position_closed','withdrawn','accepted'].includes(outcome))return stage==='closed';if(stage==='closed')return false;if(outcome==='blocked_not_submitted')return ['opportunity','approved'].includes(stage);if(outcome==='no_later_decision')return ['submitted','interview'].includes(stage);return true;}
 });
+// Review findings, 2026-10-20: each case below was reproduced against the previous rule.
+test('a downgraded or voided submission cannot be re-upgraded by correction; exact restore can',async()=>{
+ const r=await withRecord();await r.ok(r.cmd('event.append',ev(r.id,'submitted','none',2)));
+ const original=r.row(r.id).events[0];
+ await r.ok(r.cmd('event.correct',{id:r.id,target:0,action:'replace',replacement:status('approved','blocked_not_submitted',2,{blocker:'Portal error'}),note:'It never went through'}));
+ for(const [stage,day,evidence] of [['offer',9,'https://example.com/other-evidence'],['interview',3,'https://example.com/x'],['submitted',2,'https://example.com/receipt/new']]){
+  const res=await r.send(r.cmd('event.correct',{id:r.id,target:0,action:'replace',replacement:status(stage,'none',day,{evidence_url:evidence}),note:'re-upgrade'}));
+  assert.equal(res.body.error,'correction_cannot_create_submission',stage);}
+ assert.equal(r.core.current(r.row(r.id)).stage,'approved');
+ await r.ok(r.cmd('event.correct',{id:r.id,target:0,action:'replace',replacement:r.core.pick(original,r.core.STATUS_FIELDS),note:'The original entry was right'}));
+ assert.equal(r.core.current(r.row(r.id)).stage,'submitted');
+ // voided submission + later blocked update: replacing the voided entry with a new interview is refused
+ const v=await withRecord();await v.ok(v.cmd('event.append',ev(v.id,'submitted','none',2)));
+ await v.ok(v.cmd('event.correct',{id:v.id,target:0,action:'void',replacement:null,note:'Wrong employer'}));
+ await v.ok(v.cmd('event.append',ev(v.id,'approved','blocked_not_submitted',3,{blocker:'Missing transcript'})));
+ assert.equal((await v.send(v.cmd('event.correct',{id:v.id,target:0,action:'replace',replacement:status('interview','none',5),note:'x'}))).body.error,'correction_cannot_create_submission');
+ assert.equal(v.core.current(v.row(v.id)).outcome,'blocked_not_submitted');
+});
+test('URL fields and request keys must be strings; arrays and padded or invisible-character URLs are refused',async()=>{
+ const r=await withRecord(),writes=r.writes.length;
+ for(const url of [['https://example.com/a'],['https://example.com/'+'a'.repeat(20000)],' https://example.com/a','https://example.com/a\n','\thttps://example.com/a','https://exam\tple.com/a','https://example.com/a​','https://example.com/‮a'])
+  assert.equal((await r.send(r.cmd('record.create',{...listing,requisition:'U-'+r.writes.length+Math.random(),url}))).body.error,'https_url_required',JSON.stringify(url).slice(0,60));
+ assert.equal((await r.send(r.cmd('event.append',ev(r.id,'submitted','none',2,{evidence_url:['https://example.com/r']})))).body.error,'https_url_required');
+ const keyed=r.cmd('event.append',ev(r.id,'submitted','none',2));keyed.request_id=['synthetic_array_key_000001'];
+ assert.equal((await r.send(keyed)).body.error,'invalid_revision_or_request');assert.equal(r.writes.length,writes);
+});
+test('invisible format characters cannot split a requisition identity; bidi controls are refused in text',async()=>{
+ const r=await withRecord();
+ for(const req of ['TEST​-001','TEST-­001','﻿TEST-001','TEST-001⁠'])assert.equal((await r.send(r.cmd('record.create',{...listing,requisition:req}))).body.error,'duplicate_requisition',JSON.stringify(req));
+ for(const text of ['Analyst ‮gnirih','A⁦b','Del\u007f'])assert.equal((await r.send(r.cmd('record.create',{...listing,requisition:'B-'+text.length,role:text}))).body.error,'invalid_text',JSON.stringify(text));
+});

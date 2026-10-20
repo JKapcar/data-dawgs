@@ -34,10 +34,11 @@ const JOBS_CORE = (() => {
   const stageRank = stage => STAGES.indexOf(stage);
   const pick = (source, keys) => Object.fromEntries(keys.map(k => [k, source[k]]));
 
-  // Canonical form only — compatibility characters, case and runs of whitespace.
-  // No fuzzy matching, no prefix stripping: "REQ-1" and "1" stay different requisitions.
+  // Canonical form only — compatibility characters, invisible format characters (zero-width
+  // spaces, joiners, bidi marks), case and runs of whitespace. No fuzzy matching, no prefix
+  // stripping: "REQ-1" and "1" stay different requisitions.
   function normalizeRequisition(text) {
-    return String(text).normalize('NFKC').trim().replace(/\s+/g, ' ').toLowerCase();
+    return String(text).normalize('NFKC').replace(/\p{Cf}/gu, '').trim().replace(/\s+/g, ' ').toLowerCase();
   }
   function identityOf(listing) {
     return listing.employer_key + '|' + normalizeRequisition(listing.requisition);
@@ -93,6 +94,16 @@ const JOBS_CORE = (() => {
     return null;
   }
 
+  // A correction may assert a submission only where one is already effective, or by restoring
+  // the original entry exactly. Anything else that says "it reached the employer" must be a new,
+  // evidenced update. (Checking only the original entry let a submission be downgraded and then
+  // re-upgraded with a new date and evidence.)
+  function correctionMaySubmit(original, effective, replacement) {
+    if (!SUBMISSION_STAGES.includes(replacement.stage)) return true;
+    if (effective && SUBMISSION_STAGES.includes(effective.stage)) return true;
+    return SUBMISSION_STAGES.includes(original.stage) && STATUS_FIELDS.every(k => original[k] === replacement[k]);
+  }
+
   function current(record) {
     const h = history(record);
     return h.current || {stage: 'opportunity', outcome: 'none', occurred_at: null, verified_at: null, evidence_url: null,
@@ -101,5 +112,5 @@ const JOBS_CORE = (() => {
   }
 
   return Object.freeze({STAGES, OUTCOMES, SUBMISSION_STAGES, CLOSED_OUTCOMES, OUTCOMES_BY_STAGE, STATUS_FIELDS,
-    LISTING_FIELDS, kindOf, stageRank, pick, normalizeRequisition, identityOf, listingKey, sameFact, history, conflict, current});
+    LISTING_FIELDS, kindOf, stageRank, pick, normalizeRequisition, identityOf, listingKey, sameFact, history, conflict, correctionMaySubmit, current});
 })();
