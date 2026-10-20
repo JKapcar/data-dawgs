@@ -83,6 +83,8 @@ The page keeps the pending request across failures. A lost response is retried w
 
 ## Ingestion contract (pending)
 
+A bounded design for importing confirmations and status emails as owner-approved proposals is in [`job-harness-inbox.md`](job-harness-inbox.md). It is a proposal only: nothing is connected or scheduled.
+
 Keep source message/evidence ID to request-ID mapping in private ingestion storage. Never blindly retry an employer submission: this app has no submission feature. The future reconciler must verify authorized principal, source health, canonical employer/requisition, evidence URL, event date, resume version and explicit vs inferred reason before append. Deduplicate source events privately, preserve the original evidence reference, compare new evidence with the entire history, and queue ambiguous/backdated/correction cases for owner review. Partial failures must not advance a complete-sync watermark. A completed daily run will require a run ID, scanned window, source cursor, verified event IDs, failures and server readback revision/hash before claiming website synchronization. These run fields are a proposed separate adapter contract, not implemented writable fields or a scheduled job. Do not connect inboxes or create another automation as part of this patch.
 
 ## Limits
