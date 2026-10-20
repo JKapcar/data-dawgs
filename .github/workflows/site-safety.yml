@@ -68,6 +68,12 @@ on:
       - "work/test-bozo-disclosures-ui.mjs"
       - "tests/service-worker.test.js"
       - "tests/live-state.test.js"
+      - "jobs.html"
+      - "jobs.js"
+      - "jobs-core.js"
+      - "jobs.css"
+      - "work/jobs.js"
+      - "tests/jobs*"
       - ".github/workflows/site-safety.yml"
   pull_request:
     paths:
@@ -135,6 +141,12 @@ on:
       - "work/test-bozo-disclosures-ui.mjs"
       - "tests/service-worker.test.js"
       - "tests/live-state.test.js"
+      - "jobs.html"
+      - "jobs.js"
+      - "jobs-core.js"
+      - "jobs.css"
+      - "work/jobs.js"
+      - "tests/jobs*"
       - ".github/workflows/site-safety.yml"
 
 permissions:
@@ -167,6 +179,12 @@ jobs:
           if-no-files-found: ignore
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-disclosures-ui.mjs
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-diagnostics-ui.mjs
+      # Job Harness: API suites plus the four browser suites (real page against the real handler).
+      - run: node --test tests/jobs.test.cjs tests/jobs-history.test.cjs tests/jobs-members.test.cjs tests/jobs-privacy.test.cjs
+      - run: NODE_PATH=/tmp/dd-feedback-pw/node_modules node tests/jobs-browser.cjs
+      - run: NODE_PATH=/tmp/dd-feedback-pw/node_modules node tests/jobs-privacy-browser.cjs
+      - run: NODE_PATH=/tmp/dd-feedback-pw/node_modules node tests/jobs-history-browser.cjs
+      - run: NODE_PATH=/tmp/dd-feedback-pw/node_modules node tests/jobs-members-browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
