@@ -4,12 +4,13 @@
 // this set so changes to the modular research UI also invalidate the cache key.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "58617c44e7";
+const VERSION = "fc0f370604";
 // A cache revision also invalidates old images when only precached artwork changes.
 const CACHE = "dd-" + VERSION + "-public-v3";
 
 // the pages that must survive a network drop (stats.html is 2MB — cached on first visit instead)
 const CORE = [
+  "/presentation-mode.js", "/presentation-mode.css",
   "/", "/index.html", "/draft-leagues.html", "/draft-league.js", "/draft-personal-sync.js", "/draft-providers.js", "/draft-live-sync.js", "/dashboard.html", "/board.html", "/auction.html",
   "/bigboard.html", "/dataviz.html", "/report.html", "/master.html", "/strategy.html",
   // Lab landing pages — small, static, and the nav now points at them

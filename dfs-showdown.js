@@ -44,6 +44,8 @@ const TYPES = [
   { id: 'mme', label: 'Max-entry', sub: '~1.5K · $333', entrants: 1500, fee: 333, beta: 0.8 },
   { id: 'flag', label: 'Flagship', sub: '~90K entrants', entrants: 90000, fee: 20, beta: 0.1 }
 ];
+// Accounting category only: reuse the existing single-entry field hypothesis, no new ranking weights.
+TYPES.push({id:'cash',label:'Cash / Double Up',sub:'Payout-based cutoff',entrants:4000,fee:1,beta:TYPES[0].beta});
 const TYPE_IDS = TYPES.map(t => t.id);
 
 /* Lineup score weights by contest type. A placeholder until calibrated on receipts;
@@ -56,7 +58,7 @@ const SCORE_WEIGHTS = {
 };
 const CONTRIBUTOR_NAMES = {
   pts: 'Points for its ownership', ceil: 'Ceiling', top1: 'Top-1% chance',
-  cash: 'Cash chance', unique: 'Uniqueness'
+  cash: 'Top-22% simulation baseline', unique: 'Uniqueness'
 };
 const AXES = ['own', 'sal', 'dupe'];
 const MEASURES = ['proj', 'ceil'];
@@ -71,6 +73,59 @@ function finite(v) { return typeof v === 'number' && Number.isFinite(v); }
 function num(v) { const n = typeof v === 'string' ? parseFloat(v) : v; return finite(n) ? n : NaN; }
 const tick = () => new Promise(r => setTimeout(r, 0));
 
+/* Cash-line inputs use numeric types, never permissive string parsing. A numeric
+   payouts array is ordered by finishing rank; omitted trailing ranks pay zero.
+   Validate every supplied field, including lower-priority evidence. Conflicting
+   ratios fail closed; empty payouts are absent, not evidence of zero paid places. */
+function resolveCashLine(c = {}) {
+  const has = k => c[k] !== undefined && c[k] !== null;
+  const fail = m => { throw new Error('Cash line: ' + m); };
+  if (has('fieldSize') && (!Number.isInteger(c.fieldSize) || c.fieldSize < 2)) fail('fieldSize must be an integer >= 2');
+  if (has('paidPlaces') && (!Number.isInteger(c.paidPlaces) || c.paidPlaces < 0)) fail('paidPlaces must be a nonnegative integer');
+  if (has('cashLinePct') && (!finite(c.cashLinePct) || c.cashLinePct < 0 || c.cashLinePct > 100)) fail('cashLinePct must be a finite percentage from 0 to 100');
+  if (has('cashLineSource') && typeof c.cashLineSource !== 'string') fail('cashLineSource must be text');
+  if (has('contestType') && !['cash','gpp'].includes(c.contestType)) fail('contestType must be cash or gpp');
+  if (has('entryLimit') && (!Number.isInteger(c.entryLimit) || c.entryLimit < 1)) fail('entryLimit must be a positive integer');
+  for (const k of ['fee','prizePool']) if (has(k) && (!finite(c[k]) || c[k] < 0)) fail(k + ' must be finite and nonnegative');
+  if (has('payouts') && (!Array.isArray(c.payouts) || c.payouts.some(v => !finite(v) || v < 0))) fail('payouts must be a numeric nonnegative array by rank');
+  const payouts = c.payouts || [], evidence = [];
+  if ((payouts.length || has('paidPlaces')) && !has('fieldSize')) fail('supplied payouts/paidPlaces require fieldSize');
+  if (payouts.length > c.fieldSize || (has('paidPlaces') && c.paidPlaces > c.fieldSize)) fail('paid ranks exceed fieldSize');
+  for (let i=1;i<payouts.length;i++) if (payouts[i] > payouts[i-1]) fail('payouts must not increase at lower ranks');
+  const positive = payouts.filter(v => v > 0);
+  if (payouts.length) evidence.push(['payouts',positive.length/c.fieldSize]);
+  if (has('paidPlaces')) evidence.push(['paidPlaces',c.paidPlaces/c.fieldSize]);
+  if (has('cashLinePct')) evidence.push(['cashLinePct',c.cashLinePct/100]);
+  if (evidence.some(x => Math.abs(x[1]-evidence[0][1]) > 1e-9)) fail('supplied cutoff fields contradict each other');
+  const chosen = evidence[0] || ['assumed',0.22];
+  return {cashLine:chosen[1],cashLineSource:chosen[0],cashLineSourceText:c.cashLineSource || '',
+    // This describes supplied rank prizes only; ties at the boundary remain unresolved.
+    flatPositivePrizes:positive.length > 1 && positive.every(v => v === positive[0])};
+}
+function classifyContest(c = {}, fallback = 'se') {
+  const name=String(c.name || c.contest || '');
+  if (c.contestType === 'cash' || /double up|50\/50|head.to.head|triple up/i.test(name)) return 'cash';
+  if (finite(c.fieldSize) && c.fieldSize >= 20000) return 'flag';
+  if (finite(c.prizePool) && c.prizePool >= 250000 && /\[\$?(?:500|50)K to 1st\]/i.test(name)) return 'flag';
+  if (c.entryLimit === 1) return 'se';
+  if (Number.isInteger(c.entryLimit) && c.entryLimit > 1) return c.entryLimit >= 100 ? 'mme' : 'mid';
+  if (/single[ -]entry/i.test(name)) return 'se';
+  if (/milly|millionaire/i.test(name)) return 'flag';
+  const m=name.match(/\[(\d+)\s*entry max\]/i);
+  return m ? (+m[1] === 1 ? 'se' : +m[1] >= 100 ? 'mme' : 'mid') : fallback;
+}
+function formatSimulationPct(pct, worlds) {
+  if (!finite(pct) || pct < 0 || pct > 100 || !Number.isInteger(worlds) || worlds < 1) return 'Unavailable';
+  if ((pct < 100 && Math.round(pct) >= 100) || pct === 100 && worlds < 5000) return '>99%';
+  if (pct === 100) return '100% in simulation';
+  return (pct < 1 && pct > 0 ? '<1' : Math.round(pct)) + '%';
+}
+function wilson95(hits, n) {
+  if (!Number.isInteger(hits) || !Number.isInteger(n) || n < 1 || hits < 0 || hits > n) return null;
+  const z=1.959963984540054, q=z*z, p=hits/n, d=1+q/n;
+  const center=(p+q/(2*n))/d, half=z*Math.sqrt(p*(1-p)/n+q/(4*n*n))/d;
+  return [Math.max(0,center-half),Math.min(1,center+half)];
+}
 /* ---------------------------------------------------------------- inputs */
 
 /* Normalise workspace players. Ownership is PERCENT, 0–100, as everywhere on the site.
@@ -120,13 +175,17 @@ function prepareEntries(P, entries) {
     const sal = P[cpt].cptSal + flex.reduce((s, i) => s + P[i].sal, 0);
     if (sal > 50000) { problems.push(label + ': is over the $50,000 cap.'); return; }
     if (new Set(all.map(i => P[i].team)).size < 2) { problems.push(label + ': needs players from both teams.'); return; }
-    const type = TYPE_IDS.includes(e.type) ? e.type : 'se';
+    let cashMeta;
+    const supplied = e.contestMeta || e;
+    try { cashMeta = resolveCashLine(supplied); } catch(err) { problems.push(label + ': ' + err.message); return; }
+    const type = classifyContest(supplied, TYPE_IDS.includes(e.type) ? e.type : 'se');
     const preset = TYPES.find(t => t.id === type);
     const fee = finite(num(e.fee)) && num(e.fee) >= 0 ? num(e.fee) : 1;
-    const entrants = Number.isInteger(+e.entrants) && +e.entrants >= 2 ? +e.entrants : preset.entrants;
+    if (supplied.fieldSize != null && e.entrants != null && supplied.fieldSize !== e.entrants) { problems.push(label + ': fieldSize contradicts entrants'); return; }
+    const entrants = supplied.fieldSize != null ? supplied.fieldSize : Number.isInteger(+e.entrants) && +e.entrants >= 2 ? +e.entrants : preset.entrants;
     const canon = lineupKey(P, cpt, flex);
     out.push({
-      key: e.key || canon, canon, label, cpt, flex, ids: all, sal, fee, type, entrants,
+      key: e.key || canon, canon, label, cpt, flex, ids: all, sal, fee, type, entrants, ...cashMeta,
       contest: String(e.contest || '').slice(0, 120), source: e.source || 'workspace', idx: out.length
     });
   });
@@ -398,6 +457,9 @@ async function runWorlds(E, P, field, weights, entries, bench, opts, onProgress)
   // finish[entry][type][bin] counts; bench hits per type
   const finish = entries.map(() => types.map(() => new Float64Array(6)));
   const bTop1 = types.map(() => new Float64Array(B)), bCash = types.map(() => new Float64Array(B));
+  const eCashBaseline = types.map(() => new Float64Array(K));
+  const cashCuts = [...new Set(entries.map(e => e.cashLine))].sort((a,b)=>a-b);
+  const entryThresholds = types.map(() => ({}));
   const eTop1 = types.map(() => new Float64Array(K)), eCash = types.map(() => new Float64Array(K));
   const bestCpt = new Float64Array(NP), bestAny = new Float64Array(NP);
   let anyTop1 = 0, anyCash = 0;
@@ -425,14 +487,19 @@ async function runWorlds(E, P, field, weights, entries, bench, opts, onProgress)
       keys[f] = Math.floor(Math.max(0, v) * 1000) * 8192 + f;
     }
     keys.sort();
-    // thresholds per type, walking down from the top
-    for (let t = 0; t < T; t++) {
-      const wt = wf[t]; let acc = 0, c = 0;
-      for (let r = nf - 1; r >= 0 && c < FINISH_CUTS.length; r--) {
-        acc += wt[keys[r] % 8192];
-        while (c < FINISH_CUTS.length && acc >= FINISH_CUTS[c]) { th[t * FINISH_CUTS.length + c] = fScore[keys[r] % 8192]; c++; }
+    // One cumulative traversal per type for all legacy bins and entry cash lines.
+    const cuts=[...new Set(FINISH_CUTS.concat(cashCuts))].sort((a,b)=>a-b);
+    for (let t=0;t<T;t++) {
+      const found={};let acc=0,c=0;
+      while(c<cuts.length && cuts[c]===0){found[cuts[c++]]=Infinity;}
+      for(let r=nf-1;r>=0 && c<cuts.length;r--){
+        const id=keys[r]%8192;acc+=wf[t][id];
+        while(c<cuts.length && acc>=cuts[c]) found[cuts[c++]]=fScore[id];
       }
-      while (c < FINISH_CUTS.length) { th[t * FINISH_CUTS.length + c] = -Infinity; c++; }
+      while(c<cuts.length) found[cuts[c++]]=-Infinity;
+      found[1]=-Infinity;
+      FINISH_CUTS.forEach((cut,i)=>{th[t*FINISH_CUTS.length+i]=found[cut];});
+      cashCuts.forEach(cut=>{entryThresholds[t][cut]=found[cut];});
     }
     let bestV = fScore[keys[nf - 1] % 8192], bestIds = null;
     for (let k = 0; k < K; k++) { eScore[k] = lineScore(eIds[k]); if (eScore[k] > bestV) { bestV = eScore[k]; bestIds = eIds[k]; } }
@@ -448,7 +515,8 @@ async function runWorlds(E, P, field, weights, entries, bench, opts, onProgress)
         for (let c = 0; c < FINISH_CUTS.length; c++) if (v > th[o + c]) { bin = c; break; }
         finish[k][t][bin]++;
         if (v > t1) { eTop1[t][k]++; if (types[t] === entries[k].type) hitTop1 = true; }
-        if (v > tc) { eCash[t][k]++; if (types[t] === entries[k].type) hitCash = true; }
+        if (v > tc) eCashBaseline[t][k]++;
+        if (v > entryThresholds[t][entries[k].cashLine]) { eCash[t][k]++; if (types[t] === entries[k].type) hitCash = true; }
       }
       for (let k = 0; k < B; k++) { if (bScore[k] > t1) bTop1[t][k]++; if (bScore[k] > tc) bCash[t][k]++; }
     }
@@ -457,7 +525,8 @@ async function runWorlds(E, P, field, weights, entries, bench, opts, onProgress)
     if (now - last > 40) { last = now; await tick(); if (onProgress) onProgress('worlds', (s + 1) / worlds); }
   }
   return {
-    worlds, fieldSim: nf, warn: G.warn,
+    worlds, fieldSim: nf, warn: G.warn, anyCashHits:anyCash,
+    eCashHits:eCash.map(a=>Array.from(a)), eCashBaseline:eCashBaseline.map(a=>Array.from(a,v=>v/worlds*100)),
     finish: finish.map(rows => rows.map(r => Array.from(r, v => v / worlds * 100))),
     eTop1: eTop1.map(a => Array.from(a, v => v / worlds * 100)), eCash: eCash.map(a => Array.from(a, v => v / worlds * 100)),
     bTop1: bTop1.map(a => Array.from(a, v => v / worlds * 100)), bCash: bCash.map(a => Array.from(a, v => v / worlds * 100)),
@@ -585,7 +654,7 @@ async function analyze(input, opts) {
   for (const t of TYPE_IDS) { const a = new Float64Array(nF); for (let k = 0; k < nF; k++) a[k] = -(freq[t].get(fKeys[k]) || 0); fieldUniq[t] = a; }
   const fieldCeil = fx.ceil;
   entries.forEach((e, k) => {
-    e.grade = {}; e.contrib = {}; e.score = {}; e.finish = {}; e.top1 = {}; e.cash = {}; e.dupes = {};
+    e.cashInterval = {}; e.cashHits = {}; e.grade = {}; e.contrib = {}; e.score = {}; e.finish = {}; e.top1 = {}; e.cash = {}; e.dupes = {};
     TYPE_IDS.forEach((t, ti) => {
       const preset = TYPES[ti];
       const ent = t === e.type ? e.entrants : preset.entrants;
@@ -598,16 +667,18 @@ async function analyze(input, opts) {
         for (const mm of MEASURES) e.grade[t][a][mm] = pctInSorted(bb.measures[mm].sorted[b], e.feat[mm]);
       }
       const top1 = sim ? sim.eTop1[ti][k] : 0, cash = sim ? sim.eCash[ti][k] : 0;
-      e.top1[t] = round(top1, 2); e.cash[t] = round(cash, 1);
+      e.top1[t] = round(top1, 2); e.cash[t] = cash;
+      e.cashHits[t] = sim ? sim.eCashHits[ti][k] : 0; e.cashInterval[t] = sim ? wilson95(e.cashHits[t],sim.worlds) : null;
       e.finish[t] = sim ? sim.finish[k][ti].map(v => round(v, 1)) : [0, 0, 0, 0, 0, 100];
       const c = {
         pts: e.grade[t].own.proj,
         ceil: weightedPct(fieldCeil, weights[t], e.feat.ceil),
         top1: sim ? weightedPct(sim.bTop1[ti], benchW[t], top1) : 50,
-        cash: sim ? weightedPct(sim.bCash[ti], benchW[t], cash) : 50,
+        cash: sim ? weightedPct(sim.bCash[ti], benchW[t], sim.eCashBaseline[ti][k]) : 50,
         unique: weightedPct(fieldUniq[t], weights[t], -fq)
       };
       e.contrib[t] = c;
+      if (t === 'cash' || e.type === 'cash') { e.score[t]={score:null,word:'Unavailable'}; return; }
       const W = SCORE_WEIGHTS[t]; let sc = 0;
       for (const key of Object.keys(W)) sc += W[key] * c[key];
       e.score[t] = { score: Math.round(sc), word: gradeWord(Math.round(sc)) };
@@ -651,10 +722,10 @@ async function analyze(input, opts) {
     bands: stripBands(bands), frontier: best, cloud, domains,
     entries: entries.map(e => ({
       key: e.key, label: e.label, idx: e.idx, cpt: e.cpt, flex: e.flex, ids: e.ids, sal: e.sal, fee: e.fee, type: e.type,
-      entrants: e.entrants, contest: e.contest, source: e.source, feat: e.feat, split: e.split, script: e.script,
+      entrants: e.entrants, contest: e.contest, source: e.source, cashLine:e.cashLine,cashLineSource:e.cashLineSource,cashLineSourceText:e.cashLineSourceText,flatPositivePrizes:e.flatPositivePrizes,cashInterval:e.cashInterval,cashHits:e.cashHits, feat: e.feat, split: e.split, script: e.script,
       grade: e.grade, contrib: e.contrib, score: e.score, finish: e.finish, top1: e.top1, cash: e.cash, dupes: e.dupes
     })),
-    portfolio: { fees: round(fees, 2), entries: entries.length, pTop1: sim ? round(sim.pTop1, 1) : 0, pCash: sim ? round(sim.pCash, 1) : 0, avgCopies: round(avgCopies, 2), captains: new Set(entries.map(e => e.cpt)).size },
+    portfolio: { fees: round(fees, 2), entries: entries.length, pTop1: sim ? round(sim.pTop1, 1) : 0, cashHits:sim ? sim.anyCashHits : 0,cashInterval:sim ? wilson95(sim.anyCashHits,sim.worlds) : null,pCash: sim ? sim.pCash : 0, avgCopies: round(avgCopies, 2), captains: new Set(entries.map(e => e.cpt)).size },
     exposure, captains, scripts, overlap, warnings
   };
 }
@@ -696,12 +767,7 @@ function normName(s) {
   return String(s || '').toLowerCase().replace(/\(.*?\)/g, '').replace(/[.'’]/g, '').replace(/\b(jr|sr|ii|iii|iv|v)\b/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 }
 function contestTypeFromName(name, fallback) {
-  const s = String(name || '').toLowerCase();
-  if (/single entry/.test(s)) return 'se';
-  const m = s.match(/\[(\d+)\s*entry max\]/);
-  if (m) { const n = +m[1]; return n >= 100 ? 'mme' : 'mid'; }
-  if (/milly|millionaire/.test(s)) return 'flag';
-  return fallback || 'se';
+  return classifyContest({name},fallback || 'se');
 }
 function parseEntriesCsv(text, players) {
   const lines = String(text || '').split(/\r?\n/).filter(l => l.trim());
@@ -783,6 +849,7 @@ function demoSlate() {
 }
 
 return {
+  resolveCashLine, classifyContest, formatSimulationPct, wilson95,
   VERSION, TYPES, SCORE_WEIGHTS, CONTRIBUTOR_NAMES, AXES, MEASURES, FINISH_CUTS,
   analyze, preparePlayers, prepareEntries, features, gradeWord, lineupKey, parseEntriesCsv, parseCsvLine,
   contestTypeFromName, normName, demoSlate, scriptOf, splitOf,

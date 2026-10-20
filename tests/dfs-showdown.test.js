@@ -48,7 +48,7 @@ test('analysis is deterministic for a seed and its distributions are coherent', 
     assert.ok(e.cash[t.id] >= e.top1[t.id], 'cashing includes every top-1% finish');
     const s = e.score[t.id];
     assert.ok(s.score >= 0 && s.score <= 100);
-    assert.equal(s.word, SD.gradeWord(s.score));
+    if (t.id === 'cash') assert.deepEqual(s, {score:null,word:'Unavailable'}); else assert.equal(s.word, SD.gradeWord(s.score));
     assert.ok(e.dupes[t.id] >= 0);
   }
   assert.ok(a.portfolio.pTop1 <= a.portfolio.pCash);
@@ -131,7 +131,9 @@ test('the page is public code with no paid data in it and only reads the account
   assert.match(html, /<script src="work\/dfs-engine\.js"><\/script>/);
   assert.match(html, /<script src="dfs-showdown\.js\?v=[\w.-]+"><\/script>/);
   assert.match(html, /<script data-page="dfs-showdown">/);
-  const page = html.slice(html.indexOf('<main class="sd"'));
+  const main = html.match(/<main\b[^>]*\bid="sd"/);
+  assert.ok(main, 'Showdown main exists');
+  const page = html.slice(main.index);
   for (const text of [page, core]) {
     assert.doesNotMatch(text, /\bETR\b|Establish ?The ?Run/i, 'no vendor data or attribution in the page’s own code');
   }

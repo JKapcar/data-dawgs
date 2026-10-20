@@ -1,0 +1,21 @@
+
+    [data-dd-view="tldr"] [data-dd-agent-only]{display:none!important}
+    .dd-presentation{box-sizing:border-box;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:6px 12px;margin:0 auto;max-width:1400px;color:var(--ink-1,#2a1a06);font:14px/1.35 system-ui,sans-serif}
+    .dd-presentation button{box-sizing:border-box;font:inherit;min-height:44px;padding:8px 12px;border:1px solid var(--border,#a9957e);border-radius:10px;background:var(--surface-1,#fff7ed);color:var(--ink-1,#2a1a06);cursor:pointer}
+    .dd-presentation button[aria-pressed="true"]{background:var(--accent,#ff6a03);color:var(--accent-ink,#211305);font-weight:750;border-color:currentColor}
+    .dd-presentation button:focus-visible,.dd-human-help summary:focus-visible{outline:3px solid var(--accent,#ff6a03);outline-offset:3px}
+    .dd-agent-summary{flex:1 1 100%;font-size:14px;overflow-wrap:anywhere;border-left:3px solid var(--accent,#ff6a03);padding:8px 12px}
+    .dd-agent-summary[hidden]{display:none}.dd-agent-summary p{margin:4px 0}.dd-agent-summary a{display:inline-block;min-height:44px;padding:8px 10px;box-sizing:border-box;color:inherit}
+    .dd-human-help{margin:4px 0 8px}.dd-human-help>summary{cursor:pointer;min-height:44px;box-sizing:border-box;padding:10px 0;font:600 14px/1.5 system-ui,sans-serif;color:var(--ink-2,inherit)}
+    .dd-human-warning{border-left:3px solid var(--warn,#ab6600);padding-left:10px}.dd-human-warning>summary{font-weight:750}.dd-human-warning .p-disclosure{margin:4px 0}
+    .dd-human-help>.p-lead{font-size:16px!important;margin:8px 0!important}
+    [data-dd-compact] .p-jump{margin:8px 0 12px;gap:6px}
+    [data-dd-compact] .p-section{margin:16px 0}
+    [data-dd-compact] .p-section>header{margin-bottom:8px;padding-bottom:6px}
+    [data-dd-compact] .dd-human-help{margin:2px 0}
+    [data-dd-compact] .p-hero{padding-top:4px;max-width:none}
+    [data-dd-compact] .p-hero h1{font-size:clamp(24px,4vw,36px);margin:6px 0;line-height:1.15}
+    [data-dd-compact][data-dd-view="tldr"] .p-hero .p-kicker{display:none}
+    [data-dd-compact] .p-hero .p-kicker{font-size:10px;letter-spacing:.04em}
+    @media(max-width:600px){.dd-presentation{padding:4px 12px}[data-dd-compact] main{padding-top:6px}}
+    @media print{.dd-presentation{display:none}[data-dd-view="tldr"] [data-dd-agent-only]{display:block!important}}
