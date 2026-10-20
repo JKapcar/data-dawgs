@@ -1,0 +1,54 @@
+# Job Harness: local review version
+
+Proposed route: `/jobs.html`, consistent with the site's standalone app pages. This is a new app, not a migration from a vault or a claim that an old tracker has been imported. No global navigation, account permissions, connector grants, schedules or credentials change in this patch. Existing daily Gmail checking remains independent and must report website integration as pending.
+
+## Privacy and release gate
+
+The new `/api/jobs/v1` route reuses `poundIdentity`: exact signed bearer session, account/revocation verification, and rejection of legacy headers. It then requires the existing configured `RESEARCH_OWNER_UID`. `JOB_HARNESS_ENABLED` must equal `true`; it is deliberately absent from configuration. Other users cannot read or write, even with known record IDs. There is no friend enrollment path.
+
+Storage is a separate `/privateJobs/v1/<verified uid>` envelope containing `owner_uid` and a JSON-string payload. Owner identity is checked both outside and inside that payload. No client-supplied tenant or owner is accepted. No job data shares a research tenant, Pound record, or public data file. Responses are private/no-store; the service worker excludes the app and API. The browser keeps records only in memory, clears on hide/account change, renders text safely and excludes records from assistant context. It uses only the existing session key; no content is written to browser storage.
+
+**Rules snapshot verified locally:** The parent inspected the complete displayed RTDB rules; the exact SHA-256 9507116bd03e832af8cb9ab084845f82c9e21f2c894cf6aa48ed6718c2b34179 snapshot passed 174 emulator permission checks (160 denials, 14 expected allows). No direct-client grant is needed. This does not verify deployed gateway behavior or rules freshness at release. **Activation remains gated:** deployed logging/privacy handling and private readback have not been verified. Before activating, obtain approval for any necessary security configuration; verify direct database anonymous and other-user reads/writes are denied, then deployed API isolation and private save/readback. This patch neither changes rules nor enables storage. Handler tests prove local behavior; separate rules-emulator tests prove only the inspected snapshot. No real records should be entered until this gate passes. Future friends require a separately reviewed access model and per-user negative tests; never add them to the owner UID or share this owner's envelope.
+
+## Stored contract
+
+Workspace v1: `owner_uid`, monotonically increasing `revision`, `updated_at`, `records`, durable `receipts`, and `source: {health: "not_connected", last_verified_at: null, sync: "pending"}`. The UI's latest verified time is explicitly the latest record evidence date; it is not a successful inbox-sync timestamp.
+
+`record.create` accepts exactly: `employer_key` (canonical lowercase slug), `employer`, `role`, `requisition` (exact source text), verified HTTPS `url`, `url_verified_at`, `resume_version`, `next_action`, `blocker`. Identity is canonical employer key plus trimmed case-folded requisition. Reusing that pair returns 409, regardless of role title or URL changes. Employer aliases must be reconciled to the same stable key before ingestion; free-text company naming is not a substitute. No fuzzy matching or inferred merges.
+
+`event.append` accepts exactly: `id`, `stage`, `outcome`, `occurred_at`, `verified_at`, nullable `evidence_url`, `reason_kind`, `reason`, `next_action`, `blocker`, `resume_version`. UTC timestamps use millisecond ISO form. Stage: opportunity, approved, submitted, interview, offer, closed. Outcome: none, no_later_decision, rejected, position_closed, blocked_not_submitted, withdrawn, accepted. Decision/submission stages require evidence; a blocked/not-submitted record cannot have prior submission events. Closed stages require a closed outcome. Backdated events and stage regression require explicit reconciliation and are rejected in v1. There is no correction/delete endpoint yet.
+
+Every append preserves prior snapshots and adds server `recorded_at` and verified `actor_uid`. An absent reason stays `unknown` with empty text. `explicit` needs an evidence reference; `inferred` is a labeled hypothesis, never a factual cause. A template email or timing does not establish automation or rejection reasons. No response means `no_later_decision`, never rejected. A receipt reference is owner-verified input; the service does not fetch links or certify employer authenticity.
+
+## Concurrency and daily ingestion contract (pending)
+
+GET first. POST `{op, data, expected_revision, request_id}` with the exact workspace revision and a 16–80 character idempotency key. Canonical payload fingerprints bind keys to content. Exact lost-response retries replay; changed payload with the same key conflicts. CAS uses Firebase ETag and rechecks session revocation immediately before commit. On 409 re-read, reconcile, and use a new key only for a new logical operation. Keep source message/evidence ID to request-ID mapping in private ingestion storage. Never blindly retry an employer submission: this app has no submission feature.
+
+The future reconciler must verify authorized principal, source health, canonical employer/requisition, evidence URL, event date, resume version and explicit vs inferred reason before append. Deduplicate source events privately, preserve the original evidence reference, compare new evidence with the entire history, and queue ambiguous/backdated/correction cases for owner review. Partial failures must not advance a complete-sync watermark. A completed daily run will require a run ID, scanned window, source cursor, verified event IDs, failures and server readback revision/hash before claiming website synchronization. These run fields are a proposed separate adapter contract, not implemented writable fields or a scheduled job. Do not connect inboxes or create another automation as part of this patch.
+
+Limits fail closed at 300 records, 300 events per record, 2,000 durable receipts or 1 MiB payload; no history or replay key is pruned. Archival and correction workflows require later review.
+
+## Acceptance and local verification
+
+- Signed-out and cross-user read/write denied before storage; mismatched owner envelopes denied.
+- Disabled flag, revoked sessions, hostile origins, query/path tenant attempts and legacy credentials fail closed.
+- Duplicate identity, receipt replay/conflict, stale revision, ETag race and missing evidence tested.
+- Every lifecycle update preserves history; no rejection cause inferred from silence.
+- Synthetic preview clearly labeled; no private records, inboxes, resumes or client data in fixtures.
+- Desktop and 390/320px mobile layout, stage filtering, details, keyboard dialog dismissal and session-change DOM clearing checked by `tests/jobs-browser.cjs`.
+- Run `node --test tests/jobs.test.cjs tests/dawg-pound.test.cjs tests/research-project.test.cjs` and `node tests/jobs-browser.cjs` with local Playwright configured. Stamp cache version using `python work/stamp-sw-version.py`.
+
+Repository `AGENTS.md` and `docs/visual-interaction-design.md` were read. A separately named software-engineering guidance file was not found in this checkout or installed local skill catalog. Independent review was completed for the disabled implementation and rules-emulator evidence; final logging/privacy deltas are separately reviewed. This version has no deployment, production readback, inbox connection, auto-apply, friend access, or external communications.
+
+
+## Local logging/privacy review and bounded release scope
+
+The job page loads only its own script/style, has no analytics/beacon/third-party script, uses a restrictive CSP and no-referrer policy, and never writes record content to web storage. Form autofill is disabled as a browser hint. The API URL is fixed; payloads are JSON bodies and the existing session is an Authorization header. Links use HTTPS with no embedded credentials and noreferrer. They open only after an explicit click. Error UI uses fixed messages, never raw response/parser text. Lock, logout/account changes (including storage.clear), hide and page restoration clear private DOM and drafts; pending requests are aborted and old responses cannot restore state. Same-tab changes are detected at next request/focus or within 500 ms while active.
+
+Synthetic sentinel tests cover application console/error output, extra request destinations, URL/referrer leakage, local/session storage, cache, assistant context, and clearing behavior. Service-worker tests verify private requests bypass caching and private/JSON responses cannot be stored. Changed public assets contain only invented examples; no real records were imported or read. This review does not certify unrelated pre-existing public content.
+
+The job route returns before other dispatch paths, contains no console or analytics call, and converts unexpected storage/parse failures to a generic error. Shared identity helpers do not log. The complete manifest currently enables observability/logs. The shared fbUrl helper places the existing server credential in an outbound `auth` query parameter. Application tests cannot certify provider-side request/subrequest traces, invocation logs, Logpush/tail destinations or retention. Cloudflare documents fetch invocation method/URL capture: https://developers.cloudflare.com/workers/observability/logs/workers-logs/ . Rejecting incoming query parameters does not retroactively remove provider-captured URLs. Before activation, inspect current logging/tracing/export settings and synthetic observations for header/body/credential redaction. If any change is required, present its exact diff and obtain separate approval; no logging configuration changed here.
+
+Bounded approval target, once platform logging/privacy checks pass: release only this job page, style/script, Worker route/module and cache version using the complete existing manifest, then set the non-secret Worker variable `JOB_HARNESS_ENABLED="true"`. Keep `RESEARCH_OWNER_UID` unchanged. Reuse existing signed sessions and server storage authority; create no credential, grant, database rule or public job data. Verify a synthetic private save/readback and denied signed-out/other-user API access under the approved release test plan before importing real records. Roll back activation by removing the flag or setting it to "false"; preserve stored history. Do not disable worker-wide logs without separate approval.
+
+Friend access remains rejected server-side. Inbox sync, connector access, daily reconciliation writes, new schedules, employer submissions/auto-apply, resume-file upload, correction/delete/archive automation remain unavailable. Approval for this release must not imply those capabilities or changes to other applications.
