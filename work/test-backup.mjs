@@ -215,5 +215,36 @@ const T0 = Date.parse("2026-09-15T09:00:00Z");
  ok('successful backup does not alter repaired active data',JSON.stringify(WHOLE_DB)===repaired);
  delete WHOLE_DB.researchLab;
 }
+// Job harness workspaces (owner and members): never in either general form, one
+// 30-day copy per verified owner per day, sanitized failures. Synthetic content only.
+{
+  WHOLE_DB.privateJobs={v1:{
+    u_one:{owner_uid:"u_one",payload:JSON.stringify({version:1,owner_uid:"u_one",records:[{role:"SYNTHETIC_JOB_ONE"}]})},
+    u_two:{owner_uid:"u_two",payload:JSON.stringify({version:1,owner_uid:"u_two",records:[{role:"SYNTHETIC_JOB_TWO"}]})}}};
+  const original=JSON.stringify(WHOLE_DB),kv=makeKV(),before=fbRequests.length;
+  await worker.scheduled({scheduledTime:T0},{FB_SECRET:"s",RL:kv},{});
+  const general=kv.puts.filter(p=>p.k.startsWith("backup:")&&p.k!=="backup:lasterror");
+  ok("job workspaces never enter the dated or permanent general backups",general.length===2&&general.every(p=>!Object.hasOwn(JSON.parse(p.v).db,"privateJobs")&&!p.v.includes("SYNTHETIC_JOB_")));
+  const copies=kv.puts.filter(p=>p.k.startsWith("jobs-backup:"));
+  ok("one job copy per verified owner and date",copies.length===2&&copies.every(p=>/^jobs-backup:v1:u_(one|two):2026-09-15$/.test(p.k)));
+  ok("every job copy expires in exactly 30 days; none is permanent",copies.every(p=>p.opts?.expirationTtl===2592000)&&!kv.puts.some(p=>p.k.startsWith("jobs-backup:")&&p.k.endsWith(":latest")));
+  ok("each job copy holds only its own owner's exact envelope",copies.every(p=>{const v=JSON.parse(p.v);return v.version===1&&JSON.stringify(v.workspace)===JSON.stringify(WHOLE_DB.privateJobs.v1[v.owner_uid])&&!Object.hasOwn(v,"db");}));
+  ok("job backup only reads Firebase and leaves active data untouched",fbRequests.slice(before).every(r=>r.method==="GET")&&JSON.stringify(WHOLE_DB)===original);
+  delete WHOLE_DB.privateJobs;
+}
+{
+  WHOLE_DB.privateJobs={v1:{u_one:{owner_uid:"u_other",payload:"SYNTHETIC_JOB_CANARY"}}};
+  let kv=makeKV(),message="";try{await worker.scheduled({scheduledTime:T0},{FB_SECRET:"s",RL:kv},{});}catch(e){message=e.message;}
+  ok("a job envelope naming another owner is refused with a sanitized error",message==="Private job backup record invalid"&&!kv.puts.some(p=>p.k.startsWith("jobs-backup:")));
+  ok("refused job data stays out of general backups and the post-mortem",!Object.hasOwn(JSON.parse(kv.store.get("backup:latest")).db,"privateJobs")&&!kv.store.get("backup:lasterror").includes("SYNTHETIC_JOB_CANARY"));
+  WHOLE_DB.privateJobs={v2:{u_one:{owner_uid:"u_one",payload:"SYNTHETIC_JOB_CANARY"}}};
+  kv=makeKV();message="";try{await worker.scheduled({scheduledTime:T0},{FB_SECRET:"s",RL:kv},{});}catch(e){message=e.message;}
+  ok("an unknown job store version fails visibly instead of going unbacked-up",message==="Private job backup shape invalid"&&!Object.hasOwn(JSON.parse(kv.store.get("backup:latest")).db,"privateJobs"));
+  WHOLE_DB.privateJobs={v1:{u_one:{owner_uid:"u_one",payload:"SYNTHETIC_JOB_CANARY"}}};
+  kv=makeKV();const base=kv.put.bind(kv);kv.put=async(k,v,o)=>{if(k.startsWith("jobs-backup:"))throw new Error("provider exposed SYNTHETIC_JOB_CANARY");return base(k,v,o);};message="";
+  try{await worker.scheduled({scheduledTime:T0},{FB_SECRET:"s",RL:kv},{});}catch(e){message=e.message;}
+  ok("a failed job copy reports a sanitized message and leaves the general backup intact",message==="Private job backup write failed"&&kv.store.has("backup:latest")&&!kv.store.get("backup:lasterror").includes("SYNTHETIC_JOB_CANARY"));
+  delete WHOLE_DB.privateJobs;
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
