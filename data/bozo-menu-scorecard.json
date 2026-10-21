@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-13",
+ "as_of": "2026-10-21",
  "source": "Data Dawgs public Bozo Menu (Worker /bozo/menu.json) graded against Worker /scores finals and DraftKings near-closes (SportsGameOdds).",
  "tier": "labs",
  "graded": true,
@@ -7,9 +7,10 @@
  "data": {
   "weeks": [
    "2026-10-05",
-   "2026-10-12"
+   "2026-10-12",
+   "2026-10-19"
   ],
-  "rows_total": 156,
+  "rows_total": 279,
   "benchmarks": {
    "random_hit_rate": 0.5,
    "breakeven_at_minus_110": 0.5238,
@@ -298,6 +299,6 @@
   }
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-13T19:52:54.512Z",
+ "built": "2026-10-21T11:54:13.043Z",
  "canonical_url": "https://datadawgs216.com/data/bozo-menu-scorecard.json"
 }

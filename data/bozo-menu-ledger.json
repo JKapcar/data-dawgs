@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-20",
+ "as_of": "2026-10-21",
  "source": "Data Dawgs public Bozo Menu (Worker /bozo/menu.json) graded against Worker /scores finals and DraftKings near-closes (SportsGameOdds).",
  "tier": "labs",
  "graded": true,
@@ -7,7 +7,8 @@
  "data": {
   "weeks": [
    "2026-10-05",
-   "2026-10-12"
+   "2026-10-12",
+   "2026-10-19"
   ],
   "rows": [
    {
@@ -286,7 +287,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-20T17:09:56.000Z"
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
     },
     "result": "loss",
     "actual": {
@@ -4052,7 +4053,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-20T17:09:56.000Z"
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
     },
     "result": "win",
     "actual": {
@@ -4125,7 +4126,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-20T17:09:56.000Z"
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
     },
     "result": "win",
     "actual": {
@@ -4198,7 +4199,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-20T17:09:56.000Z"
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
     },
     "result": "win",
     "actual": {
@@ -4271,7 +4272,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-20T17:09:56.000Z"
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
     },
     "result": "loss",
     "actual": {
@@ -4343,7 +4344,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-20T17:09:56.000Z"
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
     },
     "result": "loss",
     "actual": {
@@ -4416,7 +4417,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-20T17:09:56.000Z"
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
     },
     "result": "win",
     "actual": {
@@ -4489,7 +4490,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-20T17:09:56.000Z"
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
     },
     "result": "loss",
     "actual": {
@@ -7954,10 +7955,5374 @@
     "close": null,
     "clv": null,
     "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "2026w43-cfb-nmsu-shsu-moneyline-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "New Mexico State at Sam Houston",
+    "kickoff": "2026-10-22T00:00:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "New Mexico State moneyline",
+     "side": "New Mexico State",
+     "line": null,
+     "team": "NMSU",
+     "odds": -148,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401871070",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-nmsu-shsu-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "New Mexico State at Sam Houston",
+    "kickoff": "2026-10-22T00:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 44.5",
+     "side": "over",
+     "line": 44.5,
+     "team": null,
+     "odds": -112,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401871070",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-jmu-app-moneyline-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "James Madison at Appalachian State",
+    "kickoff": "2026-10-22T23:00:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "James Madison moneyline",
+     "side": "James Madison",
+     "line": null,
+     "team": null,
+     "odds": -425,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "2026w43-cfb-jmu-app-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "James Madison at Appalachian State",
+    "kickoff": "2026-10-22T23:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "James Madison -10.5",
+     "side": "James Madison",
+     "line": -10.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "2026w43-cfb-jmu-app-total-under",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "James Madison at Appalachian State",
+    "kickoff": "2026-10-22T23:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 56.5",
+     "side": "under",
+     "line": 56.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "2026w43-cfb-lib-kenn-moneyline-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Liberty at Kennesaw State",
+    "kickoff": "2026-10-22T23:00:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Liberty moneyline",
+     "side": "Liberty",
+     "line": null,
+     "team": "LIB",
+     "odds": -395,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401871056",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-lib-kenn-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Liberty at Kennesaw State",
+    "kickoff": "2026-10-22T23:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Liberty -10.5",
+     "side": "Liberty",
+     "line": -10.5,
+     "team": "LIB",
+     "odds": -107,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401871056",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-lib-kenn-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Liberty at Kennesaw State",
+    "kickoff": "2026-10-22T23:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 49.5",
+     "side": "over",
+     "line": 49.5,
+     "team": null,
+     "odds": -105,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401871056",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-ecu-mem-total-under",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "East Carolina at Memphis",
+    "kickoff": "2026-10-22T23:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 54.5",
+     "side": "under",
+     "line": 54.5,
+     "team": null,
+     "odds": -108,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401862807",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-ne-chi-spread-away",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "New England Patriots at Chicago Bears",
+    "kickoff": "2026-10-23T00:15:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "New England Patriots +3",
+     "side": "New England Patriots",
+     "line": 3,
+     "team": "NE",
+     "odds": -118,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873010",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-ne-chi-total-under",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "New England Patriots at Chicago Bears",
+    "kickoff": "2026-10-23T00:15:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 50.5",
+     "side": "under",
+     "line": 50.5,
+     "team": null,
+     "odds": -105,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873010",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-duke-uva-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Duke at Virginia",
+    "kickoff": "2026-10-23T23:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 47.5",
+     "side": "over",
+     "line": 47.5,
+     "team": null,
+     "odds": -105,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858271",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-mass-conn-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Massachusetts at Connecticut",
+    "kickoff": "2026-10-23T23:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Massachusetts +14.5",
+     "side": "Massachusetts",
+     "line": 14.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "2026w43-cfb-mass-conn-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Massachusetts at Connecticut",
+    "kickoff": "2026-10-23T23:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 49.5",
+     "side": "over",
+     "line": 49.5,
+     "team": null,
+     "odds": -105,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "2026w43-cfb-army-tlsa-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Army at Tulsa",
+    "kickoff": "2026-10-24T00:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Army +1.5",
+     "side": "Army",
+     "line": 1.5,
+     "team": "ARMY",
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401862808",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-army-tlsa-total-under",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Army at Tulsa",
+    "kickoff": "2026-10-24T00:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 53.5",
+     "side": "under",
+     "line": 53.5,
+     "team": null,
+     "odds": -108,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401862808",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-af-wyo-moneyline-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Air Force at Wyoming",
+    "kickoff": "2026-10-24T01:00:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Air Force moneyline",
+     "side": "Air Force",
+     "line": null,
+     "team": "AFA",
+     "odds": -205,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401864525",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-af-wyo-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Air Force at Wyoming",
+    "kickoff": "2026-10-24T01:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Air Force -5.5",
+     "side": "Air Force",
+     "line": -5.5,
+     "team": "AFA",
+     "odds": -111,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401864525",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-cal-smu-spread-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "California at SMU",
+    "kickoff": "2026-10-24T16:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "SMU -19.5",
+     "side": "SMU",
+     "line": -19.5,
+     "team": "SMU",
+     "odds": -108,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858270",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-ind-mich-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Indiana at Michigan",
+    "kickoff": "2026-10-24T16:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Indiana -7.5",
+     "side": "Indiana",
+     "line": -7.5,
+     "team": "IU",
+     "odds": -105,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858496",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-ind-mich-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Indiana at Michigan",
+    "kickoff": "2026-10-24T16:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 41.5",
+     "side": "over",
+     "line": 41.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858496",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-lsu-aub-total-under",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "LSU at Auburn",
+    "kickoff": "2026-10-24T16:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 50.5",
+     "side": "under",
+     "line": 50.5,
+     "team": null,
+     "odds": -106,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856728",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-pitt-mia-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Pittsburgh at Miami-FL",
+    "kickoff": "2026-10-24T16:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 50.5",
+     "side": "over",
+     "line": 50.5,
+     "team": null,
+     "odds": -118,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858274",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-rice-fau-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Rice at Florida Atlantic",
+    "kickoff": "2026-10-24T16:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 52.5",
+     "side": "over",
+     "line": 52.5,
+     "team": null,
+     "odds": -118,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401862809",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-tt-cin-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Texas Tech at Cincinnati",
+    "kickoff": "2026-10-24T16:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Texas Tech -10.5",
+     "side": "Texas Tech",
+     "line": -10.5,
+     "team": "TTU",
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856840",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-tt-cin-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Texas Tech at Cincinnati",
+    "kickoff": "2026-10-24T16:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 56.5",
+     "side": "over",
+     "line": 56.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856840",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-wmu-tol-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Western Michigan at Toledo",
+    "kickoff": "2026-10-24T16:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 45.5",
+     "side": "over",
+     "line": 45.5,
+     "team": null,
+     "odds": -108,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401866450",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-wvu-tcu-moneyline-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "West Virginia at TCU",
+    "kickoff": "2026-10-24T16:00:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "TCU moneyline",
+     "side": "TCU",
+     "line": null,
+     "team": "TCU",
+     "odds": -310,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856841",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-wvu-tcu-spread-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "West Virginia at TCU",
+    "kickoff": "2026-10-24T16:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "TCU -8.5",
+     "side": "TCU",
+     "line": -8.5,
+     "team": "TCU",
+     "odds": -108,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856841",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-wvu-tcu-total-under",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "West Virginia at TCU",
+    "kickoff": "2026-10-24T16:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 56.5",
+     "side": "under",
+     "line": 56.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856841",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-akr-kent-spread-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Akron at Kent State",
+    "kickoff": "2026-10-24T17:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Kent State -2.5",
+     "side": "Kent State",
+     "line": -2.5,
+     "team": "KENT",
+     "odds": -130,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401866446",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-akr-kent-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Akron at Kent State",
+    "kickoff": "2026-10-24T17:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 46.5",
+     "side": "over",
+     "line": 46.5,
+     "team": null,
+     "odds": -108,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401866446",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-bay-ku-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Baylor at Kansas",
+    "kickoff": "2026-10-24T17:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Baylor -2.5",
+     "side": "Baylor",
+     "line": -2.5,
+     "team": "BAY",
+     "odds": -129,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856834",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-m-oh-cmu-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Miami-OH at Central Michigan",
+    "kickoff": "2026-10-24T17:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Miami-OH -2.5",
+     "side": "Miami-OH",
+     "line": -2.5,
+     "team": "M-OH",
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401866476",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-m-oh-cmu-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Miami-OH at Central Michigan",
+    "kickoff": "2026-10-24T17:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 40.5",
+     "side": "over",
+     "line": 40.5,
+     "team": null,
+     "odds": -105,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401866476",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-ore-ill-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Oregon at Illinois",
+    "kickoff": "2026-10-24T19:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Oregon -8.5",
+     "side": "Oregon",
+     "line": -8.5,
+     "team": "ORE",
+     "odds": -112,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858495",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-ore-ill-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Oregon at Illinois",
+    "kickoff": "2026-10-24T19:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 50.5",
+     "side": "over",
+     "line": 50.5,
+     "team": null,
+     "odds": -112,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858495",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-bc-gt-moneyline-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Boston College at Georgia Tech",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Georgia Tech moneyline",
+     "side": "Georgia Tech",
+     "line": null,
+     "team": "GT",
+     "odds": -185,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858273",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-bc-gt-spread-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Boston College at Georgia Tech",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Georgia Tech -3.5",
+     "side": "Georgia Tech",
+     "line": -3.5,
+     "team": "GT",
+     "odds": -120,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858273",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-bc-gt-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Boston College at Georgia Tech",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 49.5",
+     "side": "over",
+     "line": 49.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858273",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-bgsu-buff-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Bowling Green at Buffalo",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 44.5",
+     "side": "over",
+     "line": 44.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401866448",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-byu-ucf-moneyline-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "BYU at UCF",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "BYU moneyline",
+     "side": "BYU",
+     "line": null,
+     "team": "BYU",
+     "odds": -258,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856835",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-byu-ucf-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "BYU at UCF",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "BYU -6.5",
+     "side": "BYU",
+     "line": -6.5,
+     "team": "BYU",
+     "odds": -115,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856835",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-byu-ucf-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "BYU at UCF",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 43.5",
+     "side": "over",
+     "line": 43.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856835",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-haw-niu-spread-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Hawaii at Northern Illinois",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Northern Illinois +4.5",
+     "side": "Northern Illinois",
+     "line": 4.5,
+     "team": "NIU",
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401864526",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-haw-niu-total-under",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Hawaii at Northern Illinois",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 47.5",
+     "side": "under",
+     "line": 47.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401864526",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-iowa-minn-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Iowa at Minnesota",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Iowa -6.5",
+     "side": "Iowa",
+     "line": -6.5,
+     "team": "IOWA",
+     "odds": -124,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858497",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-msu-ucla-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Michigan State at UCLA",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 44.5",
+     "side": "over",
+     "line": 44.5,
+     "team": null,
+     "odds": -115,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858499",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-okla-mst-spread-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Oklahoma at Mississippi State",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Mississippi State +4.5",
+     "side": "Mississippi State",
+     "line": 4.5,
+     "team": "MSST",
+     "odds": -118,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856730",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-okla-mst-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Oklahoma at Mississippi State",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 44.5",
+     "side": "over",
+     "line": 44.5,
+     "team": null,
+     "odds": -112,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856730",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-sac-ball-total-under",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Sacramento State at Ball State",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 51.5",
+     "side": "under",
+     "line": 51.5,
+     "team": null,
+     "odds": -118,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401866447",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-tenn-scar-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Tennessee at South Carolina",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Tennessee +2.5",
+     "side": "Tennessee",
+     "line": 2.5,
+     "team": "TENN",
+     "odds": -112,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856731",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-tenn-scar-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Tennessee at South Carolina",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 50.5",
+     "side": "over",
+     "line": 50.5,
+     "team": null,
+     "odds": -115,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856731",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-txam-bama-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Texas A&M at Alabama",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 50.5",
+     "side": "over",
+     "line": 50.5,
+     "team": null,
+     "odds": -108,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856727",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-unt-navy-spread-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "North Texas at Navy",
+    "kickoff": "2026-10-24T19:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Navy +2.5",
+     "side": "Navy",
+     "line": 2.5,
+     "team": "NAVY",
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401862810",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-ksu-asu-total-under",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Kansas State at Arizona State",
+    "kickoff": "2026-10-24T19:45:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 56.5",
+     "side": "under",
+     "line": 56.5,
+     "team": null,
+     "odds": -105,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856839",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-emu-ohio-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Eastern Michigan at Ohio",
+    "kickoff": "2026-10-24T20:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 48.5",
+     "side": "over",
+     "line": 48.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401866449",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-ulm-troy-spread-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "UL-Monroe at Troy",
+    "kickoff": "2026-10-24T20:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Troy -14.5",
+     "side": "Troy",
+     "line": -14.5,
+     "team": "TROY",
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401871094",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-odu-lat-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Old Dominion at Louisiana Tech",
+    "kickoff": "2026-10-24T21:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Old Dominion +12.5",
+     "side": "Old Dominion",
+     "line": 12.5,
+     "team": "ODU",
+     "odds": -112,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401871093",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-odu-lat-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Old Dominion at Louisiana Tech",
+    "kickoff": "2026-10-24T21:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 46.5",
+     "side": "over",
+     "line": 46.5,
+     "team": null,
+     "odds": -108,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401871093",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-ull-usm-moneyline-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "UL-Lafayette at Southern Miss",
+    "kickoff": "2026-10-24T21:00:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "UL-Lafayette moneyline",
+     "side": "UL-Lafayette",
+     "line": null,
+     "team": null,
+     "odds": -410,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "2026w43-cfb-ull-usm-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "UL-Lafayette at Southern Miss",
+    "kickoff": "2026-10-24T21:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "UL-Lafayette -9.5",
+     "side": "UL-Lafayette",
+     "line": -9.5,
+     "team": null,
+     "odds": -124,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "2026w43-cfb-ull-usm-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "UL-Lafayette at Southern Miss",
+    "kickoff": "2026-10-24T21:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 52.5",
+     "side": "over",
+     "line": 52.5,
+     "team": null,
+     "odds": -112,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": null,
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no scheduled game matched"
+   },
+   {
+    "id": "2026w43-cfb-bsu-wsu-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Boise State at Washington State",
+    "kickoff": "2026-10-24T22:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Boise State -12.5",
+     "side": "Boise State",
+     "line": -12.5,
+     "team": "BOIS",
+     "odds": -112,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401860907",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-bsu-wsu-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Boise State at Washington State",
+    "kickoff": "2026-10-24T22:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 51.5",
+     "side": "over",
+     "line": 51.5,
+     "team": null,
+     "odds": -102,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401860907",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-sdsu-csu-moneyline-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "San Diego State at Colorado State",
+    "kickoff": "2026-10-24T22:30:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Colorado State moneyline",
+     "side": "Colorado State",
+     "line": null,
+     "team": "CSU",
+     "odds": -105,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401860905",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-sdsu-csu-spread-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "San Diego State at Colorado State",
+    "kickoff": "2026-10-24T22:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Colorado State +1.5",
+     "side": "Colorado State",
+     "line": 1.5,
+     "team": "CSU",
+     "odds": -115,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401860905",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-sdsu-csu-total-under",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "San Diego State at Colorado State",
+    "kickoff": "2026-10-24T22:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 63.5",
+     "side": "under",
+     "line": 63.5,
+     "team": null,
+     "odds": -112,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401860905",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-colo-okst-total-under",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Colorado at Oklahoma State",
+    "kickoff": "2026-10-24T23:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 56.5",
+     "side": "under",
+     "line": 56.5,
+     "team": null,
+     "odds": -119,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856836",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-gast-arst-spread-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Georgia State at Arkansas State",
+    "kickoff": "2026-10-24T23:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Arkansas State +2.5",
+     "side": "Arkansas State",
+     "line": 2.5,
+     "team": "ARST",
+     "odds": -112,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401869935",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-gast-arst-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Georgia State at Arkansas State",
+    "kickoff": "2026-10-24T23:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 58.5",
+     "side": "over",
+     "line": 58.5,
+     "team": null,
+     "odds": -118,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401869935",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-vt-clem-total-under",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Virginia Tech at Clemson",
+    "kickoff": "2026-10-24T23:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 49.5",
+     "side": "under",
+     "line": 49.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858276",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-isu-ariz-moneyline-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Iowa State at Arizona",
+    "kickoff": "2026-10-24T23:30:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Arizona moneyline",
+     "side": "Arizona",
+     "line": null,
+     "team": "ARIZ",
+     "odds": -325,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856838",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-miss-tex-moneyline-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Ole Miss at Texas",
+    "kickoff": "2026-10-24T23:30:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Texas moneyline",
+     "side": "Texas",
+     "line": null,
+     "team": "TEX",
+     "odds": -162,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856732",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-miss-tex-spread-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Ole Miss at Texas",
+    "kickoff": "2026-10-24T23:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Texas -3.5",
+     "side": "Texas",
+     "line": -3.5,
+     "team": "TEX",
+     "odds": -107,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856732",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-syr-unc-spread-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Syracuse at North Carolina",
+    "kickoff": "2026-10-24T23:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "North Carolina -7.5",
+     "side": "North Carolina",
+     "line": -7.5,
+     "team": "UNC",
+     "odds": -112,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858275",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-syr-unc-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Syracuse at North Carolina",
+    "kickoff": "2026-10-24T23:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 46.5",
+     "side": "over",
+     "line": 46.5,
+     "team": null,
+     "odds": -112,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858275",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-usc-wis-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "USC at Wisconsin",
+    "kickoff": "2026-10-24T23:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "USC -2.5",
+     "side": "USC",
+     "line": -2.5,
+     "team": "USC",
+     "odds": -132,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858500",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-usc-wis-total-under",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "USC at Wisconsin",
+    "kickoff": "2026-10-24T23:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 49.5",
+     "side": "under",
+     "line": 49.5,
+     "team": null,
+     "odds": -108,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401858500",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-usu-txst-spread-home",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Utah State at Texas State",
+    "kickoff": "2026-10-24T23:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Texas State -12.5",
+     "side": "Texas State",
+     "line": -12.5,
+     "team": "TXST",
+     "odds": -112,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401860906",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-usu-txst-total-under",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Utah State at Texas State",
+    "kickoff": "2026-10-24T23:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 60.5",
+     "side": "under",
+     "line": 60.5,
+     "team": null,
+     "odds": -105,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401860906",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-van-uk-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Vanderbilt at Kentucky",
+    "kickoff": "2026-10-24T23:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Vanderbilt +10.5",
+     "side": "Vanderbilt",
+     "line": 10.5,
+     "team": "VAN",
+     "odds": -105,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856729",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-van-uk-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Vanderbilt at Kentucky",
+    "kickoff": "2026-10-24T23:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 51.5",
+     "side": "over",
+     "line": 51.5,
+     "team": null,
+     "odds": -115,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856729",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-utsa-tul-moneyline-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "UTSA at Tulane",
+    "kickoff": "2026-10-25T00:00:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "UTSA moneyline",
+     "side": "UTSA",
+     "line": null,
+     "team": "UTSA",
+     "odds": -142,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401862811",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-utsa-tul-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "UTSA at Tulane",
+    "kickoff": "2026-10-25T00:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "UTSA -2.5",
+     "side": "UTSA",
+     "line": -2.5,
+     "team": "UTSA",
+     "odds": -112,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401862811",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-utsa-tul-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "UTSA at Tulane",
+    "kickoff": "2026-10-25T00:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 51.5",
+     "side": "over",
+     "line": 51.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401862811",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-ndsu-unm-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "North Dakota State at New Mexico",
+    "kickoff": "2026-10-25T02:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "North Dakota State +4.5",
+     "side": "North Dakota State",
+     "line": 4.5,
+     "team": "NDSU",
+     "odds": -108,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401864527",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-ndsu-unm-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "North Dakota State at New Mexico",
+    "kickoff": "2026-10-25T02:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 41.5",
+     "side": "over",
+     "line": 41.5,
+     "team": null,
+     "odds": -108,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401864527",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-hou-utah-spread-away",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Houston at Utah",
+    "kickoff": "2026-10-25T02:15:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Houston +6.5",
+     "side": "Houston",
+     "line": 6.5,
+     "team": "HOU",
+     "odds": -105,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856837",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-cfb-hou-utah-total-over",
+    "week": "2026-10-19",
+    "sport": "cfb",
+    "event": "Houston at Utah",
+    "kickoff": "2026-10-25T02:15:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 56.5",
+     "side": "over",
+     "line": 56.5,
+     "team": null,
+     "odds": -115,
+     "book": "DraftKings via Covers (not executable)",
+     "quoted_at": "2026-10-20T14:39:00Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings-attributed snapshot via Covers; not executable",
+      "as_of": "2026-10-20T14:39:00Z"
+     },
+     {
+      "name": "Public SP+ Week8; exact model refresh unknown",
+      "as_of": "2026-10-20T14:39:00Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401856837",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
+     "score_observed_at": "2026-10-19T15:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-pit-no-moneyline-away",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Pittsburgh Steelers at New Orleans Saints (Paris, neutral site)",
+    "kickoff": "2026-10-25T13:30:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Pittsburgh Steelers moneyline",
+     "side": "Pittsburgh Steelers",
+     "line": null,
+     "team": "PIT",
+     "odds": -180,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873011",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-pit-no-spread-away",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Pittsburgh Steelers at New Orleans Saints (Paris, neutral site)",
+    "kickoff": "2026-10-25T13:30:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Pittsburgh Steelers -3.5",
+     "side": "Pittsburgh Steelers",
+     "line": -3.5,
+     "team": "PIT",
+     "odds": -102,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873011",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-pit-no-total-under",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Pittsburgh Steelers at New Orleans Saints (Paris, neutral site)",
+    "kickoff": "2026-10-25T13:30:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 44.5",
+     "side": "under",
+     "line": 44.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873011",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-cin-bal-spread-away",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Cincinnati Bengals at Baltimore Ravens",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Cincinnati Bengals +3",
+     "side": "Cincinnati Bengals",
+     "line": 3,
+     "team": "CIN",
+     "odds": -118,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873012",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-cin-bal-total-under",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Cincinnati Bengals at Baltimore Ravens",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 51.5",
+     "side": "under",
+     "line": 51.5,
+     "team": null,
+     "odds": -118,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873012",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-cle-ten-moneyline-away",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Cleveland Browns at Tennessee Titans",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Cleveland Browns moneyline",
+     "side": "Cleveland Browns",
+     "line": null,
+     "team": "CLE",
+     "odds": -130,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873013",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-cle-ten-spread-away",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Cleveland Browns at Tennessee Titans",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Cleveland Browns -1.5",
+     "side": "Cleveland Browns",
+     "line": -1.5,
+     "team": "CLE",
+     "odds": -115,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873013",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-cle-ten-total-over",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Cleveland Browns at Tennessee Titans",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 38.5",
+     "side": "over",
+     "line": 38.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873013",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-ind-min-total-over",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Indianapolis Colts at Minnesota Vikings",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 41.5",
+     "side": "over",
+     "line": 41.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873014",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-mia-nyj-spread-away",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Miami Dolphins at New York Jets",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Miami Dolphins +4.5",
+     "side": "Miami Dolphins",
+     "line": 4.5,
+     "team": "MIA",
+     "odds": -102,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873015",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-mia-nyj-total-over",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Miami Dolphins at New York Jets",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 38.5",
+     "side": "over",
+     "line": 38.5,
+     "team": null,
+     "odds": -115,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873015",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-nyg-hou-spread-home",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "New York Giants at Houston Texans",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Houston Texans -10",
+     "side": "Houston Texans",
+     "line": -10,
+     "team": "HOU",
+     "odds": -108,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873016",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-nyg-hou-total-over",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "New York Giants at Houston Texans",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 42.5",
+     "side": "over",
+     "line": 42.5,
+     "team": null,
+     "odds": -118,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873016",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-sf-atl-moneyline-away",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "San Francisco 49ers at Atlanta Falcons",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "San Francisco 49ers moneyline",
+     "side": "San Francisco 49ers",
+     "line": null,
+     "team": "SF",
+     "odds": -192,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873017",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-sf-atl-spread-away",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "San Francisco 49ers at Atlanta Falcons",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "San Francisco 49ers -3.5",
+     "side": "San Francisco 49ers",
+     "line": -3.5,
+     "team": "SF",
+     "odds": -110,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873017",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-sf-atl-total-under",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "San Francisco 49ers at Atlanta Falcons",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 50.5",
+     "side": "under",
+     "line": 50.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873017",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-tb-car-moneyline-home",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Tampa Bay Buccaneers at Carolina Panthers",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Carolina Panthers moneyline",
+     "side": "Carolina Panthers",
+     "line": null,
+     "team": "CAR",
+     "odds": -192,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873018",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-tb-car-spread-home",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Tampa Bay Buccaneers at Carolina Panthers",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Carolina Panthers -3.5",
+     "side": "Carolina Panthers",
+     "line": -3.5,
+     "team": "CAR",
+     "odds": -108,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873018",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-tb-car-total-over",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Tampa Bay Buccaneers at Carolina Panthers",
+    "kickoff": "2026-10-25T17:00:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 44.5",
+     "side": "over",
+     "line": 44.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873018",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-den-ari-moneyline-away",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Denver Broncos at Arizona Cardinals",
+    "kickoff": "2026-10-25T20:05:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Denver Broncos moneyline",
+     "side": "Denver Broncos",
+     "line": null,
+     "team": "DEN",
+     "odds": -238,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873019",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-den-ari-spread-away",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Denver Broncos at Arizona Cardinals",
+    "kickoff": "2026-10-25T20:05:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Denver Broncos -4.5",
+     "side": "Denver Broncos",
+     "line": -4.5,
+     "team": "DEN",
+     "odds": -110,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873019",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-den-ari-total-over",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Denver Broncos at Arizona Cardinals",
+    "kickoff": "2026-10-25T20:05:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 43.5",
+     "side": "over",
+     "line": 43.5,
+     "team": null,
+     "odds": -115,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873019",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-gb-det-moneyline-home",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Green Bay Packers at Detroit Lions",
+    "kickoff": "2026-10-25T20:25:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Detroit Lions moneyline",
+     "side": "Detroit Lions",
+     "line": null,
+     "team": "DET",
+     "odds": -166,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873020",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-gb-det-spread-home",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Green Bay Packers at Detroit Lions",
+    "kickoff": "2026-10-25T20:25:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Detroit Lions -3",
+     "side": "Detroit Lions",
+     "line": -3,
+     "team": "DET",
+     "odds": -105,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873020",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-gb-det-total-under",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Green Bay Packers at Detroit Lions",
+    "kickoff": "2026-10-25T20:25:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 53.5",
+     "side": "under",
+     "line": 53.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873020",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-lar-lv-moneyline-away",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Los Angeles Rams at Las Vegas Raiders",
+    "kickoff": "2026-10-25T20:25:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Los Angeles Rams moneyline",
+     "side": "Los Angeles Rams",
+     "line": null,
+     "team": "LA",
+     "odds": -225,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873021",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-lar-lv-spread-away",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Los Angeles Rams at Las Vegas Raiders",
+    "kickoff": "2026-10-25T20:25:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Los Angeles Rams -4.5",
+     "side": "Los Angeles Rams",
+     "line": -4.5,
+     "team": "LA",
+     "odds": -105,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873021",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-lar-lv-total-under",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Los Angeles Rams at Las Vegas Raiders",
+    "kickoff": "2026-10-25T20:25:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Under 47.5",
+     "side": "under",
+     "line": 47.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873021",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-kc-sea-moneyline-home",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Kansas City Chiefs at Seattle Seahawks",
+    "kickoff": "2026-10-26T00:20:00Z",
+    "market": "moneyline",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Seattle Seahawks moneyline",
+     "side": "Seattle Seahawks",
+     "line": null,
+     "team": "SEA",
+     "odds": -135,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873022",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-kc-sea-spread-home",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Kansas City Chiefs at Seattle Seahawks",
+    "kickoff": "2026-10-26T00:20:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Seattle Seahawks -2.5",
+     "side": "Seattle Seahawks",
+     "line": -2.5,
+     "team": "SEA",
+     "odds": -110,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873022",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-kc-sea-total-over",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Kansas City Chiefs at Seattle Seahawks",
+    "kickoff": "2026-10-26T00:20:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 42.5",
+     "side": "over",
+     "line": 42.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873022",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-dal-phi-spread-home",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Dallas Cowboys at Philadelphia Eagles",
+    "kickoff": "2026-10-27T00:15:00Z",
+    "market": "spread",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Philadelphia Eagles +4.5",
+     "side": "Philadelphia Eagles",
+     "line": 4.5,
+     "team": "PHI",
+     "odds": -108,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873009",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
+   },
+   {
+    "id": "2026w43-nfl-dal-phi-total-over",
+    "week": "2026-10-19",
+    "sport": "nfl",
+    "event": "Dallas Cowboys at Philadelphia Eagles",
+    "kickoff": "2026-10-27T00:15:00Z",
+    "market": "total",
+    "status": "hold",
+    "published_at": "2026-10-21T00:05:15.859Z",
+    "screened_at": "2026-10-20T23:45:00Z",
+    "selection": {
+     "text": "Over 44.5",
+     "side": "over",
+     "line": 44.5,
+     "team": null,
+     "odds": -110,
+     "book": "DraftKings Network (not executable)",
+     "quoted_at": "2026-10-20T14:48:07Z"
+    },
+    "edge": null,
+    "sources": [
+     {
+      "name": "DraftKings Network public snapshot; not executable",
+      "as_of": "2026-10-20T14:48:07Z"
+     },
+     {
+      "name": "DRatings directional screen; refresh unknown",
+      "as_of": "2026-10-20T14:40:46Z"
+     }
+    ],
+    "claims": [],
+    "game": {
+     "id": "401873009",
+     "matched_by": "teams+kickoff",
+     "final": false,
+     "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
+     "score_observed_at": "2026-10-21T11:09:56.000Z"
+    },
+    "result": "pending",
+    "actual": null,
+    "close": null,
+    "clv": null,
+    "grade_note": "no final yet"
    }
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-20T18:00:06.824Z",
+ "built": "2026-10-21T11:54:13.043Z",
  "canonical_url": "https://datadawgs216.com/data/bozo-menu-ledger.json"
 }

@@ -1,9 +1,9 @@
 {
- "as_of": "2026-10-20",
+ "as_of": "2026-10-21",
  "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
  "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
  "site": "https://datadawgs216.com",
- "built": "2026-10-20",
+ "built": "2026-10-21",
  "data": {
   "files": [
    {
@@ -17,17 +17,17 @@
    {
     "path": "/data/bozo-menu-ledger.json",
     "url": "https://datadawgs216.com/data/bozo-menu-ledger.json",
-    "bytes": 219483,
-    "as_of": "2026-10-20",
-    "sha256": "b7419d446fd44ef3c69c0e9f8bbcd17f55ddd5c0befc1ec58ba6ba34d773e05e",
+    "bytes": 371012,
+    "as_of": "2026-10-21",
+    "sha256": "38d5ba4b631f3d4910ed9361739b9fb0ed10167107ad1e17b486d6d1fd5e93b9",
     "note": "One row per published candidate per week, graded at its published line only. Results are pending until a final exists; a push is a push. Closes are NEAR-CLOSE (SportsGameOdds free tier, about 10 minutes behind DraftKings). Entry probability CLV stays null because the menu saves one entry side; no juice is assumed. Simulation-free; not a recommendation."
    },
    {
     "path": "/data/bozo-menu-scorecard.json",
     "url": "https://datadawgs216.com/data/bozo-menu-scorecard.json",
-    "bytes": 5890,
-    "as_of": "2026-10-13",
-    "sha256": "579661e8520876c5734d80ce8c4be384066eebeddc5bf6ac5647993adf8e4891",
+    "bytes": 5907,
+    "as_of": "2026-10-21",
+    "sha256": "725675abe75fd1f03d3319e83b93371e86337bcf499833e31f84a2f1b92b299f",
     "note": "Source scorecard for the Bozo Menu. Every number carries its n; nothing is ranked below 30 graded rows. Benchmarks: 50% at the line, 52.38% break-even at -110, and the near-close."
    },
    {
