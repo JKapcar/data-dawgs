@@ -51,7 +51,7 @@ test('expired claim-only attempt recovers after both claim response and reconcil
 });
 test('late receipt snapshot verification cannot clear a newer identity pending attempt',async()=>{
  const f=fixture({bounded:true});await f.coordinator.run(f.task.id,f.tracking);const old=f.canonical();f.coordinator.clear();f.actor='next-owner';
- const task=f.command('task',{hypothesisId:f.h.id,dataCheckId:f.check.id,split:'discovery',budgetMs:5000,maxObservations:10000});f.lose('run-before');
+ const task=f.command('task',{hypothesisId:f.h.id,dataCheckId:f.check.id,split:'discovery',budgetMs:4500,maxObservations:10000});f.lose('run-before');
  await assert.rejects(f.coordinator.run(task.id,f.tracking),/Transport/);assert.equal(f.coordinator.pending(task.id),true);
  await f.coordinator.verifyReceipt(old,old.tasks[0],old.receipts[0]);assert.equal(f.coordinator.pending(task.id),true);
 });
@@ -73,9 +73,9 @@ test('CAS-style claim conflict reconciles foreign winner without run',async()=>{
  const f=fixture();f.client.command=async()=>{f.actor='winner';f.command('claim',{taskId:f.task.id,leaseMs:60000});f.actor='owner';throw Object.assign(Error('CAS conflict'),{status:409});};
  await assert.rejects(f.coordinator.run(f.task.id,f.tracking),/CAS/);assert.equal(f.state.receipts.length,0);
 });
-for(const kind of ['body','tenant','task','data','code','config','revision'])test('tampered or mismatched receipt fails closed: '+kind,async()=>{
+for(const kind of ['body','tenant','task','data','code','config','revision','experiment','execution'])test('tampered or mismatched receipt fails closed: '+kind,async()=>{
  const f=fixture({bounded:true});await f.coordinator.run(f.task.id,f.tracking);const s=f.canonical(),r=s.receipts[0],t=s.tasks[0];
- if(kind==='body')r.summary=[];if(kind==='tenant')r.tenant='foreign';if(kind==='task')r.taskId='other';if(['data','code','config'].includes(kind))r.hashes[kind]='b'.repeat(64);if(kind==='revision')r.hypothesisVersion=2;
+ if(kind==='experiment')r.experimentId='b'.repeat(64);if(kind==='execution')r.executionId='b'.repeat(64);if(kind==='body')r.summary=[];if(kind==='tenant')r.tenant='foreign';if(kind==='task')r.taskId='other';if(['data','code','config'].includes(kind))r.hashes[kind]='b'.repeat(64);if(kind==='revision')r.hypothesisVersion=2;
  if(kind!=='body'){const {receiptHash,...body}=r;r.receiptHash=hash(body);}
  await assert.rejects(verifyReceipt(s,t,r),/verification failed/);
 });

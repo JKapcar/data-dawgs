@@ -60,6 +60,14 @@ export function syntheticTracking() {
       {id:'ball',kind:'ball',cohort:'ball',x:28+i*.7,y:25,speed:null,dir:null,o:null}]}))});
 }
 
+// execution-identity.mjs
+// Versioned, deterministic synthetic adapter identity. No caller-supplied seed or
+// execution ID is accepted by the command protocol. The adapter has no randomness.
+export const EXECUTION_POLICY='tenant-cas-experiment-v1';
+export const executionConfig=t=>({method:t.method,split:t.split,budgetMs:t.budgetMs,maxObservations:t.maxObservations});
+export const experimentBasis=(t,code,data)=>({policy:EXECUTION_POLICY,tenant:t.tenant,hypothesisId:t.hypothesisId,hypothesisVersion:t.hypothesisVersion,code,data,config:executionConfig(t),seed:null});
+export const rerunBasis=(experimentId,receiptId)=>({experimentId,rerunOf:receiptId});
+
 // machine-core.mjs
 const requireThat = (ok, message) => {if (!ok) throw new Error(message);};
 const text = (v,max=4000) => {requireThat(typeof v==='string' && v.trim().length>0 && v.length<=max,'Invalid text');return v;};
@@ -82,7 +90,7 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
   requireThat(command&&typeof command==='object'&&!Array.isArray(command)&&Object.keys(command).every(k=>['type','key','payload'].includes(k)),'Invalid command');
   const s=structuredClone(state), tenant=principal.tenant;
   const {type, key, payload:p={}}=command;
-  const fields={hypothesis:['id','expectedVersion','title','method','status','family',...HYPOTHESIS_DESIGN_FIELDS],evidence:['url','title','excerpt','kind'],discussion:['hypothesisId','kind','body','evidenceIds','hypothesisVersion','tracking','receiptId','receiptHash','reviewId','findingId','disposition'],task:['hypothesisId','split','budgetMs','maxObservations','dataCheckId'],claim:['taskId','leaseMs'],run:['taskId','leaseToken','tracking']}[type];
+  const fields={hypothesis:['id','expectedVersion','title','method','status','family',...HYPOTHESIS_DESIGN_FIELDS],evidence:['url','title','excerpt','kind'],discussion:['hypothesisId','kind','body','evidenceIds','hypothesisVersion','tracking','receiptId','receiptHash','reviewId','findingId','disposition'],task:['hypothesisId','split','budgetMs','maxObservations','dataCheckId','rerunOf','rerunReason'],claim:['taskId','leaseMs'],run:['taskId','leaseToken','tracking']}[type];
   requireThat(fields&&p&&typeof p==='object'&&!Array.isArray(p)&&Object.keys(p).every(k=>fields.includes(k)),'Invalid payload fields');
   text(key,160);
   const scope={hypothesis:'hypothesis:write',evidence:'evidence:write',discussion:'discussion:write',task:'task:write',claim:'task:claim',run:'experiment:run'}[type];
@@ -101,6 +109,40 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
     if(check.codeHash!==codeHash)return 'implementation_changed';
     return null;
   };
+  // These reservations live inside the same tenant state/CAS as task leases,
+  // receipts and grants. Different task IDs cannot own the same attempt at once.
+  function* experiment(task,data,code=codeHash){
+    const check=task.dataCheckId&&own('discussions',task.dataCheckId);
+    return yield experimentBasis(task,code,check?check.dataHash:data);
+  }
+  function* execution(task,data,code=codeHash){
+    const experimentId=yield* experiment(task,data,code);
+    const executionId=task.rerunOf?(yield rerunBasis(experimentId,task.rerunOf)):experimentId;
+    return {experimentId,executionId};
+  }
+  function* terminal(r){
+    const task=own('tasks',r.taskId),{receiptHash,...body}=r;
+    requireThat((yield body)===receiptHash,'Execution receipt integrity conflict; reconcile');
+    requireThat(r.hypothesisId===task.hypothesisId&&r.hypothesisVersion===task.hypothesisVersion&&r.split===task.split&&['success','null','inconclusive','failure'].includes(r.outcome)&&['completed','stale'].includes(task.status)&&r.hashes?.config===(yield executionConfig(task))&&/^[a-f0-9]{64}$/.test(r.hashes?.data),'Execution receipt linkage conflict; reconcile');
+    const experimentId=yield* experiment(task,r.hashes.data,r.hashes.code);
+    const executionId=task.rerunOf?(yield rerunBasis(experimentId,task.rerunOf)):experimentId;
+    requireThat(r.executionId===undefined&&r.experimentId===undefined||r.executionId===executionId&&r.experimentId===experimentId,'Execution receipt identity conflict; reconcile');
+    return {experimentId,executionId};
+  }
+  function* available(task,ids){
+    for(const r of s.receipts.filter(r=>r.tenant===tenant&&r.hypothesisId===task.hypothesisId&&r.hypothesisVersion===task.hypothesisVersion&&r.execution!=='not_executed')){
+      const previous=yield* terminal(r);
+      requireThat(previous.executionId!==ids.executionId,'Experiment terminal conflict; explicit owner rerun required');
+    }
+    for(const other of s.tasks.filter(t=>t.tenant===tenant&&t.id!==task.id&&t.lease?.expiresAt>now)){
+      // Legacy unbound tasks cannot reserve input identity at claim time. Their
+      // run still checks receipts atomically; continuation requires a data check.
+      if(!other.dataCheckId&&!other.executionId)continue;
+      const previous=other.dataCheckId?yield* execution(other,undefined,own('discussions',other.dataCheckId).codeHash):other;
+      requireThat(!other.executionId||other.executionId===previous.executionId,'Execution reservation integrity conflict; reconcile');
+      requireThat(previous.executionId!==ids.executionId,'Experiment lease unavailable');
+    }
+  }
   let result;
   if(type==='hypothesis') {
     const previous=p.id?own('hypotheses',p.id):null;
@@ -194,7 +236,18 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
       requireThat(h.revisions.at(-1).status!=='withdrawn','Hypothesis withdrawn');
     }
     result={id:crypto.randomUUID(),...stamp,...(p.dataCheckId?{dataCheckId:p.dataCheckId}:{}),hypothesisId:h.id,hypothesisVersion:h.revisions.length,method:'descriptive-cohorts-v1',split:p.split,
-      requiredCapabilities:['experiment:run'],budgetMs:p.budgetMs,maxObservations:p.maxObservations,status:'queued',lease:null};s.tasks.push(result);
+      requiredCapabilities:['experiment:run'],budgetMs:p.budgetMs,maxObservations:p.maxObservations,status:'queued',lease:null};
+    if(p.rerunOf!==undefined||p.rerunReason!==undefined){
+      requireThat(principal.signedOwner===true,'Signed owner rerun denied');
+      requireThat(result.dataCheckId,'Current data check required for rerun');
+      const prior=own('receipts',p.rerunOf),ids=yield* terminal(prior),experimentId=yield* experiment(result);
+      requireThat(prior.execution!=='not_executed','Prior attempt was not executed; queue normally');
+      requireThat(ids.experimentId===experimentId,'Rerun must match current experiment; queue changed experiments normally');
+      requireThat(!s.receipts.some(r=>r.tenant===tenant&&s.tasks.some(t=>t.id===r.taskId&&t.rerunOf===prior.id)),'Rerun successor already terminal; select its receipt');
+      Object.assign(result,{rerunOf:prior.id,rerunReason:text(p.rerunReason,500),rerunAuthorizedBy:principal.id});
+    }
+    if(result.dataCheckId)Object.assign(result,yield* execution(result));
+    s.tasks.push(result);
   }
   if(type==='claim') {
     const task=own('tasks',p.taskId);
@@ -205,6 +258,15 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
     if(staleReason)Object.assign(task,{status:'stale',lease:null,staleReason,staleAt:stamp.at});
     else {
       requireThat(!task.lease||task.lease.expiresAt<=now,'Task unavailable');
+      if(task.dataCheckId){
+        const ids=yield* execution(task);yield* available(task,ids);
+        // Fence every expired equivalent claim when ownership transfers. Old
+        // tokens cannot execute after a different task takes the reservation.
+        for(const other of s.tasks.filter(t=>t.tenant===tenant&&t.id!==task.id&&t.lease&&t.lease.expiresAt<=now)){
+          if(other.executionId===ids.executionId){other.lease=null;other.status='queued';}
+        }
+        Object.assign(task,ids);
+      }
       task.status='claimed';task.lease={owner:principal.id,token:crypto.randomUUID(),expiresAt:now+p.leaseMs};
     }
     result=task;
@@ -213,6 +275,13 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
     const task=own('tasks',p.taskId);
     requireThat(task.status==='claimed'&&task.lease?.owner===principal.id&&task.lease.token===p.leaseToken&&task.lease.expiresAt>now,'Valid owned lease required');
     const staleReason=staleTaskReason(task);
+    const ids=yield* execution(task,yield p.tracking);
+    // Never run an old lease against changed code or input identity. Stale runs
+    // retain the preexisting not_executed receipt behavior for audit history.
+    if(!staleReason){
+      requireThat(!task.executionId||task.executionId===ids.executionId,'Execution identity conflict; reclaim required');
+      yield* available(task,ids);
+    }
     const started=performance.now();let outcome='success',summary=null,error=null,provenance=null,reason=null;
     try {
       requireThat(!staleReason,'Stale task: '+staleReason);
@@ -227,9 +296,9 @@ export function* transitionSteps(state, principal, command, now=Date.now(), code
       requireThat(performance.now()-started<=task.budgetMs,'Runtime budget exceeded');
     } catch(e) {outcome='failure';error=e.message;summary=null;reason=null;}
     if(staleReason)reason=staleReason;
-    result={id:crypto.randomUUID(),...stamp,...(staleReason?{execution:'not_executed'}:{}),taskId:task.id,hypothesisId:task.hypothesisId,hypothesisVersion:task.hypothesisVersion,
+    result={id:crypto.randomUUID(),...stamp,...ids,...(staleReason?{execution:'not_executed'}:{}),taskId:task.id,hypothesisId:task.hypothesisId,hypothesisVersion:task.hypothesisVersion,
       split:task.split,synthetic:provenance?.kind==='synthetic',provenance,outcome,reason,error,summary,
-      hashes:{data:(yield p.tracking),code:codeHash,config:(yield {method:task.method,split:task.split,budgetMs:task.budgetMs,maxObservations:task.maxObservations})},
+      hashes:{data:(yield p.tracking),code:codeHash,config:(yield executionConfig(task))},
       baseline:{kind:'none',note:'Cohort means are descriptive, not fitted baselines.'},
       uncertainty:{interval:null,note:'Repeated frame observations are dependent; no inferential interval or hypothesis verdict.'},
       limits:{runtimeMs:task.budgetMs,maxObservations:task.maxObservations},elapsedMs:performance.now()-started};
@@ -255,4 +324,4 @@ export async function transition(...args){
   return step.value;
 }
 
-export const codeHash='cd61b8976fa02f876bc37245193adae1b63cc2678f31a03c66fbf5c952766b17';
+export const codeHash='b2762381df9df14b5ebda7937182ee5c283eea948faed35956cc482e529d12f4';

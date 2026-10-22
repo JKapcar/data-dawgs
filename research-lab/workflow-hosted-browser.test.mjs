@@ -16,7 +16,7 @@ try{
   const sharedAssets=new Map([['/presentation-mode.js','text/javascript'],['/presentation-mode.css','text/css']]);
   if(sharedAssets.has(url.pathname))return route.fulfill({contentType:sharedAssets.get(url.pathname),body:readFileSync(new URL('..'+url.pathname,import.meta.url))});
   let file=url.pathname.split('/').at(-1)||'index.html';if(file==='data-dawgs-site-logo-560.png')file='brand.png';if(file==='client-config.mjs')return route.fulfill({contentType:'text/javascript',body:`export default {mode:'hosted',workerOrigin:'${worker}',tenant:'demo'};`});
-  assert(['coordinator.mjs','workflow.mjs','workflow.css','install-help.js','install-help.css','index.html','app.mjs','client.mjs','tracking.mjs','style.css','instrument.css','brand.png','navigation.css','navigation.js'].includes(file),file);
+  assert(['execution-identity.mjs','continuation.mjs','coordinator.mjs','workflow.mjs','workflow.css','install-help.js','install-help.css','index.html','app.mjs','client.mjs','tracking.mjs','style.css','instrument.css','brand.png','navigation.css','navigation.js'].includes(file),file);
   return route.fulfill({contentType:/\.(mjs|js)$/.test(file)?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'text/html',body:readFileSync(new URL(file==='brand.png'?'../assets/data-dawgs-site-logo-560.png':file.startsWith('install-help.')?'../'+file:file,import.meta.url))});
  });await page.goto(site+'/research-lab/');await page.getByText('Shared runner ready.',{exact:false}).waitFor();return page;}
  const open=async page=>{await page.getByRole('button',{name:'Open research record'}).first().click();await page.getByRole('button',{name:'Open dependency and evidence graph'}).click();};

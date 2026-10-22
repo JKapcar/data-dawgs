@@ -1,3 +1,4 @@
+import {EXECUTION_POLICY} from './execution-identity.mjs';
 import http from 'node:http';
 import {readFileSync,writeFileSync,mkdirSync,openSync,closeSync,unlinkSync,appendFileSync,existsSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
@@ -6,12 +7,21 @@ import os from 'node:os';
 import {initialState,transition,view,hash,capabilities} from './machine.mjs';
 import {syntheticTracking} from './tracking.mjs';
 const root=path.dirname(fileURLToPath(import.meta.url));
+const assets=new Map([['/execution-identity.mjs','execution-identity.mjs'],['/continuation.mjs','continuation.mjs'],['/coordinator.mjs','coordinator.mjs'],['/workflow.mjs','workflow.mjs'],['/workflow.css','workflow.css'],['/install-help.js','../install-help.js'],['/install-help.css','../install-help.css'],['/navigation.css','navigation.css'],['/navigation.js','navigation.js'],['/','index.html'],['/private.html','private.html'],['/account.js','account.js'],['/app.mjs','app.mjs'],['/client.mjs','client.mjs'],['/style.css','style.css'],['/instrument.css','instrument.css'],['/tracking.mjs','tracking.mjs'],['/CONTRACT.md','CONTRACT.md'],['/brand.png','../assets/data-dawgs-site-logo-560.png'],['/assets/data-dawgs-site-logo-560.png','../assets/data-dawgs-site-logo-560.png']]);
+// Shared by the actual HTTP handler and socket-free asset contract tests.
+export function readLocalAsset(pathname) {
+  if(pathname==='/client-config.mjs')return {body:Buffer.from("export default {mode:'local'};"),type:'text/javascript'};
+  if(!assets.has(pathname))return null;
+  const file=assets.get(pathname);
+  return {body:readFileSync(path.join(root,file)),type:file.endsWith('.png')?'image/png':/\.(mjs|js)$/.test(file)?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.md')?'text/plain':'text/html'};
+}
+export const localCodeHash=()=>hash(['machine.mjs','machine-core.mjs','execution-identity.mjs','tracking.mjs','server.mjs'].map(f=>readFileSync(path.join(root,f),'utf8')).join('\n'));
 export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-lab'),port=0,manifestSummary=path.join(root,'data','manifest-summary.json')}={}) {
   mkdirSync(directory,{recursive:true});
   const lock=path.join(directory,'writer.lock'); const fd=openSync(lock,'wx');
   const journal=path.join(directory,'journal.jsonl');
   let state=initialState();
-  const codeHash=hash(['machine.mjs','machine-core.mjs','tracking.mjs','server.mjs'].map(f=>readFileSync(path.join(root,f),'utf8')).join('\n'));
+  const codeHash=localCodeHash();
   // The loopback runner is the owner's own machine: it may register hypotheses.
   const principal={tenant:'local-research',id:'local-owner',capabilities,signedOwner:true};
   try {
@@ -44,7 +54,6 @@ export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-l
       execute({type:'task',key:`seed-t-${i}`,payload:{hypothesisId:h.id,split:'discovery',budgetMs:5000,maxObservations:10000}});
     }
   }
-  const assets=new Map([['/coordinator.mjs','coordinator.mjs'],['/workflow.mjs','workflow.mjs'],['/workflow.css','workflow.css'],['/install-help.js','../install-help.js'],['/install-help.css','../install-help.css'],['/navigation.css','navigation.css'],['/navigation.js','navigation.js'],['/','index.html'],['/private.html','private.html'],['/account.js','account.js'],['/app.mjs','app.mjs'],['/client.mjs','client.mjs'],['/style.css','style.css'],['/instrument.css','instrument.css'],['/tracking.mjs','tracking.mjs'],['/CONTRACT.md','CONTRACT.md'],['/brand.png','../assets/data-dawgs-site-logo-560.png'],['/assets/data-dawgs-site-logo-560.png','../assets/data-dawgs-site-logo-560.png']]);
   const server=http.createServer(async(req,res)=>{
     const origin=`http://127.0.0.1:${server.address().port}`;
     const send=(status,value,type='application/json')=>{res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"});res.end(type==='application/json'?JSON.stringify(value):value);};
@@ -53,8 +62,7 @@ export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-l
     if(req.headers['sec-fetch-site']==='cross-site') return send(403,{error:'Cross-site request denied'});
     const url=new URL(req.url,origin);
     try {
-      if(req.method==='GET'&&url.pathname==='/client-config.mjs')return send(200,"export default {mode:'local'};",'text/javascript');
-      if(req.method==='GET'&&url.pathname==='/api/state') return send(200,{...view(state,principal),identity:{actor:principal.id,tenant:principal.tenant,kind:'local'},adapters:{externalAI:'unconfigured',scheduler:'unconfigured',verifiedData:'unconfigured',holdout:'disabled'},mode:'single-user loopback',codeHash});
+      if(req.method==='GET'&&url.pathname==='/api/state') return send(200,{...view(state,principal),executionPolicy:EXECUTION_POLICY,identity:{actor:principal.id,tenant:principal.tenant,kind:'local'},adapters:{externalAI:'unconfigured',scheduler:'unconfigured',verifiedData:'unconfigured',holdout:'disabled'},mode:'single-user loopback',codeHash});
       if(req.method==='GET'&&url.pathname==='/api/tracking') return send(200,syntheticTracking());
       if(req.method==='POST'&&url.pathname==='/api/command') {
         if(req.headers.origin!==origin||req.headers['content-type']!=='application/json') return send(403,{error:'Same-origin JSON required'});
@@ -66,9 +74,8 @@ export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-l
       }
       // The owner's redacted manifest summary (counts only), when manifest.py has written one.
       if(req.method==='GET'&&url.pathname==='/data/manifest-summary.json')return existsSync(manifestSummary)?send(200,JSON.parse(readFileSync(manifestSummary,'utf8'))):send(404,{error:'No manifest summary'});
-      if(req.method==='GET'&&assets.has(url.pathname)) {
-        const file=assets.get(url.pathname);return send(200,readFileSync(path.join(root,file)),file.endsWith('.png')?'image/png':/\.(mjs|js)$/.test(file)?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.md')?'text/plain':'text/html');
-      }
+      const asset=req.method==='GET'&&readLocalAsset(url.pathname);
+      if(asset)return send(200,asset.body,asset.type);
       send(404,{error:'Not found'});
     }catch(e){send(400,{error:e.message});}
   });

@@ -1,3 +1,4 @@
+import {EXECUTION_POLICY} from './execution-identity.mjs';
 import {agentCredential,authorizeAgent,RESEARCH_AGENT_SCOPES} from './agent-identity.mjs';
 // Disabled-by-default hosted adapter. Identity and storage primitives come from the
 // existing Worker; this module neither mints credentials nor writes access grants.
@@ -115,7 +116,7 @@ export function createResearchGateway({fbGet,fbPut,sessionAuth,mcpAuth,transitio
       const project=state=>{
         const result=view(state,principal);
         for(const task of result.tasks)if(task.lease?.owner!==actor&&task.lease)task.lease={owner:task.lease.owner,expiresAt:task.lease.expiresAt};
-        return {...result,codeHash,storage:'conditional-tenant-store',identity:{actor,tenant,kind},adapters:{scheduler:'unconfigured',verifiedData:'unconfigured',holdout:'disabled'}};
+        return {...result,executionPolicy:EXECUTION_POLICY,codeHash,storage:'conditional-tenant-store',identity:{actor,tenant,kind},adapters:{scheduler:'unconfigured',verifiedData:'unconfigured',holdout:'disabled'}};
       };
       if(operation==='read'){
         if(!principal.capabilities.includes('research:read'))fail(403,'read_scope_required');

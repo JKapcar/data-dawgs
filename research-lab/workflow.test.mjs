@@ -48,7 +48,7 @@ test('question edits stale the chain and bounded execution; holdout and real inp
  for(const mutate of [d=>d.split='holdout',d=>d.provenance.kind='verified']){const d=syntheticTracking();mutate(d);assert.throws(()=>x.call('discussion',{...x.base,hypothesisVersion:2,kind:'data_check',tracking:d}));}
 });
 test('changed input produces a failed immutable attempt and cannot be reviewed',()=>{
- const x=fixture(),t=x.call('task',{hypothesisId:x.h.id,dataCheckId:x.check.id,split:'discovery',budgetMs:5000,maxObservations:10000});
+ const x=fixture(),t=x.call('task',{hypothesisId:x.h.id,dataCheckId:x.check.id,split:'discovery',budgetMs:5000,maxObservations:10000,rerunOf:x.r.id,rerunReason:'Explicitly test changed-input failure'},owner);
  const c=x.call('claim',{taskId:t.id,leaseMs:1000});const d=structuredClone(x.tracking);d.provenance.note+=' changed';
  const r=x.call('run',{taskId:t.id,leaseToken:c.lease.token,tracking:d});assert.equal(r.outcome,'failure');assert.match(r.error,/Data changed/);
  assert.throws(()=>x.call('discussion',{...x.refs,receiptId:r.id,receiptHash:r.receiptHash,kind:'review',disposition:'ready'},reviewer),/successful synthetic/);

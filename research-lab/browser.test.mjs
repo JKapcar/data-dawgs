@@ -15,6 +15,8 @@ try {
  assert.equal(await page.locator('#hypothesis-grid article').count(),3);
  assert.equal(await page.locator('.dd-brand').textContent(),'DATA DAWGS');
  await page.getByRole('tab',{name:'Queue'}).click();
+ assert.equal(await page.getByRole('button',{name:'Start approved tasks'}).isDisabled(),false);
+ await page.getByRole('status').filter({hasText:'Server reserves experiment identities atomically'}).waitFor();
  // Hold the post-run state read until success is visible. Success acknowledges the
  // receipt write; the counter belongs to the subsequent asynchronous refresh.
  let releaseRefresh,refreshRequested;

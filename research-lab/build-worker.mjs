@@ -4,7 +4,7 @@ import {readFileSync,writeFileSync,mkdirSync,copyFileSync} from 'node:fs';
 import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';
 const root=path.dirname(fileURLToPath(import.meta.url));
 export function buildWorker(destination=path.join(root,'../work/artifacts/research-lab')) {
-  const modules=['tracking.mjs','machine-core.mjs','worker-core.mjs','gateway.mjs','upload-gateway.mjs','pound-portraits.mjs','exact-store.mjs','agent-identity.mjs','pound-agent-gateway.mjs','agent-setup.mjs','owner-apps.mjs','development-data.mjs','development-index.mjs','development-v3.mjs'];
+  const modules=['execution-identity.mjs','tracking.mjs','machine-core.mjs','worker-core.mjs','gateway.mjs','upload-gateway.mjs','pound-portraits.mjs','exact-store.mjs','agent-identity.mjs','pound-agent-gateway.mjs','agent-setup.mjs','owner-apps.mjs','development-data.mjs','development-index.mjs','development-v3.mjs'];
   const worker=readFileSync(path.join(root,'../dawg-bot-worker.js'),'utf8');
   const anchor='  async fetch(request, env) {';
   if(worker.split(anchor).length!==2)throw new Error('Worker entry changed; review integration before rebuilding');
@@ -21,7 +21,7 @@ export function buildWorker(destination=path.join(root,'../work/artifacts/resear
   copyFileSync(path.join(root,'../bozo-team-registry.mjs'),path.join(destination,'bozo-team-registry.mjs'));
   writeFileSync(path.join(destination,'build-manifest.json'),JSON.stringify({codeHash,sources:manifest,enabled:false},null,2));
   const ui=path.join(destination,'dashboard');mkdirSync(ui,{recursive:true});
-  for(const f of ['coordinator.mjs','workflow.mjs','workflow.css','index.html','private.html','decisions.html','decisions.css','decisions.mjs','decision-controls.mjs','app.mjs','client.mjs','client-config.mjs','browser-runner.mjs','browser-engine.mjs','worker-core.mjs','machine-core.mjs','style.css','instrument.css','tracking.mjs','CONTRACT.md','upload.html','upload.mjs','upload.css','discord-smoke.html','discord-smoke.mjs','discord-smoke.css','agent-setup.html','agent-setup-ui.mjs','agent-setup.css','navigation.css','navigation.js','account.js','app-permissions.html','app-permissions.mjs','OWNER-CONNECTOR.md'])copyFileSync(path.join(root,f),path.join(ui,f));
+  for(const f of ['execution-identity.mjs','continuation.mjs','coordinator.mjs','workflow.mjs','workflow.css','index.html','private.html','decisions.html','decisions.css','decisions.mjs','decision-controls.mjs','app.mjs','client.mjs','client-config.mjs','browser-runner.mjs','browser-engine.mjs','worker-core.mjs','machine-core.mjs','style.css','instrument.css','tracking.mjs','CONTRACT.md','upload.html','upload.mjs','upload.css','discord-smoke.html','discord-smoke.mjs','discord-smoke.css','agent-setup.html','agent-setup-ui.mjs','agent-setup.css','navigation.css','navigation.js','account.js','app-permissions.html','app-permissions.mjs','OWNER-CONNECTOR.md'])copyFileSync(path.join(root,f),path.join(ui,f));
   for(const file of ['install-help.js','install-help.css'])copyFileSync(path.join(root,'../',file),path.join(destination,file));
   // Relative asset works at the root or a separately approved /research-lab/ path.
   writeFileSync(path.join(ui,'index.html'),readFileSync(path.join(ui,'index.html'),'utf8').replace('src="../assets/data-dawgs-site-logo-560.png"','src="brand.png"'));
