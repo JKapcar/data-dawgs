@@ -33,6 +33,7 @@ export function workflowGraph(state,hypothesisId,now=Date.now(),attemptId=null) 
   if(!r){blocked=true;continue;}
   if(i===1)n.reason='Synthetic input schema checked and hashed; baseline_fit=false. No real development validation.';
   if(i===2){
+   if(receipt&&state.verifiedReceiptIds&&!state.verifiedReceiptIds.includes(receipt.id)){n.status='unverified';n.reason='Historical receipt retained; canonical linkage and hashes are not verified for the current attempt.';blocked=true;continue;}
    n.reason=receipt?`SYNTHETIC ${receipt.outcome}; descriptive only, no fitted baseline.`:task.lease?.expiresAt>now?'Lease active; no execution receipt yet.':'Awaiting a valid claim and execution; no completed agent work.';
    if(!receipt||receipt.outcome==='failure'){n.status=task?.status==='stale'?'stale':receipt?'failed':'pending';n.reason=task?.staleReason||receipt?.error||n.reason;blocked=true;}
   }

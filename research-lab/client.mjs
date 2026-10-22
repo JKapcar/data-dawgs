@@ -18,7 +18,7 @@ export function createClient(config,{fetcher=fetch,origin=location.origin,token=
     if(route==='tracking')return syntheticTracking();
     const credential=hosted?token():'';
     if(hosted&&!credential){invalidate();throw new Error('Sign in through the existing DataDawgs sign-in page. Research access also requires an explicit grant.');}
-    if(identity!==credential){if(identity!==null)invalidate();identity=credential;epoch++;}const generation=epoch;
+    if(identity!==credential){const changed=identity!==null;if(changed)invalidate();identity=credential;epoch++;if(changed&&body)throw new Error('Identity changed; reload research state.');}const generation=epoch;
     const url=hosted?`${WORKER_ORIGIN}/research/v1/tenants/${config.tenant}/${route}`:`/api/${route}`;
     const r=await fetcher(url,{method:body?'POST':'GET',credentials:'omit',redirect:'error',cache:'no-store',headers:{...(hosted?{Authorization:'Bearer '+credential}:{}),...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
     const ensureIdentity=()=>{if(generation!==epoch||(hosted&&credential!==token())){invalidate();throw new Error('Identity changed; reload research state.');}};

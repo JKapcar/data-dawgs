@@ -44,7 +44,7 @@ export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-l
       execute({type:'task',key:`seed-t-${i}`,payload:{hypothesisId:h.id,split:'discovery',budgetMs:5000,maxObservations:10000}});
     }
   }
-  const assets=new Map([['/workflow.mjs','workflow.mjs'],['/workflow.css','workflow.css'],['/install-help.js','../install-help.js'],['/install-help.css','../install-help.css'],['/navigation.css','navigation.css'],['/navigation.js','navigation.js'],['/','index.html'],['/private.html','private.html'],['/account.js','account.js'],['/app.mjs','app.mjs'],['/client.mjs','client.mjs'],['/style.css','style.css'],['/instrument.css','instrument.css'],['/tracking.mjs','tracking.mjs'],['/CONTRACT.md','CONTRACT.md'],['/brand.png','../assets/data-dawgs-site-logo-560.png'],['/assets/data-dawgs-site-logo-560.png','../assets/data-dawgs-site-logo-560.png']]);
+  const assets=new Map([['/coordinator.mjs','coordinator.mjs'],['/workflow.mjs','workflow.mjs'],['/workflow.css','workflow.css'],['/install-help.js','../install-help.js'],['/install-help.css','../install-help.css'],['/navigation.css','navigation.css'],['/navigation.js','navigation.js'],['/','index.html'],['/private.html','private.html'],['/account.js','account.js'],['/app.mjs','app.mjs'],['/client.mjs','client.mjs'],['/style.css','style.css'],['/instrument.css','instrument.css'],['/tracking.mjs','tracking.mjs'],['/CONTRACT.md','CONTRACT.md'],['/brand.png','../assets/data-dawgs-site-logo-560.png'],['/assets/data-dawgs-site-logo-560.png','../assets/data-dawgs-site-logo-560.png']]);
   const server=http.createServer(async(req,res)=>{
     const origin=`http://127.0.0.1:${server.address().port}`;
     const send=(status,value,type='application/json')=>{res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"});res.end(type==='application/json'?JSON.stringify(value):value);};
@@ -54,7 +54,7 @@ export function createLab({directory=path.join(os.tmpdir(),'datadawgs-research-l
     const url=new URL(req.url,origin);
     try {
       if(req.method==='GET'&&url.pathname==='/client-config.mjs')return send(200,"export default {mode:'local'};",'text/javascript');
-      if(req.method==='GET'&&url.pathname==='/api/state') return send(200,{...view(state,principal),adapters:{externalAI:'unconfigured',scheduler:'unconfigured',verifiedData:'unconfigured',holdout:'disabled'},mode:'single-user loopback',codeHash});
+      if(req.method==='GET'&&url.pathname==='/api/state') return send(200,{...view(state,principal),identity:{actor:principal.id,tenant:principal.tenant,kind:'local'},adapters:{externalAI:'unconfigured',scheduler:'unconfigured',verifiedData:'unconfigured',holdout:'disabled'},mode:'single-user loopback',codeHash});
       if(req.method==='GET'&&url.pathname==='/api/tracking') return send(200,syntheticTracking());
       if(req.method==='POST'&&url.pathname==='/api/command') {
         if(req.headers.origin!==origin||req.headers['content-type']!=='application/json') return send(403,{error:'Same-origin JSON required'});
