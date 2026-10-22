@@ -44,3 +44,21 @@ test('actual Worker build ships complete dashboard module closure',()=>{
   unlinkSync(path.join(destination,'dashboard','continuation.mjs'));
   assert.throws(()=>moduleClosure(load),/ENOENT.*continuation\.mjs/);
 });
+
+test('browser generation binds identical source bytes across LF and CRLF checkouts',async()=>{
+  const {writeFileSync}=await import('node:fs');
+  const {execFileSync}=await import('node:child_process');
+  const destination=mkdtempSync(path.join(tmpdir(),'bdb-browser-generation-'));
+  const names=['build-browser.mjs','tracking.mjs','execution-identity.mjs','machine-core.mjs','worker-core.mjs'];
+  const generate=newline=>{
+    for(const name of names){
+      const source=readFileSync(new URL(name,import.meta.url),'utf8').replace(/\r\n/g,'\n');
+      writeFileSync(path.join(destination,name),source.replace(/\n/g,newline));
+    }
+    execFileSync(process.execPath,[path.join(destination,'build-browser.mjs')]);
+    return readFileSync(path.join(destination,'browser-engine.mjs'),'utf8');
+  };
+  const lf=generate('\n');
+  assert.equal(generate('\r\n'),lf);
+  assert.equal(readFileSync(new URL('browser-engine.mjs',import.meta.url),'utf8').replace(/\r\n/g,'\n'),lf);
+});
