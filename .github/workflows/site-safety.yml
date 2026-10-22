@@ -64,6 +64,7 @@ on:
       - "tests/bozo-form-spread.test.cjs"
       - "tests/bozo-disclosures.test.cjs"
       - "tests/bozo-diagnostics.test.cjs"
+      - "tests/bozo-loading.test.cjs"
       - "work/test-bozo-diagnostics-ui.mjs"
       - "work/test-bozo-disclosures-ui.mjs"
       - "tests/service-worker.test.js"
@@ -131,6 +132,7 @@ on:
       - "tests/bozo-form-spread.test.cjs"
       - "tests/bozo-disclosures.test.cjs"
       - "tests/bozo-diagnostics.test.cjs"
+      - "tests/bozo-loading.test.cjs"
       - "work/test-bozo-diagnostics-ui.mjs"
       - "work/test-bozo-disclosures-ui.mjs"
       - "tests/service-worker.test.js"
@@ -179,7 +181,7 @@ jobs:
           name: bozo-disclosure-screenshots
           path: work/artifacts/bozo-disclosures/*.png
           if-no-files-found: ignore
-      - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node --test tests/bozo-form-spread.test.cjs tests/bozo-spread-sign.test.js tests/bozo-price-sign.test.js tests/bozo-disclosures.test.cjs tests/bozo-diagnostics.test.cjs
+      - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node --test tests/bozo-form-spread.test.cjs tests/bozo-spread-sign.test.js tests/bozo-price-sign.test.js tests/bozo-disclosures.test.cjs tests/bozo-diagnostics.test.cjs tests/bozo-loading.test.cjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-bozo-menu-ui.mjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-autoload-ui.cjs
       - run: DDFS_JSDOM=/tmp/dd-dfs-test/node_modules/jsdom node work/test-dfs-workspace-ui.cjs
