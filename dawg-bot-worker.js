@@ -3638,6 +3638,10 @@ async function authMcpToken(request, env, cors) {
     const label = String((body && body.label) || "").trim();
     if (!/^[A-Za-z0-9_-]{1,24}$/.test(label))
       return json({ error: "Label: 1-24 letters, digits, - or _ (for example Muse)." }, 400, cors);
+    // "primary" names the original key in every audit line and permission check (RoboKap seats
+    // refuse it because every client holding it looks the same), so no added key may take it.
+    if (action === "add" && label.toLowerCase() === "primary")
+      return json({ error: "The label primary is reserved for your original key. Choose another label." }, 400, cors);
     if (action === "remove") {
       try { await fbPatch(env, "/users/" + key, { ["mcpTokens/" + label]: null }); }
       catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }
@@ -12994,6 +12998,8 @@ async function poundWrite(state,input,uid,actorKind='owner',authorLabel=null,cre
       poundCheck(fields.status!=='blocked'||reason,400,'blocked requires blocked_reason.code');
       poundCheck(fields.status==='blocked'||!fields.blocked_reason,400,'blocked_reason applies to blocked tasks only');
       poundCheck(fields.status!=='canceled'||actorKind==='owner',403,'Only the owner cancels a task');
+      // Reopening undoes a cancel, so it is the owner's decision too (RoboKap treats canceled as closed).
+      poundCheck(!row||row.status!=='canceled'||!Object.hasOwn(fields,'status')||fields.status==='canceled'||actorKind==='owner',403,'Only the owner reopens a canceled task');
       // Leaving review for done needs an accepting reviewer on the record.
       if(row&&row.status==='review'&&fields.status==='done'){const review=Object.hasOwn(fields,'review')?fields.review:row.review;poundCheck(review&&review.verdict==='accept'&&review.reviewed_by,400,'done after review requires an accept verdict and reviewed_by');}
       if(fields.blocks){poundCheck(new Set(fields.blocks).size===fields.blocks.length,400,'blocks lists a task twice');for(const b of fields.blocks){poundCheck(b!==row?.id,400,'blocks cycle');poundItem(state.tasks,b);}}

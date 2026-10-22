@@ -1,7 +1,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process'),vm=require('node:vm');
 const root=path.resolve(__dirname,'..'),paths=[...fs.readdirSync(root).filter(p=>p.endsWith('.html')),...fs.readdirSync(path.join(root,'research-lab')).filter(p=>p.endsWith('.html')).map(p=>'research-lab/'+p)];
-test('all 60 integrated pages restore presentation in the head with early styles',()=>{
- assert.equal(paths.length,60);
+test('all 61 integrated pages restore presentation in the head with early styles',()=>{
+ assert.equal(paths.length,61);
  for(const p of paths){
   const source=fs.readFileSync(path.join(root,p),'utf8'),head=source.split('</head>')[0];
   if(p==='datedawg.html'){assert.match(head,/<script id="dd-presentation-inline">/);assert.match(head,/<style id="dd-presentation-early">/);}

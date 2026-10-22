@@ -2321,7 +2321,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   var selectedEmail = "";
   var qs = new URLSearchParams(location.search);
   var next = qs.get("next") || "";
-  var researchReturn = next === "research-lab/private.html" || next === "research-lab/upload.html" || next === "research-lab/" || next === "research-lab/agent-setup.html" || next === "research-lab/app-permissions.html";
+  var researchReturn = next === "research-lab/private.html" || next === "research-lab/upload.html" || next === "research-lab/" || next === "research-lab/agent-setup.html" || next === "research-lab/app-permissions.html" || next === "research-lab/robokap.html";
   if ((!researchReturn && !/^[A-Za-z0-9][A-Za-z0-9._-]*\.html$/.test(next)) || next === "signon.html") next = "";
   // Reusable league-link parameters are retired. Remove one before any render so it
   // cannot look like an active credential; joining now happens through search below.
