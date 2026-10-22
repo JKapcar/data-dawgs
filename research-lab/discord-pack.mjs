@@ -14,11 +14,11 @@ function clear(){epoch++;data=null;$('panel').hidden=true;$('consent').checked=f
 function render(){
  const seats=$('seats');seats.replaceChildren();
  for(const s of data.seats){const row=el('div',null,'seat'),title=el('strong',s.display+' ');
-  const state=!s.configured_key?['not connected','']:!s.binding?['no session bound','warn']:s.binding.revoked_at?['unbound by owner','warn']:s.binding.live?['session bound','ok']:['session idle','warn'];
+  const state=s.stopped_at?['stopped by you','warn']:!s.configured_key?['not connected','']:!s.binding?['no session bound','warn']:s.binding.live?['session bound','ok']:['session idle','warn'];
   title.append(el('span',state[0],'tag '+state[1]),' ',el('span',s.verified?'passed end-to-end test':'not yet tested','tag '+(s.verified?'ok':'')));row.append(title);
   if(s.configured_key)row.append(el('span','Connector key: '+s.configured_key+' (server-verified)','small'));
-  if(s.binding){row.append(el('span','Binding '+s.binding.number+' · session (self-declared): '+(s.binding.session_ref||'not given')+' · last check-in '+s.binding.last_seen_at,'small'));
-   if(!s.binding.revoked_at){const b=el('button','Unbind '+s.display);b.dataset.act='unbind';b.onclick=()=>act({action:'unbind',seat:s.seat},'Unbound '+s.display+'.');row.append(b);}}
+  if(s.binding)row.append(el('span','Binding '+s.binding.number+' · session (self-declared): '+(s.binding.session_ref||'not given')+' · last check-in '+s.binding.last_seen_at,'small'));
+  if(s.stopped_at||s.configured_key||s.binding){const stop=!s.stopped_at,b=el('button',(stop?'Stop ':'Allow ')+s.display+(stop?'':' again'));b.dataset.act=stop?'stop':'allow';b.onclick=()=>act({action:stop?'stop':'allow',seat:s.seat},(stop?'Stopped ':'Allowed ')+s.display+'.');row.append(b);}
   if(s.verified?.url){const a=el('a','Test reply in Discord');a.href=s.verified.url;a.rel='noreferrer';a.target='_blank';row.append(a);}
   seats.append(row);}
  const jobs=$('jobs');jobs.replaceChildren();

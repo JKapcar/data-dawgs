@@ -54,8 +54,9 @@ mentions; all pings are suppressed.
      (Discord returns the existing message instead of creating another);
    - Discord shows no thread for the request, or the request's own new thread is empty.
 4. Anything else waits for the owner, who checks Discord and records "in Discord" or
-   "not in Discord" on the Pack page. "Not in Discord" returns the request for one fresh attempt
-   with a new nonce.
+   "not in Discord" on the Pack page (refused for two minutes after the reservation, while a send
+   may still be in flight). "Not in Discord" returns the request for one fresh attempt with a new
+   nonce.
 5. A thread-creation attempt younger than 20 seconds is treated as possibly in flight.
 
 This avoids duplicates in preference to guaranteeing delivery. It is not exactly-once.
@@ -78,7 +79,9 @@ This avoids duplicates in preference to guaranteeing delivery. It is not exactly
 
 An unlinked requester gets an ephemeral one-time link (10 minutes) to the owner page. The
 signed-in owner sees the Discord name and ID and confirms. Only hashes of codes are stored.
-Requests made before linking are not queued.
+Requests made before linking are not queued. Every linked account can reach every bound seat,
+and the seat answers from its own session's context, so link other members only if that session
+should answer them; replies are always visible to the server.
 
 ## Acceptance test for any seat
 
@@ -96,7 +99,9 @@ A seat counts as connected only after all of these pass for that seat:
 - Stop everything: set `DISCORD_PACK_ENABLED` to `"false"` and deploy, or roll traffic back
   to the previous Worker version in the deploy workflow.
 - Stop sends only: `DISCORD_PACK_DELIVERY_ENABLED` to `"false"`.
-- Stop one seat: "Unbind" on the owner page, or remove it from `DISCORD_PACK_SEATS`.
+- Stop one seat: "Stop" on the owner page. The lease ends, unsent claims return to the queue,
+  and the seat refuses to bind until "Allow" is pressed; a session cannot undo it. Removing the
+  seat from `DISCORD_PACK_SEATS` also works but needs a deploy.
 - Stored requests and receipts are kept; nothing is deleted or migrated. Discord threads and
   the `/pack` command remain until removed in Discord.
 

@@ -179,7 +179,9 @@ test('uncertain message that landed: replay inside the nonce window resolves wit
 test('uncertain follow-up outside the nonce window waits for the owner; owner resolution is recorded',async()=>{
  const f=await fixture();const lease=await f.ready();const first=await claimed(f,lease);await reply(f,lease,first);const thread=Object.keys(f.threads)[0];
  const q=await f.slash({channel:thread,to:null});await f.tool('owner','dd_pack_claim',{lease,id:q.id});f.faults.push(['message','timeout']);
- assert.equal((await reply(f,lease,q.id)).body.job.delivery,'uncertain');f.advance(5*60e3);const n=f.discordCalls().length;
+ assert.equal((await reply(f,lease,q.id)).body.job.delivery,'uncertain');
+ assert.equal((await f.owner({action:'resolve',id:q.id,observed:'absent'})).body.error,'delivery_may_still_be_in_flight_wait_two_minutes','no owner resolution while a send may be in flight');
+ f.advance(5*60e3);const n=f.discordCalls().length;
  const held=(await reply(f,lease,q.id)).body;assert.match(held.notice,/Not resent: outside_nonce_window/);assert.equal(f.discordCalls().length,n,'no send outside the window');
  const absent=(await f.owner({action:'resolve',id:q.id,observed:'absent'})).body;assert.deepEqual([absent.state,absent.attempt],['queued',2]);
  await f.tool('owner','dd_pack_claim',{lease,id:q.id});const done=(await reply(f,lease,q.id,'Retry after owner check')).body.job;assert.equal(done.delivery,'delivered');
@@ -246,11 +248,17 @@ test('production path defers ephemerally, edits the original once, and never sto
  assert.ok(!JSON.stringify(f.store()).includes('interaction-token'),'token never persisted');
  const bad=await f.slash({to:'nobody',execution:{waitUntil:p=>pending.push(p)}});assert.equal(bad.body.type,4);assert.match(bad.text,/Unknown Pack member/);
 });
-test('owner unbind stops a seat and returns its unsent claims',async()=>{
+test('owner stop is a hard stop: lease ends, claims return, binding refused until allowed',async()=>{
  const f=await fixture();const lease=await f.ready();const q=await claimed(f,lease);
- assert.deepEqual((await f.owner({action:'unbind',seat:'claude'})).body.released,[q]);assert.equal((await f.tool('owner','dd_pack_poll',{lease})).error,'seat_not_bound_call_dd_pack_bind');
- assert.match((await f.slash()).text,/no session is bound/);
- const s=(await f.owner()).body.seats.find(x=>x.seat==='claude');assert.ok(s.binding.revoked_at);
+ assert.deepEqual(plain((await f.owner({action:'stop',seat:'claude'})).body.released),[q]);
+ assert.equal((await f.tool('owner','dd_pack_poll',{lease})).error,'seat_stopped_by_owner');
+ assert.equal((await f.tool('owner','dd_pack_bind')).error,'seat_stopped_by_owner','a session cannot quietly rebind after an owner stop');
+ assert.match((await f.slash()).text,/stopped by the site owner/);assert.equal((await reply(f,lease,q)).error,'seat_stopped_by_owner');
+ const s=(await f.owner()).body.seats.find(x=>x.seat==='claude');assert.ok(s.stopped_at);assert.equal(s.binding,null);
+ assert.equal((await f.owner({action:'allow',seat:'claude'})).body.allowed,true);
+ assert.equal((await f.tool('owner','dd_pack_poll',{lease})).error,'lease_ended_by_owner_stop','the old lease stays dead after allow');
+ const fresh=await f.bind();assert.equal((await f.tool('owner','dd_pack_poll',{lease:fresh})).body.jobs[0].id,q);
+ assert.equal((await f.owner({action:'stop',seat:'grok'})).body.stopped,true,'an unbound seat can be stopped pre-emptively');
 });
 test('store normalisation tolerates RTDB omissions and fails closed when malformed',()=>{
  return fixture().then(f=>{const n=f.ctx.dpStore;assert.deepEqual(plain(Object.keys(n(null))),['version','seats','jobs','threads','links','challenges','windows']);

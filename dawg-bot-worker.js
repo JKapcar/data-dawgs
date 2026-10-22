@@ -12843,10 +12843,11 @@ function dpSeatForCaller(env,caller){
  return hit.length===1?hit[0][0]:null;
 }
 const dpClaimExpired=(j,now)=>j.state==='claimed'&&!(Date.parse(j.claim?.expires_at)>now);
-function dpLiveBinding(s,seat,now){const b=s.seats[seat];return b&&b.lease_sha256&&!b.revoked_at&&now-Date.parse(b.last_seen_at)<=DP.leaseIdleMs?b:null;}
+function dpLiveBinding(s,seat,now){const b=s.seats[seat];return b&&b.lease_sha256&&!b.stopped_at&&now-Date.parse(b.last_seen_at)<=DP.leaseIdleMs?b:null;}
 function dpLeaseCheck(s,seat,hash,now){
- const b=s.seats[seat];dpCheck(b&&b.lease_sha256&&!b.revoked_at,409,'seat_not_bound_call_dd_pack_bind');
- if(b.lease_sha256!==hash)dpFail(409,b.history.some(h=>h.lease_sha256===hash)?'lease_superseded_by_another_session':'lease_invalid');
+ const b=s.seats[seat];dpCheck(!b?.stopped_at,409,'seat_stopped_by_owner');dpCheck(b?.lease_sha256||b?.history.some(h=>h.lease_sha256===hash),409,'seat_not_bound_call_dd_pack_bind');
+ // An owner stop ends the lease; a session must not quietly rebind after it.
+ if(b.lease_sha256!==hash){const old=b.history.find(h=>h.lease_sha256===hash);dpFail(409,!old?'lease_invalid':old.ended==='owner_stop'?'lease_ended_by_owner_stop':'lease_superseded_by_another_session');}
  dpCheck(now-Date.parse(b.last_seen_at)<=DP.leaseIdleMs,409,'lease_expired_rebind');
  return b;
 }
@@ -12936,6 +12937,7 @@ async function dpAdmit(event,env,{question,to}){
   if(event.channel_id===env.DISCORD_CHANNEL_ID){dpCheck(to,400,'choose_seat');seat=to;kind='new';}
   else{thread=s.threads[event.channel_id];dpCheck(thread&&thread.parent_id===env.DISCORD_CHANNEL_ID,403,'destination_denied');dpCheck(thread.requester_id===uid,403,'thread_owner_only');dpCheck(!to||to===thread.seat,409,'thread_seat_mismatch');seat=thread.seat;kind='follow_up';}
   const label=DP_SEATS[seat];
+  if(s.seats[seat]?.stopped_at)return {result:label+'’s seat is stopped by the site owner. Nothing was queued.',write:false};
   if(!Object.hasOwn(seats,seat))return {result:label+' has no supported incoming connection configured, so nothing was queued. Pack members are only listed as connected after their own end-to-end test.',write:false};
   const b=dpLiveBinding(s,seat,now);
   if(!b)return {result:label+'’s seat is configured, but no session is bound and checking in right now (last check-in: '+(s.seats[seat]?.last_seen_at?dpAgo(now-Date.parse(s.seats[seat].last_seen_at)):'never')+'). Nothing was queued.',write:false};
@@ -13015,7 +13017,7 @@ async function dpBind(env,seat,caller,args,recheck){
  dpCheck(pm===null||(Number.isInteger(pm)&&pm>=1&&pm<=1440),400,'invalid_poll_minutes');
  const lease='dpl_'+dpRandom(32),hash=await dcHash(lease),now=Date.now();await recheck();
  return dpTxn(env,s=>{
-  const prev=s.seats[seat],released=[];
+  const prev=s.seats[seat],released=[];dpCheck(!prev?.stopped_at,409,'seat_stopped_by_owner');
   for(const j of Object.values(s.jobs))if(j.seat===seat&&j.state==='claimed'&&j.delivery==='not_sent'){j.state='queued';delete j.claim;released.push(j.id);}
   const history=[...(prev?.history??[]),...(prev?.lease_sha256?[{epoch:prev.epoch,lease_sha256:prev.lease_sha256,session_ref:prev.session_ref??null,bound_at:prev.bound_at,superseded_at:dpIso(now)}]:[])].slice(-5);
   s.seats[seat]={epoch:(prev?.epoch||0)+1,lease_sha256:hash,key_label:caller.keyLabel,session_ref:ref,poll_minutes:pm,bound_at:dpIso(now),last_seen_at:dpIso(now),verified:prev?.verified??null,history};
@@ -13149,13 +13151,13 @@ async function handleDiscordPackOwner(request,env){
   if(request.method==='GET'){
    const snap=await fbGet(env,DP_PATH,true);dpCheck(snap.etag,503,'pack_store_unavailable');const s=dpStore(snap.data),seats=dpSeatConfig(env);
    return send({flags:{pack:env.DISCORD_PACK_ENABLED==='true',delivery:env.DISCORD_PACK_DELIVERY_ENABLED==='true',bot_secret_bound:!!env.DISCORD_BOT_TOKEN},channel:env.DISCORD_CHANNEL_ID||null,
-    seats:Object.entries(DP_SEATS).map(([seat,display])=>{const b=s.seats[seat];return {seat,display,configured_key:seats[seat]?.key_label??null,binding:b?.lease_sha256?{number:b.epoch,session_ref:b.session_ref??null,bound_at:b.bound_at,last_seen_at:b.last_seen_at,live:!!dpLiveBinding(s,seat,now),revoked_at:b.revoked_at??null}:null,verified:b?.verified??null};}),
+    seats:Object.entries(DP_SEATS).map(([seat,display])=>{const b=s.seats[seat];return {seat,display,configured_key:seats[seat]?.key_label??null,stopped_at:b?.stopped_at??null,binding:b?.lease_sha256?{number:b.epoch,session_ref:b.session_ref??null,bound_at:b.bound_at,last_seen_at:b.last_seen_at,live:!!dpLiveBinding(s,seat,now)}:null,verified:b?.verified??null};}),
     command:s.command??null,links:Object.entries(s.links).map(([id,l])=>({discord_user_id:id,name:l.name,linked_at:l.linked_at,expires_at:l.expires_at})),open_link_codes:Object.values(s.challenges).filter(c=>Date.parse(c.expires_at)>now).length,
     jobs:Object.values(s.jobs).sort(dpById).slice(-25).reverse().map(j=>({id:j.id,seat:j.seat,kind:j.kind,state:j.state,delivery:j.delivery,next:dpNext(j,now),thread_id:j.thread_id??null,url:j.url??null,created_at:j.created_at,last_error:j.last_error??null,resolution:j.resolution??null}))});
   }
   dpCheck(request.headers.get('Content-Type')?.split(';')[0]==='application/json',415,'json_required');
   const a=JSON.parse(new TextDecoder().decode(await dqBytes(request)));
-  const shapes={link_preview:['code'],link_confirm:['code'],unlink:['discord_user_id'],register:[],inspect_command:[],resolve:['id','observed'],unbind:['seat']};
+  const shapes={link_preview:['code'],link_confirm:['code'],unlink:['discord_user_id'],register:[],inspect_command:[],resolve:['id','observed'],stop:['seat'],allow:['seat']};
   dpCheck(dpObj(a)&&Object.hasOwn(shapes,a.action)&&Object.keys(a).every(k=>k==='action'||shapes[a.action].includes(k))&&shapes[a.action].every(k=>k in a),400,'invalid_owner_action');
   if(a.action==='link_preview'||a.action==='link_confirm'){
    dpCheck(env.DISCORD_PACK_ENABLED==='true',503,'pack_disabled');dpCheck(typeof a.code==='string'&&/^[A-Za-z0-9_-]{32}$/.test(a.code),400,'invalid_code');
@@ -13170,16 +13172,24 @@ async function handleDiscordPackOwner(request,env){
    }));
   }
   if(a.action==='unlink'){dpCheck(dqSnow(a.discord_user_id),400,'invalid_discord_user_id');await authorize();return send(await dpTxn(env,s=>{const had=!!s.links[a.discord_user_id];delete s.links[a.discord_user_id];return {result:{unlinked:had},write:had};}));}
-  if(a.action==='unbind'){
+  if(a.action==='stop'||a.action==='allow'){
    dpCheck(Object.hasOwn(DP_SEATS,a.seat),400,'unknown_seat');await authorize();
-   return send(await dpTxn(env,s=>{const b=s.seats[a.seat];if(!b?.lease_sha256||b.revoked_at)return {result:{unbound:false},write:false};b.revoked_at=dpIso(now);const released=[];
-    for(const j of Object.values(s.jobs))if(j.seat===a.seat&&j.state==='claimed'&&j.delivery==='not_sent'){j.state='queued';delete j.claim;released.push(j.id);}
-    return {result:{unbound:true,released},write:true};}));
+   return send(await dpTxn(env,s=>{
+    const b=s.seats[a.seat]??(s.seats[a.seat]={epoch:0,history:[]});
+    if(a.action==='allow'){if(!b.stopped_at)return {result:{allowed:false,notice:'Seat was not stopped.'},write:false};delete b.stopped_at;return {result:{allowed:true,notice:'A session must bind again before it can answer.'},write:true};}
+    if(b.stopped_at)return {result:{stopped:true,replayed:true},write:false};
+    // Hard stop: the lease ends, unsent claims return to the queue, and binding stays refused until the owner allows it.
+    const released=[];for(const j of Object.values(s.jobs))if(j.seat===a.seat&&j.state==='claimed'&&j.delivery==='not_sent'){j.state='queued';delete j.claim;released.push(j.id);}
+    if(b.lease_sha256){b.history=[...b.history,{epoch:b.epoch,lease_sha256:b.lease_sha256,session_ref:b.session_ref??null,bound_at:b.bound_at,superseded_at:dpIso(now),ended:'owner_stop'}].slice(-5);delete b.lease_sha256;}
+    b.stopped_at=dpIso(now);return {result:{stopped:true,released},write:true};
+   }));
   }
   if(a.action==='resolve'){
    dpCheck(dqSnow(a.id)&&['present','absent'].includes(a.observed),400,'invalid_resolution');await authorize();
    return send(await dpTxn(env,s=>{
     const j=s.jobs[a.id];dpCheck(j&&j.delivery==='uncertain',409,'nothing_to_resolve');
+    // A reservation younger than two minutes may still be in flight; resolving it could allow a duplicate.
+    dpCheck(now-Date.parse(j.reserved_at)>=120e3,409,'delivery_may_still_be_in_flight_wait_two_minutes');
     const resolution={by:'owner_site_session',observed:a.observed,at:dpIso(now)};
     if(a.observed==='present'){Object.assign(j,{delivery:'delivered',state:j.outcome==='failed'?'failed':'answered',delivered_at:dpIso(now),completed_at:dpIso(now),resolution});delete j.delivery_stage;}
     else{Object.assign(j,{delivery:'not_sent',state:'queued',attempt:(j.attempt||1)+1,resolution});for(const k of ['claim','delivery_stage','reserved_at','nonce','outcome','result_text','author'])delete j[k];}
