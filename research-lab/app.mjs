@@ -1,9 +1,12 @@
 import {workflowGraph,renderWorkflow} from './workflow.mjs';
 import config from './client-config.mjs';
 import {createClient} from './client.mjs';
+import {createCoordinator,taskState} from './coordinator.mjs';
 const client=createClient(config,{onInvalidated:clearVisibleState,onVerified:t=>globalThis.DDAccount?.verified(t),onRejected:s=>globalThis.DDAccount?.failed(s)});
+const coordinator=createCoordinator(client);
 import {validateTracking,summarize} from './tracking.mjs';
 const $=s=>document.querySelector(s),el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
+let renderEpoch=0;
 let state,tracking,index=0,playing=false,timer,returnFocus,audioContext,realData=false;
 // Mirrors machine-core.mjs HYPOTHESIS_FAMILIES; revisions saved before families existed group under other.
 const FAMILIES=[['speed-retention','Speed retention'],['accel-decel-cut','Accel / decel / cut'],['missingness','Missingness'],['external-market','External market'],['other','Other']];
@@ -63,16 +66,29 @@ function hypothesisDetails(h) {const latest=h.revisions.at(-1);drawer(latest.tit
   c.append(action('Revise hypothesis',()=>drawer('New hypothesis revision',c=>form(c,[['title','Title'],['method','Method and falsification criteria','textarea']],'Save revision',p=>command('hypothesis',{...p,id:h.id,expectedVersion:h.revisions.length})))));
 });}
 async function refresh() {
-  state=await client.state();$('.machine-status').dataset.ready='true';$('#receipt-count').textContent=`${state.receipts.length} ${state.receipts.length===1?'receipt':'receipts'}`;
-  const active=state.tasks.filter(t=>!['completed','stale'].includes(t.status)),claimed=active.filter(t=>t.lease?.expiresAt>Date.now()).length;$('#queue-count').textContent=active.length;$('#active-tasks').textContent=`${active.length} active ${active.length===1?'task':'tasks'} / ${claimed} leased / ${active.length-claimed} awaiting claim`;
+  const epoch=++renderEpoch,snapshot=await client.state();
+  for(const t of snapshot.tasks){
+    if(epoch!==renderEpoch)return;
+    t.executionState=taskState(snapshot,t);
+    if(t.executionState==='unverified'){
+      try{const r=snapshot.receipts.find(r=>r.taskId===t.id);await coordinator.verifyReceipt(snapshot,t,r);t.executionState=r.outcome==='failure'?'failed':'completed';}
+      catch{t.executionState='unverified';}
+    }
+  }
+  if(epoch!==renderEpoch)return;
+  snapshot.verifiedReceiptIds=snapshot.tasks.filter(t=>['completed','failed'].includes(t.executionState)).flatMap(t=>snapshot.receipts.filter(r=>r.taskId===t.id).map(r=>r.id));
+  state=snapshot;$('.machine-status').dataset.ready='true';$('#receipt-count').textContent=`${state.receipts.length} ${state.receipts.length===1?'receipt':'receipts'}`;
+  const active=state.tasks.filter(t=>['queued','expired','owned','foreign'].includes(t.executionState)),claimed=active.filter(t=>t.lease?.expiresAt>Date.now()).length;$('#queue-count').textContent=active.length;$('#active-tasks').textContent=`${active.length} active ${active.length===1?'task':'tasks'} / ${claimed} leased / ${active.length-claimed} awaiting claim`;
   const groups=FAMILIES.map(([family,label])=>[label,state.hypotheses.filter(h=>(h.revisions.at(-1).family||'other')===family)]).filter(([,list])=>list.length);
   $('#hypothesis-grid').replaceChildren(...groups.map(([label,list])=>{const g=el('section',undefined,'family-group'),grid=el('div',undefined,'grid');g.append(el('h3',`${label} · ${list.length}`,'eyebrow'),grid);grid.append(...list.map(h=>{const r=h.revisions.at(-1),n=el('article',undefined,'card');n.dataset.status=r.status||'exploratory';n.append(chip(r.status||'exploratory'),el('span',` v${r.version}`,'meta'),el('h3',r.title),el('p',r.method),action('Open research record ↗',()=>hypothesisDetails(h)));return n;}));return g;}));
-  $('#tasks').replaceChildren(...state.tasks.map(t=>{const n=el('article',undefined,'task'),d=el('div');n.dataset.status=t.status;d.append(el('strong',state.hypotheses.find(h=>h.id===t.hypothesisId)?.revisions[t.hypothesisVersion-1]?.title||t.hypothesisId),el('small',`${t.status}${t.staleReason?' / '+t.staleReason:''} · discovery · ${t.budgetMs}ms / ${t.maxObservations} observations · requires experiment:run`));n.append(d);if(!['completed','stale'].includes(t.status))n.append(action(t.lease&&t.lease.expiresAt>Date.now()?'Resume owned lease':client.mode==='hosted'?'Claim & run shared audit':client.mode==='browser'?'Run synthetic demo':'Claim & run locally',async()=>{
-    let claimed=t;if(!t.lease||t.lease.expiresAt<=Date.now())claimed=await command('claim',{taskId:t.id,leaseMs:60000});
-    if(claimed.status==='stale'){notice('Task closed as stale: '+claimed.staleReason+'. Recheck the current question before queuing again.');await refresh();return;}
-    const receipt=await command('run',{taskId:t.id,leaseToken:claimed.lease.token,tracking});notice(`Receipt recorded: ${receipt.outcome}. Synthetic discovery; no hypothesis verdict.`);await refresh();
-  }));return n;}));
-  $('#receipts').replaceChildren(...state.receipts.map(r=>{const d=el('details'),s=el('summary');s.append(...(r.synthetic?[el('span','SYNTHETIC','tag synthetic-badge'),' ']:[]),`${r.outcome.toUpperCase()}${r.reason?' ('+r.reason+')':''} · ${r.at} · ${r.id.slice(0,8)}`);d.append(s,el('pre',JSON.stringify(r,null,2)));return d;}));
+  $('#tasks').replaceChildren(...state.tasks.map(t=>{const n=el('article',undefined,'task'),d=el('div'),status=t.executionState;n.dataset.status=status;
+    d.append(el('strong',state.hypotheses.find(h=>h.id===t.hypothesisId)?.revisions[t.hypothesisVersion-1]?.title||t.hypothesisId),el('small',`${status}${coordinator.attemptState(t.id)?' · attempt: '+coordinator.attemptState(t.id):''} · reported: ${t.status} · discovery · ${t.budgetMs}ms / ${t.maxObservations} observations · requires experiment:run`));n.append(d);
+    if(['queued','expired','owned'].includes(status))n.append(action(coordinator.pending(t.id)?'Reconcile pending attempt':status==='owned'?'Resume owned lease':client.mode==='hosted'?'Claim & run shared audit':client.mode==='browser'?'Run synthetic demo':'Claim & run locally',async()=>{
+      notice('Pending canonical claim / receipt verification. No completed work yet.');
+      try{const result=await coordinator.run(t.id,tracking);notice(result.status==='failed'?`Audit failed: ${result.receipt.error}`:`Receipt recorded: ${result.receipt.outcome}. Verified synthetic discovery receipt; no hypothesis verdict.`,result.status==='failed');}
+      finally{await refresh();}
+    }));return n;}));
+  $('#receipts').replaceChildren(...state.receipts.map(r=>{const d=el('details'),s=el('summary');s.append(...(r.synthetic?[el('span','SYNTHETIC','tag synthetic-badge'),' ']:[]),`${state.verifiedReceiptIds.includes(r.id)?'VERIFIED RECEIPT':'UNVERIFIED / HISTORICAL RECORD'} · ${r.outcome.toUpperCase()}${r.reason?' ('+r.reason+')':''} · ${r.at} · ${r.id.slice(0,8)}`);d.append(s,el('pre',JSON.stringify(r,null,2)));return d;}));
   $('#evidence').replaceChildren(...state.evidence.map(e=>{const n=el('article'),a=el('a',e.title);a.href=e.url;a.target='_blank';a.rel='noopener noreferrer';n.append(a,el('p',e.excerpt),el('span',e.assessment+' · '+who(e),'meta'));return n;}));
   if(!state.evidence.length)$('#evidence').append(el('p','No cited evidence yet. Add a source and excerpt; claims remain unverified.'));
   $('#audit').replaceChildren(el('pre',JSON.stringify(state.audit,null,2)));
@@ -128,5 +144,5 @@ async function loadRealData(){
   for(const f of summary.files){const tr=el('tr');for(const v of [f.file,f.bytes?.toLocaleString?.()??f.bytes,f.rows?.toLocaleString?.()??f.rows,f.columns,f.key_unique===undefined?'—':String(f.key_unique),f.max_null_share===undefined?'—':String(f.max_null_share),f.sha256?f.sha256.slice(0,12)+'…':'—'])tr.append(el('td',v===undefined||v===null?'—':String(v)));table.append(tr);}
   box.replaceChildren(head,table,el('p','Counts and shapes only. Not a finding, not a fitted baseline, and not evidence for any hypothesis.','meta'));
 }
-function clearVisibleState(){globalThis.DDAccount?.reset();state=null;stop();$('.machine-status').dataset.ready='false';for(const id of ['hypothesis-grid','tasks','receipts','evidence','audit'])$('#'+id).replaceChildren();if($('#real-data')){$('#real-data').replaceChildren();realData=false;}$('#receipt-count').textContent='State cleared';$('#drawer').close();$('#drawer-content').replaceChildren();notice('Identity changed. Reload to verify research access.',true);}
+function clearVisibleState(){renderEpoch++;coordinator.clear();globalThis.DDAccount?.reset();state=null;stop();$('.machine-status').dataset.ready='false';for(const id of ['hypothesis-grid','tasks','receipts','evidence','audit'])$('#'+id).replaceChildren();if($('#real-data')){$('#real-data').replaceChildren();realData=false;}$('#receipt-count').textContent='State cleared';$('#drawer').close();$('#drawer-content').replaceChildren();notice('Identity changed. Reload to verify research access.',true);}
 window.addEventListener('storage',e=>{if(e.key==='dd-bozo-sess'||e.key===null)client.invalidate();});

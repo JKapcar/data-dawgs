@@ -10,5 +10,5 @@ export async function createBrowserRunner() {
     [3,'Missingness before model complexity','Audit missing fields and sampling intervals by entity and cohort before designing a study.']]){
     const h=await command('hypothesis',{title,method},`seed-h-${i}`);await command('task',{hypothesisId:h.id,split:'discovery',budgetMs:5000,maxObservations:10000},`seed-t-${i}`);
   }
-  return {command,state:()=>({...view(state,principal),mode:'browser-memory-demo',codeHash,adapters:{externalAI:'unconfigured',scheduler:'unconfigured',verifiedData:'unconfigured',holdout:'disabled'}})};
+  return {command,state:()=>({...view(state,principal),identity:{actor:principal.id,tenant:principal.tenant,kind:'demo'},mode:'browser-memory-demo',codeHash,adapters:{externalAI:'unconfigured',scheduler:'unconfigured',verifiedData:'unconfigured',holdout:'disabled'}})};
 }
