@@ -25,7 +25,7 @@ Discord is an interface to this harness, not the harness; see [Discord](#discord
 |---|---|---|---|
 | Tasks, messages, context versions | Pound record `/privatePounds/<owner>` → `payload` | Pound | Reads tasks and context hashes. Never rewrites them |
 | Pins, plans, roles, claims, receipts, reviews, decisions, events | Same Pound record → `robokap` key (JSON string) | RoboKap | Appends; amendments add versions, history is kept |
-| Hypotheses, experiments, Lab receipts, findings | Lab tenant `/researchLab/v1/tenants/<tenant>` | Lab | Reads versions, receipt hashes and splits through the owner's research access. Never writes, claims or runs |
+| Hypotheses, experiments, Lab receipts, findings | Lab tenant `/researchLab/v1/tenants/<tenant>` | Lab | Reads versions, receipt hashes, splits and run outcomes through the owner's research access. Never writes, claims or runs |
 | Project milestones, checks, decisions, roles | Project store (`RESEARCH_PROJECTS_ENABLED=false`) | Project store | Untouched. Plan acceptance items may carry a `check_ref` link only |
 | Discord requests and threads | `/discord_pack_v1` (PR #332, draft) | Discord seats | Accepts a `discord_message` receipt artifact and checks it against the plan's thread |
 
@@ -38,7 +38,7 @@ copy) and keeps it out of general backups. There is no second task store.
 
 | Principal | How it is established | May |
 |---|---|---|
-| Owner session | Signed site session of `RESEARCH_OWNER_UID` | Pin, plan (approved), decide, do owner-seat tasks |
+| Owner session | Signed site session of `RESEARCH_OWNER_UID` | Pin, plan (approved), decide, stop any lease, do owner-seat tasks |
 | Owner connector key | Connector credential; `key_label` server-verified (`primary`, per-assistant labels) | Propose plans and roles, accept a role naming its own key, claim/renew/release/report for its seat, advisory review |
 | Delegated agent | Separate `da1_` credential (designed in `AGENT-CONNECTIONS.md`) | Modelled for independent review; **not wired to RoboKap** |
 | Declared by the session | `session_ref`, summaries, notes, model names | Routing and display only. Never authorization |
@@ -46,9 +46,15 @@ copy) and keeps it out of general backups. There is no second task store.
 Every connector key carries owner authority, so a key label proves which key acted, not which
 model. Reviews from connector keys are recorded as `advisory` and can never satisfy an
 `independent` requirement. A self-reported sign-up is a role *proposal*; acceptance must come
-from the key the role names; approval is a separate owner decision. A seat never binds to the
-shared `primary` key (refused as `shared_primary_key_not_allowed`): every client holding it would
-look the same, so each seat needs its own key.
+from the key the role names; approval is a separate owner decision.
+
+- **The shared `primary` key never holds a seat** (`shared_primary_key_not_allowed`): every
+  client holding it looks the same. The Worker also refuses to add a labelled key named
+  `primary`, so that name always means the original key.
+- **A role binds to a key label.** Re-adding a label (rotating that key) gives the new secret the
+  same seat. Removing the key or revoking the role cuts the seat off.
+- **Session targeting** (`session_ref`) stops accidental cross-session claims. It is declared by
+  the session, so it does not stop a key holder who deliberately claims to be another session.
 
 ## Process maps
 
@@ -60,27 +66,42 @@ stateDiagram-v2
     Unplanned --> NeedsYou: plan proposed by a connector key
     Unplanned --> Ready: owner saves plan (approved)
     NeedsYou --> Ready: owner approves plan
-    Ready --> Blocked: dependency not accepted / seat role not accepted / Lab unverifiable
+    Ready --> Blocked: waiting on a dependency, a seat's acceptance or an unreadable Lab
     Blocked --> Ready: condition clears (recomputed on every read)
+    Ready --> NeedsYou: dependency canceled, rejected, missing or in a cycle
     Ready --> Running: authorized claim with lease (key + session + secret)
-    Running --> Ready: release or lease expiry (attempt counted)
-    Running --> Review: receipt, outcome succeeded, review required
-    Running --> NeedsYou: receipt uncertain (reconcile) / decision required
-    Running --> Ready: receipt failed, budget left
-    Review --> NeedsYou: review satisfied, owner decision required
+    Running --> Ready: release, owner stop, lease expiry, or failed or stale receipt (attempt counted)
+    Running --> NeedsYou: amendment pending, uncertain outcome, or owner decision required
+    Running --> Review: receipt succeeded, review required
+    Review --> NeedsYou: review satisfied and decision required, or reviewer rejects
+    Review --> Ready: reviewer asks for revision
     Review --> Done: review satisfied, no decision required
     NeedsYou --> Done: owner accepts current-version receipt
-    NeedsYou --> Ready: owner asks for revision / not landed / budget extended
-    Done --> NeedsYou: task text, pin or Lab link changes (evidence goes stale)
+    NeedsYou --> Ready: owner asks for revision, not landed, or budget extended
+    Done --> NeedsYou: task text, pin or Lab link changes
+    Done --> Ready: owner sends it back, or a dependency is redone
     Done --> [*]
 ```
 
 A dependent task is eligible only when each dependency is **Done at its current version**:
 a current receipt for the approved plan version, the pinned context version still current, the
 task text unchanged since approval, the required review satisfied and, where required, the
-owner's accept decision. Dependencies are the owner-approved `depends_on` list plus every task
-whose Pound `blocks` list names this one. Adding a Pound blocker takes effect at once; removing
-one requires an approved plan amendment, so a connector key cannot unblock its own work.
+owner's accept decision.
+
+Dependencies are the plan's `depends_on`, the Pound blockers in force when you approved the
+plan, and every task whose Pound `blocks` list names this one now.
+
+- Adding a Pound blocker takes effect at once.
+- Removing a blocker that an approved plan recorded changes nothing until you approve a new plan
+  version, so a connector key cannot unblock work by editing Pound. Before you approve an
+  amendment, the board lists any dependency the approval would stop enforcing.
+- A blocker added after approval is shown as a live Pound edge. Until a plan version records it,
+  any Pound writer can remove it again.
+- An archived task blocks nothing new; an archived recorded dependency sends the task to Needs You.
+- A dependency that is canceled, rejected, missing or in a cycle goes to Needs You. A dependency
+  that is simply not done yet leaves the task Blocked.
+- A result binds to the dependency evidence it started from. If a dependency is redone after the
+  dependent was accepted, the dependent reopens for a new attempt.
 
 ### Claim, execute, report
 
@@ -92,10 +113,11 @@ sequenceDiagram
     participant O as Owner board
     S->>W: dd_owner_robokap_read {session_ref}
     W->>P: read (ETag)
-    W-->>S: ready work for this key's seat, plan_version, pin
+    W-->>S: ready work for this key's seat, by priority, with plan_version and pin
     S->>W: rk.claim {task_id, plan_version, pin_version, session_ref, lease_secret}
-    W->>P: CAS write: claim (lease, attempt n)
+    W->>P: CAS write: claim (lease, attempt n, dependency evidence)
     S->>S: do the work in-session
+    S->>W: rk.claim again with the same secret to renew (re-checked, capped)
     S->>W: rk.report {claim_id, lease_secret, outcome, summary, artifacts}
     W->>P: CAS write: receipt (hash-chained, artifacts verified)
     O->>W: rk.decide {receipt, accept}
@@ -107,6 +129,26 @@ Stop conditions, all enforced by the server: stale plan, pin or task text; wrong
 or lease secret; a live lease held by another session; an unreconciled uncertain outcome; a
 pending owner decision; a failed, canceled or missing dependency; a dependency cycle; exhausted
 attempts; an unverifiable or stale Lab link; a revoked role or expired connector grant.
+
+Leases:
+
+- **Renewal** re-checks the task text, pin, Lab link and dependencies, and stops at four lease
+  lengths after the claim (`max_expires_at`). A lease whose context changed is flagged on the
+  board, cannot renew, and its result is recorded as stale.
+- **Late results.** A report after the lease ended is kept (labelled late) if no newer attempt
+  started; otherwise it is refused. An `uncertain` outcome is always recorded, so the owner can
+  reconcile it.
+- **Superseded or stopped leases.** A result from a lease ended by an approved amendment, a role
+  revocation or your stop is recorded as stale and never counts.
+- **Uncertain outcomes** from any plan version block retries until you record whether they
+  landed. An amendment cannot erase one.
+
+Reviews and decisions:
+
+- One review per key per result. A reviewer's revise or reject closes review: later accepts
+  cannot outvote it, and you cannot accept over it (amend the plan to change the requirement).
+- You can send back accepted work even when its plan needed no decision.
+- Each decision keeps its own id and records what it decides as `subject_id`.
 
 ### Roles
 
@@ -125,41 +167,46 @@ flowchart LR
 flowchart LR
     T[RoboKap plan] -->|link: hypothesis id + version| H[(Lab hypothesis)]
     R[RoboKap receipt] -->|artifact: Lab receipt id + hash| LR[(Lab receipt)]
-    W[Worker] -.->|read-only check: version, hash, split| H
+    W[Worker] -.->|read-only check: version, hash, split, outcome| H
     W -.->|read-only check| LR
 ```
 
 - The Lab stays authoritative. RoboKap stores references and checks them read-only.
 - Saving or claiming a coordination task never launches an experiment or grants access.
 - A Lab receipt counts as evidence only if its hash matches and it belongs to the linked
-  hypothesis version. Plans can require it (`lab.evidence: "required"`).
+  hypothesis version. Plans can require it (`lab.evidence: "required"`); a required receipt must
+  have executed and not failed (null and inconclusive results count).
+- Lab references are verified when recorded: while the Lab cannot be read, a report citing one
+  is refused (`lab_unavailable`) and can be resent later.
 - A revised or withdrawn hypothesis makes the link stale; an unreadable Lab blocks linked work.
 - The 2025 holdout stays sealed: `data_scope` has no holdout value, and Lab receipts are
   accepted only from the `discovery` or `development` splits.
 
 ## Agent protocol (connector)
 
-1. `dd_owner_robokap_read {session_ref}`: role offers, ready work, your live leases, review requests.
+1. `dd_owner_robokap_read {session_ref}`: role offers, ready work (highest priority first), your
+   live leases, review requests.
 2. `rk.role.accept {role_id}` for a role naming your key.
 3. `rk.claim` with the read's `plan_version` (and `pin_version`), your `session_ref` and a fresh
-   random `lease_secret`. Resend the same values to renew before expiry.
+   random `lease_secret`. Resend the same values to renew before expiry, until `max_expires_at`.
 4. Do the work. `rk.report` with `succeeded`, `failed` or `uncertain` (an external effect may or
    may not have landed), a summary and artifact references.
 5. Read again for the next eligible task. Stop when nothing is ready.
 
-After a timeout, resend the identical request (same `request_id`): it replays. If the request id
+After a timeout, resend the identical request (same `request_id`) promptly: replies are kept for
+the last 256 writes, after which a resend is treated as new and checked again. If the request id
 is lost, read first and reconcile; never claim again blindly.
 
 Artifact verification is shown per artifact: `server_verified` (RoboKap context version or Lab
 receipt matched), `format_checked` (GitHub commit/PR, Claude artifact, Discord message, https
-URL), `claimed` (a note), or `unverified_lab_unavailable`.
+URL) or `claimed` (a note).
 
 ## Pack capability matrix
 
 | Seat | Read shared context | Receive a task | Wake a session | Execute | Independent review |
 |---|---|---|---|---|---|
-| Claude | Supported via connector key | Supported by pull | Unsupported | In-session only | No (shared owner key) |
-| Grok, Gemini, Muse | Same mechanism if their client holds a key; not verified end to end here | Same | Unsupported | In-session only | No (shared owner key) |
+| Claude | Supported via its own connector key | Supported by pull | Unsupported | In-session only | No (shared owner authority) |
+| Grok, Gemini, Muse | Same mechanism if their client holds its own key; not verified end to end | Same | Unsupported | In-session only | No (shared owner authority) |
 | Scout/dot | No connection established | Manual | Unsupported | Manual | No |
 | Delegated agent | Designed, not wired to RoboKap | — | — | — | Yes, by design |
 
@@ -201,15 +248,16 @@ Requires your explicit approval, in this order. Nothing below has been done.
    `main` (which carries other Worker changes merged since the last deploy), and run the packaged
    tests on that exact artifact before deploying it.
 3. **Deploy with `ROBOKAP_ENABLED="false"`**, then confirm the active version with the
-   `worker-inspect` workflow. Behaviour is unchanged; the research bundle code hash changes.
+   `worker-inspect` workflow. RoboKap stays off. One small behaviour change ships with it:
+   `/auth/mcp-token` refuses to add a new labelled key named `primary` (existing keys untouched).
 4. **Flip `ROBOKAP_ENABLED` to `"true"`** and deploy.
 
 | Item | Detail |
 |---|---|
-| Permissions | Route `/robokap/v1` for the configured owner's signed session. Two connector tools for the owner's connector keys while the RoboKap app grant is on. Keys gain proposals, own-key role acceptance, claims/reports for their own seat and advisory reviews; never pins, decisions, Lab writes or grants. No new credential, secret, grant, binding or schedule |
+| Permissions | Route `/robokap/v1` for the configured owner's signed session. Two connector tools for the owner's connector keys while the RoboKap app grant is on. Keys gain proposals, own-key role acceptance, claims/reports for their own seat and advisory reviews; never pins, decisions, Lab writes or grants. Keys can fill at most three quarters of each record list and of the 256 KiB store, so you always have room to decide. No new credential, secret, grant, binding or schedule |
 | Data recipients | Firebase RTDB (existing Pound record). Cloudflare (Worker; existing 30-day private KV backup of the same record). Each assistant provider whose session reads its queue receives those task briefs and pins (Anthropic for Claude; xAI, Google or Meta only if their keys read). Nothing goes to Discord or GitHub from RoboKap |
 | Costs | No new paid service. Per call: one Pound read, one read-only Lab read, at most one write plus compare-and-swap retries. Assistant usage is the session's own plan; no API billing |
-| Stop controls | Revoke the seat role on the board (live leases end). Turn off the RoboKap app grant on App permissions (tools disappear for every key). Set `ROBOKAP_ENABLED="false"` and deploy, or roll back the Worker version. Plan budgets cap attempts and lease minutes. Closing the session stops all work: nothing runs without it |
+| Stop controls | Stop any lease from its card. Revoke the seat role on the board (live leases end). Turn off the RoboKap app grant on App permissions (tools disappear for every key). Set `ROBOKAP_ENABLED="false"` and deploy, or roll back the Worker version. Plan budgets cap attempts and lease minutes. Closing the session stops all work: nothing runs without it |
 | Rollback | Worker: previous version via the deploy workflow, or the flag off. Data: records stay inert in the `robokap` key; deleting that key is optional and only by your admin access. Pages: revert the merge commit |
 
 ## Proposed real-session pilot (separate approval)
@@ -219,18 +267,20 @@ Requires your explicit approval, in this order. Nothing below has been done.
   creating that key (a new credential) is the pilot's first approval.
 - **Work:** two tasks you create in RoboKap. A: read the pinned design of record (pinned by
   exact revision, status draft) and save a short summary as a RoboKap context version. B,
-  depending on A: list the open freeze-checklist items as a task message. `data_scope: none`;
-  no competition data, no Lab access.
+  depending on A: list the open questions A's summary raises, as a task message.
+  `data_scope: none`; no competition data, no Lab access.
 - **Observable receipts:** the board's lane changes; A's receipt with a `server_verified`
   context-version artifact and its hash; the event log with the Claude seat key and declared
   session; your accept decision; B moving from Blocked to Ready without anyone relaying it.
-- **Stop:** revoke the role or turn the app grant off; the plans' budgets cap attempts at 2.
+- **Stop:** stop the lease or revoke the role on the board, or turn the app grant off; the plans'
+  budgets cap attempts at 2.
 
 ## Limits and known gaps
 
 - Lifetime caps per workspace (for example 300 claims, 200 receipts) with fail-closed capacity
   errors. A retention or archive policy is a later owner decision.
-- RoboKap keeps its own event ring (200). Pound's 40-task and 100-message lifetime limits still apply.
+- RoboKap keeps its own event ring (200) and idempotency ring (256). Pound's 40-task and
+  100-message lifetime limits still apply.
 - Task briefs, summaries and artifacts are untrusted text, rendered as text.
 - Claude Doc revisions are recorded as owner attestations: the Worker cannot read Claude Docs.
 - No delegated-agent transport for RoboKap yet, so `independent` reviews cannot be satisfied in
@@ -243,6 +293,7 @@ Requires your explicit approval, in this order. Nothing below has been done.
 node --test research-lab/robokap-core.test.mjs research-lab/robokap.test.mjs
 DD_NODE_MODULES=<node_modules with miniflare> node --test research-lab/robokap-worker.test.mjs
 DD_NODE_MODULES=<node_modules with playwright> node research-lab/robokap-browser.test.mjs
+node work/test-identity-league-foundation.mjs
 ```
 
 All fixtures are synthetic: invented tasks, keys, sessions, hypotheses and receipts.

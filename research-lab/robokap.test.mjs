@@ -21,18 +21,22 @@ const secret = n => ('integration_secret_' + n).padEnd(30, 'z');
 function labEnvelope({ grant = true } = {}) {
   const state = initialState();
   state.hypotheses.push({ id: LAB_H, tenant: 'test', revisions: [{ version: 1, title: 'Synthetic', method: 'Synthetic', status: 'exploratory' }] });
-  state.receipts.push({ id: 'lab-receipt-1', tenant: 'test', taskId: 'lab-task-1', hypothesisId: LAB_H, hypothesisVersion: 1, split: 'discovery', receiptHash: 'd'.repeat(64) });
+  state.receipts.push({ id: 'lab-receipt-1', tenant: 'test', taskId: 'lab-task-1', hypothesisId: LAB_H, hypothesisVersion: 1, split: 'discovery', outcome: 'success', receiptHash: 'd'.repeat(64) });
   return encodeEnvelope({ version: 1, access: { users: { u_owner: { owner: grant, enabled: true, capabilities: ['research:read'] } } }, state, inputs: {} });
 }
 function rig({ robokapFlag = 'true' } = {}) {
-  let clock = Date.parse('2026-10-22T12:00:00Z'), race = 0, lose = false, revoke = false, sessionUid = 'u_owner';
+  let clock = Date.parse('2026-10-22T12:00:00Z'), race = 0, lose = false, revoke = false, sessionUid = 'u_owner', failReadAfterWrite = false, readArmed = false;
   const env = { RESEARCH_OWNER_UID: 'u_owner', RESEARCH_UPLOAD_TENANT: 'test', DAWG_POUND_ENABLED: 'true', RESEARCH_LAB_ENABLED: 'true', ...(robokapFlag ? { ROBOKAP_ENABLED: robokapFlag } : {}) };
   const db = new Map([[L, labEnvelope()]]), etags = new Map(), writes = [];
-  const fbGet = async (e, path) => ({ data: structuredClone(db.get(path) ?? null), etag: String(etags.get(path) || 0) });
+  const fbGet = async (e, path) => {
+    if (readArmed && path === P) { readArmed = false; throw new Error('synthetic read failure'); }
+    return { data: structuredClone(db.get(path) ?? null), etag: String(etags.get(path) || 0) };
+  };
   const fbPut = async (e, path, data, etag) => {
     if (race > 0) { race--; etags.set(path, (etags.get(path) || 0) + 1); }
     if (etag !== String(etags.get(path) || 0)) return false;
     db.set(path, structuredClone(data)); etags.set(path, (etags.get(path) || 0) + 1); writes.push(path);
+    if (failReadAfterWrite) { failReadAfterWrite = false; readArmed = true; }
     if (lose) { lose = false; throw new Error('synthetic lost response'); }
     return true;
   };
@@ -55,7 +59,7 @@ function rig({ robokapFlag = 'true' } = {}) {
     const out = await run('claude', 'dd_owner_pound_write', { op: 'task.save', expected_revision: s.revision, request_id: 'pound_task_' + String(++n).padStart(10, '0'), data: { title, body: 'Synthetic brief for ' + title, agent_id: '', status: 'queued', archived: false, ...extra } });
     return out.result.item_id;
   };
-  return { env, db, writes, api, robokap, enable, run, write, route, owner, addTask, tick: ms => { clock += ms; }, race: (k = 1) => { race = k; }, lose: () => { lose = true; }, revoke: () => { revoke = true; }, sessionAs: uid => { sessionUid = uid; } };
+  return { env, db, writes, api, robokap, enable, run, write, route, owner, addTask, tick: ms => { clock += ms; }, race: (k = 1) => { race = k; }, lose: () => { lose = true; }, revoke: () => { revoke = true; }, sessionAs: uid => { sessionUid = uid; }, failReadAfterWrite: () => { failReadAfterWrite = true; } };
 }
 const names = tools => tools.map(t => t.name);
 async function seat(f) {
@@ -89,7 +93,7 @@ test('complete workflow through the real interfaces: owner route decides, the Cl
   await f.enable('pound');
   const A = await f.addTask('Synthetic task A'), B = await f.addTask('Synthetic task B');
   await seat(f);
-  const pin = await f.owner('rk.pin', { project_id: 'bdb-test', kind: 'design_of_record', status: 'draft', ref: { type: 'claude_doc', id: 'SyntheticDocId00000000', rev: 45 } });
+  const pin = await f.owner('rk.pin', { project_id: 'bdb-test', kind: 'design_of_record', status: 'draft', ref: { type: 'claude_doc', id: 'SyntheticDocId00000000', rev: 1 } });
   assert.equal(pin.body.result.pin.verification, 'owner_attested');
   await f.owner('rk.plan', { task_id: A, expected_plan_version: 0, seat: 'claude', review: 'advisory', decision: 'required', data_scope: 'synthetic', pin: { project_id: 'bdb-test', kind: 'design_of_record', version: 1, require: 'any' } });
   const planB = await f.owner('rk.plan', { task_id: B, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'required', data_scope: 'none', depends_on: [A] });
@@ -217,4 +221,21 @@ test('Lab links are checked read-only through the owner\'s research access and f
   assert.equal(board.lab.status, 'unavailable');
   assert.deepEqual(board.lanes.blocked.map(c => c.reasons.map(r => r.code)), [['lab_unverifiable']]);
   assert.ok(!f.writes.includes(L), 'RoboKap never writes the Lab');
+});
+
+test('a committed owner write reads as saved even when the board cannot be re-read afterwards', async () => {
+  const f = rig();
+  await f.enable('pound');
+  await f.addTask('Synthetic task A');
+  f.failReadAfterWrite();
+  const body = { op: 'rk.role.propose', request_id: 'owner_saved_read_failed', data: { seat: 'claude', key_label: 'Claude', role: 'Synthetic' } };
+  const first = await f.route(body);
+  assert.equal(first.status, 200, 'the write committed, so the answer is not an error');
+  assert.equal(first.body.board, null);
+  assert.equal(first.body.board_status, 'saved_reload_needed');
+  assert.equal(first.body.result.state, 'proposed');
+  const again = await f.route(body);
+  assert.equal(again.body.result.replayed, true, 'a resend replays instead of writing twice');
+  assert.equal(JSON.parse(f.db.get(P).robokap).roles.length, 1);
+  assert.ok(again.body.board);
 });

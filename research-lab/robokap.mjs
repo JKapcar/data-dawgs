@@ -46,7 +46,7 @@ export function createRoboKap({ fbGet, fbPut, ownerIdentity, now = Date.now }) {
     return { snapshot, pound, rk: rkParse(snapshot.data?.robokap) };
   }
 
-  // Read-only index of the owner's Lab tenant: versions, receipt hashes and splits only.
+  // Read-only index of the owner's Lab tenant: versions, receipt hashes, splits and run outcomes.
   async function labIndex(env, uid) {
     const tenant = env.RESEARCH_UPLOAD_TENANT;
     if (env.RESEARCH_LAB_ENABLED !== 'true' || !/^[A-Za-z0-9_-]{1,100}$/.test(tenant || '')) return null;
@@ -59,7 +59,7 @@ export function createRoboKap({ fbGet, fbPut, ownerIdentity, now = Date.now }) {
       return {
         tenant,
         hypotheses: new Map(state.hypotheses.filter(mine).map(h => [h.id, { version: h.revisions.length, status: h.revisions.at(-1)?.status ?? null }])),
-        receipts: new Map(state.receipts.filter(mine).map(r => [r.id, { receiptHash: r.receiptHash, hypothesisId: r.hypothesisId, hypothesisVersion: r.hypothesisVersion, split: r.split, taskId: r.taskId }])),
+        receipts: new Map(state.receipts.filter(mine).map(r => [r.id, { receiptHash: r.receiptHash, hypothesisId: r.hypothesisId, hypothesisVersion: r.hypothesisVersion, split: r.split, taskId: r.taskId, outcome: r.outcome ?? null, execution: r.execution ?? 'executed' }])),
         discussions: new Map(state.discussions.filter(mine).map(d => [d.id, { hypothesisId: d.hypothesisId, kind: d.kind }])),
       };
     } catch { return null; }
@@ -148,7 +148,10 @@ export function createRoboKap({ fbGet, fbPut, ownerIdentity, now = Date.now }) {
       if (request.method === 'GET') return send({ board: await board(), capability: CAPABILITY, holdout: 'sealed' });
       const input = await readJson(request);
       const result = await write(env, uid, { kind: 'owner_session' }, input, async () => check(await ownerIdentity(request, env) === uid, 401, 'owner_session_changed'));
-      return send({ result, board: await board(), capability: CAPABILITY, holdout: 'sealed' });
+      // The write is committed. A failed re-read must not turn it into an apparent failure.
+      let fresh = null;
+      try { fresh = await board(); } catch {}
+      return send({ result, board: fresh, ...(fresh ? {} : { board_status: 'saved_reload_needed' }), capability: CAPABILITY, holdout: 'sealed' });
     } catch (e) {
       const status = e.status || e.poundStatus;
       return send({ error: status ? e.message : 'robokap_unavailable', ...(status && e.detail !== undefined ? { detail: e.detail } : {}) }, status || 503);
