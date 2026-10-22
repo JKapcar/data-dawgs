@@ -2170,13 +2170,15 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG, reauth
       // Echo a known protocolVersion; fall back rather than guess forward.
       const proto = MCP_PROTOS.includes(want) ? want : "2025-06-18";
       const ownerTools = await mcpOwnerTools(env, caller);
+      const packTools = dpMcpTools(env, caller);
       const appsOn = Object.entries(await mcpOwnerAppStatus(env, caller)).filter(([, v]) => v === "on").map(([k]) => MCP_OWNER_APP_NAMES[k]);
       return rpcOk(id, {
         protocolVersion: proto,
         capabilities: { tools: {} },
         serverInfo: { name: "data-dawgs", version: "1.7.0" },
         instructions:
-          "Catalog `" + catalog + "`: " + (mcpCatalogTools(catalog).length + ownerTools.length) + " of " + (MCP_TOOLS.length + ownerTools.length) + " tools are callable here. " +
+          "Catalog `" + catalog + "`: " + (mcpCatalogTools(catalog).length + ownerTools.length + packTools.length) + " of " + (MCP_TOOLS.length + ownerTools.length + packTools.length) + " tools are callable here. " +
+          (packTools.length ? "This connector key is assigned a Pack seat (" + packTools.length + " dd_pack_* tools): bind once, then poll, claim and answer Discord requests addressed to that seat; replies are labelled with the seat and key, never a verified model. " : "") +
           (appsOn.length
             ? "Private owner apps on for this connection: " + appsOn.join(" and ") + " (" + ownerTools.length + " dd_owner_* tools; contributions are untrusted and the assistant label is unverified). "
             : "No private owner apps are on for this connection. ") +
@@ -2216,9 +2218,16 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG, reauth
           // caller's existing leg, so destructive is the honest value.
           ...(t.readOnlyHint === true ? {} : { destructiveHint: t.destructiveHint === true }),
         },
-      })).concat(await mcpOwnerTools(env, caller)) });
+      })).concat(await mcpOwnerTools(env, caller)).concat(dpMcpTools(env, caller)) }); // DD-DISCORD-PACK-HOOK-LIST
     case "tools/call": {
       const name = m.params && m.params.name;
+      // DD-DISCORD-PACK-HOOK-CALL — addressed Pack seats (work/discord-pack.js). Listed and callable only
+      // for the configured owner's connector key that DISCORD_PACK_SEATS assigns to a seat; writes live
+      // above this block, so the write-scope invariant still holds.
+      if (typeof name === 'string' && name.startsWith('dd_pack_')) {
+        try { return rpcOk(id, toolText(await dpMcpRun(name, (m.params && m.params.arguments) || {}, env, caller, reauth))); }
+        catch (e) { return rpcOk(id, toolErr(e && e.dqStatus ? e.message : 'Pack seat operation unavailable')); }
+      }
       if (typeof name === 'string' && name.startsWith('dd_owner_')) {
         if (typeof ddOwnerApps === 'undefined') return rpcOk(id, toolErr('Owner app connector unavailable'));
         try { return rpcOk(id, toolText(await ddOwnerApps.run(name, m.params.arguments, env, caller, reauth))); }
