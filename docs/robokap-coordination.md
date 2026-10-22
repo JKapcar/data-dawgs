@@ -121,10 +121,10 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    T[RoboKap plan] -- "link: hypothesis id + version" --> H[(Lab hypothesis)]
-    R[RoboKap receipt] -- "artifact: Lab receipt id + hash" --> LR[(Lab receipt)]
-    W[Worker] -. "read-only check: version, hash, split" .-> H
-    W -. "read-only check" .-> LR
+    T[RoboKap plan] -->|link: hypothesis id + version| H[(Lab hypothesis)]
+    R[RoboKap receipt] -->|artifact: Lab receipt id + hash| LR[(Lab receipt)]
+    W[Worker] -.->|read-only check: version, hash, split| H
+    W -.->|read-only check| LR
 ```
 
 - The Lab stays authoritative. RoboKap stores references and checks them read-only.
