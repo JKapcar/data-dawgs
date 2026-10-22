@@ -50,7 +50,8 @@ from the key the role names; approval is a separate owner decision.
 
 - **The shared `primary` key never holds a seat** (`shared_primary_key_not_allowed`): every
   client holding it looks the same. The Worker also refuses to add a labelled key named
-  `primary`, so that name always means the original key.
+  `primary`, so that name always means the original key. (A labelled key named `Primary` created
+  before this change keeps working as a connector key, but cannot hold a seat either.)
 - **A role binds to a key label.** Re-adding a label (rotating that key) gives the new secret the
   same seat. Removing the key or revoking the role cuts the seat off.
 - **Session targeting** (`session_ref`) stops accidental cross-session claims. It is declared by
@@ -102,6 +103,13 @@ plan, and every task whose Pound `blocks` list names this one now.
   that is simply not done yet leaves the task Blocked.
 - A result binds to the dependency evidence it started from. If a dependency is redone after the
   dependent was accepted, the dependent reopens for a new attempt.
+- Canceling is yours in both directions: Pound already let only you cancel a task, and now only
+  you can reopen one, so a connector key cannot revive a canceled dependency.
+
+Approvals bind to what you saw. Each card carries a `basis` (the task text and the Pound
+blockers an approval would record). Approving a proposal must send it, and the board also sends
+it with your own plan saves; if either changed after the board loaded, the write is refused
+(`plan_basis_changed`) and you review the fresh card instead.
 
 ### Claim, execute, report
 
@@ -141,12 +149,22 @@ Leases:
 - **Superseded or stopped leases.** A result from a lease ended by an approved amendment, a role
   revocation or your stop is recorded as stale and never counts.
 - **Uncertain outcomes** from any plan version block retries until you record whether they
-  landed. An amendment cannot erase one.
+  landed. An amendment cannot erase one, archiving or deleting the task does not hide one (it
+  stays in Needs You), and one is always recordable: it skips the connector share of the store
+  and is accepted even after the seat released its own lease.
+- **Renewal** extends to one lease length from now, never past the ceiling; only a lease already
+  at its ceiling is refused (`lease_limit_reached`).
+- **Stopping a lease** ends that attempt; the seat may claim again as a new attempt. To keep a
+  seat off a task, revoke its role or amend the plan.
 
 Reviews and decisions:
 
 - One review per key per result. A reviewer's revise or reject closes review: later accepts
   cannot outvote it, and you cannot accept over it (amend the plan to change the requirement).
+- One open proposal per task. A key may replace its own open proposal (the replaced one leaves no
+  record); another key's proposal waits until you approve or reject the open one. Proposals you
+  reject or replace with your own plan keep a fingerprint (`content_sha256`), not their text;
+  approved versions are kept in full.
 - You can send back accepted work even when its plan needed no decision.
 - Each decision keeps its own id and records what it decides as `subject_id`.
 
@@ -175,7 +193,9 @@ flowchart LR
 - Saving or claiming a coordination task never launches an experiment or grants access.
 - A Lab receipt counts as evidence only if its hash matches and it belongs to the linked
   hypothesis version. Plans can require it (`lab.evidence: "required"`); a required receipt must
-  have executed and not failed (null and inconclusive results count).
+  have executed and not failed (null and inconclusive results count). The requirement applies
+  when a result is accepted, so an `uncertain` report reconciled as landed still needs one.
+- A Lab receipt is matched by hypothesis version, not bound to the attempt that cites it.
 - Lab references are verified when recorded: while the Lab cannot be read, a report citing one
   is refused (`lab_unavailable`) and can be resent later.
 - A revised or withdrawn hypothesis makes the link stale; an unreadable Lab blocks linked work.
@@ -194,8 +214,9 @@ flowchart LR
 5. Read again for the next eligible task. Stop when nothing is ready.
 
 After a timeout, resend the identical request (same `request_id`) promptly: replies are kept for
-the last 256 writes, after which a resend is treated as new and checked again. If the request id
-is lost, read first and reconcile; never claim again blindly.
+the last 256 writes, after which a resend is treated as new and checked again. When the window is
+full, the oldest reply of whoever holds the most is dropped first, so one busy key cannot push out
+yours. If the request id is lost, read first and reconcile; never claim again blindly.
 
 Artifact verification is shown per artifact: `server_verified` (RoboKap context version or Lab
 receipt matched), `format_checked` (GitHub commit/PR, Claude artifact, Discord message, https
@@ -248,8 +269,9 @@ Requires your explicit approval, in this order. Nothing below has been done.
    `main` (which carries other Worker changes merged since the last deploy), and run the packaged
    tests on that exact artifact before deploying it.
 3. **Deploy with `ROBOKAP_ENABLED="false"`**, then confirm the active version with the
-   `worker-inspect` workflow. RoboKap stays off. One small behaviour change ships with it:
-   `/auth/mcp-token` refuses to add a new labelled key named `primary` (existing keys untouched).
+   `worker-inspect` workflow. RoboKap stays off. Two small behaviour changes ship with it:
+   `/auth/mcp-token` refuses to add a new labelled key named `primary` (existing keys untouched),
+   and only the owner can reopen a canceled Pound task.
 4. **Flip `ROBOKAP_ENABLED` to `"true"`** and deploy.
 
 | Item | Detail |

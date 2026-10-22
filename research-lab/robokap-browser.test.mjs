@@ -159,6 +159,9 @@ try {
   editTask(B, { body: 'Synthetic brief B, revised' });
   await page.locator('#rkRefresh').click();
   await cardB.getByRole('button', { name: 'Amend plan' }).click();
+  // Re-rendering (switching lanes and back) must not drop what the form holds.
+  await tab('Done').click();
+  await tab('Needs you').click();
   const form = page.locator('#rkPlanForm');
   assert.equal(await form.locator('[name=priority]').inputValue(), '2');
   assert.equal(await form.locator('[name=review]:checked').inputValue(), 'advisory');

@@ -120,8 +120,9 @@ const leaseCap = claim => iso(Date.parse(claim.claimed_at) + LEASE_RENEWAL_FACTO
 // Connector keys may fill three quarters of any list, so the owner always keeps room to decide.
 const connectorLimit = list => Math.floor(RK_LIMITS[list] * 0.75);
 const activeClaim = (rk, taskId, now) => latest(rk.claims, c => c.task_id === taskId && claimLive(c, now));
-// A decision's own id is unique; subject_id names what it decides.
-const decisionOn = (rk, subject, id) => latest(rk.decisions, d => d.subject === subject && d.subject_id === id);
+// A decision's own id is unique; subject_id names what it decides. (Early records kept the
+// subject in `id`; read them the same way.)
+const decisionOn = (rk, subject, id) => latest(rk.decisions, d => d.subject === subject && (d.subject_id ?? d.id) === id);
 export function roleState(role) {
   if (role.revocation) return 'revoked';
   if (role.rejection) return 'rejected';
@@ -137,7 +138,7 @@ function seatKey(rk, seat) {
 const effectiveRole = (rk, seat, name) => latest(rk.roles, r => r.seat === seat && (!name || r.role === name) && roleState(r) === 'effective');
 function attempts(rk, plan) {
   const used = rk.claims.filter(c => c.task_id === plan.task_id && c.plan_version === plan.version).length;
-  const extra = rk.decisions.filter(d => d.subject === 'budget' && d.subject_id === plan.task_id && d.plan_version === plan.version).reduce((n, d) => n + d.attempts, 0);
+  const extra = rk.decisions.filter(d => d.subject === 'budget' && (d.subject_id ?? d.id) === plan.task_id && d.plan_version === plan.version).reduce((n, d) => n + d.attempts, 0);
   return { used, limit: plan.budget.attempts + extra };
 }
 function effectiveOutcome(rk, r) {
@@ -173,6 +174,16 @@ function dependencies(rk, pound, taskId, plan) {
   const deps = new Set([...(plan?.depends_on || []), ...(plan?.pound_blockers || []), ...liveBlockers(pound, taskId)]);
   deps.delete(taskId);
   return [...deps];
+}
+// What an owner approval binds besides the plan itself: the task text and the Pound blockers the
+// approval will record. The board sends the basis it showed, so a change made after it loaded is
+// refused instead of being approved unseen.
+const basisOf = (fp, pound, taskId) => sha256Hex(canonical({ task_fp: fp, blockers: liveBlockers(pound, taskId).sort() }));
+export const planBasis = async (task, pound) => basisOf(await taskFingerprint(task), pound, task.id);
+async function checkBasis(data, task, pound) {
+  if (data.basis === undefined) return;
+  check(typeof data.basis === 'string' && RX.sha.test(data.basis), 400, 'invalid_basis');
+  check(data.basis === await planBasis(task, pound), 409, 'plan_basis_changed', 'The task text or its Pound blockers changed since the board loaded. Reload and review again.');
 }
 function cycleWith(rk, pound, taskId, newDeps) {
   const edges = id => id === taskId ? new Set([...newDeps, ...liveBlockers(pound, id)]) : new Set(dependencies(rk, pound, id, approvedPlan(rk, id)));
@@ -238,6 +249,7 @@ const REASONS = {
   needs_independent_review: 'Needs an independent reviewer. Shared owner keys only give advisory reviews, and no separate agent credential is connected.',
   review_revise: 'A revision was requested; a new attempt is open.',
   dependency_changed: 'A dependency was redone after this result. A new attempt is open.',
+  lab_evidence_missing: 'The plan requires Lab evidence and this result has none that executed and did not fail. A new attempt is open.',
   lease_stale: 'Context changed during this lease. It cannot renew, and its report will be recorded as stale.',
 };
 const reason = (code, lane, actor, detail) => ({ code, lane, actor, text: REASONS[code] || code, ...(detail ? { detail } : {}) });
@@ -325,10 +337,12 @@ export async function rkDerive(rk, pound, now, ctx = {}) {
     const budget = attempts(rk, plan);
     const versionOk = !changed && !pin.code && !lab.code;
     const drift = Boolean(receipt) && depDrift(receipt.deps, deps);
+    // Required Lab evidence must be on the receipt itself, including a result reconciled as landed.
+    const labOk = plan.lab?.evidence !== 'required' || Boolean(receipt?.artifacts?.some(labEvidence));
     // Evidence is current when it matches the approved task text, pin and Lab link, every
     // dependency is accepted now at the evidence the result relied on, and nothing is left
     // to reconcile.
-    const evidenceCurrent = Boolean(receipt) && versionOk && depsOk && !drift && !open.length;
+    const evidenceCurrent = Boolean(receipt) && versionOk && depsOk && !drift && !open.length && labOk;
     const ownerOk = decision ? decision.decision === 'accept' : plan.decision === 'not_required';
     const accepted = Boolean(receipt && outcome === 'succeeded' && review?.ok && ownerOk && evidenceCurrent);
     const evidence = { receipt, outcome, review: review?.review ?? null, decision };
@@ -368,6 +382,7 @@ export async function rkDerive(rk, pound, now, ctx = {}) {
     let inReview = false, redo = null;
     if (receipt && outcome === 'succeeded' && !open.length && depsOk) {
       if (drift) redo = 'dependency_changed';
+      else if (!labOk) redo = 'lab_evidence_missing';
       else if (decision?.decision === 'revise' || review.verdict === 'revise') redo = 'review_revise';
       else if (review.verdict === 'reject') reasons.push(reason('review_rejected', NEEDS, 'owner', { receipt_id: receipt.id }));
       // Ask for the owner's decision only when it is the one thing left.
@@ -448,16 +463,25 @@ function cardFor(rk, pound, d, now) {
 // Priority 1 is first; ties keep a stable, readable order.
 const byPriority = (a, b) => a.priority - b.priority || String(a.title).localeCompare(String(b.title));
 export async function rkBoard(rk, pound, now, ctx = {}) {
-  const { tasks } = await rkDerive(rk, pound, now, ctx);
+  const { tasks, fps } = await rkDerive(rk, pound, now, ctx);
   const lanes = Object.fromEntries(RK_LANES.map(l => [l, []]));
   const done = [], closed = [], unplanned = [];
   for (const d of tasks.values()) {
     if (!d.task) continue;
-    const card = cardFor(rk, pound, d, now);
+    const card = { ...cardFor(rk, pound, d, now), basis: await basisOf(fps.get(d.id), pound, d.id) };
     if (lanes[d.lane]) lanes[d.lane].push(card);
     else if (d.lane === 'done') done.push(card);
     else if (d.lane === 'closed') closed.push({ ...card, closed: d.closed });
     else if (d.lane === 'unplanned') unplanned.push(card);
+  }
+  // An uncertain outcome on a task that was archived or deleted still needs your answer.
+  const orphans = new Map();
+  for (const r of rk.receipts) if (r.outcome === 'uncertain' && !tasks.get(r.task_id)?.task && !decisionOn(rk, 'uncertain', r.id)) orphans.set(r.task_id, [...(orphans.get(r.task_id) || []), r]);
+  for (const [taskId, open] of orphans) {
+    const t = taskById(pound, taskId), plan = approvedPlan(rk, taskId);
+    const task = { id: taskId, title: t ? t.title + ' (archived)' : 'Deleted task', body: t?.body ?? '', refs: t?.refs ?? [], status: t?.status ?? null, status_source: t?.status_source };
+    const d = { task, plan, pending: null, lane: NEEDS, deps: [], unreconciled: open, budget: plan ? attempts(rk, plan) : null, evidence: null, claim: null, reasons: [reason('reconcile_uncertain', NEEDS, 'owner', { receipt_ids: open.map(r => r.id) })] };
+    lanes.needs_you.push({ ...cardFor(rk, pound, d, now), archived: true, basis: null });
   }
   for (const list of [...Object.values(lanes), done, closed, unplanned]) list.sort(byPriority);
   // Role decisions that are not tied to one task still belong in the owner's inbox.
@@ -529,8 +553,8 @@ function addEvent(rk, at, op, principal, extra) {
   rk.events.push({ at, op, by: principalRecord(principal), task_id: extra.task_id ?? null, subject: extra.subject ?? null, ...(extra.session_ref ? { session_ref_declared: extra.session_ref } : {}) });
   if (rk.events.length > RK_LIMITS.events) rk.events = rk.events.slice(-RK_LIMITS.events);
 }
-function cap(rk, list, principal) {
-  const limit = principal.kind === 'owner_session' ? RK_LIMITS[list] : connectorLimit(list);
+function cap(rk, list, principal, full = false) {
+  const limit = principal.kind === 'owner_session' || full ? RK_LIMITS[list] : connectorLimit(list);
   check(rk[list].length < limit, 409, 'robokap_capacity', { list, used: rk[list].length, limit });
 }
 const ownerOnly = p => check(p.kind === 'owner_session', 403, 'owner_session_required');
@@ -629,8 +653,9 @@ const OPS = {
   },
   async 'rk.plan'({ rk, pound, data, principal, at, now, ctx }) {
     notDelegated(principal);
-    only(data, ['task_id', 'expected_plan_version', 'seat', 'session_ref', 'role', 'priority', 'depends_on', 'pin', 'acceptance', 'review', 'decision', 'lab', 'data_scope', 'budget', 'thread', 'note'], ['task_id', 'expected_plan_version', 'seat', 'review', 'decision', 'data_scope']);
+    only(data, ['task_id', 'expected_plan_version', 'seat', 'session_ref', 'role', 'priority', 'depends_on', 'pin', 'acceptance', 'review', 'decision', 'lab', 'data_scope', 'budget', 'thread', 'note', 'basis'], ['task_id', 'expected_plan_version', 'seat', 'review', 'decision', 'data_scope']);
     const task = liveTask(pound, data.task_id);
+    await checkBasis(data, task, pound);
     check(task.status !== 'canceled', 409, 'task_canceled');
     check(int(data.expected_plan_version, 0, 100000) && data.expected_plan_version === maxPlanVersion(rk, task.id), 409, 'plan_version_conflict', { current: maxPlanVersion(rk, task.id) });
     check(RK_SEATS.includes(data.seat), 400, 'invalid_seat');
@@ -673,8 +698,12 @@ const OPS = {
     if (data.thread !== undefined) { only(data.thread, ['discord_thread_id'], ['discord_thread_id']); check(RX.snowflake.test(data.thread.discord_thread_id), 400, 'invalid_thread'); thread = { discord_thread_id: data.thread.discord_thread_id }; }
     check(data.note === undefined || text(data.note, RK_LIMITS.note), 400, 'invalid_note');
     check(!cycleWith(rk, pound, task.id, deps), 400, 'dependency_cycle');
-    cap(rk, 'plans', principal);
     const status = principal.kind === 'owner_session' ? 'approved' : 'proposed';
+    // One open proposal per task. A key may replace its own; another key's waits for your decision,
+    // so proposals cannot pile up faster than you decide them.
+    const open = pendingPlan(rk, task.id);
+    if (status === 'proposed' && open) check(principalLabel(open.by) === principalLabel(principal), 409, 'proposal_pending', 'Another proposal for this task is waiting for the owner.');
+    if (!(status === 'proposed' && open)) cap(rk, 'plans', principal);
     const plan = {
       task_id: task.id, version: maxPlanVersion(rk, task.id) + 1, status, seat: data.seat, ...(data.session_ref ? { session_ref: data.session_ref } : {}), ...(data.role ? { role: data.role } : {}),
       priority: data.priority ?? 3, depends_on: deps, pin, acceptance, review: data.review, decision: data.decision, lab, data_scope: data.data_scope, budget, thread, ...(data.note ? { note: data.note } : {}),
@@ -683,7 +712,13 @@ const OPS = {
       // does not unblock this task; only another approved plan version can.
       ...(status === 'approved' ? { approved_at: at, pound_blockers: liveBlockers(pound, task.id) } : {}),
     };
-    for (const p of rk.plans) if (p.task_id === task.id && (p.status === 'proposed' || (status === 'approved' && p.status === 'approved'))) p.status = 'superseded';
+    for (const p of [...rk.plans]) {
+      if (p.task_id !== task.id) continue;
+      // A key's replaced open proposal was never decided, so it leaves no record; one you supersede
+      // with your own plan keeps a fingerprint.
+      if (p.status === 'proposed') { if (status === 'proposed') rk.plans.splice(rk.plans.indexOf(p), 1); else await retireProposal(p, 'superseded', at); }
+      else if (status === 'approved' && p.status === 'approved') p.status = 'superseded';
+    }
     if (status === 'approved') supersedeClaims(rk, task.id, now, at);
     rk.plans.push(plan);
     return { task_id: task.id, subject: 'plan', plan_version: plan.version, status };
@@ -741,8 +776,9 @@ const OPS = {
       const causes = staleCauses(tasks.get(task.id), live);
       check(!causes.length, 409, 'lease_stale', causes);
       const ceiling = leaseCap(live);
-      const until = Math.min(now + (live.lease_minutes ?? plan.budget.lease_minutes) * 60000, Date.parse(ceiling));
-      check(until > Date.parse(live.expires_at), 409, 'lease_limit_reached', { max_expires_at: ceiling });
+      check(Date.parse(live.expires_at) < Date.parse(ceiling), 409, 'lease_limit_reached', { max_expires_at: ceiling });
+      // Extend to one lease length from now, never past the ceiling and never shorter than before.
+      const until = Math.max(Date.parse(live.expires_at), Math.min(now + (live.lease_minutes ?? plan.budget.lease_minutes) * 60000, Date.parse(ceiling)));
       live.expires_at = iso(until);
       live.renewed_at = at;
       return { task_id: task.id, subject: live.id, session_ref: live.session_ref, claim_id: live.id, attempt: live.attempt, expires_at: live.expires_at, max_expires_at: ceiling, renewed: true };
@@ -792,7 +828,7 @@ const OPS = {
     only(data, ['task_id', 'claim_id', 'lease_secret', 'outcome', 'summary', 'artifacts'], ['task_id', 'claim_id', 'lease_secret', 'outcome', 'summary']);
     const claim = await ownClaim(rk, data, principal);
     if (claim.receipt_id) fail(409, 'already_reported', { receipt_id: claim.receipt_id });
-    check(claim.state !== 'released' || claim.released_by === 'owner', 409, 'claim_released');
+    check(claim.state !== 'released' || claim.released_by === 'owner' || data.outcome === 'uncertain', 409, 'claim_released');
     check(OUTCOMES.includes(data.outcome), 400, 'invalid_outcome');
     const live = claim.state === 'active' && Date.parse(claim.expires_at) > now;
     const late = !live;
@@ -812,11 +848,11 @@ const OPS = {
     const d = task && !task.archived ? (await rkDerive(rk, pound, now, ctx)).tasks.get(claim.task_id) : null;
     const causes = d ? staleCauses(d, claim) : ['task_archived'];
     if (task?.status === 'canceled' && !causes.includes('task_canceled')) causes.push('task_canceled');
-    if (['superseded', 'released'].includes(claim.state)) causes.push(claim.state === 'released' ? 'stopped_by_owner' : 'claim_superseded');
+    if (['superseded', 'released'].includes(claim.state)) causes.push(claim.state === 'superseded' ? 'claim_superseded' : claim.released_by === 'owner' ? 'stopped_by_owner' : 'released_by_seat');
     if (newer) causes.push('lease_superseded');
     const current = !causes.length;
     if (current && plan.lab?.evidence === 'required' && data.outcome === 'succeeded') check(artifacts.some(labEvidence), 409, 'lab_evidence_required', 'Attach a server-verified Lab receipt that executed and did not fail.');
-    cap(rk, 'receipts', principal);
+    cap(rk, 'receipts', principal, data.outcome === 'uncertain');
     const body = {
       id: 'rcp_' + uuid(), task_id: claim.task_id, claim_id: claim.id, plan_version: claim.plan_version, task_fp: claim.task_fp, pin: claim.pin, seat: claim.seat,
       outcome: data.outcome, summary: data.summary, summary_sha256: await sha256Hex(data.summary), artifacts, by: principalRecord(principal),
@@ -853,7 +889,7 @@ const OPS = {
   },
   async 'rk.decide'({ rk, pound, data, principal, at, now, ctx }) {
     ownerOnly(principal);
-    only(data, ['subject', 'id', 'decision', 'plan_version', 'attempts', 'note'], ['subject', 'id', 'decision']);
+    only(data, ['subject', 'id', 'decision', 'plan_version', 'attempts', 'note', 'basis'], ['subject', 'id', 'decision']);
     check(data.note === undefined || text(data.note, RK_LIMITS.note), 400, 'invalid_note');
     cap(rk, 'decisions', principal);
     check(typeof data.id === 'string' && data.id.length <= 80, 400, 'invalid_decision_subject_id');
@@ -865,6 +901,9 @@ const OPS = {
       const plan = rk.plans.find(p => p.task_id === task.id && p.version === data.plan_version);
       check(plan && plan.status === 'proposed', 409, 'plan_not_pending');
       if (data.decision === 'approve') {
+        // Approving someone else's proposal must name what you saw (the card's basis).
+        check(data.basis !== undefined, 400, 'basis_required', 'Send the basis shown on the card you are approving.');
+        await checkBasis(data, task, pound);
         check(!cycleWith(rk, pound, task.id, plan.depends_on), 409, 'dependency_cycle');
         for (const p of rk.plans) if (p.task_id === task.id && p !== plan && p.status === 'approved') p.status = 'superseded';
         plan.status = 'approved';
@@ -874,7 +913,7 @@ const OPS = {
         plan.task_fp = await taskFingerprint(task);
         plan.pound_blockers = liveBlockers(pound, task.id);
         supersedeClaims(rk, task.id, now, at);
-      } else plan.status = 'rejected';
+      } else await retireProposal(plan, 'rejected', at);
       const d = record({ plan_version: plan.version });
       return { task_id: task.id, subject: d.id, decision_id: d.id, plan_status: plan.status };
     }
@@ -942,6 +981,13 @@ async function ownClaim(rk, data, principal) {
   check(claim.lease_sha256 === await sha256Hex(data.lease_secret), 403, 'lease_secret_mismatch');
   return claim;
 }
+// A proposal that was never approved keeps a fingerprint once it is replaced or rejected, not its
+// text: approved versions are the plan's history, and stale proposals must not fill the store.
+async function retireProposal(p, status, at) {
+  const kept = { task_id: p.task_id, version: p.version, status, by: p.by, at: p.at, retired_at: at, content_sha256: await sha256Hex(canonical(p)) };
+  for (const k of Object.keys(p)) delete p[k];
+  Object.assign(p, kept);
+}
 function supersedeClaims(rk, taskId, now, at) {
   for (const c of rk.claims) if (c.task_id === taskId && c.state === 'active') { c.state = claimLive(c, now) ? 'superseded' : 'expired'; c.closed_at = at; }
 }
@@ -966,7 +1012,8 @@ export async function rkApply(rkIn, pound, input, principal, now, ctx = {}) {
   const rk = structuredClone(rkIn);
   const at = iso(now);
   const out = await OPS[input.op]({ rk, pound, data: input.data, principal, now, at, ctx });
-  if (principal.kind !== 'owner_session') {
+  // A possible external effect must always be recordable, so an uncertain report skips the headroom.
+  if (principal.kind !== 'owner_session' && !(input.op === 'rk.report' && input.data.outcome === 'uncertain')) {
     const bytes = enc.encode(JSON.stringify(rk)).length, limit = Math.floor(RK_LIMITS.bytes * 0.75);
     check(bytes <= limit, 409, 'robokap_capacity', { list: 'bytes', used: bytes, limit });
   }
@@ -975,7 +1022,15 @@ export async function rkApply(rkIn, pound, input, principal, now, ctx = {}) {
   const { session_ref: _declared, ...visible } = out;
   const result = { ...visible, op: input.op, rk_revision: rk.rev };
   rk.idem.push({ p: who, k: input.request_id, f: fingerprint, r: result });
-  if (rk.idem.length > RK_LIMITS.idem) rk.idem = rk.idem.slice(-RK_LIMITS.idem);
+  // Over the limit, drop the oldest entry of whoever holds the most, so one busy key cannot push
+  // the owner's or another key's recent requests out of the replay window.
+  while (rk.idem.length > RK_LIMITS.idem) {
+    const counts = new Map();
+    for (const x of rk.idem) counts.set(x.p, (counts.get(x.p) || 0) + 1);
+    let heavy = who;
+    for (const [p, n] of counts) if (n > (counts.get(heavy) || 0)) heavy = p;
+    rk.idem.splice(rk.idem.findIndex(x => x.p === heavy), 1);
+  }
   return { rk, result: { ...result, replayed: false }, changed: true };
 }
 

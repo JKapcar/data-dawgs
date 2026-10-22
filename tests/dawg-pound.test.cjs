@@ -330,6 +330,16 @@ test('WO-02 J.1-5 canceling counts as not planned, never done; only the owner ca
   const context={crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array};vm.createContext(context);vm.runInContext(source+'\nthis.write=poundWrite;this.empty=poundEmpty;',context);
   const st=context.empty();await context.write(st,{op:'task.save',data:{...task}},'u_one','owner_connector',null,'primary');
   await assert.rejects(context.write(st,{op:'task.save',data:{...task,status:'canceled',id:st.tasks[0].id,expected_task_revision:1}},'u_one','owner_connector',null,'primary'),e=>e.poundStatus===403&&/Only the owner cancels/.test(e.message));
+  // ...and only the owner reopens one: a connector cannot undo the owner's cancel.
+  await context.write(st,{op:'task.save',data:{...task,status:'canceled',id:st.tasks[0].id,expected_task_revision:1}},'u_one','owner',null,null);
+  for(const status of ['queued','working','done'])
+    await assert.rejects(context.write(st,{op:'task.save',data:{...task,status,id:st.tasks[0].id,expected_task_revision:2}},'u_one','owner_connector',null,'Claude'),e=>e.poundStatus===403&&/Only the owner reopens/.test(e.message));
+  assert.equal(st.tasks[0].status,'canceled');
+  const {status:_kept,...noStatus}=task;
+  await context.write(st,{op:'task.save',data:{...noStatus,body:'Edited while canceled',id:st.tasks[0].id,expected_task_revision:2}},'u_one','owner_connector',null,'Claude');
+  assert.equal(st.tasks[0].status,'canceled','a connector edit that leaves status alone keeps the cancel');
+  await context.write(st,{op:'task.save',data:{...task,status:'queued',id:st.tasks[0].id,expected_task_revision:3}},'u_one','owner',null,null);
+  assert.equal(st.tasks[0].status,'queued');
 });
 test('WO-02 actual_start/actual_end derive from activity, are never accepted as input, and read null once the ring forgets',async()=>{
   const r=rig(),id=(await r.send(r.command('task.save',task,0))).body.receipt.item_id;
