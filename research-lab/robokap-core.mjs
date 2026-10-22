@@ -114,8 +114,14 @@ const pendingPlan = (rk, taskId) => latest(rk.plans, p => p.task_id === taskId &
 const maxPlanVersion = (rk, taskId) => rk.plans.filter(p => p.task_id === taskId).reduce((m, p) => Math.max(m, p.version), 0);
 const currentPin = (rk, project, kind) => latest(rk.pins, p => p.project_id === project && p.kind === kind);
 const claimLive = (c, now) => c.state === 'active' && Date.parse(c.expires_at) > now;
+// Renewals stop at four lease lengths after the claim; then the seat reports or lets go.
+const LEASE_RENEWAL_FACTOR = 4;
+const leaseCap = claim => iso(Date.parse(claim.claimed_at) + LEASE_RENEWAL_FACTOR * (claim.lease_minutes ?? 30) * 60000);
+// Connector keys may fill three quarters of any list, so the owner always keeps room to decide.
+const connectorLimit = list => Math.floor(RK_LIMITS[list] * 0.75);
 const activeClaim = (rk, taskId, now) => latest(rk.claims, c => c.task_id === taskId && claimLive(c, now));
-const decisionOn = (rk, subject, id) => latest(rk.decisions, d => d.subject === subject && d.id === id);
+// A decision's own id is unique; subject_id names what it decides.
+const decisionOn = (rk, subject, id) => latest(rk.decisions, d => d.subject === subject && d.subject_id === id);
 export function roleState(role) {
   if (role.revocation) return 'revoked';
   if (role.rejection) return 'rejected';
@@ -131,7 +137,7 @@ function seatKey(rk, seat) {
 const effectiveRole = (rk, seat, name) => latest(rk.roles, r => r.seat === seat && (!name || r.role === name) && roleState(r) === 'effective');
 function attempts(rk, plan) {
   const used = rk.claims.filter(c => c.task_id === plan.task_id && c.plan_version === plan.version).length;
-  const extra = rk.decisions.filter(d => d.subject === 'budget' && d.id === plan.task_id && d.plan_version === plan.version).reduce((n, d) => n + d.attempts, 0);
+  const extra = rk.decisions.filter(d => d.subject === 'budget' && d.subject_id === plan.task_id && d.plan_version === plan.version).reduce((n, d) => n + d.attempts, 0);
   return { used, limit: plan.budget.attempts + extra };
 }
 function effectiveOutcome(rk, r) {
@@ -140,27 +146,36 @@ function effectiveOutcome(rk, r) {
   return !d ? 'uncertain' : d.decision === 'landed' ? 'succeeded' : 'failed';
 }
 const latestReceipt = (rk, taskId, version) => latest(rk.receipts, r => r.task_id === taskId && r.plan_version === version && r.validity === 'current');
-const latestReview = (rk, receiptId) => latest(rk.reviews, v => v.receipt_id === receiptId);
+// Every uncertain outcome for a task, from any plan version and stale or not, waits for the
+// owner: an amendment cannot erase an external effect that may already have landed.
+const unreconciled = (rk, taskId) => rk.receipts.filter(r => r.task_id === taskId && r.outcome === 'uncertain' && !decisionOn(rk, 'uncertain', r.id));
+// A reject or revise closes a receipt's review; later accepts cannot outvote it.
 function reviewState(rk, plan, receipt) {
   if (plan.review === 'none') return { ok: true, review: null };
-  const review = latestReview(rk, receipt.id);
-  if (!review) return { ok: false, waiting: true, review: null };
-  if (review.verdict !== 'accept') return { ok: false, verdict: review.verdict, review };
+  const reviews = rk.reviews.filter(v => v.receipt_id === receipt.id);
+  const closing = reviews.find(v => v.verdict === 'reject') || reviews.find(v => v.verdict === 'revise');
+  if (closing) return { ok: false, verdict: closing.verdict, review: closing };
+  const accepts = reviews.filter(v => v.verdict === 'accept');
+  if (!accepts.length) return { ok: false, waiting: true, review: null };
   // Shared owner keys are advisory by construction: they can never stand in for independence.
-  if (plan.review === 'independent' && review.mode !== 'independent') return { ok: false, needs_independent: true, review };
-  return { ok: true, review };
+  if (plan.review === 'independent') {
+    const independent = latest(accepts, v => v.mode === 'independent');
+    return independent ? { ok: true, review: independent } : { ok: false, needs_independent: true, review: accepts.at(-1) };
+  }
+  return { ok: true, review: accepts.at(-1) };
 }
-// Dependencies: the owner-approved list, plus every Pound task that currently says it
-// `blocks` this one. Adding a blocker in Pound takes effect at once; removing one needs an
-// approved plan amendment, so a connector key cannot unblock its own work.
+// Pound tasks that currently say they block this one. Archived tasks block nothing.
+const liveBlockers = (pound, taskId) => poundTasks(pound).filter(t => !t.archived && t.id !== taskId && Array.isArray(t.blocks) && t.blocks.includes(taskId)).map(t => t.id);
+// Dependencies: the owner-approved list, the Pound blockers recorded when the owner approved
+// the plan, and every Pound blocker now. Adding a blocker in Pound takes effect at once;
+// removing one changes nothing until the owner approves a new plan version.
 function dependencies(rk, pound, taskId, plan) {
-  const deps = new Set(plan?.depends_on || []);
-  for (const t of poundTasks(pound)) if (Array.isArray(t.blocks) && t.blocks.includes(taskId)) deps.add(t.id);
+  const deps = new Set([...(plan?.depends_on || []), ...(plan?.pound_blockers || []), ...liveBlockers(pound, taskId)]);
   deps.delete(taskId);
   return [...deps];
 }
 function cycleWith(rk, pound, taskId, newDeps) {
-  const edges = id => id === taskId ? new Set([...newDeps, ...dependencies(rk, pound, id, null)]) : new Set(dependencies(rk, pound, id, approvedPlan(rk, id)));
+  const edges = id => id === taskId ? new Set([...newDeps, ...liveBlockers(pound, id)]) : new Set(dependencies(rk, pound, id, approvedPlan(rk, id)));
   const seen = new Set(), path = new Set();
   const walk = id => { if (path.has(id)) return true; if (seen.has(id)) return false; seen.add(id); path.add(id); for (const d of edges(id)) if (walk(d)) return true; path.delete(id); return false; };
   return walk(taskId);
@@ -193,20 +208,20 @@ function labState(plan, lab) {
 }
 const NEEDS = 'needs_you', BLOCKED = 'blocked';
 const REASONS = {
-  plan_proposed: 'Approve or reject the proposed plan.',
-  plan_amendment_proposed: 'A plan amendment is waiting for your decision.',
+  plan_proposed: 'Approve or reject the proposed plan. Check its changes first.',
+  plan_amendment_proposed: 'A plan amendment is waiting for your decision. Check its changes first.',
   task_changed: 'The task text changed after approval. Re-approve the plan so evidence binds to the new version.',
   pin_missing: 'The pinned context is missing. Pin it again.',
   pin_superseded: 'A newer pin exists. Amend the plan to the current version or restore the pin.',
   pin_not_approved: 'The plan requires an approved pin; the current pin is a draft.',
   pin_context_missing: 'The pinned context document is archived or missing.',
   pin_hash_mismatch: 'The pinned context version no longer matches its recorded hash.',
-  pin_behind_context: 'The context has a newer version than the pin. Re-pin or confirm.',
+  pin_behind_context: 'The context has a newer version than the pin. Pin the version you approve, then amend the plan.',
   lab_unverifiable: 'The Lab link cannot be checked right now. Work waits rather than guessing.',
   lab_hypothesis_missing: 'The linked Lab hypothesis is missing.',
   lab_hypothesis_withdrawn: 'The linked Lab hypothesis was withdrawn.',
   lab_link_stale: 'The linked Lab hypothesis has a newer version. Amend the link.',
-  reconcile_uncertain: 'The last attempt reported an uncertain outcome. Record whether it landed before any retry.',
+  reconcile_uncertain: 'An attempt reported an uncertain outcome. Record whether it landed before any retry.',
   decide_receipt: 'Review is satisfied. Accept, revise or reject the result.',
   review_rejected: 'A reviewer rejected the result. Decide what happens next.',
   propose_role: 'No role exists for this seat. Propose one.',
@@ -214,19 +229,21 @@ const REASONS = {
   approve_role: 'The seat accepted its role. Approve it or reject it.',
   role_key_ambiguous: 'This seat has effective roles on more than one key. Revoke one.',
   waiting_dependency: 'Waiting for a dependency to be accepted at its current version.',
-  dependency_closed: 'A dependency was canceled, rejected or archived. Amend the plan.',
-  dependency_missing: 'A dependency no longer exists. Amend the plan.',
+  dependency_closed: 'A dependency was canceled or rejected. Amend the plan.',
+  dependency_missing: 'A dependency was archived or deleted. Amend the plan to drop it.',
   dependency_cycle: 'Dependencies form a cycle. Amend a plan or a Pound blocks list.',
   budget_exhausted: 'All attempts for this plan version are used. Extend the budget or amend the plan.',
   owner_task: 'This task is yours to do. Claim it here and attach evidence when finished.',
   awaiting_review: 'Waiting for a reviewer.',
   needs_independent_review: 'Needs an independent reviewer. Shared owner keys only give advisory reviews, and no separate agent credential is connected.',
-  review_revise: 'A reviewer asked for revisions; a new attempt is open.',
+  review_revise: 'A revision was requested; a new attempt is open.',
+  dependency_changed: 'A dependency was redone after this result. A new attempt is open.',
+  lease_stale: 'Context changed during this lease. It cannot renew, and its report will be recorded as stale.',
 };
 const reason = (code, lane, actor, detail) => ({ code, lane, actor, text: REASONS[code] || code, ...(detail ? { detail } : {}) });
 
-// Tasks inside a dependency cycle (strongly connected components larger than one node,
-// or a node that depends on itself), over the same edges eligibility uses.
+// Tasks inside a dependency cycle (strongly connected components larger than one node),
+// over the same edges eligibility uses.
 function cycleMembers(rk, pound, ids) {
   const live = new Set(ids), index = new Map(), low = new Map(), stack = [], onStack = new Set(), out = new Set();
   let counter = 0;
@@ -244,6 +261,23 @@ function cycleMembers(rk, pound, ids) {
     }
   };
   for (const id of ids) if (!index.has(id)) visit(id);
+  return out;
+}
+
+// The dependencies a result relied on, as recorded at claim time, must still be accepted at
+// the same evidence. Dependencies added later must be accepted too, but do not force a redo.
+const depDrift = (recorded, deps) => (recorded || []).some(r => { const c = deps.find(x => x.id === r.task_id); return c && c.receipt_id !== r.receipt_id; });
+// Why a lease (or a result from it) no longer matches what the owner approved.
+function staleCauses(d, claim) {
+  if (!d || !('depsOk' in d)) return [d?.task?.status === 'canceled' ? 'task_canceled' : 'task_unavailable'];
+  const out = [];
+  if (!d.plan || d.plan.version !== claim.plan_version) out.push('plan_changed');
+  if (d.changed) out.push('task_changed');
+  if (d.pin?.code) out.push(d.pin.code);
+  // An unreadable Lab is not evidence of change; acceptance waits on it separately.
+  if (d.lab?.code && d.lab.code !== 'lab_unverifiable') out.push(d.lab.code);
+  if (!d.depsOk) out.push('dependency_not_accepted');
+  else if (depDrift(claim.deps, d.deps)) out.push('dependency_changed');
   return out;
 }
 
@@ -265,9 +299,22 @@ export async function rkDerive(rk, pound, now, ctx = {}) {
     const task = tasks.find(t => t.id === id);
     if (!task) return { id, missing: true, lane: 'missing', accepted: false };
     const plan = approvedPlan(rk, id), pending = pendingPlan(rk, id);
-    const base = { id, task, plan, pending, reasons: [], accepted: false, closed: false };
+    const open = unreconciled(rk, id);
+    const base = { id, task, plan, pending, reasons: [], accepted: false, closed: false, unreconciled: open };
+    const reconcile = open.length ? [reason('reconcile_uncertain', NEEDS, 'owner', { receipt_ids: open.map(r => r.id) })] : [];
     if (!plan) return { ...base, lane: pending ? NEEDS : 'unplanned', reasons: pending ? [reason('plan_proposed', NEEDS, 'owner', { version: pending.version })] : [] };
-    if (task.status === 'canceled') return { ...base, lane: 'closed', closed: 'canceled' };
+    // A canceled task needs nothing more, except the truth about an effect that may have landed.
+    if (task.status === 'canceled') return { ...base, lane: open.length ? NEEDS : 'closed', closed: open.length ? false : 'canceled', reasons: reconcile };
+    const recorded = new Set([...(plan.depends_on || []), ...(plan.pound_blockers || [])]);
+    const deps = dependencies(rk, pound, id, plan).map(depId => {
+      const d = derive(depId);
+      return {
+        id: depId, title: d.task?.title ?? taskById(pound, depId)?.title ?? null, lane: d.lane, accepted: d.accepted,
+        receipt_id: d.accepted ? d.evidence.receipt.id : null, source: recorded.has(depId) ? 'approved' : 'pound_live',
+        cycle: Boolean(d.cycle) || cycles.has(depId), closed: d.closed || false, missing: Boolean(d.missing),
+      };
+    });
+    const depsOk = deps.every(d => d.accepted);
     const claim = activeClaim(rk, id, now);
     const receipt = latestReceipt(rk, id, plan.version);
     const outcome = receipt ? effectiveOutcome(rk, receipt) : null;
@@ -276,32 +323,35 @@ export async function rkDerive(rk, pound, now, ctx = {}) {
     const changed = fps.get(id) !== plan.task_fp;
     const pin = pinState(rk, pound, plan), lab = labState(plan, ctx.lab);
     const budget = attempts(rk, plan);
-    const evidence = { receipt, outcome, review: review?.review ?? null, decision };
     const versionOk = !changed && !pin.code && !lab.code;
-    const accepted = Boolean(receipt && outcome === 'succeeded' && review?.ok && (plan.decision === 'not_required' || decision?.decision === 'accept') && decision?.decision !== 'reject' && versionOk);
-    const common = { ...base, claim, evidence, budget, pin, lab, changed };
+    const drift = Boolean(receipt) && depDrift(receipt.deps, deps);
+    // Evidence is current when it matches the approved task text, pin and Lab link, every
+    // dependency is accepted now at the evidence the result relied on, and nothing is left
+    // to reconcile.
+    const evidenceCurrent = Boolean(receipt) && versionOk && depsOk && !drift && !open.length;
+    const ownerOk = decision ? decision.decision === 'accept' : plan.decision === 'not_required';
+    const accepted = Boolean(receipt && outcome === 'succeeded' && review?.ok && ownerOk && evidenceCurrent);
+    const evidence = { receipt, outcome, review: review?.review ?? null, decision };
+    const common = { ...base, claim, evidence, budget, pin, lab, changed, deps, depsOk, evidenceCurrent, fp: fps.get(id) };
+    const amend = pending ? [reason('plan_amendment_proposed', NEEDS, 'owner', { version: pending.version })] : [];
     // A pending amendment always reaches the owner's inbox; accepted work stays accepted for its
     // dependents until the owner actually approves a new version.
-    if (accepted) return { ...common, lane: pending ? NEEDS : 'done', accepted: true, reasons: pending ? [reason('plan_amendment_proposed', NEEDS, 'owner', { version: pending.version })] : [] };
-    if (decision?.decision === 'reject') return { ...common, lane: pending ? NEEDS : 'closed', closed: pending ? false : 'rejected', reasons: pending ? [reason('plan_amendment_proposed', NEEDS, 'owner', { version: pending.version })] : [] };
-    if (claim) return { ...common, lane: 'running', reasons: pending ? [reason('plan_amendment_proposed', NEEDS, 'owner')] : [] };
-    const reasons = [];
-    if (pending) reasons.push(reason('plan_amendment_proposed', NEEDS, 'owner', { version: pending.version }));
+    if (accepted) return { ...common, lane: pending ? NEEDS : 'done', accepted: true, reasons: amend };
+    if (decision?.decision === 'reject') {
+      const r = [...amend, ...reconcile];
+      return { ...common, lane: r.length ? NEEDS : 'closed', closed: r.length ? false : 'rejected', reasons: r };
+    }
+    if (claim) {
+      const causes = staleCauses(common, claim);
+      // An owner decision outranks the lease: a pending amendment or an effect to reconcile goes
+      // to your inbox even while a seat holds the task.
+      const yours = [...amend, ...reconcile];
+      return { ...common, lane: yours.length ? NEEDS : 'running', reasons: [...yours, ...(causes.length ? [reason('lease_stale', 'running', 'seat', { causes })] : [])] };
+    }
+    const reasons = [...amend, ...reconcile];
     if (changed) reasons.push(reason('task_changed', NEEDS, 'owner'));
     if (pin.code) reasons.push(reason(pin.code, NEEDS, 'owner', pin.detail));
     if (lab.code) reasons.push(reason(lab.code, lab.blocked ? BLOCKED : NEEDS, lab.blocked ? 'system' : 'owner', lab.detail));
-    let inReview = false;
-    if (receipt && outcome === 'uncertain') reasons.push(reason('reconcile_uncertain', NEEDS, 'owner', { receipt_id: receipt.id }));
-    else if (receipt && outcome === 'succeeded' && decision?.decision !== 'revise') {
-      // An acceptable receipt that is not "accepted" here is held back only by the version
-      // checks already listed above; it needs an owner decision only when the plan says so.
-      if (review.ok) { if (plan.decision === 'required' && !decision && versionOk) reasons.push(reason('decide_receipt', NEEDS, 'owner', { receipt_id: receipt.id })); }
-      else if (review.verdict === 'reject') reasons.push(reason('review_rejected', NEEDS, 'owner', { receipt_id: receipt.id }));
-      else if (review.verdict !== 'revise') inReview = true;
-    }
-    if (inReview && !reasons.some(r => r.lane === NEEDS)) {
-      return { ...common, lane: 'review', reasons: [reason(review.needs_independent || (plan.review === 'independent' && !review.review) ? 'needs_independent_review' : 'awaiting_review', 'review', 'reviewer', { receipt_id: receipt.id })] };
-    }
     if (plan.seat !== 'owner') {
       const roles = rk.roles.filter(r => r.seat === plan.seat && liveRole(r) && (!plan.role || r.role === plan.role));
       if (!roles.some(r => roleState(r) === 'effective')) {
@@ -310,19 +360,30 @@ export async function rkDerive(rk, pound, now, ctx = {}) {
         else reasons.push(reason('propose_role', NEEDS, 'owner'));
       } else if (!seatKey(rk, plan.seat)) reasons.push(reason('role_key_ambiguous', NEEDS, 'owner'));
     }
-    const deps = dependencies(rk, pound, id, plan).map(depId => {
-      const d = derive(depId);
-      return { id: depId, title: d.task?.title ?? taskById(pound, depId)?.title ?? null, lane: d.lane, accepted: d.accepted, cycle: Boolean(d.cycle) || cycles.has(depId), closed: d.closed || false, missing: Boolean(d.missing) };
-    });
+    // Dependency trouble the owner must resolve goes to Needs You; waiting is Blocked.
     if (cycles.has(id)) reasons.push(reason('dependency_cycle', NEEDS, 'owner'));
-    if (deps.some(d => d.missing)) reasons.push(reason('dependency_missing', NEEDS, 'owner'));
-    if (deps.some(d => d.closed)) reasons.push(reason('dependency_closed', NEEDS, 'owner'));
-    if (deps.some(d => !d.accepted && !d.missing && !d.closed)) reasons.push(reason('waiting_dependency', BLOCKED, 'dependency', { waiting_on: deps.filter(d => !d.accepted).map(d => d.id) }));
-    if (budget.used >= budget.limit) reasons.push(reason('budget_exhausted', NEEDS, 'owner', budget));
-    if (receipt && outcome === 'succeeded' && (decision?.decision === 'revise' || review?.verdict === 'revise') && !reasons.length) reasons.push(reason('review_revise', 'ready', 'seat'));
-    let lane = reasons.some(r => r.lane === NEEDS) ? NEEDS : reasons.some(r => r.lane === BLOCKED) ? BLOCKED : 'ready';
-    if (lane === 'ready' && plan.seat === 'owner') { lane = NEEDS; reasons.push(reason('owner_task', NEEDS, 'owner')); }
-    return { ...common, lane, reasons, deps };
+    if (deps.some(d => d.missing)) reasons.push(reason('dependency_missing', NEEDS, 'owner', { ids: deps.filter(d => d.missing).map(d => d.id) }));
+    if (deps.some(d => d.closed)) reasons.push(reason('dependency_closed', NEEDS, 'owner', { ids: deps.filter(d => d.closed).map(d => d.id) }));
+    if (deps.some(d => !d.accepted && !d.missing && !d.closed)) reasons.push(reason('waiting_dependency', BLOCKED, 'dependency', { waiting_on: deps.filter(d => !d.accepted && !d.missing && !d.closed).map(d => d.id) }));
+    let inReview = false, redo = null;
+    if (receipt && outcome === 'succeeded' && !open.length && depsOk) {
+      if (drift) redo = 'dependency_changed';
+      else if (decision?.decision === 'revise' || review.verdict === 'revise') redo = 'review_revise';
+      else if (review.verdict === 'reject') reasons.push(reason('review_rejected', NEEDS, 'owner', { receipt_id: receipt.id }));
+      // Ask for the owner's decision only when it is the one thing left.
+      else if (review.ok) { if (plan.decision === 'required' && !decision && versionOk) reasons.push(reason('decide_receipt', NEEDS, 'owner', { receipt_id: receipt.id })); }
+      else if (versionOk) inReview = true;
+    }
+    // Budget matters only when the next step is another attempt under this plan version.
+    const needsAttempt = !open.length && (!receipt || outcome !== 'succeeded' || Boolean(redo));
+    if (needsAttempt && budget.used >= budget.limit) reasons.push(reason('budget_exhausted', NEEDS, 'owner', budget));
+    let lane = reasons.some(r => r.lane === NEEDS) ? NEEDS : reasons.some(r => r.lane === BLOCKED) ? BLOCKED : inReview ? 'review' : 'ready';
+    if (lane === 'review') return { ...common, lane, reasons: [reason(review.needs_independent || (plan.review === 'independent' && !review.review) ? 'needs_independent_review' : 'awaiting_review', 'review', 'reviewer', { receipt_id: receipt.id })] };
+    if (lane === 'ready' && redo) reasons.push(reason(redo, 'ready', 'seat', { receipt_id: receipt.id }));
+    const claimable = lane === 'ready';
+    // Your own ready work belongs in your inbox.
+    if (claimable && plan.seat === 'owner') { lane = NEEDS; reasons.push(reason('owner_task', NEEDS, 'owner')); }
+    return { ...common, lane, reasons, claimable };
   }
   for (const t of tasks) derive(t.id);
   return { tasks: memo, fps };
@@ -333,45 +394,74 @@ function lastVerified(rk, taskId) {
   const e = latest(rk.events, x => x.task_id === taskId);
   return e ? { op: e.op, at: e.at, by: e.by, by_text: describePrincipal(e.by), ...(e.session_ref_declared ? { session_ref_declared: e.session_ref_declared } : {}) } : null;
 }
-function cardFor(rk, d, now) {
+const PLAN_FIELDS = ['seat', 'session_ref', 'role', 'priority', 'depends_on', 'pin', 'acceptance', 'review', 'decision', 'lab', 'data_scope', 'budget', 'thread', 'note'];
+// Everything an approver needs to see, and everything an amendment must carry forward.
+function planView(p) {
+  if (!p) return null;
+  return {
+    version: p.version, status: p.status, seat: p.seat, session_ref: p.session_ref || null, role: p.role || null, priority: p.priority ?? 3,
+    depends_on: p.depends_on || [], pound_blockers: p.pound_blockers || [], pin: p.pin || null, acceptance: p.acceptance || [], review: p.review, decision: p.decision,
+    lab: p.lab ? { hypothesis_id: p.lab.hypothesis_id, hypothesis_version: p.lab.hypothesis_version, evidence: p.lab.evidence } : null,
+    data_scope: p.data_scope, budget: p.budget, thread: p.thread || null, note: p.note || null,
+    by: describePrincipal(p.by), at: p.at, approved_at: p.approved_at || null,
+  };
+}
+function planChanges(from, to) {
+  const a = planView(from) || {}, b = planView(to);
+  return PLAN_FIELDS.filter(k => canonical(a[k] ?? null) !== canonical(b[k] ?? null)).map(k => ({ field: k, from: a[k] ?? null, to: b[k] ?? null }));
+}
+// Dependencies the current plan enforces that approving `next` would stop enforcing. Shown before
+// approval so a quiet Pound edit cannot ride along with an innocent-looking amendment.
+function droppedDeps(pound, plan, next) {
+  if (!plan) return [];
+  const keep = new Set([...(next.depends_on || []), ...liveBlockers(pound, next.task_id)]);
+  return [...new Set([...(plan.depends_on || []), ...(plan.pound_blockers || [])])].filter(id => !keep.has(id));
+}
+function cardFor(rk, pound, d, now) {
   const t = d.task, plan = d.plan;
   const receipt = d.evidence?.receipt || null;
   const roleKey = plan && plan.seat !== 'owner' ? seatKey(rk, plan.seat) : null;
   const role = plan && plan.seat !== 'owner' ? latest(rk.roles, r => r.seat === plan.seat && liveRole(r) && (!plan.role || r.role === plan.role)) : null;
   const next = d.reasons?.[0] || null;
   return {
-    task_id: t.id, title: t.title, project: plan?.pin?.project_id || t.project_id || null, lane: d.lane, max_plan_version: maxPlanVersion(rk, t.id),
+    task_id: t.id, title: t.title, brief: typeof t.body === 'string' ? t.body : '', refs: Array.isArray(t.refs) ? t.refs : [],
+    project: plan?.pin?.project_id || t.project_id || null, lane: d.lane, priority: plan?.priority ?? 3, max_plan_version: maxPlanVersion(rk, t.id),
     reported: { status: t.status, source: t.status_source || 'owner_reported', note: t.status === 'working' && !(d.claim) ? 'Reported working; no execution receipt or live lease.' : null },
     owner: plan ? { seat: plan.seat, key_label: plan.seat === 'owner' ? null : roleKey, role: role ? { id: role.id, name: role.role, state: roleState(role) } : null, session_ref_target: plan.session_ref || null } : null,
     next: next ? { code: next.code, text: next.text, actor: next.actor } : d.lane === 'ready' ? { code: 'claimable', text: 'Ready for ' + (plan.seat === 'owner' ? 'you' : plan.seat) + ' to claim.', actor: 'seat' } : d.lane === 'running' ? { code: 'running', text: 'Lease held. Progress is unverified until a receipt arrives.', actor: 'seat' } : null,
     reasons: d.reasons || [],
     dependencies: d.deps || [],
-    plan: plan ? { version: plan.version, review: plan.review, decision: plan.decision, data_scope: plan.data_scope, pin: plan.pin || null, lab: plan.lab || null, acceptance: plan.acceptance, budget: d.budget, approved_at: plan.approved_at || plan.at } : null,
-    pending_plan: d.pending ? { version: d.pending.version, proposed_by: describePrincipal(d.pending.by), at: d.pending.at } : null,
-    claim: d.claim ? { id: d.claim.id, seat: d.claim.seat, by: describePrincipal(d.claim.by), session_ref_declared: d.claim.session_ref, attempt: d.claim.attempt, claimed_at: d.claim.claimed_at, expires_at: d.claim.expires_at, minutes_left: Math.max(0, Math.round((Date.parse(d.claim.expires_at) - now) / 60000)) } : null,
+    plan: plan ? { ...planView(plan), attempts: d.budget } : null,
+    // An approver sees the whole proposal and exactly what it changes, not just a version number.
+    pending_plan: d.pending ? { ...planView(d.pending), proposed_by: describePrincipal(d.pending.by), changes: planChanges(plan, d.pending), drops_dependencies: droppedDeps(pound, plan, d.pending).map(id => ({ id, title: taskById(pound, id)?.title ?? null })) } : null,
+    claim: d.claim ? { id: d.claim.id, seat: d.claim.seat, by: describePrincipal(d.claim.by), by_owner: d.claim.by.kind === 'owner_session', session_ref_declared: d.claim.session_ref, attempt: d.claim.attempt, claimed_at: d.claim.claimed_at, expires_at: d.claim.expires_at, max_expires_at: leaseCap(d.claim), minutes_left: Math.max(0, Math.round((Date.parse(d.claim.expires_at) - now) / 60000)) } : null,
+    unreconciled: (d.unreconciled || []).map(r => ({ receipt_id: r.id, plan_version: r.plan_version, attempt: r.attempt, at: r.at, by: describePrincipal(r.by), summary: r.summary, artifacts: r.artifacts })),
     evidence: receipt ? {
       receipt_id: receipt.id, outcome: d.evidence.outcome, reported_outcome: receipt.outcome, at: receipt.at, by: describePrincipal(receipt.by), session_ref_declared: receipt.session_ref_declared,
-      late: receipt.late, hash: receipt.hash, summary: receipt.summary, artifacts: receipt.artifacts,
+      late: receipt.late, hash: receipt.hash, summary: receipt.summary, artifacts: receipt.artifacts, current: Boolean(d.evidenceCurrent),
       review: d.evidence.review ? { verdict: d.evidence.review.verdict, mode: d.evidence.review.mode, by: describePrincipal(d.evidence.review.by), at: d.evidence.review.at } : null,
       decision: d.evidence.decision ? { decision: d.evidence.decision.decision, at: d.evidence.decision.at } : null,
     } : null,
     last_verified: lastVerified(rk, t.id),
   };
 }
+// Priority 1 is first; ties keep a stable, readable order.
+const byPriority = (a, b) => a.priority - b.priority || String(a.title).localeCompare(String(b.title));
 export async function rkBoard(rk, pound, now, ctx = {}) {
   const { tasks } = await rkDerive(rk, pound, now, ctx);
   const lanes = Object.fromEntries(RK_LANES.map(l => [l, []]));
   const done = [], closed = [], unplanned = [];
   for (const d of tasks.values()) {
     if (!d.task) continue;
-    const card = cardFor(rk, d, now);
+    const card = cardFor(rk, pound, d, now);
     if (lanes[d.lane]) lanes[d.lane].push(card);
     else if (d.lane === 'done') done.push(card);
     else if (d.lane === 'closed') closed.push({ ...card, closed: d.closed });
     else if (d.lane === 'unplanned') unplanned.push(card);
   }
+  for (const list of [...Object.values(lanes), done, closed, unplanned]) list.sort(byPriority);
   // Role decisions that are not tied to one task still belong in the owner's inbox.
-  const roleInbox = rk.roles.filter(r => roleState(r) === 'accepted').map(r => ({ role_id: r.id, seat: r.seat, key_label: r.key_label, role: r.role, accepted: { by: describePrincipal(r.acceptance.by), tier: r.acceptance.tier, at: r.acceptance.at } }));
+  const roleInbox = rk.roles.filter(r => roleState(r) === 'accepted').map(r => ({ role_id: r.id, seat: r.seat, key_label: r.key_label, role: r.role, scope: r.scope || null, accepted: { by: describePrincipal(r.acceptance.by), tier: r.acceptance.tier, at: r.acceptance.at } }));
   const pins = [];
   for (const p of rk.pins) { const cur = currentPin(rk, p.project_id, p.kind); if (cur === p) pins.push({ ...p, by: describePrincipal(p.by), history: rk.pins.filter(x => x.project_id === p.project_id && x.kind === p.kind).length }); }
   return {
@@ -382,11 +472,13 @@ export async function rkBoard(rk, pound, now, ctx = {}) {
     pins,
     contexts: poundContexts(pound).filter(c => !c.archived).map(c => ({ id: c.id, title: c.title, versions: c.versions?.length || 0 })),
     lab: ctx.lab ? { status: 'checked', tenant: ctx.lab.tenant } : { status: 'unavailable' },
+    capacity: Object.fromEntries(LISTS.filter(k => k !== 'events' && k !== 'idem').map(k => [k, { used: rk[k].length, limit: RK_LIMITS[k], connector_limit: connectorLimit(k) }])),
     honesty: [
       'Lanes come from server-recorded claims, receipts, reviews and decisions. Pound status is shown as reported.',
       'Running means a lease is held. Progress is unverified until a receipt arrives.',
       'Connector keys are server-verified, but every key carries owner authority: reviews from them are advisory and never independent.',
-      'session_ref and summaries are declared by the session. Model identity is never verified.',
+      'session_ref and summaries are declared by the session. Session targeting prevents accidental cross-session claims, not deliberate ones. Model identity is never verified.',
+      'A Pound blocker added after a plan was approved applies at once, but any Pound writer can remove it until you approve a plan version that records it.',
     ],
   };
 }
@@ -403,10 +495,13 @@ export async function rkWork(rk, pound, now, ctx, { key_label, session_ref }) {
     if (d.claim && d.claim.by.kind === 'owner_key' && d.claim.by.key_label === key_label) running.push(d);
     if (d.lane === 'review' && d.evidence.receipt && !(d.evidence.receipt.by.kind === 'owner_key' && d.evidence.receipt.by.key_label === key_label)) reviews.push(d);
   }
+  const order = (a, b) => (a.plan.priority ?? 3) - (b.plan.priority ?? 3) || String(a.task.title).localeCompare(String(b.task.title));
+  ready.sort(order);
   const brief = d => ({
-    task_id: d.task.id, title: d.task.title, brief: d.task.body, refs: d.task.refs || [], plan_version: d.plan.version, seat: d.plan.seat,
+    task_id: d.task.id, title: d.task.title, brief: d.task.body, refs: d.task.refs || [], priority: d.plan.priority ?? 3, plan_version: d.plan.version, seat: d.plan.seat,
     pin: d.plan.pin ? { ...d.plan.pin, current: d.pin?.pin ? { id: d.pin.pin.id, status: d.pin.pin.status, ref: d.pin.pin.ref, verification: d.pin.pin.verification } : null } : null,
-    lab: d.plan.lab, data_scope: d.plan.data_scope, acceptance: d.plan.acceptance, review: d.plan.review, budget: d.budget, session_ref_target: d.plan.session_ref || null,
+    lab: d.plan.lab, data_scope: d.plan.data_scope, acceptance: d.plan.acceptance, review: d.plan.review, budget: d.budget, lease_minutes: d.plan.budget.lease_minutes, session_ref_target: d.plan.session_ref || null,
+    redo: d.reasons.find(r => r.code === 'review_revise' || r.code === 'dependency_changed')?.code ?? null,
     dependencies: (d.deps || []).map(x => ({ id: x.id, title: x.title, accepted: x.accepted })),
   });
   return {
@@ -415,16 +510,16 @@ export async function rkWork(rk, pound, now, ctx, { key_label, session_ref }) {
     seats,
     ready: ready.map(brief),
     targeted_to_other_sessions: elsewhere.map(d => ({ task_id: d.task.id, title: d.task.title, session_ref_target: d.plan.session_ref })),
-    running: running.map(d => ({ task_id: d.task.id, title: d.task.title, claim_id: d.claim.id, session_ref_declared: d.claim.session_ref, expires_at: d.claim.expires_at, plan_version: d.claim.plan_version, attempt: d.claim.attempt, yours: d.claim.session_ref === session_ref })),
+    running: running.map(d => ({ task_id: d.task.id, title: d.task.title, claim_id: d.claim.id, session_ref_declared: d.claim.session_ref, expires_at: d.claim.expires_at, max_expires_at: leaseCap(d.claim), plan_version: d.claim.plan_version, attempt: d.claim.attempt, yours: d.claim.session_ref === session_ref, stale: d.reasons.find(r => r.code === 'lease_stale')?.detail?.causes ?? [] })),
     review_requests: reviews.map(d => ({ task_id: d.task.id, title: d.task.title, receipt_id: d.evidence.receipt.id, summary: d.evidence.receipt.summary, artifacts: d.evidence.receipt.artifacts, required: d.plan.review, note: 'Your review will be recorded as advisory: connector keys share owner authority.' })),
     role_offers: rk.roles.filter(r => r.key_label === key_label && roleState(r) === 'proposed').map(r => ({ role_id: r.id, seat: r.seat, role: r.role, scope: r.scope || null })),
     protocol: [
       '1. Accept a role offer for your seat with op rk.role.accept (only your own key can).',
-      '2. Claim one ready task with op rk.claim: echo plan_version (and pin_version when pinned), declare session_ref, and send a fresh random lease_secret you keep for this claim.',
-      '3. Do the work. Re-claim with the same lease_secret to renew before expires_at.',
+      '2. Claim the first ready task (highest priority first) with op rk.claim: echo plan_version (and pin_version when pinned), declare session_ref, and send a fresh random lease_secret you keep for this claim.',
+      '3. Do the work. Re-claim with the same lease_secret to renew before expires_at. Renewal stops at max_expires_at, or as soon as the task text, pin, Lab link or a dependency changes.',
       '4. Report with op rk.report: outcome succeeded | failed | uncertain, a summary and artifact references. Use uncertain when an external effect may or may not have landed.',
       '5. Read again for the next ready task. Stop when nothing is ready, a decision is pending, a version changed, or your budget is used.',
-      'After a timeout, resend the identical request (same request_id). If you lost the request_id, read first and reconcile; never claim again blindly.',
+      'After a timeout, resend the identical request (same request_id) soon: replies are kept for the last 256 writes. If you lost the request_id, read first and reconcile; never claim again blindly.',
     ],
   };
 }
@@ -434,7 +529,10 @@ function addEvent(rk, at, op, principal, extra) {
   rk.events.push({ at, op, by: principalRecord(principal), task_id: extra.task_id ?? null, subject: extra.subject ?? null, ...(extra.session_ref ? { session_ref_declared: extra.session_ref } : {}) });
   if (rk.events.length > RK_LIMITS.events) rk.events = rk.events.slice(-RK_LIMITS.events);
 }
-function cap(rk, list) { check(rk[list].length < RK_LIMITS[list], 409, 'robokap_capacity', list); }
+function cap(rk, list, principal) {
+  const limit = principal.kind === 'owner_session' ? RK_LIMITS[list] : connectorLimit(list);
+  check(rk[list].length < limit, 409, 'robokap_capacity', { list, used: rk[list].length, limit });
+}
 const ownerOnly = p => check(p.kind === 'owner_session', 403, 'owner_session_required');
 const notDelegated = p => check(p.kind !== 'delegated_agent', 403, 'delegated_agents_not_connected_to_robokap');
 function liveTask(pound, id) {
@@ -467,6 +565,9 @@ async function normalizePinRef(ref, pound) {
   }
   fail(400, 'invalid_pin_ref');
 }
+// Lab evidence for a successful report: verified, actually executed, and not a failed run.
+// Null and inconclusive results are results.
+const labEvidence = a => a.kind === 'lab_receipt' && a.verification === 'server_verified' && a.executed === true && a.lab_outcome !== 'failure';
 async function verifyArtifact(a, { pound, lab, plan }) {
   check(isObj(a), 400, 'invalid_artifact');
   only(a, ['kind', 'ref', 'sha256', 'note'], ['kind']);
@@ -487,7 +588,8 @@ async function verifyArtifact(a, { pound, lab, plan }) {
   if (a.kind === 'lab_receipt' || a.kind === 'lab_discussion') {
     check(RX.labId.test(a.ref), 400, 'invalid_artifact_ref');
     if (a.kind === 'lab_receipt') check(a.sha256, 400, 'lab_receipt_hash_required');
-    if (!lab) return { ...out, verification: 'unverified_lab_unavailable' };
+    // An unreadable Lab cannot vouch for a split or a hash. Retry the report when it is back.
+    check(lab, 503, 'lab_unavailable', 'Lab references are verified when they are recorded. Resend this report when the Lab is reachable.');
     if (a.kind === 'lab_discussion') { const d = lab.discussions.get(a.ref); check(d, 400, 'artifact_not_found'); check(!plan.lab || d.hypothesisId === plan.lab.hypothesis_id, 400, 'lab_link_mismatch'); return { ...out, verification: 'server_verified' }; }
     const r = lab.receipts.get(a.ref);
     check(r, 400, 'artifact_not_found');
@@ -495,7 +597,7 @@ async function verifyArtifact(a, { pound, lab, plan }) {
     // Allow-list, not deny-list: anything other than a known non-holdout split is refused.
     check(['discovery', 'development'].includes(r.split), 403, 'holdout_sealed');
     check(!plan.lab || (r.hypothesisId === plan.lab.hypothesis_id && r.hypothesisVersion === plan.lab.hypothesis_version), 400, 'lab_link_mismatch');
-    return { ...out, verification: 'server_verified' };
+    return { ...out, verification: 'server_verified', lab_outcome: r.outcome ?? null, executed: r.execution !== 'not_executed' };
   }
   let url; try { url = new URL(a.ref); } catch { fail(400, 'invalid_artifact_ref'); }
   check(url.protocol === 'https:' && !url.username && !url.password, 400, 'invalid_artifact_ref');
@@ -519,7 +621,7 @@ const OPS = {
     check(['draft', 'approved'].includes(data.status), 400, 'invalid_pin_status');
     check(data.note === undefined || text(data.note, RK_LIMITS.note), 400, 'invalid_note');
     const { ref, verification } = await normalizePinRef(data.ref, pound);
-    cap(rk, 'pins');
+    cap(rk, 'pins', principal);
     const prev = currentPin(rk, data.project_id, data.kind);
     const pin = { id: 'pin_' + uuid(), project_id: data.project_id, kind: data.kind, version: (prev?.version || 0) + 1, status: data.status, ref, verification, ...(data.note ? { note: data.note } : {}), by: principalRecord(principal), at, supersedes: prev?.id || null };
     rk.pins.push(pin);
@@ -527,7 +629,7 @@ const OPS = {
   },
   async 'rk.plan'({ rk, pound, data, principal, at, now, ctx }) {
     notDelegated(principal);
-    only(data, ['task_id', 'expected_plan_version', 'seat', 'session_ref', 'role', 'depends_on', 'pin', 'acceptance', 'review', 'decision', 'lab', 'data_scope', 'budget', 'thread', 'note'], ['task_id', 'expected_plan_version', 'seat', 'review', 'decision', 'data_scope']);
+    only(data, ['task_id', 'expected_plan_version', 'seat', 'session_ref', 'role', 'priority', 'depends_on', 'pin', 'acceptance', 'review', 'decision', 'lab', 'data_scope', 'budget', 'thread', 'note'], ['task_id', 'expected_plan_version', 'seat', 'review', 'decision', 'data_scope']);
     const task = liveTask(pound, data.task_id);
     check(task.status !== 'canceled', 409, 'task_canceled');
     check(int(data.expected_plan_version, 0, 100000) && data.expected_plan_version === maxPlanVersion(rk, task.id), 409, 'plan_version_conflict', { current: maxPlanVersion(rk, task.id) });
@@ -535,6 +637,7 @@ const OPS = {
     const agentSeat = data.seat !== 'owner';
     check(data.session_ref === undefined || (agentSeat && text(data.session_ref, 200)), 400, 'invalid_session_ref');
     check(data.role === undefined || (agentSeat && text(data.role, 60)), 400, 'invalid_role');
+    check(data.priority === undefined || int(data.priority, 1, 5), 400, 'invalid_priority', '1 is most urgent, 5 least; default 3.');
     const deps = data.depends_on ?? [];
     check(Array.isArray(deps) && deps.length <= RK_LIMITS.depends && new Set(deps).size === deps.length, 400, 'invalid_depends_on');
     for (const d of deps) { check(d !== task.id, 400, 'self_dependency'); liveTask(pound, d); }
@@ -570,12 +673,15 @@ const OPS = {
     if (data.thread !== undefined) { only(data.thread, ['discord_thread_id'], ['discord_thread_id']); check(RX.snowflake.test(data.thread.discord_thread_id), 400, 'invalid_thread'); thread = { discord_thread_id: data.thread.discord_thread_id }; }
     check(data.note === undefined || text(data.note, RK_LIMITS.note), 400, 'invalid_note');
     check(!cycleWith(rk, pound, task.id, deps), 400, 'dependency_cycle');
-    cap(rk, 'plans');
+    cap(rk, 'plans', principal);
     const status = principal.kind === 'owner_session' ? 'approved' : 'proposed';
     const plan = {
       task_id: task.id, version: maxPlanVersion(rk, task.id) + 1, status, seat: data.seat, ...(data.session_ref ? { session_ref: data.session_ref } : {}), ...(data.role ? { role: data.role } : {}),
-      depends_on: deps, pin, acceptance, review: data.review, decision: data.decision, lab, data_scope: data.data_scope, budget, thread, ...(data.note ? { note: data.note } : {}),
-      task_fp: await taskFingerprint(task), by: principalRecord(principal), at, ...(status === 'approved' ? { approved_at: at } : {}),
+      priority: data.priority ?? 3, depends_on: deps, pin, acceptance, review: data.review, decision: data.decision, lab, data_scope: data.data_scope, budget, thread, ...(data.note ? { note: data.note } : {}),
+      task_fp: await taskFingerprint(task), by: principalRecord(principal), at,
+      // The owner's approval records the Pound blockers in force, so removing one later in Pound
+      // does not unblock this task; only another approved plan version can.
+      ...(status === 'approved' ? { approved_at: at, pound_blockers: liveBlockers(pound, task.id) } : {}),
     };
     for (const p of rk.plans) if (p.task_id === task.id && (p.status === 'proposed' || (status === 'approved' && p.status === 'approved'))) p.status = 'superseded';
     if (status === 'approved') supersedeClaims(rk, task.id, now, at);
@@ -596,7 +702,7 @@ const OPS = {
     const taken = rk.roles.filter(r => r.key_label === data.key_label && liveRole(r));
     check(taken.every(r => r.seat === data.seat), 409, 'key_serves_another_seat');
     check(!live.some(r => r.role === data.role), 409, 'role_exists');
-    cap(rk, 'roles');
+    cap(rk, 'roles', principal);
     const role = { id: 'rol_' + uuid(), seat: data.seat, key_label: data.key_label, role: data.role, ...(data.scope ? { scope: data.scope } : {}), proposed: { by: principalRecord(principal), at }, acceptance: null, approval: null, rejection: null, revocation: null };
     rk.roles.push(role);
     return { subject: role.id, role_id: role.id, state: 'proposed' };
@@ -630,9 +736,16 @@ const OPS = {
     if (live) {
       const same = principalLabel(live.by) === principalLabel(principal) && live.session_ref === (data.session_ref ?? null) && live.lease_sha256 === leaseHash;
       check(same, 409, 'already_claimed', { seat: live.seat, session_ref_declared: live.session_ref, expires_at: live.expires_at });
-      live.expires_at = iso(now + plan.budget.lease_minutes * 60000);
+      // A renewal re-checks everything the lease was granted on, and stops at a fixed ceiling.
+      const { tasks } = await rkDerive(rk, pound, now, ctx);
+      const causes = staleCauses(tasks.get(task.id), live);
+      check(!causes.length, 409, 'lease_stale', causes);
+      const ceiling = leaseCap(live);
+      const until = Math.min(now + (live.lease_minutes ?? plan.budget.lease_minutes) * 60000, Date.parse(ceiling));
+      check(until > Date.parse(live.expires_at), 409, 'lease_limit_reached', { max_expires_at: ceiling });
+      live.expires_at = iso(until);
       live.renewed_at = at;
-      return { task_id: task.id, subject: live.id, session_ref: live.session_ref, claim_id: live.id, attempt: live.attempt, expires_at: live.expires_at, renewed: true };
+      return { task_id: task.id, subject: live.id, session_ref: live.session_ref, claim_id: live.id, attempt: live.attempt, expires_at: live.expires_at, max_expires_at: ceiling, renewed: true };
     }
     if (agentSeat) {
       check(principal.kind === 'owner_key', 403, 'target_mismatch', 'This task is for the ' + plan.seat + ' seat.');
@@ -644,38 +757,50 @@ const OPS = {
     } else check(principal.kind === 'owner_session', 403, 'target_mismatch', 'This task is the owner\'s own work.');
     const { tasks } = await rkDerive(rk, pound, now, ctx);
     const d = tasks.get(task.id);
-    const ownerReady = !agentSeat && d.lane === NEEDS && d.reasons.length === 1 && d.reasons[0].code === 'owner_task';
-    check(d.lane === 'ready' || ownerReady, 409, 'not_eligible', (d.reasons || []).map(r => r.code));
+    check(d.claimable === true, 409, 'not_eligible', (d.reasons || []).map(r => r.code));
     for (const c of rk.claims) if (c.task_id === task.id && c.state === 'active') { c.state = 'expired'; c.closed_at = at; }
-    cap(rk, 'claims');
+    cap(rk, 'claims', principal);
     const claim = {
       id: 'clm_' + uuid(), task_id: task.id, plan_version: plan.version, task_fp: plan.task_fp, pin: plan.pin ? { kind: plan.pin.kind, version: plan.pin.version, project_id: plan.pin.project_id } : null,
       seat: plan.seat, by: principalRecord(principal), session_ref: data.session_ref ?? null, lease_sha256: leaseHash, attempt: d.budget.used + 1,
-      claimed_at: at, renewed_at: at, expires_at: iso(now + plan.budget.lease_minutes * 60000), state: 'active',
+      // The dependency evidence this attempt starts from. A result counts only while it still holds.
+      deps: d.deps.map(x => ({ task_id: x.id, receipt_id: x.receipt_id })),
+      lease_minutes: plan.budget.lease_minutes, claimed_at: at, renewed_at: at, expires_at: iso(now + plan.budget.lease_minutes * 60000), state: 'active',
     };
     rk.claims.push(claim);
-    return { task_id: task.id, subject: claim.id, session_ref: claim.session_ref, claim_id: claim.id, attempt: claim.attempt, attempts_limit: d.budget.limit, expires_at: claim.expires_at, plan_version: plan.version, renewed: false };
+    return { task_id: task.id, subject: claim.id, session_ref: claim.session_ref, claim_id: claim.id, attempt: claim.attempt, attempts_limit: d.budget.limit, expires_at: claim.expires_at, max_expires_at: leaseCap(claim), plan_version: plan.version, renewed: false };
   },
   async 'rk.release'({ rk, data, principal, at }) {
+    // Stop control: the signed owner can end any active lease without its secret. The attempt
+    // still counts, and a result that arrives afterwards is recorded as stale.
+    if (principal.kind === 'owner_session' && data?.lease_secret === undefined) {
+      only(data, ['task_id', 'claim_id'], ['task_id', 'claim_id']);
+      check(RX.task.test(data.task_id || '') && RX.claim.test(data.claim_id || ''), 400, 'invalid_claim_reference');
+      const claim = rk.claims.find(c => c.id === data.claim_id && c.task_id === data.task_id);
+      check(claim, 404, 'claim_not_found');
+      check(claim.state === 'active', 409, 'claim_closed', claim.state);
+      Object.assign(claim, { state: 'released', closed_at: at, released_by: 'owner' });
+      return { task_id: claim.task_id, subject: claim.id, claim_id: claim.id, state: 'released', stopped_by_owner: true };
+    }
     only(data, ['task_id', 'claim_id', 'lease_secret'], ['task_id', 'claim_id', 'lease_secret']);
     const claim = await ownClaim(rk, data, principal);
     check(claim.state === 'active', 409, 'claim_closed', claim.state);
-    claim.state = 'released';
-    claim.closed_at = at;
+    Object.assign(claim, { state: 'released', closed_at: at, released_by: 'claimant' });
     return { task_id: claim.task_id, subject: claim.id, claim_id: claim.id, state: 'released' };
   },
   async 'rk.report'({ rk, pound, data, principal, at, now, ctx }) {
     only(data, ['task_id', 'claim_id', 'lease_secret', 'outcome', 'summary', 'artifacts'], ['task_id', 'claim_id', 'lease_secret', 'outcome', 'summary']);
     const claim = await ownClaim(rk, data, principal);
-    if (claim.state === 'reported') fail(409, 'already_reported', { receipt_id: claim.receipt_id });
-    check(claim.state !== 'superseded', 409, 'claim_superseded', 'The owner approved a new plan version during this lease.');
-    check(claim.state !== 'released', 409, 'claim_released');
-    const late = !(Date.parse(claim.expires_at) > now);
-    if (late || claim.state === 'expired') {
-      const newer = rk.claims.some(c => c.task_id === claim.task_id && c.id !== claim.id && Date.parse(c.claimed_at) >= Date.parse(claim.claimed_at));
-      check(!newer, 409, 'lease_superseded', 'The lease expired and another attempt started. This result was not recorded.');
-    }
+    if (claim.receipt_id) fail(409, 'already_reported', { receipt_id: claim.receipt_id });
+    check(claim.state !== 'released' || claim.released_by === 'owner', 409, 'claim_released');
     check(OUTCOMES.includes(data.outcome), 400, 'invalid_outcome');
+    const live = claim.state === 'active' && Date.parse(claim.expires_at) > now;
+    const late = !live;
+    // Claims are appended in order, so a later index is a later attempt even within one millisecond.
+    const newer = !live && rk.claims.slice(rk.claims.indexOf(claim) + 1).some(c => c.task_id === claim.task_id);
+    // A possible external effect is always recorded, whatever happened to the lease, so it can be
+    // reconciled. Any other result from a lease that lost its place is refused.
+    check(!newer || data.outcome === 'uncertain', 409, 'lease_superseded', 'The lease ended and another attempt started. This result was not recorded.');
     check(text(data.summary, RK_LIMITS.summary), 400, 'invalid_summary');
     const list = data.artifacts ?? [];
     check(Array.isArray(list) && list.length <= RK_LIMITS.artifacts, 400, 'invalid_artifacts');
@@ -683,22 +808,27 @@ const OPS = {
     const plan = approvedPlan(rk, claim.task_id);
     const artifacts = [];
     for (const a of list) artifacts.push(await verifyArtifact(a, { pound, lab: ctx.lab, plan: plan || { lab: null, thread: null } }));
-    const pinNow = plan?.pin ? currentPin(rk, plan.pin.project_id, plan.pin.kind) : null;
-    const current = Boolean(task && !task.archived && plan && plan.version === claim.plan_version && (await taskFingerprint(task)) === claim.task_fp && (!claim.pin || pinNow?.version === claim.pin.version));
-    if (current && plan.lab?.evidence === 'required' && data.outcome === 'succeeded') check(artifacts.some(a => a.kind === 'lab_receipt' && a.verification === 'server_verified'), 409, 'lab_evidence_required');
-    cap(rk, 'receipts');
+    // The same staleness rules as renewal: plan, task text, pin, Lab link and dependencies.
+    const d = task && !task.archived ? (await rkDerive(rk, pound, now, ctx)).tasks.get(claim.task_id) : null;
+    const causes = d ? staleCauses(d, claim) : ['task_archived'];
+    if (task?.status === 'canceled' && !causes.includes('task_canceled')) causes.push('task_canceled');
+    if (['superseded', 'released'].includes(claim.state)) causes.push(claim.state === 'released' ? 'stopped_by_owner' : 'claim_superseded');
+    if (newer) causes.push('lease_superseded');
+    const current = !causes.length;
+    if (current && plan.lab?.evidence === 'required' && data.outcome === 'succeeded') check(artifacts.some(labEvidence), 409, 'lab_evidence_required', 'Attach a server-verified Lab receipt that executed and did not fail.');
+    cap(rk, 'receipts', principal);
     const body = {
       id: 'rcp_' + uuid(), task_id: claim.task_id, claim_id: claim.id, plan_version: claim.plan_version, task_fp: claim.task_fp, pin: claim.pin, seat: claim.seat,
       outcome: data.outcome, summary: data.summary, summary_sha256: await sha256Hex(data.summary), artifacts, by: principalRecord(principal),
-      session_ref_declared: claim.session_ref, attempt: claim.attempt, at, late, validity: current ? 'current' : 'stale',
+      session_ref_declared: claim.session_ref, attempt: claim.attempt, deps: claim.deps || [], at, late, validity: current ? 'current' : 'stale', ...(current ? {} : { stale_causes: causes }),
     };
     const prev = rk.receipts.at(-1)?.hash || null;
     const receipt = { ...body, prev, hash: await sha256Hex(canonical({ ...body, prev })) };
     rk.receipts.push(receipt);
-    claim.state = 'reported';
-    claim.closed_at = at;
+    if (claim.state === 'active') { claim.state = 'reported'; claim.closed_at = at; }
     claim.receipt_id = receipt.id;
-    return { task_id: claim.task_id, subject: receipt.id, session_ref: claim.session_ref, receipt_id: receipt.id, validity: receipt.validity, late, hash: receipt.hash, artifacts: artifacts.map(a => ({ kind: a.kind, verification: a.verification })) };
+    claim.reported_at = at;
+    return { task_id: claim.task_id, subject: receipt.id, session_ref: claim.session_ref, receipt_id: receipt.id, validity: receipt.validity, ...(current ? {} : { stale_causes: causes }), late, hash: receipt.hash, artifacts: artifacts.map(a => ({ kind: a.kind, verification: a.verification })) };
   },
   async 'rk.review'({ rk, data, principal, at }) {
     only(data, ['receipt_id', 'verdict', 'note'], ['receipt_id', 'verdict']);
@@ -712,18 +842,23 @@ const OPS = {
     const plan = approvedPlan(rk, receipt.task_id);
     check(plan && receipt.validity === 'current' && plan.version === receipt.plan_version && latestReceipt(rk, receipt.task_id, plan.version)?.id === receipt.id && effectiveOutcome(rk, receipt) === 'succeeded', 409, 'receipt_not_reviewable');
     check(!decisionOn(rk, 'receipt', receipt.id), 409, 'receipt_already_decided');
-    cap(rk, 'reviews');
+    const prior = rk.reviews.filter(v => v.receipt_id === receipt.id);
+    check(!prior.some(v => v.verdict !== 'accept'), 409, 'review_closed', 'A reviewer already asked for changes or rejected this result. The owner decides next.');
+    check(!prior.some(v => principalLabel(v.by) === principalLabel(principal)), 409, 'already_reviewed');
+    cap(rk, 'reviews', principal);
     const mode = principal.kind === 'delegated_agent' ? 'independent' : 'advisory';
     const review = { id: 'rvw_' + uuid(), receipt_id: receipt.id, task_id: receipt.task_id, plan_version: receipt.plan_version, verdict: data.verdict, mode, basis: mode === 'independent' ? 'separate_agent_credential' : 'shared_owner_credential', by: principalRecord(principal), at, ...(data.note ? { note: data.note } : {}) };
     rk.reviews.push(review);
     return { task_id: receipt.task_id, subject: review.id, review_id: review.id, mode, satisfies_independent: mode === 'independent' };
   },
-  async 'rk.decide'({ rk, pound, data, principal, at, now }) {
+  async 'rk.decide'({ rk, pound, data, principal, at, now, ctx }) {
     ownerOnly(principal);
     only(data, ['subject', 'id', 'decision', 'plan_version', 'attempts', 'note'], ['subject', 'id', 'decision']);
     check(data.note === undefined || text(data.note, RK_LIMITS.note), 400, 'invalid_note');
-    cap(rk, 'decisions');
-    const record = extra => { const d = { id: 'dcs_' + uuid(), subject: data.subject, id: data.id, decision: data.decision, ...extra, ...(data.note ? { note: data.note } : {}), by: principalRecord(principal), at }; rk.decisions.push(d); return d; };
+    cap(rk, 'decisions', principal);
+    check(typeof data.id === 'string' && data.id.length <= 80, 400, 'invalid_decision_subject_id');
+    // A decision's own id is unique; subject_id is the plan's task, role, receipt or budget it decides.
+    const record = extra => { const d = { id: 'dcs_' + uuid(), subject: data.subject, subject_id: data.id, decision: data.decision, ...extra, ...(data.note ? { note: data.note } : {}), by: principalRecord(principal), at }; rk.decisions.push(d); return d; };
     if (data.subject === 'plan') {
       check(['approve', 'reject'].includes(data.decision) && int(data.plan_version, 1, 100000), 400, 'invalid_decision');
       const task = liveTask(pound, data.id);
@@ -734,8 +869,10 @@ const OPS = {
         for (const p of rk.plans) if (p.task_id === task.id && p !== plan && p.status === 'approved') p.status = 'superseded';
         plan.status = 'approved';
         plan.approved_at = at;
-        // Evidence binds to the task text the owner actually approved.
+        // Evidence binds to the task text the owner actually approved, and the approval records
+        // the Pound blockers in force (see rk.plan).
         plan.task_fp = await taskFingerprint(task);
+        plan.pound_blockers = liveBlockers(pound, task.id);
         supersedeClaims(rk, task.id, now, at);
       } else plan.status = 'rejected';
       const d = record({ plan_version: plan.version });
@@ -754,27 +891,33 @@ const OPS = {
       if (data.decision === 'revoke') for (const c of rk.claims) if (c.state === 'active' && c.by.kind === 'owner_key' && c.by.key_label === role.key_label && c.seat === role.seat) { c.state = 'superseded'; c.closed_at = at; }
       return { subject: d.id, decision_id: d.id, role_id: role.id, state: roleState(role) };
     }
-    if (data.subject === 'receipt' || data.subject === 'uncertain') {
+    if (data.subject === 'uncertain') {
+      // Any uncertain outcome can be reconciled, from any plan version and whether or not it
+      // still counts as evidence: the external effect is real either way.
       check(RX.receipt.test(data.id), 400, 'invalid_receipt_id');
+      check(['landed', 'not_landed'].includes(data.decision), 400, 'invalid_decision');
+      const receipt = rk.receipts.find(r => r.id === data.id);
+      check(receipt, 404, 'receipt_not_found');
+      check(receipt.outcome === 'uncertain' && !decisionOn(rk, 'uncertain', receipt.id), 409, 'nothing_to_reconcile');
+      const d = record({ plan_version: receipt.plan_version });
+      return { task_id: receipt.task_id, subject: d.id, decision_id: d.id };
+    }
+    if (data.subject === 'receipt') {
+      check(RX.receipt.test(data.id), 400, 'invalid_receipt_id');
+      check(['accept', 'revise', 'reject'].includes(data.decision), 400, 'invalid_decision');
       const receipt = rk.receipts.find(r => r.id === data.id);
       check(receipt, 404, 'receipt_not_found');
       const plan = approvedPlan(rk, receipt.task_id);
       check(plan && receipt.validity === 'current' && plan.version === receipt.plan_version && latestReceipt(rk, receipt.task_id, plan.version)?.id === receipt.id, 409, 'receipt_not_current');
-      if (data.subject === 'uncertain') {
-        check(['landed', 'not_landed'].includes(data.decision), 400, 'invalid_decision');
-        check(receipt.outcome === 'uncertain' && !decisionOn(rk, 'uncertain', receipt.id), 409, 'nothing_to_reconcile');
-      } else {
-        check(['accept', 'revise', 'reject'].includes(data.decision), 400, 'invalid_decision');
-        check(effectiveOutcome(rk, receipt) === 'succeeded', 409, 'receipt_not_successful');
-        check(!decisionOn(rk, 'receipt', receipt.id), 409, 'receipt_already_decided');
-        // No override: if the review requirement is wrong, amend the plan on the record.
-        if (data.decision === 'accept') {
-          check(reviewState(rk, plan, receipt).ok, 409, 'review_not_satisfied', plan.review);
-          // Accepting evidence for a task whose text or pinned context has since changed would
-          // record a decision that cannot make the task done; ask for a re-approval instead.
-          const task = taskById(pound, receipt.task_id);
-          check(task && (await taskFingerprint(task)) === receipt.task_fp && !pinState(rk, pound, plan).code, 409, 'receipt_not_current_version');
-        }
+      check(effectiveOutcome(rk, receipt) === 'succeeded', 409, 'receipt_not_successful');
+      check(!decisionOn(rk, 'receipt', receipt.id), 409, 'receipt_already_decided');
+      // No override: if the review requirement is wrong, amend the plan on the record.
+      if (data.decision === 'accept') {
+        check(reviewState(rk, plan, receipt).ok, 409, 'review_not_satisfied', plan.review);
+        // Accept only what can make the task done now: the approved task text, pin and Lab link,
+        // and every dependency accepted at the evidence this result relied on.
+        const d = (await rkDerive(rk, pound, now, ctx)).tasks.get(receipt.task_id);
+        check(d?.evidenceCurrent && d.evidence.receipt?.id === receipt.id, 409, 'receipt_not_current_version', (d?.reasons || []).map(r => r.code));
       }
       const d = record({ plan_version: receipt.plan_version });
       return { task_id: receipt.task_id, subject: d.id, decision_id: d.id };
@@ -823,6 +966,10 @@ export async function rkApply(rkIn, pound, input, principal, now, ctx = {}) {
   const rk = structuredClone(rkIn);
   const at = iso(now);
   const out = await OPS[input.op]({ rk, pound, data: input.data, principal, now, at, ctx });
+  if (principal.kind !== 'owner_session') {
+    const bytes = enc.encode(JSON.stringify(rk)).length, limit = Math.floor(RK_LIMITS.bytes * 0.75);
+    check(bytes <= limit, 409, 'robokap_capacity', { list: 'bytes', used: bytes, limit });
+  }
   rk.rev += 1;
   addEvent(rk, at, input.op, principal, { task_id: out.task_id, subject: out.subject, session_ref: out.session_ref });
   const { session_ref: _declared, ...visible } = out;
@@ -835,7 +982,7 @@ export async function rkApply(rkIn, pound, input, principal, now, ctx = {}) {
 /* Flat tool input schemas: several MCP clients reject a top-level oneOf. Exact per-op rules
  * live in the descriptions and in server validation. */
 export const RK_TOOL_DESCRIPTION = 'One RoboKap coordination write. Read first (dd_owner_robokap_read) for plan_version, pin versions and ids. '
-  + 'Ops for a connector key: rk.role.accept {role_id} (only the key a role names can accept it); rk.claim {task_id, plan_version, pin_version (when the plan pins context), session_ref, lease_secret (fresh random 22-80 chars [A-Za-z0-9_-] you keep; resend the same values to renew)}; '
+  + 'Ops for a connector key: rk.role.accept {role_id} (only the key a role names can accept it); rk.claim {task_id, plan_version, pin_version (when the plan pins context), session_ref, lease_secret (fresh random 22-80 chars [A-Za-z0-9_-] you keep; resend the same values to renew until max_expires_at; renewal is refused once the task, pin, Lab link or a dependency changes)}; '
   + 'rk.release {task_id, claim_id, lease_secret}; rk.report {task_id, claim_id, lease_secret, outcome succeeded|failed|uncertain, summary 1-2000, artifacts? up to 8 of {kind pound_context|lab_receipt|lab_discussion|github_commit|github_pr|claude_artifact|discord_message|url|note, ref?, sha256?, note?}}; '
-  + 'rk.review {receipt_id, verdict accept|revise|reject, note?} (connector-key reviews are advisory, never independent); rk.plan {task_id, expected_plan_version, seat claude|grok|gemini|muse|dot|owner, review none|advisory|independent, decision required|not_required, data_scope none|synthetic|development, session_ref?, role?, depends_on?, pin? {kind, version, require approved|any, project_id?}, acceptance? [{text, check_ref?}], lab? {hypothesis_id, hypothesis_version, evidence required|optional}, budget? {attempts 1-5, lease_minutes 5-120}, thread? {discord_thread_id}, note?} is recorded as a PROPOSAL for the owner; '
+  + 'rk.review {receipt_id, verdict accept|revise|reject, note?} (connector-key reviews are advisory, never independent; a revise or reject closes review for the owner); rk.plan {task_id, expected_plan_version, seat claude|grok|gemini|muse|dot|owner, review none|advisory|independent, decision required|not_required, data_scope none|synthetic|development, priority? 1-5 (1 most urgent, default 3), session_ref?, role?, depends_on?, pin? {kind, version, require approved|any, project_id?}, acceptance? [{text, check_ref?}], lab? {hypothesis_id, hypothesis_version, evidence required|optional}, budget? {attempts 1-5, lease_minutes 5-120}, thread? {discord_thread_id}, note?} is recorded as a PROPOSAL for the owner; '
   + 'rk.role.propose {seat, key_label, role, scope?} is a proposal. Pins and decisions belong to the signed owner. After a timeout resend the identical call; after 409 read before acting. Text you send is stored as untrusted and labelled as declared.';

@@ -11,7 +11,7 @@ const grok = { kind: 'owner_key', key_label: 'Grok' };
 const gemini = { kind: 'owner_key', key_label: 'Gemini' };
 const reviewer = { kind: 'delegated_agent', agent_id: 'a'.repeat(32) };
 const id = n => 'p_' + String(n).padStart(8, '0') + '-0000-4000-8000-000000000000';
-const A = id(1), B = id(2), C = id(3), CTX = id(9);
+const A = id(1), B = id(2), C = id(3), D = id(4), CTX = id(9);
 const S1 = 'claude-code:session-one', S2 = 'claude-ai:chat-two';
 const secret = n => ('lease_secret_' + n + '_').padEnd(32, 'x');
 const LAB_H = 'h-synthetic-q1';
@@ -20,9 +20,10 @@ function poundFixture() {
   return {
     revision: 7,
     tasks: [
-      { id: A, title: 'Audit develop data coverage', body: 'Synthetic brief A', agent_id: '', status: 'queued', archived: false, revision: 1, project_id: 'bdb-test' },
-      { id: B, title: 'Draft Break Cost feature notes', body: 'Synthetic brief B', agent_id: '', status: 'queued', archived: false, revision: 1, project_id: 'bdb-test' },
-      { id: C, title: 'Unplanned idea', body: 'Synthetic brief C', agent_id: '', status: 'working', status_source: 'owner_connector_reported', archived: false, revision: 1 },
+      { id: A, title: 'Synthetic task A', body: 'Synthetic brief A', agent_id: '', status: 'queued', archived: false, revision: 1, project_id: 'bdb-test' },
+      { id: B, title: 'Synthetic task B', body: 'Synthetic brief B', agent_id: '', status: 'queued', archived: false, revision: 1, project_id: 'bdb-test' },
+      { id: C, title: 'Synthetic task C', body: 'Synthetic brief C', agent_id: '', status: 'working', status_source: 'owner_connector_reported', archived: false, revision: 1 },
+      { id: D, title: 'Synthetic task D', body: 'Synthetic brief D', agent_id: '', status: 'queued', archived: false, revision: 1, project_id: 'bdb-test' },
     ],
     contexts: [{ id: CTX, title: 'Design of record (synthetic)', archived: false, active_version: 1, versions: [{ version: 1, title: 'v1', sha256: 'c'.repeat(64), text: 'synthetic' }] }],
     messages: [], agents: [], activity: [],
@@ -33,8 +34,11 @@ function labFixture() {
     tenant: 'synthetic',
     hypotheses: new Map([[LAB_H, { version: 2, status: 'exploratory' }]]),
     receipts: new Map([
-      ['lab-rcpt-1', { receiptHash: 'd'.repeat(64), hypothesisId: LAB_H, hypothesisVersion: 2, split: 'discovery', taskId: 'lab-task-1' }],
-      ['lab-rcpt-holdout', { receiptHash: 'e'.repeat(64), hypothesisId: LAB_H, hypothesisVersion: 2, split: 'holdout', taskId: 'lab-task-2' }],
+      ['lab-rcpt-1', { receiptHash: 'd'.repeat(64), hypothesisId: LAB_H, hypothesisVersion: 2, split: 'discovery', taskId: 'lab-task-1', outcome: 'success', execution: 'executed' }],
+      ['lab-rcpt-holdout', { receiptHash: 'e'.repeat(64), hypothesisId: LAB_H, hypothesisVersion: 2, split: 'holdout', taskId: 'lab-task-2', outcome: 'success', execution: 'executed' }],
+      ['lab-rcpt-failed', { receiptHash: '1'.repeat(64), hypothesisId: LAB_H, hypothesisVersion: 2, split: 'discovery', taskId: 'lab-task-3', outcome: 'failure', execution: 'executed' }],
+      ['lab-rcpt-not-run', { receiptHash: '2'.repeat(64), hypothesisId: LAB_H, hypothesisVersion: 2, split: 'development', taskId: 'lab-task-4', outcome: 'failure', execution: 'not_executed' }],
+      ['lab-rcpt-null', { receiptHash: '3'.repeat(64), hypothesisId: LAB_H, hypothesisVersion: 2, split: 'development', taskId: 'lab-task-5', outcome: 'null', execution: 'executed' }],
     ]),
     discussions: new Map([['lab-note-1', { hypothesisId: LAB_H, kind: 'note' }]]),
   };
@@ -61,19 +65,19 @@ function rig({ lab = labFixture() } = {}) {
   return { pound, ctx, apply, refused, board, lane, card, get rk() { return rk; }, set rk(v) { rk = v; }, tick: ms => { clock += ms; }, get now() { return clock; } };
 }
 async function claudeRole(r) {
-  const role = await r.apply(owner, 'rk.role.propose', { seat: 'claude', key_label: 'Claude', role: 'BDB coordinator', scope: 'Synthetic test scope' });
+  const role = await r.apply(owner, 'rk.role.propose', { seat: 'claude', key_label: 'Claude', role: 'Synthetic coordinator', scope: 'Synthetic test scope' });
   await r.apply(claude, 'rk.role.accept', { role_id: role.role_id });
   await r.apply(owner, 'rk.decide', { subject: 'role', id: role.role_id, decision: 'approve' });
   return role.role_id;
 }
 async function standardPlans(r, { aReview = 'advisory', bExtra = {} } = {}) {
   const pin = await r.apply(owner, 'rk.pin', { project_id: 'bdb-test', kind: 'design_of_record', status: 'draft', ref: { type: 'pound_context', context_id: CTX, version: 1 } });
-  await r.apply(owner, 'rk.plan', { task_id: A, expected_plan_version: 0, seat: 'claude', review: aReview, decision: 'required', data_scope: 'development', pin: { kind: 'design_of_record', version: pin.pin.version, require: 'any' }, acceptance: [{ text: 'Coverage table attached' }] });
+  await r.apply(owner, 'rk.plan', { task_id: A, expected_plan_version: 0, seat: 'claude', review: aReview, decision: 'required', data_scope: 'development', pin: { kind: 'design_of_record', version: pin.pin.version, require: 'any' }, acceptance: [{ text: 'Synthetic acceptance check' }] });
   await r.apply(owner, 'rk.plan', { task_id: B, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'required', data_scope: 'synthetic', depends_on: [A], ...bExtra });
   return pin;
 }
 const claimA = (r, who = claude, session = S1, s = secret(1), extra = {}) => r.apply(who, 'rk.claim', { task_id: A, plan_version: 1, pin_version: 1, session_ref: session, lease_secret: s, ...extra });
-const reportA = (r, claim, extra = {}, who = claude, s = secret(1)) => r.apply(who, 'rk.report', { task_id: A, claim_id: claim.claim_id, lease_secret: s, outcome: 'succeeded', summary: 'Synthetic coverage audit complete.', artifacts: [{ kind: 'pound_context', ref: CTX + '@1' }, { kind: 'github_commit', ref: 'https://github.com/JKapcar/data-dawgs/commit/' + 'f'.repeat(40) }], ...extra });
+const reportA = (r, claim, extra = {}, who = claude, s = secret(1)) => r.apply(who, 'rk.report', { task_id: A, claim_id: claim.claim_id, lease_secret: s, outcome: 'succeeded', summary: 'Synthetic result A.', artifacts: [{ kind: 'pound_context', ref: CTX + '@1' }, { kind: 'github_commit', ref: 'https://github.com/JKapcar/data-dawgs/commit/' + 'f'.repeat(40) }], ...extra });
 
 test('complete workflow: A is claimed, evidenced, reviewed and accepted before B becomes eligible', async () => {
   const r = rig();
@@ -85,8 +89,10 @@ test('complete workflow: A is claimed, evidenced, reviewed and accepted before B
   const work = await rkWork(r.rk, r.pound, r.now, r.ctx, { key_label: 'Claude', session_ref: S1 });
   assert.deepEqual(work.ready.map(t => t.task_id), [A]);
   assert.equal(work.identity.model_identity, 'unverified');
+  assert.deepEqual((await r.card(B)).dependencies.map(d => [d.id, d.source, d.accepted]), [[A, 'approved', false]]);
   const claim = await claimA(r);
   assert.equal(claim.attempt, 1);
+  assert.equal(claim.max_expires_at, new Date(T0 + 4 * 30 * 60000).toISOString());
   assert.equal(await r.lane(A), 'running');
   assert.match((await r.card(A)).next.text, /Progress is unverified until a receipt/);
   const receipt = await reportA(r, claim);
@@ -104,7 +110,7 @@ test('complete workflow: A is claimed, evidenced, reviewed and accepted before B
   const next = await rkWork(r.rk, r.pound, r.now, r.ctx, { key_label: 'Claude', session_ref: S1 });
   assert.deepEqual(next.ready.map(t => t.task_id), [B], 'the same session continues to the next eligible task');
   const cb = await r.apply(claude, 'rk.claim', { task_id: B, plan_version: 1, session_ref: S1, lease_secret: secret(2) });
-  const rb = await r.apply(claude, 'rk.report', { task_id: B, claim_id: cb.claim_id, lease_secret: secret(2), outcome: 'succeeded', summary: 'Synthetic notes drafted.', artifacts: [{ kind: 'note', note: 'Draft lives in the synthetic thread.' }] });
+  const rb = await r.apply(claude, 'rk.report', { task_id: B, claim_id: cb.claim_id, lease_secret: secret(2), outcome: 'succeeded', summary: 'Synthetic result B.', artifacts: [{ kind: 'note', note: 'Synthetic note artifact.' }] });
   assert.equal(await r.lane(B), 'needs_you');
   await r.apply(owner, 'rk.decide', { subject: 'receipt', id: rb.receipt_id, decision: 'accept' });
   assert.equal(await r.lane(B), 'done');
@@ -134,7 +140,7 @@ test('B stays blocked through every partial or stale state of A', async () => {
   r.pound.tasks.find(t => t.id === A).body = 'Synthetic brief A';
   assert.equal(await r.lane(B), 'ready');
   // A newer design-of-record pin makes A's evidence stale until its plan is amended.
-  await r.apply(owner, 'rk.pin', { project_id: 'bdb-test', kind: 'design_of_record', status: 'approved', ref: { type: 'claude_doc', id: 'SyntheticDocId00000000', rev: 46 } });
+  await r.apply(owner, 'rk.pin', { project_id: 'bdb-test', kind: 'design_of_record', status: 'approved', ref: { type: 'claude_doc', id: 'SyntheticDocId00000000', rev: 2 } });
   assert.equal(await r.lane(A), 'needs_you');
   assert.ok((await r.card(A)).reasons.some(x => x.code === 'pin_superseded'));
   assert.equal(await r.lane(B), 'blocked');
@@ -207,13 +213,19 @@ test('stale versions stop claims and make mid-lease evidence stale instead of co
   await r.apply(owner, 'rk.pin', { project_id: 'bdb-test', kind: 'design_of_record', status: 'approved', ref: { type: 'pound_context', context_id: CTX, version: 1 } });
   const stale = await reportA(r, claim);
   assert.equal(stale.validity, 'stale');
+  assert.deepEqual(stale.stale_causes, ['pin_superseded']);
   assert.equal(await r.lane(A), 'needs_you');
   assert.equal(await r.lane(B), 'blocked');
-  // Approving a new plan version mid-lease closes the old lease.
+  // Approving a new plan version mid-lease closes the old lease: it cannot renew, and a result
+  // that arrives afterwards is kept for the record as stale, never counted.
   await r.apply(owner, 'rk.plan', { task_id: A, expected_plan_version: 1, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'development', pin: { kind: 'design_of_record', version: 2, require: 'approved' } });
   const c2 = await r.apply(claude, 'rk.claim', { task_id: A, plan_version: 2, pin_version: 2, session_ref: S1, lease_secret: secret(4) });
   await r.apply(owner, 'rk.plan', { task_id: A, expected_plan_version: 2, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'development', pin: { kind: 'design_of_record', version: 2, require: 'approved' }, note: 'Amended mid-lease' });
-  await r.refused(claude, 'rk.report', { task_id: A, claim_id: c2.claim_id, lease_secret: secret(4), outcome: 'succeeded', summary: 'x' }, 409, 'claim_superseded');
+  await r.refused(claude, 'rk.claim', { task_id: A, plan_version: 2, pin_version: 2, session_ref: S1, lease_secret: secret(4) }, 409, 'stale_plan');
+  const after = await r.apply(claude, 'rk.report', { task_id: A, claim_id: c2.claim_id, lease_secret: secret(4), outcome: 'succeeded', summary: 'Synthetic result after the amendment' });
+  assert.equal(after.validity, 'stale');
+  assert.deepEqual(after.stale_causes, ['plan_changed', 'claim_superseded']);
+  assert.equal(await r.lane(A), 'ready', 'the stale result never counts');
   assert.equal(r.rk.plans.filter(p => p.task_id === A).map(p => p.status).join(','), 'superseded,superseded,approved', 'amendments are recorded, never overwritten');
 });
 
@@ -227,6 +239,13 @@ test('lease expiry returns work; a late result is refused once another attempt s
   const c2 = await claimA(r, claude, S2, secret(2));
   assert.equal(c2.attempt, 2);
   await r.refused(claude, 'rk.report', { task_id: A, claim_id: c1.claim_id, lease_secret: secret(1), outcome: 'succeeded', summary: 'late' }, 409, 'lease_superseded');
+  // A possible external effect is different: it is always recorded, so the owner can reconcile it.
+  const unsure = await r.apply(claude, 'rk.report', { task_id: A, claim_id: c1.claim_id, lease_secret: secret(1), outcome: 'uncertain', summary: 'A synthetic external call may have gone out' });
+  assert.equal(unsure.validity, 'stale');
+  assert.ok(unsure.stale_causes.includes('lease_superseded'));
+  assert.equal(await r.lane(A), 'needs_you', 'it reaches the owner even while the newer attempt runs');
+  assert.deepEqual((await r.card(A)).reasons.map(x => x.code), ['reconcile_uncertain']);
+  assert.equal((await r.card(A)).claim.attempt, 2);
   // Without a newer attempt, a late report is kept and labelled late.
   const r2 = rig();
   await claudeRole(r2);
@@ -296,6 +315,18 @@ test('uncertain outcomes stop retries until the owner reconciles them', async ()
   const unsure2 = await reportA(r, c2, { outcome: 'uncertain', summary: 'Second attempt unclear' }, claude, secret(2));
   await r.apply(owner, 'rk.decide', { subject: 'uncertain', id: unsure2.receipt_id, decision: 'landed' });
   assert.equal(await r.lane(A), 'review', 'a landed outcome still needs its review');
+  // An amendment cannot erase an uncertain outcome recorded under an earlier plan version.
+  const r2 = rig();
+  await claudeRole(r2);
+  await standardPlans(r2);
+  const u = await reportA(r2, await claimA(r2), { outcome: 'uncertain', summary: 'A synthetic message may have been sent', artifacts: [] });
+  await r2.apply(owner, 'rk.plan', { task_id: A, expected_plan_version: 1, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'development', pin: { kind: 'design_of_record', version: 1, require: 'any' } });
+  assert.equal(await r2.lane(A), 'needs_you');
+  assert.deepEqual((await r2.card(A)).reasons.map(x => x.code), ['reconcile_uncertain']);
+  assert.deepEqual((await r2.card(A)).unreconciled.map(x => [x.receipt_id, x.plan_version]), [[u.receipt_id, 1]]);
+  await r2.refused(claude, 'rk.claim', { task_id: A, plan_version: 2, pin_version: 1, session_ref: S1, lease_secret: secret(3) }, 409, 'not_eligible');
+  await r2.apply(owner, 'rk.decide', { subject: 'uncertain', id: u.receipt_id, decision: 'not_landed' });
+  assert.equal(await r2.lane(A), 'ready');
 });
 
 test('shared-owner reviews never satisfy an independent-review requirement', async () => {
@@ -320,7 +351,7 @@ test('shared-owner reviews never satisfy an independent-review requirement', asy
 
 test('roles: proposal, acceptance by the seat\'s own key, and owner approval stay separate', async () => {
   const r = rig();
-  const role = await r.apply(claude, 'rk.role.propose', { seat: 'gemini', key_label: 'Gemini', role: 'Methodology red-team', scope: 'Synthetic' });
+  const role = await r.apply(claude, 'rk.role.propose', { seat: 'gemini', key_label: 'Gemini', role: 'Synthetic reviewer role', scope: 'Synthetic' });
   assert.equal(role.state, 'proposed', 'a sign-up through any connector is only a proposal');
   await r.refused(owner, 'rk.role.accept', { role_id: role.role_id }, 403, 'acceptance_must_come_from_the_seat_key');
   await r.refused(claude, 'rk.role.accept', { role_id: role.role_id }, 403, 'acceptance_must_come_from_the_seat_key');
@@ -389,6 +420,9 @@ test('Pound–Lab contract: links are read-only checks, stale links stop work an
   await r.refused(claude, 'rk.report', { task_id: A, claim_id: c.claim_id, lease_secret: secret(1), outcome: 'succeeded', summary: 'No Lab evidence' }, 409, 'lab_evidence_required');
   await r.refused(claude, 'rk.report', { task_id: A, claim_id: c.claim_id, lease_secret: secret(1), outcome: 'succeeded', summary: 'Holdout', artifacts: [{ kind: 'lab_receipt', ref: 'lab-rcpt-holdout', sha256: 'e'.repeat(64) }] }, 403, 'holdout_sealed');
   await r.refused(claude, 'rk.report', { task_id: A, claim_id: c.claim_id, lease_secret: secret(1), outcome: 'succeeded', summary: 'Bad hash', artifacts: [{ kind: 'lab_receipt', ref: 'lab-rcpt-1', sha256: '0'.repeat(64) }] }, 400, 'artifact_hash_mismatch');
+  // A failed run, or a receipt for a run that never executed, is not evidence of success.
+  await r.refused(claude, 'rk.report', { task_id: A, claim_id: c.claim_id, lease_secret: secret(1), outcome: 'succeeded', summary: 'Failed run', artifacts: [{ kind: 'lab_receipt', ref: 'lab-rcpt-failed', sha256: '1'.repeat(64) }] }, 409, 'lab_evidence_required');
+  await r.refused(claude, 'rk.report', { task_id: A, claim_id: c.claim_id, lease_secret: secret(1), outcome: 'succeeded', summary: 'Not run', artifacts: [{ kind: 'lab_receipt', ref: 'lab-rcpt-not-run', sha256: '2'.repeat(64) }] }, 409, 'lab_evidence_required');
   const ok = await r.apply(claude, 'rk.report', { task_id: A, claim_id: c.claim_id, lease_secret: secret(1), outcome: 'succeeded', summary: 'Linked Lab receipt', artifacts: [{ kind: 'lab_receipt', ref: 'lab-rcpt-1', sha256: 'd'.repeat(64) }, { kind: 'lab_discussion', ref: 'lab-note-1' }] });
   assert.deepEqual(ok.artifacts.map(a => a.verification), ['server_verified', 'server_verified']);
   assert.equal(await r.lane(A), 'done');
@@ -399,16 +433,28 @@ test('Pound–Lab contract: links are read-only checks, stale links stop work an
   r.ctx.lab = null;
   assert.equal(await r.lane(A), 'blocked');
   assert.ok((await r.card(A)).reasons.some(x => x.code === 'lab_unverifiable'));
+  // A null result is a result; and nothing can cite the Lab while it cannot be read.
+  const r2 = rig();
+  await claudeRole(r2);
+  await r2.apply(owner, 'rk.plan', { task_id: C, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'synthetic', lab: { hypothesis_id: LAB_H, hypothesis_version: 2, evidence: 'required' } });
+  const cc = await r2.apply(claude, 'rk.claim', { task_id: C, plan_version: 1, session_ref: S1, lease_secret: secret(1) });
+  const lab = r2.ctx.lab;
+  r2.ctx.lab = null;
+  await r2.refused(claude, 'rk.report', { task_id: C, claim_id: cc.claim_id, lease_secret: secret(1), outcome: 'succeeded', summary: 'Null result', artifacts: [{ kind: 'lab_receipt', ref: 'lab-rcpt-null', sha256: '3'.repeat(64) }] }, 503, 'lab_unavailable');
+  await r2.refused(claude, 'rk.report', { task_id: C, claim_id: cc.claim_id, lease_secret: secret(1), outcome: 'failed', summary: 'Cites a note', artifacts: [{ kind: 'lab_discussion', ref: 'lab-note-1' }] }, 503, 'lab_unavailable');
+  r2.ctx.lab = lab;
+  await r2.apply(claude, 'rk.report', { task_id: C, claim_id: cc.claim_id, lease_secret: secret(1), outcome: 'succeeded', summary: 'Null result', artifacts: [{ kind: 'lab_receipt', ref: 'lab-rcpt-null', sha256: '3'.repeat(64) }] });
+  assert.equal(await r2.lane(C), 'done');
 });
 
 test('owner-seat tasks land in Needs You and carry owner evidence', async () => {
   const r = rig();
-  await r.apply(owner, 'rk.plan', { task_id: C, expected_plan_version: 0, seat: 'owner', review: 'none', decision: 'not_required', data_scope: 'none', acceptance: [{ text: 'Rules accepted on Kaggle' }] });
+  await r.apply(owner, 'rk.plan', { task_id: C, expected_plan_version: 0, seat: 'owner', review: 'none', decision: 'not_required', data_scope: 'none', acceptance: [{ text: 'Synthetic owner step done' }] });
   assert.equal(await r.lane(C), 'needs_you');
   assert.deepEqual((await r.card(C)).reasons.map(x => x.code), ['owner_task']);
   await r.refused(claude, 'rk.claim', { task_id: C, plan_version: 1, session_ref: S1, lease_secret: secret(1) }, 403, 'target_mismatch');
   const c = await r.apply(owner, 'rk.claim', { task_id: C, plan_version: 1, lease_secret: secret(1) });
-  await r.apply(owner, 'rk.report', { task_id: C, claim_id: c.claim_id, lease_secret: secret(1), outcome: 'succeeded', summary: 'Done by hand', artifacts: [{ kind: 'url', ref: 'https://www.kaggle.com/competitions/example' }] });
+  await r.apply(owner, 'rk.report', { task_id: C, claim_id: c.claim_id, lease_secret: secret(1), outcome: 'succeeded', summary: 'Done by hand', artifacts: [{ kind: 'url', ref: 'https://example.com/synthetic-evidence' }] });
   assert.equal(await r.lane(C), 'done');
 });
 
@@ -427,7 +473,7 @@ test('Discord thread references must match the planned thread', async () => {
 test('unplanned Pound work stays reported only; nothing is inferred from a status', async () => {
   const r = rig();
   const b = await r.board();
-  assert.deepEqual(b.unplanned.map(c => c.task_id).sort(), [A, B, C].sort());
+  assert.deepEqual(b.unplanned.map(c => c.task_id).sort(), [A, B, C, D].sort());
   const c = b.unplanned.find(x => x.task_id === C);
   assert.equal(c.reported.status, 'working');
   assert.equal(c.reported.source, 'owner_connector_reported');
@@ -471,7 +517,7 @@ test('amendments reach the owner without silently undoing accepted work; stale e
   // The brief changes before the owner decides: accepting that receipt would describe old work.
   r.pound.tasks.find(t => t.id === A).body = 'Synthetic brief A, changed before the decision';
   assert.ok(!(await r.card(A)).reasons.some(x => x.code === 'decide_receipt'), 'no accept prompt for stale evidence');
-  await r.refused(owner, 'rk.decide', { subject: 'receipt', id: receipt.receipt_id, decision: 'accept' }, 409, 'receipt_not_current_version');
+  await assert.rejects(r.apply(owner, 'rk.decide', { subject: 'receipt', id: receipt.receipt_id, decision: 'accept' }), e => e.code === 'receipt_not_current_version' && e.detail.includes('task_changed'));
   r.pound.tasks.find(t => t.id === A).body = 'Synthetic brief A';
   await r.apply(owner, 'rk.decide', { subject: 'receipt', id: receipt.receipt_id, decision: 'accept' });
   assert.equal(await r.lane(A), 'done');
@@ -479,6 +525,13 @@ test('amendments reach the owner without silently undoing accepted work; stale e
   await r.apply(claude, 'rk.plan', { task_id: A, expected_plan_version: 1, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none' });
   assert.equal(await r.lane(A), 'needs_you');
   assert.deepEqual((await r.card(A)).reasons.map(x => x.code), ['plan_amendment_proposed']);
+  // The owner sees the whole proposal and exactly what it would change, not just a version number.
+  const card = await r.card(A);
+  assert.equal(card.brief, 'Synthetic brief A');
+  assert.match(card.pending_plan.proposed_by, /connector key "Claude"/);
+  assert.deepEqual(card.pending_plan.changes.map(c => c.field).sort(), ['acceptance', 'data_scope', 'decision', 'pin', 'review']);
+  assert.deepEqual(card.pending_plan.changes.find(c => c.field === 'review'), { field: 'review', from: 'advisory', to: 'none' });
+  assert.deepEqual(card.plan.acceptance, [{ text: 'Synthetic acceptance check' }], 'the approved plan is shown in full, for amendments to carry forward');
   assert.equal(await r.lane(B), 'ready', 'accepted evidence still stands until the owner approves a new version');
   await r.apply(owner, 'rk.decide', { subject: 'plan', id: A, plan_version: 2, decision: 'reject' });
   assert.equal(await r.lane(A), 'done');
@@ -492,4 +545,176 @@ test('a seat never binds to the shared primary key', async () => {
   }
   const role = await r.apply(owner, 'rk.role.propose', { seat: 'claude', key_label: 'Claude', role: 'Own key seat' });
   await r.refused({ kind: 'owner_key', key_label: 'primary' }, 'rk.role.accept', { role_id: role.role_id }, 403, 'acceptance_must_come_from_the_seat_key');
+});
+
+test('a connector key cannot unblock work by editing Pound blocks; only an approved plan removes a recorded blocker', async () => {
+  const r = rig();
+  await claudeRole(r);
+  // Pound says D blocks B when the owner approves B's plan.
+  r.pound.tasks.find(t => t.id === D).blocks = [B];
+  await r.apply(owner, 'rk.plan', { task_id: D, expected_plan_version: 0, seat: 'owner', review: 'none', decision: 'not_required', data_scope: 'none' });
+  await r.apply(owner, 'rk.plan', { task_id: B, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none' });
+  assert.deepEqual(r.rk.plans.find(p => p.task_id === B).pound_blockers, [D], 'approval records the blockers in force');
+  assert.equal(await r.lane(B), 'blocked');
+  // Any Pound writer, a connector key included, removes the edge. B stays blocked on D.
+  r.pound.tasks.find(t => t.id === D).blocks = [];
+  assert.equal(await r.lane(B), 'blocked');
+  assert.deepEqual((await r.card(B)).dependencies.map(d => [d.id, d.source]), [[D, 'approved']]);
+  await r.refused(claude, 'rk.claim', { task_id: B, plan_version: 1, session_ref: S1, lease_secret: secret(1) }, 409, 'not_eligible');
+  // Then an innocent-looking amendment: the owner is shown what approving it would drop.
+  await r.apply(claude, 'rk.plan', { task_id: B, expected_plan_version: 1, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none', note: 'Synthetic wording tidy-up' });
+  const pending = (await r.card(B)).pending_plan;
+  assert.deepEqual(pending.changes.map(c => c.field), ['note']);
+  assert.deepEqual(pending.drops_dependencies.map(d => d.id), [D]);
+  // Archiving the recorded blocker does not unblock B either: it goes to the owner.
+  r.pound.tasks.find(t => t.id === D).archived = true;
+  assert.equal(await r.lane(B), 'needs_you');
+  assert.ok((await r.card(B)).reasons.some(x => x.code === 'dependency_missing'));
+  r.pound.tasks.find(t => t.id === D).archived = false;
+  // Only the owner's approval of a new version removes it.
+  await r.apply(owner, 'rk.decide', { subject: 'plan', id: B, plan_version: 2, decision: 'approve' });
+  assert.deepEqual(r.rk.plans.find(p => p.task_id === B && p.version === 2).pound_blockers, []);
+  assert.equal(await r.lane(B), 'ready');
+  // A blocker added after approval applies at once and is labelled as a live Pound edge.
+  r.pound.tasks.find(t => t.id === C).blocks = [B];
+  assert.equal(await r.lane(B), 'blocked');
+  assert.deepEqual((await r.card(B)).dependencies.map(d => [d.id, d.source]), [[C, 'pound_live']]);
+  // An archived task blocks nothing.
+  r.pound.tasks.find(t => t.id === C).archived = true;
+  assert.equal(await r.lane(B), 'ready');
+});
+
+test('renewal re-checks what the lease was granted on and stops at a fixed ceiling', async () => {
+  const r = rig();
+  await claudeRole(r);
+  await standardPlans(r);
+  const c = await claimA(r);
+  // The brief changes mid-lease: the board flags the lease and renewal is refused, changing nothing.
+  r.pound.tasks.find(t => t.id === A).body = 'Synthetic brief A, edited mid-lease';
+  assert.equal(await r.lane(A), 'running');
+  assert.deepEqual((await r.card(A)).reasons.find(x => x.code === 'lease_stale').detail.causes, ['task_changed']);
+  await assert.rejects(claimA(r), e => e.code === 'lease_stale' && e.detail.includes('task_changed'));
+  r.pound.tasks.find(t => t.id === A).body = 'Synthetic brief A';
+  // A draft pin the plan does not require approval for is fine; a superseding pin is not.
+  for (let i = 0; i < 4; i++) { r.tick(25 * 60000); await claimA(r); }
+  r.tick(10 * 60000);
+  await r.refused(claude, 'rk.claim', { task_id: A, plan_version: 1, pin_version: 1, session_ref: S1, lease_secret: secret(1) }, 409, 'lease_limit_reached');
+  assert.equal((await r.card(A)).claim.expires_at, new Date(T0 + 120 * 60000).toISOString());
+  // The seat can still report inside the lease.
+  assert.equal((await reportA(r, c)).validity, 'current');
+});
+
+test('a dependency that goes stale mid-lease stops the dependent, and a redone dependency reopens it', async () => {
+  const r = rig();
+  await claudeRole(r);
+  await standardPlans(r, { bExtra: { decision: 'not_required' } });
+  const ra = await reportA(r, await claimA(r));
+  await r.apply(grok, 'rk.review', { receipt_id: ra.receipt_id, verdict: 'accept' });
+  await r.apply(owner, 'rk.decide', { subject: 'receipt', id: ra.receipt_id, decision: 'accept' });
+  const cb = await r.apply(claude, 'rk.claim', { task_id: B, plan_version: 1, session_ref: S1, lease_secret: secret(2) });
+  // A's brief changes while B runs: B's lease is flagged, cannot renew, and its result is stale.
+  r.pound.tasks.find(t => t.id === A).body = 'Synthetic brief A, changed while B runs';
+  assert.deepEqual((await r.card(B)).reasons.find(x => x.code === 'lease_stale').detail.causes, ['dependency_not_accepted']);
+  await r.refused(claude, 'rk.claim', { task_id: B, plan_version: 1, session_ref: S1, lease_secret: secret(2) }, 409, 'lease_stale');
+  const rb = await r.apply(claude, 'rk.report', { task_id: B, claim_id: cb.claim_id, lease_secret: secret(2), outcome: 'succeeded', summary: 'Synthetic result B' });
+  assert.equal(rb.validity, 'stale');
+  assert.deepEqual(rb.stale_causes, ['dependency_not_accepted']);
+  r.pound.tasks.find(t => t.id === A).body = 'Synthetic brief A';
+  assert.equal(await r.lane(B), 'ready', 'the stale result never counts; B needs a fresh attempt');
+  const cb2 = await r.apply(claude, 'rk.claim', { task_id: B, plan_version: 1, session_ref: S1, lease_secret: secret(3) });
+  await r.apply(claude, 'rk.report', { task_id: B, claim_id: cb2.claim_id, lease_secret: secret(3), outcome: 'succeeded', summary: 'Synthetic result B, second attempt' });
+  assert.equal(await r.lane(B), 'done');
+  // The owner amends and redoes A. B rested on A's earlier evidence, so B reopens for a new attempt.
+  await r.apply(owner, 'rk.plan', { task_id: A, expected_plan_version: 1, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'development', pin: { kind: 'design_of_record', version: 1, require: 'any' } });
+  assert.equal(await r.lane(B), 'blocked');
+  const ca2 = await r.apply(claude, 'rk.claim', { task_id: A, plan_version: 2, pin_version: 1, session_ref: S1, lease_secret: secret(4) });
+  await reportA(r, ca2, {}, claude, secret(4));
+  assert.equal(await r.lane(A), 'done');
+  assert.equal(await r.lane(B), 'ready');
+  assert.deepEqual((await r.card(B)).reasons.map(x => x.code), ['dependency_changed']);
+});
+
+test('a reject or revise closes review: no other key and not the owner can accept over it', async () => {
+  const r = rig();
+  await claudeRole(r);
+  await standardPlans(r);
+  const rec = await reportA(r, await claimA(r));
+  await r.apply(grok, 'rk.review', { receipt_id: rec.receipt_id, verdict: 'reject', note: 'Synthetic objection' });
+  await r.refused(gemini, 'rk.review', { receipt_id: rec.receipt_id, verdict: 'accept' }, 409, 'review_closed');
+  await r.refused(owner, 'rk.decide', { subject: 'receipt', id: rec.receipt_id, decision: 'accept' }, 409, 'review_not_satisfied');
+  assert.deepEqual((await r.card(A)).reasons.map(x => x.code), ['review_rejected']);
+  // An accept that came first does not outvote a later revise; one review per key.
+  const r2 = rig();
+  await claudeRole(r2);
+  await standardPlans(r2);
+  const rec2 = await reportA(r2, await claimA(r2));
+  await r2.apply(gemini, 'rk.review', { receipt_id: rec2.receipt_id, verdict: 'accept' });
+  await r2.refused(gemini, 'rk.review', { receipt_id: rec2.receipt_id, verdict: 'accept' }, 409, 'already_reviewed');
+  await r2.apply(grok, 'rk.review', { receipt_id: rec2.receipt_id, verdict: 'revise' });
+  assert.equal(await r2.lane(A), 'ready');
+  assert.deepEqual((await r2.card(A)).reasons.map(x => x.code), ['review_revise']);
+});
+
+test('the owner can send back work that needed no decision; decisions keep their own ids', async () => {
+  const r = rig();
+  await claudeRole(r);
+  await r.apply(owner, 'rk.plan', { task_id: A, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none' });
+  await r.apply(owner, 'rk.plan', { task_id: B, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none', depends_on: [A] });
+  const c = await r.apply(claude, 'rk.claim', { task_id: A, plan_version: 1, session_ref: S1, lease_secret: secret(1) });
+  const rec = await r.apply(claude, 'rk.report', { task_id: A, claim_id: c.claim_id, lease_secret: secret(1), outcome: 'succeeded', summary: 'Synthetic result A.' });
+  assert.equal(await r.lane(A), 'done');
+  assert.equal(await r.lane(B), 'ready');
+  const d = await r.apply(owner, 'rk.decide', { subject: 'receipt', id: rec.receipt_id, decision: 'revise', note: 'Synthetic: tighten the summary' });
+  assert.match(d.decision_id, /^dcs_/);
+  const stored = r.rk.decisions.at(-1);
+  assert.equal(stored.id, d.decision_id, 'a decision keeps its own id');
+  assert.equal(stored.subject_id, rec.receipt_id);
+  assert.equal(await r.lane(A), 'ready');
+  assert.deepEqual((await r.card(A)).reasons.map(x => x.code), ['review_revise']);
+  assert.equal(await r.lane(B), 'blocked');
+  await r.refused(owner, 'rk.decide', { subject: 'receipt', id: rec.receipt_id, decision: 'accept' }, 409, 'receipt_already_decided');
+});
+
+test('the owner can stop any lease without its secret; a result after the stop is kept as stale', async () => {
+  const r = rig();
+  await claudeRole(r);
+  await standardPlans(r);
+  const c = await claimA(r);
+  await r.refused(grok, 'rk.release', { task_id: A, claim_id: c.claim_id }, 400, 'missing_field');
+  const stop = await r.apply(owner, 'rk.release', { task_id: A, claim_id: c.claim_id });
+  assert.equal(stop.stopped_by_owner, true);
+  assert.equal(await r.lane(A), 'ready');
+  assert.equal((await r.card(A)).plan.attempts.used, 1, 'the stopped attempt still counts');
+  const late = await reportA(r, c, { outcome: 'uncertain', summary: 'A synthetic external call was in flight', artifacts: [] });
+  assert.equal(late.validity, 'stale');
+  assert.deepEqual(late.stale_causes, ['stopped_by_owner']);
+  assert.deepEqual((await r.card(A)).reasons.map(x => x.code), ['reconcile_uncertain']);
+  await r.refused(claude, 'rk.release', { task_id: A, claim_id: c.claim_id, lease_secret: secret(1) }, 409, 'claim_closed');
+  // No retry until the owner says whether the in-flight effect landed.
+  await r.refused(claude, 'rk.claim', { task_id: A, plan_version: 1, pin_version: 1, session_ref: S1, lease_secret: secret(2) }, 409, 'not_eligible');
+  await r.apply(owner, 'rk.decide', { subject: 'uncertain', id: late.receipt_id, decision: 'not_landed' });
+  assert.equal((await claimA(r, claude, S1, secret(2))).attempt, 2);
+});
+
+test('connector keys keep a quarter of every list and of the store free for the owner', async () => {
+  const pound = poundFixture();
+  const plan = task => ({ op: 'rk.plan', request_id: 'req_headroom_' + task.slice(2, 10) + '00', data: { task_id: task, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none' } });
+  const full = rkEmpty();
+  for (let i = 0; i < Math.floor(RK_LIMITS.plans * 0.75); i++) full.plans.push({ task_id: 'p_synthetic', version: i + 1, status: 'superseded' });
+  await assert.rejects(rkApply(full, pound, plan(A), claude, T0), e => e.code === 'robokap_capacity' && e.detail.list === 'plans');
+  assert.equal((await rkApply(full, pound, plan(A), owner, T0)).changed, true, 'the owner still has room');
+  const heavy = rkEmpty();
+  for (let i = 0; i < RK_LIMITS.events; i++) heavy.events.push({ at: new Date(T0).toISOString(), op: 'rk.plan', by: { kind: 'owner_session' }, task_id: null, subject: 'x'.repeat(1000) });
+  await assert.rejects(rkApply(heavy, pound, plan(A), claude, T0), e => e.code === 'robokap_capacity' && e.detail.list === 'bytes');
+  assert.equal((await rkApply(heavy, pound, plan(A), owner, T0)).changed, true);
+});
+
+test('priority orders the owner board and each seat queue', async () => {
+  const r = rig();
+  await claudeRole(r);
+  for (const [task, priority] of [[A, 4], [B, 1], [C, 3]]) await r.apply(owner, 'rk.plan', { task_id: task, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none', ...(priority === 3 ? {} : { priority }) });
+  const work = await rkWork(r.rk, r.pound, r.now, r.ctx, { key_label: 'Claude', session_ref: S1 });
+  assert.deepEqual(work.ready.map(t => [t.task_id, t.priority]), [[B, 1], [C, 3], [A, 4]]);
+  assert.deepEqual((await r.board()).lanes.ready.map(c => c.task_id), [B, C, A]);
+  await r.refused(owner, 'rk.plan', { task_id: D, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none', priority: 0 }, 400, 'invalid_priority');
 });

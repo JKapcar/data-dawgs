@@ -61,6 +61,13 @@
 .rk-form input[type=range]{accent-color:#ff3c00;padding:0;border:0;background:none;min-height:32px}
 .rk-form output{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:bold}
 .rk-empty{color:var(--muted);font-style:italic}
+.rk-proposal{margin:0 0 10px;padding:8px 10px;border:1px dashed var(--c);border-radius:8px;background:#130f0b}
+.rk-proposal s{color:var(--muted)}
+.rk-warn{margin:8px 0 0;padding:8px 10px;border-left:4px solid var(--needs);background:#2a1610;color:var(--ink)}
+.rk-warn::before{content:"⚠ "}
+.rk-reconcile{margin:0 0 10px;padding:8px 10px;border:1px solid var(--needs);border-radius:8px}
+.rk-reconcile p{margin:0 0 6px;overflow-wrap:anywhere}
+.rk-brief{white-space:pre-wrap;overflow-wrap:anywhere}
 .rk-pending{opacity:.6}
 @media(min-width:720px){.rk-tabs{grid-template-columns:repeat(6,1fr)}}
 @media(prefers-reduced-motion:reduce){.rk-tab,.rk-actions button{transition:none}.rk-tab[aria-pressed=true],.rk-actions button:active{transform:none}}

@@ -3638,6 +3638,10 @@ async function authMcpToken(request, env, cors) {
     const label = String((body && body.label) || "").trim();
     if (!/^[A-Za-z0-9_-]{1,24}$/.test(label))
       return json({ error: "Label: 1-24 letters, digits, - or _ (for example Muse)." }, 400, cors);
+    // "primary" names the original key in every audit line and permission check (RoboKap seats
+    // refuse it because every client holding it looks the same), so no added key may take it.
+    if (action === "add" && label.toLowerCase() === "primary")
+      return json({ error: "The label primary is reserved for your original key. Choose another label." }, 400, cors);
     if (action === "remove") {
       try { await fbPatch(env, "/users/" + key, { ["mcpTokens/" + label]: null }); }
       catch (e) { return json({ error: "Database write failed: " + e.message }, 502, cors); }

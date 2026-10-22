@@ -51,6 +51,7 @@ jobs:
       - run: node work/test-cfb-market-capture.mjs
       - run: node work/test-backup.mjs
       - run: node work/test-identity.mjs
+      - run: node work/test-identity-league-foundation.mjs
       - run: node work/test-mcp.mjs
       - run: node work/test-agent-feedback.mjs
       - run: node work/test-agent-board.mjs
