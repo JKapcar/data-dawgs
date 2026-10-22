@@ -1,5 +1,10 @@
 # Personal assistant app permissions
 
+Contribution runbook: use the [site-wide contribution protocol](../docs/contribution-protocol.md)
+to record method, judgment, artifacts and uncertainty in existing authorized notes/context
+versions. BDB is the first pilot. This is not a new write API or proof that assistants
+are already logging; current server schemas and access boundaries below still apply.
+
 Status: implementation for review; deployment does not enable either app. No provider accounts have been tested by this change. Updated 2026-10-16 for the "BDB Research Lab and Dawg Pound" release plan (PR 1: honest, portable discovery).
 
 > **Connector credentials are secrets.** The token — whether it rides in an `Authorization` header or inside a `/mcp/…/<token>` URL — acts as you. Never paste it, or a connector URL that contains it, into an issue, a pull request, a screenshot, a shared doc, a chat or a test fixture. If one leaks, rotate it on the Connect page; the old token dies immediately in every client.
