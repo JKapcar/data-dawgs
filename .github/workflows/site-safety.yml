@@ -69,6 +69,8 @@ on:
       - "work/test-bozo-disclosures-ui.mjs"
       - "tests/service-worker.test.js"
       - "tests/live-state.test.js"
+      - "presentation-mode.*"
+      - "tests/presentation-*"
       - ".github/workflows/site-safety.yml"
   pull_request:
     paths:
@@ -137,6 +139,8 @@ on:
       - "work/test-bozo-disclosures-ui.mjs"
       - "tests/service-worker.test.js"
       - "tests/live-state.test.js"
+      - "presentation-mode.*"
+      - "tests/presentation-*"
       - ".github/workflows/site-safety.yml"
 
 permissions:
@@ -169,6 +173,8 @@ jobs:
           if-no-files-found: ignore
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-disclosures-ui.mjs
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-diagnostics-ui.mjs
+      - run: node --test tests/presentation-mode.test.cjs
+      - run: PLAYWRIGHT_MODULE=/tmp/dd-feedback-pw/node_modules/playwright node tests/presentation-view.browser.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
