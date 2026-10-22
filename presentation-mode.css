@@ -19,7 +19,7 @@
     .dd-agent-summary{font-size:14px;overflow-wrap:anywhere;padding:8px 0;max-height:45vh;overflow:auto}
     .dd-agent-summary[hidden]{display:none}.dd-agent-summary p{margin:4px 0}.dd-agent-summary a{display:block;min-height:44px;padding:8px 10px;box-sizing:border-box;color:inherit}
     .dd-presentation-fallback{display:flex;justify-content:flex-end;padding:0 12px}
-    @media(max-width:760px){.dd-view-menu{position:fixed;top:70px;right:12px}.dd-presentation>summary{font-size:12px}}
+    @media(max-width:760px){.dd-view-menu{position:fixed;top:70px;right:12px}.dd-presentation>summary{font-size:12px}.sitenav .links>.dd-presentation.dd-has-overflow{display:none}}
     .dd-human-help{margin:4px 0 8px}.dd-human-help>summary{cursor:pointer;min-height:44px;box-sizing:border-box;padding:10px 0;font:600 14px/1.5 system-ui,sans-serif;color:var(--ink-2,inherit)}
     .dd-human-warning{border-left:3px solid var(--warn,#ab6600);padding-left:10px}.dd-human-warning>summary{font-weight:750}.dd-human-warning .p-disclosure{margin:4px 0}
     .dd-human-help>.p-lead{font-size:16px!important;margin:8px 0!important}
