@@ -572,7 +572,8 @@ test('a connector key cannot unblock work by editing Pound blocks; only an appro
   assert.ok((await r.card(B)).reasons.some(x => x.code === 'dependency_missing'));
   r.pound.tasks.find(t => t.id === D).archived = false;
   // Only the owner's approval of a new version removes it.
-  await r.apply(owner, 'rk.decide', { subject: 'plan', id: B, plan_version: 2, decision: 'approve' });
+  await r.refused(owner, 'rk.decide', { subject: 'plan', id: B, plan_version: 2, decision: 'approve' }, 400, 'basis_required');
+  await r.apply(owner, 'rk.decide', { subject: 'plan', id: B, plan_version: 2, decision: 'approve', basis: (await r.card(B)).basis });
   assert.deepEqual(r.rk.plans.find(p => p.task_id === B && p.version === 2).pound_blockers, []);
   assert.equal(await r.lane(B), 'ready');
   // A blocker added after approval applies at once and is labelled as a live Pound edge.
@@ -717,4 +718,124 @@ test('priority orders the owner board and each seat queue', async () => {
   assert.deepEqual(work.ready.map(t => [t.task_id, t.priority]), [[B, 1], [C, 3], [A, 4]]);
   assert.deepEqual((await r.board()).lanes.ready.map(c => c.task_id), [B, C, A]);
   await r.refused(owner, 'rk.plan', { task_id: D, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none', priority: 0 }, 400, 'invalid_priority');
+});
+
+test('required Lab evidence cannot be skipped by reporting uncertain and reconciling it as landed', async () => {
+  const r = rig();
+  await claudeRole(r);
+  await r.apply(owner, 'rk.plan', { task_id: C, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'synthetic', lab: { hypothesis_id: LAB_H, hypothesis_version: 2, evidence: 'required' } });
+  const c1 = await r.apply(claude, 'rk.claim', { task_id: C, plan_version: 1, session_ref: S1, lease_secret: secret(1) });
+  const unsure = await r.apply(claude, 'rk.report', { task_id: C, claim_id: c1.claim_id, lease_secret: secret(1), outcome: 'uncertain', summary: 'A synthetic run may have finished' });
+  await r.apply(owner, 'rk.decide', { subject: 'uncertain', id: unsure.receipt_id, decision: 'landed' });
+  assert.equal(await r.lane(C), 'ready', 'landed without Lab evidence is not done');
+  assert.deepEqual((await r.card(C)).reasons.map(x => x.code), ['lab_evidence_missing']);
+  await r.refused(owner, 'rk.decide', { subject: 'receipt', id: unsure.receipt_id, decision: 'accept' }, 409, 'receipt_not_current_version');
+  const c2 = await r.apply(claude, 'rk.claim', { task_id: C, plan_version: 1, session_ref: S1, lease_secret: secret(2) });
+  await r.apply(claude, 'rk.report', { task_id: C, claim_id: c2.claim_id, lease_secret: secret(2), outcome: 'succeeded', summary: 'Synthetic run with its receipt', artifacts: [{ kind: 'lab_receipt', ref: 'lab-rcpt-1', sha256: 'd'.repeat(64) }] });
+  assert.equal(await r.lane(C), 'done');
+});
+
+test('an approval binds to what the owner saw: a Pound edit after the board loaded is refused, not approved unseen', async () => {
+  const r = rig();
+  await claudeRole(r);
+  r.pound.tasks.find(t => t.id === D).blocks = [B];
+  await r.apply(owner, 'rk.plan', { task_id: D, expected_plan_version: 0, seat: 'owner', review: 'none', decision: 'not_required', data_scope: 'none' });
+  await r.apply(owner, 'rk.plan', { task_id: B, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none' });
+  // A key proposes a harmless-looking amendment while D still blocks B: nothing would be dropped.
+  await r.apply(claude, 'rk.plan', { task_id: B, expected_plan_version: 1, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none', note: 'Synthetic wording' });
+  const seen = await r.card(B);
+  assert.deepEqual(seen.pending_plan.drops_dependencies, []);
+  // After the board loaded, the key removes the edge. Approving with the basis the owner saw fails.
+  r.pound.tasks.find(t => t.id === D).blocks = [];
+  await r.refused(owner, 'rk.decide', { subject: 'plan', id: B, plan_version: 2, decision: 'approve', basis: seen.basis }, 409, 'plan_basis_changed');
+  // Reloaded, the card now shows what approval would drop; approving that is an informed choice.
+  const fresh = await r.card(B);
+  assert.notEqual(fresh.basis, seen.basis);
+  assert.deepEqual(fresh.pending_plan.drops_dependencies.map(d => d.id), [D]);
+  await r.apply(owner, 'rk.decide', { subject: 'plan', id: B, plan_version: 2, decision: 'approve', basis: fresh.basis });
+  // The same holds for task text the owner never saw, on a direct plan save.
+  const before = await r.card(A);
+  r.pound.tasks.find(t => t.id === A).body = 'Synthetic brief A, edited by a key after the board loaded';
+  await r.refused(owner, 'rk.plan', { task_id: A, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none', basis: before.basis }, 409, 'plan_basis_changed');
+  await r.refused(owner, 'rk.plan', { task_id: A, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none', basis: 'nope' }, 400, 'invalid_basis');
+});
+
+test('an uncertain outcome on an archived or deleted task still reaches the owner', async () => {
+  const r = rig();
+  await claudeRole(r);
+  await standardPlans(r);
+  const u = await reportA(r, await claimA(r), { outcome: 'uncertain', summary: 'A synthetic post may have gone out', artifacts: [] });
+  r.pound.tasks.find(t => t.id === A).archived = true;
+  let card = (await r.board()).lanes.needs_you.find(c => c.task_id === A);
+  assert.equal(card.archived, true);
+  assert.equal(card.title, 'Synthetic task A (archived)');
+  assert.deepEqual(card.unreconciled.map(x => x.receipt_id), [u.receipt_id]);
+  r.pound.tasks = r.pound.tasks.filter(t => t.id !== A);
+  card = (await r.board()).lanes.needs_you.find(c => c.task_id === A);
+  assert.equal(card.title, 'Deleted task');
+  await r.apply(owner, 'rk.decide', { subject: 'uncertain', id: u.receipt_id, decision: 'not_landed' });
+  assert.equal((await r.board()).lanes.needs_you.some(c => c.task_id === A), false);
+});
+
+test('an uncertain outcome is recordable even when keys have used their share, or after the seat released its lease', async () => {
+  const r = rig();
+  await claudeRole(r);
+  await standardPlans(r);
+  const c = await claimA(r);
+  // The store is past the connector share (filler stands in for heavy key traffic).
+  for (let i = 0; i < RK_LIMITS.events; i++) r.rk.events.push({ at: new Date(T0).toISOString(), op: 'rk.claim', by: { kind: 'owner_key', key_label: 'Grok' }, task_id: null, subject: 'x'.repeat(1000) });
+  await r.refused(claude, 'rk.plan', { task_id: B, expected_plan_version: 1, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none' }, 409, 'robokap_capacity');
+  const unsure = await reportA(r, c, { outcome: 'uncertain', summary: 'A synthetic external call may have landed', artifacts: [] });
+  assert.equal(unsure.validity, 'current');
+  // After the seat's own release, an uncertain outcome is still recorded, as stale.
+  const r2 = rig();
+  await claudeRole(r2);
+  await standardPlans(r2);
+  const c2 = await claimA(r2);
+  await r2.apply(claude, 'rk.release', { task_id: A, claim_id: c2.claim_id, lease_secret: secret(1) });
+  await r2.refused(claude, 'rk.report', { task_id: A, claim_id: c2.claim_id, lease_secret: secret(1), outcome: 'failed', summary: 'x' }, 409, 'claim_released');
+  const late = await reportA(r2, c2, { outcome: 'uncertain', summary: 'It may have landed before the release', artifacts: [] });
+  assert.deepEqual(late.stale_causes, ['released_by_seat']);
+  assert.deepEqual((await r2.card(A)).reasons.map(x => x.code), ['reconcile_uncertain']);
+});
+
+test('proposals cannot pile up: one open proposal per task, replaced proposals leave at most a fingerprint', async () => {
+  const r = rig();
+  await claudeRole(r);
+  const propose = (who, version, note) => r.apply(who, 'rk.plan', { task_id: B, expected_plan_version: version, seat: 'grok', review: 'none', decision: 'not_required', data_scope: 'none', note });
+  for (let i = 0; i < 50; i++) await propose(grok, i, 'Synthetic proposal ' + i);
+  assert.equal(r.rk.plans.length, 1, 'a key replacing its own open proposal keeps one record');
+  assert.equal(r.rk.plans[0].version, 50);
+  await r.refused(claude, 'rk.plan', { task_id: B, expected_plan_version: 50, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none' }, 409, 'proposal_pending');
+  await r.apply(owner, 'rk.decide', { subject: 'plan', id: B, plan_version: 50, decision: 'reject' });
+  const stub = r.rk.plans[0];
+  assert.deepEqual(Object.keys(stub).sort(), ['at', 'by', 'content_sha256', 'retired_at', 'status', 'task_id', 'version']);
+  assert.equal(stub.status, 'rejected');
+  await propose(claude, 50, 'Now another key may propose');
+  await r.apply(owner, 'rk.plan', { task_id: B, expected_plan_version: 51, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none' });
+  assert.deepEqual(r.rk.plans.map(p => [p.version, p.status, Boolean(p.content_sha256)]), [[50, 'rejected', true], [51, 'superseded', true], [52, 'approved', false]]);
+});
+
+test('a busy key cannot push the owner out of the replay window, and early decision records still count', async () => {
+  const r = rig();
+  await claudeRole(r);
+  await r.apply(owner, 'rk.plan', { task_id: C, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none', budget: { attempts: 1, lease_minutes: 120 } });
+  const ext = { subject: 'budget', id: C, plan_version: 1, decision: 'extend', attempts: 1 };
+  await r.apply(owner, 'rk.decide', ext, 'req_owner_extend_0001');
+  const c = await r.apply(claude, 'rk.claim', { task_id: C, plan_version: 1, session_ref: S1, lease_secret: secret(1) });
+  for (let i = 0; i < 300; i++) await r.apply(claude, 'rk.claim', { task_id: C, plan_version: 1, session_ref: S1, lease_secret: secret(1) });
+  assert.equal(r.rk.idem.length, RK_LIMITS.idem);
+  const again = await r.apply(owner, 'rk.decide', ext, 'req_owner_extend_0001');
+  assert.equal(again.replayed, true, 'the owner\'s resend still replays');
+  assert.equal((await r.card(C)).plan.attempts.limit, 2, 'the extension applied once');
+  assert.ok(c.claim_id);
+  // A decision written before subject_id existed (the subject in `id`) is still honoured.
+  const legacy = rig();
+  await claudeRole(legacy);
+  await legacy.apply(owner, 'rk.plan', { task_id: C, expected_plan_version: 0, seat: 'claude', review: 'none', decision: 'not_required', data_scope: 'none' });
+  const lc = await legacy.apply(claude, 'rk.claim', { task_id: C, plan_version: 1, session_ref: S1, lease_secret: secret(1) });
+  const rec = await legacy.apply(claude, 'rk.report', { task_id: C, claim_id: lc.claim_id, lease_secret: secret(1), outcome: 'succeeded', summary: 'Synthetic' });
+  assert.equal(await legacy.lane(C), 'done');
+  legacy.rk.decisions.push({ id: rec.receipt_id, subject: 'receipt', decision: 'revise', plan_version: 1, by: { kind: 'owner_session' }, at: new Date(T0).toISOString() });
+  assert.equal(await legacy.lane(C), 'ready');
 });

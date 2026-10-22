@@ -126,7 +126,8 @@ function actionsFor(card) {
   const receipt = card.evidence?.receipt_id;
   if ((codes.has('plan_proposed') || codes.has('plan_amendment_proposed')) && card.pending_plan) {
     const v = card.pending_plan.version;
-    box.append(button('Approve plan v' + v, () => act('rk.decide', { subject: 'plan', id: card.task_id, plan_version: v, decision: 'approve' }, 'Approve plan')), button('Reject plan v' + v, () => act('rk.decide', { subject: 'plan', id: card.task_id, plan_version: v, decision: 'reject' }, 'Reject plan'), 'secondary'));
+    // The approval names what you saw: if the task text or its Pound blockers changed since, it is refused.
+    box.append(button('Approve plan v' + v, () => act('rk.decide', { subject: 'plan', id: card.task_id, plan_version: v, decision: 'approve', ...(card.basis ? { basis: card.basis } : {}) }, 'Approve plan')), button('Reject plan v' + v, () => act('rk.decide', { subject: 'plan', id: card.task_id, plan_version: v, decision: 'reject' }, 'Reject plan'), 'secondary'));
   }
   if (codes.has('decide_receipt') && receipt) box.append(button('Accept result', () => act('rk.decide', { subject: 'receipt', id: receipt, decision: 'accept' }, 'Accept result')), button('Ask for revision', () => act('rk.decide', { subject: 'receipt', id: receipt, decision: 'revise' }, 'Ask for revision'), 'secondary'), button('Reject', () => act('rk.decide', { subject: 'receipt', id: receipt, decision: 'reject' }, 'Reject result'), 'secondary'));
   if (codes.has('review_rejected') && receipt) box.append(button('Ask for revision', () => act('rk.decide', { subject: 'receipt', id: receipt, decision: 'revise' }, 'Ask for revision')), button('Close as rejected', () => act('rk.decide', { subject: 'receipt', id: receipt, decision: 'reject' }, 'Reject result'), 'secondary'));
@@ -251,15 +252,22 @@ function render() {
 }
 const allCards = () => board ? [...Object.values(board.lanes).flat(), ...board.done, ...board.closed, ...board.unplanned] : [];
 const pinValue = p => JSON.stringify({ project_id: p.project_id, kind: p.kind, version: p.version, require: p.require });
+// Re-rendering refreshes the lists but keeps what is selected in them, so switching lanes or
+// saving something else never silently drops a dependency or pin from a plan being edited.
 function fillForms() {
-  const tasks = allCards().map(c => [c.task_id, c.title]);
+  const tasks = allCards().filter(c => !c.archived).map(c => [c.task_id, c.title]);
   const plan = $('rkPlanForm').elements, keep = plan.task_id.value;
+  const keepDeps = new Set([...plan.depends_on.selectedOptions].map(o => o.value));
+  const keepPin = plan.pin.value, keepPinText = plan.pin.selectedOptions[0]?.textContent;
   plan.task_id.replaceChildren(...tasks.map(([v, t]) => el('option', { value: v, text: t })));
   if (keep) plan.task_id.value = keep;
-  plan.depends_on.replaceChildren(...tasks.map(([v, t]) => el('option', { value: v, text: t })));
+  plan.depends_on.replaceChildren(...tasks.map(([v, t]) => el('option', { value: v, text: t, selected: keepDeps.has(v) })));
   plan.pin.replaceChildren(el('option', { value: '', text: 'No pin' }), ...board.pins.flatMap(p => ['any', 'approved'].map(require => el('option', { value: pinValue({ ...p, require }), text: p.kind.replace(/_/g, ' ') + ' · ' + p.project_id + ' v' + p.version + (require === 'any' ? ' · any status' : ' · must be approved') }))));
-  const pin = $('rkPinForm').elements;
+  if (keepPin && ![...plan.pin.options].some(o => o.value === keepPin)) plan.pin.append(el('option', { value: keepPin, text: keepPinText || keepPin }));
+  plan.pin.value = keepPin;
+  const pin = $('rkPinForm').elements, keepContext = pin.context_id.value;
   pin.context_id.replaceChildren(...board.contexts.map(c => el('option', { value: c.id, text: c.title + ' · ' + c.versions + ' version' + (c.versions === 1 ? '' : 's') })));
+  if (keepContext) pin.context_id.value = keepContext;
 }
 // Amending starts from the whole current plan. Fields this form cannot edit are shown and kept.
 function openPlan(taskId) {
@@ -302,7 +310,7 @@ $('rkPlanForm').addEventListener('submit', async e => {
   e.preventDefault();
   const f = e.target.elements, card = allCards().find(c => c.task_id === f.task_id.value);
   if (!card) { note('Choose a task.'); return; }
-  const data = { task_id: card.task_id, expected_plan_version: card.max_plan_version, seat: f.seat.value, review: f.review.value, decision: f.decision.value, data_scope: f.data_scope.value, budget: { attempts: Number(f.attempts.value), lease_minutes: Number(f.lease_minutes.value) } };
+  const data = { task_id: card.task_id, expected_plan_version: card.max_plan_version, seat: f.seat.value, review: f.review.value, decision: f.decision.value, data_scope: f.data_scope.value, budget: { attempts: Number(f.attempts.value), lease_minutes: Number(f.lease_minutes.value) }, ...(card.basis ? { basis: card.basis } : {}) };
   if (f.priority.value !== '3') data.priority = Number(f.priority.value);
   const deps = [...f.depends_on.selectedOptions].map(o => o.value).filter(v => v !== card.task_id);
   if (deps.length) data.depends_on = deps;
