@@ -57,7 +57,7 @@
     [data-dd-compact][data-dd-view="tldr"] .p-hero .p-kicker{display:none}
     [data-dd-compact] .p-hero .p-kicker{font-size:10px;letter-spacing:.04em}
     @media(max-width:600px){.dd-presentation{padding:4px 12px}[data-dd-compact] main{padding-top:6px}}
-    @media print{.dd-presentation{display:none}[data-dd-view="tldr"] [data-dd-agent-only]{display:block!important}}
+    @media print{.dd-presentation{display:none}[data-dd-view="tldr"] [data-dd-agent-only],[data-dd-view="tldr"][data-dd-page] #machines,[data-dd-view="tldr"][data-dd-page] #surfaces{display:block!important}}
 `;
   const policy=document.querySelector('meta[http-equiv="Content-Security-Policy" i]')?.content || '';
   const styles=policy.match(/style-src\s+([^;]+)/)?.[1];
