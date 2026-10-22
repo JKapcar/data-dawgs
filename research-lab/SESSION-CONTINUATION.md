@@ -159,8 +159,7 @@ background service or scheduler is included, and no activation has occurred.
 This PR is **not covered by PR327's static-only release clearance**. It changes the
 research server state machine. The PR does not alter `dawg-bot-worker.js`, live
 settings or `wrangler.jsonc`; `build-worker.mjs` produces the isolated integrated
-Worker candidate. The existing generic worker-deploy workflow uploads its configured
-entrypoint and must not be assumed to publish that generated research candidate.
+Worker candidate. Read-only inspection confirms the existing worker-deploy workflow builds and explicitly uploads `work/artifacts/research-lab/worker.mjs` with the full `wrangler.jsonc`. Its dispatch remains a separate release action, not PR validation.
 The release owner must verify the reviewed artifact/entrypoint and complete existing
 manifest/bindings before using a separately approved Worker release procedure.
 
