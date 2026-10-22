@@ -17,8 +17,24 @@ try {
  await page.getByRole('tab',{name:'Queue'}).click();
  assert.equal(await page.getByRole('button',{name:'Start approved tasks'}).isDisabled(),false);
  await page.getByRole('status').filter({hasText:'Server reserves experiment identities atomically'}).waitFor();
+ // Hold the post-run state read until success is visible. Success acknowledges the
+ // receipt write; the counter belongs to the subsequent asynchronous refresh.
+ let releaseRefresh,refreshRequested;
+ const refreshGate=new Promise(resolve=>{releaseRefresh=resolve;});
+ const refreshSeen=new Promise(resolve=>{refreshRequested=resolve;});
+ await page.route(base+'/api/state',async route=>{
+   // Coordinator verification also reads state before success; only delay the UI refresh.
+   const succeeded=await page.getByText('Receipt recorded: success.',{exact:false}).count();
+   if(succeeded){refreshRequested();await refreshGate;}
+   await route.continue();
+ });
  await page.getByRole('button',{name:'Claim & run locally'}).first().click();await page.getByText('Receipt recorded: success.',{exact:false}).waitFor();
+ await refreshSeen;
+ assert.equal(await page.locator('#receipt-count').innerText(),'0 receipts','a pending state response must not invent a rendered receipt');
  const state=await(await fetch(base+'/api/state')).json();assert.equal(state.receipts.length,1);assert(replay(directory,state.receipts[0].id).reproduced);
+ releaseRefresh();
+ await page.waitForFunction(()=>document.querySelector('#receipt-count').textContent==='1 receipt');
+ await page.unroute(base+'/api/state');
  assert.equal(await page.locator('#receipt-count').innerText(),'1 receipt');
  await page.getByRole('tab',{name:'Research',exact:true}).click();
  await page.screenshot({path:path.join(output,'desktop.png'),fullPage:true});

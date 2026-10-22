@@ -32,7 +32,22 @@ test('unsigned or invalid sessions fall back to the public catalog', () => {
   assert.doesNotMatch(directory, /if \(auth\.err\) return/);
 });
 
-test('the page sends its existing session on directory GETs', () => {
-  assert.match(page, /if\(ME\) h\['X-Bozo-Session'\] = ME\.session;/);
-  assert.match(page, /fetch\(WORKER \+ path[\s\S]*\{headers:h\}\)/);
+test('directory reads capture the initiating identity and never reuse another session', async () => {
+  const vm=require('node:vm'),calls=[];
+  let release;
+  const pending=new Promise(resolve=>{release=resolve;});
+  const context={ME:{session:'synthetic-account-a'},WORKER:'https://synthetic.invalid',bust:()=> 'fixture=1',AbortController,setTimeout,clearTimeout,
+    fetch:async(url,options)=>{calls.push({url,options});if(calls.length===1)await pending;return {ok:true,json:async()=>({leagues:[]})};}};
+  vm.createContext(context);
+  vm.runInContext(page.match(/async function wGet\(path\)\{[\s\S]*?\n\}/)[0],context);
+  const first=context.wGet('/league/list');
+  context.ME={session:'synthetic-account-b'};await context.wGet('/league/list');
+  context.ME=null;await context.wGet('/league/list');
+  release();await first;
+  assert.deepEqual(calls.map(c=>c.options.headers['X-Bozo-Session']),['synthetic-account-a','synthetic-account-b',undefined]);
+  for(const {url,options} of calls){
+    assert.equal(url,'https://synthetic.invalid/league/list?fixture=1');
+    assert.equal(options.cache,'no-store');assert.ok(options.signal instanceof AbortSignal);
+    assert.equal(Object.hasOwn(options.headers,'Authorization'),false);
+  }
 });
