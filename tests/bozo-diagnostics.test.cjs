@@ -126,6 +126,7 @@ test('ledger loading clears the previous slice for missing or mismatched league 
 test('failed ledger request clears stale values, exposes error and releases loading state',async()=>{
   const {document:d,context}=fixture(mixed());
   const loadSource=html.slice(html.indexOf('async function clvLoad(force)'),html.indexOf('(function clvWireControls(){'));
+  context.ME=null;context.stateGeneration=1;context.boardReady=true;
   let rejectRequest;
   context.onHub=()=>false;
   context.wGet=url=>{

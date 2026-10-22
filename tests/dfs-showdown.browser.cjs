@@ -179,10 +179,12 @@ const server = http.createServer((q, r) => {
           await page.locator('#sdPointSelect').selectOption(pick);
           assert.match(await page.locator('#sdPointDetail').innerText(),pick==='0'?/43.5%.*supplied paidPlaces/:/22.0%.*supplied payouts/);
           const before=await page.evaluate(()=>JSON.stringify(window.DDShowdownPage.state.model));
-          await page.getByRole('button',{name:'Agent details',exact:true}).click();
+          await page.locator('.dd-presentation').evaluate(el=>{el.open=true;el.closest('.navgrp')?.classList.add('open');});
+          await page.getByRole('button',{name:'AI / technical details',exact:true}).click();
           assert.equal(await page.locator('#sdUncertainty summary').isVisible(),true);
           assert.equal(await page.locator('#sdPointDetail').isVisible(),true);
           assert.equal(await page.evaluate(()=>JSON.stringify(window.DDShowdownPage.state.model)),before);
+          await page.locator('.dd-presentation').evaluate(el=>{el.open=true;el.closest('.navgrp')?.classList.add('open');});
           await page.getByRole('button',{name:'TL;DR',exact:true}).click();
         }
         await page.evaluate(()=>scrollTo(0,0));
