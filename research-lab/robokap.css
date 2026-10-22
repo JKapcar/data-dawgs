@@ -1,0 +1,66 @@
+/* RoboKap board: mobile-first, dark Data Dawgs foundation, tactile lane switches.
+   Color is never the only signal: every lane, badge and bar segment carries text. */
+.rk{--needs:#ff6a3d;--ready:#2dd4ac;--running:#6fb4ff;--blocked:#b8a4ff;--review:#ffc94a;--done:#8fdc9a;--line:#614c35;--panel:#241a13;--ink:#f4ecdd;--muted:#c8b9a3;max-width:880px}
+.rk-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.rk-head h1{margin:0}
+.rk button.quiet{background:#1b140f;color:var(--ink);border-color:var(--line);box-shadow:0 3px #0b0806}
+.rk-status{min-height:1.5em;font-size:15px;color:var(--muted)}
+.rk-help{font-size:14px;color:var(--muted);margin:6px 0 10px}
+.rk-summary{padding:14px}
+.rk-bar{display:flex;height:16px;border-radius:9px;overflow:hidden;background:#130f0b;border:1px solid var(--line)}
+.rk-bar span{display:block;min-width:6px}
+.rk-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.rk-tab{margin:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;min-height:56px;background:#1b140f;color:var(--ink);border:1px solid var(--line);border-left:6px solid var(--c);border-radius:10px;box-shadow:0 4px #0b0806;text-align:left;transition:transform .08s ease,box-shadow .08s ease}
+.rk-tab b{font-size:24px;line-height:1;font-variant-numeric:tabular-nums}
+.rk-tab span{font-size:13px;color:var(--muted)}
+.rk-tab[aria-pressed=true]{background:#2f2218;transform:translateY(3px);box-shadow:0 1px #0b0806,inset 0 0 0 2px var(--c)}
+.rk-tab[aria-pressed=true] span{color:var(--ink)}
+.lane-needs_you{--c:var(--needs)}.lane-ready{--c:var(--ready)}.lane-running{--c:var(--running)}.lane-blocked{--c:var(--blocked)}.lane-review{--c:var(--review)}.lane-done{--c:var(--done)}
+.rk-bar .lane-needs_you{background:var(--needs)}.rk-bar .lane-ready{background:var(--ready)}.rk-bar .lane-running{background:var(--running)}.rk-bar .lane-blocked{background:repeating-linear-gradient(135deg,var(--blocked) 0 6px,#6e5fa3 6px 12px)}.rk-bar .lane-review{background:var(--review)}.rk-bar .lane-done{background:var(--done)}
+.rk-lane h2{margin:0 0 4px}
+.rk-cards{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.rk-card{position:relative;padding:14px 14px 12px;border:1px solid var(--line);border-left:6px solid var(--c);border-radius:12px;background:#1b140f}
+.rk-card h3{margin:0 0 8px;font-size:18px;line-height:1.3;color:var(--ink);overflow-wrap:anywhere}
+.rk-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px;padding:0;list-style:none}
+.rk-chip{font-size:13px;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:#130f0b;color:var(--muted);margin:0}
+.rk-chip.strong{color:var(--ink);border-color:var(--c)}
+.rk-next{margin:0 0 10px;padding:10px 12px;border-radius:8px;background:#2a1f16;border:1px dashed var(--c)}
+.rk-next b{display:block;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--c)}
+.rk-facts{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:0 0 8px;font-size:14px}
+.rk-facts dt{color:var(--muted)}
+.rk-facts dd{margin:0;overflow-wrap:anywhere}
+.rk-deps{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.rk-dep{font-size:13px;padding:3px 8px;border-radius:6px;background:#130f0b;border:1px solid var(--line)}
+.rk-dep.ok{border-color:var(--done)}
+.rk-dep.ok::before{content:"✓ ";color:var(--done)}
+.rk-dep.wait::before{content:"… ";color:var(--blocked)}
+.rk-dep.bad::before{content:"✕ ";color:var(--needs)}
+.rk-card details{margin-top:8px;font-size:14px}
+.rk-card summary{cursor:pointer;color:var(--muted)}
+.rk-artifacts{margin:6px 0 0;padding-left:18px}
+.rk-artifacts li{margin:6px 0}
+.rk-badge{display:inline-block;font-size:12px;padding:1px 7px;border-radius:999px;margin-left:6px;border:1px solid var(--line);color:var(--muted)}
+.rk-badge.v-server_verified{border-color:var(--ready);color:var(--ready)}
+.rk-badge.v-format_checked,.rk-badge.v-commit_and_hash_recorded{border-color:var(--running);color:var(--running)}
+.rk-badge.v-owner_attested{border-color:var(--review);color:var(--review)}
+.rk-badge.v-claimed,.rk-badge.v-unverified_lab_unavailable{border-style:dashed}
+.rk-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.rk-actions button{margin:0;min-height:44px}
+.rk-actions button.secondary{background:#1b140f;color:var(--ink);border-color:var(--line);box-shadow:0 3px #0b0806}
+.rk-actions button:active{transform:translateY(2px);box-shadow:0 1px #0b0806}
+.rk-inline{display:grid;gap:8px;margin-top:10px}
+.rk-inline input,.rk-inline textarea{box-sizing:border-box;width:100%;padding:10px;background:#130f0b;color:inherit;border:1px solid #8a7152;border-radius:5px;font:inherit}
+.rk-panel{padding:16px}
+.rk-list{margin:0;padding-left:18px}
+.rk-list li{margin:10px 0}
+.rk-form label{margin:12px 0}
+.rk-form small{color:var(--muted);font-weight:normal}
+.rk-switches{border:1px solid var(--line);border-radius:8px;margin:12px 0;padding:8px 10px}
+.rk-switches label{display:inline-flex;align-items:center;gap:6px;margin:6px 14px 6px 0;min-height:32px}
+.rk-switches input{display:inline-block;width:20px;height:20px;margin:0;padding:0;accent-color:#ff3c00}
+.rk-form input[type=range]{accent-color:#ff3c00;padding:0;border:0;background:none;min-height:32px}
+.rk-form output{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:bold}
+.rk-empty{color:var(--muted);font-style:italic}
+.rk-pending{opacity:.6}
+@media(min-width:720px){.rk-tabs{grid-template-columns:repeat(6,1fr)}}
+@media(prefers-reduced-motion:reduce){.rk-tab,.rk-actions button{transition:none}.rk-tab[aria-pressed=true],.rk-actions button:active{transform:none}}
