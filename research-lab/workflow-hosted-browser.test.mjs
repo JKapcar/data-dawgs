@@ -12,7 +12,10 @@ const {chromium}=loadPlaywright(),browser=await chromium.launch({headless:true,e
 try{
  async function pageFor(token){const page=await browser.newPage();page.on('pageerror',e=>errors.push(e.message));await page.addInitScript(t=>localStorage.setItem('dd-bozo-sess',t),token);await page.route('**/*',async route=>{
   const req=route.request(),url=new URL(req.url());if(url.origin===worker){const res=await handler(new Request(req.url(),{method:req.method(),headers:req.headers(),...(req.postData()?{body:req.postData()}: {})}),f.env);return route.fulfill({status:res.status,headers:Object.fromEntries(res.headers),body:await res.text()});}
-  assert.equal(url.origin,site);let file=url.pathname.split('/').at(-1)||'index.html';if(file==='data-dawgs-site-logo-560.png')file='brand.png';if(file==='client-config.mjs')return route.fulfill({contentType:'text/javascript',body:`export default {mode:'hosted',workerOrigin:'${worker}',tenant:'demo'};`});
+  assert.equal(url.origin,site);
+  const sharedAssets=new Map([['/presentation-mode.js','text/javascript'],['/presentation-mode.css','text/css']]);
+  if(sharedAssets.has(url.pathname))return route.fulfill({contentType:sharedAssets.get(url.pathname),body:readFileSync(new URL('..'+url.pathname,import.meta.url))});
+  let file=url.pathname.split('/').at(-1)||'index.html';if(file==='data-dawgs-site-logo-560.png')file='brand.png';if(file==='client-config.mjs')return route.fulfill({contentType:'text/javascript',body:`export default {mode:'hosted',workerOrigin:'${worker}',tenant:'demo'};`});
   assert(['workflow.mjs','workflow.css','install-help.js','install-help.css','index.html','app.mjs','client.mjs','tracking.mjs','style.css','instrument.css','brand.png','navigation.css','navigation.js'].includes(file),file);
   return route.fulfill({contentType:/\.(mjs|js)$/.test(file)?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.png')?'image/png':'text/html',body:readFileSync(new URL(file==='brand.png'?'../assets/data-dawgs-site-logo-560.png':file.startsWith('install-help.')?'../'+file:file,import.meta.url))});
  });await page.goto(site+'/research-lab/');await page.getByText('Shared runner ready.',{exact:false}).waitFor();return page;}
