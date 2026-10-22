@@ -41,6 +41,20 @@ test('lost run and reconciliation read recovers from canonical receipt on next c
  const f=fixture();f.lose('run-and-read');await assert.rejects(f.coordinator.run(f.task.id,f.tracking),/Read response/);
  assert.equal((await f.coordinator.run(f.task.id,f.tracking)).status,'completed');assert.equal(f.calls.filter(x=>x.type==='run').length,1);
 });
+test('expired claim-only attempt recovers after both claim response and reconciliation read are lost',async()=>{
+ const f=fixture({bounded:true}),input=structuredClone(f.tracking);f.lose('claim-and-read');
+ await assert.rejects(f.coordinator.run(f.task.id,f.tracking),/Read response lost/);
+ assert.equal(f.calls.filter(x=>x.type==='run').length,0);f.time=62000;f.tracking.provenance.note='Changed after uncertain claim';
+ assert.equal((await f.coordinator.run(f.task.id,f.tracking)).status,'completed');
+ const claims=f.calls.filter(x=>x.type==='claim');assert.equal(claims.length,2);assert.notEqual(claims[0].key,claims[1].key);assert.deepEqual(claims[0].payload,claims[1].payload);
+ assert.equal(f.calls.filter(x=>x.type==='run').length,1);assert.equal(f.state.receipts.length,1);assert.equal(f.state.receipts[0].hashes.data,hash(input));
+});
+test('late receipt snapshot verification cannot clear a newer identity pending attempt',async()=>{
+ const f=fixture({bounded:true});await f.coordinator.run(f.task.id,f.tracking);const old=f.canonical();f.coordinator.clear();f.actor='next-owner';
+ const task=f.command('task',{hypothesisId:f.h.id,dataCheckId:f.check.id,split:'discovery',budgetMs:5000,maxObservations:10000});f.lose('run-before');
+ await assert.rejects(f.coordinator.run(task.id,f.tracking),/Transport/);assert.equal(f.coordinator.pending(task.id),true);
+ await f.coordinator.verifyReceipt(old,old.tasks[0],old.receipts[0]);assert.equal(f.coordinator.pending(task.id),true);
+});
 test('foreign lease is not resumable and redacted token never enters a command',async()=>{
  const f=fixture();f.actor='other';const claimed=f.command('claim',{taskId:f.task.id,leaseMs:60000});f.actor='owner';
  const s=f.canonical();assert.equal(taskState(s,s.tasks[0],1000),'foreign');assert.equal(s.tasks[0].lease.token,undefined);

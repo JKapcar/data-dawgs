@@ -64,6 +64,9 @@ export function createCoordinator(client,{now=Date.now,key=()=>crypto.randomUUID
     const check=t.dataCheckId&&s.discussions.find(d=>d.id===t.dataCheckId&&d.tenant===t.tenant);
     if(s.codeHash!==a.codeHash||check&&check.dataHash!==a.dataHash)throw new Error('Input or implementation changed; recheck before execution');
     if(a.run&&status!=='owned')throw new Error('Pending run has no valid owned lease; reconcile before a new attempt');
+    // This fresh canonical read found no receipt and an expired lease. A claim-only
+    // retry may renew its key; an uncertain run must retain its original identity.
+    if(status==='expired'&&a.sent&&!a.run)a.claimKey=key();
     if(status!=='owned'){
       a.sent=true;a.status='pending';
       let error;try{await client.command('claim',a.claim,a.claimKey);}catch(e){error=e;}
@@ -78,7 +81,7 @@ export function createCoordinator(client,{now=Date.now,key=()=>crypto.randomUUID
     current(g);await reconcile();done=await receipt();if(done)return done;
     throw error||new Error('Run response pending; reconcile canonical state before retrying');
   }
-  return {clear,verifyReceipt(s,t,r){adopt(s);return verifyReceipt(s,t,r,verifiedInputs.get(r?.id));},pending:id=>attempts.get(id)?.status==='pending',attemptState:id=>attempts.get(id)?.status||null,run(taskId,tracking){
+  return {clear,verifyReceipt(s,t,r){return verifyReceipt(s,t,r,identity(s)===owner?verifiedInputs.get(r?.id):undefined);},pending:id=>attempts.get(id)?.status==='pending',attemptState:id=>attempts.get(id)?.status||null,run(taskId,tracking){
     if(flights.has(taskId))return flights.get(taskId);
     const start=generation;
     const promise=execute(taskId,tracking).catch(error=>{const a=attempts.get(taskId);if(a&&start===generation)a.status=error.status||!a.sent?'failed':'pending';throw error;});flights.set(taskId,promise);

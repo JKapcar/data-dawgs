@@ -68,6 +68,7 @@ function hypothesisDetails(h) {const latest=h.revisions.at(-1);drawer(latest.tit
 async function refresh() {
   const epoch=++renderEpoch,snapshot=await client.state();
   for(const t of snapshot.tasks){
+    if(epoch!==renderEpoch)return;
     t.executionState=taskState(snapshot,t);
     if(t.executionState==='unverified'){
       try{const r=snapshot.receipts.find(r=>r.taskId===t.id);await coordinator.verifyReceipt(snapshot,t,r);t.executionState=r.outcome==='failure'?'failed':'completed';}
@@ -77,7 +78,7 @@ async function refresh() {
   if(epoch!==renderEpoch)return;
   snapshot.verifiedReceiptIds=snapshot.tasks.filter(t=>['completed','failed'].includes(t.executionState)).flatMap(t=>snapshot.receipts.filter(r=>r.taskId===t.id).map(r=>r.id));
   state=snapshot;$('.machine-status').dataset.ready='true';$('#receipt-count').textContent=`${state.receipts.length} ${state.receipts.length===1?'receipt':'receipts'}`;
-  const active=state.tasks.filter(t=>!['completed','stale'].includes(t.status)),claimed=active.filter(t=>t.lease?.expiresAt>Date.now()).length;$('#queue-count').textContent=active.length;$('#active-tasks').textContent=`${active.length} active ${active.length===1?'task':'tasks'} / ${claimed} leased / ${active.length-claimed} awaiting claim`;
+  const active=state.tasks.filter(t=>['queued','expired','owned','foreign'].includes(t.executionState)),claimed=active.filter(t=>t.lease?.expiresAt>Date.now()).length;$('#queue-count').textContent=active.length;$('#active-tasks').textContent=`${active.length} active ${active.length===1?'task':'tasks'} / ${claimed} leased / ${active.length-claimed} awaiting claim`;
   const groups=FAMILIES.map(([family,label])=>[label,state.hypotheses.filter(h=>(h.revisions.at(-1).family||'other')===family)]).filter(([,list])=>list.length);
   $('#hypothesis-grid').replaceChildren(...groups.map(([label,list])=>{const g=el('section',undefined,'family-group'),grid=el('div',undefined,'grid');g.append(el('h3',`${label} · ${list.length}`,'eyebrow'),grid);grid.append(...list.map(h=>{const r=h.revisions.at(-1),n=el('article',undefined,'card');n.dataset.status=r.status||'exploratory';n.append(chip(r.status||'exploratory'),el('span',` v${r.version}`,'meta'),el('h3',r.title),el('p',r.method),action('Open research record ↗',()=>hypothesisDetails(h)));return n;}));return g;}));
   $('#tasks').replaceChildren(...state.tasks.map(t=>{const n=el('article',undefined,'task'),d=el('div'),status=t.executionState;n.dataset.status=status;
