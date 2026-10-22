@@ -49,7 +49,7 @@ never as the owner:
 | Research gateway (`personal_mcp_identity_required`) | refused |
 | Another seat's requests or lease | refused |
 
-The restriction comes from the label, not from `DISCORD_PACK_SEATS`: removing a seat leaves its
+The restriction comes from the label alone, for every account and regardless of `RESEARCH_OWNER_UID` or `DISCORD_PACK_SEATS` (the `pack-` prefix is reserved for seat keys): removing a seat leaves its
 key with no tools rather than widening it, and deleting the key on `connect.html` ends it. The
 shared `primary` key and existing full-access keys (such as `Gemini` or `Grok`) are rejected as
 seat keys and keep their current behaviour.

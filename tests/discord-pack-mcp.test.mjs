@@ -29,12 +29,23 @@ const call=async(token,name,args)=>{const r=await rpc(token,'tools/call',{name,a
 
 const allNames=async token=>(await rpc(token,'tools/list',{})).result?.tools?.map(t=>t.name)??[];
 test('seat keys are seat-only credentials; full-access keys never get seat tools',async()=>{
- for(const token of ['u_primarytoken','u_geminitoken','u_jefftoken','u_jeffpacktoken']){const n=await allNames(token);assert.ok(n.includes('dd_whoami'),token+' keeps its normal catalog');assert.equal(n.filter(x=>x.startsWith('dd_pack_')).length,0,token+' gets no seat tools');}
+ for(const token of ['u_primarytoken','u_geminitoken','u_jefftoken']){const n=await allNames(token);assert.ok(n.includes('dd_whoami'),token+' keeps its normal catalog');assert.equal(n.filter(x=>x.startsWith('dd_pack_')).length,0,token+' gets no seat tools');}
  assert.deepEqual(await allNames('u_packclaudetoken'),['dd_pack_bind','dd_pack_poll','dd_pack_read','dd_pack_claim','dd_pack_answer','dd_pack_release']);
  const init=await rpc('u_packclaudetoken','initialize',{protocolVersion:'2025-06-18'});assert.match(init.result.instructions,/no league, private workspace or research access/);
  for(const name of ['dd_whoami','dd_owner_pound_read','dd_submit_bozo_leg','dd_league_overview']){const r=await rpc('u_packclaudetoken','tools/call',{name,arguments:{}});assert.equal(r.error?.code,-32602,name);}
  const verdict=await (await worker.fetch(new Request('https://toto.jkapcar4.workers.dev/mcp/u_packclaudetoken',{headers:{Accept:'application/json'}}),env)).json();assert.equal(verdict.kind,'pack_seat');assert.match(verdict.note,/only dd_pack_\* tools/);
  env.DISCORD_PACK_ENABLED='false';assert.deepEqual(await allNames('u_packclaudetoken'),[],'disabled: nothing, still not elevated');env.DISCORD_PACK_ENABLED='true';
+});
+test('pack- keys stay seat-only on every connector path and whatever the owner setting says',async()=>{
+ const owner=env.RESEARCH_OWNER_UID,seatOnly=async(token,opts={})=>{const path=opts.path??'/mcp/'+token,headers={'Content-Type':'application/json',...(opts.headers||{})};
+  const list=await (await worker.fetch(new Request('https://toto.jkapcar4.workers.dev'+path,{method:'POST',headers,body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list'})}),env)).json();
+  const names=(list.result?.tools||[]).map(t=>t.name);assert.ok(names.every(n=>n.startsWith('dd_pack_')),JSON.stringify(names).slice(0,120));
+  const call=await (await worker.fetch(new Request('https://toto.jkapcar4.workers.dev'+path,{method:'POST',headers,body:JSON.stringify({jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'dd_whoami',arguments:{}}})}),env)).json();
+  assert.equal(call.error?.code,-32602,'dd_whoami refused');return names.length;};
+ for(const [label,opts] of [['url full',{}],['url core',{path:'/mcp/core/u_packclaudetoken'}],['url explicit full',{path:'/mcp/full/u_packclaudetoken'}],['bearer header',{path:'/mcp',headers:{Authorization:'Bearer u_packclaudetoken'}}],['bearer header core',{path:'/mcp/core',headers:{Authorization:'Bearer u_packclaudetoken'}}],['x-api-key',{path:'/mcp',headers:{'X-Api-Key':'u_packclaudetoken'}}]])
+  assert.equal(await seatOnly('u_packclaudetoken',opts),6,label);
+ for(const value of [undefined,'','u_someone_else']){env.RESEARCH_OWNER_UID=value;assert.equal(await seatOnly('u_packclaudetoken'),0,'owner='+value+': no tools, never a full key');}
+ env.RESEARCH_OWNER_UID=owner;assert.equal(await seatOnly('u_jeffpacktoken'),0,"another member's pack- key is seat-only too");
 });
 test('bind and poll run through JSON-RPC with server-verified key labels',async()=>{
  const bound=await call('u_packclaudetoken','dd_pack_bind',{session_ref:'synthetic session',poll_minutes:10});assert.equal(bound.isError,false,bound.body);

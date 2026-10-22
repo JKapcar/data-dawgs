@@ -1976,9 +1976,10 @@ async function mcpAuth(request, url, env) {
     // ⚠️ PACK SEAT KEYS ARE NOT THE OWNER. A configured owner's key labelled pack-… is a
     // seat-only credential: it never becomes a "user" principal, so owner apps, the research
     // gateway and every league tool refuse it; mcpDispatch serves it dd_pack_* only. Decided by
-    // the label, not by DISCORD_PACK_SEATS, so removing a seat can never widen its key.
-    // Inline on purpose (gateway-fixture extracts mcpAuth without helpers).
-    if (/^pack-/i.test(keyLabel) && hit === env.RESEARCH_OWNER_UID)
+    // the label alone, for every account and whatever RESEARCH_OWNER_UID says, so neither a
+    // seat change nor an owner-setting change can widen a pack- key; seat tools still check the
+    // owner separately. Inline on purpose (gateway-fixture extracts mcpAuth without helpers).
+    if (/^pack-/i.test(keyLabel))
       return { kind: "pack_seat", name: display, uid: hit, transport, keyLabel };
     return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser), transport, keyLabel,
       // ⚠️ The account's role flags, read here so isSiteAdmin() has one shape to check.
