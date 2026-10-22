@@ -62,7 +62,11 @@ export const OWNER_APP_STATUSES=['on','off','expired','not_owner','app_disabled'
 
 const names={pound:['dd_owner_pound_read','dd_owner_pound_write'],research:['dd_owner_bdb_read','dd_owner_bdb_write','dd_owner_bdb_data']};
 const emptySchema={type:'object',properties:{},additionalProperties:false};
-export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeHash,pound,project,now=Date.now}){
+// RoboKap coordination tools ride the existing RoboKap (pound) app grant. They are listed only
+// while that grant is on AND the Worker has ROBOKAP_ENABLED=true; `robokap` is optional, so
+// builds and tests that do not pass it list exactly the tools they always did.
+const robokapNames=['dd_owner_robokap_read','dd_owner_robokap_write'];
+export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeHash,pound,project,robokap,now=Date.now}){
  const owner=(env,caller)=>{check(caller?.kind==='user'&&/^u_[A-Za-z0-9_-]{1,100}$/.test(caller.uid||'')&&caller.uid===env.RESEARCH_OWNER_UID,403,'configured_owner_required');return caller.uid;};
  const path=(env,app,uid)=>app==='pound'?'/privatePounds/'+uid:'/researchLab/v1/tenants/'+env.RESEARCH_UPLOAD_TENANT;
  const read=async(env,app,uid)=>{
@@ -86,7 +90,7 @@ export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeH
  }
  const projectOn=env=>Boolean(project)&&project.enabled(env);
  const projectDefinitions=()=>[{name:projectNames[0],title:'Research project',description:'Read an opted-in research project record (milestones, checks, questions, decisions, votes, roles, policies). Includes private text. Assistant identity is unverified. '+projectFlat.read.description,inputSchema:projectFlat.read,annotations:{readOnlyHint:true}},{name:projectNames[1],title:'Research project contribution',description:'Propose or revise project records as the owner\'s connector. Writes are stamped with the verified credential label; binding actions stay with the signed owner. '+projectFlat.write.description,inputSchema:projectFlat.write,annotations:{readOnlyHint:false,destructiveHint:false}}];
- async function list(env,caller){try{const state=await status(env,caller);return ['pound','research'].filter(app=>state[app]==='on').flatMap(app=>[...definitions(app),...(app==='research'&&dataEnabled(env)?[DATA_TOOL]:[]),...(app==='research'&&projectOn(env)?projectDefinitions():[])]);}catch{return [];}}
+ async function list(env,caller){try{const state=await status(env,caller);return ['pound','research'].filter(app=>state[app]==='on').flatMap(app=>[...definitions(app),...(app==='pound'&&robokap?.enabled(env)?robokap.definitions():[]),...(app==='research'&&dataEnabled(env)?[DATA_TOOL]:[]),...(app==='research'&&projectOn(env)?projectDefinitions():[])]);}catch{return [];}}
  // Grant and expiry are checked before storage I/O, then again after it: before returning a
  // read and immediately before a commit (J.5 27).
  const researchGrant=async(env,uid)=>{const s=await read(env,'research',uid);check(allowed(s.data,uid),403,'app_permission_off_or_expired');return s;};
@@ -113,6 +117,13 @@ export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeH
  }
  async function run(name,args,env,caller,reauth){
   const uid=owner(env,caller);if(projectNames.includes(name)){check(object(args)&&bytes(args)<=32768,400,'invalid_arguments');return runProject(name,args,env,caller,reauth,uid);}
+  if(robokap&&robokapNames.includes(name)){
+   // Same grant, expiry and identity rechecks as the Pound tools: before storage I/O, and
+   // again immediately before a commit or before private content is returned.
+   check(allowed((await read(env,'pound',uid)).data,uid),403,'app_permission_off_or_expired');
+   const guard=async()=>{const again=typeof reauth==='function'?await reauth():null;check(owner(env,again)===uid&&(again.keyLabel??null)===(caller.keyLabel??null),401,'connector_identity_changed');check(allowed((await read(env,'pound',uid)).data,uid),403,'app_permission_expired');};
+   return robokap.connector(name,args,env,{uid,keyLabel:caller.keyLabel??null},guard);
+  }
   const app=Object.keys(names).find(a=>names[a].includes(name));check(app,404,'unknown_private_tool');check(object(args)&&bytes(args)<=32768,400,'invalid_arguments');
   const s=await read(env,app,uid);check(allowed(s.data,uid),403,'app_permission_off_or_expired');
   if(name===DATA_TOOL.name){
