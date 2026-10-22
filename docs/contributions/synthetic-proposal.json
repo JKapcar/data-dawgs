@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "id": "synthetic-bdb-proposal",
+  "revision": 1,
+  "supersedes": null,
+  "project_id": "bdb",
+  "scope": "public",
+  "kind": "research",
+  "stage": "proposed",
+  "synthetic": true,
+  "question": "Would a synthetic missing-speed fixture produce an explicit null outcome?",
+  "actor": {
+    "label": "Synthetic contributor",
+    "model_self_reported": null,
+    "credential_identity": null,
+    "continuity_ref": null
+  },
+  "data": {
+    "dataset": "invented missing-speed fixture",
+    "version": "fixture-v1",
+    "split": "synthetic",
+    "sha256": null,
+    "holdout_accessed": false
+  },
+  "method": {
+    "description": "Propose running the existing descriptive-cohorts-v1 method on invented observations. This example has not run.",
+    "sources": [],
+    "code_ref": null,
+    "config_ref": null
+  },
+  "judgment": {
+    "basis": "synthetic_example",
+    "choice": "Check missingness before attempting any comparison.",
+    "tradeoffs": [
+      "A small fixture checks bookkeeping, not predictive performance."
+    ],
+    "rejected_alternatives": [
+      "Do not replace missing speed with zero."
+    ],
+    "assumptions": [
+      "All observations are invented."
+    ]
+  },
+  "execution": {
+    "status": "not_run",
+    "experiment_ref": null
+  },
+  "results": {
+    "outcome": "unknown",
+    "summary": null
+  },
+  "artifacts": [],
+  "reviews": null,
+  "owner_decision": null,
+  "timestamps": {
+    "recorded_at": "2026-10-22T22:47:22Z",
+    "started_at": null,
+    "finished_at": null
+  },
+  "resources": {
+    "elapsed_ms": null,
+    "cost_amount": null,
+    "currency": null,
+    "basis_ref": null
+  }
+}
