@@ -46,7 +46,9 @@ copy) and keeps it out of general backups. There is no second task store.
 Every connector key carries owner authority, so a key label proves which key acted, not which
 model. Reviews from connector keys are recorded as `advisory` and can never satisfy an
 `independent` requirement. A self-reported sign-up is a role *proposal*; acceptance must come
-from the key the role names; approval is a separate owner decision.
+from the key the role names; approval is a separate owner decision. A seat never binds to the
+shared `primary` key (refused as `shared_primary_key_not_allowed`): every client holding it would
+look the same, so each seat needs its own key.
 
 ## Process maps
 
@@ -84,7 +86,7 @@ one requires an approved plan amendment, so a connector key cannot unblock its o
 
 ```mermaid
 sequenceDiagram
-    participant S as Claude session (key "primary")
+    participant S as Claude session (its own seat key)
     participant W as Worker (RoboKap)
     participant P as Pound record
     participant O as Owner board
@@ -195,8 +197,9 @@ Requires your explicit approval, in this order. Nothing below has been done.
 
 1. **Review and merge** this PR. Pages then publishes the board page; it is inert while the
    Worker flag is off.
-2. **Release decision:** `main` carries Worker changes merged after the last Worker deploy.
-   Decide whether to release them together or build from the production commit plus this change.
+2. **Isolated release:** build the Worker from the production commit plus this change, not from
+   `main` (which carries other Worker changes merged since the last deploy), and run the packaged
+   tests on that exact artifact before deploying it.
 3. **Deploy with `ROBOKAP_ENABLED="false"`**, then confirm the active version with the
    `worker-inspect` workflow. Behaviour is unchanged; the research bundle code hash changes.
 4. **Flip `ROBOKAP_ENABLED` to `"true"`** and deploy.
@@ -211,15 +214,15 @@ Requires your explicit approval, in this order. Nothing below has been done.
 
 ## Proposed real-session pilot (separate approval)
 
-- **Session:** one named existing Claude session holding the `primary` key, recorded as the
-  plan's target `session_ref`. A dedicated per-assistant key is stronger but creating it is a
-  new credential and needs its own approval.
+- **Session:** one named existing Claude session holding a dedicated Claude connector key,
+  recorded as the plan's target `session_ref`. Seats never use the shared `primary` key, so
+  creating that key (a new credential) is the pilot's first approval.
 - **Work:** two tasks you create in RoboKap. A: read the pinned design of record (pinned by
   exact revision, status draft) and save a short summary as a RoboKap context version. B,
   depending on A: list the open freeze-checklist items as a task message. `data_scope: none`;
   no competition data, no Lab access.
 - **Observable receipts:** the board's lane changes; A's receipt with a `server_verified`
-  context-version artifact and its hash; the event log with the `primary` key and declared
+  context-version artifact and its hash; the event log with the Claude seat key and declared
   session; your accept decision; B moving from Blocked to Ready without anyone relaying it.
 - **Stop:** revoke the role or turn the app grant off; the plans' budgets cap attempts at 2.
 

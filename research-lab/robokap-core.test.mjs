@@ -6,7 +6,7 @@ import { rkApply, rkBoard, rkWork, rkEmpty, rkParse, rkSerialize, rkDerive, sha2
 
 const T0 = Date.parse('2026-10-22T12:00:00Z');
 const owner = { kind: 'owner_session' };
-const claude = { kind: 'owner_key', key_label: 'primary' };
+const claude = { kind: 'owner_key', key_label: 'Claude' };
 const grok = { kind: 'owner_key', key_label: 'Grok' };
 const gemini = { kind: 'owner_key', key_label: 'Gemini' };
 const reviewer = { kind: 'delegated_agent', agent_id: 'a'.repeat(32) };
@@ -61,7 +61,7 @@ function rig({ lab = labFixture() } = {}) {
   return { pound, ctx, apply, refused, board, lane, card, get rk() { return rk; }, set rk(v) { rk = v; }, tick: ms => { clock += ms; }, get now() { return clock; } };
 }
 async function claudeRole(r) {
-  const role = await r.apply(owner, 'rk.role.propose', { seat: 'claude', key_label: 'primary', role: 'BDB coordinator', scope: 'Synthetic test scope' });
+  const role = await r.apply(owner, 'rk.role.propose', { seat: 'claude', key_label: 'Claude', role: 'BDB coordinator', scope: 'Synthetic test scope' });
   await r.apply(claude, 'rk.role.accept', { role_id: role.role_id });
   await r.apply(owner, 'rk.decide', { subject: 'role', id: role.role_id, decision: 'approve' });
   return role.role_id;
@@ -82,7 +82,7 @@ test('complete workflow: A is claimed, evidenced, reviewed and accepted before B
   assert.equal(await r.lane(A), 'ready');
   assert.equal(await r.lane(B), 'blocked');
   assert.deepEqual((await r.card(B)).reasons.map(x => x.code), ['waiting_dependency']);
-  const work = await rkWork(r.rk, r.pound, r.now, r.ctx, { key_label: 'primary', session_ref: S1 });
+  const work = await rkWork(r.rk, r.pound, r.now, r.ctx, { key_label: 'Claude', session_ref: S1 });
   assert.deepEqual(work.ready.map(t => t.task_id), [A]);
   assert.equal(work.identity.model_identity, 'unverified');
   const claim = await claimA(r);
@@ -101,7 +101,7 @@ test('complete workflow: A is claimed, evidenced, reviewed and accepted before B
   await r.apply(owner, 'rk.decide', { subject: 'receipt', id: receipt.receipt_id, decision: 'accept' });
   assert.equal(await r.lane(A), 'done');
   assert.equal(await r.lane(B), 'ready', 'eligibility recomputed once A has current-version evidence and approvals');
-  const next = await rkWork(r.rk, r.pound, r.now, r.ctx, { key_label: 'primary', session_ref: S1 });
+  const next = await rkWork(r.rk, r.pound, r.now, r.ctx, { key_label: 'Claude', session_ref: S1 });
   assert.deepEqual(next.ready.map(t => t.task_id), [B], 'the same session continues to the next eligible task');
   const cb = await r.apply(claude, 'rk.claim', { task_id: B, plan_version: 1, session_ref: S1, lease_secret: secret(2) });
   const rb = await r.apply(claude, 'rk.report', { task_id: B, claim_id: cb.claim_id, lease_secret: secret(2), outcome: 'succeeded', summary: 'Synthetic notes drafted.', artifacts: [{ kind: 'note', note: 'Draft lives in the synthetic thread.' }] });
@@ -269,10 +269,10 @@ test('mismatched target sessions cannot take each other\'s work', async () => {
   await claudeRole(r);
   await r.apply(owner, 'rk.plan', { task_id: C, expected_plan_version: 0, seat: 'claude', session_ref: 'claude-code:pilot', review: 'none', decision: 'not_required', data_scope: 'none' });
   await r.refused(claude, 'rk.claim', { task_id: C, plan_version: 1, session_ref: 'claude-ai:other', lease_secret: secret(1) }, 403, 'session_mismatch');
-  const other = await rkWork(r.rk, r.pound, r.now, r.ctx, { key_label: 'primary', session_ref: 'claude-ai:other' });
+  const other = await rkWork(r.rk, r.pound, r.now, r.ctx, { key_label: 'Claude', session_ref: 'claude-ai:other' });
   assert.deepEqual(other.ready, []);
   assert.deepEqual(other.targeted_to_other_sessions.map(t => t.task_id), [C]);
-  const pilot = await rkWork(r.rk, r.pound, r.now, r.ctx, { key_label: 'primary', session_ref: 'claude-code:pilot' });
+  const pilot = await rkWork(r.rk, r.pound, r.now, r.ctx, { key_label: 'Claude', session_ref: 'claude-code:pilot' });
   assert.deepEqual(pilot.ready.map(t => t.task_id), [C]);
   const grokView = await rkWork(r.rk, r.pound, r.now, r.ctx, { key_label: 'Grok', session_ref: 'x' });
   assert.deepEqual(grokView.ready, [], 'another key never sees a seat it does not hold');
@@ -482,4 +482,14 @@ test('amendments reach the owner without silently undoing accepted work; stale e
   assert.equal(await r.lane(B), 'ready', 'accepted evidence still stands until the owner approves a new version');
   await r.apply(owner, 'rk.decide', { subject: 'plan', id: A, plan_version: 2, decision: 'reject' });
   assert.equal(await r.lane(A), 'done');
+});
+
+test('a seat never binds to the shared primary key', async () => {
+  const r = rig();
+  for (const label of ['primary', 'Primary', 'PRIMARY']) {
+    await r.refused(owner, 'rk.role.propose', { seat: 'claude', key_label: label, role: 'Shared key seat' }, 409, 'shared_primary_key_not_allowed');
+    await r.refused(grok, 'rk.role.propose', { seat: 'claude', key_label: label, role: 'Shared key seat' }, 409, 'shared_primary_key_not_allowed');
+  }
+  const role = await r.apply(owner, 'rk.role.propose', { seat: 'claude', key_label: 'Claude', role: 'Own key seat' });
+  await r.refused({ kind: 'owner_key', key_label: 'primary' }, 'rk.role.accept', { role_id: role.role_id }, 403, 'acceptance_must_come_from_the_seat_key');
 });
