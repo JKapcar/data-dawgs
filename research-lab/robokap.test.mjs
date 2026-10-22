@@ -14,7 +14,7 @@ vm.createContext(context);
 vm.runInContext(readFileSync('work/dawg-pound.js', 'utf8') + '\nthis.pound={empty:poundEmpty,view:poundView,write:poundWrite,validate:poundValidate,schema:POUND_SCHEMA,hash:poundHash,canonical:poundCanonical};', context);
 const pound = context.pound;
 const P = '/privatePounds/u_owner', L = '/researchLab/v1/tenants/test';
-const keys = { claude: { kind: 'user', uid: 'u_owner', keyLabel: 'primary' }, grok: { kind: 'user', uid: 'u_owner', keyLabel: 'Grok' }, gemini: { kind: 'user', uid: 'u_owner', keyLabel: 'Gemini' } };
+const keys = { claude: { kind: 'user', uid: 'u_owner', keyLabel: 'Claude' }, grok: { kind: 'user', uid: 'u_owner', keyLabel: 'Grok' }, gemini: { kind: 'user', uid: 'u_owner', keyLabel: 'Gemini' }, primary: { kind: 'user', uid: 'u_owner', keyLabel: 'primary' } };
 const LAB_H = '11111111-1111-4111-8111-111111111111';
 const secret = n => ('integration_secret_' + n).padEnd(30, 'z');
 
@@ -59,7 +59,7 @@ function rig({ robokapFlag = 'true' } = {}) {
 }
 const names = tools => tools.map(t => t.name);
 async function seat(f) {
-  const role = await f.owner('rk.role.propose', { seat: 'claude', key_label: 'primary', role: 'Synthetic coordinator' });
+  const role = await f.owner('rk.role.propose', { seat: 'claude', key_label: 'Claude', role: 'Synthetic coordinator' });
   assert.equal(role.status, 200, JSON.stringify(role.body));
   await f.write('claude', 'rk.role.accept', { role_id: role.body.result.role_id });
   const approved = await f.owner('rk.decide', { subject: 'role', id: role.body.result.role_id, decision: 'approve' });
@@ -145,7 +145,7 @@ test('compare-and-swap races retry from fresh state; lost responses replay; pers
   await f.enable('pound');
   await f.addTask('Synthetic task A');
   f.race(1);
-  const role = await f.owner('rk.role.propose', { seat: 'claude', key_label: 'primary', role: 'Race survivor' });
+  const role = await f.owner('rk.role.propose', { seat: 'claude', key_label: 'Claude', role: 'Race survivor' });
   assert.equal(role.status, 200);
   f.lose();
   const body = { op: 'rk.role.accept', request_id: 'lost_response_000001', data: { role_id: role.body.result.role_id } };
@@ -162,7 +162,7 @@ test('identity, grant expiry and owner-only operations stop commits', async () =
   const f = rig();
   await f.enable('pound');
   await f.addTask('Synthetic task A');
-  const role = await f.owner('rk.role.propose', { seat: 'claude', key_label: 'primary', role: 'Synthetic' });
+  const role = await f.owner('rk.role.propose', { seat: 'claude', key_label: 'Claude', role: 'Synthetic' });
   f.revoke();
   const robokapBefore = f.db.get(P).robokap;
   await assert.rejects(f.write('claude', 'rk.role.accept', { role_id: role.body.result.role_id }), /configured_owner_required|connector_identity_changed/);

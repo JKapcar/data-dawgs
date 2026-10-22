@@ -38,7 +38,7 @@
 <button type="submit">Pin version</button><p class="rk-help">A new pin supersedes the previous one for that project and kind; history is kept. The Worker can check RoboKap context hashes; Claude Doc revisions are recorded as your attestation.</p></form></details>
 <details id="rkRoleBox"><summary>Propose a seat role</summary><form id="rkRoleForm" class="rk-form" novalidate>
 <label>Seat<select name="seat"><option value="claude">Claude</option><option value="grok">Grok</option><option value="gemini">Gemini</option><option value="muse">Muse</option><option value="dot">Scout/dot</option></select></label>
-<label>Connector key label <small>as shown in your connector settings</small><input name="key_label" maxlength="24" autocomplete="off" required></label>
+<label>Connector key label <small>the seat's own key, never primary</small><input name="key_label" maxlength="24" autocomplete="off" required></label>
 <label>Role<input name="role" maxlength="60" autocomplete="off" required></label>
 <label>Scope <small>optional</small><input name="scope" maxlength="300" autocomplete="off"></label>
 <button type="submit">Propose role</button></form></details>

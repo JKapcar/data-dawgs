@@ -14,7 +14,7 @@ import { encodeEnvelope } from './exact-store.mjs';
 
 const require = createRequire(path.join(process.env.DD_NODE_MODULES, 'resolver.cjs'));
 const { Miniflare } = require('miniflare');
-const uid = 'u_owner', pepper = 'synthetic-pepper', primary = 'u_synthetic-primary', grokKey = 'u_synthetic-grok';
+const uid = 'u_owner', pepper = 'synthetic-pepper', primary = 'u_synthetic-primary', claudeKey = 'u_synthetic-claude', grokKey = 'u_synthetic-grok';
 const A = 'p_00000000-0000-4000-8000-00000000000a', B = 'p_00000000-0000-4000-8000-00000000000b';
 const mac = text => createHmac('sha256', pepper).update(text).digest('base64url');
 const session = () => { const payload = Buffer.from(JSON.stringify({ u: uid, n: 'Synthetic Owner', i: Date.now(), e: Date.now() + 86400000, p: 0 })).toString('base64url'); return payload + '.' + mac(payload); };
@@ -27,7 +27,7 @@ async function boot({ flag = 'true' } = {}) {
   const db = new Map([
     ['/privatePounds/' + uid, { owner_uid: uid, payload: JSON.stringify({ revision: 2, updated_at: null, agents: [], tasks: [task(A, 'Synthetic A'), task(B, 'Synthetic B')], messages: [], contexts: [], activity: [], receipts: [] }), ownerConnector: grant }],
     ['/researchLab/v1/tenants/test', encodeEnvelope({ version: 1, access: { users: { [uid]: { owner: true, enabled: true, capabilities: ['research:read'] } } }, state: initialState(), inputs: {} })],
-    ['/users', { [uid]: { name: 'Synthetic Owner', passwordSetAt: 0, mcpToken: mac('mcp|' + primary), mcpTokens: { Grok: { hash: mac('mcp|' + grokKey) } } } }],
+    ['/users', { [uid]: { name: 'Synthetic Owner', passwordSetAt: 0, mcpToken: mac('mcp|' + primary), mcpTokens: { Claude: { hash: mac('mcp|' + claudeKey) }, Grok: { hash: mac('mcp|' + grokKey) } } } }],
     ['/users/' + uid, { name: 'Synthetic Owner', passwordSetAt: 0 }],
   ]);
   const versions = new Map(), writes = [];
@@ -49,17 +49,17 @@ async function boot({ flag = 'true' } = {}) {
     },
   });
   let n = 0;
-  const rpc = async (method, params = {}, credential = primary) => {
+  const rpc = async (method, params = {}, credential = claudeKey) => {
     const res = await mf.dispatchFetch('https://test/mcp/full/' + credential, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: ++n, method, params }) });
     return res.json();
   };
-  const tool = async (name, args, credential = primary) => {
+  const tool = async (name, args, credential = claudeKey) => {
     const out = await rpc('tools/call', { name, arguments: args }, credential);
     const text = out.result.content[0].text;
     if (out.result.isError) throw new Error(text);
     return JSON.parse(text);
   };
-  const write = (op, data, credential = primary) => tool('dd_owner_robokap_write', { op, request_id: 'pkg_' + op.replace(/\./g, '_') + '_' + String(++n).padStart(8, '0'), data }, credential);
+  const write = (op, data, credential = claudeKey) => tool('dd_owner_robokap_write', { op, request_id: 'pkg_' + op.replace(/\./g, '_') + '_' + String(++n).padStart(8, '0'), data }, credential);
   const owner = async (body, { auth = session(), method } = {}) => {
     const res = await mf.dispatchFetch('https://test/robokap/v1', { method: method || (body ? 'POST' : 'GET'), headers: { ...(auth ? { Authorization: 'Bearer ' + auth } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
     return { status: res.status, cache: res.headers.get('cache-control'), body: await res.json() };
@@ -93,9 +93,13 @@ test('packaged Worker: one complete RoboKap workflow over MCP and the signed own
     assert.equal(empty.status, 200);
     assert.match(empty.cache, /private, no-store/);
     assert.deepEqual(empty.body.board.unplanned.map(c => c.task_id).sort(), [A, B]);
-    const role = await w.ownerOp('rk.role.propose', { seat: 'claude', key_label: 'primary', role: 'Synthetic coordinator' });
+    const shared = await w.ownerOp('rk.role.propose', { seat: 'claude', key_label: 'primary', role: 'Shared key seat' });
+    assert.equal(shared.status, 409);
+    assert.equal(shared.body.error, 'shared_primary_key_not_allowed');
+    const role = await w.ownerOp('rk.role.propose', { seat: 'claude', key_label: 'Claude', role: 'Synthetic coordinator' });
     assert.equal(role.status, 200, JSON.stringify(role.body));
     await assert.rejects(w.write('rk.role.accept', { role_id: role.body.result.role_id }, grokKey), /acceptance_must_come_from_the_seat_key/);
+    await assert.rejects(w.write('rk.role.accept', { role_id: role.body.result.role_id }, primary), /acceptance_must_come_from_the_seat_key/);
     await w.write('rk.role.accept', { role_id: role.body.result.role_id });
     assert.equal((await w.decide({ subject: 'role', id: role.body.result.role_id, decision: 'approve' })).status, 200);
     assert.equal((await w.ownerOp('rk.plan', { task_id: A, expected_plan_version: 0, seat: 'claude', review: 'advisory', decision: 'required', data_scope: 'synthetic' })).status, 200);

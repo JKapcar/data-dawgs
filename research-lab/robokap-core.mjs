@@ -587,6 +587,9 @@ const OPS = {
     only(data, ['seat', 'key_label', 'role', 'scope'], ['seat', 'key_label', 'role']);
     check(RK_AGENT_SEATS.includes(data.seat), 400, 'invalid_seat');
     check(RX.key.test(data.key_label), 400, 'invalid_key_label');
+    // The primary key is shared by every client that holds it, so it cannot tell one session
+    // or assistant from another. A seat needs its own key.
+    check(data.key_label.toLowerCase() !== 'primary', 409, 'shared_primary_key_not_allowed', 'A seat needs its own connector key; the primary key is shared by every client that holds it.');
     check(text(data.role, 60) && (data.scope === undefined || text(data.scope, 300)), 400, 'invalid_role');
     const live = rk.roles.filter(r => r.seat === data.seat && liveRole(r));
     check(live.every(r => r.key_label === data.key_label), 409, 'seat_key_conflict', 'One connector key serves one seat. Revoke or reject the other role first.');

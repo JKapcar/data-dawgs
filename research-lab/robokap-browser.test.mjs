@@ -22,7 +22,7 @@ const robokap = createRoboKap({
   fbPut: async (e, p, data, etag) => { if (etag !== String(etags.get(p) || 0)) return false; db.set(p, structuredClone(data)); etags.set(p, (etags.get(p) || 0) + 1); return true; },
   ownerIdentity: async req => { const auth = req.headers.get('Authorization'); if (auth !== 'Bearer synthetic-session') throw Object.assign(new Error('Sign in again'), { poundStatus: 401 }); return 'u_owner'; },
 });
-const claude = (name, args) => robokap.connector(name, args, env, { uid: 'u_owner', keyLabel: 'primary' }, async () => {});
+const claude = (name, args) => robokap.connector(name, args, env, { uid: 'u_owner', keyLabel: 'Claude' }, async () => {});
 let rq = 0;
 const claudeWrite = (op, data) => claude('dd_owner_robokap_write', { op, request_id: 'browser_claude_' + String(++rq).padStart(6, '0'), data });
 const STATIC = new Map([
@@ -63,7 +63,7 @@ try {
   assert.match(await page.locator('#rkUnplanned').innerText(), /Reported working · owner connector reported · Reported working; no execution receipt/);
   // Propose Claude's role from the form; Claude accepts with its own key; you approve on the board.
   await page.locator('#rkRoleBox summary').click();
-  await page.locator('#rkRoleForm [name=key_label]').fill('primary');
+  await page.locator('#rkRoleForm [name=key_label]').fill('Claude');
   await page.locator('#rkRoleForm [name=role]').fill('Synthetic coordinator');
   await page.locator('#rkRoleForm button[type=submit]').click();
   await page.getByText('Propose role: saved', { exact: false }).waitFor();
