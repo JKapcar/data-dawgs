@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-21",
+ "as_of": "2026-10-22",
  "source": "Data Dawgs public Bozo Menu (Worker /bozo/menu.json) graded against Worker /scores finals and DraftKings near-closes (SportsGameOdds).",
  "tier": "labs",
  "graded": true,
@@ -17,22 +17,22 @@
    "close": "clv_points and close MAE are measured against the DraftKings near-close"
   },
   "menu": {
-   "n_graded": 62,
-   "wins": 37,
+   "n_graded": 64,
+   "wins": 39,
    "losses": 25,
    "pushes": 1,
-   "hit_rate": 0.5968,
+   "hit_rate": 0.6094,
    "hit_wilson90": [
-    0.4923,
-    0.6931
+    0.5066,
+    0.7033
    ],
    "clv_points": {
-    "n": 45,
-    "mean": 0.511
+    "n": 46,
+    "mean": 0.533
    },
    "close_fair_prob_at_line": {
-    "n": 35,
-    "mean": 0.5464
+    "n": 36,
+    "mean": 0.5477
    },
    "verdict": "rankable"
   },
@@ -160,21 +160,24 @@
   ],
   "edge_buckets": {
    "none": {
-    "n_graded": 0,
-    "wins": 0,
+    "n_graded": 2,
+    "wins": 2,
     "losses": 0,
     "pushes": 0,
-    "hit_rate": null,
-    "hit_wilson90": null,
+    "hit_rate": 1,
+    "hit_wilson90": [
+     0.425,
+     1
+    ],
     "clv_points": {
-     "n": 0,
-     "mean": null
+     "n": 1,
+     "mean": 1.5
     },
     "close_fair_prob_at_line": {
-     "n": 0,
-     "mean": null
+     "n": 1,
+     "mean": 0.5934
     },
-    "verdict": "insufficient (n=0 < 30)"
+    "verdict": "insufficient (n=2 < 30)"
    },
    "percentage_points: 3-5": {
     "n_graded": 1,
@@ -299,6 +302,6 @@
   }
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-21T18:04:32.859Z",
+ "built": "2026-10-22T11:57:24.834Z",
  "canonical_url": "https://datadawgs216.com/data/bozo-menu-scorecard.json"
 }

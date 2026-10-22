@@ -17,17 +17,17 @@
    {
     "path": "/data/bozo-menu-ledger.json",
     "url": "https://datadawgs216.com/data/bozo-menu-ledger.json",
-    "bytes": 377542,
-    "as_of": "2026-10-21",
-    "sha256": "b428151c8a9809beb903aa5e61cf42d6497434444696542790a7daf29fbe6760",
+    "bytes": 378069,
+    "as_of": "2026-10-22",
+    "sha256": "2cf4800cfbc6a94332681dcd5df203282ae8db7f9ddc384c21dacf2e4d2cf199",
     "note": "One row per published candidate per week, graded at its published line only. Results are pending until a final exists; a push is a push. Closes are NEAR-CLOSE (SportsGameOdds free tier, about 10 minutes behind DraftKings). Entry probability CLV stays null because the menu saves one entry side; no juice is assumed. Simulation-free; not a recommendation."
    },
    {
     "path": "/data/bozo-menu-scorecard.json",
     "url": "https://datadawgs216.com/data/bozo-menu-scorecard.json",
-    "bytes": 5907,
-    "as_of": "2026-10-21",
-    "sha256": "c2b4161ef19aa7e8f049927d09a2279931f66e829ff07864fe379d4d075409f7",
+    "bytes": 5927,
+    "as_of": "2026-10-22",
+    "sha256": "8584790683e21664b1e39d08e4bd4d63159ce301d1b667b8f10df863dd072de5",
     "note": "Source scorecard for the Bozo Menu. Every number carries its n; nothing is ranked below 30 graded rows. Benchmarks: 50% at the line, 52.38% break-even at -110, and the near-close."
    },
    {
@@ -201,9 +201,9 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 166028,
-    "as_of": "2026-10-21",
-    "sha256": "c5fb65ad5530a26a6486bdaf28baeb128e6a7f250f56c2686dc6d240e9b4d050",
+    "bytes": 166027,
+    "as_of": "2026-10-22",
+    "sha256": "5aacc3500d265f0e2718d78888be1f317e95a96c43123c4308162d4fc09925e7",
     "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 93/272 regular-season games are settled and banked in wins_tracker; 179 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    },
    {
@@ -218,16 +218,16 @@
     "path": "/data/epa-players.json",
     "url": "https://datadawgs216.com/data/epa-players.json",
     "bytes": 191840,
-    "as_of": "2026-10-21",
-    "sha256": "6d640346e4b6df098199592a361af5e74b18e4e36b162fec14433af46d2af47a",
+    "as_of": "2026-10-22",
+    "sha256": "4b019b3532aee40fa8afd1139f472f2e1c9c45eddf53959dda533ce3ee546998",
     "note": "Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name per play, so the whole value of a completed pass is credited to the quarterback and a receiver appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, not projections: do not read 2025 as 2026. 2026 is Weeks 1-6 ONLY (93 games): incomplete-season coverage, with the season minimums prorated to 52 dropbacks / 26 rushes. The pooled table spans every season in the snapshot, including the partial one."
    },
    {
     "path": "/data/epa-teams.json",
     "url": "https://datadawgs216.com/data/epa-teams.json",
     "bytes": 110482,
-    "as_of": "2026-10-21",
-    "sha256": "7c28c2ad4e30b9327bcf82018cd81524040697a4cacad5e52f5f0c8a19af4af8",
+    "as_of": "2026-10-22",
+    "sha256": "8ad9f5652c1059c5710e4b4522ed5034d7a0dbefcd8d6005416c185ea88144bc",
     "note": "Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback minimum for QBs; the pooled table uses 500. 2026 covers Weeks 1-6 ONLY (93 games) — a small sample sensitive to opponent and game script; its QB minimum is the 200 bar prorated to 69 dropbacks. The pooled table spans every season in the snapshot, including the partial one. These are descriptive aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026, and do not interpret an incomplete season as a complete season. Dropback EPA counts every dropback including scrambles and penalty-nullified plays and uses play epa, not qb_epa; Rush EPA excludes scrambles and kneels. These will not match nflverse passing_epa / rushing_epa."
    },
    {
@@ -257,8 +257,8 @@
     "path": "/data/fourth-down-rates.json",
     "url": "https://datadawgs216.com/data/fourth-down-rates.json",
     "bytes": 34089,
-    "as_of": "2026-10-21",
-    "sha256": "bcd5cbea33a6962832440c6932300f75f089ee53602d62a40e57d16ccfc33ffa",
+    "as_of": "2026-10-22",
+    "sha256": "599adeaa89d24a1383bc17673b5e1c6bd2cf6315377370eef9c62bfb11cab1fd",
     "note": "Observed comparable team rates. Fourth-down distance + field zone; field goals by 10-yard distance band + open/closed roof. Not a matchup forecast or calibration of nfl4th."
    },
    {
@@ -266,7 +266,7 @@
     "url": "https://datadawgs216.com/data/fourth-down.json",
     "bytes": 2489,
     "as_of": "2026-10-22",
-    "sha256": "0f078b9e17ee0041ba8faaeb5340acccaf99b491d30f53563cbdae79da806bc0",
+    "sha256": "6f1b183a84c7726793970876f6a88eeaf14e11c62892201e990c07630e272e0b",
     "note": "Delayed game-decision snapshot. Check per-game capture time and refresh_error. No overtime recommendations. Pregame lines, not live betting prices."
    },
    {
