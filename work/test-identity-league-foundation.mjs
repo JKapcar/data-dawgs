@@ -215,6 +215,10 @@ equal((await mcpCall({}, "/mcp/full/" + grok.json.token)).status, 403, "removed 
 equal((await mcpCall({ Authorization: "Bearer " + museAgain.json.token })).status, 200, "other keys keep working");
 for (const label of ["", "a b", "x".repeat(25), "../users", "a.b", "a$b"])
   equal((await call("/auth/mcp-token", { body: { action: "add", label }, session: sess })).response.status, 400, "bad label " + JSON.stringify(label));
+for (const label of ["primary", "Primary", "PRIMARY"]) {
+  equal((await call("/auth/mcp-token", { body: { action: "add", label }, session: sess })).response.status, 400, "the primary label is reserved: " + label);
+  check(!Object.keys(db.users[first.json.uid].mcpTokens || {}).some(k => k.toLowerCase() === "primary"), "no added key is stored as primary");
+}
 for (let i = 0; i < 7; i++) await call("/auth/mcp-token", { body: { action: "add", label: "k" + i }, session: sess });
 equal((await call("/auth/mcp-token", { body: { action: "add", label: "ninth" }, session: sess })).response.status, 409, "at most 8 per-AI keys");
 equal((await call("/auth/mcp-token", { body: { action: "add", label: "Muse" }, session: sess })).response.status, 200, "an existing label can still be replaced at the cap");

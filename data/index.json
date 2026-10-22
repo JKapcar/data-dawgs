@@ -201,9 +201,9 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 166027,
+    "bytes": 166057,
     "as_of": "2026-10-22",
-    "sha256": "5aacc3500d265f0e2718d78888be1f317e95a96c43123c4308162d4fc09925e7",
+    "sha256": "95501dbaa26f75e9cd35428c7e44a98b30818c9fb6481a439c978a52255bd5d3",
     "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 93/272 regular-season games are settled and banked in wins_tracker; 179 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    },
    {
@@ -266,15 +266,15 @@
     "url": "https://datadawgs216.com/data/fourth-down.json",
     "bytes": 2489,
     "as_of": "2026-10-22",
-    "sha256": "6f1b183a84c7726793970876f6a88eeaf14e11c62892201e990c07630e272e0b",
+    "sha256": "535648bc7b43b2314e4833eb35e96d21335e930c37b99643b93456949ef66b9c",
     "note": "Delayed game-decision snapshot. Check per-game capture time and refresh_error. No overtime recommendations. Pregame lines, not live betting prices."
    },
    {
     "path": "/data/guillotine-calibration.json",
     "url": "https://datadawgs216.com/data/guillotine-calibration.json",
     "bytes": 6597,
-    "as_of": "2026-10-21",
-    "sha256": "66700a2f7e6254fe6dae7b6088b178d345d31c4f640ebd2d84b1b034daa72f97",
+    "as_of": "2026-10-22",
+    "sha256": "d551c18213fa645d0e68ba551d002713279d3306d19ce6c64076ba0c97dd3ff3",
     "note": "Historical Sleeper projections can be revised after games. These are descriptive uncertainty estimates, not out-of-sample calibration. Correlation between opposing NFL teams and negative teammate correlations are not modeled."
    },
    {
@@ -288,17 +288,17 @@
    {
     "path": "/data/guillotine-receipts.json",
     "url": "https://datadawgs216.com/data/guillotine-receipts.json",
-    "bytes": 73648,
-    "as_of": "2026-10-21",
-    "sha256": "863c2728dfa731e1b00b95e0f47b58dfb1766a9b7a7dd5548650b3ad85a04c6a",
+    "bytes": 81552,
+    "as_of": "2026-10-22",
+    "sha256": "ffccae01a244e472744f7dd78a196567a2930c94e7359bc2c2d26bd86902bf2f",
     "note": "Prospective pregame forecasts. Roster IDs only; no ownership identities or player rosters. Multiclass Brier is the sum of squared chop-probability errors; lower is better. Repeated full ties await resolution."
    },
    {
     "path": "/data/guillotine-weekly.json",
     "url": "https://datadawgs216.com/data/guillotine-weekly.json",
-    "bytes": 625059,
-    "as_of": "2026-10-21",
-    "sha256": "c1b7023eebe554cba5429b198c35ba9bbd3e879e944c141ffa0f4a59399e8da9",
+    "bytes": 625142,
+    "as_of": "2026-10-22",
+    "sha256": "2c9c4e45f8b74aee6572c5c452a1ab85f99f564f98450f4eb4764d0150bc4062",
     "note": "Daily snapshot. Player timestamps are source update times. Projections are not live scores. Historical uncertainty is descriptive, not prospectively validated."
    },
    {
@@ -337,16 +337,16 @@
     "path": "/data/models.json",
     "url": "https://datadawgs216.com/data/models.json",
     "bytes": 3267,
-    "as_of": "2026-10-21",
-    "sha256": "066251a57a78e7e692ce044d2f4cbce3009d90edae14db3e3d074b7fd1d3b12e",
+    "as_of": "2026-10-22",
+    "sha256": "e27a5c730d5ed2166110e51ec7a6eccc1606cac866e68aafc9bef3e35bd193b8",
     "note": "Survivor uses nfelo published probabilities or nfelo-season-v1, not the legacy margin model below. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
     "path": "/data/nfelo.json",
     "url": "https://datadawgs216.com/data/nfelo.json",
-    "bytes": 144555,
-    "as_of": "2026-10-21",
-    "sha256": "271f3b01cf811083c431b58390e556ed78a68354b4a8d0df0478724d9726827e",
+    "bytes": 144549,
+    "as_of": "2026-10-22",
+    "sha256": "8d24a109a77c042aedc4d6f148a5a3080fadafae91ea291d9af4cca7e59723a4",
     "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp)."
    },
    {
@@ -432,17 +432,17 @@
    {
     "path": "/data/survivor-receipts.json",
     "url": "https://datadawgs216.com/data/survivor-receipts.json",
-    "bytes": 11480,
-    "as_of": "2026-10-18",
-    "sha256": "41100c27cfc8cbc6b8f1cb67814a4f78754b750d5d003c37f5913832df67ea4f",
+    "bytes": 12923,
+    "as_of": "2026-10-22",
+    "sha256": "71308d2aeb7196b6f156af98aa2b1cebf11bc28741c01bed792688c21cc8c222",
     "note": "PROSPECTIVE RECEIPTS. Every row was written before the week it forecasts kicked off — captured_at < kickoff_at is enforced at capture, not flagged afterwards, and a row is never edited once written. What is graded is CALIBRATION of the stated win probabilities (Brier) and whether the pick survived. This is NOT a claim that the tool beats a pool: whether an entry would have won depends on the rest of the field, which is not ours to score. `n` is small and stays small — 18 weeks is at most 18 scored predictions per entry — so read every figure next to its n and do not draw a calibration curve on a season."
    },
    {
     "path": "/data/survivor.json",
     "url": "https://datadawgs216.com/data/survivor.json",
-    "bytes": 116586,
-    "as_of": "2026-10-21",
-    "sha256": "769795fdc45949c6231b349cd2b1114772fb9e5f278d47013c3c49dc0f195b4a",
+    "bytes": 116585,
+    "as_of": "2026-10-22",
+    "sha256": "7479146355deef09adfa4a15e19db05824c241f5da0b38ae7e5970d6342ca052",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"nfelo\" = published nfelo forecast without an extra blend; \"nfelo-season\" = nfelo pre-market calculation with current team/QB strength and game-specific HFA. Ownership is modelled, not observed."
    },
    {
