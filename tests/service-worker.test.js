@@ -33,6 +33,17 @@ function harness(){
   return {entries,stores,calls,timers,cache,key,dispatch,listeners,context,
     setNet:fn=>net=fn,deny:()=>denied=true};
 }
+
+test('HTML delivery does not wait for cache writes, whose lifetime remains protected',async()=>{
+  const h=harness();let finish;const pending=new Promise(r=>finish=r);
+  h.cache.put=()=>pending;
+  let response;const lifetime=[];
+  h.listeners.fetch({request:new Request(origin+'/bozo.html',{headers:{accept:'text/html'}}),respondWith:p=>response=p,waitUntil:p=>lifetime.push(p)});
+  assert.equal((await response).status,200);
+  let done=false;const saved=Promise.all(lifetime).then(()=>done=true);
+  await Promise.resolve();assert.equal(done,false);
+  finish();await saved;assert.equal(done,true);
+});
 test('unknown providers, APIs, data, private objects, and non-GET requests bypass all service-worker storage',async()=>{
   const h=harness();
   for(const url of ['/data/index.json','/llms.txt','/api/profile','/api/private.js','/uploads/receipt.png',
