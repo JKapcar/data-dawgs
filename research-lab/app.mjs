@@ -2,6 +2,7 @@ import {workflowGraph,renderWorkflow} from './workflow.mjs';
 import config from './client-config.mjs';
 import {createClient} from './client.mjs';
 import {createCoordinator,taskState} from './coordinator.mjs';
+import {createContinuation,SHARED_CONTINUATION_BLOCKED} from './continuation.mjs';
 const client=createClient(config,{onInvalidated:clearVisibleState,onVerified:t=>globalThis.DDAccount?.verified(t),onRejected:s=>globalThis.DDAccount?.failed(s)});
 const coordinator=createCoordinator(client);
 import {validateTracking,summarize} from './tracking.mjs';
@@ -15,8 +16,21 @@ const tabs=[...document.querySelectorAll('[role=tab]')];
 function activateTab(tab,focus=false){stop();if(tab.id==='tab-real')loadRealData();if(tab.id==='tab-inspector')$('#panel-inspector').append($('#inspector'));else if(tab.id==='tab-research')$('#instruments').prepend($('#inspector'));for(const t of tabs){const active=t===tab;t.setAttribute('aria-selected',String(active));t.tabIndex=active?0:-1;document.getElementById(t.getAttribute('aria-controls')).hidden=!active;}if(focus)tab.focus();render();}
 for(const tab of tabs){tab.onclick=()=>activateTab(tab);tab.onkeydown=e=>{const i=tabs.indexOf(tab),next=e.key==='Home'?0:e.key==='End'?tabs.length-1:e.key==='ArrowRight'?(i+1)%tabs.length:e.key==='ArrowLeft'?(i+tabs.length-1)%tabs.length:null;if(next!==null){e.preventDefault();activateTab(tabs[next],true);}};}
 const notice=(message,error=false)=>{$('#notice').textContent=message;$('#notice').classList.toggle('error',error);};
-const command=(type,payload)=>client.command(type,payload);
+const command=(type,payload)=>{if(continuing)throw Error('Stop continuation before changing research records');return client.command(type,payload);};
 const action=(label,fn)=>{const b=el('button',label);b.onclick=async()=>{try{const pending=fn();if(pending&&typeof pending.then==='function'){b.disabled=true;await pending;}}catch(e){notice(e.message,true);}finally{b.disabled=false;}};return b;};
+let continuing=false,manualRunning=false;
+const continuationStatus=el('p',client.mode==='browser'?'Session-bound, not 24/7. Isolated demo only. Approve exact tasks below, then start. Maximum 3 audits / 30 seconds.':'Session-bound, not 24/7. '+SHARED_CONTINUATION_BLOCKED);
+continuationStatus.setAttribute('role','status');
+const continuation=createContinuation(client,{onStatus:s=>{continuing=s.active;continuationStatus.textContent=s.label+' — '+s.reason+' — '+s.count+' verified runs. Stop prevents the next command; an already submitted command may finish.';}});
+const continuationStart=action('Start approved tasks',async()=>{if(manualRunning)throw Error('Wait for the manual attempt to reconcile');await continuation.start();await refresh();});
+continuationStart.disabled=client.mode!=='browser';
+const continuationPanel=el('section');continuationPanel.setAttribute('aria-label','Foreground synthetic continuation');
+continuationPanel.append(el('h3','Continue approved synthetic audits'),continuationStatus,
+  continuationStart,
+  action('Stop continuation',()=>continuation.stop()));
+$('#tasks').before(continuationPanel);
+addEventListener('pagehide',()=>continuation.stop('Page closed'));
+document.addEventListener('visibilitychange',()=>{if(document.hidden)continuation.stop('Page hidden');});
 function drawer(title,build) {stop();const wasOpen=$('#drawer').open;if(!wasOpen)returnFocus=document.activeElement?.id==='methods'?$('.dd-apps > summary'):document.activeElement;const content=$('#drawer-content');content.replaceChildren(el('h2',title));build(content);if(!wasOpen)$('#drawer').showModal();else $('#drawer').querySelector('button,input,textarea')?.focus();}
 $('#drawer').addEventListener('close',()=>{const target=returnFocus?.getClientRects().length?returnFocus:$('.dd-apps > summary');target?.focus();});
 function form(container,fields,submitLabel,submit) {
@@ -84,10 +98,14 @@ async function refresh() {
   $('#tasks').replaceChildren(...state.tasks.map(t=>{const n=el('article',undefined,'task'),d=el('div'),status=t.executionState;n.dataset.status=status;
     d.append(el('strong',state.hypotheses.find(h=>h.id===t.hypothesisId)?.revisions[t.hypothesisVersion-1]?.title||t.hypothesisId),el('small',`${status}${coordinator.attemptState(t.id)?' · attempt: '+coordinator.attemptState(t.id):''} · reported: ${t.status} · discovery · ${t.budgetMs}ms / ${t.maxObservations} observations · requires experiment:run`));n.append(d);
     if(['queued','expired','owned'].includes(status))n.append(action(coordinator.pending(t.id)?'Reconcile pending attempt':status==='owned'?'Resume owned lease':client.mode==='hosted'?'Claim & run shared audit':client.mode==='browser'?'Run synthetic demo':'Claim & run locally',async()=>{
+      if(continuing)throw Error('Stop continuation before a manual run');
       notice('Pending canonical claim / receipt verification. No completed work yet.');
+      manualRunning=true;
       try{const result=await coordinator.run(t.id,tracking);notice(result.status==='failed'?`Audit failed: ${result.receipt.error}`:`Receipt recorded: ${result.receipt.outcome}. Verified synthetic discovery receipt; no hypothesis verdict.`,result.status==='failed');}
-      finally{await refresh();}
-    }));return n;}));
+      finally{manualRunning=false;await refresh();}
+    }));
+    if(client.mode==='browser'&&t.dataCheckId&&['queued','expired','owned'].includes(status))n.append(action('Approve exact task for this session',()=>continuation.approve(t.id,tracking)));
+    return n;}));
   $('#receipts').replaceChildren(...state.receipts.map(r=>{const d=el('details'),s=el('summary');s.append(...(r.synthetic?[el('span','SYNTHETIC','tag synthetic-badge'),' ']:[]),`${state.verifiedReceiptIds.includes(r.id)?'VERIFIED RECEIPT':'UNVERIFIED / HISTORICAL RECORD'} · ${r.outcome.toUpperCase()}${r.reason?' ('+r.reason+')':''} · ${r.at} · ${r.id.slice(0,8)}`);d.append(s,el('pre',JSON.stringify(r,null,2)));return d;}));
   $('#evidence').replaceChildren(...state.evidence.map(e=>{const n=el('article'),a=el('a',e.title);a.href=e.url;a.target='_blank';a.rel='noopener noreferrer';n.append(a,el('p',e.excerpt),el('span',e.assessment+' · '+who(e),'meta'));return n;}));
   if(!state.evidence.length)$('#evidence').append(el('p','No cited evidence yet. Add a source and excerpt; claims remain unverified.'));
@@ -144,5 +162,5 @@ async function loadRealData(){
   for(const f of summary.files){const tr=el('tr');for(const v of [f.file,f.bytes?.toLocaleString?.()??f.bytes,f.rows?.toLocaleString?.()??f.rows,f.columns,f.key_unique===undefined?'—':String(f.key_unique),f.max_null_share===undefined?'—':String(f.max_null_share),f.sha256?f.sha256.slice(0,12)+'…':'—'])tr.append(el('td',v===undefined||v===null?'—':String(v)));table.append(tr);}
   box.replaceChildren(head,table,el('p','Counts and shapes only. Not a finding, not a fitted baseline, and not evidence for any hypothesis.','meta'));
 }
-function clearVisibleState(){renderEpoch++;coordinator.clear();globalThis.DDAccount?.reset();state=null;stop();$('.machine-status').dataset.ready='false';for(const id of ['hypothesis-grid','tasks','receipts','evidence','audit'])$('#'+id).replaceChildren();if($('#real-data')){$('#real-data').replaceChildren();realData=false;}$('#receipt-count').textContent='State cleared';$('#drawer').close();$('#drawer-content').replaceChildren();notice('Identity changed. Reload to verify research access.',true);}
+function clearVisibleState(){continuation.clear();renderEpoch++;coordinator.clear();globalThis.DDAccount?.reset();state=null;stop();$('.machine-status').dataset.ready='false';for(const id of ['hypothesis-grid','tasks','receipts','evidence','audit'])$('#'+id).replaceChildren();if($('#real-data')){$('#real-data').replaceChildren();realData=false;}$('#receipt-count').textContent='State cleared';$('#drawer').close();$('#drawer-content').replaceChildren();notice('Identity changed. Reload to verify research access.',true);}
 window.addEventListener('storage',e=>{if(e.key==='dd-bozo-sess'||e.key===null)client.invalidate();});
