@@ -7,7 +7,10 @@ Isolated branch: `codex/bdb-session-continuation`. Original base was PR327 commi
 were copied before further work. PR327 was verified merged, and only this isolated
 branch was rebased onto its merge commit `1dd7e86623b46887840bc0e3fb5e4c2836fb0783`.
 The earlier continuation/asset correction is commit `54ff003`; the server identity
-constraint is a separate follow-up commit. PR327's branch was never modified.
+constraint is separate commit `e0ff27e`. Merge commit `7823bef` reconciles current main
+`bf915f1433a1a15b14f1339864d9c7229b012fe2` including Bozo PR328. Its delayed-receipt
+test, exact presentation-asset routing and service-worker behavior are preserved.
+Neither upstream branch was modified.
 
 This is a usable, tested implementation for an updated synthetic gateway, **not an
 active production runner**. No push, deployment, grant, credential, flag, schedule,
@@ -149,3 +152,50 @@ not repurpose owner sessions, GH_DISPATCH_TOKEN, repairOwnerEnvelope, sports/bac
 cron or PR CI. New adapters, arbitrary code, real development data, external AI and
 holdout require their own execution/data authority and review. No such expansion,
 background service or scheduler is included, and no activation has occurred.
+
+
+## Worker versus Pages release order and live prerequisites
+
+This PR is **not covered by PR327's static-only release clearance**. It changes the
+research server state machine. The PR does not alter `dawg-bot-worker.js`, live
+settings or `wrangler.jsonc`; `build-worker.mjs` produces the isolated integrated
+Worker candidate. The existing generic worker-deploy workflow uploads its configured
+entrypoint and must not be assumed to publish that generated research candidate.
+The release owner must verify the reviewed artifact/entrypoint and complete existing
+manifest/bindings before using a separately approved Worker release procedure.
+
+Required sequence after independent review and exact-head CI:
+
+1. Pin the approved commit and build/hash the full integrated Worker artifact.
+   Check that existing bindings, routes, compatibility settings, secrets references
+   and access settings are preserved. Do not use a partial manifest or silently
+   enable an unset research flag. Upload/validate the Worker candidate through the
+   approved procedure before traffic promotion; these are deployment actions and
+   were not performed by this PR preparation.
+2. Deploy/promote the approved Worker first, then use the owner's existing signed
+   session for read-only `GET /research/v1/tenants/jason-bdb/state`. Confirm 200,
+   canonical tenant/actor/kind, exact `executionPolicy:tenant-cas-experiment-v1`,
+   and the expected candidate `codeHash`. Confirm the complete canonical response
+   and existing CAS-backed store are healthy; missing policy or a stale hash blocks
+   continuation. Do not expose/copy the session credential into logs or artifacts.
+3. Publish the reviewed Pages/client assets with the recomputed SW cache version.
+   Main merges publish the static site, so coordinate merge timing with the Worker
+   rollout. A client arriving before the Worker stays fail-closed; do not treat
+   that safe fallback as a successful feature release. Verify fresh and SW-controlled
+   loads show the expected policy and truthful foreground status.
+4. Only after separate execution authorization, validate one explicitly approved,
+   current-code synthetic task end-to-end and reconcile its receipt. A changed
+   Worker hash requires a new current synthetic data check/task; do not auto-create
+   or auto-approve them. Stop on permission errors or uncertainty. Rollback must
+   restore the reviewed Worker/static versions without modifying grants or data.
+
+Read-only live prerequisites still to verify (not performed here): correct existing
+research tenant/configuration and enabled endpoint; an existing authenticated user
+session; existing `research:read`, `task:claim` and `experiment:run` capabilities;
+existing `discussion:write` / `task:write` only if the owner explicitly creates a
+check/task; and existing signedOwner authority for an explicit rerun. The state API
+need not expose grant details, so use authorized release-side inspection of the
+existing grant if scope verification is required. A 401/403/503 is a blocker, not
+permission to repair envelopes, enable flags or expand access. Confirm no foreign
+active lease or unresolved relevant receipt, the correct synthetic discovery input,
+current hypothesis version and bounded budgets. No real data or holdout is needed.
