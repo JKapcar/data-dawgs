@@ -1973,6 +1973,13 @@ async function mcpAuth(request, url, env) {
     if (!hit) return null;
     const display = hitUser && typeof hitUser.name === "string" && hitUser.name.trim()
       ? hitUser.name.trim() : hit;
+    // ⚠️ PACK SEAT KEYS ARE NOT THE OWNER. A configured owner's key labelled pack-… is a
+    // seat-only credential: it never becomes a "user" principal, so owner apps, the research
+    // gateway and every league tool refuse it; mcpDispatch serves it dd_pack_* only. Decided by
+    // the label, not by DISCORD_PACK_SEATS, so removing a seat can never widen its key.
+    // Inline on purpose (gateway-fixture extracts mcpAuth without helpers).
+    if (/^pack-/i.test(keyLabel) && hit === env.RESEARCH_OWNER_UID)
+      return { kind: "pack_seat", name: display, uid: hit, transport, keyLabel };
     return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser), transport, keyLabel,
       // ⚠️ The account's role flags, read here so isSiteAdmin() has one shape to check.
       // Never derived from anything the caller sent.
@@ -2081,7 +2088,9 @@ async function handleMcp(request, url, env) {
       const { catalog } = mcpRoute(url, request);
       return new Response(JSON.stringify({ ok: true, valid: true, kind: who.kind,
         player: who.kind === "user" ? who.name : null, catalog, tools: mcpCatalogTools(catalog).length,
-        note: who.kind === "user"
+        note: who.kind === "pack_seat"
+          ? "Pack seat key " + who.keyLabel + " for " + who.name + ": only dd_pack_* tools, no league or private data."
+          : who.kind === "user"
           ? "This URL authenticates as " + who.name + "; dd_submit_bozo_leg can write their leg."
           : "Shared league passphrase: read-only and anonymous. A personal URL from " + SITE + "/connect.html enables writes." }),
         { status: 200, headers: noStore });
@@ -2163,6 +2172,8 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG, reauth
     return rpcErr(m && m.id, -32600, "Invalid Request");
   const id = m.id;
   if (id === undefined) return undefined;        // a notification: acknowledge by silence
+  // DD-DISCORD-PACK-SEATKEY-GUARD — a pack-… seat key gets the seat dispatcher and nothing else.
+  if (caller && caller.kind === "pack_seat") return dpSeatDispatch(m, env, caller, reauth);
 
   switch (m.method) {
     case "initialize": {
@@ -2170,15 +2181,13 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG, reauth
       // Echo a known protocolVersion; fall back rather than guess forward.
       const proto = MCP_PROTOS.includes(want) ? want : "2025-06-18";
       const ownerTools = await mcpOwnerTools(env, caller);
-      const packTools = dpMcpTools(env, caller);
       const appsOn = Object.entries(await mcpOwnerAppStatus(env, caller)).filter(([, v]) => v === "on").map(([k]) => MCP_OWNER_APP_NAMES[k]);
       return rpcOk(id, {
         protocolVersion: proto,
         capabilities: { tools: {} },
         serverInfo: { name: "data-dawgs", version: "1.7.0" },
         instructions:
-          "Catalog `" + catalog + "`: " + (mcpCatalogTools(catalog).length + ownerTools.length + packTools.length) + " of " + (MCP_TOOLS.length + ownerTools.length + packTools.length) + " tools are callable here. " +
-          (packTools.length ? "This connector key is assigned a Pack seat (" + packTools.length + " dd_pack_* tools): bind once, then poll, claim and answer Discord requests addressed to that seat; replies are labelled with the seat and key, never a verified model. " : "") +
+          "Catalog `" + catalog + "`: " + (mcpCatalogTools(catalog).length + ownerTools.length) + " of " + (MCP_TOOLS.length + ownerTools.length) + " tools are callable here. " +
           (appsOn.length
             ? "Private owner apps on for this connection: " + appsOn.join(" and ") + " (" + ownerTools.length + " dd_owner_* tools; contributions are untrusted and the assistant label is unverified). "
             : "No private owner apps are on for this connection. ") +
@@ -2218,16 +2227,9 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG, reauth
           // caller's existing leg, so destructive is the honest value.
           ...(t.readOnlyHint === true ? {} : { destructiveHint: t.destructiveHint === true }),
         },
-      })).concat(await mcpOwnerTools(env, caller)).concat(dpMcpTools(env, caller)) }); // DD-DISCORD-PACK-HOOK-LIST
+      })).concat(await mcpOwnerTools(env, caller)) });
     case "tools/call": {
       const name = m.params && m.params.name;
-      // DD-DISCORD-PACK-HOOK-CALL — addressed Pack seats (work/discord-pack.js). Listed and callable only
-      // for the configured owner's connector key that DISCORD_PACK_SEATS assigns to a seat; writes live
-      // above this block, so the write-scope invariant still holds.
-      if (typeof name === 'string' && name.startsWith('dd_pack_')) {
-        try { return rpcOk(id, toolText(await dpMcpRun(name, (m.params && m.params.arguments) || {}, env, caller, reauth))); }
-        catch (e) { return rpcOk(id, toolErr(e && e.dqStatus ? e.message : 'Pack seat operation unavailable')); }
-      }
       if (typeof name === 'string' && name.startsWith('dd_owner_')) {
         if (typeof ddOwnerApps === 'undefined') return rpcOk(id, toolErr('Owner app connector unavailable'));
         try { return rpcOk(id, toolText(await ddOwnerApps.run(name, m.params.arguments, env, caller, reauth))); }

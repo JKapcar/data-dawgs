@@ -14,7 +14,7 @@ already uses. Source: `work/discord-pack.js`. Owner page: `research-lab/discord-
 3. The one session bound to that seat polls, claims and answers with `dd_pack_*` tools on the
    main connector, from its own context.
 4. Toto posts the reply in a public thread named `Claude · <request id>`, labelled
-   `[Claude seat · request … · binding N · key "primary" server-verified · model unverified]`,
+   `[Claude seat · request … · binding N · key "pack-claude" server-verified · model unverified]`,
    and returns a receipt with the Discord message URL.
 5. `/pack question:<text>` inside that thread continues with the same seat. The session sees the
    thread's earlier turns. Ordinary thread messages are **not** read (no Gateway, no Message
@@ -29,15 +29,34 @@ delivered with a Discord API receipt.
 | Fact | How it is established |
 |---|---|
 | Discord requester | Ed25519-signed interaction, plus a link the owner confirmed from a signed site session |
-| Seat consumer | Owner account (`RESEARCH_OWNER_UID`) and connector key label matching `DISCORD_PACK_SEATS[seat].key_label` — server-verified |
+| Seat consumer | A dedicated owner key labelled `pack-…` that `DISCORD_PACK_SEATS[seat].key_label` names — server-verified credential, not proof of which model holds it |
 | One consumer per seat | Lease from `dd_pack_bind`; binding again supersedes the old session and returns its unsent claims |
 | Which session | `session_ref` — self-declared, shown as such |
 | Which model | Not verified. Every reply says so |
 | Question text | Untrusted data, never instructions; never copied into Discord by Toto |
 
-## Seat tools (main connector)
+## Seat keys: what they can and cannot do
 
-Listed and callable only for the owner's key assigned to a seat. `dd_pack_bind`,
+A seat needs its own key minted on `connect.html` with a label starting `pack-` (for example
+`pack-claude`). For the configured owner, `mcpAuth` returns such a key as a seat-only identity,
+never as the owner:
+
+| Surface | `pack-…` seat key |
+|---|---|
+| `dd_pack_*` for its own configured seat | yes |
+| Every other connector tool (league data, Bozo submit, DFS, SwoleDawg, `dd_whoami`) | refused |
+| Private owner apps (RoboKap Pound, BDB research) | refused |
+| Research gateway (`personal_mcp_identity_required`) | refused |
+| Another seat's requests or lease | refused |
+
+The restriction comes from the label, not from `DISCORD_PACK_SEATS`: removing a seat leaves its
+key with no tools rather than widening it, and deleting the key on `connect.html` ends it. The
+shared `primary` key and existing full-access keys (such as `Gemini` or `Grok`) are rejected as
+seat keys and keep their current behaviour.
+
+## Seat tools
+
+Served only to the seat key of a configured seat. `dd_pack_bind`,
 `dd_pack_poll` (check-in + open work + deliveries needing attention), `dd_pack_read`,
 `dd_pack_claim` (20 minutes, renewable), `dd_pack_answer` (`outcome: "failed"` posts a
 could-not-complete notice), `dd_pack_release`. Replies: 1-1,800 characters, no links, no raw
@@ -64,7 +83,8 @@ This avoids duplicates in preference to guaranteeing delivery. It is not exactly
 ## Configuration
 
 - Vars (`wrangler.jsonc`): `DISCORD_PACK_ENABLED`, `DISCORD_PACK_DELIVERY_ENABLED`,
-  `DISCORD_PACK_SEATS` such as `{"claude":{"key_label":"primary"}}`. One key serves one seat.
+  `DISCORD_PACK_SEATS` such as `{"claude":{"key_label":"pack-claude"}}`. Labels must match
+  `pack-[a-z0-9-]{1,19}`; one key serves one seat.
 - Reused: `DISCORD_INBOUND_ENABLED`, `DISCORD_APPLICATION_ID`, `DISCORD_APPLICATION_PUBLIC_KEY`,
   `DISCORD_GUILD_ID`, `DISCORD_CHANNEL_ID`, `RESEARCH_OWNER_UID`, secret `DISCORD_BOT_TOKEN`.
   No new secret.
@@ -109,8 +129,9 @@ A seat counts as connected only after all of these pass for that seat:
 
 - 400 retained requests, then admission fails closed; retention is a later owner decision.
 - Archived threads (7 days idle) do not accept commands; any message unarchives the thread.
-- Binding a seat to the `primary` key means any client holding that URL could bind it. That is
-  visible (the old session's lease fails) but a dedicated per-assistant key is stronger.
+- A seat key identifies a credential, not a model. Whoever holds the `pack-claude` URL can bind
+  the Claude seat; a takeover is visible (the old lease fails) and stoppable, not prevented.
+  Each key must live only in its intended assistant's connector settings.
 - Thread adoption after a lost response assumes the bot user ID equals the application ID.
 - Polling cadence is the session's own; Toto cannot wake a session.
 

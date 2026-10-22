@@ -49,12 +49,14 @@ async function dpTxn(env,mutate){
 function dpSeatConfig(env){
  let c;try{c=JSON.parse(env.DISCORD_PACK_SEATS||'{}');}catch{return {};}
  if(!dpObj(c))return {};
- const out={};for(const [seat,v] of Object.entries(c))if(Object.hasOwn(DP_SEATS,seat)&&dpObj(v)&&typeof v.key_label==='string'&&/^[A-Za-z0-9_-]{1,24}$/.test(v.key_label))out[seat]={key_label:v.key_label};
+ // Seats accept only dedicated pack-… keys, which mcpAuth turns into seat-only credentials.
+ // The shared primary key, or any other full-access key, can never serve a seat.
+ const out={};for(const [seat,v] of Object.entries(c))if(Object.hasOwn(DP_SEATS,seat)&&dpObj(v)&&typeof v.key_label==='string'&&/^pack-[a-z0-9-]{1,19}$/.test(v.key_label))out[seat]={key_label:v.key_label};
  const labels=Object.values(out).map(v=>v.key_label);
  return new Set(labels).size===labels.length?out:{}; // one key serves one seat, or none do
 }
 function dpSeatForCaller(env,caller){
- if(env.DISCORD_PACK_ENABLED!=='true'||!caller||caller.kind!=='user')return null;
+ if(env.DISCORD_PACK_ENABLED!=='true'||!caller||caller.kind!=='pack_seat')return null;
  if(!/^u_[A-Za-z0-9_-]{1,100}$/.test(caller.uid||'')||caller.uid!==env.RESEARCH_OWNER_UID)return null;
  const hit=Object.entries(dpSeatConfig(env)).filter(([,v])=>v.key_label===caller.keyLabel);
  return hit.length===1?hit[0][0]:null;
@@ -191,6 +193,21 @@ const DP_TOOLS=[
 function dpMcpTools(env,caller){
  const seat=dpSeatForCaller(env,caller);if(!seat)return [];
  return DP_TOOLS.map(t=>({name:t.name,title:t.title+' ('+DP_SEATS[seat]+')',description:t.description,inputSchema:t.inputSchema,annotations:{title:t.title,readOnlyHint:t.readOnly,...(t.readOnly?{}:{destructiveHint:false})}}));
+}
+// Whole MCP surface for a pack-… seat key: dd_pack_* tools for its own seat, nothing else.
+async function dpSeatDispatch(m,env,caller,reauth){
+ const id=m.id,ok=result=>({jsonrpc:'2.0',id,result}),tools=dpMcpTools(env,caller);
+ if(m.method==='initialize')return ok({protocolVersion:['2025-03-26','2025-06-18'].includes(m.params?.protocolVersion)?m.params.protocolVersion:'2025-06-18',capabilities:{tools:{}},serverInfo:{name:'data-dawgs-pack-seat',version:'1'},
+  instructions:'Pack seat key "'+caller.keyLabel+'": '+tools.length+' dd_pack_* tools and nothing else. This credential has no league, private workspace or research access. It identifies a credential, not a model.'});
+ if(m.method==='ping')return ok({});
+ if(m.method==='tools/list')return ok({tools});
+ if(m.method==='tools/call'){
+  const name=m.params?.name;
+  if(typeof name!=='string'||!tools.some(t=>t.name===name))return {jsonrpc:'2.0',id,error:{code:-32602,message:'This Pack seat key serves only its own dd_pack_* tools.'}};
+  try{return ok({content:[{type:'text',text:JSON.stringify(await dpMcpRun(name,m.params.arguments||{},env,caller,reauth),null,1)}]});}
+  catch(e){return ok({content:[{type:'text',text:e?.dqStatus?e.message:'Pack seat operation unavailable'}],isError:true});}
+ }
+ return {jsonrpc:'2.0',id,error:{code:-32601,message:'Method not found: '+m.method}};
 }
 async function dpMcpRun(name,args,env,caller,reauth){
  const seat=dpSeatForCaller(env,caller);dpCheck(seat,403,'pack_seat_not_available_for_this_connector_key');

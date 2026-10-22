@@ -9,7 +9,7 @@ function rtdb(v){if(Array.isArray(v)){const a=v.map(rtdb).filter(x=>x!==undefine
 async function fixture(){
  const pair=await webcrypto.subtle.generateKey('Ed25519',true,['sign','verify']),pub=Buffer.from(await webcrypto.subtle.exportKey('raw',pair.publicKey)).toString('hex');
  const env={DISCORD_INBOUND_ENABLED:'true',DISCORD_APPLICATION_PUBLIC_KEY:pub,DISCORD_APPLICATION_ID:APP,DISCORD_GUILD_ID:GUILD,DISCORD_CHANNEL_ID:CHANNEL,FB_SECRET:'mock',DISCORD_BOT_TOKEN:'fake-test-only',DISCORD_USER_LINKS:'[]',
-  DISCORD_PACK_ENABLED:'true',DISCORD_PACK_DELIVERY_ENABLED:'true',DISCORD_PACK_SEATS:JSON.stringify({claude:{key_label:'primary'},gemini:{key_label:'Gemini'}}),RESEARCH_OWNER_UID:'u_owner'};
+  DISCORD_PACK_ENABLED:'true',DISCORD_PACK_DELIVERY_ENABLED:'true',DISCORD_PACK_SEATS:JSON.stringify({claude:{key_label:'pack-claude'},gemini:{key_label:'pack-gemini'}}),RESEARCH_OWNER_UID:'u_owner'};
  let now=Date.UTC(2026,9,22,12,0,0),seq=70000000000000000n;
  class FakeDate extends Date{constructor(...a){super(...(a.length?a:[now]));}static now(){return now;}}
  const db={},rev={},faults=[],calls=[],patches=[],threads={},byNonce={},messages={},commands=[];let writes=0,failPut=null,sessionUid='u_owner';
@@ -41,7 +41,7 @@ async function fixture(){
  const worker=fs.readFileSync('dawg-bot-worker.js','utf8');vm.createContext(ctx);
  vm.runInContext(worker.slice(worker.indexOf('async function poundIdentity('),worker.indexOf('function poundEmpty(')),ctx);
  vm.runInContext(['work/discord-bridge.js','work/discord-inbound.js','work/discord-owner-smoke.js','work/discord-pack.js'].map(f=>fs.readFileSync(f,'utf8')).join('\n'),ctx);
- const callers={owner:{kind:'user',uid:'u_owner',keyLabel:'primary',name:'Kap'},ownerGemini:{kind:'user',uid:'u_owner',keyLabel:'Gemini',name:'Kap'},ownerMuse:{kind:'user',uid:'u_owner',keyLabel:'Muse',name:'Kap'},jeff:{kind:'user',uid:'u_jeff',keyLabel:'primary',name:'Jeff'},shared:{kind:'shared'}};
+ const callers={owner:{kind:'pack_seat',uid:'u_owner',keyLabel:'pack-claude',name:'Kap'},ownerGemini:{kind:'pack_seat',uid:'u_owner',keyLabel:'pack-gemini',name:'Kap'},ownerMuse:{kind:'pack_seat',uid:'u_owner',keyLabel:'pack-muse',name:'Kap'},ownerPrimary:{kind:'user',uid:'u_owner',keyLabel:'primary',name:'Kap'},ownerFullKey:{kind:'user',uid:'u_owner',keyLabel:'pack-claude',name:'Kap'},jeff:{kind:'pack_seat',uid:'u_jeff',keyLabel:'pack-claude',name:'Jeff'},shared:{kind:'shared'}};
  async function slash({to='claude',question='What is the plan?',channel=CHANNEL,user=KAP,interaction=id(),options,execution,patch={}}={}){
   const opts=options??[{name:'question',type:3,value:question},...(to?[{name:'to',type:3,value:to}]:[])];
   const event={id:interaction,application_id:APP,type:2,guild_id:GUILD,channel_id:channel,token:'interaction-token-'+'t'.repeat(40),member:{nick:user===KAP?'Kap':'Jeff',user:{id:user,username:user===KAP?'kap':'jeff'}},data:{type:1,name:'pack',options:opts},...patch};
@@ -72,11 +72,12 @@ test('authorization: only the configured owner key assigned to a seat sees or ru
  const f=await fixture();
  assert.deepEqual(plain(f.ctx.dpMcpTools(f.env,f.callers.owner).map(t=>t.name)),['dd_pack_bind','dd_pack_poll','dd_pack_read','dd_pack_claim','dd_pack_answer','dd_pack_release']);
  assert.match(f.ctx.dpMcpTools(f.env,f.callers.ownerGemini)[0].title,/Gemini/);
- for(const c of ['jeff','shared','ownerMuse']){assert.deepEqual(plain(f.ctx.dpMcpTools(f.env,f.callers[c])),[]);assert.equal((await f.tool(c,'dd_pack_bind')).status,403);}
- f.env.DISCORD_PACK_SEATS=JSON.stringify({claude:{key_label:'primary'},gemini:{key_label:'primary'}});assert.deepEqual(plain(f.ctx.dpMcpTools(f.env,f.callers.owner)),[],'one key cannot serve two seats');
+ for(const c of ['jeff','shared','ownerMuse','ownerPrimary','ownerFullKey']){assert.deepEqual(plain(f.ctx.dpMcpTools(f.env,f.callers[c])),[]);assert.equal((await f.tool(c,'dd_pack_bind')).status,403);}
+ f.env.DISCORD_PACK_SEATS=JSON.stringify({claude:{key_label:'pack-claude'},gemini:{key_label:'pack-claude'}});assert.deepEqual(plain(f.ctx.dpMcpTools(f.env,f.callers.owner)),[],'one key cannot serve two seats');
+ for(const label of ['primary','Primary','Gemini','pack-','pack-UPPER','pack-'+'x'.repeat(20)]){f.env.DISCORD_PACK_SEATS=JSON.stringify({claude:{key_label:label}});assert.deepEqual(plain(f.ctx.dpSeatConfig(f.env)),{},label+' must never serve a seat');}
  f.env.DISCORD_PACK_SEATS='not json';assert.deepEqual(plain(f.ctx.dpMcpTools(f.env,f.callers.owner)),[]);
- const g=await fixture();await g.bind();const revoked={kind:'user',uid:'u_owner',keyLabel:'primary'};
- const r=await g.ctx.dpMcpRun('dd_pack_bind',{},g.env,revoked,async()=>({kind:'user',uid:'u_owner',keyLabel:'rotated'})).catch(e=>e);assert.equal(r.message,'connector_identity_changed');
+ const g=await fixture();await g.bind();const seat={kind:'pack_seat',uid:'u_owner',keyLabel:'pack-claude'};
+ const r=await g.ctx.dpMcpRun('dd_pack_bind',{},g.env,seat,async()=>null).catch(e=>e);assert.equal(r.message,'connector_identity_changed');
  assert.equal((await g.tool('owner','dd_pack_bind',{surprise:1})).error,'invalid_arguments');
 });
 test('linking: ephemeral one-time code, owner site session confirms, nothing queued before',async()=>{
@@ -109,7 +110,7 @@ test('end-to-end: claim and answer create one labelled thread reply with a verif
  const a=(await reply(f,lease,q.id,'Here is the plan @everyone')).body;assert.equal(a.job.delivery,'delivered');assert.equal(a.job.state,'answered');
  assert.match(a.job.receipt.url,new RegExp('^https://discord.com/channels/'+GUILD+'/\\d+/\\d+$'));assert.equal(a.job.receipt.evidence,'discord_api_response');
  assert.deepEqual(f.created(),{threads:1,messages:1});const t=Object.values(f.threads)[0];assert.equal(t.name,'Claude · '+q.id);assert.equal(t.parent_id,CHANNEL);assert.equal(t.thread_metadata.auto_archive_duration,10080);
- const m=Object.values(f.messages)[0];assert.match(m.content,/^\[Claude seat · request \d+ · binding 1 · key "primary" server-verified · model unverified\]\nHere is the plan @everyone$/);
+ const m=Object.values(f.messages)[0];assert.match(m.content,/^\[Claude seat · request \d+ · binding 1 · key "pack-claude" server-verified · model unverified\]\nHere is the plan @everyone$/);
  assert.deepEqual(m.body.allowed_mentions,{parse:[],users:[],roles:[],replied_user:false});assert.equal(m.body.flags,4);assert.equal(m.body.enforce_nonce,true);assert.equal(m.body.nonce,'p'+q.id+'a1');
  assert.ok(!m.content.includes('SECRET-QUESTION-TEXT'),'question is never copied into Discord');
  assert.equal(f.store().seats.claude.verified.request_id,q.id);
@@ -265,9 +266,18 @@ test('store normalisation tolerates RTDB omissions and fails closed when malform
   const s=n({version:1,threads:{'1':{root_id:'1'}},seats:{claude:{epoch:1}}});assert.deepEqual(plain(s.threads['1'].turns),[]);assert.deepEqual(plain(s.seats.claude.history),[]);
   for(const bad of [false,[],{},{version:2},{version:1,jobs:[]},{version:1,seats:'x'}])assert.throws(()=>n(bad),/pack_store_invalid/);});
 });
+test('seat-key dispatcher serves only its own dd_pack_* tools',async()=>{
+ const f=await fixture();const call=(caller,method,params)=>f.ctx.dpSeatDispatch({jsonrpc:'2.0',id:7,method,params},f.env,f.callers[caller],async()=>f.callers[caller]);
+ assert.match((await call('owner','initialize',{})).result.instructions,/no league, private workspace or research access/);
+ assert.deepEqual(plain((await call('owner','tools/list',{})).result.tools.map(t=>t.name)),['dd_pack_bind','dd_pack_poll','dd_pack_read','dd_pack_claim','dd_pack_answer','dd_pack_release']);
+ for(const name of ['dd_owner_pound_read','dd_whoami','dd_submit_bozo_leg','dd_pack_nope'])assert.equal((await call('owner','tools/call',{name,arguments:{}})).error.code,-32602,name);
+ assert.deepEqual(plain((await call('ownerMuse','tools/list',{})).result.tools),[],'an unassigned pack- key gets nothing, not the full catalog');
+ assert.equal((await call('owner','resources/list',{})).error.code,-32601);
+ const bound=JSON.parse((await call('owner','tools/call',{name:'dd_pack_bind',arguments:{}})).result.content[0].text);assert.equal(bound.seat,'claude');
+});
 test('legacy /ask is untouched and the Pack module is assembled exactly once with its hooks',()=>{
  const worker=fs.readFileSync('dawg-bot-worker.js','utf8'),source=fs.readFileSync('work/discord-pack.js','utf8').trim();
  assert.equal(worker.split(source).length,2);assert.equal(worker.split('handleDiscordPackOwner(request, env); // DD-DISCORD-QUEUE-ROUTE').length,2);
- const block=worker.slice(worker.indexOf('/* ===== DD-MCP-BLOCK START'));assert.equal((block.match(/dpMcpRun\(/g)||[]).length,1);assert.ok(!/fbPut\(/.test(block));
+ const block=worker.slice(worker.indexOf('/* ===== DD-MCP-BLOCK START'));assert.equal((block.match(/dpMcpRun\(/g)||[]).length,0);assert.equal((block.match(/dpSeatDispatch\(/g)||[]).length,1);assert.ok(!/fbPut\(/.test(block));
  assert.ok(worker.indexOf('async function dpMcpRun(')<worker.indexOf('/* ===== DD-MCP-BLOCK START'));
 });
