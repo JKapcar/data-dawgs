@@ -4,7 +4,7 @@
 // this set so changes to the modular research UI also invalidate the cache key.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "fb5c20647b";
+const VERSION = "11ad54454a";
 // A cache revision also invalidates old images when only precached artwork changes.
 const CACHE = "dd-" + VERSION + "-public-v3";
 
@@ -110,8 +110,9 @@ async function cached(key){
 }
 async function save(key, response, allowOpaque = false){
   try{
+    const copy = response.clone();
     const c = await caches.open(CACHE);
-    if(canStore(response, allowOpaque)) await c.put(key, response.clone());
+    if(canStore(response, allowOpaque)) await c.put(key, copy);
     else await c.delete(key);
   }catch{ /* Cache quota/privacy restrictions do not fail the page request. */ }
 }
@@ -154,11 +155,11 @@ async function coreMediaRange(req){
   headers.set("content-length",String(end-start+1));
   return new Response(bytes.slice(start,end+1),{status:206,headers});
 }
-async function networkFirst(req, key){
+async function networkFirst(req, key, background){
   let net;
   try{
     net = await fetchWithinBudget(req);
-    if(net.status < 500){ await save(key, net); return net; }
+    if(net.status < 500){ background(save(key, net)); return net; }
   }catch{ /* An interrupted or slow network may use the existing public file. */ }
   const hit = await cached(key);
   if(hit) return isHTML(req) ? savedPage(hit) : hit;
@@ -173,20 +174,22 @@ self.addEventListener("fetch", e=>{
   const url = new URL(req.url);
   const documentRequest = isHTML(req);
   const key = documentRequest ? url.origin + url.pathname : req;
+  const cacheWrites = [];
+  const background = promise => cacheWrites.push(promise);
   const work = req.headers.has("range") ? coreMediaRange(req)
     : documentRequest || /\.(?:js|css|webmanifest)$/i.test(url.pathname)
-    ? networkFirst(req, key)
+    ? networkFirst(req, key, background)
     : (async()=>{
         const hit = await cached(key);
         if(hit) return hit;
         try{
           const net = await fetch(req);
-          await save(key, net, MEDIA.includes(url.href));
+          background(save(key, net, MEDIA.includes(url.href)));
           return net;
         }catch{ return Response.error(); }
       })();
   e.respondWith(work);
   // Keep cache writes alive for this fetch; a successful response must not be lost
   // simply because the worker's lifetime ended before a detached put() finished.
-  e.waitUntil(work.then(()=>{}, ()=>{}));
+  e.waitUntil(work.then(()=>Promise.all(cacheWrites), ()=>{}));
 });

@@ -4422,10 +4422,17 @@ async function wGet(path){
   // Directory visibility is session-aware. GETs use the same advertised header as
   // writes, so /league/list can return public leagues plus only this member's leagues.
   if(ME) h['X-Bozo-Session'] = ME.session;
-  const r = await fetch(WORKER + path + (path.includes('?')?'&':'?') + bust(), {headers:h});
-  const j = await r.json().catch(()=>({error:'bad response'}));
-  if(!r.ok) throw new Error(j.error || ('HTTP '+r.status));
-  return j;
+  // Bound both headers and body; only reads may be retried by their caller.
+  const controller = new AbortController();
+  let timer;
+  try{
+    return await Promise.race([(async()=>{
+      const r = await fetch(WORKER + path + (path.includes('?')?'&':'?') + bust(), {headers:h, cache:'no-store', signal:controller.signal});
+      const j = await r.json();
+      if(!r.ok) throw new Error(j.error || ('HTTP '+r.status));
+      return j;
+    })(), new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(new Error('Read timed out'));},10000);})]);
+  }finally{ clearTimeout(timer); }
 }
 // Every write names its league. The Worker defaults to "main" when absent, but being
 // explicit means a stale tab can never write into the wrong league after a switch.
@@ -5150,7 +5157,8 @@ function paintSides(){
 /* ---------------- live state ---------------- */
 // /bozo is world-readable, so the board streams straight from RTDB with no
 // credential. EventSource = push; the poll is only a safety net.
-let stateReader = null;
+let stateReader = null, watchedLeague = null, stateGeneration = 0, boardReady = false;
+let directoryState = 'loading', directoryRequest = 0, rosterRequest = 0;
 let stateConnection = {state:'loading',lastSuccessAt:null,reason:null};
 function paintConnection(status){
   stateConnection=status;
@@ -5160,16 +5168,21 @@ function paintConnection(status){
     stale:'Updates delayed — displayed information may be out of date.',
     offline:'Offline — displayed information may be out of date.',
     error:'Could not load current information. Retrying automatically.'};
-  el.hidden=onHub() || status.state==='fresh';
+  el.hidden=status.state==='fresh';
   const message=messages[status.state] || messages.error;
   if(el.textContent!==message) el.textContent=message;
   el.title=status.lastSuccessAt ? 'Last checked '+new Date(status.lastSuccessAt).toLocaleString() : '';
+  if(onHub()) paintHouseTicket();
 }
 function watchState(){
   stateReader?.stop();
+  const generation=++stateGeneration;
+  watchedLeague=LID; boardReady=false; S={};
   stateReader=DDLiveState.create({
     url:DB + '/bozo/leagues/' + LID + '.json',
     onData:value=>{
+      if(generation!==stateGeneration) return;
+      boardReady=true;
       const prevWeek = Number(S && S.week) || null;
       S=value||{};
       render();
@@ -5182,7 +5195,7 @@ function watchState(){
         loadGames(sp && sp.value ? sp.value : 'nfl');
       }
     },
-    onStatus:paintConnection
+    onStatus:status=>{if(generation===stateGeneration) paintConnection(status);}
   });
   stateReader.start();
 }
@@ -5442,7 +5455,7 @@ function paintHub(){
   if(!onHub()){ card.style.display='none'; return; }
   card.style.display='';
   document.getElementById('hubCount').textContent =
-    LEAGUES.filter(isPlayableLeague).length + ' leagues';
+    directoryState==='loading' ? 'Loading leagues…' : directoryState==='error' ? 'Directory unavailable' : LEAGUES.filter(isPlayableLeague).length + ' leagues';
   // ⚠️ A div, not an <a> — the stub carries buttons and an input, and nesting
   // interactive controls inside an anchor is both invalid and unusable.
   // ⚠️ The data-* contract (open/rename/del/title/rnerr) is what the delegated click
@@ -5455,7 +5468,7 @@ function paintHub(){
     // Fill boxes: the live one prints its own count, so the directory answers
     // "is there anything to do here" without opening anything. Only the league we
     // actually hold state for can say — S is one league's state, not all of them.
-    const known = (l.id === LID);
+    const known = boardReady && (l.id === LID);
     const inNow = known ? Object.keys(S.picks||{}).length : null;
     const fill = (inNow==null) ? '' :
       `<div class="fill" role="img" aria-label="${inNow} of ${l.size} legs in">` +
@@ -5476,7 +5489,10 @@ function paintHub(){
       <span class="go">${canManage(l)?'Open to manage roster &amp; rules →':'Open the board →'}</span>
       <div class="rnerr" data-rnerr="${esc(l.id)}"></div>
     </div>`;
-  }).join('') || '<p class="pend">No leagues yet.</p>';
+  }).join('') || (directoryState==='loading' ? '<p class="pend" role="status">Loading leagues…</p>'
+    : directoryState==='error' ? '<p class="pend" role="status">League directory unavailable. <button type="button" id="retryDirectory">Retry</button></p>'
+    : '<p class="pend">No leagues available to this account.</p>');
+  document.getElementById('retryDirectory')?.addEventListener('click',()=>loadLeagues());
 
   const demos = LEAGUES.filter(l => l.settings?.synthetic === true);
   document.getElementById('demoSection').hidden = !demos.length;
@@ -5578,7 +5594,7 @@ function paintHouseTicket(){
   const slip = document.getElementById('houseSlip');
   const bar  = document.getElementById('pbStubBar');
   if(!slip) return;
-  const lg = league();
+  const lg = league() || {id:LID,name:S.name || 'Bozo',week:S.week,members:stateMembers()};
   const players = names();
   const wkEl = document.getElementById('pbBillWk');
   const soulsEl = document.getElementById('pbSouls');
@@ -5586,11 +5602,12 @@ function paintHouseTicket(){
   const openBtn = document.getElementById('pbOpen');
 
   // No league state at all — say so plainly rather than printing a hopeful zero.
-  if(!lg || !players.length){
+  if(!boardReady || !players.length){
     slip.innerHTML = '<div class="sl-hd"><span class="sl-t">The house ticket</span>' +
-      '<span class="sl-m">no board loaded</span></div>' +
-      '<p class="sl-note">The league boards are not reachable from this device right now. ' +
-      'Nothing below is stale — there is simply nothing to print.</p>';
+      '<span class="sl-m">'+(boardReady?'empty board':stateConnection.state==='loading'?'loading board':'board unavailable')+'</span></div>' +
+      '<p class="sl-note" role="status">'+(boardReady?'This board has no members yet.'
+        : stateConnection.state==='loading'?'Loading the live house ticket…'
+        :'The live board could not be loaded. Retrying automatically.')+'</p>';
     paintBozoTonight([], {}, 'open', {});
     if(bar) bar.hidden = true;
     document.body.classList.remove('pb-hasbar');
@@ -5870,16 +5887,42 @@ document.getElementById('lgPick').onchange = e => {
   u.hash = '';
   location.href = u.toString();
 };
-async function loadLeagues(){
+async function loadLeagues(attempt=0){
+  const request=++directoryRequest, session=ME?.session;
+  directoryState='loading'; paintHub();
   try{
     const r = await wGet('/league/list');
+    if(request!==directoryRequest || session!==ME?.session) return;
     LEAGUES = r.leagues || [];
+    directoryState='ready';
+    const sourceNote=document.getElementById('srcNote');
+    if(sourceNote.textContent.startsWith('Leagues unreachable')) sourceNote.textContent='';
     const want = new URLSearchParams(location.search).get('l');
-    LID = (want && LEAGUES.some(l=>l.id===want)) ? want
-        : (LEAGUES.some(l=>l.id===r.defaultLeague) ? r.defaultLeague : (LEAGUES[0]||{}).id || 'main');
+    // An inaccessible explicit league is never silently replaced with a different board.
+    if(want && !LEAGUES.some(l=>l.id===want) && want!=='main'){
+      stateReader?.stop(); stateReader=null; watchedLeague=null; ++stateGeneration;
+      S={}; boardReady=false;
+      paintConnection({state:'error',lastSuccessAt:null,reason:'access'});
+      document.getElementById('connectionNote').textContent='This league is unavailable to this account. Sign in or choose a league from the hub.';
+      renderAuth(); return;
+    }
+    LID = want || (LEAGUES.some(l=>l.id===r.defaultLeague) ? r.defaultLeague : 'main');
+    if(watchedLeague!==LID) watchState();
+    renderAuth();
   }catch(e){
-    LEAGUES = [];
+    if(request!==directoryRequest || session!==ME?.session) return;
+    directoryState='error';
     document.getElementById('srcNote').textContent = 'Leagues unreachable — '+e.message;
+    if(!stateReader){
+      paintConnection({state:'error',lastSuccessAt:null,reason:'directory'});
+      const note=document.getElementById('connectionNote');
+      note.textContent='League access could not be checked. ';
+      const retry=document.createElement('button');retry.type='button';retry.textContent='Retry';
+      retry.onclick=()=>loadLeagues();note.append(retry);
+    }
+    paintHub();
+    // One automatic retry, then an explicit Retry remains available on the hub.
+    if(attempt<1) setTimeout(()=>{if(request===directoryRequest && session===ME?.session) void loadLeagues(attempt+1);},1500);
   }
 }
 
@@ -6099,6 +6142,13 @@ function render(){
   for(const id of ['snav','lgbar','sheetBar','royaleAlert','submitCard','ticketCard','seasonCard','sheetCard','leagueCard','drawCard','royaleCard','clvCard','survCard','diagCard','hierHistoryCard','diagExploreCard','gradeCard','verdict'])
     { const el=document.getElementById(id); if(el && hub) el.style.display='none'; }
   if(hub) return;
+  if(!boardReady){
+    for(const id of ['submitCard','ticketCard','seasonCard','sheetCard','leagueCard','drawCard','royaleCard','clvCard','survCard','diagCard','hierHistoryCard','diagExploreCard','gradeCard','verdict']){
+      const el=document.getElementById(id); if(el) el.style.display='none';
+    }
+    document.getElementById('statusChip').textContent='Waiting for board';
+    return;
+  }
   document.getElementById('snav').style.display = '';
   document.getElementById('royaleAlert').style.display = view()==='week' ? '' : 'none';
 
@@ -6402,7 +6452,7 @@ function paintLeague(){
   paintRoster();
 }
 
-function settings(){ return league()?.settings || {stake:50,allowEdit:true,lockRule:'all',lockCount:0,levers:[0,1,2,3],format:'standard',buyback:0,formatLocked:false,synthetic:false}; }
+function settings(){ return league()?.settings || S.settings || {stake:50,allowEdit:true,lockRule:'all',lockCount:0,levers:[0,1,2,3],format:'standard',buyback:0,formatLocked:false,synthetic:false}; }
 // Which ruleset this league runs. Standard names a bozo who plays again next week;
 // Bozo Royale eliminates them. Everything else about a leg is identical.
 const isRoyale = () => settings().format === 'royale';
@@ -8552,8 +8602,15 @@ function renderAuth(){
 }
 
 async function loadRoster(){
-  try{ ROSTER=(await wGet('/auth/roster')).players||[]; }
-  catch(e){ ROSTER=[]; document.getElementById('srcNote').textContent='Roster unreachable — '+e.message; }
+  const request=++rosterRequest, session=ME?.session;
+  try{
+    const r=await wGet('/auth/roster');
+    if(request!==rosterRequest || session!==ME?.session) return;
+    ROSTER=r.players||[]; renderAuth();
+  }catch(e){
+    if(request!==rosterRequest || session!==ME?.session) return;
+    document.getElementById('srcNote').textContent='Roster unavailable — '+e.message;
+  }
 }
 
 /* ---------------- wiring ---------------- */
@@ -8639,7 +8696,15 @@ document.addEventListener('click', ev=>{
    ⚠️ Do NOT call setSession/clearSession from in here — those are what fire this. */
 window.onDDAuth = function(){
   ME = loadSession();
+  ++directoryRequest; ++rosterRequest;
+  LEAGUES=[]; ROSTER=[]; directoryState='loading';
+  joinDirectoryLoaded=false; joinSelected=null;
+  stateReader?.stop(); stateReader=null; watchedLeague=null; ++stateGeneration;
+  boardReady=false; S={};
+  CLV.data=null; CLV.lid=null;
+  if(LID==='main') watchState();
   renderAuth();
+  void loadLeagues(); void loadRoster();
 };
 
 
@@ -9774,9 +9839,11 @@ async function clvLoad(force){
     return;
   }
   CLV.loading = true;
+  const ledgerLid=LID, ledgerSession=ME?.session, ledgerGeneration=stateGeneration;
   try{
     const j = await wGet('/bozo/clv?league='+encodeURIComponent(LID));
-    CLV.data = j; CLV.lid = LID;
+    if(ledgerLid!==LID || ledgerSession!==ME?.session || ledgerGeneration!==stateGeneration) return;
+    CLV.data = j; CLV.lid = ledgerLid;
     CLV.series = {}; CLV.dom = {};
     CLV.players = (j.players||[]).slice().sort();
     CLV.me = ME ? ME.name : null;
@@ -9804,6 +9871,7 @@ async function clvLoad(force){
     if(view()==='overview') paintSurvival();
     if(view()==='diagnostics') paintDiagnosticsExplorer();
   }catch(e){
+    if(ledgerLid!==LID || ledgerSession!==ME?.session || ledgerGeneration!==stateGeneration) return;
     card.style.display='none';
     if(view()==='diagnostics'){
       document.getElementById('dxMeta').textContent='ledger unavailable';
@@ -9813,7 +9881,10 @@ async function clvLoad(force){
       document.getElementById('dxNote').textContent='';
       document.getElementById('dxChart').innerHTML='<div class="dash-empty">The diagnostics ledger could not be reached. Try this sheet again in a moment.</div>';
     }
-  }finally{ CLV.loading=false; }
+  }finally{
+    CLV.loading=false;
+    if(boardReady && (ledgerLid!==LID || ledgerSession!==ME?.session || ledgerGeneration!==stateGeneration)) void clvLoad();
+  }
 }
 
 (function clvWireControls(){
@@ -9868,17 +9939,14 @@ async function clvLoad(force){
   // that this signed-in account may see them.
   const requested=new URLSearchParams(location.search).get('l');
   if(requested && /^[a-z0-9-]{2,24}$/.test(requested)) LID=requested;
-  const watchedLid=LID;
+
   // ⚠️ Only the one public room now. The Royale demo was the other, and it is gone —
   // eager-loading a deleted league would open a watch on state that never arrives.
   const eagerPublic = LID==='main';
   if(eagerPublic) watchState();
-  await Promise.all([loadRoster(), loadLeagues()]);
-  // A bad or inaccessible ?l= may be normalized by loadLeagues. Replace the entire
-  // reader so late responses from the former subscription cannot paint this league.
-  if(!eagerPublic) watchState();
-  else if(LID!==watchedLid){ watchState(); }
   renderAuth();
+  void loadLeagues();
+  void loadRoster();
   loadGames('nfl');
 })();
 </script>
