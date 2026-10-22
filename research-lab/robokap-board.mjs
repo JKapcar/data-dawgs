@@ -63,7 +63,8 @@ function forgetIfAccountChanged() {
 }
 function clearView() {
   epoch++; board = null; laneChosen = false; carry = null;
-  for (const id of ['rkCards', 'rkRoleList', 'rkPinList', 'rkUnplannedList', 'rkTabs', 'rkBar']) $(id).replaceChildren();
+  for (const id of ['rkCards', 'rkRoleList', 'rkPinList', 'rkUnplannedList', 'rkTabs', 'rkBar', 'rkEvidenceList']) $(id).replaceChildren();
+  $('rkEvidence').hidden = true;
   for (const id of ['rkSummary', 'rkLane', 'rkRoles', 'rkOwnerForms', 'rkPins', 'rkUnplanned', 'rkResend']) $(id).hidden = true;
   // Forms and the task lists inside them hold private titles: reset and empty them too.
   for (const id of ['rkPlanForm', 'rkPinForm', 'rkRoleForm']) $(id).reset();
@@ -221,6 +222,7 @@ function cardView(card) {
   return el('li', { class: 'rk-card lane-' + (card.lane === 'unplanned' ? 'blocked' : card.lane), 'data-task': card.task_id }, el('h3', { text: card.title }), chips, next, card.pending_plan ? pendingView(card) : null, unsure, facts, brief, evidence, actionsFor(card));
 }
 function render() {
+  renderEvidence();
   const counts = board.counts, total = ORDER.reduce((n, k) => n + (counts[k] || 0), 0);
   const bar = $('rkBar');
   // CSSOM, not a style attribute: the page CSP refuses inline styles.
@@ -251,6 +253,18 @@ function render() {
   showResend();
 }
 const allCards = () => board ? [...Object.values(board.lanes).flat(), ...board.done, ...board.closed, ...board.unplanned] : [];
+function renderEvidence() {
+  const cards = allCards(), counts = board.counts;
+  const latest = cards.map(c => c.last_verified).filter(e => e?.at).sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0];
+  $('rkEvidenceList').replaceChildren(
+    el('li', {}, 'Installed and enabled: this Worker answered an authenticated owner request. Snapshot ', when(board.as_of), '.'),
+    el('li', { text: 'Connected assistants: unknown. Key acceptance records do not prove a session is online.' }),
+    el('li', { text: 'Executing: unverified. ' + cards.filter(c => c.claim).length + ' leases held; ' + (counts.done || 0) + ' tasks in Done.' }),
+    el('li', { text: 'Waiting: ' + (counts.ready || 0) + ' ready for a foreground session; ' + (counts.blocked || 0) + ' blocked; ' + (counts.needs_you || 0) + ' need you. Open a task for its exact next action.' }),
+    latest ? el('li', {}, 'Latest retained task event: ' + latest.op + ' by ' + latest.by_text + ', ', when(latest.at), '. This is recorded activity, not a heartbeat.') : el('li', { text: 'No retained coordination event for these tasks yet.' })
+  );
+  $('rkEvidence').hidden = false;
+}
 const pinValue = p => JSON.stringify({ project_id: p.project_id, kind: p.kind, version: p.version, require: p.require });
 // Re-rendering refreshes the lists but keeps what is selected in them, so switching lanes or
 // saving something else never silently drops a dependency or pin from a plan being edited.

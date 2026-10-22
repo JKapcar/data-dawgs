@@ -75,6 +75,9 @@ try {
   await page.evaluate(() => { localStorage.setItem('dd-bozo-sess', 'synthetic-session'); dispatchEvent(new StorageEvent('storage', { key: 'dd-bozo-sess' })); });
   await page.locator('#rkUnplanned li').first().waitFor();
   assert.equal(await page.locator('#rkUnplanned li').count(), 4);
+  assert.match(await page.locator('#rkEvidence').innerText(), /authenticated owner request/);
+  assert.match(await page.locator('#rkEvidence').innerText(), /Connected assistants: unknown/);
+  assert.match(await page.locator('#rkEvidence').innerText(), /Executing: unverified. 0 leases held/);
   assert.match(await page.locator('#rkUnplanned').innerText(), /Reported working · owner connector reported · Reported working; no execution receipt/);
   // Propose Claude's role from the form; Claude accepts with its own key; you approve on the board.
   await page.locator('#rkRoleBox summary').click();
@@ -136,11 +139,14 @@ try {
   await tab('Ready').click();
   assert.match(await page.locator('#rkCards').innerText(), /Synthetic task B/);
   await page.screenshot({ path: path.join(output, 'robokap-board-ready-390.png'), fullPage: true });
+  await claudeWrite('rk.claim', { task_id: B, plan_version: 1, session_ref: 'claude-code:browser', lease_secret: 'browser_b_lease_secret_000000' });
   // Claude proposes an amendment. You see the whole change before deciding, not a version number.
   await claudeWrite('rk.plan', { task_id: B, expected_plan_version: 1, seat: 'claude', review: 'advisory', decision: 'required', data_scope: 'none', depends_on: [A], priority: 2, note: 'Synthetic tidy-up', thread: { discord_thread_id: '111111111111111111' }, acceptance: [{ text: 'Synthetic check one' }, { text: 'Synthetic check two' }] });
   await page.locator('#rkRefresh').click();
   const cardB = page.locator('.rk-card[data-task="' + B + '"]');
   await cardB.locator('.rk-proposal').waitFor();
+  assert.equal(await tab('Running').locator('b').innerText(), '0');
+  assert.match(await page.locator('#rkEvidence').innerText(), /Executing: unverified. 1 leases held; 1 tasks in Done/);
   const proposal = await cardB.locator('.rk-proposal').innerText();
   for (const line of [/Proposed plan v2 · connector key "Claude"/, /Review\s*none → advisory/, /Priority\s*3 → 2/, /Discord thread\s*none → 111111111111111111/, /Acceptance\s*none → Synthetic check one; Synthetic check two/]) assert.match(proposal, line);
   await page.screenshot({ path: path.join(output, 'robokap-board-proposal-390.png'), fullPage: true });
@@ -204,6 +210,8 @@ try {
   for (const select of ['#rkPlanForm [name=task_id]', '#rkPlanForm [name=depends_on]', '#rkPlanForm [name=pin]', '#rkPinForm [name=context_id]']) assert.equal(await page.locator(select + ' option').count(), 0, select + ' emptied');
   assert.equal(await page.locator('#rkPlanForm [name=note]').inputValue(), '');
   assert.equal(await page.locator('#rkResend').isHidden(), true);
+  assert.equal(await page.locator('#rkEvidence').isHidden(), true);
+  assert.equal(await page.locator('#rkEvidenceList').innerText(), '');
   await setHidden(false);
   await page.locator('#rkResend').waitFor();
   assert.equal(await page.locator('#rkResend').innerText(), 'Resend "Record your task"');
