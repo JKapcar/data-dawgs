@@ -2,16 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {initialState,transition,view,capabilities} from './machine.mjs';
 import {syntheticTracking} from './tracking.mjs';
+import {EXECUTION_POLICY} from './execution-identity.mjs';
 import {createContinuation} from './continuation.mjs';
 function fixture(options={}) {
   let stored=initialState(),actor='owner',time=1000,code='a'.repeat(64),hook=async()=>{};
   const tracking=syntheticTracking(),calls=[],statuses=[];
-  const principal=()=>({tenant:'synthetic',id:actor,capabilities});
+  const principal=()=>({tenant:'synthetic',id:actor,capabilities,signedOwner:true});
   const command=(type,payload,key=crypto.randomUUID())=>{const out=transition(stored,principal(),{type,payload,key},time,code);stored=out.state;return out.result;};
   const h=command('hypothesis',{title:'Synthetic',method:'Descriptive only'});
   const check=command('discussion',{hypothesisId:h.id,hypothesisVersion:1,kind:'data_check',body:'Synthetic only',tracking,evidenceIds:[]});
   const task=(budgetMs=5000)=>command('task',{hypothesisId:h.id,dataCheckId:check.id,split:'discovery',budgetMs,maxObservations:10000});
-  const client={mode:'browser',async state(){return {...view(stored,principal()),codeHash:code,mode:'browser-memory-demo',identity:{actor,tenant:'synthetic',kind:'demo'}};},async command(type,payload,key){calls.push({type,payload,key});await hook(type);return command(type,payload,key);}};
+  const client={mode:'browser',async state(){return {...view(stored,principal()),executionPolicy:EXECUTION_POLICY,codeHash:code,mode:'browser-memory-demo',identity:{actor,tenant:'synthetic',kind:'demo'}};},async command(type,payload,key){calls.push({type,payload,key});await hook(type);return command(type,payload,key);}};
   const loop=createContinuation(client,{now:()=>time,onStatus:s=>statuses.push(s),...options});
   return {loop,task,command,client,tracking,calls,statuses,h,get stored(){return stored;},set actor(x){actor=x;},set time(x){time=x;},set hook(x){hook=x;},set code(x){code=x;}};
 }
@@ -60,15 +61,15 @@ test('terminal failure receipt blocks duplicate combination',async()=>{
   // Corrupt fixture input after data check to force canonical failure outside loop.
   const claim=f.command('claim',{taskId:a.id,leaseMs:60000});const invalid=structuredClone(f.tracking);invalid.frames=[];
   f.command('run',{taskId:a.id,leaseToken:claim.lease.token,tracking:invalid});
-  await f.loop.start();assert.equal(f.calls.length,0);assert.match(f.statuses.at(-1).reason,/verification failed/);
+  await f.loop.start();assert.equal(f.calls.length,0);assert.match(f.statuses.at(-1).reason,/failure receipt/);
 });
 
-test('canonical failure halts later work and enforces manual reconciliation',async()=>{
-  const f=fixture(),a=f.task();f.stored.tasks[0].maxObservations=1;
-  const claim=f.command('claim',{taskId:a.id,leaseMs:60000});
-  f.command('run',{taskId:a.id,leaseToken:claim.lease.token,tracking:f.tracking});
+test('a distinct approved configuration is not silently forbidden by an older failure',async()=>{
+  const f=fixture(),a=f.task();const claim=f.command('claim',{taskId:a.id,leaseMs:60000});
+  const invalid=structuredClone(f.tracking);invalid.frames=[];
+  f.command('run',{taskId:a.id,leaseToken:claim.lease.token,tracking:invalid});
   const b=f.task(4500);await f.loop.approve(b.id,f.tracking);await f.loop.start();
-  assert.equal(f.calls.length,0);assert.match(f.statuses.at(-1).reason,/failure receipt/);assert.throws(()=>f.loop.start(),/reconcile/);
+  assert.equal(f.stored.receipts.length,2);assert.equal(f.stored.receipts[1].outcome,'success');
 });
 test('owner disposition stops approved work',async()=>{
   const f=fixture(),a=f.task();await f.loop.approve(a.id,f.tracking);
@@ -97,21 +98,28 @@ test('active lease on equivalent work prevents dispatch under another task ID',a
   await f.loop.start();assert.equal(f.calls.length,0);
 });
 
-for(const mode of ['hosted','local',undefined])test('shared/unknown mode fails closed before any dispatch: '+mode,async()=>{
-  const f=fixture(),a=f.task(),b=f.task();await f.loop.approve(a.id,f.tracking);
-  const second=createContinuation(f.client);await second.approve(b.id,f.tracking);
-  f.client.mode=mode;
-  assert.throws(()=>f.loop.start(),/transactional/);assert.throws(()=>second.start(),/transactional/);
-  assert.equal(f.calls.length,0);assert.equal(f.stored.receipts.length,0);
+
+for(const mode of ['hosted','local','browser'])test('missing server guarantee stays closed: '+mode,async()=>{
+  const f=fixture(),a=f.task();f.client.mode=mode;const real=f.client.state;
+  f.client.state=async()=>({...await real(),executionPolicy:undefined,identity:{actor:'owner',tenant:'synthetic',kind:{hosted:'users',local:'local',browser:'demo'}[mode]}});
+  await assert.rejects(f.loop.approve(a.id,f.tracking),/guarantee/);assert.throws(()=>f.loop.start(),/approval/);assert.equal(f.calls.length,0);
 });
-test('browser mode cannot turn a shared state response into isolated execution',async()=>{
-  const f=fixture(),a=f.task();const real=f.client.state;
-  f.client.state=async()=>({...await real(),mode:'shared-store'});
-  await f.loop.approve(a.id,f.tracking);await f.loop.start();
-  assert.equal(f.calls.length,0);assert.match(f.statuses.at(-1).reason,/transactional/);
+test('server guarantee loss after approval prevents commands',async()=>{
+  const f=fixture(),a=f.task();await f.loop.approve(a.id,f.tracking);const real=f.client.state;
+  f.client.state=async()=>({...await real(),executionPolicy:undefined});await f.loop.start();assert.equal(f.calls.length,0);
 });
 test('mode changing during claim prevents the next command',async()=>{
   const f=fixture(),a=f.task();await f.loop.approve(a.id,f.tracking);
   f.hook=async()=>{f.client.mode='hosted';};await f.loop.start();
   assert.deepEqual(f.calls.map(c=>c.type),['claim']);assert.equal(f.stored.receipts.length,0);
+});
+
+test('explicit signed-owner rerun of a terminal failure executes once',async()=>{
+  const f=fixture(),a=f.task();const claim=f.command('claim',{taskId:a.id,leaseMs:60000});
+  const invalid=structuredClone(f.tracking);invalid.frames=[];
+  const failed=f.command('run',{taskId:a.id,leaseToken:claim.lease.token,tracking:invalid});
+  const retry=f.command('task',{hypothesisId:f.h.id,dataCheckId:a.dataCheckId,split:a.split,budgetMs:a.budgetMs,maxObservations:a.maxObservations,rerunOf:failed.id,rerunReason:'Owner explicitly requests valid-input retry'});
+  await f.loop.approve(retry.id,f.tracking);await f.loop.start();
+  assert.equal(f.stored.receipts.length,2);assert.equal(f.stored.receipts[1].outcome,'success');
+  await f.loop.start();assert.equal(f.stored.receipts.length,2);
 });

@@ -15,8 +15,8 @@ try {
  assert.equal(await page.locator('#hypothesis-grid article').count(),3);
  assert.equal(await page.locator('.dd-brand').textContent(),'DATA DAWGS');
  await page.getByRole('tab',{name:'Queue'}).click();
- assert.equal(await page.getByRole('button',{name:'Start approved tasks'}).isDisabled(),true);
- await page.getByRole('status').filter({hasText:'shared stores lack transactional'}).waitFor();
+ assert.equal(await page.getByRole('button',{name:'Start approved tasks'}).isDisabled(),false);
+ await page.getByRole('status').filter({hasText:'Server reserves experiment identities atomically'}).waitFor();
  await page.getByRole('button',{name:'Claim & run locally'}).first().click();await page.getByText('Receipt recorded: success.',{exact:false}).waitFor();
  const state=await(await fetch(base+'/api/state')).json();assert.equal(state.receipts.length,1);assert(replay(directory,state.receipts[0].id).reproduced);
  assert.equal(await page.locator('#receipt-count').innerText(),'1 receipt');

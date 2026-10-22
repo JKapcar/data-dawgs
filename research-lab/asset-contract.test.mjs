@@ -35,6 +35,9 @@ test('actual Worker build ships complete dashboard module closure',()=>{
   const load=file=>({body:readFileSync(path.join(destination,'dashboard',file)),type:'text/javascript'});
   const files=moduleClosure(load);
   assert.ok(files.has('/continuation.mjs'));assert.ok(files.has('/coordinator.mjs'));
+  assert.ok(files.has('/execution-identity.mjs'));
+  const workerFiles=moduleClosure(file=>({body:readFileSync(path.join(destination,file)),type:'text/javascript'}),'/worker.mjs');
+  assert.ok(workerFiles.has('/execution-identity.mjs'));assert.ok(workerFiles.has('/machine-core.mjs'));
   for(const file of files)assert.deepEqual(load(file).body,readFileSync(new URL('.'+file,import.meta.url)),`Packaged source parity: ${file}`);
   assert.equal(JSON.parse(readFileSync(path.join(destination,'build-manifest.json'))).enabled,false);
   // Prove this contract catches the reviewer's actual missing-package failure.

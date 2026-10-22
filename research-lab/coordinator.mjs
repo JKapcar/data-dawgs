@@ -1,5 +1,6 @@
 // Tab-memory coordination only. Canonical tenant state remains the authority.
 import {validateTracking} from './tracking.mjs';
+import {experimentBasis,rerunBasis} from './execution-identity.mjs';
 export async function digest(value) {
   const bytes=new TextEncoder().encode(typeof value==='string'?value:JSON.stringify(value));
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
@@ -35,6 +36,11 @@ export async function verifyReceipt(s,t,r,{dataHash,codeHash,actor}={}) {
   if(!check&&!dataHash)fail(); // Legacy receipts have no canonical input anchor after a reload.
   if(t.dataCheckId&&(!check||check.kind!=='data_check'||check.synthetic!==true||check.hypothesisId!==t.hypothesisId||check.hypothesisVersion!==t.hypothesisVersion||check.dataHash!==r.hashes.data||check.codeHash!==r.hashes.code))fail();
   if(!/^[a-f0-9]{64}$/.test(r.hashes?.data)||!/^[a-f0-9]{64}$/.test(r.hashes?.code))fail();
+  if(r.executionId!==undefined||r.experimentId!==undefined){
+    const experimentId=await digest(experimentBasis(t,r.hashes.code,check?.dataHash||r.hashes.data));
+    const executionId=t.rerunOf?await digest(rerunBasis(experimentId,t.rerunOf)):experimentId;
+    if(r.experimentId!==experimentId||r.executionId!==executionId||t.executionId&&t.executionId!==executionId)fail();
+  }
   return r;
 }
 export function createCoordinator(client,{now=Date.now,key=()=>crypto.randomUUID()}={}) {

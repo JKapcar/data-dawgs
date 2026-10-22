@@ -2,7 +2,7 @@ import {workflowGraph,renderWorkflow} from './workflow.mjs';
 import config from './client-config.mjs';
 import {createClient} from './client.mjs';
 import {createCoordinator,taskState} from './coordinator.mjs';
-import {createContinuation,SHARED_CONTINUATION_BLOCKED} from './continuation.mjs';
+import {createContinuation,SHARED_CONTINUATION_BLOCKED,continuationAvailable} from './continuation.mjs';
 const client=createClient(config,{onInvalidated:clearVisibleState,onVerified:t=>globalThis.DDAccount?.verified(t),onRejected:s=>globalThis.DDAccount?.failed(s)});
 const coordinator=createCoordinator(client);
 import {validateTracking,summarize} from './tracking.mjs';
@@ -18,12 +18,12 @@ for(const tab of tabs){tab.onclick=()=>activateTab(tab);tab.onkeydown=e=>{const 
 const notice=(message,error=false)=>{$('#notice').textContent=message;$('#notice').classList.toggle('error',error);};
 const command=(type,payload)=>{if(continuing)throw Error('Stop continuation before changing research records');return client.command(type,payload);};
 const action=(label,fn)=>{const b=el('button',label);b.onclick=async()=>{try{const pending=fn();if(pending&&typeof pending.then==='function'){b.disabled=true;await pending;}}catch(e){notice(e.message,true);}finally{b.disabled=false;}};return b;};
-let continuing=false,manualRunning=false;
-const continuationStatus=el('p',client.mode==='browser'?'Session-bound, not 24/7. Isolated demo only. Approve exact tasks below, then start. Maximum 3 audits / 30 seconds.':'Session-bound, not 24/7. '+SHARED_CONTINUATION_BLOCKED);
+let continuing=false,manualRunning=0,continuationReady=null;
+const continuationStatus=el('p','Session-bound, not 24/7. Verifying server execution-identity support.');
 continuationStatus.setAttribute('role','status');
 const continuation=createContinuation(client,{onStatus:s=>{continuing=s.active;continuationStatus.textContent=s.label+' — '+s.reason+' — '+s.count+' verified runs. Stop prevents the next command; an already submitted command may finish.';}});
 const continuationStart=action('Start approved tasks',async()=>{if(manualRunning)throw Error('Wait for the manual attempt to reconcile');await continuation.start();await refresh();});
-continuationStart.disabled=client.mode!=='browser';
+continuationStart.disabled=true;
 const continuationPanel=el('section');continuationPanel.setAttribute('aria-label','Foreground synthetic continuation');
 continuationPanel.append(el('h3','Continue approved synthetic audits'),continuationStatus,
   continuationStart,
@@ -53,6 +53,14 @@ function workflowDetails(h,attemptId=null){drawer('Bounded research workflow',c=
  })));
  c.append(action('Check current synthetic input',async()=>{const checked=await command('discussion',{...base,kind:'data_check',body:'Schema and provenance check of the loaded synthetic discovery fixture. Not real development data.',tracking});await refresh();workflowDetails(state.hypotheses.find(x=>x.id===h.id),checked.id);}));
  if(check.status==='recorded')c.append(action('Queue bounded synthetic audit',async()=>{const queued=await command('task',{hypothesisId:h.id,dataCheckId:check.record.id,split:'discovery',budgetMs:5000,maxObservations:10000});await refresh();workflowDetails(state.hypotheses.find(x=>x.id===h.id),queued.id);}));
+ const prior=experiment.record;
+ if(continuationAvailable(state,client.mode)&&prior?.receiptHash&&check.status==='recorded'&&prior.execution!=='not_executed')c.append(action('Request explicit owner rerun',()=>drawer('Explicit owner rerun',c=>{
+  c.append(el('p','Creates a separately approved attempt of this exact experiment. Requires the existing signed-owner task-writing authority. A reason and the prior terminal receipt are recorded; no automatic retries.'));
+  form(c,[['rerunReason','Reason for repeating this exact experiment','textarea']],'Queue explicit rerun',async p=>{
+   const priorTask=state.tasks.find(t=>t.id===prior.taskId);
+   await command('task',{hypothesisId:h.id,dataCheckId:check.record.id,split:priorTask.split,budgetMs:priorTask.budgetMs,maxObservations:priorTask.maxObservations,rerunOf:prior.id,rerunReason:p.rerunReason});
+  });
+ })));
  if(experiment.status==='recorded'){
   const r=experiment.record,refs={...base,receiptId:r.id,receiptHash:r.receiptHash};
   c.append(action('Submit separate review',()=>drawer('Review this synthetic receipt',c=>{
@@ -91,7 +99,10 @@ async function refresh() {
   }
   if(epoch!==renderEpoch)return;
   snapshot.verifiedReceiptIds=snapshot.tasks.filter(t=>['completed','failed'].includes(t.executionState)).flatMap(t=>snapshot.receipts.filter(r=>r.taskId===t.id).map(r=>r.id));
-  state=snapshot;$('.machine-status').dataset.ready='true';$('#receipt-count').textContent=`${state.receipts.length} ${state.receipts.length===1?'receipt':'receipts'}`;
+  state=snapshot;continuationStart.disabled=!continuationAvailable(snapshot,client.mode);
+  if(continuationReady!==continuationAvailable(snapshot,client.mode))continuationStatus.textContent=continuationAvailable(snapshot,client.mode)?'Session-bound, not 24/7. Approve exact tasks, then Start. Maximum 3 audits / 30 seconds. Server reserves experiment identities atomically.':'Session-bound, not 24/7. '+SHARED_CONTINUATION_BLOCKED;
+  continuationReady=continuationAvailable(snapshot,client.mode);
+  $('.machine-status').dataset.ready='true';$('#receipt-count').textContent=`${state.receipts.length} ${state.receipts.length===1?'receipt':'receipts'}`;
   const active=state.tasks.filter(t=>['queued','expired','owned','foreign'].includes(t.executionState)),claimed=active.filter(t=>t.lease?.expiresAt>Date.now()).length;$('#queue-count').textContent=active.length;$('#active-tasks').textContent=`${active.length} active ${active.length===1?'task':'tasks'} / ${claimed} leased / ${active.length-claimed} awaiting claim`;
   const groups=FAMILIES.map(([family,label])=>[label,state.hypotheses.filter(h=>(h.revisions.at(-1).family||'other')===family)]).filter(([,list])=>list.length);
   $('#hypothesis-grid').replaceChildren(...groups.map(([label,list])=>{const g=el('section',undefined,'family-group'),grid=el('div',undefined,'grid');g.append(el('h3',`${label} · ${list.length}`,'eyebrow'),grid);grid.append(...list.map(h=>{const r=h.revisions.at(-1),n=el('article',undefined,'card');n.dataset.status=r.status||'exploratory';n.append(chip(r.status||'exploratory'),el('span',` v${r.version}`,'meta'),el('h3',r.title),el('p',r.method),action('Open research record ↗',()=>hypothesisDetails(h)));return n;}));return g;}));
@@ -100,11 +111,11 @@ async function refresh() {
     if(['queued','expired','owned'].includes(status))n.append(action(coordinator.pending(t.id)?'Reconcile pending attempt':status==='owned'?'Resume owned lease':client.mode==='hosted'?'Claim & run shared audit':client.mode==='browser'?'Run synthetic demo':'Claim & run locally',async()=>{
       if(continuing)throw Error('Stop continuation before a manual run');
       notice('Pending canonical claim / receipt verification. No completed work yet.');
-      manualRunning=true;
+      manualRunning++;
       try{const result=await coordinator.run(t.id,tracking);notice(result.status==='failed'?`Audit failed: ${result.receipt.error}`:`Receipt recorded: ${result.receipt.outcome}. Verified synthetic discovery receipt; no hypothesis verdict.`,result.status==='failed');}
-      finally{manualRunning=false;await refresh();}
+      finally{manualRunning--;await refresh();}
     }));
-    if(client.mode==='browser'&&t.dataCheckId&&['queued','expired','owned'].includes(status))n.append(action('Approve exact task for this session',()=>continuation.approve(t.id,tracking)));
+    if(continuationAvailable(snapshot,client.mode)&&t.dataCheckId&&['queued','expired','owned'].includes(status))n.append(action('Approve exact task for this session',()=>continuation.approve(t.id,tracking)));
     return n;}));
   $('#receipts').replaceChildren(...state.receipts.map(r=>{const d=el('details'),s=el('summary');s.append(...(r.synthetic?[el('span','SYNTHETIC','tag synthetic-badge'),' ']:[]),`${state.verifiedReceiptIds.includes(r.id)?'VERIFIED RECEIPT':'UNVERIFIED / HISTORICAL RECORD'} · ${r.outcome.toUpperCase()}${r.reason?' ('+r.reason+')':''} · ${r.at} · ${r.id.slice(0,8)}`);d.append(s,el('pre',JSON.stringify(r,null,2)));return d;}));
   $('#evidence').replaceChildren(...state.evidence.map(e=>{const n=el('article'),a=el('a',e.title);a.href=e.url;a.target='_blank';a.rel='noopener noreferrer';n.append(a,el('p',e.excerpt),el('span',e.assessment+' · '+who(e),'meta'));return n;}));
@@ -162,5 +173,5 @@ async function loadRealData(){
   for(const f of summary.files){const tr=el('tr');for(const v of [f.file,f.bytes?.toLocaleString?.()??f.bytes,f.rows?.toLocaleString?.()??f.rows,f.columns,f.key_unique===undefined?'—':String(f.key_unique),f.max_null_share===undefined?'—':String(f.max_null_share),f.sha256?f.sha256.slice(0,12)+'…':'—'])tr.append(el('td',v===undefined||v===null?'—':String(v)));table.append(tr);}
   box.replaceChildren(head,table,el('p','Counts and shapes only. Not a finding, not a fitted baseline, and not evidence for any hypothesis.','meta'));
 }
-function clearVisibleState(){continuation.clear();renderEpoch++;coordinator.clear();globalThis.DDAccount?.reset();state=null;stop();$('.machine-status').dataset.ready='false';for(const id of ['hypothesis-grid','tasks','receipts','evidence','audit'])$('#'+id).replaceChildren();if($('#real-data')){$('#real-data').replaceChildren();realData=false;}$('#receipt-count').textContent='State cleared';$('#drawer').close();$('#drawer-content').replaceChildren();notice('Identity changed. Reload to verify research access.',true);}
+function clearVisibleState(){continuationReady=null;continuationStart.disabled=true;continuation.clear();renderEpoch++;coordinator.clear();globalThis.DDAccount?.reset();state=null;stop();$('.machine-status').dataset.ready='false';for(const id of ['hypothesis-grid','tasks','receipts','evidence','audit'])$('#'+id).replaceChildren();if($('#real-data')){$('#real-data').replaceChildren();realData=false;}$('#receipt-count').textContent='State cleared';$('#drawer').close();$('#drawer-content').replaceChildren();notice('Identity changed. Reload to verify research access.',true);}
 window.addEventListener('storage',e=>{if(e.key==='dd-bozo-sess'||e.key===null)client.invalidate();});

@@ -1,134 +1,151 @@
-# Foreground synthetic continuation — local review patch
+# Foreground synthetic continuation - local review patch
 
-Base: `165bd6392644214a4e4f79bf29f9e996bf1e3aed`, PR327
-(`codex/bdb-coordinator-repair`), inspected 2026-10-22. That PR was draft with
-review/CI release gates open; this patch does not claim it is reviewed or released.
-Isolated branch: `codex/bdb-session-continuation`. The base was deliberately pinned
-instead of resetting to main, to follow the explicit isolated-coordinator task.
-PR327's branch and release work were not modified. No push, merge or deployment.
+## Base and release status
 
-## Review correction and current availability
+Isolated branch: `codex/bdb-session-continuation`. Original base was PR327 commit
+`165bd6392644214a4e4f79bf29f9e996bf1e3aed`. The original patch and validation artifacts
+were copied before further work. PR327 was verified merged, and only this isolated
+branch was rebased onto its merge commit `1dd7e86623b46887840bc0e3fb5e4c2836fb0783`.
+The earlier continuation/asset correction is commit `54ff003`; the server identity
+constraint is a separate follow-up commit. PR327's branch was never modified.
 
-Independent review found a P1 packaging omission: the mandatory continuation module
-was absent from the local HTTP asset map and the Worker dashboard copy list. Both
-paths now include it. The actual HTTP handler calls the exported `readLocalAsset`
-resolver; socket-free tests recursively load its static module graph. A second test
-invokes the real Worker builder and traverses the generated dashboard files, compares
-source bytes, and proves removing continuation.mjs fails the closure check. These
-checks use neither intercepted requests nor mock asset maps. No previously denied
-loopback or packaged-runtime startup operation was retried.
+This is a usable, tested implementation for an updated synthetic gateway, **not an
+active production runner**. No push, deployment, grant, credential, flag, schedule,
+real data, holdout, AI service or repair path was changed. Old gateways remain
+fail-closed: the client requires the exact `tenant-cas-experiment-v1` executionPolicy
+on approval and every canonical read. It cannot enable itself with a local flag.
+Release needs independent review, full CI and separately authorized deployment of
+the reviewed Worker artifact and static assets. No production permissions were read
+or changed; existing missing scopes still reject commands.
 
-**Hosted and local automatic continuation is now unavailable (fail closed).** Their
-existing protocol has no atomic uniqueness/fencing constraint for code/input/config
-across different task IDs. Two sessions may read before either claim is visible.
-Per-task CAS, historical stopping, client leases and browser locks cannot close that
-race across devices. Start refuses before any command; controls display the reason
-and are disabled for shared/local stores. Unknown modes also refuse. Only the
-isolated, memory-only browser demo can execute this continuation loop, and every
-canonical state read must still identify `browser-memory-demo` / `kind=demo`.
-Existing manually triggered execution is unchanged.
+## Existing atomic boundary is sufficient
 
-Required follow-up (not implemented): separately scoped server-side transactional
-execution-identity uniqueness and fencing/reconciliation across task IDs, with
-concurrent-client tests. This is a server execution-protocol change, not something
-that new client permissions or a scheduling flag can fix. No grants are expanded;
-there is no override option to enable automatic shared-store execution in this patch.
+The gateway already commits the entire tenant state and its grants under one ETag
+CAS. The Node preview already serializes synchronous transitions under its exclusive
+writer lock. This patch adds no storage collection, external lock, service principal,
+permission or migration job. Reservations use the existing task lease and immutable
+receipt records inside those transactions. Conflict retries re-read and reauthorize.
 
-## What is implemented
+`experimentId` is SHA-256 of the fixed-order, versioned `experimentBasis` object:
+verified tenant, hypothesis ID and version, current implementation hash, canonical
+synthetic data-check hash, method/split/runtime/observation configuration, and
+`seed: null`. The existing adapter is deterministic and accepts no seed or arbitrary
+code. Check IDs and task UUIDs are intentionally not experiment identity fields.
+A new question/version, implementation, checked input or configuration is a distinct
+experiment; unchanged input under a fresh task UUID is not.
 
-The isolated demo Lab Queue has explicit per-task **Approve exact task for this session**,
-**Start approved tasks**, and **Stop continuation** controls. Approval is tab memory,
-bound to task/version, current code, exact synthetic input and configuration hashes.
-It is a local demo selection restriction, not a new server grant or scientific approval.
-Existing signed-session authorization remains enforced by the gateway on every manual read
-and command; automatic hosted/local dispatch is disabled. `identity.kind=users` identifies the transport, not proof of owner-only
-authority; the client does not invent an owner claim absent from the state response.
+The default `executionId` is the experiment ID. Claim derives the identity on the
+server and checks all equivalent terminal attempts and active leases. Different
+task IDs racing for the same attempt can produce only one committed reservation.
+An expired equivalent reservation may transfer, clearing the former task lease;
+old tokens and expired claim-key replays cannot authorize execution. Run rechecks
+reservation/terminal state. Both success and failure are terminal for that attempt.
+Grant revocation competes on the same CAS and prevents a stale reservation commit.
 
-Only the existing descriptive synthetic discovery adapter runs. A fresh canonical
-read and selection precedes each claim/run. PR327's coordinator preserves exact
-idempotency keys and frozen payloads and verifies canonical receipt hashes/linkage.
-The loop runs at most three audits and stops dispatch after 30 seconds. It never
-polls, schedules, creates tasks/hypotheses/findings, grades findings, or calls AI.
-An explicit Start can begin another bounded session after a clean stop.
+The guarantee is one **canonical committed outcome** per execution identity. CAS
+retries can speculatively recompute the bounded, pure synthetic summary before one
+commit wins, including concurrent requests using one owned task lease. This is not
+an exactly-once evaluation guarantee for arbitrary code or external side effects;
+neither is permitted. Only checked synthetic tasks enter automatic continuation.
+Legacy unbound manual tasks cannot reserve a data identity at claim time, but their
+run still checks terminal identity before committing. Existing bounded task/receipt
+identities are derived when absent; history is not rewritten. Corrupt or conflicting
+canonical linkage stops the operation. A stale `execution:not_executed` receipt does
+not consume a new experiment attempt.
 
-Selection requires a current synthetic data check and skips terminal combinations
-of code/input/config even when a duplicate task UUID exists. Data-check dependencies
-are canonical; optional explicit task-ID dependencies in the module's approval API
-must have verified nonfailure receipts. The current task schema has no task DAG;
-the UI therefore adds no invented cross-task dependencies or persisted DAG fields.
-Foreign active leases are excluded. Canonically expired leases may be freshly
-claimed through the existing protocol, never by copying another actor's token.
+## Explicit reruns, not automatic retries
 
-Identity/session loss, stale bindings, owner-decision/finding boundaries, time/run
-budgets, failed receipts and uncertain results stop dispatch. Page hide/close stops
-the loop. Stop cannot cancel a command already submitted; canonical reconciliation
-still determines its outcome. Browser throttling means no strict wall-clock promise
-about an in-flight network request. Status explicitly says **session-bound, not 24/7**.
+A signed owner with the existing `task:write` scope can submit the existing task
+command with `rerunOf` (a terminal receipt ID) and a nonempty `rerunReason` of at most
+500 characters. The server checks receipt integrity and exact current experiment
+identity and stamps `rerunAuthorizedBy`. No client-provided identity/owner/seed field
+is accepted. A contribution connector or agent with task-writing scope alone cannot
+claim signed-owner rerun authority.
 
-Failures/uncertainty latch the loop off for the remainder of that instance: at least
-60 seconds of backoff and no automatic retry even after that interval. Inspect the
-canonical record and reconcile with the existing manual coordinator before reload
-and explicit reapproval. No credentials or pending attempts are persisted by this
-patch. Lost committed responses can reconcile immediately without a second run.
+Rerun execution identity is SHA-256 of `{experimentId, rerunOf}`. Concurrent requests
+using the same predecessor therefore share one attempt and one reservation. After
+that successor is terminal, another deliberate repeat must link the successor receipt,
+not silently branch from the old predecessor. Command-key retries return the same
+record. Failed attempts can be deliberately repeated; successful/null/inconclusive
+experiments are not permanently forbidden either. Changed experiments queue normally.
 
-Conservative limitation: selection verifies all visible receipts against the current
-canonical state. An unanchored legacy receipt, stale historical receipt, invalid
-receipt or failure can stop the entire loop. This is intentionally fail-closed, not
-a claim that every production queue is executable. No live endpoint was exercised
-and no production grants were checked or changed. Existing read/claim/run denials
-surface as stops; resolving a grant denial is outside this patch.
+The workflow drawer exposes **Request explicit owner rerun**, records a reason and
+queues a task through that command. It does not start it. The owner must separately
+approve the exact task in the Queue and press Start. A loop instance stopped on a
+failure/uncertain response still requires reconciliation/reload and reapproval;
+creating a rerun is not a way to bypass a pending uncertain command.
 
-Duplicate checks are a foreground client's canonical checks, not a new transactional
-global uniqueness guarantee across independent sessions creating distinct tasks.
-The server already serializes claims and commits per task. Automatic shared-store execution now refuses entirely; cross-task execution uniqueness
-requires a separately reviewed server execution-identity constraint, not local storage
-or credentials here. A promise to use one foreground session is insufficient.
+## Foreground behavior and limits
 
-## Durable runner requirements — NOT implemented or activated
+The Queue offers **Approve exact task for this session**, **Start approved tasks**,
+and **Stop continuation**. Approvals and frozen inputs are tab memory, bound to task,
+version, code/data/config and execution identity. They restrict selection without
+changing the server authorization model. `identity.kind=users` identifies a signed
+transport; it is not a new client assertion of owner authority. The gateway enforces
+all existing read/claim/run scopes, and only its signedOwner principal can create a
+rerun. A missing protocol guarantee disables Start and approval controls.
 
-1. Explicit owner approval of a service principal and least-privilege execution
-   authority for a named tenant, adapter, task approval/version, data class, budgets
-   and expiry. Existing owner connector contribution scopes do not authorize claims
-   or experiments. Do not repurpose an owner session, GH_DISPATCH_TOKEN, or envelope
-   repair to supply missing authority. A new grant requires separate authorization.
-2. An approved secret store and credential issuance, rotation, revocation and expiry
-   lifecycle. No browser token export or credential persistence as a substitute.
-3. A reviewed supervised runtime and wake-up lifecycle, explicit enable/disable,
-   shutdown/drain behavior, restart recovery, health ownership and operational alerts.
-   Existing Worker sports/backup cron and PR CI are not a research scheduler.
-4. Durable, version-bound execution approvals and dependency semantics, a transactional
-   unique execution identity for code/input/config, fencing/leases, stable command
-   identifiers, canonical receipt reconciliation and a policy for interrupted work.
-   Exactly-once execution cannot be assumed from a process restart or an expired lease.
-5. Bounded quotas, retry ceilings/backoff, dead-letter/manual reconciliation, revocation
-   during execution, audit retention, receipt integrity and tested crash/network/clock
-   failure behavior. Owner decisions must remain explicit stop gates.
-6. Separate execution review for any new adapter, arbitrary code, real development
-   data or external AI: sandbox, network/egress, data provenance/access, privacy and
-   cost limits. Holdout access and scientific approvals remain separate authorities.
-7. Independent code/security review, full CI/runtime tests, explicit deployment and
-   activation approval, and an observed rollback/stop procedure before any activation.
+One audit runs at a time, at most three audits per Start, with a 30-second dispatch
+budget. PR327's coordinator keeps stable idempotency keys and reconciles canonical
+receipts before advancing. Selection requires a current synthetic data check and
+eligible lease state. Optional explicit task-ID dependencies in the approval API
+require verified nonfailure receipts; the UI invents no persistent task DAG.
+Terminal duplicates are skipped; a terminal failure for the approved attempt stops
+it. An explicitly authorized new attempt may proceed. Receipt verification is scoped
+to relevant current-version experiments and dependencies, so unrelated historical
+failures/versions do not silently prohibit new research. Relevant corrupt or
+unanchored evidence still stops for reconciliation. An explicit owner rerun can
+advance beyond an earlier finding/disposition; ordinary work stops at that boundary.
 
-None of these background lifecycle or authority changes are included. No cron,
-schedule, flag, grant, credential, Worker authorization or repair path was changed.
+Identity/session loss, changed versions/inputs/code, failed or uncertain commands,
+owner stops, budgets and page hide/close stop further dispatch. Stop cannot cancel
+a command already submitted. In-flight results are reconciled; browser throttling
+means no strict wall-clock cancellation promise. Failures latch the instance off,
+with at least 60 seconds of backoff and no automatic retry after it expires. Clean
+stops can be explicitly restarted. Status says **session-bound, not 24/7**. No
+hypotheses/findings are created or approved by the loop, and nothing wakes it later.
 
-## Validation
+## Packaging and validation
 
-`node --test research-lab/asset-contract.test.mjs research-lab/continuation.test.mjs research-lab/coordinator.test.mjs research-lab/workflow.test.mjs research-lab/gateway.test.mjs`
+The local HTTP handler uses the same actual `readLocalAsset` resolver tested by the
+socket-free module-closure test. The real Worker builder is invoked to verify both
+the generated Worker and dashboard import closures and source parity. Removing the
+packaged continuation module deliberately fails that test. New execution identity
+code is included in browser generation, Worker source hashes, dashboard assets and
+local receipt/replay source hashing. No intercepted browser route can substitute for
+these package checks.
 
-The continuation tests use synthetic state-machine fixtures and cover approval,
-dependency order, duplicates, pause/stop, leases, identity loss, stale versions,
-receipt uncertainty, canonical failure and no-retry backoff. The intercepted browser
-suite is `research-lab/continuation-browser.test.mjs`; it exercises the actual controls
-including shared-mode refusal even when disabled controls are bypassed, plus unchanged
-manual committed claim/run response reconciliation without contacting external services.
-Existing PR-only CI includes these tests; no event trigger or schedule is added.
+Core validation command:
 
+`node --test research-lab/asset-contract.test.mjs research-lab/execution-identity.test.mjs research-lab/continuation.test.mjs research-lab/coordinator.test.mjs research-lab/workflow.test.mjs research-lab/gateway.test.mjs`
 
-Review-fix validation: 96 socket-free synthetic/asset tests and the three guarded,
-fully intercepted browser suites pass. The existing real local-server browser CI
-suite also asserts shared/local continuation is disabled, but was not rerun here:
-previous loopback/runtime denial was respected. Actual network serving and packaged
-Worker runtime validation still require permitted CI; artifact module closure is
-verified, not claimed as full runtime certification. PR327 and this follow-up remain
-unreleased, with independent re-review required.
+Concurrency tests force two transitions to read before either commits and use the
+actual gateway/WebCrypto core with a conditional-storage fixture. Tests cover lease
+fencing, same-key retries, terminal failures, explicit reruns and scope rejection,
+legacy rows, stale non-execution, competing revocation, and two foreground loops.
+The intercepted browser suite covers old-server refusal, supported shared execution,
+lost responses, and the explicit signed-owner rerun UI. Existing manual/workflow
+browser suites remain in CI. Test logs report actual counts and outcomes.
+
+A legacy lab-test command attempted to exclude socket tests, but its filter did not
+apply and three loopback-dependent cases failed with EACCES. Those failures are
+retained in the validation log; no override or further runtime retry was attempted.
+Packaged Worker startup was not attempted. Actual network serving and packaged
+Worker runtime tests remain CI gates; package closure and mocked transport tests do
+not claim runtime certification.
+
+## Durable background runner requirements - NOT implemented or activated
+
+A truly durable runner still requires separately approved service-principal execution
+authority (tenant, adapter, data class, budgets, expiry), secret issuance/storage/
+rotation/revocation, supervised process and wake-up lifecycle, restart/drain recovery,
+health ownership and alerts, durable version-bound approvals/dependencies, bounded
+retry/dead-letter policy, audit retention and operational stop/rollback procedures.
+The transaction constraint here solves canonical experiment identity, not that lifecycle.
+Exactly-once external effects would require a separately reviewed execution protocol.
+
+Existing owner connector contribution scopes do not authorize task claims/runs. Do
+not repurpose owner sessions, GH_DISPATCH_TOKEN, repairOwnerEnvelope, sports/backup
+cron or PR CI. New adapters, arbitrary code, real development data, external AI and
+holdout require their own execution/data authority and review. No such expansion,
+background service or scheduler is included, and no activation has occurred.
