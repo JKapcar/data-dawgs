@@ -1,0 +1,143 @@
+{
+  "as_of": "2026-10-23",
+  "source": "The Odds Gap; user-relayed research receipt retrieved 2026-10-23T02:59:00Z",
+  "note": "Supplemental, uncorroborated source-claimed closing prices. Page timestamp is not an exact per-book quote timestamp. Original captures and official scoring are unchanged. Append revisions; never replace prior records.",
+  "built": "2026-10-23",
+  "canonical_url": "https://datadawgs216.com/data/bozo-recovered-closes.json",
+  "data": {
+    "schema_version": 1,
+    "records": [
+      {
+        "id": "recovery-401869845",
+        "revision": 1,
+        "supersedes": null,
+        "event_id": "401869845",
+        "sport": "cfb",
+        "kickoff": "2026-10-22T23:00:00Z",
+        "away": "James Madison",
+        "home": "App State",
+        "book": "draftkings",
+        "source_url": "https://theoddsgap.com/odds/college-football/james-madison-dukes-vs-appalachian-state-mountaineers/2026-10-22",
+        "page_quote_timestamp": "2026-10-22T19:02:00-04:00",
+        "quote_timestamp": null,
+        "retrieved_at": "2026-10-23T02:59:00Z",
+        "evidence_status": "third_party_reported_closing_uncorroborated",
+        "orientation": "scheduled_home_away",
+        "period": "full_game",
+        "markets": {
+          "moneyline": {
+            "home_price": 370,
+            "away_price": -485
+          },
+          "spread": {
+            "home_line": 12.5,
+            "home_price": -108,
+            "away_price": -112
+          },
+          "total": {
+            "line": 56.5,
+            "over_price": -112,
+            "under_price": -108
+          }
+        }
+      },
+      {
+        "id": "recovery-401871056",
+        "revision": 1,
+        "supersedes": null,
+        "event_id": "401871056",
+        "sport": "cfb",
+        "kickoff": "2026-10-22T23:00:00Z",
+        "away": "Liberty",
+        "home": "Kennesaw State",
+        "book": "draftkings",
+        "source_url": "https://theoddsgap.com/odds/college-football/liberty-flames-vs-kennesaw-state-owls/2026-10-22",
+        "page_quote_timestamp": "2026-10-22T19:02:00-04:00",
+        "quote_timestamp": null,
+        "retrieved_at": "2026-10-23T02:59:00Z",
+        "evidence_status": "third_party_reported_closing_uncorroborated",
+        "orientation": "scheduled_home_away",
+        "period": "full_game",
+        "markets": {
+          "moneyline": {
+            "home_price": 300,
+            "away_price": -380
+          },
+          "spread": {
+            "home_line": 8.5,
+            "home_price": -112,
+            "away_price": -108
+          },
+          "total": {
+            "line": 50.5,
+            "over_price": -108,
+            "under_price": -112
+          }
+        }
+      },
+      {
+        "id": "recovery-401862807",
+        "revision": 1,
+        "supersedes": null,
+        "event_id": "401862807",
+        "sport": "cfb",
+        "kickoff": "2026-10-22T23:30:00Z",
+        "away": "East Carolina",
+        "home": "Memphis",
+        "book": "draftkings",
+        "source_url": "https://theoddsgap.com/odds/college-football/east-carolina-pirates-vs-memphis-tigers/2026-10-22",
+        "page_quote_timestamp": "2026-10-22T19:32:00-04:00",
+        "quote_timestamp": null,
+        "retrieved_at": "2026-10-23T02:59:00Z",
+        "evidence_status": "third_party_reported_closing_uncorroborated",
+        "orientation": "scheduled_home_away",
+        "period": "full_game",
+        "markets": {
+          "moneyline": {
+            "home_price": -425,
+            "away_price": 330
+          },
+          "spread": {
+            "home_line": -10.5,
+            "home_price": -105,
+            "away_price": -115
+          },
+          "total": {
+            "line": 55.5,
+            "over_price": -105,
+            "under_price": -115
+          }
+        }
+      },
+      {
+        "id": "recovery-401873010",
+        "revision": 1,
+        "supersedes": null,
+        "event_id": "401873010",
+        "sport": "nfl",
+        "kickoff": "2026-10-23T00:15:00Z",
+        "away": "New England",
+        "home": "Chicago",
+        "book": "draftkings",
+        "source_url": "https://theoddsgap.com/weeklyslate/nfl",
+        "page_quote_timestamp": "2026-10-22T20:00:00-04:00",
+        "quote_timestamp": null,
+        "retrieved_at": "2026-10-23T02:59:00Z",
+        "evidence_status": "third_party_reported_closing_uncorroborated",
+        "orientation": "scheduled_home_away",
+        "period": "full_game",
+        "markets": {
+          "moneyline": {
+            "home_price": -155,
+            "away_price": 130
+          },
+          "spread": null,
+          "total": null
+        }
+      }
+    ]
+  },
+  "tier": "labs",
+  "graded": false,
+  "tier_meaning": "Pup \u2014 live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here."
+}
