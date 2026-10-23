@@ -431,14 +431,14 @@ async function handleDiscordPackOwner(request,env){
    }));
   }
   // register / inspect_command: one guild command named pack; never bulk-overwrites other commands.
-  dpCheck(env.DISCORD_PACK_ENABLED==='true',503,'pack_disabled');dpCheck(env.DISCORD_BOT_TOKEN&&dqSnow(env.DISCORD_APPLICATION_ID)&&dqSnow(env.DISCORD_GUILD_ID),503,'bot_configuration_required');
+  if(a.action==='register')dpCheck(env.DISCORD_PACK_ENABLED==='true',503,'pack_disabled');dpCheck(env.DISCORD_BOT_TOKEN&&dqSnow(env.DISCORD_APPLICATION_ID)&&dqSnow(env.DISCORD_GUILD_ID),503,'bot_configuration_required');
   const fingerprint=await dcHash(JSON.stringify([env.DISCORD_APPLICATION_ID,env.DISCORD_GUILD_ID,DP_COMMAND]));await authorize();
   if(a.action==='inspect_command'){
    // Read-only observation; it may settle an uncertain registration, never sends one.
    const r=await dpDiscord(env,'applications/'+env.DISCORD_APPLICATION_ID+'/guilds/'+env.DISCORD_GUILD_ID+'/commands').catch(()=>null),list=r?.ok?await r.json().catch(()=>null):null;
    dpCheck(Array.isArray(list),502,'command_inspection_unavailable');
    const hits=list.filter(c=>c?.name==='pack'&&c.type===1&&c.application_id===env.DISCORD_APPLICATION_ID&&c.guild_id===env.DISCORD_GUILD_ID);dpCheck(hits.length<=1,502,'command_inspection_ambiguous');
-   const c=hits[0],o=c?.options??[],matches=!!c&&c.default_member_permissions===DP_COMMAND.default_member_permissions&&c.description===DP_COMMAND.description&&o.length===2&&o[0]?.name==='question'&&o[0].required===true&&o[0].max_length===2000&&o[1]?.name==='to'&&!o[1].required&&JSON.stringify((o[1].choices??[]).map(x=>[x.name,x.value]))===JSON.stringify(DP_COMMAND.options[1].choices.map(x=>[x.name,x.value]));
+   const c=hits[0],o=c?.options??[],matches=!!c&&c.default_member_permissions===DP_COMMAND.default_member_permissions&&c.description===DP_COMMAND.description&&o.length===2&&o[0]?.name==='question'&&o[0].type===3&&o[0].required===true&&o[0].max_length===2000&&o[1]?.name==='to'&&o[1].type===3&&!o[1].required&&JSON.stringify((o[1].choices??[]).map(x=>[x.name,x.value]))===JSON.stringify(DP_COMMAND.options[1].choices.map(x=>[x.name,x.value]));
    return send(await dpTxn(env,s=>{const old=s.command;const status=matches?'registered':c?'present_definition_differs':'absent';
     if(old?.status==='uncertain'&&old.fingerprint===fingerprint&&matches){s.command={...old,status:'registered',command_id:c.id,observed_at:dpIso(now)};return {result:{observed:status,command_id:c.id,settled:true},write:true};}
     if(old?.status==='uncertain'&&!c){delete s.command;return {result:{observed:status,settled:true,notice:'No pack command exists; a fresh registration is safe.'},write:true};}

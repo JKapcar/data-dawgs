@@ -302,3 +302,8 @@ test('revocation at mutation reauthorization prevents binding and sends',async()
  const f=await fixture();await assert.rejects(f.ctx.dpMcpRun('dd_pack_bind',{},f.env,f.callers.owner,async()=>null),/connector_identity_changed/);
  const lease=await f.ready(),id=await claimed(f,lease);await assert.rejects(f.ctx.dpMcpRun('dd_pack_answer',{lease,id,text:'Synthetic.'},f.env,f.callers.owner,async()=>null),/connector_identity_changed/);assert.deepEqual(f.created(),{threads:0,messages:0});
 });
+
+test('owner can inspect command while Pack is off without enabling registration',async()=>{
+ const f=await fixture();f.env.DISCORD_PACK_ENABLED='false';const inspected=await f.owner({action:'inspect_command'});assert.equal(inspected.status,200);assert.equal(inspected.body.observed,'absent');assert.ok(f.discordCalls().every(c=>c.method==='GET'));
+ const registered=await f.owner({action:'register'});assert.equal(registered.status,503);assert.equal(registered.body.error,'pack_disabled');assert.ok(f.discordCalls().every(c=>c.method==='GET'));
+});

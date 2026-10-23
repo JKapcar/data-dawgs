@@ -32,9 +32,9 @@ try{for(const width of [320,390,1280]){
  await page.goto(base+'/research-lab/discord-pack.html');await page.locator('#load').click();await page.locator('#panel').waitFor({state:'visible'});
  assert(await page.locator('#register').isDisabled());assert.match(await page.locator('main').innerText(),/cannot wake a chat/);
  assert.equal(await page.locator('#seats img').count(),0);
- await page.locator('#inspect').click();await page.waitForFunction(()=>document.querySelector('#command').textContent.includes('absent'));
+ state.flags.pack=false;await page.locator('#load').click();await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('Pack off'));assert(!await page.locator('#inspect').isDisabled());await page.locator('#inspect').click();await page.waitForFunction(()=>document.querySelector('#command').textContent.includes('absent'));
  assert.deepEqual(calls.map(c=>c.action),['inspect_command']);assert(!await page.locator('#consent').isChecked());
- await page.locator('#consent').check();await page.locator('#register').click();await page.waitForFunction(()=>document.querySelector('#command').textContent.includes('registered'));
+ state.flags.pack=true;await page.locator('#load').click();await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('Pack on'));await page.locator('#consent').check();await page.locator('#register').click();await page.waitForFunction(()=>document.querySelector('#command').textContent.includes('registered'));
  assert(!await page.locator('#consent').isChecked());
  await page.locator('#consent').check();await page.locator('[data-act="stop"]').click();await page.locator('[data-act="allow"]').waitFor();
  assert.deepEqual(calls.map(c=>c.action),['inspect_command','register','stop']);

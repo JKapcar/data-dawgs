@@ -8,7 +8,7 @@ const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!=null)e.te
 async function request(body){const auth=token(),generation=epoch;if(!auth)throw Error('Sign in to DataDawgs as the site owner, then return here.');
  const r=await fetch(api,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+auth,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),credentials:'omit',redirect:'error',cache:'no-store'});
  const result=await r.json();if(auth!==token()||generation!==epoch)throw Error('Account changed. Load status again.');if(!r.ok){DDAccount.failed(r.status);throw Error(result.error||'Request failed');}DDAccount.verified(auth);return result;}
-function controls(){const ok=!busy&&!!data&&$('consent').checked;$('register').disabled=!ok||!data.flags.pack;$('inspect').disabled=busy||!data||!data.flags.pack;$('confirmLink').disabled=!ok||!preview;$('load').disabled=busy;
+function controls(){const ok=!busy&&!!data&&$('consent').checked;$('register').disabled=!ok||!data.flags.pack;$('inspect').disabled=busy||!data;$('confirmLink').disabled=!ok||!preview;$('load').disabled=busy;
  for(const b of document.querySelectorAll('[data-act]'))b.disabled=!ok;}
 function clear(){epoch++;data=null;$('panel').hidden=true;$('consent').checked=false;controls();}
 function render(){
