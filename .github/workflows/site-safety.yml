@@ -58,6 +58,10 @@ on:
       - "fantasy-warroom.html"
       - "tests/warroom-weekly.test.js"
       - "bozo.html"
+      - "bozo-recovered.js"
+      - "data/bozo-recovered-closes.json"
+      - "tests/bozo-recovered.test.cjs"
+      - "work/test-bozo-recovered-ui.mjs"
       - "bozo-menu-ui.js"
       - "bozo-menu.html"
       - "work/test-bozo-menu-ui.mjs"
@@ -125,6 +129,10 @@ on:
       - "fantasy-warroom.html"
       - "tests/warroom-weekly.test.js"
       - "bozo.html"
+      - "bozo-recovered.js"
+      - "data/bozo-recovered-closes.json"
+      - "tests/bozo-recovered.test.cjs"
+      - "work/test-bozo-recovered-ui.mjs"
       - "bozo-menu-ui.js"
       - "bozo-menu.html"
       - "work/test-bozo-menu-ui.mjs"
@@ -148,6 +156,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - run: node --test tests/bozo-recovered.test.cjs
       - run: node work/test-dfs-page.js
       - run: node work/test-dfs-main-slate.cjs
       - run: npm install --prefix /tmp/dd-dfs-test jsdom@30.0.1 --no-audit --no-fund
@@ -165,6 +174,7 @@ jobs:
           name: agent-board-mobile
           path: artifacts/board
           if-no-files-found: ignore
+      - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-recovered-ui.mjs
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-disclosures-ui.mjs
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-diagnostics-ui.mjs
       - uses: actions/upload-artifact@v4
