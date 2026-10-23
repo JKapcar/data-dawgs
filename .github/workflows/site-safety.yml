@@ -62,6 +62,9 @@ on:
       - "data/bozo-recovered-closes.json"
       - "tests/bozo-recovered.test.cjs"
       - "work/test-bozo-recovered-ui.mjs"
+      - "bozo-estimate-manager.js"
+      - "tests/bozo-estimate-manager.test.cjs"
+      - "work/test-bozo-estimate-manager-ui.mjs"
       - "bozo-menu-ui.js"
       - "bozo-menu.html"
       - "work/test-bozo-menu-ui.mjs"
@@ -133,6 +136,9 @@ on:
       - "data/bozo-recovered-closes.json"
       - "tests/bozo-recovered.test.cjs"
       - "work/test-bozo-recovered-ui.mjs"
+      - "bozo-estimate-manager.js"
+      - "tests/bozo-estimate-manager.test.cjs"
+      - "work/test-bozo-estimate-manager-ui.mjs"
       - "bozo-menu-ui.js"
       - "bozo-menu.html"
       - "work/test-bozo-menu-ui.mjs"
@@ -175,6 +181,8 @@ jobs:
           path: artifacts/board
           if-no-files-found: ignore
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-recovered-ui.mjs
+      - run: node --test tests/bozo-estimate-manager.test.cjs
+      - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-estimate-manager-ui.mjs
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-disclosures-ui.mjs
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-diagnostics-ui.mjs
       - uses: actions/upload-artifact@v4

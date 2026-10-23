@@ -1,0 +1,9 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const {preview}=require('../bozo-estimate-manager.js');
+const block=fs.readFileSync('dawg-bot-worker.js','utf8').split('// BEGIN BOZO ESTIMATED CLV')[1].split('// END BOZO ESTIMATED CLV')[0].split('\n').slice(1).join('\n');
+const c={URL,Date};vm.createContext(c);vm.runInContext(block,c);
+const row={result:'lost',price:-150,priceOpp:null,selectionKey:'synthetic',entryBook:'draftkings',verificationStatus:'unverified'};
+const input=()=>({closeQuote:{price:-180,opposite:150,selectionKey:'synthetic',book:'draftkings',sourceUrl:'https://example.com/closing',quotedAt:null,retrievedAt:'2026-10-23T12:00Z',evidence:'source_reported_closing'},rationale:'Synthetic evidence and hold assumptions'});
+test('form preview agrees with server for paired and explicit one-sided scenarios',()=>{for(const [entryOpp,closeOpp] of [[null,150],[130,null],[130,150],[null,null]]){const r={...row,priceOpp:entryOpp},i=input();i.closeQuote.opposite=closeOpp;i.scenarios=[.02,.05,.08];const a=preview(r,i),b=c.bozoEstimateClv(r,i);for(const k of ['point','low','high'])assert.ok(Math.abs(a[k]-b[k])<1e-10);}});
+test('form preserves unknown quote time and requires explicit unknown-side scenarios',()=>{const i=input();assert.equal(i.closeQuote.quotedAt,null);preview(row,i);i.closeQuote.opposite=null;assert.throws(()=>preview(row,i));i.scenarios=[.02,.05,.08];preview(row,i);assert.equal(i.closeQuote.opposite,null);});
+test('form refuses credential URL, invalid quote and un-timed pregame claim',()=>{for(const mutate of [i=>i.closeQuote.sourceUrl='https://user:secret@example.com/a',i=>i.closeQuote.price=0,i=>i.closeQuote.evidence='observed_pregame']){const i=input();mutate(i);assert.throws(()=>preview(row,i));}});

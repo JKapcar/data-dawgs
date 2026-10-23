@@ -4242,6 +4242,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div id="clvTableView" hidden><div class="clv-tablewrap"><table class="clv-tbl" id="clvTbl"></table></div></div>
 
   <div class="clv-foot" id="clvFoot"></div>
+  <div id="clvEstimateManager"></div>
+  <script src="bozo-estimate-manager.js" defer></script>
 </div>
 
 <!-- ---------- Bozo Royale: survival odds ----------
@@ -9850,11 +9852,13 @@ function paintSurvival(){
     + `</div></details>`;
 }
 
+function mountBozoEstimateManager(){window.DDClvEstimateManager?.mount(document.getElementById('clvEstimateManager'),{isManager,league:()=>LID,identity:()=>ME?.name||'',read:godRead,write:wPost,who:ledgerWho,refresh:()=>clvLoad(true)});}
 async function clvLoad(force){
   const card = document.getElementById('clvCard');
   if(onHub()){ card.style.display='none'; return; }
   if(CLV.loading) return;
   if(CLV.lid===LID && CLV.data && !force){
+    mountBozoEstimateManager();
     card.style.display=view()==='overview' ? '' : 'none';
     if(view()==='diagnostics') paintDiagnosticsExplorer();
     return;
@@ -9889,6 +9893,7 @@ async function clvLoad(force){
     document.getElementById('clvSim').style.display = CLV.data.synthetic ? '' : 'none';
     document.getElementById('clvFoot').innerHTML = clvFootLive() + clvMethod() + clvEstimateEvidence();
     clvRender();
+    mountBozoEstimateManager();
     if(view()==='overview') paintSurvival();
     if(view()==='diagnostics') paintDiagnosticsExplorer();
   }catch(e){
