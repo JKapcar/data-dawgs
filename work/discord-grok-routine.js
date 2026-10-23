@@ -10,13 +10,25 @@ async function dgSignedHeaders(secret,id,timestamp,body){
  let binary='';for(const b of digest)binary+=String.fromCharCode(b);
  return {'Content-Type':'application/json','webhook-id':id,'webhook-timestamp':timestamp,'webhook-signature':'v1,'+btoa(binary)};
 }
-function dgConfig(env){
- if(env.DISCORD_PACK_ENABLED!=='true'||env.DISCORD_PACK_DELIVERY_ENABLED!=='true'||env.DISCORD_GROK_WAKE_ENABLED!=='true'||env.DISCORD_GROK_INCLUDED_USAGE_CONFIRMED!=='true'||dpSeatConfig(env).grok?.key_label!=='pack-grok')return null;
+// Fixed reason codes only: never expose configuration values or secret details.
+function dgConfigFailures(env){
+ const failures=[];
+ for(const [key,code] of [['DISCORD_PACK_ENABLED','pack_disabled'],['DISCORD_PACK_DELIVERY_ENABLED','delivery_disabled'],['DISCORD_GROK_WAKE_ENABLED','wake_disabled'],['DISCORD_GROK_INCLUDED_USAGE_CONFIRMED','included_usage_unconfirmed']])if(env[key]!=='true')failures.push(code);
+ if(dpSeatConfig(env).grok?.key_label!=='pack-grok')failures.push('seat_configuration_invalid');
  const until=Date.parse(env.DISCORD_GROK_APPROVAL_EXPIRES_AT),now=Date.now();
- if(!Number.isFinite(until)||until<=now||until>now+86400e3||!dqSnow(env.DISCORD_GROK_USER_ID))return null;
- let u;try{u=new URL(env.GROK_ROUTINE_URL);}catch{return null;}
- if(u.protocol!=='https:'||u.origin!==env.GROK_ROUTINE_ORIGIN||u.username||u.password||u.hash||u.port||!u.hostname.includes('.')||/^[\d.]+$|^\[|\.(local|localhost|internal)$/.test(u.hostname)||!dgSigningKey(env.GROK_WEBHOOK_SIGNING_SECRET))return null;
- return {url:u.href,until};
+ if(!Number.isFinite(until)||until<=now||until>now+86400e3)failures.push('approval_window_invalid');
+ if(!dqSnow(env.DISCORD_GROK_USER_ID))failures.push('requester_configuration_invalid');
+ let u;try{u=new URL(env.GROK_ROUTINE_URL);}catch{}
+ if(!u||u.protocol!=='https:'||u.origin!==env.GROK_ROUTINE_ORIGIN||u.username||u.password||u.hash||u.port||!u.hostname.includes('.')||/^[\d.]+$|^\[|\.(local|localhost|internal)$/.test(u.hostname))failures.push('endpoint_configuration_invalid');
+ if(!dgSigningKey(env.GROK_WEBHOOK_SIGNING_SECRET))failures.push('signing_configuration_invalid');
+ return failures;
+}
+function dgConfig(env){return dgConfigFailures(env).length?null:{url:new URL(env.GROK_ROUTINE_URL).href,until:Date.parse(env.DISCORD_GROK_APPROVAL_EXPIRES_AT)};}
+function dgOwnerDiagnostics(s,env,now){
+ const failures=dgConfigFailures(env),uid=env.DISCORD_GROK_USER_ID;
+ if(s.seats.grok?.stopped_at)failures.push('seat_stopped');
+ if(!(s.links[uid]?.owner_uid===env.RESEARCH_OWNER_UID&&Date.parse(s.links[uid].expires_at)>now))failures.push('configured_requester_link_invalid');
+ return {ready:failures.length===0,failures};
 }
 function dgAdmissible(s,env,seat,uid,now){return seat==='grok'&&uid===env.DISCORD_GROK_USER_ID&&!!dgConfig(env)&&!s.seats.grok?.stopped_at&&s.links[uid]?.owner_uid===env.RESEARCH_OWNER_UID&&Date.parse(s.links[uid].expires_at)>now;}
 function dgStage(j,now){j.wake={mechanism:'grok_routine',status:'pending',attempts:0,due_ms:now,deadline_ms:now+20*60e3};}

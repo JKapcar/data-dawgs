@@ -13266,7 +13266,7 @@ async function handleDiscordPackOwner(request,env){
   const now=Date.now();
   if(request.method==='GET'){
    const snap=await fbGet(env,DP_PATH,true);dpCheck(snap.etag,503,'pack_store_unavailable');const s=dpStore(snap.data),seats=dpSeatConfig(env);
-   return send({flags:{pack:env.DISCORD_PACK_ENABLED==='true',delivery:env.DISCORD_PACK_DELIVERY_ENABLED==='true',bot_secret_bound:!!env.DISCORD_BOT_TOKEN},channel:env.DISCORD_CHANNEL_ID||null,
+   return send({grok_admission:typeof dgOwnerDiagnostics==='function'?dgOwnerDiagnostics(s,env,now):null,flags:{pack:env.DISCORD_PACK_ENABLED==='true',delivery:env.DISCORD_PACK_DELIVERY_ENABLED==='true',bot_secret_bound:!!env.DISCORD_BOT_TOKEN},channel:env.DISCORD_CHANNEL_ID||null,
     seats:Object.entries(DP_SEATS).map(([seat,display])=>{const b=s.seats[seat];return {seat,display,configured_key:seats[seat]?.key_label??null,stopped_at:b?.stopped_at??null,binding:b?.lease_sha256?{number:b.epoch,session_ref:b.session_ref??null,bound_at:b.bound_at,last_seen_at:b.last_seen_at,live:!!dpLiveBinding(s,seat,now)}:null,verified:b?.verified??null};}),
     command:s.command??null,links:Object.entries(s.links).map(([id,l])=>({discord_user_id:id,name:l.name,linked_at:l.linked_at,expires_at:l.expires_at})),open_link_codes:Object.values(s.challenges).filter(c=>Date.parse(c.expires_at)>now).length,
     jobs:Object.values(s.jobs).sort(dpById).slice(-25).reverse().map(j=>({id:j.id,seat:j.seat,kind:j.kind,state:j.state,delivery:j.delivery,next:dpNext(j,now),thread_id:j.thread_id??null,url:j.url??null,created_at:j.created_at,last_error:j.last_error??null,resolution:j.resolution??null}))});
@@ -13348,13 +13348,25 @@ async function dgSignedHeaders(secret,id,timestamp,body){
  let binary='';for(const b of digest)binary+=String.fromCharCode(b);
  return {'Content-Type':'application/json','webhook-id':id,'webhook-timestamp':timestamp,'webhook-signature':'v1,'+btoa(binary)};
 }
-function dgConfig(env){
- if(env.DISCORD_PACK_ENABLED!=='true'||env.DISCORD_PACK_DELIVERY_ENABLED!=='true'||env.DISCORD_GROK_WAKE_ENABLED!=='true'||env.DISCORD_GROK_INCLUDED_USAGE_CONFIRMED!=='true'||dpSeatConfig(env).grok?.key_label!=='pack-grok')return null;
+// Fixed reason codes only: never expose configuration values or secret details.
+function dgConfigFailures(env){
+ const failures=[];
+ for(const [key,code] of [['DISCORD_PACK_ENABLED','pack_disabled'],['DISCORD_PACK_DELIVERY_ENABLED','delivery_disabled'],['DISCORD_GROK_WAKE_ENABLED','wake_disabled'],['DISCORD_GROK_INCLUDED_USAGE_CONFIRMED','included_usage_unconfirmed']])if(env[key]!=='true')failures.push(code);
+ if(dpSeatConfig(env).grok?.key_label!=='pack-grok')failures.push('seat_configuration_invalid');
  const until=Date.parse(env.DISCORD_GROK_APPROVAL_EXPIRES_AT),now=Date.now();
- if(!Number.isFinite(until)||until<=now||until>now+86400e3||!dqSnow(env.DISCORD_GROK_USER_ID))return null;
- let u;try{u=new URL(env.GROK_ROUTINE_URL);}catch{return null;}
- if(u.protocol!=='https:'||u.origin!==env.GROK_ROUTINE_ORIGIN||u.username||u.password||u.hash||u.port||!u.hostname.includes('.')||/^[\d.]+$|^\[|\.(local|localhost|internal)$/.test(u.hostname)||!dgSigningKey(env.GROK_WEBHOOK_SIGNING_SECRET))return null;
- return {url:u.href,until};
+ if(!Number.isFinite(until)||until<=now||until>now+86400e3)failures.push('approval_window_invalid');
+ if(!dqSnow(env.DISCORD_GROK_USER_ID))failures.push('requester_configuration_invalid');
+ let u;try{u=new URL(env.GROK_ROUTINE_URL);}catch{}
+ if(!u||u.protocol!=='https:'||u.origin!==env.GROK_ROUTINE_ORIGIN||u.username||u.password||u.hash||u.port||!u.hostname.includes('.')||/^[\d.]+$|^\[|\.(local|localhost|internal)$/.test(u.hostname))failures.push('endpoint_configuration_invalid');
+ if(!dgSigningKey(env.GROK_WEBHOOK_SIGNING_SECRET))failures.push('signing_configuration_invalid');
+ return failures;
+}
+function dgConfig(env){return dgConfigFailures(env).length?null:{url:new URL(env.GROK_ROUTINE_URL).href,until:Date.parse(env.DISCORD_GROK_APPROVAL_EXPIRES_AT)};}
+function dgOwnerDiagnostics(s,env,now){
+ const failures=dgConfigFailures(env),uid=env.DISCORD_GROK_USER_ID;
+ if(s.seats.grok?.stopped_at)failures.push('seat_stopped');
+ if(!(s.links[uid]?.owner_uid===env.RESEARCH_OWNER_UID&&Date.parse(s.links[uid].expires_at)>now))failures.push('configured_requester_link_invalid');
+ return {ready:failures.length===0,failures};
 }
 function dgAdmissible(s,env,seat,uid,now){return seat==='grok'&&uid===env.DISCORD_GROK_USER_ID&&!!dgConfig(env)&&!s.seats.grok?.stopped_at&&s.links[uid]?.owner_uid===env.RESEARCH_OWNER_UID&&Date.parse(s.links[uid].expires_at)>now;}
 function dgStage(j,now){j.wake={mechanism:'grok_routine',status:'pending',attempts:0,due_ms:now,deadline_ms:now+20*60e3};}
