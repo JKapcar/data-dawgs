@@ -11,6 +11,8 @@
     if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash)throw Error('Use a public HTTPS source URL without credentials, query or fragment.');
     if(!input.rationale.trim()||input.rationale.length>400)throw Error('Explain the evidence and assumptions (maximum 400 characters).');
     if(!Number.isFinite(Date.parse(q.retrievedAt))||(q.quotedAt!==null&&!Number.isFinite(Date.parse(q.quotedAt))))throw Error('Use ISO timestamps; an unknown quote time stays blank.');
+    if(!['source_reported_closing','observed_pregame','untimed_quote_proxy'].includes(q.evidence))throw Error('Choose a supported evidence classification.');
+    if(q.evidence==='untimed_quote_proxy'&&q.quotedAt!==null)throw Error('Untimed quote proxy must leave quote time unknown.');
     if(q.evidence==='observed_pregame'&&(!Number.isFinite(Date.parse(row.startsAt))||q.quotedAt===null||Date.parse(q.quotedAt)>=Date.parse(row.startsAt)))throw Error('Observed pregame evidence needs a quote time before known kickoff.');
     const entry=row.entryOppSource==='assumed'?null:pair(row.price,row.priceOpp),close=pair(q.price,q.opposite),cal=close||entry;
     let holds;
@@ -34,7 +36,7 @@
       <label>Closing price (American) <input name="price" type="number" required></label>
       <label>Opposite closing price (blank if unknown) <input name="opposite" type="number"></label>
       <label>Public source URL <input name="sourceUrl" type="url" required style="width:100%;box-sizing:border-box"></label>
-      <label>Evidence <select name="evidence"><option value="source_reported_closing">Source-reported closing quote</option><option value="observed_pregame">Observed pregame quote</option></select></label>
+      <label>Evidence <select name="evidence"><option value="source_reported_closing">Source-reported closing quote</option><option value="observed_pregame">Observed pregame quote</option><option value="untimed_quote_proxy">Untimed quote used as closing proxy</option></select></label>
       <label>Quote timestamp (ISO; blank if unknown) <input name="quotedAt" placeholder="2026-10-22T20:00:00-04:00"></label>
       <label>Retrieval timestamp (ISO) <input name="retrievedAt" required></label>
       <label>Source limitations and assumptions <textarea name="rationale" required maxlength="400" rows="3" style="width:100%;box-sizing:border-box"></textarea></label>
@@ -63,7 +65,7 @@
       if(field('scenarios').value.trim())estimate.scenarios=field('scenarios').value.split(',').map(x=>Number(x.trim())/100);
       const calc=preview(row,estimate),signature=JSON.stringify({row:field('row').value,estimate});
       if(!pending||pending.signature!==signature)pending={signature,body:{league:api.league(),row:field('row').value,requestId:crypto.randomUUID(),expectedEstimateRevision:row.clvEstimate?.revision||0,estimate}};
-      output.textContent=`Estimated ${calc.point.toFixed(2)} pp; sensitivity ${calc.low.toFixed(2)} to ${calc.high.toFixed(2)} pp. Overround ${calc.holds.map(x=>(100*x).toFixed(2)+'%').join(' / ')}. Not a confidence interval or expected ROI. Price preview only; server checks settlement and evidence precedence.`;save.disabled=false;status.textContent='Review the preview, then save.';
+      output.textContent=(estimate.closeQuote.evidence==='untimed_quote_proxy'?'Untimed quote used as closing proxy. Not a verified closing price. ':'')+`Estimated ${calc.point.toFixed(2)} pp; sensitivity ${calc.low.toFixed(2)} to ${calc.high.toFixed(2)} pp. Overround ${calc.holds.map(x=>(100*x).toFixed(2)+'%').join(' / ')}. Not a confidence interval or expected ROI. Price preview only; server checks settlement and evidence precedence.`;save.disabled=false;status.textContent='Review the preview, then save.';
     }catch(e){save.disabled=true;status.textContent=e.message;}};
     save.onclick=async()=>{if(busy||!pending)return;busy=true;let verified=false;const snapshot=structuredClone(row),protectedFields=x=>{const {clvEstimate,...rest}=x;return stable(rest);};Array.from(form.elements).forEach(e=>e.disabled=true);host.querySelector('[data-load]').disabled=true;status.textContent='Saving; awaiting persisted readback…';try{ensure();const body=pending.body;const result=await api.write('/bozo/close',body);ensure();const read=await api.read('ledger/'+body.row);ensure();const stored=read.value?.clvEstimate;if(field('row').value!==body.row||protectedFields(read.value||{})!==protectedFields(snapshot))throw Error('Ledger or selection changed during save. Reload and review before using the estimate.');
       if(!result.ok||!stored||stored.requestId!==body.requestId||stored.revision!==result.estimate?.revision||stable(stored.input)!==stable(body.estimate)||stable(stored)!==stable(result.estimate)||!Number.isFinite(stored.point))throw Error('Save not verified. Reload or retry identical evidence; do not assume success.');
