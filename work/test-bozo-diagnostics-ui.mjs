@@ -21,6 +21,11 @@ const state={season:2026,week:1,status:'placed',order:[3,1,2,0],closeTs:17916400
 const origin='https://diagnostics.fixture.invalid';
 const leg=(extra={})=>({player:players[0],sport:'nfl',mkt:'ml',week:1,result:'win',entryPrice:100,entryPriceOpp:100,closePrice:-150,closePriceOpp:150,...extra});
 const legs=[leg(),leg({player:players[1],result:'loss',week:2,closePrice:150,closePriceOpp:-150}),leg({result:'win',week:2,closePrice:null}),leg({result:'pending',week:3,sport:'nba'}),leg({result:'push',week:3}),leg({result:'win',week:4,clvPts:90})];
+// boundingBox() maps CSS geometry through the page scale in float32. When the 390px page
+// overflows (dark-theme nav button, 400px layout viewport) Chrome can settle on a scale of
+// 1-2^-24, and a box that is exactly 44 CSS px then reads 44±2^-15 depending on its y. Blink
+// lays out in 1/64px, so a real shortfall is at least 0.0156px; 0.001px separates the two.
+const TARGET_EPS=1e-3;
 const {chromium}=loadPlaywright();
 let browser;
 try{
@@ -76,7 +81,7 @@ try{
       const selector=`#dxChart [data-chart="${chart}"] details.bz-help`;
       const detail=section.locator('details.bz-help'), summary=detail.locator(':scope > summary');
       await waitDisclosure(selector,false,`${chart}: initially closed`);
-      const box=await summary.boundingBox();assert.ok(box.height>=44,'44px disclosure target');
+      const box=await summary.boundingBox();assert.ok(box.height>=44-TARGET_EPS,'44px disclosure target');
       if(width===390)await summary.tap();else await summary.click();
       await waitDisclosure(selector,true,`${chart}: opened by ${width===390?'touch':'click'}`);
       await detail.locator('table').waitFor({state:'visible'});

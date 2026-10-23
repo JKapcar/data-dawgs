@@ -1425,6 +1425,14 @@ const SURFACES = [
               { kind: 'json', url: '/data/models.json', status: 'live', covers: 'the margin model parameters' },
               { kind: 'mcp', tool: 'dd_analyze_matchup', status: 'live', covers: 'one current matchup with dated nfelo, market and model context' }],
     planned: ['rest:/api/matchup'] },
+  /* 2026-10-23: rebuilt daily by .github/workflows/playoff-leverage.yml from nfl-schedule.json
+     results and survivor.json probabilities; the page reads the file at runtime. */
+  { id: 'playoff-leverage', domain: 'nfl', name: 'NFL playoff leverage', page: '/playoffs.html',
+    machine: [{ kind: 'json', url: '/data/nfl-playoff-leverage.json', status: 'live',
+                covers: "this week's unplayed games: each team's playoff probability if it loses, now and if it wins, the swing with its simulation error, " +
+                        'all 32 teams under each result, and every team\'s playoff, division and bye odds — a daily 100,000-season simulation, ungraded' }],
+    planned: [],
+    gap: 'Simulation output with team strength held fixed over nfelo game probabilities, so values near 0 and 1 are overconfident. One game at a time: no combinations or later-week scenarios. Tie-breakers stop at strength of schedule, then a coin toss. No MCP tool.' },
   { id: 'bozo-menu', domain: 'arena', name: 'The Bozo Menu', page: '/bozo-menu.html',
     machine: [
       { kind: 'mcp', tool: 'dd_bozo_menu_public', status: 'live', covers: 'same published menu through an existing connector' },

@@ -1,0 +1,130 @@
+name: Playoff leverage
+
+# Daily rebuild of /data/nfl-playoff-leverage.json from two files the site already publishes:
+# data/nfl-schedule.json (verified finals) and data/survivor.json (per-game probabilities,
+# moved only by nfelo-refresh.yml). playoffs.html reads the JSON at runtime, so a data-only
+# commit needs no sw.js bump — the same rule draft-picks.yml and fourth-down-rates.yml follow.
+#
+# ⚠️ Commits straight to main: this is a dated simulation snapshot, not a receipt or a graded
+#    row. Git history keeps every day's file. The builder is deterministic (seed = hash of
+#    the inputs, dates from the inputs), so a day with unchanged inputs commits nothing.
+# ⚠️ Runs after the nfelo refresh finishes (workflow_run), with a daily cron as the fallback.
+#    NEVER on push.
+# ⚠️ The history replay downloads nflverse/nfldata games.csv, so it gates engine changes on
+#    pull requests only; the daily refresh never depends on that download.
+
+on:
+  schedule:
+    - cron: "41 15 * * *"
+  workflow_run:
+    workflows: ["nfelo refresh"]
+    types: [completed]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/playoff-leverage.yml"
+      - "work/playoff-leverage-engine.js"
+      - "work/test-playoff-leverage.mjs"
+      - "work/validate-playoff-history.mjs"
+      - "tools/build-playoff-leverage.js"
+      - "data/nfl-playoff-leverage.json"
+      - "playoffs.html"
+      - "playoffs.js"
+      - "work/build_playoffs.py"
+      - "work/test-playoffs-page.mjs"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: playoff-leverage-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'refresh' }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - name: Engine rules, simulation invariants and the file contract
+        run: node work/test-playoff-leverage.mjs
+      - name: Replay real seasons through the seeding code
+        if: github.event_name == 'pull_request'
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/games.csv" https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv
+          node work/validate-playoff-history.mjs "$RUNNER_TEMP/games.csv" 2002 2025
+      - run: node tools/validate-data.js
+
+  page:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm install --prefix /tmp/dd-playoffs-pw playwright@1.56.1 --no-audit --no-fund
+      - run: /tmp/dd-playoffs-pw/node_modules/.bin/playwright install --with-deps chromium
+      - name: The page renders the file, one game at a time, and fails loud
+        run: DD_NODE_MODULES=/tmp/dd-playoffs-pw/node_modules PLAYOFFS_SHOTS=artifacts/playoffs node work/test-playoffs-page.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playoffs-screenshots
+          path: artifacts/playoffs
+          if-no-files-found: ignore
+
+  refresh:
+    if: github.event_name != 'pull_request' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - name: Rebuild on latest main and publish
+        id: publish
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            base=$(git rev-parse HEAD)
+            node tools/build-playoff-leverage.js
+            if git diff --quiet -- data/nfl-playoff-leverage.json; then
+              echo "Inputs unchanged since the published file — nothing to publish."
+              exit 0
+            fi
+            node tools/data-manifest.js
+            node tools/validate-data.js
+            node work/test-playoff-leverage.mjs --published
+            for f in $(git diff --name-only); do
+              case "$f" in data/nfl-playoff-leverage.json|data/index.json) ;; *) echo "Unexpected change: $f" >&2; exit 1 ;; esac
+            done
+            git add data/nfl-playoff-leverage.json data/index.json
+            msg=$(node -e 'const e=require("./data/nfl-playoff-leverage.json");process.stdout.write(`Playoff leverage: week ${e.data.week}, nfelo ${e.inputs.probabilities.nfelo_sha}, schedule ${e.inputs.schedule.snapshot_id.slice(7,19)}`)')
+            git commit -m "$msg"
+            if git push origin HEAD:main; then
+              echo "published=1" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            git fetch origin main
+            if [ "$(git rev-parse origin/main)" = "$base" ]; then
+              echo 'Push denied; stopping without bypassing repository protections.' >&2
+              exit 1
+            fi
+            echo "Main moved; rebuilding on latest main (attempt $attempt/3)."
+          done
+          exit 1
+      - name: Publish through GitHub Pages
+        if: steps.publish.outputs.published == '1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash work/request-survivor-pages-build.sh
