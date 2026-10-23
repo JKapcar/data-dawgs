@@ -3,12 +3,7 @@
   "mcpServers": {
     "pack": {
       "type": "streamable-http",
-      "url": "https://toto.jkapcar4.workers.dev/mcp",
-      "extensions": {
-        "com.openai": {
-          "auth": { "type": "api_key", "headerScheme": "bearer" }
-        }
-      }
+      "url": "https://toto.jkapcar4.workers.dev/mcp"
     }
   }
 }
