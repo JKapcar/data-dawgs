@@ -57,6 +57,7 @@ jobs:
             exit 1
           fi
       - run: node --check dawg-bot-worker.js
+      - run: node --test tests/bozo-clv-estimate.test.cjs
       - run: node --test tests/dawg-pound.test.cjs
       - run: node --test tests/research-project.test.cjs research-lab/decision-controls.test.mjs research-lab/pound-portraits.test.mjs
       - run: node --test research-lab/robokap-core.test.mjs research-lab/robokap.test.mjs
@@ -100,9 +101,9 @@ jobs:
       - run: node --test research-lab/owner-apps.test.mjs research-lab/agent-setup.test.mjs research-lab/agent-integration.test.mjs research-lab/repair-owner-envelope.test.mjs research-lab/lab.test.mjs research-lab/gateway.test.mjs
       - run: node research-lab/build-worker.mjs
 
-      - name: Verify approved RoboKap Worker artifact
+      - name: Verify approved isolated estimated-CLV Worker artifact
         run: |
-          echo "e01b9b9cb34ebb499f7e93ea9ac7dde9febb7908cec6576e80bebec3e3906bb0  work/artifacts/research-lab/worker.mjs" > worker.sha256
+          echo "f971ea3a27dfe4fa2b76ce10580fd785a8166144ac3898a2662e3ba2b2a4ed42  work/artifacts/research-lab/worker.mjs" > worker.sha256
           sha256sum --check worker.sha256
 
       # Fails closed on a malformed manifest without uploading anything.
