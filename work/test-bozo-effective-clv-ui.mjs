@@ -25,7 +25,7 @@ const {chromium}=loadPlaywright();
 let browser;
 try{
   browser=await chromium.launch({executablePath:chromiumExecutable(chromium)});
-  for(const width of [320,390,1280])for(const theme of ['light','dark']){
+  for(const width of [320,390,1280])for(const theme of ['light','dark'])for(const manager of [false,true]){
     const context=await browser.newContext({viewport:{width,height:1000},isMobile:width===390,hasTouch:width===390,reducedMotion:'reduce',serviceWorkers:'block'});
     const page=await context.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));
@@ -61,7 +61,20 @@ try{
     await page.route('**/bozo/clv?*',route=>route.fulfill({json:{players,legs,weeks:[1,2,3,4].map(week=>({week,label:'Week '+week,phase:'regular'})),coverage:{legs:legs.length},synthetic:true,season:2026}}));
     await page.goto(origin+'/bozo.html?l=main#diagnostics',{waitUntil:'domcontentloaded'});
     await page.goto(origin+'/bozo.html?l=main#overview',{waitUntil:'domcontentloaded'});
-    await page.locator('#clvAllBets tbody tr').first().waitFor();
+    await page.locator('#clvAllBets tbody tr').first().waitFor({state:'attached'});
+    assert.equal(await page.locator('html').getAttribute('data-dd-view'),'tldr');
+    await page.evaluate(manager=>DDClvEstimateManager.mount(document.getElementById('clvEstimateManager'),{isManager:()=>manager,league:()=> 'synthetic',identity:()=> 'synthetic-owner',read:async()=>({value:{}}),write:async()=>{throw Error('No writes allowed')},who:x=>x,refresh:async()=>{}}),manager);
+    for(const id of ['clvAllBets','clvFoot','clvEstimateManager'])assert.equal(await page.locator('#'+id).isVisible(),false,id+' absent in TLDR');
+    assert.equal(await page.locator('#clvCard > details.bz-help').isVisible(),false);
+    assert.equal(await page.locator('#clvSvg').isVisible(),true);
+    await page.locator('#clvCard').screenshot({path:path.join(output,`${width}-${theme}-${manager?'manager':'viewer'}-tldr.png`)});
+    await page.getByRole('button',{name:'AI / technical details',exact:true,includeHidden:true}).evaluate(e=>e.click());
+    assert.equal(await page.locator('#clvAllBets').isVisible(),true);
+    assert.equal(await page.locator('#clvEstimateManager summary').isVisible(),manager);
+    await page.getByRole('button',{name:'TL;DR',exact:true,includeHidden:true}).evaluate(e=>e.click());
+    assert.equal(await page.locator('#clvAllBets').isVisible(),false);
+    assert.equal(await page.locator('#clvEstimateManager').isVisible(),false);
+    await page.getByRole('button',{name:'AI / technical details',exact:true,includeHidden:true}).evaluate(e=>e.click());
     assert.equal(await page.locator('#clvAllBets tbody tr').count(),legs.length);
     assert.equal(await page.locator('#clvAllBets > details').getAttribute('open'),null);
     assert.equal(await page.locator('#clvAllBets > details p').isVisible(),false);
