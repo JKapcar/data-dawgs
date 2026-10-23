@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-22",
+ "as_of": "2026-10-23",
  "source": "Data Dawgs public Bozo Menu (Worker /bozo/menu.json) graded against Worker /scores finals and DraftKings near-closes (SportsGameOdds).",
  "tier": "labs",
  "graded": true,
@@ -287,7 +287,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "loss",
     "actual": {
@@ -4053,7 +4053,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "win",
     "actual": {
@@ -4126,7 +4126,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "win",
     "actual": {
@@ -4199,7 +4199,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "win",
     "actual": {
@@ -4272,7 +4272,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "loss",
     "actual": {
@@ -4344,7 +4344,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "loss",
     "actual": {
@@ -4417,7 +4417,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "win",
     "actual": {
@@ -4490,7 +4490,7 @@
      "matched_by": "teams+kickoff",
      "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "loss",
     "actual": {
@@ -8250,15 +8250,18 @@
     "game": {
      "id": "401871056",
      "matched_by": "teams+kickoff",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-19T15:09:56.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-23T03:40:27.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "side_margin": 28,
+     "total": 40
+    },
     "close": null,
     "clv": null,
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "2026w43-cfb-lib-kenn-spread-away",
@@ -8306,15 +8309,18 @@
     "game": {
      "id": "401871056",
      "matched_by": "teams+kickoff",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-19T15:09:56.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-23T03:40:27.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "win",
+    "actual": {
+     "side_margin": 28,
+     "total": 40
+    },
     "close": null,
     "clv": null,
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "2026w43-cfb-lib-kenn-total-over",
@@ -8354,15 +8360,17 @@
     "game": {
      "id": "401871056",
      "matched_by": "teams+kickoff",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-19T15:09:56.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-23T03:40:27.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "loss",
+    "actual": {
+     "total": 40
+    },
     "close": null,
     "clv": null,
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "2026w43-cfb-ecu-mem-total-under",
@@ -8398,15 +8406,17 @@
     "game": {
      "id": "401862807",
      "matched_by": "teams+kickoff",
-     "final": false,
-     "score_source": "https://raw.githubusercontent.com/sportsdataverse/cfbfastR-data/main/schedules/csv/cfb_schedules_2026.csv",
-     "score_observed_at": "2026-10-19T15:09:56.000Z"
+     "final": true,
+     "score_source": "espn",
+     "score_observed_at": "2026-10-23T03:40:27.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "loss",
+    "actual": {
+     "total": 75
+    },
     "close": null,
     "clv": null,
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "2026w43-nfl-ne-chi-spread-away",
@@ -8442,15 +8452,18 @@
     "game": {
      "id": "401873010",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "loss",
+    "actual": {
+     "side_margin": -6,
+     "total": 54
+    },
     "close": null,
     "clv": null,
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "2026w43-nfl-ne-chi-total-under",
@@ -8494,15 +8507,17 @@
     "game": {
      "id": "401873010",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
-    "result": "pending",
-    "actual": null,
+    "result": "loss",
+    "actual": {
+     "total": 54
+    },
     "close": null,
     "clv": null,
-    "grade_note": "no final yet"
+    "grade_note": null
    },
    {
     "id": "2026w43-nfl-prop-henderson-rush-att",
@@ -8538,9 +8553,9 @@
     "game": {
      "id": "401873010",
      "matched_by": "teams+kickoff",
-     "final": false,
+     "final": true,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12078,7 +12093,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12122,7 +12137,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12170,7 +12185,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12214,7 +12229,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12262,7 +12277,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12306,7 +12321,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12350,7 +12365,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12398,7 +12413,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12442,7 +12457,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12486,7 +12501,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12534,7 +12549,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12578,7 +12593,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12626,7 +12641,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12670,7 +12685,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12714,7 +12729,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12762,7 +12777,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12806,7 +12821,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12850,7 +12865,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12898,7 +12913,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12942,7 +12957,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -12986,7 +13001,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -13030,7 +13045,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -13074,7 +13089,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -13118,7 +13133,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -13162,7 +13177,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -13206,7 +13221,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -13250,7 +13265,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -13294,7 +13309,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -13334,7 +13349,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -13378,7 +13393,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -13422,7 +13437,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -13466,7 +13481,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -13510,7 +13525,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -13554,7 +13569,7 @@
      "matched_by": "teams+kickoff",
      "final": false,
      "score_source": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-     "score_observed_at": "2026-10-22T17:09:56.000Z"
+     "score_observed_at": "2026-10-23T11:09:27.000Z"
     },
     "result": "pending",
     "actual": null,
@@ -13565,6 +13580,6 @@
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-22T17:59:41.387Z",
+ "built": "2026-10-23T11:43:21.504Z",
  "canonical_url": "https://datadawgs216.com/data/bozo-menu-ledger.json"
 }
