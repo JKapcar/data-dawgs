@@ -203,7 +203,7 @@
     "url": "https://datadawgs216.com/data/draft-2026.json",
     "bytes": 165912,
     "as_of": "2026-10-23",
-    "sha256": "69493342904363f6596c773bbe1980c7a605950f37c154e90b7e101934a06d8a",
+    "sha256": "57f2ac1fb73c07e1fc96f9aaa39b3eba46103a96e26f8be4f0569383b4d167b4",
     "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 94/272 regular-season games are settled and banked in wins_tracker; 178 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    },
    {
@@ -338,15 +338,15 @@
     "url": "https://datadawgs216.com/data/models.json",
     "bytes": 3267,
     "as_of": "2026-10-23",
-    "sha256": "bb13e8b6ff7df229f0ffbad091263e2454559f232973d4b66d914430df3a989a",
+    "sha256": "998bb1067b2b2e57cef79ad3570bb83ff16fd5d4a9971489fa3e00890bed9a1f",
     "note": "Survivor uses nfelo published probabilities or nfelo-season-v1, not the legacy margin model below. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
     "path": "/data/nfelo.json",
     "url": "https://datadawgs216.com/data/nfelo.json",
-    "bytes": 144557,
+    "bytes": 144559,
     "as_of": "2026-10-23",
-    "sha256": "e01043a80ed9532b366713ea1ff0bd33998524aa4daae70eef24e59513415ed2",
+    "sha256": "0f17f9ca39d373747e1a7005086620b312162f652a95bc3bbe4744b7d66f8f8f",
     "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp)."
    },
    {
@@ -442,7 +442,7 @@
     "url": "https://datadawgs216.com/data/survivor.json",
     "bytes": 116588,
     "as_of": "2026-10-23",
-    "sha256": "a4a62dff1634529224c7148761190e7fac6b0df2a5216335994ed9ded885ca44",
+    "sha256": "b35160f94020763158b881a3695d2415dbb375a8f474d7de60129beb4bfdf336",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"nfelo\" = published nfelo forecast without an extra blend; \"nfelo-season\" = nfelo pre-market calculation with current team/QB strength and game-specific HFA. Ownership is modelled, not observed."
    },
    {
