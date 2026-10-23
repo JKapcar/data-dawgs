@@ -1,7 +1,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process'),vm=require('node:vm');
 const root=path.resolve(__dirname,'..'),paths=[...fs.readdirSync(root).filter(p=>p.endsWith('.html')),...fs.readdirSync(path.join(root,'research-lab')).filter(p=>p.endsWith('.html')).map(p=>'research-lab/'+p)];
-test('all 60 integrated pages load the View script deferred and restore layout-changing choices inline',()=>{
- assert.equal(paths.length,60);
+test('all 61 integrated pages load the View script deferred and restore layout-changing choices inline',()=>{
+ assert.equal(paths.length,61);
  const js=fs.readFileSync(path.join(root,'presentation-mode.js'),'utf8'),maps={};
  vm.runInNewContext(js.match(/const sections = \{[\s\S]*?\};/)[0]+js.match(/const compact = new Set\(\[[^\]]*\]\);/)[0]+'this.sections=sections;this.compact=[...compact];',maps);
  // The inline restore reads the same key the shared script writes.

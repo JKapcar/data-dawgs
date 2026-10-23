@@ -3721,6 +3721,16 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="sheetbar" id="sheetBar" style="display:none"></div>
 </header>
 
+<details class="card bz-help" id="bozoRecovered">
+  <summary>Closing evidence · October 22, 2026 · recovered numbers</summary>
+  <p class="note">Original captures take precedence. Otherwise, these public source-reported closing prices are uncorroborated reference evidence. Missing original captures stay missing. These numbers do not change official CLV, rankings, tiebreakers or settlement. Full-game markets only; never substitute a main line for an alternate line.</p>
+  <div id="bozoRecoveredRows" class="br-grid" aria-live="polite">Open to load attributed numerical evidence.</div>
+</details>
+<style>
+.br-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}.br-game{min-width:0;border:1px solid currentColor;border-radius:12px;padding:14px}.br-game p{font-size:13px;line-height:1.5;overflow-wrap:anywhere}.br-game h3{font-size:17px}.br-game dt{font-weight:700;margin-top:12px}.br-game dd{margin:4px 0;line-height:1.5}.br-game a{text-decoration:underline}
+</style>
+<script src="bozo-recovered.js" defer></script>
+
 <!-- Overview receipt: one row per locked week, preserving the server-drawn order. -->
 <div class="card" id="hierHistoryCard" style="display:none">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">Tiebreaker hierarchy by week</h2><span class="tm" id="hierHistoryMeta"></span></div>
@@ -4231,6 +4241,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div id="clvTableView" hidden><div class="clv-tablewrap"><table class="clv-tbl" id="clvTbl"></table></div></div>
 
   <div class="clv-foot" id="clvFoot"></div>
+  <div id="clvEstimateManager"></div>
+  <script src="bozo-estimate-manager.js" defer></script>
 </div>
 
 <!-- ---------- Bozo Royale: survival odds ----------
@@ -7948,7 +7960,7 @@ function bozoCtx(){
   return L.join('\n');
 }
 window.DD_BOTCTX = {
-  sys: BOZO_SYS, label: 'LIVE BOZO STATE', ctx: bozoCtx,
+  sys: BOZO_SYS + '\nEstimated CLV is modeled fair-close minus fair-entry in probability percentage points, separately labeled with vig sensitivity and source limitations. Never call it measured CLV or expected ROI. Missing closing quotes remain unknown.\nRecovered closing evidence is third-party-reported, uncorroborated reference data only. Page timestamps are not exact per-book quote timestamps. It never fills original captures or changes official CLV, rankings, tiebreakers or settlement.', label: 'LIVE BOZO STATE', ctx: bozoCtx,
   title: 'Ask Toto — he reads the live ticket',
   chrome: {
     sub: 'reads the live ticket',
@@ -9707,6 +9719,16 @@ function clvFootLive(){
     + ` · captured or manually verified entries; unverified entries await review</p>`;
 }
 
+function clvEstimateEvidence(){
+  const rows=(CLV.data?.legs||[]).filter(l=>l.clvEstimate?.kind==='estimated');
+  if(!rows.length)return '';
+  return '<details class="method" open style="overflow-wrap:anywhere"><summary>Estimated CLV · separate evidence ('+rows.length+')</summary><div class="method-body">Estimates are not measured CLV, expected ROI, or a confidence interval. They do not enter the chart, rankings or settlement. Manual overrides remain authoritative.'+rows.map(l=>{
+    const e=l.clvEstimate;
+    if(e.stale)return '<p><b>'+esc(teamOf(l.player))+' · '+esc(l.label)+' · Week '+esc(l.week??'unknown')+'</b>: stale estimate; selection/prices/status changed. Recalculate before using.</p>';
+    const fmt=n=>Number.isFinite(n)?(n>0?'+':'')+n.toFixed(2):'unknown';
+    return '<p><b>'+esc(teamOf(l.player))+' · '+esc(l.label)+' · Week '+esc(l.week??'unknown')+'</b><br>Estimated '+fmt(e.point)+' pp; sensitivity '+fmt(e.low)+' to '+fmt(e.high)+' pp'+(l.clvPts!=null?' · existing manual override retained':'')+'<br>'+esc(e.assumption)+'; overround scenarios '+esc((e.scenarios||[]).map(x=>(x*100).toFixed(2)+'%').join(' / '))+'<br>'+esc(e.rationale)+'<br>Source: '+esc(e.closeQuote?.sourceUrl)+' · quote time '+esc(e.closeQuote?.quotedAt??'unknown')+' · retrieved '+esc(e.closeQuote?.retrievedAt)+'<br>'+esc(e.closeQuote?.evidence)+' · entry '+(e.entryVerified?'verified':'unverified')+' · revision '+esc(e.revision)+'</p>';
+  }).join('')+'</div></details>';
+}
 function clvMethod(){
   // The counts appear on the live line too, and on purpose: up there they are the
   // sample, down here they are the sentence explaining what an exclusion means. Same
@@ -9846,11 +9868,13 @@ function paintSurvival(){
     + `</div></details>`;
 }
 
+function mountBozoEstimateManager(){window.DDClvEstimateManager?.mount(document.getElementById('clvEstimateManager'),{isManager,league:()=>LID,identity:()=>ME?.name||'',read:godRead,write:wPost,who:ledgerWho,refresh:()=>clvLoad(true)});}
 async function clvLoad(force){
   const card = document.getElementById('clvCard');
   if(onHub()){ card.style.display='none'; return; }
   if(CLV.loading) return;
   if(CLV.lid===LID && CLV.data && !force){
+    mountBozoEstimateManager();
     card.style.display=view()==='overview' ? '' : 'none';
     if(view()==='diagnostics') paintDiagnosticsExplorer();
     return;
@@ -9883,8 +9907,9 @@ async function clvLoad(force){
     // The demo warning is a strip above the plot, not a line in the footnote — see the
     // note above clvFootLive for why it does not go in the drawer.
     document.getElementById('clvSim').style.display = CLV.data.synthetic ? '' : 'none';
-    document.getElementById('clvFoot').innerHTML = clvFootLive() + clvMethod();
+    document.getElementById('clvFoot').innerHTML = clvFootLive() + clvMethod() + clvEstimateEvidence();
     clvRender();
+    mountBozoEstimateManager();
     if(view()==='overview') paintSurvival();
     if(view()==='diagnostics') paintDiagnosticsExplorer();
   }catch(e){

@@ -1,7 +1,7 @@
 name: Research lab contracts and preview
 on:
   pull_request:
-    paths: ['install-help.js', 'install-help.css', 'tests/install-help.test.mjs', 'tests/dawg-pound-ui.cjs', 'tests/dispatch-visual-preview.cjs', 'tools/check-research-data.py', 'research-lab/**', 'dawg-pound.html', 'dawg-pound.js', 'pound-portraits.js', 'pound-portraits.css', 'signon.html', '.github/workflows/research-lab.yml']
+    paths: ['tools/contribution-protocol.mjs', 'docs/contribution-protocol.md', 'docs/contributions/**', 'install-help.js', 'install-help.css', 'tests/install-help.test.mjs', 'tests/dawg-pound-ui.cjs', 'tests/dispatch-visual-preview.cjs', 'tools/check-research-data.py', 'research-lab/**', 'dawg-pound.html', 'dawg-pound.js', 'pound-portraits.js', 'pound-portraits.css', 'signon.html', '.github/workflows/research-lab.yml']
 permissions:
   contents: read
 jobs:
@@ -14,6 +14,8 @@ jobs:
       - run: node --test research-lab/development-v3.test.mjs research-lab/development-index.test.mjs research-lab/development-data.test.mjs research-lab/owner-apps.test.mjs research-lab/navigation-return.test.mjs research-lab/agent-setup.test.mjs research-lab/agent-integration.test.mjs research-lab/repair-owner-envelope.test.mjs research-lab/lab.test.mjs research-lab/gateway.test.mjs research-lab/upload.test.mjs research-lab/archive-reconcile.test.mjs research-lab/exact-store.test.mjs
       - run: node --test research-lab/sourcebook.test.mjs research-lab/workflow.test.mjs research-lab/coordinator.test.mjs
       - run: node --test tests/research-project.test.cjs research-lab/decision-controls.test.mjs research-lab/pound-portraits.test.mjs
+      - run: node --test research-lab/robokap-core.test.mjs research-lab/robokap.test.mjs
+      - run: node --test research-lab/contribution-protocol.test.mjs
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
       - run: python research-lab/inspect_zip_test.py
@@ -37,6 +39,8 @@ jobs:
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/workflow-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node research-lab/workflow-hosted-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node --test research-lab/discord-smoke-worker.test.mjs research-lab/portraits-worker.test.mjs research-lab/owner-apps-worker.test.mjs research-lab/worker.test.mjs research-lab/upload-worker.test.mjs research-lab/archive-reconcile-worker.test.mjs
+      - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node --test research-lab/robokap-worker.test.mjs
+      - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/robokap-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node research-lab/hosted-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules node research-lab/public-browser.test.mjs
       - run: DD_NODE_MODULES=/tmp/dd-lab-qa/node_modules LAB_SCREENSHOTS=/tmp/dd-lab-screenshots node research-lab/upload-browser.test.mjs

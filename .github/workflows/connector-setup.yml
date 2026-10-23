@@ -17,7 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          # The PR event base may predate either merge parent after reconciliation.
+          # Keep its baseline available without changing the regression test.
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
