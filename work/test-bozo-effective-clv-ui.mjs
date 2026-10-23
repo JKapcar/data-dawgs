@@ -19,7 +19,7 @@ const state={season:2026,week:1,status:'placed',order:[3,1,2,0],closeTs:17916400
   results:{[encodeURIComponent(players[0])]:{result:'won',actual:2,resultSource:'manual'}}};
 // Fulfill local assets directly: no local listening socket and no production fetches.
 const origin='https://diagnostics.fixture.invalid';
-const leg=(extra={})=>({selectionKey:'synthetic-0',eventId:'fixture-0',player:players[0],sport:'nfl',mkt:'ml',week:1,result:'win',entryPrice:100,entryPriceOpp:100,closePrice:-150,closePriceOpp:150,...extra});
+const leg=(extra={})=>({selectionKey:'synthetic-0',eventId:'fixture-0',label:'Synthetic team moneyline',player:players[0],sport:'nfl',mkt:'ml',week:1,result:'win',entryPrice:100,entryPriceOpp:100,closePrice:-150,closePriceOpp:150,...extra});
 const legs=[leg({closePrice:null,closePriceOpp:null,clvEstimate:{kind:'estimated',stale:false,point:2.102895,entryPrice:100,scenarios:[.05],closeQuote:{evidence:'untimed_quote_proxy',sourceUrl:'https://example.com/quote'}}}),leg({player:players[1],result:'loss',week:2,closePrice:150,closePriceOpp:-150}),leg({result:'win',week:2,closePrice:null}),leg({result:'pending',week:3,sport:'nba'}),leg({result:'push',week:3}),leg({result:'win',week:4,clvPts:90})];
 const {chromium}=loadPlaywright();
 let browser;
@@ -63,6 +63,13 @@ try{
     await page.goto(origin+'/bozo.html?l=main#overview',{waitUntil:'domcontentloaded'});
     await page.locator('#clvAllBets tbody tr').first().waitFor();
     assert.equal(await page.locator('#clvAllBets tbody tr').count(),legs.length);
+    assert.equal(await page.locator('#clvAllBets > details').getAttribute('open'),null);
+    assert.equal(await page.locator('#clvAllBets > details p').isVisible(),false);
+    assert.ok(await page.locator('#clvAllBets').evaluate(e=>e.scrollWidth<=e.clientWidth+1),'accounting table has no clipped horizontal content');
+    await page.locator('#clvAllBets > details summary').click();
+    assert.equal(await page.locator('#clvAllBets > details p').isVisible(),true);
+    await page.locator('#clvAllBets > details summary').click();
+
     assert.match(await page.locator('#clvAllBets').innerText(),/2.10 estimated/);
     assert.equal(await page.locator('#bozoRecovered').isVisible(),false);
     assert.match(await page.locator('#diagCard').innerText(),/2.10 estimated/);
@@ -73,6 +80,7 @@ try{
     assert.ok(await page.locator('#clvSvg').evaluate(e=>e.__pts.length>0));
     await page.locator('#clv-week').click();
     assert.equal(await page.locator('#clvAllBets tbody tr').count(),legs.length);
+    await page.locator('#clvAllBets').screenshot({path:path.join(output,`${width}-${theme}-accounting.png`)});
     await page.screenshot({path:path.join(output,`${width}-${theme}-effective.png`),fullPage:true});
     }finally{await context.close();}
   }
