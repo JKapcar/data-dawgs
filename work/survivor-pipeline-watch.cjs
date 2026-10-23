@@ -24,6 +24,7 @@ const WATCHED = [
   { file: 'fourth-down.yml', name: 'Fourth Down Lab', max_age_hours: 33, window: SEASON },
   { file: 'fourth-down-rates.yml', name: 'Fourth Down comparison rates', max_age_hours: 33, window: 'always' },
   { file: 'epa-daily.yml', name: 'Daily EPA refresh', max_age_hours: 33, window: 'always' },
+  { file: 'playoff-leverage.yml', name: 'Playoff leverage', max_age_hours: 33, window: 'always' },
   { file: 'cfb-data.yml', name: 'CFB efficiency backbone', max_age_hours: 33, window: 'always' },
   { file: 'draft-picks.yml', name: 'Record draft picks', max_age_hours: 33, window: 'always' },
   { file: 'guillotine-refresh.yml', name: 'Guillotine daily weekly inputs and receipts', max_age_hours: 33, window: 'always' },
