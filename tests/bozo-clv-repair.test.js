@@ -57,7 +57,7 @@ test('phone form saves signed and zero overrides without closing prices; blank d
   document:{getElementById:id=>id==='godResults'?host:null},esc:x=>String(x??''),memberLabel:()=> 'Fixture',kDec:k=>k,
   priceSourceBadge:()=>'',isManualLeg:()=>false,clvDeltaOf:()=>null,clvMissingReason:()=> 'closing odds missing',
   wPost:async(p,b)=>posts.push({p,b}),refresh:async()=>{},paintGod:()=>{},godErr:()=>{},clvLoad:()=>{}};
- vm.createContext(ctx);vm.runInContext(page.slice(page.indexOf('function paintGodResults(){'),page.indexOf('async function paintGodAudit(){')),ctx);
+ vm.createContext(ctx);vm.runInContext(page.slice(page.indexOf('function clvDisplayEstimate(x){'),page.indexOf('function clvMissingReason('))+page.slice(page.indexOf('function paintGodResults(){'),page.indexOf('async function paintGodAudit(){')),ctx);
  ctx.paintGodResults();assert.ok(host.innerHTML.includes('Save CLV override'));
  await buttons['.gdclvsave'].onclick();assert.equal(posts.length,0);
  for(const raw of ['0','-1.25','+2.50']){input.value=raw;await buttons['.gdclvsave'].onclick();assert.equal(posts.at(-1).b.clvPts,Number(raw));assert.equal(posts.at(-1).b.close,undefined);assert.equal(posts.at(-1).b.row,rowKey);}
