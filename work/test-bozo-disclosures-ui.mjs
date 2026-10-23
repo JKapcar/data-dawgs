@@ -27,6 +27,11 @@ const server=http.createServer((req,res)=>{
 });
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const origin=`http://127.0.0.1:${server.address().port}`;
+// boundingBox() maps CSS geometry through the page scale in float32. When the 390px page
+// overflows (dark-theme nav button, 400px layout viewport) Chrome can settle on a scale of
+// 1-2^-24, and a box that is exactly 44 CSS px then reads 44±2^-15 depending on its y. Blink
+// lays out in 1/64px, so a real shortfall is at least 0.0156px; 0.001px separates the two.
+const TARGET_EPS=1e-3;
 const {chromium}=loadPlaywright();
 let browser;
 try{
@@ -62,7 +67,7 @@ try{
     for(const id of ['dgClvHelp','dgHelp']){
       const summary=page.locator('#'+id+' > summary');
       const box=await summary.boundingBox();
-      assert.ok(box.height>=44,'touch target height');
+      assert.ok(box.height>=44-TARGET_EPS,'touch target height');
       if(width===390)await summary.tap();else await summary.click();
       assert.equal(await page.locator('#'+id).getAttribute('open'),'');
       await summary.press('Space');
