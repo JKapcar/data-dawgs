@@ -63,11 +63,12 @@ function dpSeatForCaller(env,caller){
 }
 const dpClaimExpired=(j,now)=>j.state==='claimed'&&!(Date.parse(j.claim?.expires_at)>now);
 function dpLiveBinding(s,seat,now){const b=s.seats[seat];return b&&b.lease_sha256&&!b.stopped_at&&now-Date.parse(b.last_seen_at)<=DP.leaseIdleMs?b:null;}
-function dpLeaseCheck(s,seat,hash,now){
+function dpLeaseCheck(s,seat,hash,now,id){
  const b=s.seats[seat];dpCheck(!b?.stopped_at,409,'seat_stopped_by_owner');dpCheck(b?.lease_sha256||b?.history.some(h=>h.lease_sha256===hash),409,'seat_not_bound_call_dd_pack_bind');
  // An owner stop ends the lease; a session must not quietly rebind after it.
  if(b.lease_sha256!==hash){const old=b.history.find(h=>h.lease_sha256===hash);dpFail(409,!old?'lease_invalid':old.ended==='owner_stop'?'lease_ended_by_owner_stop':'lease_superseded_by_another_session');}
  dpCheck(now-Date.parse(b.last_seen_at)<=DP.leaseIdleMs,409,'lease_expired_rebind');
+ if(id!==undefined){dpCheck(!b.job_id||b.job_id===id,403,'lease_scoped_to_other_job');dpCheck(s.jobs[id]?.wake?.mechanism!=='grok_routine'||b.job_id===id,403,'wake_admission_required');}
  return b;
 }
 async function dpLeaseHash(lease){dpCheck(typeof lease==='string'&&/^dpl_[A-Za-z0-9_-]{43}$/.test(lease),400,'lease_required');return dcHash(lease);}
@@ -86,7 +87,7 @@ function dpNext(j,now){
 function dpView(s,j,now){
  const t=j.thread_id?s.threads[j.thread_id]:null;
  const history=t?t.turns.filter(id=>id!==j.id&&dpById({id},j)<0).slice(-DP.historyTurns).map(id=>s.jobs[id]).filter(Boolean).map(p=>({id:p.id,question:p.question,reply:p.delivery==='delivered'?p.result_text:null,outcome:p.outcome??null,state:p.state})):[];
- return {id:j.id,seat:j.seat,kind:j.kind,root_id:j.root_id,thread_id:j.thread_id??null,thread_name:dpThreadName(j),requester:j.requester_name,question:j.question,question_trust:j.question_trust,created_at:j.created_at,
+ return {id:j.id,seat:j.seat,guild_id:j.guild_id,parent_id:j.parent_id,kind:j.kind,root_id:j.root_id,thread_id:j.thread_id??null,thread_name:dpThreadName(j),requester:j.requester_name,question:j.question,question_trust:j.question_trust,created_at:j.created_at,
   state:j.state,execution:j.execution??'not_started',wake:j.wake?.mechanism==='grok_routine'?dgView(j,now):{performed:false,mechanism:'session_polling',execution_verified:false},claim:j.claim?{binding:j.claim.epoch,expires_at:j.claim.expires_at,expired:dpClaimExpired(j,now)}:null,attempt:j.attempt,outcome:j.outcome??null,reply:j.result_text??null,
   delivery:j.delivery,delivery_stage:j.delivery_stage??null,reserved_at:j.reserved_at??null,next:dpNext(j,now),last_error:j.last_error??null,
   receipt:j.delivery==='delivered'?{thread_id:j.thread_id,message_id:j.message_id??null,url:j.url??null,delivered_at:j.delivered_at,evidence:j.resolution?'owner_observed_in_discord':'discord_api_response'}:null,
@@ -180,7 +181,7 @@ const dpLeaseArg={type:'string',pattern:'^dpl_[A-Za-z0-9_-]{43}$',description:'L
 const dpIdArg={type:'string',pattern:'^[0-9]{17,20}$'};
 const DP_TOOLS=[
  {name:'dd_pack_bind',title:'Pack seat: bind this session',readOnly:false,description:'Bind THIS session as the only consumer of the Pack seat that this connector key is configured for. Returns a lease for the other dd_pack_* tools. Binding again from any session supersedes the previous one and returns its unsent claims to the queue. session_ref and poll_minutes are self-declared and shown as such.'+DP_SAFETY,
-  inputSchema:{type:'object',additionalProperties:false,properties:{session_ref:{type:'string',minLength:1,maxLength:200},poll_minutes:{type:'integer',minimum:1,maximum:1440}}}},
+  inputSchema:{type:'object',additionalProperties:false,properties:{session_ref:{type:'string',minLength:1,maxLength:200},poll_minutes:{type:'integer',minimum:1,maximum:1440},id:dpIdArg,admission:{type:'string',pattern:'^dga_[A-Za-z0-9_-]{43}$',description:'One-time job admission proof supplied only by the configured routine webhook; never a seat lease.'}}}},
  {name:'dd_pack_poll',title:'Pack seat: check in and list requests',readOnly:false,description:'Record a check-in for this seat and list requests addressed to it: queued work, this binding\'s claims, and deliveries needing attention. Each request includes earlier turns of its thread.'+DP_SAFETY,
   inputSchema:{type:'object',additionalProperties:false,required:['lease'],properties:{lease:dpLeaseArg,after:dpIdArg}}},
  {name:'dd_pack_read',title:'Pack seat: read one request',readOnly:true,description:'Read one request addressed to this seat, including its delivery receipt.'+DP_SAFETY,
@@ -213,7 +214,7 @@ async function dpSeatDispatch(m,env,caller,reauth){
 }
 async function dpMcpRun(name,args,env,caller,reauth){
  const seat=dpSeatForCaller(env,caller);dpCheck(seat,403,'pack_seat_not_available_for_this_connector_key');
- const allowed={dd_pack_bind:['session_ref','poll_minutes'],dd_pack_poll:['lease','after'],dd_pack_read:['lease','id'],dd_pack_claim:['lease','id'],dd_pack_answer:['lease','id','text','outcome'],dd_pack_release:['lease','id']}[name];
+ const allowed={dd_pack_bind:['session_ref','poll_minutes','id','admission'],dd_pack_poll:['lease','after'],dd_pack_read:['lease','id'],dd_pack_claim:['lease','id'],dd_pack_answer:['lease','id','text','outcome'],dd_pack_release:['lease','id']}[name];
  dpCheck(allowed&&dpObj(args)&&Object.keys(args).every(k=>allowed.includes(k)),400,'invalid_arguments');
  dpCheck(args.id===undefined||dqSnow(args.id),400,'invalid_request_id');dpCheck(args.after===undefined||dqSnow(args.after),400,'invalid_cursor');
  dpCheck(env.FB_SECRET,503,'pack_store_unconfigured');
@@ -222,9 +223,9 @@ async function dpMcpRun(name,args,env,caller,reauth){
  if(name==='dd_pack_bind')return dpBind(env,seat,caller,args,recheck);
  const hash=await dpLeaseHash(args.lease),now=Date.now();
  if(name==='dd_pack_answer')return dpAnswer(env,seat,caller,args,hash,recheck);
- if(name==='dd_pack_read')return dpTxn(env,s=>{dpLeaseCheck(s,seat,hash,now);const j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');return {result:{job:dpView(s,j,now)},write:false};});
+ if(name==='dd_pack_read')return dpTxn(env,s=>{dpLeaseCheck(s,seat,hash,now,args.id);const j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');return {result:{job:dpView(s,j,now)},write:false};});
  if(name==='dd_pack_poll')return dpTxn(env,s=>{
-  const b=dpLeaseCheck(s,seat,hash,now),mine=Object.values(s.jobs).filter(j=>j.seat===seat).sort(dpById);
+  const b=dpLeaseCheck(s,seat,hash,now),mine=Object.values(s.jobs).filter(j=>j.seat===seat&&(!b.job_id||j.id===b.job_id)&&(j.wake?.mechanism!=='grok_routine'||b.job_id===j.id)).sort(dpById);
   const touch=now-Date.parse(b.last_seen_at)>=30e3;if(touch)b.last_seen_at=dpIso(now);
   const open=mine.filter(j=>j.delivery!=='uncertain'&&(j.state==='queued'||(j.state==='claimed'&&(j.claim?.epoch===b.epoch||dpClaimExpired(j,now))))&&(!args.after||dpById({id:args.after},j)<0));
   return {result:{seat,display:DP_SEATS[seat],binding:b.epoch,checked_in_at:b.last_seen_at,verified:b.verified??null,jobs:open.slice(0,DP.pollPage).map(j=>dpView(s,j,now)),next_cursor:open.length>DP.pollPage?open[DP.pollPage-1].id:null,
@@ -232,7 +233,7 @@ async function dpMcpRun(name,args,env,caller,reauth){
  });
  await recheck();
  if(name==='dd_pack_claim')return dpTxn(env,s=>{
-  const b=dpLeaseCheck(s,seat,hash,now),j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');
+  const b=dpLeaseCheck(s,seat,hash,now,args.id),j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');
   dpCheck(j.delivery==='not_sent',409,'delivery_already_reserved');dpCheck(j.state==='queued'||j.state==='claimed',409,'request_closed');
   dpCheck(j.state==='queued'||j.claim?.epoch===b.epoch||dpClaimExpired(j,now),409,'claimed_by_another_binding');
   const renewed=j.state==='claimed'&&j.claim?.epoch===b.epoch;
@@ -240,7 +241,7 @@ async function dpMcpRun(name,args,env,caller,reauth){
   return {result:{job:dpView(s,j,now),renewed},write:true};
  });
  if(name==='dd_pack_release')return dpTxn(env,s=>{
-  const b=dpLeaseCheck(s,seat,hash,now),j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');
+  const b=dpLeaseCheck(s,seat,hash,now,args.id),j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');
   if(j.state==='queued')return {result:{job:dpView(s,j,now),replayed:true},write:false};
   dpCheck(j.state==='claimed'&&j.claim?.epoch===b.epoch&&j.delivery==='not_sent',409,'release_requires_own_unsent_claim');
   j.state='queued';delete j.claim;return {result:{job:dpView(s,j,now),replayed:false},write:true};
@@ -251,12 +252,27 @@ async function dpBind(env,seat,caller,args,recheck){
  const ref=args.session_ref??null,pm=args.poll_minutes??null;
  dpCheck(ref===null||(typeof ref==='string'&&ref.trim().length>0&&ref.length<=200&&!/[\u0000-\u001f\u007f]/.test(ref)),400,'invalid_session_ref');
  dpCheck(pm===null||(Number.isInteger(pm)&&pm>=1&&pm<=1440),400,'invalid_poll_minutes');
+ const scoped=args.id!==undefined||args.admission!==undefined;
+ dpCheck(!scoped||(dqSnow(args.id)&&typeof args.admission==='string'&&/^dga_[A-Za-z0-9_-]{43}$/.test(args.admission)),400,'invalid_wake_admission');
+ const admissionHash=scoped?await dcHash(args.admission):null;
  const lease='dpl_'+dpRandom(32),hash=await dcHash(lease),now=Date.now();await recheck();
  return dpTxn(env,s=>{
   const prev=s.seats[seat],released=[];dpCheck(!prev?.stopped_at,409,'seat_stopped_by_owner');
+  const wakeJobs=Object.values(s.jobs).filter(j=>j.seat===seat&&j.wake?.mechanism==='grok_routine');
+  const requireAdmission=seat==='grok'&&(env.DISCORD_GROK_WAKE_ENABLED==='true'||wakeJobs.length>0);
+  dpCheck(!requireAdmission||scoped,403,'wake_admission_required');
+  if(scoped){
+   const j=s.jobs[args.id],w=j?.wake;
+   dpCheck(seat==='grok'&&j?.seat===seat&&w?.mechanism==='grok_routine'&&['sending','accepted','uncertain'].includes(w.status)&&w.admission_sha256===admissionHash&&!w.bound_at&&w.deadline_ms>now,403,'wake_admission_invalid_or_consumed');
+   dpCheck(dgAdmissible(s,env,seat,j.requester_id,now)&&j.guild_id===env.DISCORD_GUILD_ID&&j.parent_id===env.DISCORD_CHANNEL_ID,403,'wake_admission_not_authorized');
+   dpCheck(j.state==='queued'&&j.delivery==='not_sent',409,'wake_job_closed');
+   dpCheck(!wakeJobs.some(x=>x.id!==j.id&&['sending','accepted','uncertain'].includes(x.wake.status)&&x.delivery!=='delivered'),409,'other_wake_outstanding');
+   dpCheck(!prev?.job_id||prev.job_id===j.id||s.jobs[prev.job_id]?.delivery==='delivered',409,'other_job_bound');
+   w.bound_at=dpIso(now);w.binding=(prev?.epoch||0)+1;delete w.admission_sha256;
+  }
   for(const j of Object.values(s.jobs))if(j.seat===seat&&j.state==='claimed'&&j.delivery==='not_sent'){j.state='queued';delete j.claim;released.push(j.id);}
   const history=[...(prev?.history??[]),...(prev?.lease_sha256?[{epoch:prev.epoch,lease_sha256:prev.lease_sha256,session_ref:prev.session_ref??null,bound_at:prev.bound_at,superseded_at:dpIso(now)}]:[])].slice(-5);
-  s.seats[seat]={epoch:(prev?.epoch||0)+1,lease_sha256:hash,key_label:caller.keyLabel,session_ref:ref,poll_minutes:pm,bound_at:dpIso(now),last_seen_at:dpIso(now),verified:null,history};
+  s.seats[seat]={...(scoped?{job_id:args.id}:{}),epoch:(prev?.epoch||0)+1,lease_sha256:hash,key_label:caller.keyLabel,session_ref:ref,poll_minutes:pm,bound_at:dpIso(now),last_seen_at:dpIso(now),verified:null,history};
   return {result:{seat,display:DP_SEATS[seat],lease,binding:s.seats[seat].epoch,released,notice:'Keep this lease inside this session only. Binding from any other session supersedes this one.'},write:true};
  });
 }
@@ -325,7 +341,7 @@ async function dpAnswer(env,seat,caller,args,hash,recheck){
  dpCheck(env.DISCORD_PACK_DELIVERY_ENABLED==='true'&&env.DISCORD_BOT_TOKEN,403,'pack_delivery_disabled');
  await recheck();
  const plan=await dpTxn(env,s=>{
-  const b=dpLeaseCheck(s,seat,hash,now),j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');
+  const b=dpLeaseCheck(s,seat,hash,now,args.id),j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');
   if(j.delivery==='delivered'){dpCheck(j.result_text===text&&j.outcome===outcome,409,'reply_conflict');return {result:{action:'done',view:dpView(s,j,now)},write:false};}
   if(j.delivery==='uncertain'){dpCheck(j.result_text===text&&j.outcome===outcome,409,'reply_conflict_uncertain_delivery');return {result:{action:'reconcile',job:structuredClone(j)},write:false};}
   dpCheck(j.state==='claimed'&&j.claim?.epoch===b.epoch,409,'claim_required');dpCheck(!dpClaimExpired(j,now),409,'claim_expired_claim_again');

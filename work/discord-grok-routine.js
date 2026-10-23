@@ -15,6 +15,7 @@ async function dgKey(env){const users=(await fbGet(env,'/users')).data;return us
 async function dgDrain(env,onlyId){
  const cfg=dgConfig(env);if(!cfg)return;
  const hash=await dgKey(env);if(typeof hash!=='string'||!hash)return;
+ const admission='dga_'+dpRandom(32),admissionHash=await dcHash(admission);
  const plan=await dpTxn(env,s=>{
   const now=Date.now(),jobs=Object.values(s.jobs);
   // One outstanding unanswered wake. Delivery does not prove the external run ended.
@@ -30,7 +31,7 @@ async function dgDrain(env,onlyId){
   if(budget.day!==day){budget.day=day;budget.daily=0;}if(budget.hour!==hour){budget.hour=hour;budget.hourly=0;}
   if(budget.daily>=10||budget.hourly>=3)return {write:false};
   budget.daily++;budget.hourly++;s.windows.grok=budget;
-  w.status='sending';w.attempts++;w.reserved_ms=now;
+  w.status='sending';w.attempts++;w.reserved_ms=now;w.admission_sha256=admissionHash;
   return {write:true,result:{id:j.id,attempt:w.attempts,hash}};
  });
  if(!plan)return;
@@ -39,7 +40,7 @@ async function dgDrain(env,onlyId){
   const s=dpStore((await fbGet(env,DP_PATH)).data),j=s.jobs[plan.id],fresh=dgConfig(env);
   if(!fresh||fresh.url!==cfg.url||await dgKey(env)!==plan.hash||!j||!dgAdmissible(s,env,j.seat,j.requester_id,Date.now())||j.guild_id!==env.DISCORD_GUILD_ID||j.parent_id!==env.DISCORD_CHANNEL_ID)status='cancelled';
   else {
-   const r=await fetch(cfg.url,{method:'POST',redirect:'manual',signal:AbortSignal.timeout(8000),headers:{Authorization:'Bearer '+env.GROK_ROUTINE_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({job_id:plan.id})});
+   const r=await fetch(cfg.url,{method:'POST',redirect:'manual',signal:AbortSignal.timeout(8000),headers:{Authorization:'Bearer '+env.GROK_ROUTINE_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({job_id:plan.id,admission})});
    http=r.status;void r.body?.cancel().catch(()=>{});
    // Only documented HTTP 200 means started. Explicit 429 is known not-started.
    // Network/5xx outcomes remain uncertain; never blindly replay them.
