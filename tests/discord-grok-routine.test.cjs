@@ -77,3 +77,9 @@ test('preexisting manual lease cannot poll admitted job or its uncertain attenti
  const f=await ready();f.env.DISCORD_GROK_WAKE_ENABLED='false';const old=await f.tool('owner','dd_pack_bind',{});assert.ok(old.ok);f.env.DISCORD_GROK_WAKE_ENABLED='true';const q=await f.ask();
  for(const delivery of ['not_sent','uncertain']){f.store().jobs[q.id].delivery=delivery;const p=await f.tool('owner','dd_pack_poll',{lease:old.body.lease});assert.ok(p.ok);assert.equal(p.body.jobs.length,0);assert.equal(p.body.attention.length,0);}
 });
+
+test('routine admission cannot supersede an existing different manual claim',async()=>{
+ const f=await ready();f.env.DISCORD_GROK_WAKE_ENABLED='false';const old=await f.tool('owner','dd_pack_bind',{}),manual=await f.ask();assert.ok(manual.id);await f.tool('owner','dd_pack_claim',{lease:old.body.lease,id:manual.id});
+ f.env.DISCORD_GROK_WAKE_ENABLED='true';const q=await f.ask();assert.equal((await f.tool('owner','dd_pack_bind',{id:q.id,admission:f.wakes[0].admission})).ok,false);
+ assert.equal(f.store().jobs[manual.id].state,'claimed');assert.ok((await f.tool('owner','dd_pack_read',{lease:old.body.lease,id:manual.id})).ok);
+});

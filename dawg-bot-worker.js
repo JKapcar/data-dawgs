@@ -13131,6 +13131,7 @@ async function dpBind(env,seat,caller,args,recheck){
    dpCheck(j.state==='queued'&&j.delivery==='not_sent',409,'wake_job_closed');
    dpCheck(!wakeJobs.some(x=>x.id!==j.id&&['sending','accepted','uncertain'].includes(x.wake.status)&&x.delivery!=='delivered'),409,'other_wake_outstanding');
    dpCheck(!prev?.job_id||prev.job_id===j.id||s.jobs[prev.job_id]?.delivery==='delivered',409,'other_job_bound');
+   dpCheck(!Object.values(s.jobs).some(x=>x.seat===seat&&x.id!==j.id&&x.state==='claimed'&&x.delivery!=='delivered'),409,'other_job_claimed');
    w.bound_at=dpIso(now);w.binding=(prev?.epoch||0)+1;delete w.admission_sha256;
   }
   for(const j of Object.values(s.jobs))if(j.seat===seat&&j.state==='claimed'&&j.delivery==='not_sent'){j.state='queued';delete j.claim;released.push(j.id);}
