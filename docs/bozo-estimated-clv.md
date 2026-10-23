@@ -106,3 +106,11 @@ Release Worker schema/route first with existing settings preserved; verify authe
 read-only behavior. Release Pages with its matching service-worker stamp. Submit only
 individually approved estimate payloads via the manager path, verify persisted readback,
 and verify current/historical Overview display. No result writes or week finalization.
+
+## Current-week settled results
+
+An ungraded ledger row can use an already stored terminal current-board result only
+when season, week, exact ledger key, selectionKey and event all match. The estimate
+records that settlement basis and becomes stale if it changes. It never updates the
+ledger result, current results, week status or Bozo decision. Missing, mismatched and
+void results remain ineligible. Whole-week finalization is neither required nor called.
