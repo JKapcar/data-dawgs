@@ -1,12 +1,11 @@
-# Estimated CLV (local draft, no live writes)
+# Estimated CLV
 
-Existing schema supports two-sided measured CLV and `clvPts` manual overrides only.
-This draft adds `ledger/<row>/clvEstimate`, exposed by `/bozo/clv`, and a separate
+Alongside two-sided measured CLV and `clvPts` manual overrides, the schema stores `ledger/<row>/clvEstimate`, exposed by `/bozo/clv`, and a separate
 estimated-evidence disclosure below the existing CLV chart. Estimates never feed the
 measured chart, official rankings, tiebreakers, expected-win baseline or settlement.
 Existing zero overrides remain intact. No result field is changed.
 
-## Proposed existing manager write path
+## Existing manager write path
 
 POST `/bozo/close` with `league`, `row`, `requestId` (16–80 alphanumeric/hyphen),
 `expectedEstimateRevision` (0 for new), and `estimate`:
@@ -24,8 +23,7 @@ The same manager authorization already used by the route applies. A fresh full-l
 ETag read/write protects concurrent edits, the row must match the inspected snapshot,
 and revision comparison prevents lost estimate edits. Duplicate request IDs are
 idempotent only for identical input. Existing audit retains prior/new estimates.
-No new credentials or access grants. This is a schema/Worker change needing review
-and deployment, not an instruction to send this payload to current production.
+No new credentials or access grants. Each estimate still requires reviewed source evidence.
 
 ## Calculation
 
@@ -48,44 +46,7 @@ No participant records or research inventory are seeded by this patch. The paren
 can prepare individual requests after source review, preserving the current four
 manager overrides. Local tests use synthetic rows only.
 
-Observed-pregame evidence requires a known kickoff and an earlier quote timestamp. Saved estimates bind to the inspected price, market and status fields. Changed basis rejects duplicate replay and suppresses stale numerical display until recalculated. There is no estimate entry form yet: reviewed structured requests use the existing manager route.
-
-## Supported operator workflow after reviewed deployment
-
-There is no estimate-entry form. The supported alternative is the existing page's
-`wPost` manager request helper, which supplies the active league and current session
-without copying or displaying credentials. In an already signed-in manager's Bozo
-page, choose the intended league and inspect that league's `/bozo/clv` readback.
-Prepare a reviewed JSON payload with the exact ledger row key, selectionKey, sourced
-quote and expected estimate revision. Call `await wPost('/bozo/close', payload)` from
-the page's developer console. Do not paste session tokens, use raw database writes,
-or put credentials in the payload. This is an operator procedure, not a consumer UI.
-
-For example, the following is SYNTHETIC and must not be submitted to a real league:
-
-```js
-const payload = {
-  row: '2026-w1-synthetic', requestId: crypto.randomUUID(),
-  expectedEstimateRevision: 0,
-  estimate: {
-    closeQuote: {
-      price: -180, opposite: 150, book: 'draftkings',
-      selectionKey: 'synthetic-same-market',
-      sourceUrl: 'https://example.com/closing', quotedAt: null,
-      retrievedAt: '2026-10-23T12:00:00Z', evidence: 'source_reported_closing'
-    },
-    rationale: 'Synthetic example only; page timing is unknown.'
-  }
-};
-// Only after substituting a reviewed real payload and approval:
-// const saved = await wPost('/bozo/close', payload);
-// await clvLoad(true);
-```
-
-Success requires the returned revision AND a fresh `/bozo/clv` readback matching
-requestId, quote, method, point and unchanged original prices/override. A 409 means
-reread and review; never automatically increment the revision or overwrite a newer
-record. Retry an uncertain request only with the same requestId and identical input.
+Observed-pregame evidence requires a known kickoff and an earlier quote timestamp. Saved estimates bind to the inspected price, market and status fields. Changed basis rejects duplicate replay and suppresses stale numerical display until recalculated. The manager form submits reviewed inputs through the existing manager route.
 
 ## Visibility and limits
 
@@ -98,11 +59,28 @@ weekly card. Any future integration there must preserve the same precedence and 
 Browser tests use the actual page CSS with isolated synthetic current/history records,
 not an authenticated live session or production data.
 
-## Release sequence (not executed)
+## Manager form
 
-Review this exact local diff, publish a branch/PR only when authorized, run exact-head
-required CI, then review the assembled Worker artifact and complete configuration.
-Release Worker schema/route first with existing settings preserved; verify authenticated
-read-only behavior. Release Pages with its matching service-worker stamp. Submit only
-individually approved estimate payloads via the manager path, verify persisted readback,
-and verify current/historical Overview display. No result writes or week finalization.
+Open the league Overview while signed in as its manager. In the CLV card, use
+**Manager: save estimated CLV**, then **Load league ledger**, choose the exact week and leg,
+then enter sourced closing prices, source URL, evidence classification, quote and
+retrieval timestamps, and rationale. Unknown opposite/time fields stay blank. If
+neither end has a pair, explicitly choose three overround percentages. **Preview
+estimate** shows the modeled probability-point range; **Save estimated CLV** submits
+through the existing authenticated route. Success appears only after the exact row
+is read back with matching request ID, revision and evidence. Conflicts require a
+fresh review; an unchanged retry reuses its request ID. No DevTools or token copying.
+
+The form preserves an existing retrieval timestamp; new evidence requires its actual
+retrieval time. Saving freezes the inputs until the request and readback finish.
+A successful readback must match the saved estimate and preserve all other row fields.
+Unknown object fields omitted by Firebase are equivalent to explicit nulls only for
+estimate comparisons; changes to actual prices, markets or result evidence remain stale.
+
+## Current-week settled results
+
+An ungraded ledger row can use an already stored terminal current-board result only
+when season, week, exact ledger key, selectionKey and event all match. The estimate
+records that settlement basis and becomes stale if it changes. It never updates the
+ledger result, current results, week status or Bozo decision. Missing, mismatched and
+void results remain ineligible. Whole-week finalization is neither required nor called.
