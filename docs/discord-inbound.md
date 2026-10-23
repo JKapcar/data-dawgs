@@ -4,7 +4,7 @@ Depends on outbound PR #298. Inbound, queue access and answer delivery are indep
 
 ## Request admission
 
-`POST /discord/interactions` verifies Ed25519 over timestamp + exact raw body, rejects timestamps more than five minutes away, and checks application, immutable guild and channel IDs. Only signed PING and the guild CHAT_INPUT `/ask question:<text>` are supported. DMs, ordinary messages, components and other commands cannot enqueue work. Maximum question: 2,000 characters; body: 16 KiB.
+`POST /discord/interactions` verifies Ed25519 over timestamp + exact raw body, rejects timestamps more than five minutes away, and checks application, immutable guild and channel IDs. Only signed PING, the guild CHAT_INPUT `/ask question:<text>` and the separately gated `/pack` (addressed Pack seats, see [discord-pack.md](discord-pack.md)) are supported. DMs, ordinary messages, components and other commands cannot enqueue work. Maximum question: 2,000 characters; body: 16 KiB.
 
 An unexpired configured link maps the immutable Discord user to exactly `principal: "discord-user:<ID>"`, a constrained `project_id` and `scope:"discord:ask"`. The project is a queue namespace, not a private RoboKap resource grant. No owner credentials or private RoboKap/BDB/personal-vault data are read. Questions are explicitly untrusted data, not instructions or authority to access anything. No question is automatically copied into a public reply.
 
