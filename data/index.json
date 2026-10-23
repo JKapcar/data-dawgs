@@ -470,6 +470,14 @@
     "note": "Supplemental, uncorroborated source-claimed closing prices. Page timestamp is not an exact per-book quote timestamp. Original captures and official scoring are unchanged. Append revisions; never replace prior records."
    },
    {
+    "path": "/data/nfl-playoff-leverage.json",
+    "url": "https://datadawgs216.com/data/nfl-playoff-leverage.json",
+    "bytes": 32398,
+    "as_of": "2026-10-23",
+    "sha256": "ca316169bdc85c89eed41f7a4dc1367fb6c93e20e9c611b34b79c41e6d5bc3fc",
+    "note": "SIMULATION OUTPUT, ungraded — not a forecast receipt and not a betting signal. Each of 100,000 simulated seasons keeps every finished game's real result and plays every unplayed 2026 regular-season game once at its /data/survivor.json home-win probability (the published nfelo forecast for the current week, the nfelo season projection after it). Leverage is paired: every season is also played with one game's result flipped while every other game keeps its simulated result. Team strength is held fixed and games are independent, so probabilities near 0% and 100% are overconfident. Seeding follows the NFL tie-breaking procedures through strength of schedule; a tie that survives SOS goes to a coin toss because points are not simulated. Daily snapshot: rebuilt after the nfelo refresh, deterministic for identical inputs."
+   },
+   {
     "path": "/data/leagues/pepperoninipples.json",
     "url": "https://datadawgs216.com/data/leagues/pepperoninipples.json",
     "bytes": 2205,
