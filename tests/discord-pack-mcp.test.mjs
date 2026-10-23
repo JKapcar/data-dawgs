@@ -28,6 +28,18 @@ const names=async token=>(await rpc(token,'tools/list',{})).result.tools.map(t=>
 const call=async(token,name,args)=>{const r=await rpc(token,'tools/call',{name,arguments:args});return {isError:r.result.isError===true,body:r.result.content[0].text};};
 
 const allNames=async token=>(await rpc(token,'tools/list',{})).result?.tools?.map(t=>t.name)??[];
+
+test('native event discovery traverses real header authentication; legacy and full-owner paths stay isolated',async()=>{
+ USERS.u_owner.mcpTokens['pack-dot']={hash:await hmac(PEPPER,'mcp|u_packdottoken'),ts:5};
+ const saved=env.DISCORD_PACK_SEATS;env.DISCORD_PACK_SEATS=JSON.stringify({...JSON.parse(saved),dot:{key_label:'pack-dot'}});env.DISCORD_PACK_EVENTS_ENABLED='true';
+ const headerRpc=async(token,method)=>{const r=await worker.fetch(new Request('https://toto.jkapcar4.workers.dev/mcp',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params:{}})}),env);return r.json();};
+ const discover=await headerRpc('u_packdottoken','server/discover');assert.deepEqual(discover.result.supportedVersions,['2026-07-28']);
+ const list=await headerRpc('u_packdottoken','events/list');assert.equal(list.result.events.length,1);assert.equal(list.result.events[0].name,'pack.request.created');assert.ok(!JSON.stringify(list).includes(USERS.u_owner.mcpTokens['pack-dot'].hash));
+ assert.ok((await rpc('u_packdottoken','events/list',{})).error,'URL credential denied for events');assert.ok((await headerRpc('u_primarytoken','events/list')).error,'owner not a seat');
+ assert.equal((await headerRpc('u_packdottoken','tools/list')).result.tools.length,6);
+ const init=await rpc('u_packdottoken','initialize',{protocolVersion:'2025-06-18'});assert.equal(init.result.protocolVersion,'2025-06-18');
+ delete USERS.u_owner.mcpTokens['pack-dot'];assert.ok((await headerRpc('u_packdottoken','events/list')).error);env.DISCORD_PACK_SEATS=saved;delete env.DISCORD_PACK_EVENTS_ENABLED;
+});
 test('seat keys are seat-only credentials; full-access keys never get seat tools',async()=>{
  for(const token of ['u_primarytoken','u_geminitoken','u_jefftoken']){const n=await allNames(token);assert.ok(n.includes('dd_whoami'),token+' keeps its normal catalog');assert.equal(n.filter(x=>x.startsWith('dd_pack_')).length,0,token+' gets no seat tools');}
  assert.deepEqual(await allNames('u_packclaudetoken'),['dd_pack_bind','dd_pack_poll','dd_pack_read','dd_pack_claim','dd_pack_answer','dd_pack_release']);

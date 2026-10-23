@@ -1980,7 +1980,7 @@ async function mcpAuth(request, url, env) {
     // seat change nor an owner-setting change can widen a pack- key; seat tools still check the
     // owner separately. Inline on purpose (gateway-fixture extracts mcpAuth without helpers).
     if (/^pack-/i.test(keyLabel))
-      return { kind: "pack_seat", name: display, uid: hit, transport, keyLabel };
+      return { kind: "pack_seat", name: display, uid: hit, transport, keyLabel, credentialHash: h };
     return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser), transport, keyLabel,
       // ⚠️ The account's role flags, read here so isSiteAdmin() has one shape to check.
       // Never derived from anything the caller sent.
