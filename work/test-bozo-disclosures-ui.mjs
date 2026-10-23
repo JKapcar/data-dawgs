@@ -54,7 +54,7 @@ try{
     assert.equal(await page.locator('#dgClvHelp').getAttribute('open'),null);
     assert.equal(await page.locator('#dgHelp > div').isVisible(),false);
     assert.equal(await page.locator('#dgClvHelp > div').isVisible(),false);
-    assert.ok((await page.locator('#dgFlags').innerText()).includes('measured on 1 of 2'));
+    assert.ok((await page.locator('#dgFlags').innerText()).includes('available on 1 of 2'));
     assert.ok((await card.innerText()).includes('Simulation, not observation'));
     assert.ok(await page.locator('#dgTable').isVisible());
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'no page-level horizontal overflow');
