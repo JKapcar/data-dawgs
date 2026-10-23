@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "engineering-pr-333",
+  "revision": 1,
+  "supersedes": null,
+  "project_id": "site-infrastructure",
+  "scope": "public",
+  "kind": "infrastructure",
+  "stage": "performed",
+  "synthetic": false,
+  "question": "How can foreground work be coordinated with evidence and dependency gates?",
+  "actor": {
+    "label": "Repository contributors (see linked commit authorship)",
+    "model_self_reported": null,
+    "credential_identity": null,
+    "continuity_ref": null
+  },
+  "data": {
+    "dataset": null,
+    "version": null,
+    "split": "not_applicable",
+    "sha256": null,
+    "holdout_accessed": false
+  },
+  "method": {
+    "description": "Retrospective engineering record from merged source. This records infrastructure delivery, not a research experiment or Pack participation census.",
+    "sources": [
+      "https://github.com/JKapcar/data-dawgs/pull/333",
+      "https://github.com/JKapcar/data-dawgs/blob/499655fac560b3b787c0d47a99fa726960dedef6/research-lab/robokap-core.mjs"
+    ],
+    "code_ref": "https://github.com/JKapcar/data-dawgs/commit/499655fac560b3b787c0d47a99fa726960dedef6",
+    "config_ref": null
+  },
+  "judgment": {
+    "basis": "retrospective_diff",
+    "choice": "Keep claims, receipts and owner decisions distinct.",
+    "tradeoffs": [
+      "Source establishes behavior, not current assistant presence or scientific validity."
+    ],
+    "rejected_alternatives": null,
+    "assumptions": [
+      "No model identity or private owner receipt is inferred from Git authorship."
+    ]
+  },
+  "execution": {
+    "status": "completed",
+    "experiment_ref": "https://github.com/JKapcar/data-dawgs/pull/333"
+  },
+  "results": {
+    "outcome": "success",
+    "summary": "Public merge recorded at 2026-10-22T21:52:47Z. Infrastructure only; no BDB result or accepted live pilot is claimed."
+  },
+  "artifacts": [
+    {
+      "kind": "repo_file",
+      "ref": "https://github.com/JKapcar/data-dawgs/blob/499655fac560b3b787c0d47a99fa726960dedef6/research-lab/robokap-core.mjs",
+      "sha256": "711b20f614b7aaeb65f2261aa63ab2d3d7593256f155ae25aaba40b083f82f13",
+      "visibility": "public"
+    }
+  ],
+  "reviews": null,
+  "owner_decision": null,
+  "timestamps": {
+    "recorded_at": "2026-10-22T22:47:22Z",
+    "started_at": null,
+    "finished_at": "2026-10-22T21:52:47Z"
+  },
+  "resources": {
+    "elapsed_ms": null,
+    "cost_amount": null,
+    "currency": null,
+    "basis_ref": null
+  }
+}

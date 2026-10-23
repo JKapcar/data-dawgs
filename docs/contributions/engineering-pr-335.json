@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "id": "engineering-pr-335",
+  "revision": 1,
+  "supersedes": null,
+  "project_id": "site-infrastructure",
+  "scope": "public",
+  "kind": "infrastructure",
+  "stage": "performed",
+  "synthetic": false,
+  "question": "How can the board show activity without implying assistants are online or executing?",
+  "actor": {
+    "label": "Repository contributors (see linked commit authorship)",
+    "model_self_reported": null,
+    "credential_identity": null,
+    "continuity_ref": null
+  },
+  "data": {
+    "dataset": null,
+    "version": null,
+    "split": "not_applicable",
+    "sha256": null,
+    "holdout_accessed": false
+  },
+  "method": {
+    "description": "Retrospective engineering record from merged source. This records infrastructure delivery, not a research experiment or Pack participation census.",
+    "sources": [
+      "https://github.com/JKapcar/data-dawgs/pull/335",
+      "https://github.com/JKapcar/data-dawgs/blob/7375836bfb49172ef1f59adfc01a5d591d6c65bd/research-lab/robokap-board.mjs"
+    ],
+    "code_ref": "https://github.com/JKapcar/data-dawgs/commit/7375836bfb49172ef1f59adfc01a5d591d6c65bd",
+    "config_ref": null
+  },
+  "judgment": {
+    "basis": "retrospective_diff",
+    "choice": "Count exposed claims across lanes; label Done literally; place task actions before explanation.",
+    "tradeoffs": [
+      "Source establishes behavior, not current assistant presence or scientific validity."
+    ],
+    "rejected_alternatives": null,
+    "assumptions": [
+      "No model identity or private owner receipt is inferred from Git authorship."
+    ]
+  },
+  "execution": {
+    "status": "completed",
+    "experiment_ref": "https://github.com/JKapcar/data-dawgs/actions/runs/39864546028"
+  },
+  "results": {
+    "outcome": "success",
+    "summary": "Public merge recorded at 2026-10-22T22:27:38Z. Infrastructure only; no BDB result or accepted live pilot is claimed."
+  },
+  "artifacts": [
+    {
+      "kind": "repo_file",
+      "ref": "https://github.com/JKapcar/data-dawgs/blob/7375836bfb49172ef1f59adfc01a5d591d6c65bd/research-lab/robokap-board.mjs",
+      "sha256": "f0e58c047ead94235cf8d831490f9b63c3a003c9c94ba1b591b9a172bf75bb31",
+      "visibility": "public"
+    }
+  ],
+  "reviews": null,
+  "owner_decision": null,
+  "timestamps": {
+    "recorded_at": "2026-10-22T22:47:22Z",
+    "started_at": null,
+    "finished_at": "2026-10-22T22:27:38Z"
+  },
+  "resources": {
+    "elapsed_ms": null,
+    "cost_amount": null,
+    "currency": null,
+    "basis_ref": null
+  }
+}
