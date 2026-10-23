@@ -9484,7 +9484,7 @@ async function bozoClv(request, url, env, cors) {
          chart displays — what was typed is what reads back. */
       clvPts: r.clvPts ?? null,
       clvSource: r.clvSource || null,
-      clvEstimate: r.clvEstimate ? {...r.clvEstimate,stale:!bozoEstimateSame(r.clvEstimate.basis,bozoEstimateBasis(bozoEstimateSettledRow(r,rowKey,lg)))} : null,
+      clvEstimate: r.clvEstimate ? {...r.clvEstimate,stale:!bozoEstimateBasisSame(r.clvEstimate.basis,bozoEstimateBasis(bozoEstimateSettledRow(r,rowKey,lg)))} : null,
 
       result: RESULT[bozoEstimateSettledRow(r,rowKey,lg,true).result] || null,
       gradedAt: r.gradedAt || null,
@@ -10047,6 +10047,8 @@ function bozoAssumedOpposite(close) { return null; }
 // BEGIN BOZO ESTIMATED CLV: separate from captured prices and manual overrides.
 function bozoEstimateCanonical(value){if(Array.isArray(value))return value.map(bozoEstimateCanonical);if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).filter(k=>value[k]!=null).sort().map(k=>[k,bozoEstimateCanonical(value[k])]));return value;}
 function bozoEstimateSame(a,b){return bozoSame(bozoEstimateCanonical(a),bozoEstimateCanonical(b));}
+// Observation refresh time is provenance, not a material settlement change.
+function bozoEstimateBasisSame(a,b){const stable=x=>{if(!x?.estimateSettlement)return x;const {gradeObservedAt,...settlement}=x.estimateSettlement;return {...x,estimateSettlement:settlement};};return bozoEstimateSame(stable(a),stable(b));}
 function bozoEstimateSettledRow(row,rowKey,live,includeVoid=false){
   if(row.result!=null)return row;
   if(!live||row.season!==live.season||row.week!==live.week)return row;
@@ -10099,7 +10101,7 @@ async function bozoSaveClvEstimate(env,lid,auth,rowKey,row,body,cors){
   if(!current||!etag)return json({error:'Ledger unavailable'},409,cors);
   const settled=bozoEstimateSettledRow(current,rowKey,live);
   if(current.clvEstimate?.requestId===body.requestId){
-    if(!bozoEstimateSame(current.clvEstimate.basis,bozoEstimateBasis(settled))||!bozoEstimateSame(current.clvEstimate.input,body.estimate))return json({error:'Request ID reused with different evidence'},409,cors);
+    if(!bozoEstimateBasisSame(current.clvEstimate.basis,bozoEstimateBasis(settled))||!bozoEstimateSame(current.clvEstimate.input,body.estimate))return json({error:'Request ID reused with different evidence'},409,cors);
     return json({ok:true,unchanged:true,estimate:current.clvEstimate},200,cors);
   }
   if(!bozoSame(current,row)||(current.clvEstimate?.revision||0)!==body.expectedEstimateRevision)return json({error:'Ledger changed; refresh estimate'},409,cors);
