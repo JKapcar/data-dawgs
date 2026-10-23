@@ -9484,6 +9484,7 @@ async function bozoClv(request, url, env, cors) {
          chart displays — what was typed is what reads back. */
       clvPts: r.clvPts ?? null,
       clvSource: r.clvSource || null,
+      clvEstimate: r.clvEstimate ? {...r.clvEstimate,stale:!bozoSame(r.clvEstimate.basis,bozoEstimateBasis(r))} : null,
 
       result: RESULT[r.result] || null,
       gradedAt: r.gradedAt || null,
@@ -10043,6 +10044,62 @@ function bozoAssumedOpposite(close) { return null; }
    ⚠️ closeSource stays "manual" forever. A number read off a bet slip and a number
    snapped from the feed are different kinds of evidence and must never become
    indistinguishable in the column that records where closes come from. */
+// BEGIN BOZO ESTIMATED CLV: separate from captured prices and manual overrides.
+function bozoEstimateBasis(row){return Object.fromEntries(['selectionKey','entryBook','price','priceOpp','entryOppSource','close','closeOpp','closeOppSource','verificationStatus','result','startsAt'].map(k=>[k,row[k]??null]));}
+function bozoEstimateClv(row, input) {
+  const fail = message => { throw new Error(message); };
+  const price = x => typeof x === 'number' && Number.isFinite(x) && Math.abs(x) >= 100;
+  const imp = x => x < 0 ? -x / (100-x) : 100 / (100+x);
+  const pair = (a,b) => price(a) && price(b) ? {fair:imp(a)/(imp(a)+imp(b)),hold:imp(a)+imp(b)-1} : null;
+  if (!input || Object.keys(input).some(k=>!['closeQuote','scenarios','rationale'].includes(k))) fail('Invalid estimate fields');
+  if(!['won','lost','push'].includes(row.result))fail('Only settled non-void legs support this estimate');
+  const q=input.closeQuote;
+  if (!q || Object.keys(q).some(k=>!['price','opposite','book','selectionKey','sourceUrl','quotedAt','retrievedAt','evidence'].includes(k))) fail('Invalid closing quote');
+  if (!row.selectionKey || q.selectionKey!==row.selectionKey || q.book!=='draftkings' || row.entryBook!=='draftkings') fail('Exact same-book selection identity required');
+  if (!price(row.price) || !price(q.price) || (q.opposite!==null&&!price(q.opposite))) fail('Sourced entry and closing prices required');
+  let url;try { url=new URL(q.sourceUrl); } catch { fail('Source URL required'); }
+  if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash)fail('Use a public source URL without credentials or query');
+  if(!['source_reported_closing','observed_pregame'].includes(q.evidence)||!Number.isFinite(Date.parse(q.retrievedAt))||(q.quotedAt!==null&&!Number.isFinite(Date.parse(q.quotedAt))))fail('Explicit evidence and timestamps required');
+  if(q.evidence==='observed_pregame'&&(!Number.isFinite(Date.parse(row.startsAt))||q.quotedAt===null||Date.parse(q.quotedAt)>=Date.parse(row.startsAt)))fail('Observed pregame evidence requires a quote timestamp before known kickoff');
+  if(typeof input.rationale!=='string'||!input.rationale.trim()||input.rationale.length>400)fail('Assumption rationale required');
+  const entry=row.entryOppSource==='assumed'?null:pair(row.price,row.priceOpp),close=pair(q.price,q.opposite);
+  // When a row already has a measured pair, a recovery candidate cannot replace it.
+  const measuredClose=pair(row.close,row.closeOpp);
+  if(measuredClose&&row.closeOppSource!=='assumed'&&(q.price!==row.close||q.opposite!==row.closeOpp))fail('Existing closing pair takes precedence');
+  if(entry&&measuredClose&&row.closeOppSource!=='assumed'&&row.entryOppSource!=='assumed'&&row.verificationStatus!=='unverified')fail('Measured CLV already available');
+  const calibration=close||entry;
+  let holds;
+  if(calibration){
+    if(calibration.hold<0||calibration.hold>0.30)fail('Observed overround outside supported range');
+    holds=entry&&close?[calibration.hold]:[Math.max(0,calibration.hold-0.02),calibration.hold,Math.min(0.30,calibration.hold+0.02)];
+  }else{
+    holds=input.scenarios;
+    if(!Array.isArray(holds)||holds.length!==3||holds.some(x=>typeof x!=='number'||!Number.isFinite(x)||x<0||x>0.30)||!(holds[0]<holds[1]&&holds[1]<holds[2]))fail('Choose three increasing overround scenarios, not a universal default');
+  }
+  const values=holds.map(h=>100*((close?close.fair:imp(q.price)/(1+h))-(entry?entry.fair:imp(row.price)/(1+h))));
+  return {version:1,kind:'estimated',method:'proportional_overround_v1',units:'probability_percentage_points',point:values[Math.floor(values.length/2)],low:Math.min(...values),high:Math.max(...values),scenarios:holds,scenarioValues:values,assumption:entry&&close?'both pairs de-vigged; reported closing evidence remains unverified':calibration?(close?'entry hold assumed equal to observed close hold':'close hold assumed equal to observed entry hold'):'same assumed overround at entry and close',sensitivity:entry&&close?'quote provenance/timing uncertainty; no inferred vig interval':'illustrative overround sensitivity, not a confidence interval',confidence:'model_assumption_not_statistical_confidence',rationale:input.rationale,entryVerified:row.verificationStatus==='verified',basis:bozoEstimateBasis(row),entryPrice:row.price,entryOpposite:row.priceOpp??null,closeQuote:{...q},selectionKey:row.selectionKey};
+}
+async function bozoSaveClvEstimate(env,lid,auth,rowKey,row,body,cors){
+  if(Object.keys(body).some(k=>!['league','row','estimate','expectedEstimateRevision','requestId'].includes(k)))return json({error:'Estimate saves cannot edit other fields'},400,cors);
+  if(!Number.isInteger(body.expectedEstimateRevision)||body.expectedEstimateRevision<0||!/^[-a-zA-Z0-9]{16,80}$/.test(body.requestId||''))return json({error:'Revision and idempotency requestId required'},400,cors);
+  let computed;try{computed=bozoEstimateClv(row,body.estimate);}catch(e){return json({error:e.message},400,cors);}
+  const {data:live,etag}=await fbGet(env,LG(lid),true);
+  const current=live?.ledger?.[rowKey];
+  if(!current||!etag)return json({error:'Ledger unavailable'},409,cors);
+  if(current.clvEstimate?.requestId===body.requestId){
+    if(!bozoSame(current.clvEstimate.basis,bozoEstimateBasis(current))||!bozoSame(current.clvEstimate.input,body.estimate))return json({error:'Request ID reused with different evidence'},409,cors);
+    return json({ok:true,unchanged:true,estimate:current.clvEstimate},200,cors);
+  }
+  if(!bozoSame(current,row)||(current.clvEstimate?.revision||0)!==body.expectedEstimateRevision)return json({error:'Ledger changed; refresh estimate'},409,cors);
+  const at=new Date().toISOString(),record={...computed,revision:body.expectedEstimateRevision+1,requestId:body.requestId,input:JSON.parse(JSON.stringify(body.estimate)),recordedAt:at};
+  current.clvEstimate=record;
+  // Store only supplemental evidence on this ledger row, never result/close/clvPts.
+  live.audit||={};live.audit['estimate-'+crypto.randomUUID()]={at,by:auth.name,type:'clv_estimate',row:rowKey,from:row.clvEstimate||null,to:record};
+  if(!await fbPut(env,LG(lid),live,etag))return json({error:'Concurrent change; refresh and retry'},409,cors);
+  return json({ok:true,estimate:record},200,cors);
+}
+// END BOZO ESTIMATED CLV
+
 async function bozoCloseFill(request, env, cors) {
   if (request.method !== "POST") return json({ error: "POST only" }, 405, cors);
   let body;
@@ -10061,6 +10118,7 @@ async function bozoCloseFill(request, env, cors) {
   try { row = (await fbGet(env, LG(lid) + "/ledger/" + rowKey)).data; }
   catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
   if (!row) return json({ error: "No such ledger row." }, 404, cors);
+  if (Object.prototype.hasOwnProperty.call(body,'estimate')) return bozoSaveClvEstimate(env,lid,auth,rowKey,row,body,cors);
 
   /* ⚠️ Immutability protects a USABLE capture, not a half-written one. The cron stamps
      closeObservedAt as soon as it observes a price, so a tick that got one side and not
