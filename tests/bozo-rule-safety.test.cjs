@@ -106,7 +106,7 @@ test('UI refuses the same missing-data grade before confirmGrade',async()=>{
 
 test('future ledger entries preserve period and assumed provenance; CLV forwards absence honestly',async()=>{
  const {server}=build(page,worker);
- for(const n of ['ledgerEntries','bozoClv'])vm.runInContext(lift(worker,n),server);
+ for(const n of ['ledgerEntries','bozoEstimateSettledRow','bozoClv'])vm.runInContext(lift(worker,n),server);
  Object.assign(server,{ledgerKey:(s,w,n)=>`${s}-${w}-${n}`,validLeagueId:()=>true,loadLeague:async()=>({season:2026,week:6}),
   LG:()=>'/test',settingsOf:()=>({format:'standard'}),memberNames:()=>[],ticketPricing:()=>[],BOZO_CLOSE_BOOK:'draftkings',json:x=>x});
  const pick={sport:'nfl',mkt:'ml',period:'1h',entryOppSource:'assumed',price:-200,entryPriceOpp:170,ts:1};
