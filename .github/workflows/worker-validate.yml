@@ -40,7 +40,7 @@ jobs:
           git diff --exit-code -- dawg-bot-worker.js
       - run: node --check dawg-bot-worker.js
       - run: node --test tests/bozo-clv-estimate.test.cjs
-      - run: node --test tests/discord-bridge.test.cjs tests/discord-inbound.test.cjs tests/discord-owner-smoke.test.cjs tests/discord-pack.test.cjs tests/discord-pack-mcp.test.mjs tests/discord-grok-routine.test.cjs tests/discord-grok-routine.test.cjs tests/bozo-mcp-auth-status.test.js
+      - run: node --test tests/discord-bridge.test.cjs tests/discord-inbound.test.cjs tests/discord-owner-smoke.test.cjs tests/discord-pack.test.cjs tests/discord-pack-mcp.test.mjs tests/discord-grok-routine.test.cjs tests/bozo-mcp-auth-status.test.js
       - run: node --test tests/dawg-pound.test.cjs
       - run: node --test tests/research-project.test.cjs
       - run: node --test tests/bozo-correction.test.cjs
