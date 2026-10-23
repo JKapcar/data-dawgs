@@ -1,5 +1,5 @@
 {
- "as_of": "2026-10-13",
+ "as_of": "2026-10-23",
  "source": "Generated from the site itself. Tier is read from each page's live chip.",
  "tier": "labs",
  "graded": false,
@@ -23,6 +23,13 @@
   "identity": "dd_whoami reports the caller. Rows belonging to them are marked `you: true`. An anonymous connection is told so explicitly and instructed to ask rather than assume whose is whose.",
   "writes": "Authenticated account-scoped writes include private menus; public menu publication requires a verified site admin. Read/write annotations come from the tool registry.",
   "tools_live": [
+   "dd_dfs_history_save",
+   "dd_dfs_history_archive",
+   "dd_dfs_history_list",
+   "dd_dfs_history_get",
+   "dd_dfs_portfolio",
+   "dd_dfs_nhl_model",
+   "dd_dfs_draft",
    "dd_dfs_sync",
    "dd_dfs_compare",
    "dd_dfs_schema",
@@ -50,6 +57,7 @@
    "dd_bozo_week",
    "dd_bozo_standings",
    "dd_draft_bozo_leg",
+   "dd_correct_bozo_pick",
    "dd_submit_bozo_leg",
    "dd_verify_bozo_entry",
    "dd_bozo_admin_actions",
@@ -95,12 +103,19 @@
   "tools_staged": [],
   "catalogs": {
    "status": "Catalog arrays describe the current source; tools_staged are not deployed. DFS core promotion deployed 2026-09-16; client catalog refresh is separate. LIVE since 2026-08-09. Both /mcp/core/<credential> and /mcp/full/<credential> answer, and GET /mcp/ advertises them. The bare /mcp/<credential> is unchanged and still full. A leading `core`/`full` is only read as a catalog when a credential follows it, or when the credential arrived in a header — so no passphrase can be stranded by its own name. NOT VERIFIED IN PRODUCTION: the per-catalog tools/list counts, which need a credential.",
-   "why": "Every tool schema costs context tokens in every conversation that connects (86 tools in the source registry). core is the everyday league surface; full is everything and stays the default, so the bare /mcp/<credential> URL keeps serving every tool a live connector may already be calling.",
+   "why": "Every tool schema costs context tokens in every conversation that connects (88 tools in the source registry). core is the everyday league surface; full is everything and stays the default, so the bare /mcp/<credential> URL keeps serving every tool a live connector may already be calling.",
    "paths": {
     "core": "/mcp/core/<credential>",
     "full": "/mcp/full/<credential>"
    },
    "core": [
+    "dd_dfs_history_save",
+    "dd_dfs_history_archive",
+    "dd_dfs_history_list",
+    "dd_dfs_history_get",
+    "dd_dfs_portfolio",
+    "dd_dfs_nhl_model",
+    "dd_dfs_draft",
     "dd_dfs_sync",
     "dd_dfs_compare",
     "dd_dfs_schema",
@@ -127,6 +142,7 @@
     "dd_bozo_week",
     "dd_bozo_standings",
     "dd_draft_bozo_leg",
+    "dd_correct_bozo_pick",
     "dd_submit_bozo_leg",
     "dd_verify_bozo_entry",
     "dd_bozo_admin_actions",
@@ -144,6 +160,13 @@
     "dd_site_map"
    ],
    "full": [
+    "dd_dfs_history_save",
+    "dd_dfs_history_archive",
+    "dd_dfs_history_list",
+    "dd_dfs_history_get",
+    "dd_dfs_portfolio",
+    "dd_dfs_nhl_model",
+    "dd_dfs_draft",
     "dd_dfs_sync",
     "dd_dfs_compare",
     "dd_dfs_schema",
@@ -171,6 +194,7 @@
     "dd_bozo_week",
     "dd_bozo_standings",
     "dd_draft_bozo_leg",
+    "dd_correct_bozo_pick",
     "dd_submit_bozo_leg",
     "dd_verify_bozo_entry",
     "dd_bozo_admin_actions",
@@ -216,7 +240,7 @@
   },
   "annotations": {
    "status": "LIVE with the catalogs since 2026-08-09, present in the deployed source. Every registered tool carries a display title and a readOnlyHint matching its read/write behavior on tools/list. destructiveHint, idempotentHint and openWorldHint are deliberately absent rather than guessed. NOT VERIFIED ON THE WIRE: reading them back needs a credential.",
-   "not_every_tool_is_read_only": "Source registry (work/mcp-block.js MCP_TOOLS, dd_ and sd_): 86 tools, 25 with readOnlyHint=false, listed in read_only_false.",
+   "not_every_tool_is_read_only": "Source registry (work/mcp-block.js MCP_TOOLS, dd_ and sd_): 88 tools, 26 with readOnlyHint=false, listed in read_only_false.",
    "read_only_false": [
     "dd_dfs_history_save",
     "dd_dfs_history_archive",
@@ -235,6 +259,7 @@
     "dd_dfs_simulate",
     "dd_dfs_select",
     "dd_dfs_delete",
+    "dd_correct_bozo_pick",
     "dd_submit_bozo_leg",
     "dd_verify_bozo_entry",
     "sd_start_session",
@@ -245,6 +270,13 @@
     "sd_log_nutrition"
    ],
    "titles": {
+    "dd_dfs_history_save": "Save private DFS history",
+    "dd_dfs_history_archive": "Archive a saved DFS workspace",
+    "dd_dfs_history_list": "List private DFS history",
+    "dd_dfs_history_get": "Read private DFS history",
+    "dd_dfs_portfolio": "Save private DFS portfolio audit",
+    "dd_dfs_nhl_model": "Build private NHL historical research model",
+    "dd_dfs_draft": "Save private DFS manual draft",
     "dd_dfs_sync": "Save browser DFS workspace",
     "dd_dfs_compare": "Compare DFS contests",
     "dd_dfs_schema": "Describe DFS fields and limits",
@@ -272,6 +304,7 @@
     "dd_bozo_week": "Bozo board this week",
     "dd_bozo_standings": "Bozo season ledger",
     "dd_draft_bozo_leg": "Draft a Bozo leg",
+    "dd_correct_bozo_pick": "Correct one placed pick before kickoff",
     "dd_submit_bozo_leg": "Submit your Bozo leg (two-phase)",
     "dd_verify_bozo_entry": "Verify original Bozo entry prices (two-phase)",
     "dd_bozo_admin_actions": "Commissioner actions this week",
@@ -320,10 +353,10 @@
   "surfaces": 26,
   "with_live_machine_access": 20,
   "with_no_machine_access": 6,
-  "mcp_tools_registered": 68,
-  "mcp_tools_live": 68,
+  "mcp_tools_registered": 76,
+  "mcp_tools_live": 76,
   "mcp_tools_staged": 0,
-  "mcp_tools_core": 41,
+  "mcp_tools_core": 49,
   "mcp_tools_planned": 6
  },
  "data": [
@@ -841,6 +874,48 @@
      "tool": "dd_dfs_correlations",
      "status": "live",
      "covers": "the measured correlation structure"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_history_save",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_history_archive",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_history_list",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_history_get",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_portfolio",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_nhl_model",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
+    },
+    {
+     "kind": "mcp",
+     "tool": "dd_dfs_draft",
+     "status": "live",
+     "covers": "account-scoped DFS workspace operation; caller-supplied inputs"
     },
     {
      "kind": "mcp",
@@ -1397,6 +1472,6 @@
   }
  ],
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-13",
+ "built": "2026-10-23",
  "canonical_url": "https://datadawgs216.com/data/surfaces.json"
 }
