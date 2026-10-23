@@ -350,8 +350,8 @@
   }
  },
  "counts": {
-  "surfaces": 26,
-  "with_live_machine_access": 20,
+  "surfaces": 27,
+  "with_live_machine_access": 21,
   "with_no_machine_access": 6,
   "mcp_tools_registered": 76,
   "mcp_tools_live": 76,
@@ -595,6 +595,23 @@
     "rest:/api/matchup"
    ],
    "tier": "dawg"
+  },
+  {
+   "id": "playoff-leverage",
+   "domain": "nfl",
+   "name": "NFL playoff leverage",
+   "page": "/playoffs.html",
+   "machine": [
+    {
+     "kind": "json",
+     "url": "/data/nfl-playoff-leverage.json",
+     "status": "live",
+     "covers": "this week's unplayed games: each team's playoff probability if it loses, now and if it wins, the swing with its simulation error, all 32 teams under each result, and every team's playoff, division and bye odds — a daily 100,000-season simulation, ungraded"
+    }
+   ],
+   "planned": [],
+   "gap": "Simulation output with team strength held fixed over nfelo game probabilities, so values near 0 and 1 are overconfident. One game at a time: no combinations or later-week scenarios. Tie-breakers stop at strength of schedule, then a coin toss. No MCP tool.",
+   "tier": "labs"
   },
   {
    "id": "bozo-menu",

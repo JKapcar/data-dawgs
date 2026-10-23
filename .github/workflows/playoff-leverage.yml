@@ -28,6 +28,10 @@ on:
       - "work/validate-playoff-history.mjs"
       - "tools/build-playoff-leverage.js"
       - "data/nfl-playoff-leverage.json"
+      - "playoffs.html"
+      - "playoffs.js"
+      - "work/build_playoffs.py"
+      - "work/test-playoffs-page.mjs"
 
 permissions:
   contents: read
@@ -52,6 +56,24 @@ jobs:
           curl -fsSL -o "$RUNNER_TEMP/games.csv" https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv
           node work/validate-playoff-history.mjs "$RUNNER_TEMP/games.csv" 2002 2025
       - run: node tools/validate-data.js
+
+  page:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - run: npm install --prefix /tmp/dd-playoffs-pw playwright@1.56.1 --no-audit --no-fund
+      - run: /tmp/dd-playoffs-pw/node_modules/.bin/playwright install --with-deps chromium
+      - name: The page renders the file, one game at a time, and fails loud
+        run: DD_NODE_MODULES=/tmp/dd-playoffs-pw/node_modules PLAYOFFS_SHOTS=artifacts/playoffs node work/test-playoffs-page.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playoffs-screenshots
+          path: artifacts/playoffs
+          if-no-files-found: ignore
 
   refresh:
     if: github.event_name != 'pull_request' && (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')

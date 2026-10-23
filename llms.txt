@@ -53,6 +53,7 @@ the live draft rig, a [32-team wins pool](/teamdraft.html).
 - [Team + QB EPA](/data/epa-teams.json): nflverse pbp 2023-2025 + 2026 Wk1-2; descriptive, not predictive.
 - [nfelo](/data/nfelo.json): ratings, current-season lines, backtest; daily greerreNFL/nfelo mirror (meta.captured_at, meta.sha). In-sample backtest; ratings move after games.
 - [Survivor](/data/survivor.json): 272 games; `mk`=nfelo line (model), no book; ownership modelled.
+- [Playoff leverage](/playoffs.html) ([data](/data/nfl-playoff-leverage.json)): daily 100k-season sim; playoff odds if each team wins/loses this week. Ungraded.
 - [Parameters](/data/models.json): margin, Bozo, survivor assumptions + limitations.
 
 ## Receipts and method
