@@ -87,13 +87,14 @@ function dpView(s,j,now){
  const t=j.thread_id?s.threads[j.thread_id]:null;
  const history=t?t.turns.filter(id=>id!==j.id&&dpById({id},j)<0).slice(-DP.historyTurns).map(id=>s.jobs[id]).filter(Boolean).map(p=>({id:p.id,question:p.question,reply:p.delivery==='delivered'?p.result_text:null,outcome:p.outcome??null,state:p.state})):[];
  return {id:j.id,seat:j.seat,kind:j.kind,root_id:j.root_id,thread_id:j.thread_id??null,thread_name:dpThreadName(j),requester:j.requester_name,question:j.question,question_trust:j.question_trust,created_at:j.created_at,
-  state:j.state,execution:j.execution??'not_started',wake:{performed:false,mechanism:'session_polling',execution_verified:false},claim:j.claim?{binding:j.claim.epoch,expires_at:j.claim.expires_at,expired:dpClaimExpired(j,now)}:null,attempt:j.attempt,outcome:j.outcome??null,reply:j.result_text??null,
+  state:j.state,execution:j.execution??'not_started',wake:j.wake?.mechanism==='grok_routine'?dgView(j,now):{performed:false,mechanism:'session_polling',execution_verified:false},claim:j.claim?{binding:j.claim.epoch,expires_at:j.claim.expires_at,expired:dpClaimExpired(j,now)}:null,attempt:j.attempt,outcome:j.outcome??null,reply:j.result_text??null,
   delivery:j.delivery,delivery_stage:j.delivery_stage??null,reserved_at:j.reserved_at??null,next:dpNext(j,now),last_error:j.last_error??null,
   receipt:j.delivery==='delivered'?{thread_id:j.thread_id,message_id:j.message_id??null,url:j.url??null,delivered_at:j.delivered_at,evidence:j.resolution?'owner_observed_in_discord':'discord_api_response'}:null,
   author:j.author??null,history};
 }
 function dpAckText(s,j,now,replay){
  const name=DP_SEATS[j.seat],b=s.seats[j.seat];
+ if(j.wake?.mechanism==='grok_routine')return (replay?'Already received: ':'Queued: ')+'request '+j.id+' for Grok. Routine wake: '+j.wake.status+'. A wake acknowledgement is not a completed reply. Check the Pack page for claim and delivery evidence; do not resubmit.';
  const state={queued:'queued; nothing has run yet',claimed:'claimed by '+name+'’s bound session; execution is not verified',answered:'answered',failed:'reported as not completed'}[j.state]||j.state;
  let text=(replay?'Already received: ':'Queued: ')+'request '+j.id+' for '+name+' is '+state+'. '+name+'’s session last checked in '+(b?.last_seen_at?dpAgo(now-Date.parse(b.last_seen_at)):'never')+(b?.poll_minutes?' and says it checks about every '+b.poll_minutes+' min':'')+'. ';
  text+='The reply will appear in '+(j.kind==='new'?'a new thread named "'+dpThreadName(j)+'" in this channel':'this thread')+', labelled with the seat and connector key; model identity is not verified.';
@@ -130,11 +131,11 @@ async function dpInteraction(event,env,execution){
  const reply=content=>dqReply({type:4,data:{content,flags:64,allowed_mentions:{parse:[]}}});
  let input;try{input=dpInput(event,env);}catch(e){return reply('Not accepted: '+dpMessage(e)+' Nothing was queued.');}
  if(execution?.waitUntil){
-  execution.waitUntil((async()=>{let text;try{text=await dpAdmit(event,env,input);}catch(e){text='Not accepted: '+dpMessage(e)+' Nothing was queued.';}
+  execution.waitUntil((async()=>{let text;try{text=await dpAdmit(event,env,input);if(typeof dgDrain==='function')await dgDrain(env,event.id).catch(()=>{});}catch(e){text='Not accepted: '+dpMessage(e)+' Nothing was queued.';}
    try{await dpEditOriginal(env,event,text);}catch{console.warn('discord_pack_ack_edit_failed',{request_id:event.id});}})());
   return dqReply({type:5,data:{flags:64}}); // deferred, ephemeral: only the requester sees the outcome
  }
- try{return reply(await dpAdmit(event,env,input));}catch(e){return reply('Not accepted: '+dpMessage(e)+' Nothing was queued.');}
+ try{const text=await dpAdmit(event,env,input);if(typeof dgDrain==='function')await dgDrain(env,event.id).catch(()=>{});return reply(text);}catch(e){return reply('Not accepted: '+dpMessage(e)+' Nothing was queued.');}
 }
 async function dpAdmit(event,env,{question,to}){
  dpCheck(env.FB_SECRET,503,'pack_store_unconfigured');
@@ -159,13 +160,14 @@ async function dpAdmit(event,env,{question,to}){
   if(s.seats[seat]?.stopped_at)return {result:label+'’s seat is stopped by the site owner. Nothing was queued.',write:false};
   if(!Object.hasOwn(seats,seat))return {result:label+' has no supported incoming connection configured, so nothing was queued. Pack members are only listed as connected after their own end-to-end test.',write:false};
   const b=dpLiveBinding(s,seat,now);
-  if(!b)return {result:label+'’s seat is configured, but no session is bound and checking in right now (last check-in: '+(s.seats[seat]?.last_seen_at?dpAgo(now-Date.parse(s.seats[seat].last_seen_at)):'never')+'). Nothing was queued.',write:false};
+  if(!b&&!(typeof dgAdmissible==='function'&&dgAdmissible(s,env,seat,uid,now)))return {result:label+'’s seat is configured, but no session is bound and checking in right now (last check-in: '+(s.seats[seat]?.last_seen_at?dpAgo(now-Date.parse(s.seats[seat].last_seen_at)):'never')+'). Nothing was queued.',write:false};
   dpCheck(Object.keys(s.jobs).length<DP.jobs,503,'pack_capacity_reached');
   const hour=Math.floor(now/3600e3),w=s.windows.admit?.hour===hour?s.windows.admit:{hour,total:0,users:{}};w.users=w.users??{};
   dpCheck(w.total<DP.admitTotal&&(w.users[uid]||0)<DP.admitUser,429,'pack_rate_limit');w.total++;w.users[uid]=(w.users[uid]||0)+1;s.windows.admit=w;
   const job={id:event.id,seat,kind,root_id:kind==='new'?event.id:thread.root_id,thread_id:kind==='new'?null:event.channel_id,requester_id:uid,requester_name:name,
    guild_id:event.guild_id,parent_id:env.DISCORD_CHANNEL_ID,origin_channel_id:event.channel_id,question,question_trust:'untrusted_discord_user_text',fingerprint,created_at:dpIso(now),
    state:'queued',attempt:1,delivery:'not_sent',execution:'not_started'};
+  if(typeof dgAdmissible==='function'&&dgAdmissible(s,env,seat,uid,now))dgStage(job,now);
   s.jobs[event.id]=job;
   if(thread){thread.turns=[...thread.turns,event.id];thread.updated_at=dpIso(now);}
   return {result:dpAckText(s,job,now,false),write:true};
