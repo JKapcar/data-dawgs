@@ -9448,10 +9448,10 @@ async function bozoClv(request, url, env, cors) {
   const RESULT = { won: "win", lost: "loss", push: "push", void: "push" };
   const labels = lg.weekLabels || {};
 
-  const legs = Object.values(ledger)
-    .filter(r => r && r.player)
-    .sort((a, b) => (a.week - b.week) || String(a.player).localeCompare(String(b.player)))
-    .map(r => ({
+  const legs = Object.entries(ledger)
+    .filter(([,r]) => r && r.player)
+    .sort(([,a], [,b]) => (a.week - b.week) || String(a.player).localeCompare(String(b.player)))
+    .map(([rowKey,r]) => ({
       synthetic: lg.synthetic === true,
       league: lid, season: r.season ?? (lg.season || SEASON),
       week: r.week, weekLabel: labels[r.week] || ("Week " + r.week),
@@ -9484,7 +9484,7 @@ async function bozoClv(request, url, env, cors) {
          chart displays — what was typed is what reads back. */
       clvPts: r.clvPts ?? null,
       clvSource: r.clvSource || null,
-      clvEstimate: r.clvEstimate ? {...r.clvEstimate,stale:!bozoSame(r.clvEstimate.basis,bozoEstimateBasis(r))} : null,
+      clvEstimate: r.clvEstimate ? {...r.clvEstimate,stale:!bozoSame(r.clvEstimate.basis,bozoEstimateBasis(bozoEstimateSettledRow(r,rowKey,lg)))} : null,
 
       result: RESULT[r.result] || null,
       gradedAt: r.gradedAt || null,
@@ -10045,7 +10045,16 @@ function bozoAssumedOpposite(close) { return null; }
    snapped from the feed are different kinds of evidence and must never become
    indistinguishable in the column that records where closes come from. */
 // BEGIN BOZO ESTIMATED CLV: separate from captured prices and manual overrides.
-function bozoEstimateBasis(row){return Object.fromEntries(['selectionKey','entryBook','price','priceOpp','entryOppSource','close','closeOpp','closeOppSource','verificationStatus','result','startsAt'].map(k=>[k,row[k]??null]));}
+function bozoEstimateSettledRow(row,rowKey,live){
+  if(row.result!=null)return row;
+  if(!live||row.season!==live.season||row.week!==live.week)return row;
+  const matches=Object.entries(live.picks||{}).filter(([key,pick])=>`${live.season}-w${live.week}-${key}`===rowKey&&row.selectionKey&&pick.selectionKey===row.selectionKey&&row.eventId!=null&&pick.eventId!=null&&String(pick.eventId)===String(row.eventId));
+  if(matches.length!==1)return row;
+  const result=live.results?.[matches[0][0]];
+  if(!result||!['won','lost','push'].includes(result.result))return row;
+  return {...row,result:result.result,estimateSettlement:{source:'current_results',result:result.result,actual:result.actual??null,resultSource:result.resultSource??null,gradeSource:result.gradeSource??null,gradeObservedAt:result.gradeObservedAt??null}};
+}
+function bozoEstimateBasis(row){const basis=Object.fromEntries(['selectionKey','entryBook','price','priceOpp','entryOppSource','close','closeOpp','closeOppSource','verificationStatus','result','startsAt'].map(k=>[k,row[k]??null]));if(row.estimateSettlement)basis.estimateSettlement=row.estimateSettlement;return basis;}
 function bozoEstimateClv(row, input) {
   const fail = message => { throw new Error(message); };
   const price = x => typeof x === 'number' && Number.isFinite(x) && Math.abs(x) >= 100;
@@ -10082,15 +10091,16 @@ function bozoEstimateClv(row, input) {
 async function bozoSaveClvEstimate(env,lid,auth,rowKey,row,body,cors){
   if(Object.keys(body).some(k=>!['league','row','estimate','expectedEstimateRevision','requestId'].includes(k)))return json({error:'Estimate saves cannot edit other fields'},400,cors);
   if(!Number.isInteger(body.expectedEstimateRevision)||body.expectedEstimateRevision<0||!/^[-a-zA-Z0-9]{16,80}$/.test(body.requestId||''))return json({error:'Revision and idempotency requestId required'},400,cors);
-  let computed;try{computed=bozoEstimateClv(row,body.estimate);}catch(e){return json({error:e.message},400,cors);}
   const {data:live,etag}=await fbGet(env,LG(lid),true);
   const current=live?.ledger?.[rowKey];
   if(!current||!etag)return json({error:'Ledger unavailable'},409,cors);
+  const settled=bozoEstimateSettledRow(current,rowKey,live);
   if(current.clvEstimate?.requestId===body.requestId){
-    if(!bozoSame(current.clvEstimate.basis,bozoEstimateBasis(current))||!bozoSame(current.clvEstimate.input,body.estimate))return json({error:'Request ID reused with different evidence'},409,cors);
+    if(!bozoSame(current.clvEstimate.basis,bozoEstimateBasis(settled))||!bozoSame(current.clvEstimate.input,body.estimate))return json({error:'Request ID reused with different evidence'},409,cors);
     return json({ok:true,unchanged:true,estimate:current.clvEstimate},200,cors);
   }
   if(!bozoSame(current,row)||(current.clvEstimate?.revision||0)!==body.expectedEstimateRevision)return json({error:'Ledger changed; refresh estimate'},409,cors);
+  let computed;try{computed=bozoEstimateClv(settled,body.estimate);}catch(e){return json({error:e.message},400,cors);}
   const at=new Date().toISOString(),record={...computed,revision:body.expectedEstimateRevision+1,requestId:body.requestId,input:JSON.parse(JSON.stringify(body.estimate)),recordedAt:at};
   current.clvEstimate=record;
   // Store only supplemental evidence on this ledger row, never result/close/clvPts.
