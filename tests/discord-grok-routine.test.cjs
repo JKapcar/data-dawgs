@@ -3,11 +3,11 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const base=fs.readFileSync('tests/discord-pack.test.cjs','utf8').split("\ntest('")[0];
 const fixture=new Function('require',base+'\nreturn fixture;')(require);
 async function ready(){
- const f=await fixture();vm.runInContext(fs.readFileSync('work/discord-grok-routine.js','utf8'),f.ctx);
- await f.link();Object.assign(f.env,{DISCORD_GROK_WAKE_ENABLED:'true',DISCORD_GROK_INCLUDED_USAGE_CONFIRMED:'true',DISCORD_GROK_USER_ID:'45678901234567890',DISCORD_GROK_APPROVAL_EXPIRES_AT:new Date(f.now+3600e3).toISOString(),GROK_ROUTINE_URL:'https://routine.example.com/opaque',GROK_ROUTINE_ORIGIN:'https://routine.example.com',GROK_ROUTINE_TOKEN:'synthetic-secret-not-real',DISCORD_PACK_SEATS:JSON.stringify({grok:{key_label:'pack-grok'}})});
- f.callers.owner.keyLabel='pack-grok';const get=f.ctx.fbGet,fetch=f.ctx.fetch;f.hash='test-hash';f.wakes=[];f.response=200;
+ const f=await fixture();f.ctx.atob=atob;vm.runInContext(fs.readFileSync('work/discord-grok-routine.js','utf8'),f.ctx);
+ await f.link();Object.assign(f.env,{DISCORD_GROK_WAKE_ENABLED:'true',DISCORD_GROK_INCLUDED_USAGE_CONFIRMED:'true',DISCORD_GROK_USER_ID:'45678901234567890',DISCORD_GROK_APPROVAL_EXPIRES_AT:new Date(f.now+3600e3).toISOString(),GROK_ROUTINE_URL:'https://routine.example.com/opaque',GROK_ROUTINE_ORIGIN:'https://routine.example.com',GROK_WEBHOOK_SIGNING_SECRET:'whsec_'+Buffer.alloc(32,7).toString('base64'),DISCORD_PACK_SEATS:JSON.stringify({grok:{key_label:'pack-grok'}})});
+ f.callers.owner.keyLabel='pack-grok';const get=f.ctx.fbGet,fetch=f.ctx.fetch;f.hash='test-hash';f.wakes=[];f.response=202;
  f.ctx.fbGet=async(e,path,...args)=>path==='/users'?{data:{u_owner:{mcpTokens:{'pack-grok':{hash:f.hash}}}}}:get(e,path,...args);
- f.ctx.fetch=async(url,opts)=>{if(url!==f.env.GROK_ROUTINE_URL)return fetch(url,opts);const body=JSON.parse(opts.body);assert.deepEqual(Object.keys(body),['job_id','admission']);assert.equal(f.store().jobs[body.job_id].wake.status,'sending');f.wakes.push(body);assert.equal(opts.redirect,'manual');if(f.response==='lost')throw Error('uncertain');return new Response(null,{status:f.response});};
+ f.ctx.fetch=async(url,opts)=>{if(url!==f.env.GROK_ROUTINE_URL)return fetch(url,opts);const expected=require('node:crypto').createHmac('sha256',Buffer.alloc(32,7)).update(opts.headers['webhook-id']+'.'+opts.headers['webhook-timestamp']+'.'+opts.body).digest('base64');assert.equal(opts.headers['webhook-signature'],'v1,'+expected);assert.equal(opts.headers.Authorization,undefined);assert.equal(opts.headers['webhook-timestamp'],String(Math.floor(f.now/1000)));const body=JSON.parse(opts.body);assert.deepEqual(Object.keys(body),['job_id','admission']);assert.equal(f.store().jobs[body.job_id].wake.status,'sending');f.wakes.push(body);assert.equal(opts.redirect,'manual');if(f.response==='lost')throw Error('uncertain');return new Response(null,{status:f.response});};
  f.ask=opts=>f.slash({to:'grok',...opts});return f;
 }
 test('default off, billing confirmation and approval expiry fail closed',async()=>{
@@ -69,7 +69,7 @@ test('owner stop and expiry deny fresh admission; rejected attempt proof cannot 
  assert.equal((await f.tool('owner','dd_pack_bind',{id:a.id,admission:f.wakes[0].admission})).ok,false);
  const e=await ready(),q=await e.ask();e.advance(21*60e3);assert.equal((await e.tool('owner','dd_pack_bind',{id:q.id,admission:e.wakes[0].admission})).ok,false);
  const r=await ready();r.response=429;const j=await r.ask();assert.equal((await r.tool('owner','dd_pack_bind',{id:j.id,admission:r.wakes[0].admission})).ok,false);
- r.advance(120000);r.response=200;await r.ctx.dgDrain(r.env);assert.equal((await r.tool('owner','dd_pack_bind',{id:j.id,admission:r.wakes[0].admission})).ok,false);
+ r.advance(120000);r.response=202;await r.ctx.dgDrain(r.env);assert.equal((await r.tool('owner','dd_pack_bind',{id:j.id,admission:r.wakes[0].admission})).ok,false);
  assert.ok((await r.tool('owner','dd_pack_bind',{id:j.id,admission:r.wakes[1].admission})).ok);
 });
 
@@ -82,4 +82,16 @@ test('routine admission cannot supersede an existing different manual claim',asy
  const f=await ready();f.env.DISCORD_GROK_WAKE_ENABLED='false';const old=await f.tool('owner','dd_pack_bind',{}),manual=await f.ask();assert.ok(manual.id);await f.tool('owner','dd_pack_claim',{lease:old.body.lease,id:manual.id});
  f.env.DISCORD_GROK_WAKE_ENABLED='true';const q=await f.ask();assert.equal((await f.tool('owner','dd_pack_bind',{id:q.id,admission:f.wakes[0].admission})).ok,false);
  assert.equal(f.store().jobs[manual.id].state,'claimed');assert.ok((await f.tool('owner','dd_pack_read',{lease:old.body.lease,id:manual.id})).ok);
+});
+
+
+test('Standard Webhooks signing matches independent HMAC and exact UTF-8 body bytes',async()=>{
+ const f=await ready(),body=JSON.stringify({question:'café 🐕',job_id:'12345678901234567'}),id='msg_test',timestamp='1792780000';
+ const h=await f.ctx.dgSignedHeaders(f.env.GROK_WEBHOOK_SIGNING_SECRET,id,timestamp,body);
+ const expected=require('node:crypto').createHmac('sha256',Buffer.alloc(32,7)).update(id+'.'+timestamp+'.'+body).digest('base64');assert.equal(h['webhook-signature'],'v1,'+expected);
+ const changed=await f.ctx.dgSignedHeaders(f.env.GROK_WEBHOOK_SIGNING_SECRET,id,timestamp,body+' ');assert.notEqual(changed['webhook-signature'],h['webhook-signature']);
+ for(const secret of [undefined,'bearer-token','whsec_!!!','whsec_YQ==']){f.env.GROK_WEBHOOK_SIGNING_SECRET=secret;assert.equal(f.ctx.dgConfig(f.env),null);}
+});
+test('202 only is acceptance; documented rejection and retryable unavailable statuses remain distinct',async()=>{
+ for(const response of [200,400,401,413,503]){const f=await ready();f.response=response;const q=await f.ask();assert.equal(f.store().jobs[q.id].wake.status,response===200?'uncertain':response===503?'retry':'rejected');f.advance(120000);await f.ctx.dgDrain(f.env);assert.equal(f.wakes.length,response===503?2:1);}
 });
