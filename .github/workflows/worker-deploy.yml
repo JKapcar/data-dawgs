@@ -103,7 +103,7 @@ jobs:
 
       - name: Verify isolated Discord Pack Worker artifact
         run: |
-          echo "2842eb65445fe66bb333db715ffdd81cbef3b3e6c6706ba28091b7834c792187  work/artifacts/research-lab/worker.mjs" > worker.sha256
+          echo "a67bf1802679ef491b3135b522215d19f757243a9f741c74616054b87b2497e0  work/artifacts/research-lab/worker.mjs" > worker.sha256
           sha256sum --check worker.sha256
 
       # Fails closed on a malformed manifest without uploading anything.
