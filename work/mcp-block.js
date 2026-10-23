@@ -1973,6 +1973,14 @@ async function mcpAuth(request, url, env) {
     if (!hit) return null;
     const display = hitUser && typeof hitUser.name === "string" && hitUser.name.trim()
       ? hitUser.name.trim() : hit;
+    // ⚠️ PACK SEAT KEYS ARE NOT THE OWNER. A configured owner's key labelled pack-… is a
+    // seat-only credential: it never becomes a "user" principal, so owner apps, the research
+    // gateway and every league tool refuse it; mcpDispatch serves it dd_pack_* only. Decided by
+    // the label alone, for every account and whatever RESEARCH_OWNER_UID says, so neither a
+    // seat change nor an owner-setting change can widen a pack- key; seat tools still check the
+    // owner separately. Inline on purpose (gateway-fixture extracts mcpAuth without helpers).
+    if (/^pack-/i.test(keyLabel))
+      return { kind: "pack_seat", name: display, uid: hit, transport, keyLabel };
     return { kind: "user", name: display, uid: hit, entitlement: entitlementOf(hitUser), transport, keyLabel,
       // ⚠️ The account's role flags, read here so isSiteAdmin() has one shape to check.
       // Never derived from anything the caller sent.
@@ -2080,8 +2088,10 @@ async function handleMcp(request, url, env) {
           { status: 403, headers: noStore });
       const { catalog } = mcpRoute(url, request);
       return new Response(JSON.stringify({ ok: true, valid: true, kind: who.kind,
-        player: who.kind === "user" ? who.name : null, catalog, tools: mcpCatalogTools(catalog).length,
-        note: who.kind === "user"
+        player: who.kind === "user" ? who.name : null, catalog, tools: who.kind === "pack_seat" ? dpMcpTools(env, who).length : mcpCatalogTools(catalog).length,
+        note: who.kind === "pack_seat"
+          ? "Pack seat key " + who.keyLabel + " for " + who.name + ": only dd_pack_* tools, no league or private data."
+          : who.kind === "user"
           ? "This URL authenticates as " + who.name + "; dd_submit_bozo_leg can write their leg."
           : "Shared league passphrase: read-only and anonymous. A personal URL from " + SITE + "/connect.html enables writes." }),
         { status: 200, headers: noStore });
@@ -2163,6 +2173,8 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG, reauth
     return rpcErr(m && m.id, -32600, "Invalid Request");
   const id = m.id;
   if (id === undefined) return undefined;        // a notification: acknowledge by silence
+  // DD-DISCORD-PACK-SEATKEY-GUARD — a pack-… seat key gets the seat dispatcher and nothing else.
+  if (caller && caller.kind === "pack_seat") return dpSeatDispatch(m, env, caller, reauth);
 
   switch (m.method) {
     case "initialize": {
