@@ -103,7 +103,7 @@ jobs:
 
       - name: Verify approved isolated estimated-CLV Worker artifact
         run: |
-          echo "dd6855e82b89c04a54508431a43bb6c894147ee929affef5771b349ea41955d8  work/artifacts/research-lab/worker.mjs" > worker.sha256
+          echo "a8baedd873aeda4bf07c3e251d0684b7c42fa724e4a2ec6c561e9b2a81b5bcea  work/artifacts/research-lab/worker.mjs" > worker.sha256
           sha256sum --check worker.sha256
 
       # Fails closed on a malformed manifest without uploading anything.
