@@ -7944,7 +7944,7 @@ function bozoCtx(){
   return L.join('\n');
 }
 window.DD_BOTCTX = {
-  sys: BOZO_SYS + '\nEstimated CLV is modeled fair-close minus fair-entry in probability percentage points, separately labeled with vig sensitivity and source limitations. Never call it measured CLV or expected ROI. Missing closing quotes remain unknown.\nRecovered closing evidence is third-party-reported, uncorroborated reference data only. Page timestamps are not exact per-book quote timestamps. It never fills original captures or changes official CLV, rankings, tiebreakers or settlement.', label: 'LIVE BOZO STATE', ctx: bozoCtx,
+  sys: BOZO_SYS + '\nEstimated CLV is modeled fair-close minus fair-entry in probability percentage points, separately labeled with vig sensitivity and source limitations. Never call it measured CLV or expected ROI. Untimed quote proxies are not verified closing prices. Missing closing quotes remain unknown.\nRecovered closing evidence is third-party-reported, uncorroborated reference data only. Page timestamps are not exact per-book quote timestamps. It never fills original captures or changes official CLV, rankings, tiebreakers or settlement.', label: 'LIVE BOZO STATE', ctx: bozoCtx,
   title: 'Ask Toto — he reads the live ticket',
   chrome: {
     sub: 'reads the live ticket',
@@ -9710,7 +9710,7 @@ function clvEstimateEvidence(){
     const e=l.clvEstimate;
     if(e.stale)return '<p><b>'+esc(teamOf(l.player))+' · '+esc(l.label)+' · Week '+esc(l.week??'unknown')+'</b>: stale estimate; selection/prices/status changed. Recalculate before using.</p>';
     const fmt=n=>Number.isFinite(n)?(n>0?'+':'')+n.toFixed(2):'unknown';
-    return '<p><b>'+esc(teamOf(l.player))+' · '+esc(l.label)+' · Week '+esc(l.week??'unknown')+'</b><br>Estimated '+fmt(e.point)+' pp; sensitivity '+fmt(e.low)+' to '+fmt(e.high)+' pp'+(l.clvPts!=null?' · existing manual override retained':'')+'<br>'+esc(e.assumption)+'; overround scenarios '+esc((e.scenarios||[]).map(x=>(x*100).toFixed(2)+'%').join(' / '))+'<br>'+esc(e.rationale)+'<br>Source: '+esc(e.closeQuote?.sourceUrl)+' · quote time '+esc(e.closeQuote?.quotedAt??'unknown')+' · retrieved '+esc(e.closeQuote?.retrievedAt)+'<br>'+esc(e.closeQuote?.evidence)+' · entry '+(e.entryVerified?'verified':'unverified')+' · revision '+esc(e.revision)+'</p>';
+    return '<p><b>'+esc(teamOf(l.player))+' · '+esc(l.label)+' · Week '+esc(l.week??'unknown')+'</b><br>Estimated '+fmt(e.point)+' pp; sensitivity '+fmt(e.low)+' to '+fmt(e.high)+' pp'+(l.clvPts!=null?' · existing manual override retained':'')+'<br>'+esc(e.assumption)+'; overround scenarios '+esc((e.scenarios||[]).map(x=>(x*100).toFixed(2)+'%').join(' / '))+'<br>'+esc(e.rationale)+'<br>Source: '+esc(e.closeQuote?.sourceUrl)+' · quote time '+esc(e.closeQuote?.quotedAt??'unknown')+' · retrieved '+esc(e.closeQuote?.retrievedAt)+'<br>'+esc(e.closeQuote?.evidence==='untimed_quote_proxy'?'Untimed quote used as closing proxy — not a verified closing price':e.closeQuote?.evidence)+' · entry '+(e.entryVerified?'verified':'unverified')+' · revision '+esc(e.revision)+'</p>';
   }).join('')+'</div></details>';
 }
 function clvMethod(){

@@ -84,3 +84,11 @@ when season, week, exact ledger key, selectionKey and event all match. The estim
 records that settlement basis and becomes stale if it changes. It never updates the
 ledger result, current results, week status or Bozo decision. Missing, mismatched and
 void results remain ineligible. Whole-week finalization is neither required nor called.
+
+## Untimed quote proxy
+
+`untimed_quote_proxy` explicitly uses a sourced, matching-market quote as an estimated
+closing proxy without claiming closing timing. Quote time must remain null; public
+source URL, actual retrieval time and rationale remain required. The preview and
+board display “Untimed quote used as closing proxy.” It never becomes measured CLV
+or an original capture, and does not affect rankings, settlement or overrides.
