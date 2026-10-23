@@ -27,7 +27,7 @@
     const context=api.league()+'|'+api.identity();
     if(host.dataset.context===context)return;
     host.dataset.context=context;
-    host.innerHTML=`<details class="method" open data-ddb-skip><summary>Manager: save estimated CLV</summary>
+    host.innerHTML=`<details class="method" data-ddb-skip><summary>Manager: save estimated CLV</summary>
       <p>Supplemental estimates only. Original prices, manual overrides, results and week status stay unchanged.</p>
       <button type="button" class="btn ghost" data-load>Load league ledger</button>
       <style>.cem-form{display:grid;gap:12px;max-width:680px;min-width:0;overflow-wrap:anywhere}.cem-form[hidden]{display:none}.cem-form label{min-width:0}.cem-form input,.cem-form select,.cem-form textarea{max-width:100%;box-sizing:border-box}</style><form class="cem-form" hidden>
