@@ -41,9 +41,10 @@ const src = grab("function worstBeatRuleFor(", "\n/* Spreads and totals")
   + "\n" + grab("function gauss(){", "const devig = x")
   + "\n" + grab("function simulate(live, levers){", "\n// One definition of")
   + "\n" + grab("function clvDevig(price, opp){", "/** did either side")
-  + "\n" + grab("function clvPair(l){", "const clvGraded =");
+  + "\n" + grab("function clvMeasuredPair(l){", "const clvGraded =");
 
 const ctx = vm.createContext({
+  window:{DDEffectiveClv: (await import('../bozo-effective-clv.js')).default},
   SIMS: 20000,
   LEVERS: [{ k: "odds" }, { k: "beat" }, { k: "last" }, { k: "clv" }],
   Math, JSON, Array, Number, Infinity, console,

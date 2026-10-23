@@ -3721,11 +3721,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="sheetbar" id="sheetBar" style="display:none"></div>
 </header>
 
-<details class="card bz-help" id="bozoRecovered">
-  <summary>Closing evidence · October 22, 2026 · recovered numbers</summary>
-  <p class="note">Original captures take precedence. Otherwise, these public source-reported closing prices are uncorroborated reference evidence. Missing original captures stay missing. These numbers do not change official CLV, rankings, tiebreakers or settlement. Full-game markets only; never substitute a main line for an alternate line.</p>
-  <div id="bozoRecoveredRows" class="br-grid" aria-live="polite">Open to load attributed numerical evidence.</div>
-</details>
+
 <style>
 .br-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}.br-game{min-width:0;border:1px solid currentColor;border-radius:12px;padding:14px}.br-game p{font-size:13px;line-height:1.5;overflow-wrap:anywhere}.br-game h3{font-size:17px}.br-game dt{font-weight:700;margin-top:12px}.br-game dd{margin:4px 0;line-height:1.5}.br-game a{text-decoration:underline}
 </style>
@@ -3741,6 +3737,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <!-- Diagnostics sheet: filterable season ledger. The current-week simulation remains
      on Overview; this is the longitudinal slice-and-dice surface. -->
 <div class="card" id="diagExploreCard" style="display:none">
+<details class="card bz-help" id="bozoRecovered">
+  <summary>Closing evidence · October 22, 2026 · recovered numbers</summary>
+  <p class="note">Original captures take precedence. Otherwise, these public source-reported closing prices are uncorroborated reference evidence. Missing original captures stay missing. These numbers do not change official CLV, rankings, tiebreakers or settlement. Full-game markets only; never substitute a main line for an alternate line.</p>
+  <div id="bozoRecoveredRows" class="br-grid" aria-live="polite">Open to load attributed numerical evidence.</div>
+</details>
   <div class="bz-hdr"><h2 class="bz" style="margin:0">Diagnostics dashboard</h2><span class="tm" id="dxMeta"></span></div>
   <details class="bz-help"><summary>About this dashboard</summary><p class="note">Filter the league ledger to separate price quality from results. Expected wins use the de-vigged closing line; CLV needs both sides at entry and close.</p></details>
   <div class="dash-controls">
@@ -4194,9 +4195,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="bz-hdr"><h2 class="bz" style="margin:0">Beating the number vs. beating the close</h2>
     <span class="tm" id="clvHead"></span></div>
   <details class="bz-help"><summary>How to read this chart</summary>
-  <p class="note" id="clvSub" style="margin:0 0 14px">Each dot is one player through one week. Horizontal is the price
-    they got against the closing line; vertical is how often they actually won versus how often the closing line said
-    they should. Hover or pick a name to trace a season.</p>
+  <p class="note" id="clvSub" style="margin:0 0 14px">Each dot is one resolved bet; Season average groups by player. Horizontal is the price
+    obtained against the measured or estimated close; vertical is outcome minus expected probability. Unknown axes, pending outcomes, pushes and voids remain in the all-bets table. Hover or pick a name to trace a season.</p>
   <div class="clv-legnote">Click a name to trace it &middot; shift-click to hide &middot; shape and colour both carry
     identity, because eight series is past the point where colour alone is reliable &middot; dot size is sample size,
     so a week-1 dot is one coin flip and a Super Bowl dot is twenty-two.</div></details>
@@ -4211,7 +4211,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   <div class="clv-controls">
     <div class="seg" role="group" aria-label="View">
-      <button id="clv-week" aria-pressed="true">By week</button>
+      <button id="clv-week" aria-pressed="true">Every bet</button>
       <button id="clv-season" aria-pressed="false">Season average</button>
     </div>
     <div class="weekbox">
@@ -4242,7 +4242,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
   <div class="clv-foot" id="clvFoot"></div>
   <div id="clvEstimateManager"></div>
+  <script src="bozo-effective-clv.js"></script>
   <script src="bozo-estimate-manager.js" defer></script>
+  <style>#clvCard .weekbox{max-width:100%;min-width:0;flex-wrap:wrap}#clvCard .weekbox input{min-width:0;max-width:100%;flex:1 1 100px}#clvAllBets td{white-space:normal;overflow-wrap:anywhere;max-width:28rem}.clv-tablewrap{max-width:100%;overflow:auto}</style><div id="clvAllBets" style="max-width:100%;overflow:auto"></div>
 </div>
 
 <!-- ---------- Bozo Royale: survival odds ----------
@@ -4499,6 +4501,12 @@ function clvDeltaOf(x, r){
   if(x.verificationStatus === "unverified" || x.clvEligible === false || r.closeOppSource === "assumed" || x.entryOppSource === "assumed") return null;
   const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp ?? x.priceOpp);
   return (pC==null || pE==null) ? null : (pC - pE);
+}
+function clvDisplayEstimate(x){
+  if(typeof CLV==='undefined'||!CLV.data||CLV.lid!==LID||!x.selectionKey||x.eventId==null)return null;
+  const matches=CLV.data.legs.filter(l=>l.week===S.week&&l.selectionKey===x.selectionKey&&String(l.eventId)===String(x.eventId)&&(!(x.p||x.player)||l.player===(x.p||x.player)));
+  if(matches.length!==1)return null;
+  const e=window.DDEffectiveClv.resolve(matches[0]);return e.kind==='estimated'?e:null;
 }
 function clvMissingReason(x, r = {}){
   if(x.verificationStatus === 'unverified' || x.clvEligible === false) return 'entry odds need verification';
@@ -4911,7 +4919,7 @@ function clvHistory(player, week){
   for(const l of legs){
     if(ledgerWho(l.player) !== player) continue;
     if(week != null && Number(l.week) >= Number(week)) continue;
-    const pair = clvPair(l);
+    const pair = clvMeasuredPair(l);
     if(pair && Number.isFinite(pair.clv)) out.push(pair.clv);
   }
   return out;
@@ -7400,7 +7408,8 @@ function dxSummary(rows){
   const expected=measurable.reduce((v,l)=>v+dxPair(l).pC,0);
   const clv=measurable.reduce((v,l)=>v+dxPair(l).clv,0);
   const overridden=measurable.filter(l=>dxPair(l).manual).length;
-  return {picks:rows.length,graded,wins,losses:graded.length-wins,measurable,overridden,
+  const estimated=measurable.filter(l=>dxPair(l).estimated).length;
+  return {picks:rows.length,graded,wins,losses:graded.length-wins,measurable,overridden,estimated,
     matchedWins,expected,delta:matchedWins-expected,clv:measurable.length?clv/measurable.length:null};
 }
 const dxSigned=(v,n=1)=>(v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(n);
@@ -7425,7 +7434,7 @@ function dxLinePlot(points,series,domain,label,format){
     let segment=[];
     const flush=()=>{if(segment.length>1)body+=`<polyline points="${segment.join(' ')}" class="dx-line ${ser.cls}"/>`;segment=[];};
     points.forEach((p,i)=>{const v=p[ser.key];if(v==null){flush();return;}segment.push(`${x(i)},${y(v)}`);});flush();
-    points.forEach((p,i)=>{const v=p[ser.key];if(v!=null)body+=`<circle cx="${x(i)}" cy="${y(v)}" r="4.5" class="dx-dot ${ser.cls}"><title>Week ${esc(p.week)}: ${esc(ser.label)} ${format(v)}; ${p.n} measured picks</title></circle>`;});
+    points.forEach((p,i)=>{const v=p[ser.key];if(v!=null)body+=`<circle cx="${x(i)}" cy="${y(v)}" r="4.5" class="dx-dot ${ser.cls}"><title>Week ${esc(p.week)}: ${esc(ser.label)} ${format(v)}; ${p.n} usable picks</title></circle>`;});
   });
   return dxSvg(label,body);
 }
@@ -7439,14 +7448,14 @@ function dxVisuals(rows,s,sums,group,metric){
   if(observedWeeks.length){for(let w=Math.min(...observedWeeks);w<=Math.max(...observedWeeks);w++){if(!byWeek.has(w))byWeek.set(w,[]);}}
   let cumulativeW=0,cumulativeE=0;
   const weeks=[...byWeek].sort((a,b)=>a[0]-b[0]).map(([week,rs])=>{const t=dxSummary(rs);cumulativeW+=t.matchedWins;cumulativeE+=t.expected;return {week,n:t.measurable.length,wins:t.measurable.length?cumulativeW:null,expected:t.measurable.length?cumulativeE:null,clv:t.clv==null?null:t.clv*100};});
-  const trend=s.measurable.length?dxLinePlot(weeks,[{key:'wins',label:'Cumulative wins',cls:'dx-actual'},{key:'expected',label:'Cumulative expected wins',cls:'dx-expected'}],[0,Math.max(1,cumulativeW,cumulativeE)*1.12],'Cumulative actual and expected wins, matched measured picks',v=>v.toFixed(1)):dxEmpty('Waiting for graded picks with usable prices.');
-  const trendCard=dxCard('trend','02 / THE SEASON PATH','Results meet expectation',s.measurable.length?`${s.matchedWins} wins vs ${s.expected.toFixed(1)} expected · same ${s.measurable.length} measured picks`:'No measured win/loss decisions',trend+`<div class="dx-legend"><span><i class="dx-win"></i>Actual wins</span><span><i class="dx-expect"></i>Closing-line expectation (dashed)</span></div>`,'Cumulative totals start at the first week in this filter, using only graded wins/losses with usable paired probabilities. Weeks with no measured picks are gaps. Expectation is a benchmark, not a forecast or evidence of skill.',['Week','Measured n','Cumulative wins','Cumulative expected'],weeks.map(p=>['Week '+p.week,p.n,p.wins??'Unmeasured',p.expected==null?'Unmeasured':p.expected.toFixed(2)]));
+  const trend=s.measurable.length?dxLinePlot(weeks,[{key:'wins',label:'Cumulative wins',cls:'dx-actual'},{key:'expected',label:'Cumulative expected wins',cls:'dx-expected'}],[0,Math.max(1,cumulativeW,cumulativeE)*1.12],'Cumulative actual and expected wins, matched usable picks',v=>v.toFixed(1)):dxEmpty('Waiting for graded picks with usable prices.');
+  const trendCard=dxCard('trend','02 / THE SEASON PATH','Results meet expectation',s.measurable.length?`${s.matchedWins} wins vs ${s.expected.toFixed(1)} expected · same ${s.measurable.length} usable picks`:'No measured win/loss decisions',trend+`<div class="dx-legend"><span><i class="dx-win"></i>Actual wins</span><span><i class="dx-expect"></i>Closing-line expectation (dashed)</span></div>`,'Cumulative totals start at the first week in this filter, using only graded wins/losses with usable measured, estimated or override probabilities. Weeks with no usable picks are gaps. Expectation is a benchmark, not a forecast or evidence of skill.',['Week','Usable n','Cumulative wins','Cumulative expected'],weeks.map(p=>['Week '+p.week,p.n,p.wins??'Unmeasured',p.expected==null?'Unmeasured':p.expected.toFixed(2)]));
   const value=x=>x.measurable.length?(metric==='clv'?x.clv*100:x.delta):null;
   const limit=Math.max(metric==='clv'?.1:1,...sums.map(x=>Math.abs(value(x)||0)));
-  const compare=`<label class="dx-metric">Compare<select id="dxMetric"><option value="delta"${metric==='delta'?' selected':''}>Wins vs expected</option><option value="clv"${metric==='clv'?' selected':''}>Average CLV</option></select></label><div class="dx-axis-labels"><span>−${limit.toFixed(1)}</span><span>0</span><span>+${limit.toFixed(1)}${metric==='clv'?' pp':' wins'}</span></div><div class="dx-comparisons">${sums.map(x=>{const v=value(x);return `<div class="dx-compare"><div class="dx-row-label"><b>${esc(x.k)}</b><span>${v==null?'Unmeasured':dxSigned(v,metric==='clv'?2:1)+(metric==='clv'?' pp':' wins')} · n=${x.measurable.length}</span></div><div class="dx-diverge" role="img" aria-label="${esc(x.k+': '+(v==null?'unmeasured':dxSigned(v)+(metric==='clv'?' percentage points':' wins')))}">${v==null?'<span class="dx-missing">No measured decisions</span>':`<i class="${v<0?'dx-loss':'dx-win'}" style="left:${v<0?50+v/limit*50:50}%;width:${Math.abs(v)/limit*50}%"></i>${v===0?'<b class="dx-zero-dot"></b>':''}`}</div></div>`;}).join('')}</div>`;
-  const comparison=dxCard('comparison','03 / SIDE BY SIDE','Compare the '+(group==='player'?'players':group==='sport'?'sports':group==='market'?'markets':'weeks'),`Shared zero baseline · grouped by ${esc(group)}`,compare,'Bars extend left for negative values and right for positive values. A zero is a real zero; unmeasured rows have no bar. Both metrics use the same measured graded picks within each row. Different sample sizes are not rankings of skill.',['Group','Measured n','Matched wins','Expected wins','Delta wins','Average CLV (pp)'],sums.map(x=>[x.k,x.measurable.length,x.matchedWins,x.measurable.length?x.expected.toFixed(2):'Unmeasured',x.measurable.length?dxSigned(x.delta):'Unmeasured',x.clv==null?'Unmeasured':dxSigned(x.clv*100,2)]));
+  const compare=`<label class="dx-metric">Compare<select id="dxMetric"><option value="delta"${metric==='delta'?' selected':''}>Wins vs expected</option><option value="clv"${metric==='clv'?' selected':''}>Average CLV</option></select></label><div class="dx-axis-labels"><span>−${limit.toFixed(1)}</span><span>0</span><span>+${limit.toFixed(1)}${metric==='clv'?' pp':' wins'}</span></div><div class="dx-comparisons">${sums.map(x=>{const v=value(x);return `<div class="dx-compare"><div class="dx-row-label"><b>${esc(x.k)}</b><span>${v==null?'Unmeasured':dxSigned(v,metric==='clv'?2:1)+(metric==='clv'?' pp':' wins')} · n=${x.measurable.length}</span></div><div class="dx-diverge" role="img" aria-label="${esc(x.k+': '+(v==null?'unmeasured':dxSigned(v)+(metric==='clv'?' percentage points':' wins')))}">${v==null?'<span class="dx-missing">No usable decisions (measured / estimated / override)</span>':`<i class="${v<0?'dx-loss':'dx-win'}" style="left:${v<0?50+v/limit*50:50}%;width:${Math.abs(v)/limit*50}%"></i>${v===0?'<b class="dx-zero-dot"></b>':''}`}</div></div>`;}).join('')}</div>`;
+  const comparison=dxCard('comparison','03 / SIDE BY SIDE','Compare the '+(group==='player'?'players':group==='sport'?'sports':group==='market'?'markets':'weeks'),`Shared zero baseline · grouped by ${esc(group)}`,compare,'Bars extend left for negative values and right for positive values. A zero is a real zero; unmeasured rows have no bar. Both metrics use the same usable graded picks within each row. Different sample sizes are not rankings of skill.',['Group','Usable n','Matched wins','Expected wins','Delta wins','Average CLV (pp)'],sums.map(x=>[x.k,x.measurable.length,x.matchedWins,x.measurable.length?x.expected.toFixed(2):'Unmeasured',x.measurable.length?dxSigned(x.delta):'Unmeasured',x.clv==null?'Unmeasured':dxSigned(x.clv*100,2)]));
   const clvLimit=Math.max(.5,...weeks.map(w=>Math.abs(w.clv||0)))*1.2;
-  const clvChart=dxCard('clv','04 / PRICE QUALITY','Did the market move with you?',`${s.measurable.length} measured decisions · ${s.overridden} manager-set CLV`,s.measurable.length?dxLinePlot(weeks,[{key:'clv',label:'Average CLV (pp)',cls:'dx-actual'}],[-clvLimit,clvLimit],'Weekly average closing-line value in percentage points',v=>dxSigned(v,1)):dxEmpty('No measurable graded CLV in this slice.'),'Weekly mean of closing probability minus entry probability, in percentage points. Positive means the market moved toward the selected side. Missing weeks are gaps, never zero; manager-set CLV is included and counted above.',['Week','Measured n','Average CLV (pp)'],weeks.map(w=>['Week '+w.week,w.n,w.clv==null?'Unmeasured':dxSigned(w.clv,2)]));
+  const clvChart=dxCard('clv','04 / PRICE QUALITY','Did the market move with you?',`${s.measurable.length} usable decisions (measured / estimated / override) · ${s.estimated} estimated · ${s.overridden} manager-set CLV`,s.measurable.length?dxLinePlot(weeks,[{key:'clv',label:'Average CLV (pp)',cls:'dx-actual'}],[-clvLimit,clvLimit],'Weekly average closing-line value in percentage points',v=>dxSigned(v,1)):dxEmpty('No measurable graded CLV in this slice.'),'Weekly mean of closing probability minus entry probability, in percentage points. Positive means the market moved toward the selected side. Missing weeks are gaps, never zero; manager-set CLV is included and counted above.',['Week','Usable n','Average CLV (pp)'],weeks.map(w=>['Week '+w.week,w.n,w.clv==null?'Unmeasured':dxSigned(w.clv,2)]));
   const bands=Array.from({length:5},(_,i)=>({lo:i*.2,hi:(i+1)*.2,rows:[]}));
   s.measurable.forEach(l=>bands[Math.min(4,Math.floor(dxPair(l).pC*5))].rows.push(l));
   const calibrated=bands.map(b=>{const n=b.rows.length;return {...b,n,p:n?b.rows.reduce((v,l)=>v+dxPair(l).pC,0)/n:null,rate:n?b.rows.filter(l=>l.result==='win').length/n:null};});
@@ -7454,9 +7463,9 @@ function dxVisuals(rows,s,sums,group,metric){
   for(let t=0;t<=100;t+=25){const xx=48+t/100*362,yy=190-t/100*162;cal+=`<line x1="48" x2="410" y1="${yy}" y2="${yy}" class="dx-gridline"/><text x="40" y="${yy+4}" text-anchor="end">${t}%</text><text x="${xx}" y="210" text-anchor="middle">${t}%</text>`;}
   calibrated.filter(b=>b.n).forEach(b=>{cal+=`<circle cx="${48+b.p*362}" cy="${190-b.rate*162}" r="${5+Math.min(7,Math.sqrt(b.n))}" class="dx-dot dx-actual"><title>Closing probability ${(b.p*100).toFixed(1)}%; win rate ${(b.rate*100).toFixed(1)}%; n=${b.n}</title></circle>`;});
   cal+='<text x="229" y="235" text-anchor="middle">Closing probability →</text><text x="48" y="16">Observed win rate</text>';
-  const calibration=dxCard('calibration','05 / EXPECTATION CHECK','Price vs. observed win rate',`${s.measurable.length} measured decisions · descriptive, small samples are noisy`,s.measurable.length?dxSvg('Calibration: closing probability against observed win rate by 20-point probability band',cal):dxEmpty('No priced, graded decisions to compare.'),'Each dot is a 20-percentage-point closing-probability band; larger dots have more picks. The diagonal is equality, not a fitted model. Shared games may be correlated. These small samples cannot establish calibration or skill; no confidence band is implied.',['Closing band','Picks','Mean closing probability','Observed win rate'],calibrated.map(b=>[`${Math.round(b.lo*100)}–${Math.round(b.hi*100)}%`,b.n,b.p==null?'No data':(b.p*100).toFixed(1)+'%',b.rate==null?'No data':(b.rate*100).toFixed(1)+'%']));
-  const coverageRows=[['Captured pairs',s.measurable.length-s.overridden,'win'],['Manager-set CLV',s.overridden,'expect'],['Graded, not measured',s.graded.length-s.measurable.length,'loss'],['No win/loss decision',s.picks-s.graded.length,'pending']];
-  const coverage=dxCard('coverage','06 / THE EVIDENCE','Know what is measured',`${s.measurable.length} of ${s.picks} picks used in price comparisons`, `<div class="dx-coverage">${coverageRows.map(r=>`<div><span>${r[0]}</span><b>${r[1]}</b><div class="dx-cover-track"><i class="dx-${r[2]}" style="width:${r[1]/s.picks*100}%"></i></div></div>`).join('')}</div>`,'Captured pairs pass the existing verification checks. Manager-set CLV uses the existing manual override and is shown separately. Unverified, missing or invalid prices are excluded. Pushes, voids and pending picks stay outside the win/loss comparison.',['Evidence','Picks'],coverageRows.map(r=>r.slice(0,2)));
+  const calibration=dxCard('calibration','05 / EXPECTATION CHECK','Price vs. observed win rate',`${s.measurable.length} usable decisions (measured / estimated / override) · descriptive, small samples are noisy`,s.measurable.length?dxSvg('Calibration: closing probability against observed win rate by 20-point probability band',cal):dxEmpty('No priced, graded decisions to compare.'),'Each dot is a 20-percentage-point closing-probability band; larger dots have more picks. The diagonal is equality, not a fitted model. Shared games may be correlated. These small samples cannot establish calibration or skill; no confidence band is implied.',['Closing band','Picks','Mean closing probability','Observed win rate'],calibrated.map(b=>[`${Math.round(b.lo*100)}–${Math.round(b.hi*100)}%`,b.n,b.p==null?'No data':(b.p*100).toFixed(1)+'%',b.rate==null?'No data':(b.rate*100).toFixed(1)+'%']));
+  const coverageRows=[['Captured pairs',s.measurable.length-s.overridden-s.estimated,'win'],['Estimated CLV',s.estimated,'expect'],['Manager-set CLV',s.overridden,'expect'],['Graded, not measured',s.graded.length-s.measurable.length,'loss'],['No win/loss decision',s.picks-s.graded.length,'pending']];
+  const coverage=dxCard('coverage','06 / THE EVIDENCE','Know what is measured',`${s.measurable.length} of ${s.picks} picks used in price comparisons`, `<div class="dx-coverage">${coverageRows.map(r=>`<div><span>${r[0]}</span><b>${r[1]}</b><div class="dx-cover-track"><i class="dx-${r[2]}" style="width:${r[1]/s.picks*100}%"></i></div></div>`).join('')}</div>`,'Captured pairs pass the existing verification checks. Manager-set CLV uses the existing manual override and is shown separately. Saved non-stale estimates are included and labeled separately. Missing or invalid evidence is excluded. Pushes, voids and pending picks stay outside the win/loss comparison.',['Evidence','Picks'],coverageRows.map(r=>r.slice(0,2)));
   return `<div class="dx-primary">${outcomes}${trendCard}</div>${comparison}<details class="bz-help dx-more" id="dxMore"><summary>Price quality &amp; data coverage <span>3 more views</span></summary><div class="dx-secondary">${clvChart}${calibration}${coverage}</div></details>`;
 }
 function paintDiagnosticsExplorer(){
@@ -7468,11 +7477,11 @@ function paintDiagnosticsExplorer(){
   const moreOpen=document.getElementById('dxMore')?.open;
   const rows=dxRows(), s=dxSummary(rows), tile=(l,b,sub)=>`<div><div class="lil">${l}</div><div class="big">${b}</div><div class="tm">${sub||''}</div></div>`;
   document.getElementById('dxMeta').textContent=`${rows.length} pick${rows.length===1?'':'s'} in this slice`;
-  document.getElementById('dxScope').textContent=(CLV.data.synthetic?'SIMULATED LEAGUE · ':'')+(rows.length?`Weeks ${Math.min(...rows.map(l=>+l.week))}–${Math.max(...rows.map(l=>+l.week))} · ${s.measurable.length} measured of ${s.graded.length} win/loss decisions · descriptive, not proof of skill`:'No picks in the selected slice.');
+  document.getElementById('dxScope').textContent=(CLV.data.synthetic?'SIMULATED LEAGUE · ':'')+(rows.length?`Weeks ${Math.min(...rows.map(l=>+l.week))}–${Math.max(...rows.map(l=>+l.week))} · ${s.measurable.length} usable (${s.estimated} estimated, ${s.overridden} overrides) of ${s.graded.length} win/loss decisions · descriptive, not proof of skill`:'No picks in the selected slice.');
   document.getElementById('dxTiles').innerHTML=
     tile('Record',`${s.wins}–${s.losses}`,`${s.picks} total picks`)+
     tile('Vs expectation',s.measurable.length?dxSigned(s.delta):'—',`${s.measurable.length} matched decisions`)+
-    tile('Average CLV',s.clv==null?'—':`${dxSigned(s.clv*100,2)} pp`,`${s.overridden} manager-set · ${s.measurable.length} measured`);
+    tile('Average CLV',s.clv==null?'—':`${dxSigned(s.clv*100,2)} pp`,`${s.estimated} estimated · ${s.overridden} overrides · ${s.measurable.length} usable`);
   if(!rows.length){delete host._dxMarkup;host.innerHTML='<div class="dash-empty">No picks match these filters.</div>';document.querySelector('#dxTable tbody').innerHTML='';document.getElementById('dxNote').textContent='';return;}
   const group=document.getElementById('dxGroup').value;
   const key=l=>group==='player'?teamOf(l.player):group==='sport'?String(l.sport||'Unknown').toUpperCase():group==='market'?String(l.mkt||'other').toUpperCase():'Week '+l.week;
@@ -7485,8 +7494,8 @@ function paintDiagnosticsExplorer(){
   for(const id of opened){const d=host.querySelector(`[data-chart="${id}"] details`);if(d)d.open=true;}
   document.getElementById('dxMore').open=!!moreOpen;
   document.getElementById('dxMetric').addEventListener('change',()=>{paintDiagnosticsExplorer();document.getElementById('dxMetric').focus({preventScroll:true});});
-  document.querySelector('#dxTable tbody').innerHTML=`<tr><th>${esc(group)}</th><th>Picks</th><th>W–L (all)</th><th>Measured n</th><th>W (matched)</th><th>Expected W</th><th>vs expected</th><th>Avg CLV</th></tr>`+sums.map(x=>`<tr><td class="who">${esc(x.k)}</td><td>${x.picks}</td><td>${x.wins}–${x.losses}</td><td>${x.measurable.length}</td><td>${x.matchedWins}</td><td>${x.measurable.length?x.expected.toFixed(1):'—'}</td><td>${x.measurable.length?dxSigned(x.delta):'—'}</td><td>${x.clv==null?'—':dxSigned(x.clv*100,2)+' pp'}</td></tr>`).join('');
-  document.getElementById('dxNote').textContent='Expected wins, result delta and average CLV use only the same measured win/loss decisions. All-record W–L includes unmeasured decisions. Manager-set CLV follows the existing league override; implied probabilities outside 0–100% are excluded. Missing prices are never filled as zero. Positive CLV describes price movement, not proven skill; outcomes and expectation are noisy and picks may share games.';
+  document.querySelector('#dxTable tbody').innerHTML=`<tr><th>${esc(group)}</th><th>Picks</th><th>W–L (all)</th><th>Usable n</th><th>W (matched)</th><th>Expected W</th><th>vs expected</th><th>Avg CLV</th></tr>`+sums.map(x=>`<tr><td class="who">${esc(x.k)}</td><td>${x.picks}</td><td>${x.wins}–${x.losses}</td><td>${x.measurable.length}</td><td>${x.matchedWins}</td><td>${x.measurable.length?x.expected.toFixed(1):'—'}</td><td>${x.measurable.length?dxSigned(x.delta):'—'}</td><td>${x.clv==null?'—':dxSigned(x.clv*100,2)+' pp'}</td></tr>`).join('');
+  document.getElementById('dxNote').textContent='Expected wins, result delta and average CLV use only the same measured win/loss decisions. All-record W–L includes unusable decisions (measured / estimated / override). Manager-set CLV follows the existing league override; implied probabilities outside 0–100% are excluded. Missing prices are never filled as zero. Positive CLV describes price movement, not proven skill; outcomes and expectation are noisy and picks may share games.';
 }
 
 function paintDiag(live, players, status){
@@ -7591,14 +7600,14 @@ function paintDiag(live, players, status){
        precisely when a close cannot be captured. The flag said "measured on 1 of 8" while
        the lever was ranking on 2, and the sentence under it told the reader the lever had
        passed on a leg it had not passed on. Two definitions of one fact is one too many. */
-    const withClv = live.filter(x=>clvDeltaOf(x, legRow(x)) != null).length;
+    const withClv = live.filter(x=>clvDeltaOf(x, legRow(x)) != null || clvDisplayEstimate(x)).length;
     if(withClv === 0)
-      flags.push(`<div class="flag"><span>⚠</span><div><b>Worst CLV can't be measured on this board yet.</b>
+      flags.push(`<div class="flag"><span>⚠</span><div><b>No usable CLV evidence is loaded for this board yet.</b>
         <details class="bz-help" id="dgClvHelp"${clvHelpOpen ? ' open' : ''}><summary>Why CLV is pending</summary><div>The closes are captured at kickoff, so until the games start there is nothing to compare against — in the
         simulation CLV picks uniformly among whoever is still tied, which is what "no information" actually means.
         It fills in once the snapshot lands.</div></details></div></div>`);
     else if(withClv < live.length)
-      flags.push(`<div class="flag"><span>⚠</span><div><b>Worst CLV is measured on ${withClv} of ${live.length} legs.</b>
+      flags.push(`<div class="flag"><span>⚠</span><div><b>CLV evidence (including labeled scenario estimates) is available on ${withClv} of ${live.length} legs.</b>
         The rest are awaiting verified two-sided entry and closing prices. Missing sides stay unmeasured; no juice is assumed.
         <details class="bz-help" id="dgClvHelp"${clvHelpOpen ? ' open' : ''}><summary>How missing CLV is modelled</summary><div><b>The simulation does not treat those as unmeasurable forever.</b> A leg whose market can be captured draws a
         modelled CLV from <b>that player's own past legs</b>, or from exactly even when they have no history yet, because
@@ -7639,6 +7648,8 @@ function paintDiag(live, players, status){
       return `<span class="${v>=0?'clvup':'clvdn'}" title="de-vigged close ${(pC*100).toFixed(1)}% − de-vigged entry ${(pE*100).toFixed(1)}%">`
         + `${v>0?'+':''}${v.toFixed(2)} pts</span>`;
     }
+    const estimated=clvDisplayEstimate(x);
+    if(estimated)return '<span class="clvup">'+(estimated.point>0?'+':'')+estimated.point.toFixed(2)+' estimated</span><br><small>Scenario only; '+esc(estimated.reason)+'</small>';
     if(x.verificationStatus === "unverified") return "entry awaiting review";
     if(r.close != null && r.closeOpp == null)
       return `<span title="Only one side of the close was captured, so it can't be de-vigged.">one side only</span>`;
@@ -7960,7 +7971,7 @@ function bozoCtx(){
   return L.join('\n');
 }
 window.DD_BOTCTX = {
-  sys: BOZO_SYS + '\nEstimated CLV is modeled fair-close minus fair-entry in probability percentage points, separately labeled with vig sensitivity and source limitations. Never call it measured CLV or expected ROI. Untimed quote proxies are not verified closing prices. Missing closing quotes remain unknown.\nRecovered closing evidence is third-party-reported, uncorroborated reference data only. Page timestamps are not exact per-book quote timestamps. It never fills original captures or changes official CLV, rankings, tiebreakers or settlement.', label: 'LIVE BOZO STATE', ctx: bozoCtx,
+  sys: BOZO_SYS + '\nEstimated CLV is modeled fair-close minus fair-entry in probability percentage points, separately labeled with vig sensitivity and source limitations. Never call it measured CLV or expected ROI. Untimed quote proxies are not verified closing prices. Valid saved estimates enter labeled analytics; missing quotes remain unknown.\nRecovered closing evidence is third-party-reported, uncorroborated reference data only. Page timestamps are not exact per-book quote timestamps. It never fills original captures or changes official CLV, rankings, tiebreakers or settlement.', label: 'LIVE BOZO STATE', ctx: bozoCtx,
   title: 'Ask Toto — he reads the live ticket',
   chrome: {
     sub: 'reads the live ticket',
@@ -8762,7 +8773,7 @@ function paintGodResults(){
   // Prefer observed prices; keep a clearly labelled manual points override available.
   const clvLine = (x, r) => {
     const v = clvDeltaOf(x, r);
-    if(v == null) return `<span class="tm">CLV &mdash; ${esc(clvMissingReason(x, r))}</span>`;
+    if(v == null){const e=clvDisplayEstimate(x);return e?`<span>CLV ${e.point>0?'+':''}${e.point.toFixed(2)} estimated — scenario only</span>`:`<span class="tm">CLV &mdash; ${esc(clvMissingReason(x, r))}</span>`;}
     const pts = v*100, cls = pts>=0 ? 'clvup' : 'clvdn';
     return `<span class="${cls}">CLV ${pts>0?'+':''}${pts.toFixed(2)} pts</span>`
       + `<span class="tm"> &middot; ${r.clvPts != null ? 'set by hand'
@@ -9367,7 +9378,7 @@ const clvOppAssumed = l => !!l && ((l.closePrice != null && l.closePriceOpp == n
 
    ⚠️ An override is weaker evidence than a captured pair and every surface says which it
    is looking at. What must never happen is the two becoming indistinguishable. */
-function clvPair(l){
+function clvMeasuredPair(l){
   if(l && l.clvPts == null && (l.verificationStatus === "unverified" || l.clvEligible === false || l.closeOppSource === "assumed" || l.entryOppSource === "assumed")) return null;
   const pE = clvDevig(l && l.entryPrice, l && l.entryPriceOpp);
   if(pE == null) return null;
@@ -9375,6 +9386,10 @@ function clvPair(l){
   if(ov != null) return { pE, pC: pE + ov, clv: ov, manual: true };
   const pC = l.closeOppSource==='assumed' ? null : clvDevig(l.closePrice, l.closePriceOpp);
   return pC == null ? null : { pE, pC, clv: pC - pE, manual: false };
+}
+function clvPair(l){
+  const e=window.DDEffectiveClv.resolve(l||{});
+  return e.point!==null&&e.pE!==null&&e.pC!==null?e:null;
 }
 const clvGraded = l => (l.result==='win' || l.result==='loss') && clvPair(l) != null;
 
@@ -9423,7 +9438,7 @@ function clvVisiblePoints(){
     if(!CLV.state.on.has(p)) continue;
     const pts = clvSER()[p].filter(d=>d.week<=CLV.state.week);
     if(!pts.length) continue;
-    if(CLV.state.mode==='season') rows.push(pts[pts.length-1]); else rows.push(...pts);
+    if(CLV.state.mode==='season') rows.push(pts[pts.length-1]); else rows.push(...pts.map(d=>({...d,x:d.legClv,y:100*((d.leg.result==='win'?1:0)-clvPair(d.leg).pC),n:1,wins:d.leg.result==='win'?1:0,winPct:d.leg.result==='win'?100:0,expected:100*clvPair(d.leg).pC})));
   }
   return rows;
 }
@@ -9433,7 +9448,7 @@ function clvDomain(mode, sport){
   const S2 = clvSeriesFor(sport), all=[];
   for(const p of CLV.players){
     const pts=S2[p]; if(!pts.length) continue;
-    if(mode==='season') all.push(pts[pts.length-1]); else all.push(...pts);
+    if(mode==='season') all.push(pts[pts.length-1]); else all.push(...pts.map(d=>({...d,x:d.legClv,y:100*((d.leg.result==='win'?1:0)-clvPair(d.leg).pC)})));
   }
   if(!all.length) return {x0:-1,x1:1,y0:-1,y1:1};
   const xs=all.map(d=>d.x), ys=all.map(d=>d.y);
@@ -9497,15 +9512,10 @@ function clvRender(){
   const st = CLV.state;
   document.getElementById('clvWeekNum').textContent = clvWeekLabel(st.week);
   const pts = clvVisiblePoints();
-  const scope = CLV.data.legs.filter(l => l.week<=st.week && (st.sport==='all'||l.sport===st.sport));
-  const charted = scope.filter(clvGraded).length;
-  const noClose = scope.filter(l=>l.closePrice==null).length;
-  const noOpp   = scope.filter(l=>l.closePrice!=null && (l.closePriceOpp==null||l.entryPriceOpp==null)).length;
-  const pushes  = scope.filter(l=>l.result==='push').length;
-  document.getElementById('clvHead').textContent = scope.length
-    ? `${charted} of ${scope.length} legs charted · ${pushes} push${pushes===1?'':'es'} · ${noClose} with no capturable close`
-      + (noOpp ? ` · ${noOpp} missing the other side` : '')
-    : '';
+  const scope = CLV.data.legs.filter(l => l.week<=st.week && st.on.has(l.player) && (st.sport==='all'||l.sport===st.sport));
+  const items=window.DDEffectiveClv.rows(scope),counts=window.DDEffectiveClv.counts(items);
+  document.getElementById('clvHead').textContent=`${counts.charted} of ${counts.total} bets ${st.mode==='season'?'included in player averages':'plotted'}; ${counts.measured} measured, ${counts.estimated} estimated, ${counts.override} overrides, ${counts.unknown} unknown. ${counts.pending} pending, ${counts.push} push, ${counts.void} void. All ${counts.total} represented below.`;
+  document.getElementById('clvAllBets').innerHTML='<h3>Every bet — CLV accounting</h3><p>Estimated values are scenario analytics, not official contest tiebreaker decisions. Unknown axes are never zero-filled.</p><table class="clv-tbl"><thead><tr><th>Week / player / bet</th><th>Outcome</th><th>CLV pp / evidence</th><th>Chart status</th></tr></thead><tbody>'+items.map(d=>'<tr><td>'+esc('W'+d.leg.week+' / '+teamOf(d.leg.player)+' / '+d.leg.label)+'</td><td>'+esc(d.result||'pending')+'</td><td>'+(d.point===null?'Unknown':(d.point>0?'+':'')+d.point.toFixed(2)+' '+esc(d.kind))+'<details><summary>Source / assumptions</summary>'+esc(d.reason)+(d.source?'<br>'+esc(d.source):'')+(d.kind==='estimated'?'<br>'+esc(d.leg.clvEstimate.assumption||'')+'<br>'+esc(d.leg.clvEstimate.rationale||'')+'<br>Overround scenarios: '+esc((d.leg.clvEstimate.scenarios||[]).map(x=>(x*100).toFixed(2)+'%').join(' / '))+'<br>'+esc(d.leg.clvEstimate.sensitivity||'')+'<br>Quote time: '+esc(d.leg.clvEstimate.closeQuote?.quotedAt??'unknown')+'; retrieved: '+esc(d.leg.clvEstimate.closeQuote?.retrievedAt??'unknown'):'')+'</details>'+'</td><td>'+(d.charted?(st.mode==='season'?'Included in player average':'Plotted'):d.result==='push'||d.result==='void'?esc(d.result)+' — no binary outcome axis':d.y===null?'Pending or unavailable outcome/probability axis':'Missing CLV axis')+'</td></tr>').join('')+'</tbody></table>';
 
   CLV_D = clvDom(st.mode, st.sport);
   clvRenderLegend();
@@ -9524,7 +9534,7 @@ function clvRender(){
   s += `<rect x="${csx(0)}" y="${CLV_M.t}" width="${CLV_M.l+CLV_PW-csx(0)}" height="${csy(0)-CLV_M.t}" fill="var(--clv-quad)"/>`;
   s += `<rect x="${CLV_M.l}" y="${csy(0)}" width="${csx(0)-CLV_M.l}" height="${CLV_M.t+CLV_PH-csy(0)}" fill="var(--clv-quad)"/>`;
 
-  const LB = st.band ? clvLuckBand(pts) : null;
+  const LB = st.band && st.mode==='season' ? clvLuckBand(pts) : null;
   if(LB){
     const y2hi=Math.max(CLV_M.t,csy(2*LB.se)), y2lo=Math.min(CLV_M.t+CLV_PH,csy(-2*LB.se));
     const y1hi=Math.max(CLV_M.t,csy(LB.se)),   y1lo=Math.min(CLV_M.t+CLV_PH,csy(-LB.se));
@@ -9551,7 +9561,7 @@ function clvRender(){
 
   const emph = st.sel || st.hover;
   if(emph && st.mode==='week' && st.on.has(emph)){
-    const tp = clvSER()[emph].filter(d=>d.week<=st.week);
+    const tp = pts.filter(d=>d.player===emph);
     if(tp.length>1)
       s += `<polyline points="${tp.map(d=>`${csx(d.x)},${csy(d.y)}`).join(' ')}" fill="none"`
          + ` stroke="var(${clvId(emph).cssVar})" stroke-width="2" stroke-linejoin="round"`
@@ -9567,7 +9577,7 @@ function clvRender(){
     const r = seasonMode ? 9 : clvRadius(d.n);
     const op = dim ? 0.16 : (seasonMode||isEmph ? 1 : (last ? 0.95 : 0.62));
     s += `<g transform="translate(${csx(d.x)},${csy(d.y)})" opacity="${op}">`
-       + clvGlyph(d.player, r, `stroke="var(--surface-1)" stroke-width="2"`) + `</g>`;
+       + clvGlyph(d.player, r, `stroke="var(--surface-1)" stroke-width="2"`) + (clvPair(d.leg)?.estimated?`<circle r="${r+3}" fill="none" stroke="currentColor" stroke-dasharray="2 2"><title>Includes estimated CLV</title></circle>`:'') + `</g>`;
   }
 
   if(seasonMode){
@@ -9576,7 +9586,7 @@ function clvRender(){
       s += `<text class="dotlabel" x="${L.lx}" y="${L.ly}" text-anchor="${L.anchor}" opacity="${dim?0.25:1}">${esc(L.text)}</text>`;
     }
   } else if(emph && st.on.has(emph)){
-    const tp = clvSER()[emph].filter(d=>d.week<=st.week);
+    const tp = pts.filter(d=>d.player===emph);
     if(tp.length){ const d=tp[tp.length-1];
       s += `<text class="dotlabel" x="${csx(d.x)+15}" y="${csy(d.y)+4}">${esc(emph)} · ${esc(clvShort(d.week))}</text>`; }
   }
@@ -9644,7 +9654,7 @@ function clvRenderTable(){
     + `<td>${esc(clvShort(d.week))}</td><td>${d.n}</td><td>${d.wins}–${d.n-d.wins}</td>`
     + `<td>${d.winPct.toFixed(1)}</td><td>${d.expected.toFixed(1)}</td>`
     + `<td class="${d.y>=0?'pos':'neg'}">${csgn(d.y,1)}</td>`
-    + `<td class="${d.x>=0?'pos':'neg'}">${csgn(d.x,2)}</td></tr>`).join('');
+    + `<td class="${d.x>=0?'pos':'neg'}">${csgn(d.x,2)}${CLV.state.mode==='week'&&clvPair(d.leg)?.estimated?' estimated':''}</td></tr>`).join('');
   document.getElementById('clvTbl').innerHTML = head + `<tbody>${body}</tbody>`;
 }
 
@@ -9679,7 +9689,7 @@ function clvShowTip(d,px,py){
   tip.innerHTML =
     `<div class="t-name"><svg width="13" height="13" viewBox="-8 -8 16 16">${clvGlyph(d.player,5.4)}</svg>`
     + `${esc(teamOf(d.player))} · ${esc(clvShort(d.week))}</div>`
-    + `<div class="t-row"><span>Cumulative CLV</span><b>${csgn(d.x,2)} pts</b></div>`
+    + `<div class="t-row"><span>CLV</span><b>${csgn(d.x,2)} pts</b></div>`
     + `<div class="t-row"><span>Win rate</span><b>${d.winPct.toFixed(1)}%</b></div>`
     + `<div class="t-row"><span>Expected</span><b>${d.expected.toFixed(1)}%</b></div>`
     + `<div class="t-row"><span>Delta</span><b>${csgn(d.y,1)} pts</b></div>`
@@ -9688,7 +9698,7 @@ function clvShowTip(d,px,py){
     + `<div class="t-sep"></div>`
     + `<div class="t-row"><span>${esc(clvShort(d.week))} · ${esc(String(l.sport).toUpperCase())}</span><b>${esc(l.label)}</b></div>`
     + `<div class="t-row"><span>Got / closed</span><b>${l.entryPrice} → ${l.closePrice}</b></div>`
-    + `<div class="t-row"><span>Leg CLV</span><b>${csgn(d.legClv,2)} pts${d.legClvManual?' · set by hand':''}</b></div>`;
+    + `<div class="t-row"><span>Leg CLV</span><b>${csgn(d.legClv,2)} pts${d.legClvManual?' · override':clvPair(l)?.estimated?' · estimated':''}</b></div>`;
   const w=200, off=16;
   const bw=document.getElementById('clvSvg').getBoundingClientRect().width;
   tip.style.left = (px+off+w>bw ? px-w-off : px+off)+'px';
@@ -9706,72 +9716,19 @@ function clvShowTip(d,px,py){
       one checked number with one unchecked one, and that has to be readable next to it.
       The full paragraph is still in the drawer.
    Everything static goes below, verbatim. */
-function clvFootLive(){
-  const c = CLV.data.coverage;
-  // n per player over the whole season, for the band's range — the same counts the band
-  // takes its median from, so the two cannot drift.
-  const ns = CLV.players.map(p => (clvSeriesFor('all')[p]||[]).length).filter(n => n > 0).sort((a,b)=>a-b);
-  const band = ns.length
-    ? `luck band n = ${ns[0]}${ns[ns.length-1] !== ns[0] ? '–' + ns[ns.length-1] : ''}` : '';
-  return `<p class="live"><b>${c.noClose} of ${c.legs}</b> legs have no capturable close and are excluded`
-    + ` · <b>${c.pushes}</b> push${c.pushes===1?'':'es'} dropped`
-    + (band ? ` · ${band}` : '')
-    + ` · captured or manually verified entries; unverified entries await review</p>`;
-}
-
+function clvFootLive(){return '<p>Analytics use manager overrides first, valid measured CLV next, then non-stale estimates. Each bet stays visible; missing coordinates are unknown, not zero. Pushes and voids are distinct. Official contest decisions are unchanged.</p>';}
 function clvEstimateEvidence(){
   const rows=(CLV.data?.legs||[]).filter(l=>l.clvEstimate?.kind==='estimated');
   if(!rows.length)return '';
-  return '<details class="method" open style="overflow-wrap:anywhere"><summary>Estimated CLV · separate evidence ('+rows.length+')</summary><div class="method-body">Estimates are not measured CLV, expected ROI, or a confidence interval. They do not enter the chart, rankings or settlement. Manual overrides remain authoritative.'+rows.map(l=>{
+  return '<details class="method" open style="overflow-wrap:anywhere"><summary>Estimated CLV · separate evidence ('+rows.length+')</summary><div class="method-body">Estimates are not measured CLV, expected ROI, or a confidence interval. They enter labeled analytics, never official rankings or settlement. Manual overrides remain authoritative.'+rows.map(l=>{
     const e=l.clvEstimate;
     if(e.stale)return '<p><b>'+esc(teamOf(l.player))+' · '+esc(l.label)+' · Week '+esc(l.week??'unknown')+'</b>: stale estimate; selection/prices/status changed. Recalculate before using.</p>';
     const fmt=n=>Number.isFinite(n)?(n>0?'+':'')+n.toFixed(2):'unknown';
     return '<p><b>'+esc(teamOf(l.player))+' · '+esc(l.label)+' · Week '+esc(l.week??'unknown')+'</b><br>Estimated '+fmt(e.point)+' pp; sensitivity '+fmt(e.low)+' to '+fmt(e.high)+' pp'+(l.clvPts!=null?' · existing manual override retained':'')+'<br>'+esc(e.assumption)+'; overround scenarios '+esc((e.scenarios||[]).map(x=>(x*100).toFixed(2)+'%').join(' / '))+'<br>'+esc(e.rationale)+'<br>Source: '+esc(e.closeQuote?.sourceUrl)+' · quote time '+esc(e.closeQuote?.quotedAt??'unknown')+' · retrieved '+esc(e.closeQuote?.retrievedAt)+'<br>'+esc(e.closeQuote?.evidence==='untimed_quote_proxy'?'Untimed quote used as closing proxy — not a verified closing price':e.closeQuote?.evidence)+' · entry '+(e.entryVerified?'verified':'unverified')+' · revision '+esc(e.revision)+'</p>';
   }).join('')+'</div></details>';
 }
-function clvMethod(){
-  // The counts appear on the live line too, and on purpose: up there they are the
-  // sample, down here they are the sentence explaining what an exclusion means. Same
-  // source both times, so they cannot disagree.
-  const c = CLV.data.coverage;
-  return `<details class="method"><summary>How this chart is built</summary><div class="method-body">`
-    + `<b>How the axes are built.</b> Both prices are de-vigged proportionally against the opposite side, so a `
-    + `<code>-200</code> favourite quoted with the usual hold is treated as roughly 65%, not 66.7%. `
-    + `<b>x</b> = mean of <code>p_close − p_entry</code> across a player's graded legs to date, in probability `
-    + `points; positive means the market moved toward their side after they bet. `
-    + `<b>y</b> = <code>(wins ÷ n) − mean(p_close)</code>, also in points; the closing line sets the bar. `
-    + `Pushes and voids are dropped from both. Same unit on both axes, so the quadrants are comparable.<br><br>`
-    + `<b>One book, both ends.</b> Every Bozo leg has to be a real DraftKings selection that is legal in an SGP, `
-    + `so DK is the book at entry <i>and</i> at close — the price you got and the price it closed at are `
-    + `like-for-like rather than a cross-book artifact. Both reach us through licensed aggregators because `
-    + `DraftKings has no public odds API. <b>Self-priced props and Other legs are excluded from this chart.</b><br><br>`
-    + `<b>What is not on the chart.</b> ${c.noClose} of ${c.legs} legs have no capturable close and are excluded `
-    + `from both axes and from <code>n</code> — never back-filled from the entry price, and still counted in the `
-    + `ledger. Every leg goes on a real bet slip, so the market always existed and always closed; a gap here means `
-    + `the capture could not resolve what was typed onto the right market, and each one carries the reason it `
-    + `missed. “Other” legs are the exception — free text describing an arbitrary market, with nothing to match `
-    + `on. ${c.pushes} push${c.pushes===1?'':'es'} are dropped too.<br><br>`
-    + `<b>The luck band.</b> The shaded strip is how far from zero a perfectly-calibrated bettor drifts by chance `
-    + `alone — binomial standard error <code>√(p̄(1−p̄) ÷ n)</code> on the delta, where n is the median legs per `
-    + `player so far. It starts enormous and shrinks as the season runs. <b>A dot inside ±2 SE has not `
-    + `demonstrated anything</b>: after a full season plus playoffs the band is still roughly ±10 points, wider `
-    + `than most of the spread on this chart. The x-axis needs far less sample to mean something than the y-axis `
-    + `does, which is the honest finding here and not a flaw in the picture.<br><br>`
-    + `<b>Two caveats on the band itself.</b> It assumes legs are independent, and in Bozo they are not — several `
-    + `players land on the same game most weeks. Positive correlation means the league-wide delta swings further `
-    + `than a pooled binomial band implies, so the band is a <i>floor</i> on the noise, not a ceiling. And p̄ `
-    + `varies per player: someone who always takes −400 favourites has a different standard error from someone `
-    + `at −110. A pooled band is an approximation, and the right one at eight players.`
-    + (CLV.data.format === 'royale'
-      ? `<br><br><b>Bozo Royale changes what n means.</b> A player chopped in week 1 has one charted leg and a `
-        + `delta that says nothing about them; the survivor has fourteen. Dot size already encodes that — the `
-        + `band's <code>n</code> range is printed on its label for the same reason, because a median no longer `
-        + `describes most of the roster.` : '')
-    + `</div></details>`;
-}
+function clvMethod(){return '<details class="method"><summary>CLV methodology</summary><div class="method-body">CLV is fair close minus fair entry in probability percentage points. Estimated prices retain their source and assumptions. Every-bet mode plots one resolved bet with usable axes; Season average aggregates those bets. The all-bets table retains unknown, pending, push and void records. No estimate changes official settlement or tiebreaker policy.</div></details>';}
 
-/* Draw the survival curves. Same colour + shape identity as the CLV chart above — a
-   player is one thing on this page, not two. */
 let SURV = null, survKey = '';
 function paintSurvival(){
   const card = document.getElementById('survCard');
@@ -9907,10 +9864,10 @@ async function clvLoad(force){
     // The demo warning is a strip above the plot, not a line in the footnote — see the
     // note above clvFootLive for why it does not go in the drawer.
     document.getElementById('clvSim').style.display = CLV.data.synthetic ? '' : 'none';
-    document.getElementById('clvFoot').innerHTML = clvFootLive() + clvMethod() + clvEstimateEvidence();
+    document.getElementById('clvFoot').innerHTML = clvFootLive() + clvMethod();
     clvRender();
     mountBozoEstimateManager();
-    if(view()==='overview') paintSurvival();
+    if(view()==='overview'){paintSurvival();if(boardReady)render();}
     if(view()==='diagnostics') paintDiagnosticsExplorer();
   }catch(e){
     if(ledgerLid!==LID || ledgerSession!==ME?.session || ledgerGeneration!==stateGeneration) return;

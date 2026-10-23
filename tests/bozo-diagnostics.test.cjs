@@ -12,7 +12,7 @@ const row=(extra={})=>({player:'Fixture One',sport:'nfl',mkt:'ml',week:1,result:
 function fixture(rows){
   const dom=new JSDOM(html);
   const context={document:dom.window.document,CLV:{data:{legs:rows,synthetic:true},players:[...new Set(rows.map(r=>r.player))],sports:[...new Set(rows.map(r=>r.sport))]},LID:'fixture',view:()=> 'diagnostics',teamOf:x=>x,esc:x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))};
-  vm.createContext(context);vm.runInContext(pairs+'\n'+source,context);
+  context.window={DDEffectiveClv:require('../bozo-effective-clv.js')};vm.createContext(context);vm.runInContext(pairs+'\n'+source,context);
   const render=()=>context.paintDiagnosticsExplorer();render();
   return {context,document:dom.window.document,render};
 }
@@ -42,7 +42,7 @@ test('six accessible charts expose exact data through closed native disclosures'
   assert.deepEqual(cells('outcomes'),[['Wins','3'],['Losses','1'],['Push / void','1'],['Pending / other','1']]);
   assert.deepEqual(cells('trend'),[['Week 1','1','1','0.60'],['Week 2','1','1','1.00']]);
   assert.deepEqual(cells('clv'),[['Week 1','1','+10.00'],['Week 2','1','−10.00']]);
-  assert.deepEqual(cells('coverage'),[['Captured pairs','2'],['Manager-set CLV','0'],['Graded, not measured','2'],['No win/loss decision','2']]);
+  assert.deepEqual(cells('coverage'),[['Captured pairs','2'],['Estimated CLV','0'],['Manager-set CLV','0'],['Graded, not measured','2'],['No win/loss decision','2']]);
 });
 test('empty, pending, one-row and zero-delta slices stay finite and honest',()=>{
   for(const rows of [[],[row({result:'pending'})],[row()],[row(),row({result:'loss',closePrice:150,closePriceOpp:-150})]]){

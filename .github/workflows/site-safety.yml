@@ -58,6 +58,9 @@ on:
       - "fantasy-warroom.html"
       - "tests/warroom-weekly.test.js"
       - "bozo.html"
+      - "bozo-effective-clv.js"
+      - "tests/bozo-effective-clv.test.cjs"
+      - "work/test-bozo-effective-clv-ui.mjs"
       - "bozo-recovered.js"
       - "data/bozo-recovered-closes.json"
       - "tests/bozo-recovered.test.cjs"
@@ -135,6 +138,9 @@ on:
       - "fantasy-warroom.html"
       - "tests/warroom-weekly.test.js"
       - "bozo.html"
+      - "bozo-effective-clv.js"
+      - "tests/bozo-effective-clv.test.cjs"
+      - "work/test-bozo-effective-clv-ui.mjs"
       - "bozo-recovered.js"
       - "data/bozo-recovered-closes.json"
       - "tests/bozo-recovered.test.cjs"
@@ -187,6 +193,8 @@ jobs:
           path: artifacts/board
           if-no-files-found: ignore
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-recovered-ui.mjs
+      - run: node --test tests/bozo-effective-clv.test.cjs
+      - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-effective-clv-ui.mjs
       - run: node --test tests/bozo-estimate-manager.test.cjs
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-estimate-manager-ui.mjs
       - run: DD_NODE_MODULES=/tmp/dd-feedback-pw/node_modules node work/test-bozo-disclosures-ui.mjs
