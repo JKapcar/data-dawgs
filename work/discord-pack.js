@@ -30,7 +30,7 @@ function dpRandom(n){const b=crypto.getRandomValues(new Uint8Array(n));let s='';
 function dpStore(data){
  if(data===null||data===undefined)return {version:1,seats:{},jobs:{},threads:{},links:{},challenges:{},windows:{}};
  dpCheck(dpObj(data)&&data.version===1,503,'pack_store_invalid');
- for(const k of ['seats','jobs','threads','links','challenges','windows'])dpCheck(data[k]===undefined||dpObj(data[k]),503,'pack_store_invalid');
+ for(const k of ['seats','jobs','threads','links','challenges','windows','subscriptions'])dpCheck(data[k]===undefined||dpObj(data[k]),503,'pack_store_invalid');
  // RTDB omits empty maps and arrays; normalise in memory without rewriting records.
  const s={...data};for(const k of ['seats','jobs','threads','links','challenges','windows'])s[k]=data[k]??{};
  for(const t of Object.values(s.threads))if(dpObj(t))t.turns=Array.isArray(t.turns)?t.turns:[];
@@ -87,13 +87,14 @@ function dpView(s,j,now){
  const t=j.thread_id?s.threads[j.thread_id]:null;
  const history=t?t.turns.filter(id=>id!==j.id&&dpById({id},j)<0).slice(-DP.historyTurns).map(id=>s.jobs[id]).filter(Boolean).map(p=>({id:p.id,question:p.question,reply:p.delivery==='delivered'?p.result_text:null,outcome:p.outcome??null,state:p.state})):[];
  return {id:j.id,seat:j.seat,kind:j.kind,root_id:j.root_id,thread_id:j.thread_id??null,thread_name:dpThreadName(j),requester:j.requester_name,question:j.question,question_trust:j.question_trust,created_at:j.created_at,
-  state:j.state,execution:j.execution??'not_started',wake:{performed:false,mechanism:'session_polling',execution_verified:false},claim:j.claim?{binding:j.claim.epoch,expires_at:j.claim.expires_at,expired:dpClaimExpired(j,now)}:null,attempt:j.attempt,outcome:j.outcome??null,reply:j.result_text??null,
+  state:j.state,execution:j.execution??'not_started',wake:typeof dpeView==='function'?dpeView(j,now):{performed:false,mechanism:'session_polling',execution_verified:false},claim:j.claim?{binding:j.claim.epoch,expires_at:j.claim.expires_at,expired:dpClaimExpired(j,now)}:null,attempt:j.attempt,outcome:j.outcome??null,reply:j.result_text??null,
   delivery:j.delivery,delivery_stage:j.delivery_stage??null,reserved_at:j.reserved_at??null,next:dpNext(j,now),last_error:j.last_error??null,
   receipt:j.delivery==='delivered'?{thread_id:j.thread_id,message_id:j.message_id??null,url:j.url??null,delivered_at:j.delivered_at,evidence:j.resolution?'owner_observed_in_discord':'discord_api_response'}:null,
   author:j.author??null,history};
 }
 function dpAckText(s,j,now,replay){
  const name=DP_SEATS[j.seat],b=s.seats[j.seat];
+ if(j.wake)return (replay?'Already received: ':'Queued: ')+'request '+j.id+' for '+name+'. Native event status: '+j.wake.status+'. Event receipt is not proof of execution. Read the Pack owner page for claim, timeout and Discord delivery evidence; do not resubmit this question.';
  const state={queued:'queued; nothing has run yet',claimed:'claimed by '+name+'’s bound session; execution is not verified',answered:'answered',failed:'reported as not completed'}[j.state]||j.state;
  let text=(replay?'Already received: ':'Queued: ')+'request '+j.id+' for '+name+' is '+state+'. '+name+'’s session last checked in '+(b?.last_seen_at?dpAgo(now-Date.parse(b.last_seen_at)):'never')+(b?.poll_minutes?' and says it checks about every '+b.poll_minutes+' min':'')+'. ';
  text+='The reply will appear in '+(j.kind==='new'?'a new thread named "'+dpThreadName(j)+'" in this channel':'this thread')+', labelled with the seat and connector key; model identity is not verified.';
@@ -130,11 +131,11 @@ async function dpInteraction(event,env,execution){
  const reply=content=>dqReply({type:4,data:{content,flags:64,allowed_mentions:{parse:[]}}});
  let input;try{input=dpInput(event,env);}catch(e){return reply('Not accepted: '+dpMessage(e)+' Nothing was queued.');}
  if(execution?.waitUntil){
-  execution.waitUntil((async()=>{let text;try{text=await dpAdmit(event,env,input);}catch(e){text='Not accepted: '+dpMessage(e)+' Nothing was queued.';}
+  execution.waitUntil((async()=>{let text;try{text=await dpAdmit(event,env,input);if(typeof dpeDrain==='function')await dpeDrain(env,event.id).catch(()=>{});}catch(e){text='Not accepted: '+dpMessage(e)+' Nothing was queued.';}
    try{await dpEditOriginal(env,event,text);}catch{console.warn('discord_pack_ack_edit_failed',{request_id:event.id});}})());
   return dqReply({type:5,data:{flags:64}}); // deferred, ephemeral: only the requester sees the outcome
  }
- try{return reply(await dpAdmit(event,env,input));}catch(e){return reply('Not accepted: '+dpMessage(e)+' Nothing was queued.');}
+ try{const text=await dpAdmit(event,env,input);if(typeof dpeDrain==='function')await dpeDrain(env,event.id).catch(()=>{});return reply(text);}catch(e){return reply('Not accepted: '+dpMessage(e)+' Nothing was queued.');}
 }
 async function dpAdmit(event,env,{question,to}){
  dpCheck(env.FB_SECRET,503,'pack_store_unconfigured');
@@ -158,14 +159,15 @@ async function dpAdmit(event,env,{question,to}){
   const label=DP_SEATS[seat];
   if(s.seats[seat]?.stopped_at)return {result:label+'’s seat is stopped by the site owner. Nothing was queued.',write:false};
   if(!Object.hasOwn(seats,seat))return {result:label+' has no supported incoming connection configured, so nothing was queued. Pack members are only listed as connected after their own end-to-end test.',write:false};
-  const b=dpLiveBinding(s,seat,now);
-  if(!b)return {result:label+'’s seat is configured, but no session is bound and checking in right now (last check-in: '+(s.seats[seat]?.last_seen_at?dpAgo(now-Date.parse(s.seats[seat].last_seen_at)):'never')+'). Nothing was queued.',write:false};
+  const b=dpLiveBinding(s,seat,now),subscription=typeof dpeSubscription==='function'?dpeSubscription(s,env,seat,uid,now):null;
+  if(!b&&!subscription)return {result:label+'’s seat is configured, but no session is bound and checking in right now (last check-in: '+(s.seats[seat]?.last_seen_at?dpAgo(now-Date.parse(s.seats[seat].last_seen_at)):'never')+'). Nothing was queued.',write:false};
   dpCheck(Object.keys(s.jobs).length<DP.jobs,503,'pack_capacity_reached');
   const hour=Math.floor(now/3600e3),w=s.windows.admit?.hour===hour?s.windows.admit:{hour,total:0,users:{}};w.users=w.users??{};
   dpCheck(w.total<DP.admitTotal&&(w.users[uid]||0)<DP.admitUser,429,'pack_rate_limit');w.total++;w.users[uid]=(w.users[uid]||0)+1;s.windows.admit=w;
   const job={id:event.id,seat,kind,root_id:kind==='new'?event.id:thread.root_id,thread_id:kind==='new'?null:event.channel_id,requester_id:uid,requester_name:name,
    guild_id:event.guild_id,parent_id:env.DISCORD_CHANNEL_ID,origin_channel_id:event.channel_id,question,question_trust:'untrusted_discord_user_text',fingerprint,created_at:dpIso(now),
    state:'queued',attempt:1,delivery:'not_sent',execution:'not_started'};
+  if(subscription)dpeStage(job,subscription,now);
   s.jobs[event.id]=job;
   if(thread){thread.turns=[...thread.turns,event.id];thread.updated_at=dpIso(now);}
   return {result:dpAckText(s,job,now,false),write:true};
@@ -186,7 +188,7 @@ const DP_TOOLS=[
  {name:'dd_pack_claim',title:'Pack seat: claim a request',readOnly:false,description:'Claim (or renew this binding\'s claim on) one request for 20 minutes. Claiming is bookkeeping, not execution.'+DP_SAFETY,
   inputSchema:{type:'object',additionalProperties:false,required:['lease','id'],properties:{lease:dpLeaseArg,id:dpIdArg}}},
  {name:'dd_pack_answer',title:'Pack seat: deliver a reply',readOnly:false,description:'Deliver this exact reply (1-1800 characters, no links or raw mentions) for a request this binding has claimed, into its Discord thread, labelled with the seat and key. outcome "failed" posts a could-not-complete notice instead. Replaying identical text uses Discord nonce dedupe or verified empty-thread recovery; uncertain thread absence requires owner reconciliation. Delivery is not exactly-once.'+DP_SAFETY,
-  inputSchema:{type:'object',additionalProperties:false,required:['lease','id','text'],properties:{lease:dpLeaseArg,id:dpIdArg,text:{type:'string',minLength:1,maxLength:1800},outcome:{type:'string',enum:['answer','failed']}}}},
+  inputSchema:{type:'object',additionalProperties:false,required:['lease','id','text'],properties:{lease:dpLeaseArg,id:dpIdArg,text:{type:'string',minLength:1,maxLength:1800},outcome:{type:'string',enum:['answer','failed']},run_ref:{type:'string',minLength:1,maxLength:160,description:'For event jobs: opaque run reference, self-reported, not a URL or credential.'}}}},
  {name:'dd_pack_release',title:'Pack seat: release a claim',readOnly:false,description:'Return a claimed request with no reserved delivery to the queue.'+DP_SAFETY,
   inputSchema:{type:'object',additionalProperties:false,required:['lease','id'],properties:{lease:dpLeaseArg,id:dpIdArg}}},
 ];
@@ -197,6 +199,7 @@ function dpMcpTools(env,caller){
 // Whole MCP surface for a pack-… seat key: dd_pack_* tools for its own seat, nothing else.
 async function dpSeatDispatch(m,env,caller,reauth){
  const id=m.id,ok=result=>({jsonrpc:'2.0',id,result}),tools=dpMcpTools(env,caller);
+ if(typeof dpeMethods==='function'&&(m.method==='server/discover'||m.method.startsWith('events/')))return dpeMethods(m,env,caller,reauth);
  if(m.method==='initialize')return ok({protocolVersion:['2025-03-26','2025-06-18'].includes(m.params?.protocolVersion)?m.params.protocolVersion:'2025-06-18',capabilities:{tools:{}},serverInfo:{name:'data-dawgs-pack-seat',version:'1'},
   instructions:'Pack seat key "'+caller.keyLabel+'": '+tools.length+' dd_pack_* tools and nothing else. This credential has no league, private workspace or research access. It identifies a credential, not a model.'});
  if(m.method==='ping')return ok({});
@@ -211,7 +214,7 @@ async function dpSeatDispatch(m,env,caller,reauth){
 }
 async function dpMcpRun(name,args,env,caller,reauth){
  const seat=dpSeatForCaller(env,caller);dpCheck(seat,403,'pack_seat_not_available_for_this_connector_key');
- const allowed={dd_pack_bind:['session_ref','poll_minutes'],dd_pack_poll:['lease','after'],dd_pack_read:['lease','id'],dd_pack_claim:['lease','id'],dd_pack_answer:['lease','id','text','outcome'],dd_pack_release:['lease','id']}[name];
+ const allowed={dd_pack_bind:['session_ref','poll_minutes'],dd_pack_poll:['lease','after'],dd_pack_read:['lease','id'],dd_pack_claim:['lease','id'],dd_pack_answer:['lease','id','text','outcome','run_ref'],dd_pack_release:['lease','id']}[name];
  dpCheck(allowed&&dpObj(args)&&Object.keys(args).every(k=>allowed.includes(k)),400,'invalid_arguments');
  dpCheck(args.id===undefined||dqSnow(args.id),400,'invalid_request_id');dpCheck(args.after===undefined||dqSnow(args.after),400,'invalid_cursor');
  dpCheck(env.FB_SECRET,503,'pack_store_unconfigured');
@@ -324,6 +327,7 @@ async function dpAnswer(env,seat,caller,args,hash,recheck){
  await recheck();
  const plan=await dpTxn(env,s=>{
   const b=dpLeaseCheck(s,seat,hash,now),j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');
+  if(j.wake){dpCheck(typeof args.run_ref==='string'&&/^[A-Za-z0-9_.:-]{1,160}$/.test(args.run_ref),400,'event_run_reference_required');dpCheck(!j.run_evidence||j.run_evidence.reference===args.run_ref,409,'event_run_reference_conflict');j.run_evidence={reference:args.run_ref,trust:'seat_claimant_reported',received_at:dpIso(now)};}
   if(j.delivery==='delivered'){dpCheck(j.result_text===text&&j.outcome===outcome,409,'reply_conflict');return {result:{action:'done',view:dpView(s,j,now)},write:false};}
   if(j.delivery==='uncertain'){dpCheck(j.result_text===text&&j.outcome===outcome,409,'reply_conflict_uncertain_delivery');return {result:{action:'reconcile',job:structuredClone(j)},write:false};}
   dpCheck(j.state==='claimed'&&j.claim?.epoch===b.epoch,409,'claim_required');dpCheck(!dpClaimExpired(j,now),409,'claim_expired_claim_again');
@@ -358,6 +362,7 @@ async function dpAnswer(env,seat,caller,args,hash,recheck){
    delete j.delivery_stage;delete j.last_error;
    if(j.outcome==='answer'&&!s.seats[seat]?.verified&&s.seats[seat]?.epoch===j.author.epoch)s.seats[seat].verified={at:dpIso(now),request_id:j.id,url:j.url,binding:j.author.epoch,evidence:'discord_api_response'};
   }else if(result.certain_not_sent){
+   if(j.run_evidence){j.prior_run_evidence=j.run_evidence;delete j.run_evidence;}
    // Discord rejected the call or it never left: nothing exists, so the claim stays and a retry is not a duplicate.
    j.delivery='not_sent';delete j.delivery_stage;delete j.reserved_at;delete j.nonce;delete j.outcome;delete j.result_text;delete j.author;j.last_error=result.error;
   }else{j.delivery_stage=result.thread_id||j.thread_id?'message':'thread';j.last_error=result.error;}
@@ -387,7 +392,7 @@ async function handleDiscordPackOwner(request,env){
    return send({flags:{pack:env.DISCORD_PACK_ENABLED==='true',delivery:env.DISCORD_PACK_DELIVERY_ENABLED==='true',bot_secret_bound:!!env.DISCORD_BOT_TOKEN},channel:env.DISCORD_CHANNEL_ID||null,
     seats:Object.entries(DP_SEATS).map(([seat,display])=>{const b=s.seats[seat];return {seat,display,configured_key:seats[seat]?.key_label??null,stopped_at:b?.stopped_at??null,binding:b?.lease_sha256?{number:b.epoch,session_ref:b.session_ref??null,bound_at:b.bound_at,last_seen_at:b.last_seen_at,live:!!dpLiveBinding(s,seat,now)}:null,verified:b?.verified??null};}),
     command:s.command??null,links:Object.entries(s.links).map(([id,l])=>({discord_user_id:id,name:l.name,linked_at:l.linked_at,expires_at:l.expires_at})),open_link_codes:Object.values(s.challenges).filter(c=>Date.parse(c.expires_at)>now).length,
-    jobs:Object.values(s.jobs).sort(dpById).slice(-25).reverse().map(j=>({id:j.id,seat:j.seat,kind:j.kind,state:j.state,delivery:j.delivery,next:dpNext(j,now),thread_id:j.thread_id??null,url:j.url??null,created_at:j.created_at,last_error:j.last_error??null,resolution:j.resolution??null}))});
+    jobs:Object.values(s.jobs).sort(dpById).slice(-25).reverse().map(j=>({id:j.id,seat:j.seat,kind:j.kind,state:j.state,delivery:j.delivery,next:dpNext(j,now),thread_id:j.thread_id??null,url:j.url??null,created_at:j.created_at,wake:typeof dpeView==='function'?dpeView(j,now):null,last_error:j.last_error??null,resolution:j.resolution??null}))});
   }
   dpCheck(request.headers.get('Content-Type')?.split(';')[0]==='application/json',415,'json_required');
   const a=JSON.parse(new TextDecoder().decode(await dqBytes(request)));
@@ -426,7 +431,7 @@ async function handleDiscordPackOwner(request,env){
     dpCheck(now-Date.parse(j.reserved_at)>=120e3,409,'delivery_may_still_be_in_flight_wait_two_minutes');
     const resolution={by:'owner_site_session',observed:a.observed,at:dpIso(now)};
     if(a.observed==='present'){Object.assign(j,{delivery:'delivered',state:j.outcome==='failed'?'failed':'answered',delivered_at:dpIso(now),completed_at:dpIso(now),resolution});delete j.delivery_stage;}
-    else{Object.assign(j,{delivery:'not_sent',state:'queued',attempt:(j.attempt||1)+1,resolution});for(const k of ['claim','delivery_stage','reserved_at','nonce','outcome','result_text','author'])delete j[k];}
+    else{if(j.run_evidence){j.prior_run_evidence=j.run_evidence;delete j.run_evidence;}Object.assign(j,{delivery:'not_sent',state:'queued',attempt:(j.attempt||1)+1,resolution});for(const k of ['claim','delivery_stage','reserved_at','nonce','outcome','result_text','author'])delete j[k];}
     return {result:{id:j.id,delivery:j.delivery,state:j.state,attempt:j.attempt},write:true};
    }));
   }

@@ -46,7 +46,7 @@ const DC_END = "/* ===== DD-DISCORD END ===== */";
 const discordBridge = readFileSync("discord-bridge.js", "utf8").trimEnd();
 const DQ_START = "/* ===== DD-DISCORD-QUEUE START ===== */";
 const DQ_END = "/* ===== DD-DISCORD-QUEUE END ===== */";
-const discordInbound = readFileSync("discord-inbound.js", "utf8").trimEnd()+"\n"+readFileSync("discord-owner-smoke.js", "utf8").trimEnd()+"\n"+readFileSync("discord-pack.js", "utf8").trimEnd();
+const discordInbound = readFileSync("discord-inbound.js", "utf8").trimEnd()+"\n"+readFileSync("discord-owner-smoke.js", "utf8").trimEnd()+"\n"+readFileSync("discord-pack.js", "utf8").trimEnd()+"\n"+readFileSync("discord-pack-events.js", "utf8").trimEnd();
 const TARGET = "../dawg-bot-worker.js";
 const START = "/* ===== DD-MCP-BLOCK START — generated from work/mcp-block.js; edit THERE ===== */";
 const END   = "/* ===== DD-MCP-BLOCK END ===== */";
