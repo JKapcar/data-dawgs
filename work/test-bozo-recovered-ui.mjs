@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import {loadPlaywright,chromiumExecutable} from './playwright-loader.mjs';
 const {chromium}=loadPlaywright();
 const html=fs.readFileSync('bozo.html','utf8');
-const fragment=html.slice(html.indexOf('<details class="card bz-help" id="bozoRecovered">'),html.indexOf('<!-- Overview receipt:'));
+const fragment=html.slice(html.indexOf('<details class="card bz-help" id="bozoRecovered">'),html.indexOf('</details>',html.indexOf('<details class="card bz-help" id="bozoRecovered">'))+10);
 const seed=JSON.parse(fs.readFileSync('data/bozo-recovered-closes.json','utf8'));
 const script=fs.readFileSync('bozo-recovered.js','utf8');
 const browser=await chromium.launch({executablePath:chromiumExecutable(chromium)});
@@ -39,7 +39,7 @@ try{
    }
    return route.fulfill({json:{}});
   });
-  await page.goto('https://recovery.fixture.invalid/bozo.html');
+  await page.goto('https://recovery.fixture.invalid/bozo.html?l=main#diagnostics');
   await page.locator('#bozoRecovered summary').click();
   await page.locator('.br-game').first().waitFor();
   assert.equal(await page.locator('.br-game').count(),4);

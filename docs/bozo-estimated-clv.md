@@ -1,8 +1,7 @@
 # Estimated CLV
 
 Alongside two-sided measured CLV and `clvPts` manual overrides, the schema stores `ledger/<row>/clvEstimate`, exposed by `/bozo/clv`, and a separate
-estimated-evidence disclosure below the existing CLV chart. Estimates never feed the
-measured chart, official rankings, tiebreakers, expected-win baseline or settlement.
+estimated-evidence disclosure below the existing CLV chart. Saved non-stale estimates feed labeled analytics after manager overrides and valid measured CLV. They never change official contest rankings, tiebreakers or settlement.
 Existing zero overrides remain intact. No result field is changed.
 
 ## Existing manager write path
@@ -50,14 +49,14 @@ Observed-pregame evidence requires a known kickoff and an earlier quote timestam
 
 ## Visibility and limits
 
-The league Overview CLV card displays the estimate evidence panel **open by default**.
-It includes current and historical ledger weeks, each labeled with its week, and wraps
-long source URLs on mobile. It is separate from the measured chart; it does not replace
-weekly outcome cards, standings, hierarchy history or chart values. Thus estimates
-are readable for old weeks in Overview, but not yet embedded into every historical
-weekly card. Any future integration there must preserve the same precedence and labels.
-Browser tests use the actual page CSS with isolated synthetic current/history records,
-not an authenticated live session or production data.
+Every-bet mode plots one resolved bet with usable CLV and outcome/probability axes.
+Season mode retains cumulative player averages. The all-bets table accounts for the
+same filtered denominator, including unknown, pending, push and void rows without
+inventing coordinates. Measured, estimated and override counts are separate.
+Per-row source details retain rationale, vig scenarios, quote and retrieval timestamps.
+Current-board scenario cells show estimates explicitly; official decisions and
+simulation bootstrap inputs retain their previous policy. Recovered public evidence
+is available under Diagnostics, not as an Overview card. No source history is deleted.
 
 ## Manager form
 

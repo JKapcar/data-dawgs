@@ -9445,7 +9445,7 @@ async function bozoClv(request, url, env, cors) {
   const set = settingsOf(lg);
   // The ledger says "won"/"lost"; the chart contract says "win"/"loss". Translate once,
   // here, rather than teaching the page two vocabularies for one fact.
-  const RESULT = { won: "win", lost: "loss", push: "push", void: "push" };
+  const RESULT = { won: "win", lost: "loss", push: "push", void: "void" };
   const labels = lg.weekLabels || {};
 
   const legs = Object.entries(ledger)
@@ -9486,7 +9486,7 @@ async function bozoClv(request, url, env, cors) {
       clvSource: r.clvSource || null,
       clvEstimate: r.clvEstimate ? {...r.clvEstimate,stale:!bozoEstimateSame(r.clvEstimate.basis,bozoEstimateBasis(bozoEstimateSettledRow(r,rowKey,lg)))} : null,
 
-      result: RESULT[r.result] || null,
+      result: RESULT[bozoEstimateSettledRow(r,rowKey,lg,true).result] || null,
       gradedAt: r.gradedAt || null,
 
       // ⚠️ Needed by the Royale survival simulation, which BOOTSTRAPS from a player's own
@@ -10047,13 +10047,13 @@ function bozoAssumedOpposite(close) { return null; }
 // BEGIN BOZO ESTIMATED CLV: separate from captured prices and manual overrides.
 function bozoEstimateCanonical(value){if(Array.isArray(value))return value.map(bozoEstimateCanonical);if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).filter(k=>value[k]!=null).sort().map(k=>[k,bozoEstimateCanonical(value[k])]));return value;}
 function bozoEstimateSame(a,b){return bozoSame(bozoEstimateCanonical(a),bozoEstimateCanonical(b));}
-function bozoEstimateSettledRow(row,rowKey,live){
+function bozoEstimateSettledRow(row,rowKey,live,includeVoid=false){
   if(row.result!=null)return row;
   if(!live||row.season!==live.season||row.week!==live.week)return row;
   const matches=Object.entries(live.picks||{}).filter(([key,pick])=>`${live.season}-w${live.week}-${key}`===rowKey&&row.selectionKey&&pick.selectionKey===row.selectionKey&&row.eventId!=null&&pick.eventId!=null&&String(pick.eventId)===String(row.eventId));
   if(matches.length!==1)return row;
   const result=live.results?.[matches[0][0]];
-  if(!result||!['won','lost','push'].includes(result.result))return row;
+  if(!result||!(includeVoid?['won','lost','push','void']:['won','lost','push']).includes(result.result))return row;
   return {...row,result:result.result,estimateSettlement:{source:'current_results',result:result.result,actual:result.actual??null,resultSource:result.resultSource??null,gradeSource:result.gradeSource??null,gradeObservedAt:result.gradeObservedAt??null}};
 }
 function bozoEstimateBasis(row){const basis=Object.fromEntries(['selectionKey','entryBook','price','priceOpp','entryOppSource','close','closeOpp','closeOppSource','verificationStatus','result','startsAt'].map(k=>[k,row[k]??null]));if(row.estimateSettlement)basis.estimateSettlement=row.estimateSettlement;return basis;}

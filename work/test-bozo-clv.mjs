@@ -436,7 +436,7 @@ ok(/clv-tablewrap/.test(page), "the table twin ships — it is the WCAG counterp
      "a leg the capture could not match reads 'no close' and carries the reason");
   ok(/clvup|clvdn/.test(code) && !/class="px \$\{v>=0\?'pos'/.test(code),
      "the CLV cell uses its own classes — .pos is already the reel position label");
-  ok(/Worst CLV is measured on/.test(code),
+  ok(/CLV evidence .*available on/.test(code),
      "the lever flag counts how many legs it can actually measure instead of claiming none");
 }
 

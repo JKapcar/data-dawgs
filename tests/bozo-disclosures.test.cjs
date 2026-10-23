@@ -23,7 +23,7 @@ function fixture(measured = 1) {
     devigP:()=>.6, leverStandings:()=>({rank:[[1,2],[0,0],[1,2],[1,2]],
       holds:[[true,false],[false,false],[false,true],[true,false]],
       d:live.map(x=>({beat:null,clv:x.clv,ts:x.ts}))}),
-    esc:x=>String(x), teamOf:x=>x, flaggedRows:()=>[], clvDeltaOf:x=>x.clv,
+    esc:x=>String(x), teamOf:x=>x, flaggedRows:()=>[], clvDeltaOf:x=>x.clv, clvDisplayEstimate:()=>null,
     legRow:()=>({}), clvMissingReason:()=> 'awaiting close', ordinal:x=>x+'th',
     when:()=> '12:00', priceSourceBadge:()=>'', proxyBadge:()=>'', meter:()=>''
   };
@@ -60,7 +60,7 @@ test('diagnostic values and important caveats stay outside the closed methodolog
   assert.ok(!d.getElementById('dgTable').closest('details'));
   const flags=d.getElementById('dgFlags').cloneNode(true);
   flags.querySelectorAll('details').forEach(x=>x.remove());
-  assert.match(flags.textContent,/Worst CLV is measured on 1 of 2 legs/);
+  assert.match(flags.textContent,/CLV evidence .*available on 1 of 2 legs/);
   assert.match(flags.textContent,/Missing sides stay unmeasured/);
   assert.doesNotMatch(flags.textContent,/A leg whose market can be captured draws/);
   assert.match(d.getElementById('dgClvHelp').textContent,/that player's own past legs/);
@@ -86,10 +86,10 @@ test('click disclosures repeatedly and keep their open state after repaint',()=>
 
 test('pending, partial, fully measured and empty boards keep honest visible states',()=>{
   const {document:d,render,live}=fixture(0);
-  assert.match(d.getElementById('dgFlags').textContent,/can't be measured on this board yet/);
+  assert.match(d.getElementById('dgFlags').textContent,/No usable CLV evidence is loaded for this board yet/);
   assert.equal(d.getElementById('dgClvHelp').open,false);
   live[0].clv=.02;render();
-  assert.match(d.getElementById('dgFlags').textContent,/measured on 1 of 2/);
+  assert.match(d.getElementById('dgFlags').textContent,/available on 1 of 2/);
   live[1].clv=.01;render();
   assert.equal(d.getElementById('dgClvHelp'),null);
   render([]);

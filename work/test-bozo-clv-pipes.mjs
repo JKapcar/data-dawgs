@@ -104,8 +104,8 @@ ok(/DK captured/.test(ctx.__badge(kap)), "a captured entry still reads DK captur
 
 /* ---- one definition, not five ---- */
 const code = page.replace(/\/\*[\s\S]*?\*\//g, "");
-ok(/const withClv = live\.filter\(x=>clvDeltaOf\(x, legRow\(x\)\) != null\)/.test(code),
-   "the lever's coverage flag counts with clvDeltaOf, the rule the simulation uses");
+ok(/const withClv = live\.filter\(x=>clvDeltaOf\(x, legRow\(x\)\) != null \|\| clvDisplayEstimate\(x\)\)/.test(code),
+   "display coverage includes official values and explicitly labeled scenario estimates");
 ok(!/const withClv = live\.filter\(x=>\{[^]*?devigP\(r\.close/.test(code),
    "it no longer hand-rolls its own test out of the close alone");
 ok(/clv: clvDeltaOf\(x, r\)/.test(code) && /const r = legRow\(x\);/.test(code),
