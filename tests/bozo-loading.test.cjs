@@ -46,3 +46,31 @@ test('hub distinguishes pending and empty state without requiring directory meta
  vm.createContext(c);vm.runInContext(lift('paintHouseTicket'),c);c.paintHouseTicket();assert.match(nodes.get('houseSlip').innerHTML,/Loading the live/);
  c.boardReady=true;c.paintHouseTicket();assert.match(nodes.get('houseSlip').innerHTML,/no members yet/);assert.doesNotMatch(nodes.get('houseSlip').innerHTML,/unreachable/);
 });
+test('a /scores answer for a week the board has left cannot repaint the slate',async()=>{
+ const nodes=new Map(),late=deferred(),painted=[];
+ const week7={games:[{id:'w7',start:'2026-10-25T17:00:00Z'}],window:{week:7,loDate:'2026-10-22',hiDate:'2026-10-26'}};
+ const c={S:{},GAMES:{},WEEK_WINDOW:null,ESPN_PATH:{nfl:'football/nfl'},prefillFromMyLeg(){},paintGames(){painted.push(c.GAMES.nfl.map(g=>g.id));},
+ document:{getElementById(id){if(!nodes.has(id))nodes.set(id,{textContent:'',innerHTML:''});return nodes.get(id);}},
+ wGet:path=>/[?&]week=1(&|$)/.test(path)?late.promise:Promise.resolve(week7)};
+ vm.createContext(c);vm.runInContext(['bozoWeekNum','easternDate','inWeekWindow','fetchScores','loadGames'].map(lift).join('\n'),c);
+ const first=c.loadGames('nfl');                       // S is still empty, so this asks for Week 1
+ c.S={week:7};c.WEEK_WINDOW=null;c.GAMES={};await c.loadGames('nfl');   // what the first board answer does
+ late.resolve({games:[{id:'w1',start:'2026-09-13T17:00:00Z'}],window:{week:1,loDate:'2026-09-10',hiDate:'2026-09-14'}});await first;
+ assert.equal(c.WEEK_WINDOW.week,7);assert.deepEqual(painted,[['w7']]);assert.match(nodes.get('srcNote').textContent,/^Week 7 slate/);
+});
+test('init asks for no slate before the board knows its week',()=>{
+ const init=html.match(/\(async function init\(\)\{[\s\S]*?\n\}\)\(\);/)[0].replace(/\/\/.*$/gm,'');
+ assert.doesNotMatch(init,/loadGames\(/);assert.match(lift('watchState'),/loadGames\(/);
+});
+test('rules come from the board node until the directory answers, exactly as the Worker derives them',()=>{
+ const worker=fs.readFileSync(require('node:path').join(__dirname,'../dawg-bot-worker.js'),'utf8');
+ const w={};vm.createContext(w);vm.runInContext(worker.match(/const SETTING_DEFAULTS = \{[\s\S]*?\};/)[0]+'\n'+worker.match(/const settingsOf = lg => \(\{[\s\S]*?\}\);/)[0]+'\nthis.settingsOf=settingsOf;',w);
+ const c={S:{},league:()=>null};vm.createContext(c);
+ vm.runInContext(html.match(/const boardSettings = [\s\S]*?\}\);/)[0]+'\n'+html.match(/function settings\(\)\{[^\n]*\}/)[0],c);
+ const plain=o=>JSON.parse(JSON.stringify(o)),page=()=>plain(c.settings()),viaWorker=node=>{const {dupesRetired,...rest}=plain(w.settingsOf(node));return rest;};
+ assert.deepEqual(page(),{stake:50,allowEdit:true,lockRule:'all',lockCount:0,levers:[0,1,2,3],format:'standard',buyback:0,formatLocked:false,synthetic:false});
+ for(const node of [{},{stake:25,format:'royale',buyback:10,lockRule:'count',lockCount:3,levers:[2,0],allowEdit:false,formatLocked:true},{stake:'25',levers:[],format:'odd',synthetic:true}]){
+  c.S=node;assert.deepEqual(page(),viaWorker(node));
+ }
+ c.S={stake:25};c.league=()=>({settings:{stake:75}});assert.equal(c.settings().stake,75);
+});

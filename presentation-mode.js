@@ -7,7 +7,8 @@
   const key = 'dd:presentation:v1:' + page;
   let mode = 'tldr';
   try { if (localStorage.getItem(key) === 'agent') mode = 'agent'; } catch (_) {}
-  // This script runs in the head. Restore the choice before the page can paint.
+  // Loaded with defer (inline on datedawg.html) so it never holds first paint. Pages whose
+  // layout depends on the choice restore it inline first (data-dd-view-early).
   document.documentElement.setAttribute('data-dd-view',mode);
   document.documentElement.setAttribute('data-dd-page',name);
   function mount(){

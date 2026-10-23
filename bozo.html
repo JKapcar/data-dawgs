@@ -2024,8 +2024,7 @@ html[data-theme="dark"] #diagExploreCard{--dx-teal:#66d4cb;--dx-red:#ff9870;--dx
 </style>
 
 <link rel="stylesheet" href="install-help.css">
-<link rel="stylesheet" href="presentation-mode.css">
-<script src="presentation-mode.js"></script>
+<script src="presentation-mode.js" defer></script>
 </head>
 <body>
 <div class="wrap">
@@ -4710,10 +4709,12 @@ function slim(raw){
 }
 async function fetchScores(sport){
   const week = bozoWeekNum();
+  // A window is adopted only while the board is still on the week it was asked for.
+  const adopt = j => { if(j && j.window && week===bozoWeekNum()) WEEK_WINDOW = j.window; };
   // Worker week scope is authoritative — out-of-week events never enter the option list.
   try{
     const j = await wGet(`/scores?sport=${sport}&week=${week}`);
-    if(j && j.window) WEEK_WINDOW = j.window;
+    adopt(j);
     if(j && Array.isArray(j.games)) return j.games.filter(inWeekWindow);
   }catch(e){ /* fall through to ESPN */ }
   const url = `https://site.api.espn.com/apis/site/v2/sports/${ESPN_PATH[sport]}/scoreboard?dates=${dateRange()}&limit=400`;
@@ -4723,15 +4724,22 @@ async function fetchScores(sport){
     return slim(await r.json()).filter(inWeekWindow);
   }catch(e){
     const j = await wGet(`/scores?sport=${sport}&week=${week}&dates=${dateRange()}`);
-    if(j && j.window) WEEK_WINDOW = j.window;
+    adopt(j);
     return (j.games||[]).filter(inWeekWindow);
   }
 }
 async function loadGames(sport){
   const sel=document.getElementById('fGame');
   sel.innerHTML='<option value="">Loading…</option>';
+  // ⚠️ The board can arrive or change week while /scores is in flight. An answer for a
+  // week the board has left is dropped — the loadGames() the new week started owns the
+  // list. Kept, a late Week 1 answer laid Week 1 dates over a Week 7 slate and the
+  // picker read "no games in this Bozo week".
+  const week = bozoWeekNum();
   try{
-    GAMES[sport]=await fetchScores(sport);
+    const games = await fetchScores(sport);
+    if(week!==bozoWeekNum()) return;
+    GAMES[sport]=games;
     const note=document.getElementById('srcNote');
     if(note){
       note.textContent = WEEK_WINDOW && WEEK_WINDOW.loDate
@@ -4739,6 +4747,7 @@ async function loadGames(sport){
         : '';
     }
   }catch(e){
+    if(week!==bozoWeekNum()) return;
     GAMES[sport]=[];
     document.getElementById('srcNote').textContent='Scores unreachable — '+e.message+'. Grading falls back to manual entry.';
   }
@@ -6465,7 +6474,14 @@ function paintLeague(){
   paintRoster();
 }
 
-function settings(){ return league()?.settings || S.settings || {stake:50,allowEdit:true,lockRule:'all',lockCount:0,levers:[0,1,2,3],format:'standard',buyback:0,formatLocked:false,synthetic:false}; }
+// Until /league/list answers, the board node carries the rules itself: the Worker keeps
+// them as top-level fields of /bozo/leagues/<id> (there is no `settings` key) and builds
+// the directory's copy from them with settingsOf(). Mirrored here, defaults included.
+const boardSettings = s => ({stake:Number.isFinite(s.stake)?s.stake:50, allowEdit:s.allowEdit!==false,
+  lockRule:s.lockRule==='count'?'count':'all', lockCount:Number.isFinite(s.lockCount)?s.lockCount:0,
+  levers:Array.isArray(s.levers)&&s.levers.length?s.levers:[0,1,2,3], format:s.format==='royale'?'royale':'standard',
+  buyback:Number.isFinite(s.buyback)?s.buyback:0, formatLocked:s.formatLocked===true, synthetic:s.synthetic===true});
+function settings(){ return league()?.settings || boardSettings(S); }
 // Which ruleset this league runs. Standard names a bozo who plays again next week;
 // Bozo Royale eliminates them. Everything else about a leg is identical.
 const isRoyale = () => settings().format === 'royale';
@@ -9973,7 +9989,8 @@ async function clvLoad(force){
   renderAuth();
   void loadLeagues();
   void loadRoster();
-  loadGames('nfl');
+  // No loadGames() here: the board's first answer loads the slate for its own week (see
+  // watchState). Asked now, S is still empty, so it asked for Week 1.
 })();
 </script>
 
