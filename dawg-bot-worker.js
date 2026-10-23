@@ -1707,6 +1707,7 @@ export default {
   // sensitive auth material and exists for disaster recovery, not polling.
   async scheduled(controller, env, ctx) {
     const cron = (controller && controller.cron) || "";
+    if(cron === "*/5 * * * *" && env.DISCORD_GROK_WAKE_ENABLED === "true" && ctx?.waitUntil)ctx.waitUntil(dgDrain(env).catch(()=>{}));
     // Time-bounded, approved incident repair rides an existing tick; never HTTP.
     if(cron === "*/5 * * * *" && ctx?.waitUntil){
       ctx.waitUntil(DD_OWNER_REPAIR({env,fbGet,fbPut,backup:now=>{const run=runBackup(env,now);opsTrack(ctx,env,"backup",now,run);return run;}}).catch(async()=>{
@@ -10557,6 +10558,8 @@ async function bozoFallbackScores(env, sport, season, nowMs = Date.now(), option
   return next;
 }
 
+
+
 /* ===== DD-BOZO-ESPN-SCORES START — generated from work/bozo-espn-scores.js; edit THERE ===== */
 /* ===================== live finals: ESPN first, the schedule CSVs decide =====================
    The live half of the score feed. It lands a final minutes after the whistle, while
@@ -12923,11 +12926,12 @@ function dpSeatForCaller(env,caller){
 }
 const dpClaimExpired=(j,now)=>j.state==='claimed'&&!(Date.parse(j.claim?.expires_at)>now);
 function dpLiveBinding(s,seat,now){const b=s.seats[seat];return b&&b.lease_sha256&&!b.stopped_at&&now-Date.parse(b.last_seen_at)<=DP.leaseIdleMs?b:null;}
-function dpLeaseCheck(s,seat,hash,now){
+function dpLeaseCheck(s,seat,hash,now,id){
  const b=s.seats[seat];dpCheck(!b?.stopped_at,409,'seat_stopped_by_owner');dpCheck(b?.lease_sha256||b?.history.some(h=>h.lease_sha256===hash),409,'seat_not_bound_call_dd_pack_bind');
  // An owner stop ends the lease; a session must not quietly rebind after it.
  if(b.lease_sha256!==hash){const old=b.history.find(h=>h.lease_sha256===hash);dpFail(409,!old?'lease_invalid':old.ended==='owner_stop'?'lease_ended_by_owner_stop':'lease_superseded_by_another_session');}
  dpCheck(now-Date.parse(b.last_seen_at)<=DP.leaseIdleMs,409,'lease_expired_rebind');
+ if(id!==undefined){dpCheck(!b.job_id||b.job_id===id,403,'lease_scoped_to_other_job');dpCheck(s.jobs[id]?.wake?.mechanism!=='grok_routine'||b.job_id===id,403,'wake_admission_required');}
  return b;
 }
 async function dpLeaseHash(lease){dpCheck(typeof lease==='string'&&/^dpl_[A-Za-z0-9_-]{43}$/.test(lease),400,'lease_required');return dcHash(lease);}
@@ -12946,14 +12950,15 @@ function dpNext(j,now){
 function dpView(s,j,now){
  const t=j.thread_id?s.threads[j.thread_id]:null;
  const history=t?t.turns.filter(id=>id!==j.id&&dpById({id},j)<0).slice(-DP.historyTurns).map(id=>s.jobs[id]).filter(Boolean).map(p=>({id:p.id,question:p.question,reply:p.delivery==='delivered'?p.result_text:null,outcome:p.outcome??null,state:p.state})):[];
- return {id:j.id,seat:j.seat,kind:j.kind,root_id:j.root_id,thread_id:j.thread_id??null,thread_name:dpThreadName(j),requester:j.requester_name,question:j.question,question_trust:j.question_trust,created_at:j.created_at,
-  state:j.state,execution:j.execution??'not_started',wake:{performed:false,mechanism:'session_polling',execution_verified:false},claim:j.claim?{binding:j.claim.epoch,expires_at:j.claim.expires_at,expired:dpClaimExpired(j,now)}:null,attempt:j.attempt,outcome:j.outcome??null,reply:j.result_text??null,
+ return {id:j.id,seat:j.seat,guild_id:j.guild_id,parent_id:j.parent_id,kind:j.kind,root_id:j.root_id,thread_id:j.thread_id??null,thread_name:dpThreadName(j),requester:j.requester_name,question:j.question,question_trust:j.question_trust,created_at:j.created_at,
+  state:j.state,execution:j.execution??'not_started',wake:j.wake?.mechanism==='grok_routine'?dgView(j,now):{performed:false,mechanism:'session_polling',execution_verified:false},claim:j.claim?{binding:j.claim.epoch,expires_at:j.claim.expires_at,expired:dpClaimExpired(j,now)}:null,attempt:j.attempt,outcome:j.outcome??null,reply:j.result_text??null,
   delivery:j.delivery,delivery_stage:j.delivery_stage??null,reserved_at:j.reserved_at??null,next:dpNext(j,now),last_error:j.last_error??null,
   receipt:j.delivery==='delivered'?{thread_id:j.thread_id,message_id:j.message_id??null,url:j.url??null,delivered_at:j.delivered_at,evidence:j.resolution?'owner_observed_in_discord':'discord_api_response'}:null,
   author:j.author??null,history};
 }
 function dpAckText(s,j,now,replay){
  const name=DP_SEATS[j.seat],b=s.seats[j.seat];
+ if(j.wake?.mechanism==='grok_routine')return (replay?'Already received: ':'Queued: ')+'request '+j.id+' for Grok. Routine wake: '+j.wake.status+'. A wake acknowledgement is not a completed reply. Check the Pack page for claim and delivery evidence; do not resubmit.';
  const state={queued:'queued; nothing has run yet',claimed:'claimed by '+name+'’s bound session; execution is not verified',answered:'answered',failed:'reported as not completed'}[j.state]||j.state;
  let text=(replay?'Already received: ':'Queued: ')+'request '+j.id+' for '+name+' is '+state+'. '+name+'’s session last checked in '+(b?.last_seen_at?dpAgo(now-Date.parse(b.last_seen_at)):'never')+(b?.poll_minutes?' and says it checks about every '+b.poll_minutes+' min':'')+'. ';
  text+='The reply will appear in '+(j.kind==='new'?'a new thread named "'+dpThreadName(j)+'" in this channel':'this thread')+', labelled with the seat and connector key; model identity is not verified.';
@@ -12990,11 +12995,11 @@ async function dpInteraction(event,env,execution){
  const reply=content=>dqReply({type:4,data:{content,flags:64,allowed_mentions:{parse:[]}}});
  let input;try{input=dpInput(event,env);}catch(e){return reply('Not accepted: '+dpMessage(e)+' Nothing was queued.');}
  if(execution?.waitUntil){
-  execution.waitUntil((async()=>{let text;try{text=await dpAdmit(event,env,input);}catch(e){text='Not accepted: '+dpMessage(e)+' Nothing was queued.';}
+  execution.waitUntil((async()=>{let text;try{text=await dpAdmit(event,env,input);if(typeof dgDrain==='function')await dgDrain(env,event.id).catch(()=>{});}catch(e){text='Not accepted: '+dpMessage(e)+' Nothing was queued.';}
    try{await dpEditOriginal(env,event,text);}catch{console.warn('discord_pack_ack_edit_failed',{request_id:event.id});}})());
   return dqReply({type:5,data:{flags:64}}); // deferred, ephemeral: only the requester sees the outcome
  }
- try{return reply(await dpAdmit(event,env,input));}catch(e){return reply('Not accepted: '+dpMessage(e)+' Nothing was queued.');}
+ try{const text=await dpAdmit(event,env,input);if(typeof dgDrain==='function')await dgDrain(env,event.id).catch(()=>{});return reply(text);}catch(e){return reply('Not accepted: '+dpMessage(e)+' Nothing was queued.');}
 }
 async function dpAdmit(event,env,{question,to}){
  dpCheck(env.FB_SECRET,503,'pack_store_unconfigured');
@@ -13019,13 +13024,14 @@ async function dpAdmit(event,env,{question,to}){
   if(s.seats[seat]?.stopped_at)return {result:label+'’s seat is stopped by the site owner. Nothing was queued.',write:false};
   if(!Object.hasOwn(seats,seat))return {result:label+' has no supported incoming connection configured, so nothing was queued. Pack members are only listed as connected after their own end-to-end test.',write:false};
   const b=dpLiveBinding(s,seat,now);
-  if(!b)return {result:label+'’s seat is configured, but no session is bound and checking in right now (last check-in: '+(s.seats[seat]?.last_seen_at?dpAgo(now-Date.parse(s.seats[seat].last_seen_at)):'never')+'). Nothing was queued.',write:false};
+  if(!b&&!(typeof dgAdmissible==='function'&&dgAdmissible(s,env,seat,uid,now)))return {result:label+'’s seat is configured, but no session is bound and checking in right now (last check-in: '+(s.seats[seat]?.last_seen_at?dpAgo(now-Date.parse(s.seats[seat].last_seen_at)):'never')+'). Nothing was queued.',write:false};
   dpCheck(Object.keys(s.jobs).length<DP.jobs,503,'pack_capacity_reached');
   const hour=Math.floor(now/3600e3),w=s.windows.admit?.hour===hour?s.windows.admit:{hour,total:0,users:{}};w.users=w.users??{};
   dpCheck(w.total<DP.admitTotal&&(w.users[uid]||0)<DP.admitUser,429,'pack_rate_limit');w.total++;w.users[uid]=(w.users[uid]||0)+1;s.windows.admit=w;
   const job={id:event.id,seat,kind,root_id:kind==='new'?event.id:thread.root_id,thread_id:kind==='new'?null:event.channel_id,requester_id:uid,requester_name:name,
    guild_id:event.guild_id,parent_id:env.DISCORD_CHANNEL_ID,origin_channel_id:event.channel_id,question,question_trust:'untrusted_discord_user_text',fingerprint,created_at:dpIso(now),
    state:'queued',attempt:1,delivery:'not_sent',execution:'not_started'};
+  if(typeof dgAdmissible==='function'&&dgAdmissible(s,env,seat,uid,now))dgStage(job,now);
   s.jobs[event.id]=job;
   if(thread){thread.turns=[...thread.turns,event.id];thread.updated_at=dpIso(now);}
   return {result:dpAckText(s,job,now,false),write:true};
@@ -13038,7 +13044,7 @@ const dpLeaseArg={type:'string',pattern:'^dpl_[A-Za-z0-9_-]{43}$',description:'L
 const dpIdArg={type:'string',pattern:'^[0-9]{17,20}$'};
 const DP_TOOLS=[
  {name:'dd_pack_bind',title:'Pack seat: bind this session',readOnly:false,description:'Bind THIS session as the only consumer of the Pack seat that this connector key is configured for. Returns a lease for the other dd_pack_* tools. Binding again from any session supersedes the previous one and returns its unsent claims to the queue. session_ref and poll_minutes are self-declared and shown as such.'+DP_SAFETY,
-  inputSchema:{type:'object',additionalProperties:false,properties:{session_ref:{type:'string',minLength:1,maxLength:200},poll_minutes:{type:'integer',minimum:1,maximum:1440}}}},
+  inputSchema:{type:'object',additionalProperties:false,properties:{session_ref:{type:'string',minLength:1,maxLength:200},poll_minutes:{type:'integer',minimum:1,maximum:1440},id:dpIdArg,admission:{type:'string',pattern:'^dga_[A-Za-z0-9_-]{43}$',description:'One-time job admission proof supplied only by the configured routine webhook; never a seat lease.'}}}},
  {name:'dd_pack_poll',title:'Pack seat: check in and list requests',readOnly:false,description:'Record a check-in for this seat and list requests addressed to it: queued work, this binding\'s claims, and deliveries needing attention. Each request includes earlier turns of its thread.'+DP_SAFETY,
   inputSchema:{type:'object',additionalProperties:false,required:['lease'],properties:{lease:dpLeaseArg,after:dpIdArg}}},
  {name:'dd_pack_read',title:'Pack seat: read one request',readOnly:true,description:'Read one request addressed to this seat, including its delivery receipt.'+DP_SAFETY,
@@ -13071,7 +13077,7 @@ async function dpSeatDispatch(m,env,caller,reauth){
 }
 async function dpMcpRun(name,args,env,caller,reauth){
  const seat=dpSeatForCaller(env,caller);dpCheck(seat,403,'pack_seat_not_available_for_this_connector_key');
- const allowed={dd_pack_bind:['session_ref','poll_minutes'],dd_pack_poll:['lease','after'],dd_pack_read:['lease','id'],dd_pack_claim:['lease','id'],dd_pack_answer:['lease','id','text','outcome'],dd_pack_release:['lease','id']}[name];
+ const allowed={dd_pack_bind:['session_ref','poll_minutes','id','admission'],dd_pack_poll:['lease','after'],dd_pack_read:['lease','id'],dd_pack_claim:['lease','id'],dd_pack_answer:['lease','id','text','outcome'],dd_pack_release:['lease','id']}[name];
  dpCheck(allowed&&dpObj(args)&&Object.keys(args).every(k=>allowed.includes(k)),400,'invalid_arguments');
  dpCheck(args.id===undefined||dqSnow(args.id),400,'invalid_request_id');dpCheck(args.after===undefined||dqSnow(args.after),400,'invalid_cursor');
  dpCheck(env.FB_SECRET,503,'pack_store_unconfigured');
@@ -13080,9 +13086,9 @@ async function dpMcpRun(name,args,env,caller,reauth){
  if(name==='dd_pack_bind')return dpBind(env,seat,caller,args,recheck);
  const hash=await dpLeaseHash(args.lease),now=Date.now();
  if(name==='dd_pack_answer')return dpAnswer(env,seat,caller,args,hash,recheck);
- if(name==='dd_pack_read')return dpTxn(env,s=>{dpLeaseCheck(s,seat,hash,now);const j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');return {result:{job:dpView(s,j,now)},write:false};});
+ if(name==='dd_pack_read')return dpTxn(env,s=>{dpLeaseCheck(s,seat,hash,now,args.id);const j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');return {result:{job:dpView(s,j,now)},write:false};});
  if(name==='dd_pack_poll')return dpTxn(env,s=>{
-  const b=dpLeaseCheck(s,seat,hash,now),mine=Object.values(s.jobs).filter(j=>j.seat===seat).sort(dpById);
+  const b=dpLeaseCheck(s,seat,hash,now),mine=Object.values(s.jobs).filter(j=>j.seat===seat&&(!b.job_id||j.id===b.job_id)&&(j.wake?.mechanism!=='grok_routine'||b.job_id===j.id)).sort(dpById);
   const touch=now-Date.parse(b.last_seen_at)>=30e3;if(touch)b.last_seen_at=dpIso(now);
   const open=mine.filter(j=>j.delivery!=='uncertain'&&(j.state==='queued'||(j.state==='claimed'&&(j.claim?.epoch===b.epoch||dpClaimExpired(j,now))))&&(!args.after||dpById({id:args.after},j)<0));
   return {result:{seat,display:DP_SEATS[seat],binding:b.epoch,checked_in_at:b.last_seen_at,verified:b.verified??null,jobs:open.slice(0,DP.pollPage).map(j=>dpView(s,j,now)),next_cursor:open.length>DP.pollPage?open[DP.pollPage-1].id:null,
@@ -13090,7 +13096,7 @@ async function dpMcpRun(name,args,env,caller,reauth){
  });
  await recheck();
  if(name==='dd_pack_claim')return dpTxn(env,s=>{
-  const b=dpLeaseCheck(s,seat,hash,now),j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');
+  const b=dpLeaseCheck(s,seat,hash,now,args.id),j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');
   dpCheck(j.delivery==='not_sent',409,'delivery_already_reserved');dpCheck(j.state==='queued'||j.state==='claimed',409,'request_closed');
   dpCheck(j.state==='queued'||j.claim?.epoch===b.epoch||dpClaimExpired(j,now),409,'claimed_by_another_binding');
   const renewed=j.state==='claimed'&&j.claim?.epoch===b.epoch;
@@ -13098,7 +13104,7 @@ async function dpMcpRun(name,args,env,caller,reauth){
   return {result:{job:dpView(s,j,now),renewed},write:true};
  });
  if(name==='dd_pack_release')return dpTxn(env,s=>{
-  const b=dpLeaseCheck(s,seat,hash,now),j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');
+  const b=dpLeaseCheck(s,seat,hash,now,args.id),j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');
   if(j.state==='queued')return {result:{job:dpView(s,j,now),replayed:true},write:false};
   dpCheck(j.state==='claimed'&&j.claim?.epoch===b.epoch&&j.delivery==='not_sent',409,'release_requires_own_unsent_claim');
   j.state='queued';delete j.claim;return {result:{job:dpView(s,j,now),replayed:false},write:true};
@@ -13109,12 +13115,28 @@ async function dpBind(env,seat,caller,args,recheck){
  const ref=args.session_ref??null,pm=args.poll_minutes??null;
  dpCheck(ref===null||(typeof ref==='string'&&ref.trim().length>0&&ref.length<=200&&!/[\u0000-\u001f\u007f]/.test(ref)),400,'invalid_session_ref');
  dpCheck(pm===null||(Number.isInteger(pm)&&pm>=1&&pm<=1440),400,'invalid_poll_minutes');
+ const scoped=args.id!==undefined||args.admission!==undefined;
+ dpCheck(!scoped||(dqSnow(args.id)&&typeof args.admission==='string'&&/^dga_[A-Za-z0-9_-]{43}$/.test(args.admission)),400,'invalid_wake_admission');
+ const admissionHash=scoped?await dcHash(args.admission):null;
  const lease='dpl_'+dpRandom(32),hash=await dcHash(lease),now=Date.now();await recheck();
  return dpTxn(env,s=>{
   const prev=s.seats[seat],released=[];dpCheck(!prev?.stopped_at,409,'seat_stopped_by_owner');
+  const wakeJobs=Object.values(s.jobs).filter(j=>j.seat===seat&&j.wake?.mechanism==='grok_routine');
+  const requireAdmission=seat==='grok'&&(env.DISCORD_GROK_WAKE_ENABLED==='true'||wakeJobs.length>0);
+  dpCheck(!requireAdmission||scoped,403,'wake_admission_required');
+  if(scoped){
+   const j=s.jobs[args.id],w=j?.wake;
+   dpCheck(seat==='grok'&&j?.seat===seat&&w?.mechanism==='grok_routine'&&['sending','accepted','uncertain'].includes(w.status)&&w.admission_sha256===admissionHash&&!w.bound_at&&w.deadline_ms>now,403,'wake_admission_invalid_or_consumed');
+   dpCheck(dgAdmissible(s,env,seat,j.requester_id,now)&&j.guild_id===env.DISCORD_GUILD_ID&&j.parent_id===env.DISCORD_CHANNEL_ID,403,'wake_admission_not_authorized');
+   dpCheck(j.state==='queued'&&j.delivery==='not_sent',409,'wake_job_closed');
+   dpCheck(!wakeJobs.some(x=>x.id!==j.id&&['sending','accepted','uncertain'].includes(x.wake.status)&&x.delivery!=='delivered'),409,'other_wake_outstanding');
+   dpCheck(!prev?.job_id||prev.job_id===j.id||s.jobs[prev.job_id]?.delivery==='delivered',409,'other_job_bound');
+   dpCheck(!Object.values(s.jobs).some(x=>x.seat===seat&&x.id!==j.id&&x.state==='claimed'&&x.delivery!=='delivered'),409,'other_job_claimed');
+   w.bound_at=dpIso(now);w.binding=(prev?.epoch||0)+1;delete w.admission_sha256;
+  }
   for(const j of Object.values(s.jobs))if(j.seat===seat&&j.state==='claimed'&&j.delivery==='not_sent'){j.state='queued';delete j.claim;released.push(j.id);}
   const history=[...(prev?.history??[]),...(prev?.lease_sha256?[{epoch:prev.epoch,lease_sha256:prev.lease_sha256,session_ref:prev.session_ref??null,bound_at:prev.bound_at,superseded_at:dpIso(now)}]:[])].slice(-5);
-  s.seats[seat]={epoch:(prev?.epoch||0)+1,lease_sha256:hash,key_label:caller.keyLabel,session_ref:ref,poll_minutes:pm,bound_at:dpIso(now),last_seen_at:dpIso(now),verified:null,history};
+  s.seats[seat]={...(scoped?{job_id:args.id}:{}),epoch:(prev?.epoch||0)+1,lease_sha256:hash,key_label:caller.keyLabel,session_ref:ref,poll_minutes:pm,bound_at:dpIso(now),last_seen_at:dpIso(now),verified:null,history};
   return {result:{seat,display:DP_SEATS[seat],lease,binding:s.seats[seat].epoch,released,notice:'Keep this lease inside this session only. Binding from any other session supersedes this one.'},write:true};
  });
 }
@@ -13183,7 +13205,7 @@ async function dpAnswer(env,seat,caller,args,hash,recheck){
  dpCheck(env.DISCORD_PACK_DELIVERY_ENABLED==='true'&&env.DISCORD_BOT_TOKEN,403,'pack_delivery_disabled');
  await recheck();
  const plan=await dpTxn(env,s=>{
-  const b=dpLeaseCheck(s,seat,hash,now),j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');
+  const b=dpLeaseCheck(s,seat,hash,now,args.id),j=s.jobs[args.id];dpCheck(j&&j.seat===seat,404,'request_not_found_for_this_seat');
   if(j.delivery==='delivered'){dpCheck(j.result_text===text&&j.outcome===outcome,409,'reply_conflict');return {result:{action:'done',view:dpView(s,j,now)},write:false};}
   if(j.delivery==='uncertain'){dpCheck(j.result_text===text&&j.outcome===outcome,409,'reply_conflict_uncertain_delivery');return {result:{action:'reconcile',job:structuredClone(j)},write:false};}
   dpCheck(j.state==='claimed'&&j.claim?.epoch===b.epoch,409,'claim_required');dpCheck(!dpClaimExpired(j,now),409,'claim_expired_claim_again');
@@ -13313,6 +13335,57 @@ async function handleDiscordPackOwner(request,env){
   dpCheck(result?.name==='pack'&&result.application_id===env.DISCORD_APPLICATION_ID&&result.guild_id===env.DISCORD_GUILD_ID&&dqSnow(result.id),502,'registration_uncertain');
   return send(await dpTxn(env,s=>{dpCheck(s.command?.fingerprint===fingerprint,409,'registration_conflict');s.command={...s.command,status:'registered',command_id:result.id,registered_at:dpIso(now)};return {result:{registration:'registered',command_id:result.id},write:true};}));
  }catch(e){return send({error:e?.dqStatus?e.message:'pack_owner_unavailable'},e?.dqStatus||503);}
+}
+/* Grok Bot routine wake, disabled by default. Fixed operator-configured endpoint;
+ * never an interaction-supplied URL. Credentials are Worker secrets, not RTDB. */
+function dgConfig(env){
+ if(env.DISCORD_PACK_ENABLED!=='true'||env.DISCORD_PACK_DELIVERY_ENABLED!=='true'||env.DISCORD_GROK_WAKE_ENABLED!=='true'||env.DISCORD_GROK_INCLUDED_USAGE_CONFIRMED!=='true'||dpSeatConfig(env).grok?.key_label!=='pack-grok')return null;
+ const until=Date.parse(env.DISCORD_GROK_APPROVAL_EXPIRES_AT),now=Date.now();
+ if(!Number.isFinite(until)||until<=now||until>now+86400e3||!dqSnow(env.DISCORD_GROK_USER_ID))return null;
+ let u;try{u=new URL(env.GROK_ROUTINE_URL);}catch{return null;}
+ if(u.protocol!=='https:'||u.origin!==env.GROK_ROUTINE_ORIGIN||u.username||u.password||u.hash||u.port||!u.hostname.includes('.')||/^[\d.]+$|^\[|\.(local|localhost|internal)$/.test(u.hostname)||typeof env.GROK_ROUTINE_TOKEN!=='string'||env.GROK_ROUTINE_TOKEN.length<20||/[\r\n]/.test(env.GROK_ROUTINE_TOKEN))return null;
+ return {url:u.href,until};
+}
+function dgAdmissible(s,env,seat,uid,now){return seat==='grok'&&uid===env.DISCORD_GROK_USER_ID&&!!dgConfig(env)&&!s.seats.grok?.stopped_at&&s.links[uid]?.owner_uid===env.RESEARCH_OWNER_UID&&Date.parse(s.links[uid].expires_at)>now;}
+function dgStage(j,now){j.wake={mechanism:'grok_routine',status:'pending',attempts:0,due_ms:now,deadline_ms:now+20*60e3};}
+function dgView(j,now){const w=j.wake;return {mechanism:'grok_routine',status:w.status==='sending'&&now-w.reserved_ms>10000?'uncertain':w.status,attempts:w.attempts,receipt_acknowledged:w.status==='accepted',execution_verified:false,execution_status:j.delivery==='delivered'?'reply_delivered':now>w.deadline_ms?'timed_out_requires_owner_review':j.claim?'claimed_not_execution_proof':'awaiting_claim'};}
+async function dgKey(env){const users=(await fbGet(env,'/users')).data;return users?.[env.RESEARCH_OWNER_UID]?.mcpTokens?.['pack-grok']?.hash??null;}
+async function dgDrain(env,onlyId){
+ const cfg=dgConfig(env);if(!cfg)return;
+ const hash=await dgKey(env);if(typeof hash!=='string'||!hash)return;
+ const admission='dga_'+dpRandom(32),admissionHash=await dcHash(admission);
+ const plan=await dpTxn(env,s=>{
+  const now=Date.now(),jobs=Object.values(s.jobs);
+  // One outstanding unanswered wake. Delivery does not prove the external run ended.
+  // Ambiguous or expired accepted wakes stop further wakes;
+  // an owner must inspect them. A timeout never proves a run has ended.
+  if(jobs.some(j=>j.wake?.mechanism==='grok_routine'&&['sending','accepted','uncertain'].includes(j.wake.status)&&j.delivery!=='delivered'))return {write:false};
+  const j=jobs.filter(j=>(!onlyId||j.id===onlyId)&&j.wake?.mechanism==='grok_routine'&&['pending','retry'].includes(j.wake.status)&&j.wake.due_ms<=now).sort(dpById)[0];
+  if(!j)return {write:false};const w=j.wake;
+  if(!dgAdmissible(s,env,j.seat,j.requester_id,now)||j.guild_id!==env.DISCORD_GUILD_ID||j.parent_id!==env.DISCORD_CHANNEL_ID){w.status='cancelled';return {write:true};}
+  if(now>w.deadline_ms){w.status='timed_out';return {write:true};}
+  if(j.state!=='queued'){w.status='not_needed';return {write:true};}
+  const day=Math.floor(now/86400e3),hour=Math.floor(now/3600e3),budget=s.windows.grok??{};
+  if(budget.day!==day){budget.day=day;budget.daily=0;}if(budget.hour!==hour){budget.hour=hour;budget.hourly=0;}
+  if(budget.daily>=10||budget.hourly>=3)return {write:false};
+  budget.daily++;budget.hourly++;s.windows.grok=budget;
+  w.status='sending';w.attempts++;w.reserved_ms=now;w.admission_sha256=admissionHash;
+  return {write:true,result:{id:j.id,attempt:w.attempts,hash}};
+ });
+ if(!plan)return;
+ let status='uncertain',http=null;
+ try{
+  const s=dpStore((await fbGet(env,DP_PATH)).data),j=s.jobs[plan.id],fresh=dgConfig(env);
+  if(!fresh||fresh.url!==cfg.url||await dgKey(env)!==plan.hash||!j||!dgAdmissible(s,env,j.seat,j.requester_id,Date.now())||j.guild_id!==env.DISCORD_GUILD_ID||j.parent_id!==env.DISCORD_CHANNEL_ID)status='cancelled';
+  else {
+   const r=await fetch(cfg.url,{method:'POST',redirect:'manual',signal:AbortSignal.timeout(8000),headers:{Authorization:'Bearer '+env.GROK_ROUTINE_TOKEN,'Content-Type':'application/json'},body:JSON.stringify({job_id:plan.id,admission})});
+   http=r.status;void r.body?.cancel().catch(()=>{});
+   // Only documented HTTP 200 means started. Explicit 429 is known not-started.
+   // Network/5xx outcomes remain uncertain; never blindly replay them.
+   status=http===200?'accepted':http===429?(plan.attempt<3?'retry':'rejected'):'uncertain';
+  }
+ }catch{status='uncertain';}
+ await dpTxn(env,s=>{const w=s.jobs[plan.id]?.wake;if(w?.status!=='sending'||w.attempts!==plan.attempt)return {write:false};Object.assign(w,{status,http_status:http,updated_at:dpIso(Date.now()),due_ms:Date.now()+60000*2**(plan.attempt-1)});return {write:true};});
 }
 /* ===== DD-DISCORD-QUEUE END ===== */
 
