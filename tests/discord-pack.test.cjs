@@ -292,3 +292,13 @@ test('legacy /ask is untouched and the Pack module is assembled exactly once wit
  assert.equal(r.body.job.execution,'claimant_reported');assert.deepEqual(plain(r.body.job.wake),{performed:false,mechanism:'session_polling',execution_verified:false});
  assert.ok(f.store().seats.claude.verified);await f.bind();assert.equal(f.store().seats.claude.verified,undefined);
  });
+
+test('late receipt from an old binding never verifies its replacement',async()=>{
+ const f=await fixture(),lease=await f.ready(),id=await claimed(f,lease);
+ const original=f.ctx.dpDeliver;f.ctx.dpDeliver=async(...args)=>{const result=await original(...args);await f.bind();return result;};
+ const result=await reply(f,lease,id);assert.equal(result.body.job.delivery,'delivered');assert.equal(f.store().seats.claude.epoch,2);assert.equal(f.store().seats.claude.verified,undefined);
+});
+test('revocation at mutation reauthorization prevents binding and sends',async()=>{
+ const f=await fixture();await assert.rejects(f.ctx.dpMcpRun('dd_pack_bind',{},f.env,f.callers.owner,async()=>null),/connector_identity_changed/);
+ const lease=await f.ready(),id=await claimed(f,lease);await assert.rejects(f.ctx.dpMcpRun('dd_pack_answer',{lease,id,text:'Synthetic.'},f.env,f.callers.owner,async()=>null),/connector_identity_changed/);assert.deepEqual(f.created(),{threads:0,messages:0});
+});
