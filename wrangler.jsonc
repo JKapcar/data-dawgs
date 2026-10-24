@@ -18,12 +18,12 @@
   "durable_objects": {"bindings": [{"name": "DISCORD_GATEWAY", "class_name": "DiscordMentionGateway"}]},
   "migrations": [{"tag": "discord-mentions-v1", "new_sqlite_classes": ["DiscordMentionGateway"]}],
   "vars": {
-    "DISCORD_MENTIONS_ENABLED": "false",
+    "DISCORD_MENTIONS_ENABLED": "true",
     "BOZO_ADMIN": "Kap",
     "AGENT_FEEDBACK_ENABLED": "false",
     "AGENT_BOARD_ENABLED": "true",
     "DAWG_POUND_ENABLED": "true",
-    "ROBOKAP_ENABLED": "false",
+    "ROBOKAP_ENABLED": "true",
     "POUND_PORTRAITS_ENABLED": "false",
     "AGENT_SETUP_ENABLED": "true",
     "RESEARCH_LAB_ENABLED": "true",
@@ -46,13 +46,13 @@
     "DISCORD_CHANNEL_ID": "1473517207718989926",
     "DISCORD_USER_LINKS": "[]",
     "DISCORD_OWNER_SMOKE_ENABLED": "false",
-    "DISCORD_GROK_WAKE_ENABLED": "false",
-    "DISCORD_GROK_INCLUDED_USAGE_CONFIRMED": "false",
-    "DISCORD_PACK_ENABLED": "false",
-    "DISCORD_RETRIEVAL_ENABLED": "false",
-    "DISCORD_DFS_SHARE_ENABLED": "false",
-    "DISCORD_PACK_DELIVERY_ENABLED": "false",
-    "DISCORD_PACK_SEATS": "{}"
+    "DISCORD_GROK_WAKE_ENABLED": "true",
+    "DISCORD_GROK_INCLUDED_USAGE_CONFIRMED": "true",
+    "DISCORD_PACK_ENABLED": "true",
+    "DISCORD_RETRIEVAL_ENABLED": "true",
+    "DISCORD_DFS_SHARE_ENABLED": "true",
+    "DISCORD_PACK_DELIVERY_ENABLED": "true",
+    "DISCORD_PACK_SEATS": "{\"grok\":{\"key_label\":\"pack-grok\"}}"
   },
   "secrets": {
     "required": [

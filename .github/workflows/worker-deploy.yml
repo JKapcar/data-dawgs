@@ -57,6 +57,7 @@ jobs:
             exit 1
           fi
       - run: node --check dawg-bot-worker.js
+      - run: node --test tests/worker-config-guard.test.mjs
       - run: node --test tests/dawg-pound.test.cjs
       - run: node --test tests/research-project.test.cjs research-lab/decision-controls.test.mjs research-lab/pound-portraits.test.mjs
       - run: node --test research-lab/robokap-core.test.mjs research-lab/robokap.test.mjs
@@ -111,7 +112,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler@4 deployments list --name toto --json > previous-deployments.json
+        run: node tools/worker-config-guard.mjs snapshot previous-config.json
 
       - name: Upload a version - no traffic moves
         id: upload
@@ -121,7 +122,7 @@ jobs:
         run: |
           set -o pipefail
           npx wrangler@4 versions upload work/artifacts/research-lab/worker.mjs --config wrangler.jsonc \
-            --message "${{ inputs.message }} (${GITHUB_SHA::7})" 2>&1 | tee upload.log
+            --message "${{ inputs.message }} (${GITHUB_SHA::7})" > upload.log 2>&1
           # The id is what steps 4 and 5 of the runbook take. Parsed rather than retyped —
           # a hand-copied uuid is the step that has gone wrong most often.
           id=$(grep -oiE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' upload.log | tail -1)
@@ -132,16 +133,11 @@ jobs:
           echo "version_id=$id" >> "$GITHUB_OUTPUT"
           echo "### Uploaded version \`$id\`" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Inspect the version
+      - name: Verify actual candidate configuration before promotion
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: |
-          npx wrangler@4 versions view "${{ steps.upload.outputs.version_id }}" \
-            --name toto --json | tee version.json
-          echo '```json' >> "$GITHUB_STEP_SUMMARY"
-          head -c 4000 version.json >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+        run: node tools/worker-config-guard.mjs verify previous-config.json "${{ steps.upload.outputs.version_id }}" > config-verification.json
 
       - name: Move traffic
         if: ${{ inputs.promote }}
@@ -164,6 +160,6 @@ jobs:
         with:
           name: worker-release-evidence
           path: |
-            previous-deployments.json
-            version.json
+            previous-config.json
+            config-verification.json
             work/artifacts/research-lab/build-manifest.json

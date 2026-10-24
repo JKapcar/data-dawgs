@@ -35,6 +35,33 @@ would blur two unrelated operational jobs.
 
 ## Build and local verification
 
+### Configuration preservation gate
+
+The 2026-10-24 payout release exposed configuration drift: explicit default-off
+values in `wrangler.jsonc` overwrote activated RoboKap/Discord flags and the Pack
+seat mapping. `keep_vars: true` preserves remote-only variables, but does not
+protect variables explicitly present in the manifest. The manifest now records
+the approved active flags and seat. Grok's existing remote approval expiry is
+preserved; enabling the flag never renews that approval.
+
+`tools/worker-config-guard.mjs` snapshots the active deployment and fingerprints
+all bindings, runtime settings and handler identities before upload. It checks
+manifest variables before upload and the actual candidate before promotion.
+Unrelated additions/removals/changes and concurrent deployments fail closed.
+The only built-in migration restores all nine approved flags/seat changes from
+the exact regressed version `c531aa77-fae9-4f43-8bd6-dd052537dc50`. After that,
+configuration must match the active version; a future intentional configuration
+change requires a separately reviewed narrow migration. Code-only releases work
+without a bypass. No secret values or routine URLs appear in guard output.
+
+Release artifacts contain the baseline fingerprints and verified candidate ID;
+use `previous-config.json`'s `version_id` for rollback. Raw version metadata and
+upload logs are no longer emitted or uploaded. Non-versioned routes/schedules
+are outside this version-binding guard and require their own reviewed changes.
+
+Run `node --test tests/worker-config-guard.test.mjs` for synthetic regression,
+expiry-preservation, partial-restoration, concurrency and output-safety checks.
+
 Use Wrangler 4.x. The committed Worker is assembled output; edit `work/mcp-block.js`
 for MCP code, then rebuild. Non-MCP routes, including the CFB collector, live directly
 in `dawg-bot-worker.js` and survive the idempotent assembly process.
