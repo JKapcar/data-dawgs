@@ -2204,7 +2204,8 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG, reauth
           "the caller's own Bozo leg, in an open week, and only after the human has read back the parsed bet and " +
           "confirmed with the code it returns. Never call its confirm step without showing the human the echo first. " +
           "On a spread leg `line` is points the side gives up (positive lays, negative takes) while `label` reads as the slip prints it — CLE +8.5 is label \"CLE +8.5\", line -8.5 — and the server rejects a sign conflict rather than pricing the wrong side. " +
-          "Everything else is the league's own data, public play-by-play, " +
+          "dd_record_bozo_result fills a missing historical scoreboard result only, with an authorized manager's exact-event final-score attestation, preview and confirmation. It does not fetch or independently verify that score. Read back matchesRecorded before reporting success; never settle a ticket or change a wager through this recovery tool. " +
+          "Other reads expose the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
           "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. Compact profiles also expose non-ranked expected-versus-observed Elo diagnostics; these are not luck, team-quality labels, forecasts or grades. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_find_cfb_team_games and dd_find_cfb_team_periods return schedule-derived results only, for one exact team by default or for every team's most recent game or period under scope=latest-per-team; latest means latest within the 2025 FBS-involved surface, not current 2026 form, and FCS records are partial. dd_find_cfb_historical_market returns book-identified prices whose observation time is unknown: never call them closing lines, compute CLV or cite them as prospective inputs. dd_get_cfb_model_card returns generated governance and retrodictive evidence, not a current forecast or leaderboard. dd_get_cfb_rating_system describes registered methods and output availability; registration is not evidence of prospective skill. dd_rank_cfb_teams returns one declared system's dated ranking, not a consensus or current power ranking. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
@@ -2703,7 +2704,7 @@ const MCP_TOOLS = [
     title: "Bozo board this week",
     catalog: "core",
     readOnlyHint: true,
-    description: "The current Bozo board: every leg IN SUBMISSION ORDER (whoever went last saw every other leg first — that is the social point), plus the drawn lever hierarchy once the ticket is placed. Read the caveats field before analysing.",
+    description: "The current Bozo board, in submission order, with exact memberKey, event, market, period, line, result and resultRevision for missing-result recovery. A spread line is points GIVEN, opposite the displayed slip sign. pendingResult identifies missing grades; it does not mean the game is final. Verify final-score evidence separately before dd_record_bozo_result. Read caveats before analysing.",
     inputSchema: { type: "object", properties: { league: { type: "string", description: "League id (default: main)" } }, additionalProperties: false },
     async run(args, env, caller) {
       const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
@@ -2716,6 +2717,7 @@ const MCP_TOOLS = [
         return toolText({ season: lg.season || SEASON, week: lg.week || 1, status: lg.status || "open", legs: [], note: "No legs are in yet this week." });
       // ⚠️ SUBMISSION ORDER, not object-key order.
       keys.sort((a, b) => (picks[a].ts || 0) - (picks[b].ts || 0));
+      const resultRevisions = Object.fromEntries(await Promise.all(keys.map(async k => [k, await bozoResultRevision(lg,k)])));
       const me = caller && caller.kind === "user" ? caller.name : null;
       const legs = keys.map((k, i) => {
         const x = picks[k];
@@ -2724,6 +2726,10 @@ const MCP_TOOLS = [
           // would print a bare uid; reading it off the members map would go blank for
           // anyone who has since left the league.
           order: i + 1, player: x.who || playerName(k),
+          memberKey:k, resultRevision:resultRevisions[k], result:lg.results?.[k] || null,
+          pendingResult:!lg.results?.[k]?.result && lg.results?.[k]?.won == null,
+          fallbackBlockedReason:bozoResultGate(lg,k,Date.now()),
+          espnEventId:x.espnEventId || x.eventId || null,
           you: me ? (x.who || playerName(k)) === me : undefined,
           sport: x.sport, game: x.game, eventId: x.eventId,
           mkt: x.mkt, side: x.side, line: x.mkt === "ml" ? null : x.line,
@@ -3264,6 +3270,20 @@ const MCP_TOOLS = [
         warning: captured.captureWarning || null,
         note: "NOTHING has been submitted. Show the human the echo verbatim; only after they approve, call this tool again with {confirm: \"" + code + "\"}.",
       });
+    },
+  },
+  {
+    name: "dd_record_bozo_result",
+    title: "Record a missing historical Bozo result (two-phase)",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Verified manager/delegate/site-admin personal connector only. Fill ONE missing full-game NFL/CFB result on the current placed ticket using caller-verified ESPN final-score evidence. Read dd_bozo_week for exact memberKey, event, selection and resultRevision. Preview returns score arithmetic, evidence and confirmation code; confirm only within explicit user grading authorization after reviewing the echo. Evidence is manager-attested, not fetched by this tool. Rejects existing/manual grades, future games, unsupported periods and cached-final conflicts. Atomic result+audit only: never wagers, prices, stakes, ledger, week status, elimination or payouts. Confirm with only league, forUid and code; retry that same code after uncertain responses. Response includes exact post-write readback; matchesRecorded=false requires investigation, never a blind rewrite.",
+    inputSchema: BOZO_RESULT_SCHEMA,
+    async run(args, env, caller) {
+      if (caller?.kind !== "user") return toolErr("A personal authenticated manager connector is required; shared connections cannot record results.");
+      const out = await bozoRecordResultCore(env,caller,args);
+      return {...toolText(out.body), ...(out.status !== 200 ? {isError:true} : {})};
     },
   },
   {
