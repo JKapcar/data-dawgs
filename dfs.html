@@ -3155,7 +3155,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   </div>
 
   <div class="card" id="simCard" hidden>
-    <h3>Your lineups, ranked by dupe-adjusted EV <span class="rt" id="simMeta"></span></h3>
+    <h3>Your lineups, ranked by modelled payout EV or Top-10 proxy <span class="rt" id="simMeta"></span></h3>
     <div id="labsSimChart"></div>
     <details><summary>How to read this comparison</summary><p>Cash rate is the share of simulated contests that pay a prize. It is not profit or ROI. These bars use the current inputs and payout assumptions; model error is not included. Compare with field diagnostics before relying on differences.</p></details>
     <div class="tscroll"><table class="dtab" id="simTab"></table></div>
@@ -3244,7 +3244,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div class="card"><h3>Salary used</h3><div id="expSal"></div></div>
   <details class="card" id="legacyOwnFrontierCard">
     <summary>Projection vs cumulative ownership — convex hull, superseded by Bible §3.3 (Phase 2). Not a selection tool.</summary>
-    <p class="note">The old cumulative-ownership frontier sweep has been retired from the Exposure sheet. Selection uses dupe-adjusted EV / literal Top-10 (Bible §3.4 / I4). The Lineup lab above explores contest fit; it is not that hull.</p>
+    <p class="note">The old cumulative-ownership frontier sweep has been retired from the Exposure sheet. Selection uses modelled payout EV when available, otherwise the literal Top-10 proxy. The Lineup lab above explores contest fit; it is not that hull.</p>
   </details>
   <div class="emptystate" id="expEmpty"><div class="big">No lineups yet</div><p><a href="#solver" data-goto="solver">Build lineups in Solver</a> to see how often each player appears across your lineup pool.</p></div>
 </section>
@@ -4400,7 +4400,7 @@ function simulate(players,lineups,cfg,onProgress){
   const eDupes=Float64Array.from(lineups,l=>Math.max(0,+(l&&l.eDupes)||0));
   const candidates=lineups.map(l=>({ids:l.ids.slice().sort((a,b)=>a-b),cpt:l.cpt}));
   const candidateKeys=candidates.map(lineupKey),fieldKeys=field.map(lineupKey);
-  const metrics=['pay','payAdj','cash','profit','win','top1','top10','cutoff','cutoffShare','cutoffShare2','firstShare','rank'];
+  const metrics=['pay','cash','profit','win','top1','top10','cutoff','cutoffShare','cutoffShare2','firstShare','rank'];
   const accum=()=>Object.fromEntries(metrics.map(k=>[k,new Float64Array(ourN)]));
   const counts=new Map();
   const contests=specifications.map(c=>{
@@ -4433,8 +4433,7 @@ function simulate(players,lineups,cfg,onProgress){
         const t=tieOutcome(sorted,oScore[o],c.fieldSize,c.pay),atTop=t.above===0;
         const share=Math.max(0,Math.min(t.tied+1,c.paid-t.above))/(t.tied+1);
         a.pay[o]+=t.prize;a.cash[o]+=+(t.prize>0);a.profit[o]+=+(t.prize>c.entryFee+1e-9);
-        // Bible §3.4: dupe-adjusted prize uses prior E[dupes] on the candidate (I5 until standings).
-        if(t.prize>0)a.payAdj[o]+=t.prize/(1+eDupes[o]);
+        // Occupied-rank settlement already shares prizes across represented ties.
         a.win[o]+=+atTop;a.top1[o]+=+(t.above<top1);
         // B5: Top-10 is literal places 1–10, NOT a proportional cut of the field.
         a.top10[o]+=+(t.above<10);a.cutoff[o]+=+(t.above<c.paid);
@@ -4454,12 +4453,13 @@ function simulate(players,lineups,cfg,onProgress){
     out.top1Share=out.top1/(1+c.duplicates[o]);out.ci.top1Share=out.ci.top1.map(v=>v/(1+c.duplicates[o]));
     out.win=c.full?a.win[o]/n:null;out.firstShare=c.full?a.firstShare[o]/n:null;out.ci.win=c.full?wilson(a.win[o],n):null;
     out.meanRank=a.rank[o]/n;out.ev=a.pay[o]/n;out.roi=(out.ev-c.entryFee)/c.entryFee;
-    // Bible §3.4 — dupe-adjusted EV (prior E[dupes] until ≥3 weeks standings / I5)
-    out.eDupes=eDupes[o];out.evAdj=a.payAdj[o]/n;
+    // Ownership-product prior is diagnostic only; represented ties settle once.
+    out.eDupes=eDupes[o];
     // Top-heavy payout tails cannot be resolved by scaling a small opponent sample.
-    out.approxRoi=out.roi;out.approxEv=out.ev;out.approxEvAdj=out.evAdj;
+    out.approxRoi=out.roi;out.approxEv=out.ev;
     if(!c.full&&(c.payout||{}).kind!=='flat'){out.roi=null;out.ev=null;}
-    // Selection key stays numeric even when raw ROI is withheld for top-heavy samples.
+    // Compatibility aliases carry exactly the same availability gate and settlement.
+    out.evAdj=out.ev;out.approxEvAdj=out.ev;
     return out;
   }
   const outcomes={};
@@ -4734,6 +4734,8 @@ root.DDFS.tieOutcome=tieOutcome;root.DDFS.wilson=wilson;root.DDFS.lineupKey=line
 root.DDFS.modelHelpers={assignRoles,corrBetween,cholesky,cvFor,sampleClassic,sampleShowdown,rng};
 
 })(typeof module !== "undefined" && module.exports ? module.exports : (typeof self !== "undefined" ? self : this));
+
+
 </script>
 
 <script src="dfs-lab-audit.js?v=20260910-contests"></script>
@@ -8290,7 +8292,7 @@ function renderLineups() {
   $("luCount").textContent = `${S.lineups.length} built`;
   const P = S.players, CAP = 60;
   const order = SIM ? SIM.perLineup.slice().sort((a, b) => {
-                      const d = (b.evAdj || 0) - (a.evAdj || 0);
+                      const d = (b.ev == null || a.ev == null) ? 0 : b.ev - a.ev;
                       return d !== 0 ? d : (b.top10 || 0) - (a.top10 || 0);
                     }).map(x => x.i)
                     : S.lineups.map((_, i) => i);
@@ -8306,7 +8308,7 @@ function renderLineups() {
     }
     h += `<div class="lu"><div class="hd"><span class="r">#${n + 1}</span>
       <span>${fmt(l.proj)} proj</span><span>${fmt(own, 0)}% own</span>${edTag}
-      ${sim ? `<span title="Top-10 rate — literal places 1–10 (B5)">${pct(sim.top10, 2)} top-10</span><span title="Dupe-adjusted EV (Bible §3.4); prior E[dupes] until ≥3 weeks standings (I5)">$${fmt(sim.evAdj, 2)} EV≠</span><span>${sim.roi == null ? "—" : pct(sim.roi,0)+" ROI"}</span>` : ""}
+      ${sim ? `<span title="Top-10 rate — literal places 1–10 (B5)">${pct(sim.top10, 2)} top-10</span><span title="Modelled payout EV; represented ties share prizes once. Unavailable for sampled top-heavy fields.">${sim.ev == null ? "EV unavailable; Top-10 proxy rank" : "$"+fmt(sim.ev, 2)+" modelled EV"}</span><span>${sim.roi == null ? "—" : pct(sim.roi,0)+" ROI"}</span>` : ""}
       <span class="sp">$${l.sal.toLocaleString()}</span></div><div class="ps">`;
     for (const s of lineupSlots(l)) {
       const p = P[s.i];
@@ -8480,11 +8482,11 @@ function renderSim() {
   $("labsSimChart").innerHTML = `<h4>${S.demo ? "Synthetic demo · " : ""}Modelled cash rate</h4><p class="note">Up to eight lineups, ordered by cash rate. Intervals describe simulation noise, not model accuracy. Full results below.</p>` + cashRows.map(r => `<div class="labs-bar"><span>Lineup ${r.i+1}</span><span class="labs-track"><span style="width:${Math.max(0,Math.min(100,r.cash*100))}%"></span></span><b>${pct(r.cash,1)}</b>${r.ci && r.ci.cash ? `<small class="labs-interval">95% simulation interval: ${pct(r.ci.cash[0],1)}–${pct(r.ci.cash[1],1)}</small>` : ""}</div>`).join("");
   // --- lineups ---
   const rows = SIM.perLineup.slice().sort((a, b) => {
-    const d = (b.evAdj || 0) - (a.evAdj || 0);
+    const d = (b.ev == null || a.ev == null) ? 0 : b.ev - a.ev;
     return d !== 0 ? d : (b.top10 || 0) - (a.top10 || 0);
   });
   let h = `<thead><tr><th class="l">#</th><th class="l">Lineup</th><th>Proj</th><th>Own%</th><th>Mean</th><th>SD</th>
-    <th>Cash%</th><th title="Share of sims finishing in literal places 1–10 — not a proportional cut of the field (B5 / Bible I4).">Top-10 %</th><th>Top 1%</th><th>First%</th><th>Dupes</th><th title="Dupe-adjusted EV (Bible §3.4): Σ P(place)·prize(place)/(1+E[copies|cashed]). E[copies] = prior E[dupes] until ≥3 weeks standings (I5). Default sort key; ROI is kept visible but is not the selection objective.">EV (dupe-adj) $</th><th title="Raw simulated ROI before dupe adjustment — visible for calibration, not the default sort (I4).">ROI</th></tr></thead><tbody>`;
+    <th>Cash%</th><th title="Share of sims finishing in literal places 1–10 — not a proportional cut of the field (B5 / Bible I4).">Top-10 %</th><th>Top 1%</th><th>First%</th><th>Dupes</th><th title="Modelled payout EV. Represented ties settle once. When unavailable, ordering uses the Top-10 proxy, not payout EV.">Modelled EV $</th><th title="Modelled ROI after occupied-rank tie settlement.">ROI</th></tr></thead><tbody>`;
   rows.slice(0, 200).forEach((r, n) => {
     const l = S.lineups[r.i];
     const own = l.ids.reduce((t, i) => t + (P[i].own || 0), 0);
@@ -8494,7 +8496,7 @@ function renderSim() {
       <td>${fmt(l.proj)}</td><td>${fmt(own, 0)}</td><td>${fmt(r.mean)}</td><td>${fmt(r.sd)}</td>
       <td>${pct(r.cash, 1)}</td><td>${pct(r.top10, 2)}</td><td>${pct(r.top1, 2)}</td><td>${pct(r.win, 3)}</td>
       <td>${r.dupes == null ? "—" : r.dupes.toFixed(1)}</td>
-      <td class="${(r.evAdj || 0) >= fee ? "pos" : "neg"}">$${fmt(r.evAdj, 2)}</td>
+      <td class="${r.ev == null ? "" : r.ev >= fee ? "pos" : "neg"}">${r.ev == null ? "Unavailable" : "$"+fmt(r.ev, 2)}</td>
       <td class="${r.roi == null ? "" : (r.roi >= 0 ? "pos" : "neg")}">${r.roi == null ? "—" : pct(r.roi,0)}</td></tr>`;
   });
   $("simTab").innerHTML = h + "</tbody>";
@@ -10328,7 +10330,7 @@ function botContext() {
       ["Why is the highest-projected lineup often a bad tournament entry?", "Why is chalk bad?"],
       ["What is leverage, and how should I read the win-lineup column?", "What is leverage?"],
       ["Are my results good enough to say I have an edge?", "Do I have an edge?"]] },
-    sys: `PRIVATE DECISION DESK: Build by hand opens the Lineup builder tab in the existing decision desk. CSV mapping and DK Classic/Showdown roster construction are session-local, with drag, tap and keyboard controls. The builder shows arithmetic, projected inputs and structural stack checks only. Cash/top-1%/win rates, copies, contest suitability regions and score cutoffs are unavailable without validated field/model evidence. The diagnostics iframe below the atlas keeps session-only private audits and builder inputs outside your context. Do not claim to read its inputs, findings, notes, entry evidence or recommendations. Users explicitly save/load a private portfolio in the desk. The Saved history sheet can save, list and open private account results/audits and archive exact server workspace revisions. It never imports or saves history automatically. Archived save time is not prediction time. Do not claim any personal history was saved without a successful save response. Its viewer is excluded from your page context. No provider submission is added. Explain these boundaries and direct the user to the desk for its findings.
+    sys: `Simulation payout EV shares prizes over occupied tied ranks once. Ownership-product duplicate priors are diagnostics, not calibrated forecasts or a second payout haircut. Sampled top-heavy payout EV is unavailable; any fallback Top-10 ordering is a proxy, not calibrated EV or proven win-rate improvement. PRIVATE DECISION DESK: Build by hand opens the Lineup builder tab in the existing decision desk. CSV mapping and DK Classic/Showdown roster construction are session-local, with drag, tap and keyboard controls. The builder shows arithmetic, projected inputs and structural stack checks only. Cash/top-1%/win rates, copies, contest suitability regions and score cutoffs are unavailable without validated field/model evidence. The diagnostics iframe below the atlas keeps session-only private audits and builder inputs outside your context. Do not claim to read its inputs, findings, notes, entry evidence or recommendations. Users explicitly save/load a private portfolio in the desk. The Saved history sheet can save, list and open private account results/audits and archive exact server workspace revisions. It never imports or saves history automatically. Archived save time is not prediction time. Do not claim any personal history was saved without a successful save response. Its viewer is excluded from your page context. No provider submission is added. Explain these boundaries and direct the user to the desk for its findings.
 DFS LABS PLAYBOOK: The current operating guide is https://datadawgs216.com/docs/dfs-playbook.md and its full text is in the page at #dfsPlaybook. Follow it for account/workspace setup, tool sequence and actual-lobby construction. Capture contest size, fee, payout, entry limits and user entry count before claiming contest fit. Public guide access does not grant private workspace access. Selection metrics are contest-dependent: do not treat a default sort, rarity, top-10 rate or uncalibrated EV_adj as a universal objective. Preserve run receipts before select/settings invalidate results; never invent unavailable first-place EV. Historical Bible claims do not establish calibration or current capabilities.
 OPERATING CHECKLIST: Ask only for missing slate, source, workspace and contest inputs. Upload alone stays local; Save privately shares with the same account and Load saved retrieves remote changes. Use personal access, never another user's workspace or connector credential. Read schema, list/get, preview import, inspect matches, commit, configure, solve/explore, simulate, audit exposure, select and validate/export. Preserve user constraints and revisions; another solve replaces candidates and indexes can change. Showdown Total Own includes CPT when the vendor uses that convention: FLEX=Total-CPT. For cash prioritize projection and supported cash probability; for small-field GPP measure the cost of differentiation; for large top-heavy fields compare ceiling/correlation/tie dilution under actual payouts. Entry limit is not field size and the user chooses entry count. Compare several credible scripts and shared failure modes, not just different captains. Report salary, projection, contest assignment, script, failure condition and computed metrics. Refresh availability and official IDs before export. Do not submit entries.
 Classic hard ACO caps are constraints: never silently relax one. Score-tail simulations are uncalibrated lognormal assumptions, separate from the empirical contest simulator. QB score-tail loadings are assumed 0.35 game / 0.45 team. Threshold probabilities are not win probabilities or payout EV. A timeout proves neither infeasibility nor optimality.
@@ -10369,11 +10371,11 @@ ${S.demo ? "- ⚠️ THE LOADED SLATE IS THE DEMO SLATE. Every player name, sala
         L.push(`SIMULATION: ${SIM.meta.sims} runs, field of ${SIM.meta.fieldSize} modelled from a sample of ${SIM.meta.fieldSample}, $${SIM.meta.entryFee} entry.`);
         L.push(`⚠️ FIELD STRENGTH CHECK: median simulated opponent projects ${(SIM.meta.fieldMedianProj || 0).toFixed(1)}; the user's median lineup projects ${(SIM.meta.ourMedianProj || 0).toFixed(1)}. If the second is far above the first, every ROI below is optimistic and you must say so.`);
         const best = SIM.perLineup.slice().sort((a, b) => {
-          const d = (b.evAdj || 0) - (a.evAdj || 0);
+          const d = (b.ev == null || a.ev == null) ? 0 : b.ev - a.ev;
           return d !== 0 ? d : (b.top10 || 0) - (a.top10 || 0);
         }).slice(0, 5);
-        L.push("BEST LINEUPS BY DUPE-ADJUSTED TOP-10 (prior dupes): " + best.map(r =>
-          `${((r.top10 || 0) * 100).toFixed(2)}% top-10, $${(r.evAdj || 0).toFixed(2)} EV≠, ${r.roi == null ? "—" : (r.roi * 100).toFixed(0)+"% ROI"}, ${(r.cash * 100).toFixed(1)}% cash`).join(" | "));
+        L.push("LINEUPS ORDERED BY AVAILABLE MODELLED PAYOUT EV, OTHERWISE TOP-10 PROXY: " + best.map(r =>
+          `${((r.top10 || 0) * 100).toFixed(2)}% top-10, ${r.ev == null ? "EV unavailable" : "$"+r.ev.toFixed(2)+" modelled EV"}, ${r.roi == null ? "—" : (r.roi * 100).toFixed(0)+"% ROI"}, ${(r.cash * 100).toFixed(1)}% cash`).join(" | "));
         const lev = SIM.perPlayer.slice().sort((a, b) => b.leverage - a.leverage).slice(0, 10);
         L.push("HIGHEST LEVERAGE: " + lev.map(r => `${S.players[r.i].name} ${(r.leverage).toFixed(1)}`).join(", "));
       } else L.push("No simulation has been run in this session.");

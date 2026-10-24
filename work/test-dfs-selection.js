@@ -1,9 +1,7 @@
 #!/usr/bin/env node
-/**
- * T4 · Selection key — Bible §3.4 / I4 / B5.
- * Synthetic 20-lineup set: ROI order vs evAdj order must disagree by ≥3 positions;
- * top10 ≥ top1; evAdj ≤ raw EV when E[dupes] > 0; dfs.html #ddfsEngine == work/dfs-engine.js.
- */
+/** Regression: represented ties settle once, independent of duplicate priors.
+ * Synthetic 20-lineup settled EV and ROI orders agree at a common fee.
+ * Also verifies literal Top-10 and browser/engine parity. */
 "use strict";
 const fs = require("fs");
 const path = require("path");
@@ -71,7 +69,7 @@ const sol = D.solveLineups(P, {
 assert(sol.lineups.length >= 20, "solved ≥20 lineups (got " + sol.lineups.length + ")");
 const L20 = sol.lineups.slice(0, 20).map((l, i) => {
   // Chalky (high cumulative own) → huge E[dupes]; rare → near-zero.
-  // Forces ROI order ≠ evAdj order: high-sim-ROI chalk gets crushed by the divisor.
+  // Positive priors must not change settled payout or ranking.
   const cumOwn = l.ids.reduce((t, id) => t + (P[id].own || 0), 0);
   const eDupes = Math.pow(cumOwn / 70, 5) * 80; // ~0 for rare, >>1 for chalk
   return { ids: l.ids, cpt: l.cpt, proj: l.proj, eDupes };
@@ -97,23 +95,23 @@ for (const row of r.perLineup) {
   assert(typeof row.mean === "number" && typeof row.meanRank === "number", "keep mean/meanRank i=" + row.i);
   // B5 / I4: top-10 contains top-1%
   assert(row.top10 + 1e-12 >= row.top1, "top10≥top1 i=" + row.i + " (" + row.top10 + " vs " + row.top1 + ")");
-  // §3.4: when E[dupes]>0, adjusted EV ≤ raw EV
+  // Compatibility alias equals settled EV, even with positive priors.
   const ed = L20[row.i].eDupes;
   if (ed > 0) {
     assert(row.evAdj <= row.ev + 1e-9,
       "evAdj≤ev when eDupes>0 i=" + row.i + " evAdj=" + row.evAdj + " ev=" + row.ev + " ed=" + ed);
-    // and matches E[prize]/(1+E[dupes]) within float noise
-    const expected = row.ev / (1 + ed);
+    // No second haircut after occupied-rank prize sharing.
+    const expected = row.ev;
     assert(Math.abs(row.evAdj - expected) < 1e-6,
-      "evAdj ≈ ev/(1+eDupes) i=" + row.i + " got " + row.evAdj + " want " + expected);
+      "evAdj equals settled ev i=" + row.i + " got " + row.evAdj + " want " + expected);
   }
 }
 
 const byRoi = rankBy(r.perLineup, "roi");
 const byEv = rankBy(r.perLineup, "evAdj");
 const shift = kendallPositions(byRoi, byEv);
-assert(shift >= 3,
-  "ROI order vs evAdj order differ by ≥3 positions (max shift=" + shift + ")");
+assert(shift === 0,
+  "ROI and settled EV orders agree (max shift=" + shift + ")");
 console.log("  (max rank displacement ROI↔evAdj =", shift + ")");
 
 // default selection sort: evAdj desc, tiebreak top10 desc
