@@ -1,6 +1,6 @@
 {
  "as_of": "2026-10-24",
- "source": "Data Dawgs season simulation (playoff-leverage-engine v1, work/playoff-leverage-engine.js) over /data/nfl-schedule.json results (snapshot sha256:976c387a5289…, captured 2026-10-23T03:25:27Z) and /data/survivor.json game probabilities (nfelo 56a9cfa4, captured 2026-10-24).",
+ "source": "Data Dawgs season simulation (playoff-leverage-engine v1, work/playoff-leverage-engine.js) over /data/nfl-schedule.json results (snapshot sha256:976c387a5289…, captured 2026-10-23T03:25:27Z) and /data/survivor.json game probabilities (nfelo d8f86a64, captured 2026-10-24).",
  "tier": "labs",
  "graded": false,
  "note": "SIMULATION OUTPUT, ungraded — not a forecast receipt and not a betting signal. Each of 100,000 simulated seasons keeps every finished game's real result and plays every unplayed 2026 regular-season game once at its /data/survivor.json home-win probability (the published nfelo forecast for the current week, the nfelo season projection after it). Leverage is paired: every season is also played with one game's result flipped while every other game keeps its simulated result. Team strength is held fixed and games are independent, so probabilities near 0% and 100% are overconfident. Seeding follows the NFL tie-breaking procedures through strength of schedule; a tie that survives SOS goes to a coin toss because points are not simulated. Daily snapshot: rebuilt after the nfelo refresh, deterministic for identical inputs.",
@@ -35,9 +35,9 @@
   "probabilities": {
    "url": "/data/survivor.json",
    "as_of": "2026-10-24",
-   "nfelo_sha": "56a9cfa4",
+   "nfelo_sha": "d8f86a64",
    "captured": "2026-10-24",
-   "nfelo_observed_at": "2026-10-24T12:40:51.000Z",
+   "nfelo_observed_at": "2026-10-24T16:40:44.000Z",
    "method": "nfelo-season-v1",
    "current_week": "src \"nfelo\": published nfelo forecast",
    "later_weeks": "src \"nfelo-season\": Current base team strength and QB adjustments held fixed for future games; game-specific HFA from nfelohfa. No extra market regression."
