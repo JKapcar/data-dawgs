@@ -105,3 +105,10 @@ test('owner-only admission diagnostics return fixed codes without configuration 
  f.sessionUid='u_other';r=await f.owner();assert.equal(r.status,403);assert.equal(r.body.grok_admission,undefined);
  assert.equal(f.wakes.length,0);
 });
+
+test('owner reads wake receipt without admission proof or signing material and without dispatch',async()=>{
+ const f=await ready();f.response=401;const q=await f.ask(),before=f.wakes.length;
+ const r=await f.owner(),job=r.body.jobs.find(j=>j.id===q.id);
+ assert.equal(job.wake.status,'rejected');assert.equal(job.wake.http_status,401);assert.equal(job.wake.attempts,1);assert.equal(job.wake.receipt_acknowledged,false);
+ assert.ok(!JSON.stringify(r.body).includes(f.wakes[0].admission));assert.ok(!JSON.stringify(r.body).includes(f.env.GROK_WEBHOOK_SIGNING_SECRET));assert.equal(f.wakes.length,before);
+});
