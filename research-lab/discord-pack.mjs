@@ -27,6 +27,7 @@ function render(){
   if(j.url){const a=el('a','Open reply');a.href=j.url;a.rel='noreferrer';a.target='_blank';row.append(a);}
   if(j.delivery==='uncertain'){const box=el('div',null,'actions');for(const [observed,label] of [['present','It is in Discord'],['absent','Not in Discord']]){const b=el('button',label);b.dataset.act='resolve';b.onclick=()=>act({action:'resolve',id:j.id,observed},'Recorded.');box.append(b);}row.append(box);}
   jobs.append(row);}
+ $('grokAdmission').textContent=data.grok_admission?JSON.stringify(data.grok_admission,null,2):'Diagnostics unavailable.';
  $('command').textContent=data.command?JSON.stringify(data.command,null,2):'Not registered.';
  $('links').textContent=data.links.length?data.links.map(l=>l.name+' · '+l.discord_user_id+' · until '+l.expires_at).join('\n'):'None.';
  $('panel').hidden=false;controls();

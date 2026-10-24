@@ -403,7 +403,7 @@ async function handleDiscordPackOwner(request,env){
   const now=Date.now();
   if(request.method==='GET'){
    const snap=await fbGet(env,DP_PATH,true);dpCheck(snap.etag,503,'pack_store_unavailable');const s=dpStore(snap.data),seats=dpSeatConfig(env);
-   return send({flags:{pack:env.DISCORD_PACK_ENABLED==='true',delivery:env.DISCORD_PACK_DELIVERY_ENABLED==='true',bot_secret_bound:!!env.DISCORD_BOT_TOKEN},channel:env.DISCORD_CHANNEL_ID||null,
+   return send({grok_admission:typeof dgOwnerDiagnostics==='function'?dgOwnerDiagnostics(s,env,now):null,flags:{pack:env.DISCORD_PACK_ENABLED==='true',delivery:env.DISCORD_PACK_DELIVERY_ENABLED==='true',bot_secret_bound:!!env.DISCORD_BOT_TOKEN},channel:env.DISCORD_CHANNEL_ID||null,
     seats:Object.entries(DP_SEATS).map(([seat,display])=>{const b=s.seats[seat];return {seat,display,configured_key:seats[seat]?.key_label??null,stopped_at:b?.stopped_at??null,binding:b?.lease_sha256?{number:b.epoch,session_ref:b.session_ref??null,bound_at:b.bound_at,last_seen_at:b.last_seen_at,live:!!dpLiveBinding(s,seat,now)}:null,verified:b?.verified??null};}),
     command:s.command??null,links:Object.entries(s.links).map(([id,l])=>({discord_user_id:id,name:l.name,linked_at:l.linked_at,expires_at:l.expires_at})),open_link_codes:Object.values(s.challenges).filter(c=>Date.parse(c.expires_at)>now).length,
     jobs:Object.values(s.jobs).sort(dpById).slice(-25).reverse().map(j=>({id:j.id,seat:j.seat,kind:j.kind,state:j.state,delivery:j.delivery,next:dpNext(j,now),thread_id:j.thread_id??null,url:j.url??null,created_at:j.created_at,last_error:j.last_error??null,resolution:j.resolution??null}))});

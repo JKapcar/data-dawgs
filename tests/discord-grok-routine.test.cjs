@@ -95,3 +95,13 @@ test('Standard Webhooks signing matches independent HMAC and exact UTF-8 body by
 test('202 only is acceptance; documented rejection and retryable unavailable statuses remain distinct',async()=>{
  for(const response of [200,400,401,413,503]){const f=await ready();f.response=response;const q=await f.ask();assert.equal(f.store().jobs[q.id].wake.status,response===200?'uncertain':response===503?'retry':'rejected');f.advance(120000);await f.ctx.dgDrain(f.env);assert.equal(f.wakes.length,response===503?2:1);}
 });
+test('owner-only admission diagnostics return fixed codes without configuration or secret material',async()=>{
+ const f=await ready();let r=await f.owner();assert.equal(r.status,200);assert.deepEqual(JSON.parse(JSON.stringify(r.body.grok_admission)),{ready:true,failures:[]});
+ const cases=[['DISCORD_PACK_ENABLED',true,'pack_disabled'],['DISCORD_PACK_DELIVERY_ENABLED','false','delivery_disabled'],['DISCORD_GROK_WAKE_ENABLED',true,'wake_disabled'],['DISCORD_GROK_INCLUDED_USAGE_CONFIRMED',undefined,'included_usage_unconfirmed'],['DISCORD_PACK_SEATS','{}','seat_configuration_invalid'],['DISCORD_GROK_APPROVAL_EXPIRES_AT','invalid','approval_window_invalid'],['DISCORD_GROK_USER_ID',123,'requester_configuration_invalid'],['GROK_ROUTINE_URL','https://wrong.example/private','endpoint_configuration_invalid'],['GROK_WEBHOOK_SIGNING_SECRET','DO_NOT_EXPOSE_SECRET','signing_configuration_invalid']];
+ for(const [key,value,code] of cases){const old=f.env[key];f.env[key]=value;r=await f.owner();assert.equal(r.status,200);assert.equal(r.body.grok_admission.ready,false);assert.ok(r.body.grok_admission.failures.includes(code));assert.equal(f.ctx.dgConfig(f.env),null);assert.ok(!JSON.stringify(r.body).includes('DO_NOT_EXPOSE_SECRET'));f.env[key]=old;}
+ f.store().seats??={};f.store().seats.grok={stopped_at:new Date(f.now).toISOString()};assert.ok((await f.owner()).body.grok_admission.failures.includes('seat_stopped'));delete f.store().seats.grok;
+ delete f.store().links[f.env.DISCORD_GROK_USER_ID];assert.ok((await f.owner()).body.grok_admission.failures.includes('configured_requester_link_invalid'));
+ for(const headers of [{Authorization:'Bearer invalid'},{Origin:'https://evil.test'}]){r=await f.owner(null,headers);assert.ok([401,403].includes(r.status));assert.equal(r.body.grok_admission,undefined);}
+ f.sessionUid='u_other';r=await f.owner();assert.equal(r.status,403);assert.equal(r.body.grok_admission,undefined);
+ assert.equal(f.wakes.length,0);
+});
