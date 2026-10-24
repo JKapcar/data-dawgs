@@ -945,7 +945,7 @@ function simulate(players,lineups,cfg,onProgress){
   const eDupes=Float64Array.from(lineups,l=>Math.max(0,+(l&&l.eDupes)||0));
   const candidates=lineups.map(l=>({ids:l.ids.slice().sort((a,b)=>a-b),cpt:l.cpt}));
   const candidateKeys=candidates.map(lineupKey),fieldKeys=field.map(lineupKey);
-  const metrics=['pay','payAdj','cash','profit','win','top1','top10','cutoff','cutoffShare','cutoffShare2','firstShare','rank'];
+  const metrics=['pay','cash','profit','win','top1','top10','cutoff','cutoffShare','cutoffShare2','firstShare','rank'];
   const accum=()=>Object.fromEntries(metrics.map(k=>[k,new Float64Array(ourN)]));
   const counts=new Map();
   const contests=specifications.map(c=>{
@@ -978,8 +978,7 @@ function simulate(players,lineups,cfg,onProgress){
         const t=tieOutcome(sorted,oScore[o],c.fieldSize,c.pay),atTop=t.above===0;
         const share=Math.max(0,Math.min(t.tied+1,c.paid-t.above))/(t.tied+1);
         a.pay[o]+=t.prize;a.cash[o]+=+(t.prize>0);a.profit[o]+=+(t.prize>c.entryFee+1e-9);
-        // Bible §3.4: dupe-adjusted prize uses prior E[dupes] on the candidate (I5 until standings).
-        if(t.prize>0)a.payAdj[o]+=t.prize/(1+eDupes[o]);
+        // Occupied-rank settlement already shares prizes across represented ties.
         a.win[o]+=+atTop;a.top1[o]+=+(t.above<top1);
         // B5: Top-10 is literal places 1–10, NOT a proportional cut of the field.
         a.top10[o]+=+(t.above<10);a.cutoff[o]+=+(t.above<c.paid);
@@ -999,12 +998,13 @@ function simulate(players,lineups,cfg,onProgress){
     out.top1Share=out.top1/(1+c.duplicates[o]);out.ci.top1Share=out.ci.top1.map(v=>v/(1+c.duplicates[o]));
     out.win=c.full?a.win[o]/n:null;out.firstShare=c.full?a.firstShare[o]/n:null;out.ci.win=c.full?wilson(a.win[o],n):null;
     out.meanRank=a.rank[o]/n;out.ev=a.pay[o]/n;out.roi=(out.ev-c.entryFee)/c.entryFee;
-    // Bible §3.4 — dupe-adjusted EV (prior E[dupes] until ≥3 weeks standings / I5)
-    out.eDupes=eDupes[o];out.evAdj=a.payAdj[o]/n;
+    // Ownership-product prior is diagnostic only; represented ties settle once.
+    out.eDupes=eDupes[o];
     // Top-heavy payout tails cannot be resolved by scaling a small opponent sample.
-    out.approxRoi=out.roi;out.approxEv=out.ev;out.approxEvAdj=out.evAdj;
+    out.approxRoi=out.roi;out.approxEv=out.ev;
     if(!c.full&&(c.payout||{}).kind!=='flat'){out.roi=null;out.ev=null;}
-    // Selection key stays numeric even when raw ROI is withheld for top-heavy samples.
+    // Compatibility aliases carry exactly the same availability gate and settlement.
+    out.evAdj=out.ev;out.approxEvAdj=out.ev;
     return out;
   }
   const outcomes={};
