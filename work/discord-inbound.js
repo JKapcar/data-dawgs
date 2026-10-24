@@ -33,6 +33,7 @@ async function handleDiscordAsk(request,env,execution){
   const event=JSON.parse(new TextDecoder().decode(raw));dqCheck(event.application_id===env.DISCORD_APPLICATION_ID,403,'application_denied');
   if(event.type===1)return dqReply({type:1});
   verified=true;
+  if(typeof event.data?.custom_id==='string'&&event.data.custom_id.startsWith('dr:'))return await drInteraction(event,env,execution);
   if(event.data?.name==='pack')return await dpInteraction(event,env,execution); // addressed Pack seats: work/discord-pack.js
   dqCheck(dqSnow(env.DISCORD_GUILD_ID)&&dqSnow(env.DISCORD_CHANNEL_ID)&&event.guild_id===env.DISCORD_GUILD_ID&&event.channel_id===env.DISCORD_CHANNEL_ID,403,'destination_denied');
   dqCheck(event.type===2&&event.data?.type===1&&event.data?.name==='ask'&&dqSnow(event.id)&&dqSnow(event.member?.user?.id)&&event.member.user.bot!==true,400,'unsupported_interaction');

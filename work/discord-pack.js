@@ -87,7 +87,7 @@ function dpNext(j,now){
 function dpView(s,j,now){
  const t=j.thread_id?s.threads[j.thread_id]:null;
  const history=t?t.turns.filter(id=>id!==j.id&&dpById({id},j)<0).slice(-DP.historyTurns).map(id=>s.jobs[id]).filter(Boolean).map(p=>({id:p.id,question:p.question,reply:p.delivery==='delivered'?p.result_text:null,outcome:p.outcome??null,state:p.state})):[];
- return {id:j.id,seat:j.seat,guild_id:j.guild_id,parent_id:j.parent_id,kind:j.kind,root_id:j.root_id,thread_id:j.thread_id??null,thread_name:dpThreadName(j),requester:j.requester_name,question:j.question,question_trust:j.question_trust,created_at:j.created_at,
+ return {id:j.id,seat:j.seat,guild_id:j.guild_id,parent_id:j.parent_id,kind:j.kind,root_id:j.root_id,thread_id:j.thread_id??null,thread_name:dpThreadName(j),requester:j.requester_name,question:j.question,question_trust:j.question_trust,public_context:j.public_context??null,created_at:j.created_at,
   state:j.state,execution:j.execution??'not_started',wake:j.wake?.mechanism==='grok_routine'?dgView(j,now):{performed:false,mechanism:'session_polling',execution_verified:false},claim:j.claim?{binding:j.claim.epoch,expires_at:j.claim.expires_at,expired:dpClaimExpired(j,now)}:null,attempt:j.attempt,outcome:j.outcome??null,reply:j.result_text??null,
   delivery:j.delivery,delivery_stage:j.delivery_stage??null,reserved_at:j.reserved_at??null,next:dpNext(j,now),last_error:j.last_error??null,
   receipt:j.delivery==='delivered'?{thread_id:j.thread_id,message_id:j.message_id??null,url:j.url??null,delivered_at:j.delivered_at,evidence:j.resolution?'owner_observed_in_discord':'discord_api_response'}:null,
@@ -114,7 +114,7 @@ function dpMessage(e){
 async function dpEditOriginal(env,event,content){
  if(typeof event.token!=='string'||!/^[A-Za-z0-9._-]{20,1000}$/.test(event.token))return;
  // The interaction token is used once, in memory, to replace the deferred ephemeral reply. It is never stored.
- await fetch('https://discord.com/api/v10/webhooks/'+env.DISCORD_APPLICATION_ID+'/'+event.token+'/messages/@original',{method:'PATCH',headers:{'Content-Type':'application/json'},redirect:'manual',signal:AbortSignal.timeout(10000),body:JSON.stringify({content:content.slice(0,1900),allowed_mentions:{parse:[]}})});
+ await fetch('https://discord.com/api/v10/webhooks/'+env.DISCORD_APPLICATION_ID+'/'+event.token+'/messages/@original',{method:'PATCH',headers:{'Content-Type':'application/json'},redirect:'manual',signal:AbortSignal.timeout(10000),body:JSON.stringify({content:content.slice(0,1900),allowed_mentions:{parse:[]},components:typeof drButtons==='function'?drButtons(env,event.channel_id!==env.DISCORD_CHANNEL_ID):[]})});
 }
 function dpInput(event,env){
  dpCheck(env.DISCORD_PACK_ENABLED==='true',503,'pack_disabled');
@@ -140,10 +140,12 @@ async function dpInteraction(event,env,execution){
 }
 async function dpAdmit(event,env,{question,to}){
  dpCheck(env.FB_SECRET,503,'pack_store_unconfigured');
- const uid=event.member.user.id,name=dpName(event.member),now=Date.now(),seats=dpSeatConfig(env);
+ const uid=event.member.user.id,name=dpName(event.member),seats=dpSeatConfig(env);
  const fingerprint=await dcHash(JSON.stringify(['pack',event.guild_id,event.channel_id,uid,to,question]));
+ const publicContext=typeof drPublicContext==='function'?await drPublicContext(env,question):null;
  const code=dpRandom(24),codeHash=await dcHash(code); // used only if this user is not linked yet
  return dpTxn(env,s=>{
+  const now=Date.now();
   const old=s.jobs[event.id];
   if(old){dpCheck(old.fingerprint===fingerprint,409,'interaction_conflict');return {result:dpAckText(s,old,now,true),write:false};}
   const link=s.links[uid];
@@ -167,7 +169,7 @@ async function dpAdmit(event,env,{question,to}){
   dpCheck(w.total<DP.admitTotal&&(w.users[uid]||0)<DP.admitUser,429,'pack_rate_limit');w.total++;w.users[uid]=(w.users[uid]||0)+1;s.windows.admit=w;
   const job={id:event.id,seat,kind,root_id:kind==='new'?event.id:thread.root_id,thread_id:kind==='new'?null:event.channel_id,requester_id:uid,requester_name:name,
    guild_id:event.guild_id,parent_id:env.DISCORD_CHANNEL_ID,origin_channel_id:event.channel_id,question,question_trust:'untrusted_discord_user_text',fingerprint,created_at:dpIso(now),
-   state:'queued',attempt:1,delivery:'not_sent',execution:'not_started'};
+   state:'queued',attempt:1,delivery:'not_sent',execution:'not_started',...(publicContext?{public_context:publicContext}:{})};
   if(typeof dgAdmissible==='function'&&dgAdmissible(s,env,seat,uid,now))dgStage(job,now);
   s.jobs[event.id]=job;
   if(thread){thread.turns=[...thread.turns,event.id];thread.updated_at=dpIso(now);}
@@ -305,7 +307,7 @@ async function dpDeliver(env,j){
   }
   const content=dpContent(j);if(content.length>2000){out.certain_not_sent=true;dpFail(400,'reply_too_long_with_label');}
   mutating=true;
-  const m=await dpDiscord(env,'channels/'+out.thread_id+'/messages',{content,allowed_mentions:{parse:[],users:[],roles:[],replied_user:false},flags:4,nonce:j.nonce,enforce_nonce:true});
+  const m=await dpDiscord(env,'channels/'+out.thread_id+'/messages',{content,allowed_mentions:{parse:[],users:[],roles:[],replied_user:false},flags:4,nonce:j.nonce,enforce_nonce:true,components:typeof drButtons==='function'?drButtons(env,true):[]});
   if(!m.ok)certain(m,'message_create');
   const msg=await m.json().catch(()=>null);
   dpCheck(dqSnow(msg?.id)&&msg.channel_id===out.thread_id,502,'message_response_unverified');
@@ -403,15 +405,16 @@ async function handleDiscordPackOwner(request,env){
   const now=Date.now();
   if(request.method==='GET'){
    const snap=await fbGet(env,DP_PATH,true);dpCheck(snap.etag,503,'pack_store_unavailable');const s=dpStore(snap.data),seats=dpSeatConfig(env);
-   return send({grok_admission:typeof dgOwnerDiagnostics==='function'?dgOwnerDiagnostics(s,env,now):null,flags:{pack:env.DISCORD_PACK_ENABLED==='true',delivery:env.DISCORD_PACK_DELIVERY_ENABLED==='true',bot_secret_bound:!!env.DISCORD_BOT_TOKEN},channel:env.DISCORD_CHANNEL_ID||null,
+   return send({grok_admission:typeof dgOwnerDiagnostics==='function'?dgOwnerDiagnostics(s,env,now):null,flags:{pack:env.DISCORD_PACK_ENABLED==='true',delivery:env.DISCORD_PACK_DELIVERY_ENABLED==='true',bot_secret_bound:!!env.DISCORD_BOT_TOKEN,retrieval:env.DISCORD_RETRIEVAL_ENABLED==='true',lineup_sharing:env.DISCORD_DFS_SHARE_ENABLED==='true'},channel:env.DISCORD_CHANNEL_ID||null,
     seats:Object.entries(DP_SEATS).map(([seat,display])=>{const b=s.seats[seat];return {seat,display,configured_key:seats[seat]?.key_label??null,stopped_at:b?.stopped_at??null,binding:b?.lease_sha256?{number:b.epoch,session_ref:b.session_ref??null,bound_at:b.bound_at,last_seen_at:b.last_seen_at,live:!!dpLiveBinding(s,seat,now)}:null,verified:b?.verified??null};}),
-    command:s.command??null,links:Object.entries(s.links).map(([id,l])=>({discord_user_id:id,name:l.name,linked_at:l.linked_at,expires_at:l.expires_at})),open_link_codes:Object.values(s.challenges).filter(c=>Date.parse(c.expires_at)>now).length,
+    retrieval_launcher:s.retrieval_launcher?{status:s.retrieval_launcher.status,url:s.retrieval_launcher.url??null}:null,command:s.command??null,links:Object.entries(s.links).map(([id,l])=>({discord_user_id:id,name:l.name,linked_at:l.linked_at,expires_at:l.expires_at})),open_link_codes:Object.values(s.challenges).filter(c=>Date.parse(c.expires_at)>now).length,
     jobs:Object.values(s.jobs).sort(dpById).slice(-25).reverse().map(j=>({id:j.id,seat:j.seat,kind:j.kind,state:j.state,delivery:j.delivery,wake:j.wake?.mechanism==='grok_routine'?{...dgView(j,now),http_status:j.wake.http_status??null}:null,next:dpNext(j,now),thread_id:j.thread_id??null,url:j.url??null,created_at:j.created_at,last_error:j.last_error??null,resolution:j.resolution??null}))});
   }
   dpCheck(request.headers.get('Content-Type')?.split(';')[0]==='application/json',415,'json_required');
   const a=JSON.parse(new TextDecoder().decode(await dqBytes(request)));
-  const shapes={link_preview:['code'],link_confirm:['code'],unlink:['discord_user_id'],register:[],inspect_command:[],resolve:['id','observed'],stop:['seat'],allow:['seat']};
+  const shapes={publish_launcher:[],link_preview:['code'],link_confirm:['code'],unlink:['discord_user_id'],register:[],inspect_command:[],resolve:['id','observed'],stop:['seat'],allow:['seat']};
   dpCheck(dpObj(a)&&Object.hasOwn(shapes,a.action)&&Object.keys(a).every(k=>k==='action'||shapes[a.action].includes(k))&&shapes[a.action].every(k=>k in a),400,'invalid_owner_action');
+  if(a.action==='publish_launcher')return send(await drPublishLauncher(env));
   if(a.action==='link_preview'||a.action==='link_confirm'){
    dpCheck(env.DISCORD_PACK_ENABLED==='true',503,'pack_disabled');dpCheck(typeof a.code==='string'&&/^[A-Za-z0-9_-]{32}$/.test(a.code),400,'invalid_code');
    const h=await dcHash(a.code);await authorize();
