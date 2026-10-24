@@ -138,14 +138,14 @@ async function dpInteraction(event,env,execution){
  }
  try{const text=await dpAdmit(event,env,input);if(typeof dgDrain==='function')await dgDrain(env,event.id).catch(()=>{});return reply(text);}catch(e){return reply('Not accepted: '+dpMessage(e)+' Nothing was queued.');}
 }
-async function dpAdmit(event,env,{question,to}){
+async function dpAdmit(event,env,{question,to},guard=()=>true){
  dpCheck(env.FB_SECRET,503,'pack_store_unconfigured');
  const uid=event.member.user.id,name=dpName(event.member),seats=dpSeatConfig(env);
  const fingerprint=await dcHash(JSON.stringify(['pack',event.guild_id,event.channel_id,uid,to,question]));
  const publicContext=typeof drPublicContext==='function'?await drPublicContext(env,question):null;
  const code=dpRandom(24),codeHash=await dcHash(code); // used only if this user is not linked yet
  return dpTxn(env,s=>{
-  const now=Date.now();
+  const now=Date.now();dpCheck(guard(),409,'mention_admission_stopped');
   const old=s.jobs[event.id];
   if(old){dpCheck(old.fingerprint===fingerprint,409,'interaction_conflict');return {result:dpAckText(s,old,now,true),write:false};}
   const link=s.links[uid];
@@ -405,15 +405,16 @@ async function handleDiscordPackOwner(request,env){
   const now=Date.now();
   if(request.method==='GET'){
    const snap=await fbGet(env,DP_PATH,true);dpCheck(snap.etag,503,'pack_store_unavailable');const s=dpStore(snap.data),seats=dpSeatConfig(env);
-   return send({grok_admission:typeof dgOwnerDiagnostics==='function'?dgOwnerDiagnostics(s,env,now):null,flags:{pack:env.DISCORD_PACK_ENABLED==='true',delivery:env.DISCORD_PACK_DELIVERY_ENABLED==='true',bot_secret_bound:!!env.DISCORD_BOT_TOKEN,retrieval:env.DISCORD_RETRIEVAL_ENABLED==='true',lineup_sharing:env.DISCORD_DFS_SHARE_ENABLED==='true'},channel:env.DISCORD_CHANNEL_ID||null,
+   return send({mentions:env.DISCORD_GATEWAY?await dmOwner(env,'status'):null,grok_admission:typeof dgOwnerDiagnostics==='function'?dgOwnerDiagnostics(s,env,now):null,flags:{pack:env.DISCORD_PACK_ENABLED==='true',delivery:env.DISCORD_PACK_DELIVERY_ENABLED==='true',bot_secret_bound:!!env.DISCORD_BOT_TOKEN,retrieval:env.DISCORD_RETRIEVAL_ENABLED==='true',lineup_sharing:env.DISCORD_DFS_SHARE_ENABLED==='true'},channel:env.DISCORD_CHANNEL_ID||null,
     seats:Object.entries(DP_SEATS).map(([seat,display])=>{const b=s.seats[seat];return {seat,display,configured_key:seats[seat]?.key_label??null,stopped_at:b?.stopped_at??null,binding:b?.lease_sha256?{number:b.epoch,session_ref:b.session_ref??null,bound_at:b.bound_at,last_seen_at:b.last_seen_at,live:!!dpLiveBinding(s,seat,now)}:null,verified:b?.verified??null};}),
     retrieval_launcher:s.retrieval_launcher?{status:s.retrieval_launcher.status,url:s.retrieval_launcher.url??null}:null,command:s.command??null,links:Object.entries(s.links).map(([id,l])=>({discord_user_id:id,name:l.name,linked_at:l.linked_at,expires_at:l.expires_at})),open_link_codes:Object.values(s.challenges).filter(c=>Date.parse(c.expires_at)>now).length,
     jobs:Object.values(s.jobs).sort(dpById).slice(-25).reverse().map(j=>({id:j.id,seat:j.seat,kind:j.kind,state:j.state,delivery:j.delivery,wake:j.wake?.mechanism==='grok_routine'?{...dgView(j,now),http_status:j.wake.http_status??null}:null,next:dpNext(j,now),thread_id:j.thread_id??null,url:j.url??null,created_at:j.created_at,last_error:j.last_error??null,resolution:j.resolution??null}))});
   }
   dpCheck(request.headers.get('Content-Type')?.split(';')[0]==='application/json',415,'json_required');
   const a=JSON.parse(new TextDecoder().decode(await dqBytes(request)));
-  const shapes={publish_launcher:[],link_preview:['code'],link_confirm:['code'],unlink:['discord_user_id'],register:[],inspect_command:[],resolve:['id','observed'],stop:['seat'],allow:['seat']};
+  const shapes={mentions_start:[],mentions_stop:[],publish_launcher:[],link_preview:['code'],link_confirm:['code'],unlink:['discord_user_id'],register:[],inspect_command:[],resolve:['id','observed'],stop:['seat'],allow:['seat']};
   dpCheck(dpObj(a)&&Object.hasOwn(shapes,a.action)&&Object.keys(a).every(k=>k==='action'||shapes[a.action].includes(k))&&shapes[a.action].every(k=>k in a),400,'invalid_owner_action');
+  if(a.action==='mentions_start'||a.action==='mentions_stop')return send({mentions:await dmOwner(env,a.action==='mentions_start'?'start':'stop')});
   if(a.action==='publish_launcher')return send(await drPublishLauncher(env));
   if(a.action==='link_preview'||a.action==='link_confirm'){
    dpCheck(env.DISCORD_PACK_ENABLED==='true',503,'pack_disabled');dpCheck(typeof a.code==='string'&&/^[A-Za-z0-9_-]{32}$/.test(a.code),400,'invalid_code');
