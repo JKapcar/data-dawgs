@@ -24,6 +24,7 @@ function render(){
  const jobs=$('jobs');jobs.replaceChildren();
  if(!data.jobs.length)jobs.append(el('p','No requests yet.','small'));
  for(const j of data.jobs){const row=el('div',null,'job');row.append(el('div',j.id+' · '+j.seat+' · '+j.kind+' · '+j.state+' · delivery '+j.delivery),el('div',[j.next,j.last_error&&('last error: '+j.last_error),j.resolution&&('owner recorded: '+j.resolution.observed)].filter(Boolean).join(' · '),'small'));
+  if(j.wake)row.append(el('pre',JSON.stringify(j.wake,null,2),'small'));
   if(j.url){const a=el('a','Open reply');a.href=j.url;a.rel='noreferrer';a.target='_blank';row.append(a);}
   if(j.delivery==='uncertain'){const box=el('div',null,'actions');for(const [observed,label] of [['present','It is in Discord'],['absent','Not in Discord']]){const b=el('button',label);b.dataset.act='resolve';b.onclick=()=>act({action:'resolve',id:j.id,observed},'Recorded.');box.append(b);}row.append(box);}
   jobs.append(row);}
