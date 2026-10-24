@@ -18,3 +18,15 @@ The ranking fixture uses eight unchanged legal synthetic Classic rosters, a supp
 Initial verification found a typo in the new parity test and missing ownership in an early generated-field fixture; both were corrected before the final run. The final ranking fixture supplies its field explicitly. Browser end-to-end checks were not run: Playwright/jsdom are absent and the workspace dependency tool reports this thread unsupported. Page script compilation, embedded-source parity and renderer availability assertions passed; this is not a visual browser certification.
 
 No field generation, scoring distribution, projection source, saved lineup, historical split/gate or rejected calibration candidate changed. Payout changes apply only to new simulations; archived outputs are not rewritten. The independent research branch remains untouched. Review the portable patch before any separately authorized release.
+
+## Supplemental UI verification — 2026-10-24
+
+Installed the exact CI dependencies (`playwright@1.56.1`, `jsdom@30.0.1`) from the official npm registry into a separate workspace dependency directory. Playwright's official Chromium build v1194 installed successfully. This supersedes the earlier missing-dependency limitation; production code did not change.
+
+Passed: `DDFS_JSDOM=<external node_modules/jsdom> node work/test-dfs-payout-ui.cjs`. This runs the actual standard Simulate button, positive duplicate-prior construction, engine, result table and lineup cards with synthetic inputs and stubbed Worker transport. Full-field settlement displays $8; sampled top-heavy settlement displays unavailable EV and explicitly named Top-10 proxy ranking. Also passed `work/test-dfs-workspace-ui.cjs`, covering private save/load, revision, auth header and local backup with mocked requests.
+
+Failed, reproduced on unchanged base: `work/test-dfs-lab-ui.cjs:23` expects the upload control outside a details element, but current main nests it inside one. The identical assertion fails at base `bb7f0ada` and the patch before any simulation. The old test was not weakened or its unrelated layout changed.
+
+Blocked/unrun beyond startup: `work/test-dfs-labs-ui.cjs` launched Chromium, but navigation to the local test server failed with `net::ERR_NETWORK_ACCESS_DENIED` at `http://127.0.0.1:<ephemeral-port>/dfs.html`. No alternate browser/network route was attempted after that denial. Actual browser interactions, responsive screenshots, cancellation and the remaining E2E assertions are therefore unverified. jsdom checks are not a substitute for browser certification.
+
+Current-lineup comparison remains unavailable: the authorized workspace/project inventory contains historical 2020 audit inputs, synthetic NFL projection/lineup fixtures and unrelated NHL projection artifacts, not a verified current NFL candidate/projection snapshot. No private records or screenshots are included in the package. Supplemental commands/logs and the new test are included for reproduction.
