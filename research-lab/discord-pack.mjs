@@ -8,7 +8,7 @@ const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text!=null)e.te
 async function request(body){const auth=token(),generation=epoch;if(!auth)throw Error('Sign in to DataDawgs as the site owner, then return here.');
  const r=await fetch(api,{method:body?'POST':'GET',headers:{Authorization:'Bearer '+auth,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),credentials:'omit',redirect:'error',cache:'no-store'});
  const result=await r.json();if(auth!==token()||generation!==epoch)throw Error('Account changed. Load status again.');if(!r.ok){DDAccount.failed(r.status);throw Error(result.error||'Request failed');}DDAccount.verified(auth);return result;}
-function controls(){const ok=!busy&&!!data&&$('consent').checked;$('register').disabled=!ok||!data.flags.pack;$('inspect').disabled=busy||!data;$('confirmLink').disabled=!ok||!preview;$('load').disabled=busy;
+function controls(){const ok=!busy&&!!data&&$('consent').checked;$('register').disabled=!ok||!data.flags.pack;$('publishLauncher').disabled=!ok||!data.flags.retrieval;$('inspect').disabled=busy||!data;$('confirmLink').disabled=!ok||!preview;$('load').disabled=busy;
  for(const b of document.querySelectorAll('[data-act]'))b.disabled=!ok;}
 function clear(){epoch++;data=null;$('panel').hidden=true;$('consent').checked=false;controls();}
 function render(){
@@ -40,6 +40,7 @@ async function load(){data=await request();render();
 async function act(body,done){if(busy)return;busy=true;controls();try{if(body){if(!$('consent').checked)throw Error('Tick the approval box first.');const r=await request(body);$('status').textContent=done+(r.notice?' '+r.notice:r.registration?' '+r.registration+'.':'');}$('consent').checked=false;if(body?.action==='link_confirm'){codeUsed=true;preview=null;$('confirmLink').hidden=true;$('linkPanel').hidden=true;}const note=$('status').textContent;await load();if(body)$('status').textContent=note;}
  catch(e){clear();$('status').textContent=e.message+' Load status before another action.';}finally{busy=false;controls();}}
 $('load').onclick=()=>act();$('consent').onchange=controls;
+$('publishLauncher').onclick=()=>act({action:'publish_launcher'},'Launcher:');
 $('register').onclick=()=>act({action:'register'},'Registration:');
 $('inspect').onclick=async()=>{if(busy||!data)return;busy=true;controls();try{$('command').textContent=JSON.stringify(await request({action:'inspect_command'}),null,2);$('status').textContent='Read-only inspection complete.';}catch(e){$('status').textContent=e.message;}finally{busy=false;controls();}};
 $('confirmLink').onclick=()=>act({action:'link_confirm',code},'Linked.');
