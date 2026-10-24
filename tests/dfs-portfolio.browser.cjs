@@ -1,7 +1,7 @@
 /* Authenticated browser + MCP roundtrip using synthetic data and an in-memory Worker. */
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),vm=require('node:vm'),assert=require('node:assert/strict');
 const fixture=require('./fixtures/dfs-portfolio.cjs'),{chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright'),root=path.join(__dirname,'..'),out=process.env.DFS_PORTFOLIO_PREVIEW||path.join(root,'work/artifacts/dfs-portfolio');
-const source=fs.readFileSync(path.join(root,'dawg-bot-worker.js'),'utf8').replace(/^import .*;$/m,'const BOZO_ESPN_TEAM_SEED={};').replace('export default','const worker=');
+const source=fs.readFileSync(path.join(root,'dawg-bot-worker.js'),'utf8').replace(/^import .*;$/m,'const BOZO_ESPN_TEAM_SEED={};').replace('export class DiscordMentionGateway','class DiscordMentionGateway').replace('export default','const worker=');
 const context=vm.createContext({console,Date,URL,Response,Request,Headers,TextEncoder,TextDecoder,crypto:globalThis.crypto,AbortController,setTimeout,clearTimeout});
 vm.runInContext(source+`\nglobalThis.api={run:dfsRun,tools:MCP_TOOLS};fbGet=async(e,p)=>({data:e.rows[p]||(p.split('/').length===4?Object.fromEntries(Object.entries(e.rows).filter(([k])=>k.startsWith(p+'/')).map(([k,v])=>[k.slice(p.length+1),v])):null),etag:String(e.versions[p]||0)});fbPut=async(e,p,v,t)=>{if(String(e.versions[p]||0)!==t)return false;e.rows[p]=JSON.parse(JSON.stringify(v));e.versions[p]=(e.versions[p]||0)+1;return true;};`,context);
 const env={rows:{},versions:{}},caller={kind:'user',uid:'synthetic-user'},id='synthetic-existing',storagePath='/users/'+caller.uid+'/dfsWorkspaces/'+id;

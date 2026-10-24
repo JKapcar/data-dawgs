@@ -34,12 +34,13 @@ function dgAdmissible(s,env,seat,uid,now){return seat==='grok'&&uid===env.DISCOR
 function dgStage(j,now){j.wake={mechanism:'grok_routine',status:'pending',attempts:0,due_ms:now,deadline_ms:now+20*60e3};}
 function dgView(j,now){const w=j.wake;return {mechanism:'grok_routine',status:w.status==='sending'&&now-w.reserved_ms>10000?'uncertain':w.status,attempts:w.attempts,receipt_acknowledged:w.status==='accepted',execution_verified:false,execution_status:j.delivery==='delivered'?'reply_delivered':now>w.deadline_ms?'timed_out_requires_owner_review':j.claim?'claimed_not_execution_proof':'awaiting_claim'};}
 async function dgKey(env){const users=(await fbGet(env,'/users')).data;return users?.[env.RESEARCH_OWNER_UID]?.mcpTokens?.['pack-grok']?.hash??null;}
-async function dgDrain(env,onlyId){
+async function dgDrain(env,onlyId,guard=()=>true){
+ if(!guard())return;
  const cfg=dgConfig(env);if(!cfg)return;
  const hash=await dgKey(env);if(typeof hash!=='string'||!hash)return;
  const admission='dga_'+dpRandom(32),admissionHash=await dcHash(admission),deliveryId='msg_'+dpRandom(16);
  const plan=await dpTxn(env,s=>{
-  const now=Date.now(),jobs=Object.values(s.jobs);
+  const now=Date.now(),jobs=Object.values(s.jobs);if(!guard())return {write:false};
   // One outstanding unanswered wake. Delivery does not prove the external run ended.
   // Ambiguous or expired accepted wakes stop further wakes;
   // an owner must inspect them. A timeout never proves a run has ended.
@@ -60,11 +61,12 @@ async function dgDrain(env,onlyId){
  let status='uncertain',http=null;
  try{
   const s=dpStore((await fbGet(env,DP_PATH)).data),j=s.jobs[plan.id],fresh=dgConfig(env);
-  if(!fresh||fresh.url!==cfg.url||await dgKey(env)!==plan.hash||!j||!dgAdmissible(s,env,j.seat,j.requester_id,Date.now())||j.guild_id!==env.DISCORD_GUILD_ID||j.parent_id!==env.DISCORD_CHANNEL_ID)status='cancelled';
+  if(!guard()||!fresh||fresh.url!==cfg.url||await dgKey(env)!==plan.hash||!j||!dgAdmissible(s,env,j.seat,j.requester_id,Date.now())||j.guild_id!==env.DISCORD_GUILD_ID||j.parent_id!==env.DISCORD_CHANNEL_ID)status='cancelled';
   else {
    const body=JSON.stringify({job_id:plan.id,admission}),timestamp=String(Math.floor(Date.now()/1000));
    const headers=await dgSignedHeaders(env.GROK_WEBHOOK_SIGNING_SECRET,deliveryId,timestamp,body);
-   const r=await fetch(cfg.url,{method:'POST',redirect:'manual',signal:AbortSignal.timeout(8000),headers,body});
+   if(!guard())throw Error('wake_stopped');
+   const r=await fetch(cfg.url,{method:'POST',redirect:'manual',signal:typeof DM_ABORT!=='undefined'&&env[DM_ABORT]?AbortSignal.any([AbortSignal.timeout(8000),env[DM_ABORT]]):AbortSignal.timeout(8000),headers,body});
    http=r.status;void r.body?.cancel().catch(()=>{});
    // 202 acknowledges asynchronous acceptance, not completion. Documented 429/503
    // are retryable rejections. Other ambiguous outcomes must never be replayed.

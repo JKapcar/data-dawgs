@@ -15,7 +15,10 @@
       "enabled": true
     }
   },
+  "durable_objects": {"bindings": [{"name": "DISCORD_GATEWAY", "class_name": "DiscordMentionGateway"}]},
+  "migrations": [{"tag": "discord-mentions-v1", "new_sqlite_classes": ["DiscordMentionGateway"]}],
   "vars": {
+    "DISCORD_MENTIONS_ENABLED": "false",
     "BOZO_ADMIN": "Kap",
     "AGENT_FEEDBACK_ENABLED": "false",
     "AGENT_BOARD_ENABLED": "true",

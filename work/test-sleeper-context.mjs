@@ -38,7 +38,7 @@ async function upstream(url){
   throw Error('Unexpected fixture route: '+path);
 }
 const ctx=vm.createContext({BOZO_ESPN_TEAM_SEED,console,URL,Request,Response,Headers,TextEncoder,TextDecoder,crypto:webcrypto,fetch:upstream,structuredClone,AbortSignal,setTimeout,clearTimeout,atob,btoa});
-vm.runInContext(source.replace(/^import .*;$/m,'').replace('export default {','const worker = {')+'\nglobalThis.warTool=MCP_TOOLS.find(t=>t.name==="dd_war_room");globalThis.listTool=MCP_TOOLS.find(t=>t.name==="dd_fantasy_leagues");',ctx);
+vm.runInContext(source.replace(/^import .*;$/m,'').replace('export class DiscordMentionGateway','class DiscordMentionGateway').replace('export default {','const worker = {')+'\nglobalThis.warTool=MCP_TOOLS.find(t=>t.name==="dd_war_room");globalThis.listTool=MCP_TOOLS.find(t=>t.name==="dd_fantasy_leagues");',ctx);
 // Only auth verification is stubbed. Real scoped selection, Firebase reads, KV
 // encryption, provider loading, cache, valuation join and MCP handlers execute.
 vm.runInContext(`sessionAuth=async request=>{const t=request.headers.get('X-Bozo-Session');return t==='expired'?{err:'Expired session',code:401}:t?{uid:t}:{err:'Sign in',code:401};}`,ctx);
