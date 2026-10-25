@@ -11,7 +11,6 @@ on:
       - "bozo-menu.mjs"
       - "tests/bozo-menu*.test.mjs"
       - "tests/bozo-clv-estimate.test.cjs"
-      - "tests/bozo-provider-usage.test.cjs"
       - "tests/discord-*.test.cjs"
       - "tests/discord-*.test.mjs"
       - "wrangler.jsonc"
@@ -19,6 +18,7 @@ on:
       - "tests/worker-config-guard.test.mjs"
       - "work/**"
       - "tools/validate-data.js"
+      - "tests/bozo-provider-usage.test.cjs"
       - "data/**"
 
 permissions:
