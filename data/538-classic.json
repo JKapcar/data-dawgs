@@ -14,7 +14,7 @@
   "methodology_url": "https://datadawgs216.com/data/538-classic-methodology.md"
  },
  "provenance": {
-  "generated_at": "2026-10-25T16:37:18.331051Z",
+  "generated_at": "2026-10-25T19:50:10.349695Z",
   "official_reference": {
    "repository": "fivethirtyeight/nfl-elo-game",
    "commit": "fbec1afa38ece5befe24fb21be8ddba8eb160fe6",
@@ -32,7 +32,7 @@
    "last_game": "2025_22_SEA_NE",
    "last_game_date": "2026-02-08"
   },
-  "schedule_snapshot_id": "sha256:36355893e81733142e2fe81ac0ee30130ce982e16276d3c132e8be13d402173d",
+  "schedule_snapshot_id": "sha256:a4a41eeaddf814095205304d42ccd8808db2802693a6b9991600c158c172abdd",
   "input_material": {
    "model": {
     "id": "538-classic",
@@ -54,7 +54,7 @@
     "games_sha256": "69ad2b70c683cd92b51033521ac46b2e2033f20f759434cfcd1b391d379b2e85",
     "games_replayed": 1424
    },
-   "schedule_snapshot_id": "sha256:36355893e81733142e2fe81ac0ee30130ce982e16276d3c132e8be13d402173d",
+   "schedule_snapshot_id": "sha256:a4a41eeaddf814095205304d42ccd8808db2802693a6b9991600c158c172abdd",
    "target_season_ratings": [
     {
      "team": "ARI",
@@ -196,9 +196,9 @@
   "note": "This proves the published mathematics were reproduced; it does not establish current predictive skill or betting profitability."
  },
  "integrity": {
-  "input_snapshot_id": "sha256:353343be6ac6ef8ca2c22b8a8ec4dab4b489bbe286c689fcee4d62016a05b52d",
-  "snapshot_id": "sha256:32860df203bb3a4b05f62e21194abd52e08d7abf2d579c8b61454a67224599c8",
-  "forecast_rows": 177,
+  "input_snapshot_id": "sha256:70e5ffadc726121ae3316fa469a8037740bd9dd3573bbdf077d559202977315e",
+  "snapshot_id": "sha256:98687b5879244a00c0d540a70a108330f1266cf2b46c680296cb5259443dffe5",
+  "forecast_rows": 170,
   "team_rows": 32
  },
  "data": {
@@ -334,97 +334,6 @@
    }
   ],
   "forecasts": [
-   {
-    "game_id": "2026_07_CIN_BAL",
-    "season": 2026,
-    "week": 7,
-    "kickoff_at": "2026-10-25T17:00:00Z",
-    "home_team": "BAL",
-    "away_team": "CIN",
-    "neutral_site": false,
-    "home_elo": 1546.590992,
-    "away_elo": 1483.012378,
-    "home_field_elo": 65,
-    "home_win_probability": 0.67703
-   },
-   {
-    "game_id": "2026_07_CLE_TEN",
-    "season": 2026,
-    "week": 7,
-    "kickoff_at": "2026-10-25T17:00:00Z",
-    "home_team": "TEN",
-    "away_team": "CLE",
-    "neutral_site": false,
-    "home_elo": 1359.592264,
-    "away_elo": 1426.710159,
-    "home_field_elo": 65,
-    "home_win_probability": 0.496952
-   },
-   {
-    "game_id": "2026_07_IND_MIN",
-    "season": 2026,
-    "week": 7,
-    "kickoff_at": "2026-10-25T17:00:00Z",
-    "home_team": "MIN",
-    "away_team": "IND",
-    "neutral_site": false,
-    "home_elo": 1552.217939,
-    "away_elo": 1470.729752,
-    "home_field_elo": 65,
-    "home_win_probability": 0.69915
-   },
-   {
-    "game_id": "2026_07_MIA_NYJ",
-    "season": 2026,
-    "week": 7,
-    "kickoff_at": "2026-10-25T17:00:00Z",
-    "home_team": "NYJ",
-    "away_team": "MIA",
-    "neutral_site": false,
-    "home_elo": 1364.333443,
-    "away_elo": 1461.544821,
-    "home_field_elo": 65,
-    "home_win_probability": 0.453776
-   },
-   {
-    "game_id": "2026_07_NYG_HOU",
-    "season": 2026,
-    "week": 7,
-    "kickoff_at": "2026-10-25T17:00:00Z",
-    "home_team": "HOU",
-    "away_team": "NYG",
-    "neutral_site": false,
-    "home_elo": 1610.307635,
-    "away_elo": 1426.90776,
-    "home_field_elo": 65,
-    "home_win_probability": 0.806886
-   },
-   {
-    "game_id": "2026_07_SF_ATL",
-    "season": 2026,
-    "week": 7,
-    "kickoff_at": "2026-10-25T17:00:00Z",
-    "home_team": "ATL",
-    "away_team": "SF",
-    "neutral_site": false,
-    "home_elo": 1475.322689,
-    "away_elo": 1563.09603,
-    "home_field_elo": 65,
-    "home_win_probability": 0.467273
-   },
-   {
-    "game_id": "2026_07_TB_CAR",
-    "season": 2026,
-    "week": 7,
-    "kickoff_at": "2026-10-25T17:00:00Z",
-    "home_team": "CAR",
-    "away_team": "TB",
-    "neutral_site": false,
-    "home_elo": 1433.309904,
-    "away_elo": 1482.806614,
-    "home_field_elo": 65,
-    "home_win_probability": 0.522296
-   },
    {
     "game_id": "2026_07_DEN_ARI",
     "season": 2026,
