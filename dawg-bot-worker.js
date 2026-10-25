@@ -1870,6 +1870,7 @@ export default {
 
     if (url.pathname === "/scores")       return handleScores(url, env, cors);
     if (url.pathname === "/ops/health")   return handleOpsHealth(request, env, cors);
+    if (url.pathname === "/ops/provider-usage/sgo") return handleSgoUsageDiagnostic(request, env, cors);
     if (url.pathname === "/dk/lobby")     return handleDkLobby(request, url, cors);
     if (url.pathname === "/dk/draftables") return handleDkDraftables(request, url, cors);
     if (url.pathname === "/dk/contests")  return handleDkContests(request, url, cors);
@@ -11560,6 +11561,70 @@ async function readBozoGradeConfirm(env, token) {
   } catch { return null; }
   if (!proposal || proposal.v !== 1 || !proposal.expiresAt || Date.now() > proposal.expiresAt) return null;
   return proposal;
+}
+
+// Owner-only, on-demand diagnostic. No events, prices, account identifiers or raw
+// provider responses leave this boundary; no cache, KV writes or scheduled callers.
+function bozoSgoUsageProjection(body, observedAt) {
+  const data = body?.data;
+  if (body?.success !== true || typeof data?.isActive !== "boolean" ||
+      !data.rateLimits || typeof data.rateLimits !== "object" || Array.isArray(data.rateLimits)) return null;
+  const numeric = value => Number.isSafeInteger(value) && value >= 0 ? value : null;
+  const limits = {};
+  for (const interval of ["per-second", "per-minute", "per-hour", "per-day", "per-month"]) {
+    const row = data.rateLimits[interval];
+    if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+    const requests = numeric(row.currentIntervalRequests), objects = numeric(row.currentIntervalEntities);
+    const requestLimit = numeric(row.maxRequestsPerInterval), objectLimit = numeric(row.maxEntitiesPerInterval);
+    const end = typeof row.currentIntervalEndTime === "string" &&
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(row.currentIntervalEndTime)
+      ? Date.parse(row.currentIntervalEndTime) : NaN;
+    limits[interval] = { requests, objects, requestLimit, objectLimit,
+      requestsUnlimited: row.maxRequestsPerInterval === "unlimited",
+      objectsUnlimited: row.maxEntitiesPerInterval === "unlimited",
+      requestsRemaining: requests !== null && requestLimit !== null ? Math.max(0, requestLimit - requests) : null,
+      objectsRemaining: objects !== null && objectLimit !== null ? Math.max(0, objectLimit - objects) : null,
+      resetsAt: Number.isFinite(end) ? new Date(end).toISOString() : null };
+  }
+  // Account usage does not establish league, score or final-results entitlement.
+  return { provider: "sgo", observedAt, active: data.isActive, scoreEntitlement: null, limits };
+}
+async function handleSgoUsageDiagnostic(request, env, cors = {}) {
+  const headers = { ...cors, "Cache-Control": "private, no-store", "Vary": "Origin, Authorization",
+    "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" };
+  const send = (body, status = 200) => json(body, status, headers);
+  if (request.method !== "GET") return send({ error: "method_denied" }, 405);
+  const origin = request.headers.get("Origin");
+  if (origin && !["https://datadawgs216.com", "https://www.datadawgs216.com"].includes(origin))
+    return send({ error: "origin_denied" }, 403);
+  if (new URL(request.url).search) return send({ error: "parameters_denied" }, 400);
+  if (!/^u_[A-Za-z0-9_-]{1,100}$/.test(env.RESEARCH_OWNER_UID || ""))
+    return send({ error: "owner_unconfigured" }, 503);
+  let uid;
+  try { uid = await poundIdentity(request, env); }
+  catch { return send({ error: "site_session_required" }, 401); }
+  if (uid !== env.RESEARCH_OWNER_UID) return send({ error: "owner_required" }, 403);
+  if (!env.SGO_KEY) return send({ error: "provider_unconfigured" }, 503);
+  const controller = new AbortController();
+  let timer;
+  try {
+    return await Promise.race([(async () => {
+      const response = await fetch("https://api.sportsgameodds.com/v2/account/usage", {
+        method: "GET", headers: { "X-Api-Key": env.SGO_KEY, "Accept": "application/json" },
+        redirect: "error", signal: controller.signal });
+      if (!response.ok) return send({ error: response.status === 429 ? "provider_rate_limited" :
+        [401, 403].includes(response.status) ? "provider_denied" : "provider_unavailable",
+        httpStatus: response.status }, response.status === 429 ? 429 : 502);
+      let body;
+      try { body = await response.json(); } catch { return send({ error: "provider_invalid_response" }, 502); }
+      const projected = bozoSgoUsageProjection(body, new Date().toISOString());
+      return projected ? send(projected) : send({ error: "provider_invalid_response" }, 502);
+    })(), new Promise(resolve => { timer = setTimeout(() => {
+      controller.abort(); resolve(send({ error: "provider_timeout" }, 504));
+    }, 4000); })]);
+  } catch { return send({ error: controller.signal.aborted ? "provider_timeout" : "provider_unavailable" },
+    controller.signal.aborted ? 504 : 502); }
+  finally { clearTimeout(timer); }
 }
 
 async function requireAdmin(request, env) {
