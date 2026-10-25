@@ -186,3 +186,14 @@ test('request diagnostics distinguish malformed JSON, network failure and deadli
   assert.equal(puts,0);
  }
 });
+
+
+test('provider diagnosis retains only allowlisted fixed codes', async()=>{
+ for(const code of ['INVALID_KEY','OUT_OF_USAGE_CREDITS','secret-apiKey=test-key']) {
+  const r=rig(async()=>Response.json({error_code:code,message:'private test-key'},{status:401}));
+  await assert.rejects(r.bozoOddsApiRequest({ODDS_API_KEY:'test-key'},'sports/americanfootball_ncaaf/scores',{}),e=>{
+   assert.equal(e.providerCode,code.startsWith('secret')?null:code);
+   assert.ok(!JSON.stringify(e).includes('test-key')); return true;
+  });
+ }
+});

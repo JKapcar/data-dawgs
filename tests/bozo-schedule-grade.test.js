@@ -125,7 +125,7 @@ test('UNT @ IU can grade the IND side through the captured registry aliases', ()
   assert.equal(grade.result, 'won');
 });
 
-test('ETag refresh writes only schedule:{sport}:{season} and 304 writes nothing', async () => {
+test('ETag refresh records check time on 304 without restamping source data', async () => {
   const store = new Map(), writes = [];
   const kv = {
     async get(key, type) { const v = store.get(key); return type === 'json' && v ? JSON.parse(v) : (v || null); },
@@ -145,7 +145,11 @@ test('ETag refresh writes only schedule:{sport}:{season} and 304 writes nothing'
     async (_url, init) => { sentHeaders = init.headers; return new Response(null, { status: 304 }); });
   assert.equal(second.status, 'not_modified');
   assert.equal(sentHeaders['If-None-Match'], '"nfl-a"');
-  assert.deepEqual(writes, ['schedule:nfl:2026']);
+  assert.deepEqual(writes, ['schedule:nfl:2026','schedule:nfl:2026']);
+  const checked = JSON.parse(store.get('schedule:nfl:2026'));
+  assert.equal(checked.fetchedAt, saved.fetchedAt);
+  assert.equal(checked.checkedAt, '2026-09-04T01:00:00.000Z');
+  assert.deepEqual(checked.games, saved.games);
 });
 
 test('grade reads KV and strips a supplied game result while scores are blank', async () => {

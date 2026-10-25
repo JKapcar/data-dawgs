@@ -355,9 +355,8 @@ async function bozoLoadLiveFinals(env, sport, season) {
 /* The five-minute tick's score job. Reads the scheduled games, decides whether any is due,
    and refreshes the live archives only then. Per sport the result carries `health`, which
    opsOutcome reads:
-     ok   — ESPN (or the Odds API) answered this pass, or ESPN failed while the schedule
-            feeds are healthy (degraded: grading still lands, later; see `degraded`).
-     fail — ESPN failed, the Odds API did not rescue it, AND the schedule feed is failing.
+     ok   - a live provider answered and no overdue score remains unresolved.
+     fail - live providers failed, or a game six hours past kickoff still has no final.
      noop — nothing due, or throttled. */
 async function runBozoLiveScores(env, nowMs = Date.now(), season = SEASON,
     fetcher = (typeof fetch === "function" ? fetch : null)) {
@@ -367,7 +366,7 @@ async function runBozoLiveScores(env, nowMs = Date.now(), season = SEASON,
   for (const sport of ["nfl", "cfb"]) {
     let doc = null;
     try { doc = await bozoScheduleDoc(env, sport, season); } catch { doc = null; }
-    if (!doc || !Array.isArray(doc.games)) { out[sport] = { skipped: "no_schedule" }; continue; }
+    if (!doc || !Array.isArray(doc.games)) { out[sport] = { skipped: "no_schedule", health: "fail" }; continue; }
     const live = await bozoLoadLiveFinals(env, sport, season);
     const dueGames = [];
     let freshest = Infinity;
@@ -426,14 +425,21 @@ async function runBozoLiveScores(env, nowMs = Date.now(), season = SEASON,
     const oddsOk = odds.refreshed === true && !odds.error && !odds.skipped;
     const oddsTried = odds.refreshed === true && !odds.skipped;
 
+    // Retrieval health is not score completeness. A valid, unchanged static CSV can
+    // omit tonight's finals until tomorrow. Do not infer a result from elapsed time.
+    const refreshedLive = await bozoLoadLiveFinals(env, sport, season);
+    const overdue = dueGames.filter(game => nowMs - Date.parse(game.startsAt) >= 6 * 3600000 &&
+      !bozoAttachLiveFinal(refreshedLive.index, game)).length;
     let health;
-    if (espnOk || oddsOk) health = "ok";
+    if (overdue) health = "fail";
+    else if (espnOk || oddsOk) health = "ok";
     else if (!espn.attempted && !oddsTried) health = "noop";              // throttled pass
-    else health = scheduleOk ? "ok" : "fail";
-    const result = { due, health, source: espnOk ? "espn" : oddsOk ? "the-odds-api" : null, espn, odds,
+    else health = "fail";
+    const result = { due, overdue, health, source: espnOk ? "espn" : oddsOk ? "the-odds-api" : null, espn, odds,
       scheduleOk, refreshed: espn.refreshed || oddsTried,
       error: espnOk || oddsOk ? null : (espn.error || odds.error || null) };
-    if (!espnOk && !oddsOk && health === "ok") result.degraded = "live_scores_unavailable";
+    if (overdue) result.degraded = "overdue_scores_missing";
+    else if (!espnOk && !oddsOk) result.degraded = "live_scores_unavailable";
     if (!espnOk && odds.skipped === "daily_cap") result.skipped = "daily_cap";   // the pre-ESPN contract
     if (health === "fail") bozoEspnLog("bozo-scores-all-sources-failed", { sport, espn: espn.error, odds: odds.error || odds.skipped || null });
     out[sport] = result;

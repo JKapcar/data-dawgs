@@ -189,7 +189,7 @@ test('a due game refreshes from ESPN, attaches, stops polling, and never calls t
   const after = await api.runBozoLiveScores(r.env, now + 5 * 60_000, 2026, r.fetcher);
   assert.equal(after.nfl.due, 0); assert.equal(r.urls.length, 1);
   assert.equal(api.opsOutcome('bozo:scores', out), 'ok');
-  assert.equal(api.opsOutcome('bozo:scores', after), 'noop');
+  assert.equal(api.opsOutcome('bozo:scores', after), 'ok', 'verified finals cleared every due game');
 });
 
 test('CFB asks ESPN for FBS on each due Eastern date, at most two dates a tick', async () => {
@@ -198,7 +198,7 @@ test('CFB asks ESPN for FBS on each due Eastern date, at most two dates a tick',
     routes: [scoreboard(cfbBoard, '20261009'), scoreboard({ events: [] }, '20261008')] });
   const out = await api.runBozoLiveScores(r.env, T('2026-10-10T12:00:00Z'), 2026, r.fetcher);
   assert.equal(r.urls.length, 2); assert.ok(r.urls.every(u => /college-football\/scoreboard\?dates=\d{8}&limit=300&groups=80$/.test(u)));
-  assert.equal(out.cfb.health, 'ok'); assert.equal(out.cfb.espn.finals, 5);
+  assert.equal(out.cfb.health, 'fail'); assert.equal(out.cfb.overdue, 1); assert.equal(out.cfb.espn.finals, 5);
   const again = await api.runBozoLiveScores(r.env, T('2026-10-10T12:05:00Z'), 2026, r.fetcher);
   assert.equal(again.cfb.due, 1, 'only the Thursday game is still due');
 });
@@ -241,15 +241,15 @@ test('precedence in grading: ESPN grades while the schedule is open; the officia
 });
 
 /* ------------------------------ Odds API optional ------------------------------ */
-test('Odds API 401 is tolerated: no failure while the schedule feeds are healthy, probed once a day', async () => {
+test('Odds API 401 retains daily backoff but cannot hide a live-score outage', async () => {
   oddsCalls.length = 0;
   const blocked = [[u => /espn\.com/.test(u), status(403)]];
   const r = rig({ schedule: { nfl: [tbDal], cfb: [] }, routes: blocked, key: 'revoked' });
   const now = T('2026-10-09T03:00:00Z');
   const out = await api.runBozoLiveScores(r.env, now, 2026, r.fetcher);
   assert.equal(out.nfl.espn.error, 'espn_blocked'); assert.equal(out.nfl.odds.skipped, 'unauthorized', JSON.stringify(out.nfl) + JSON.stringify(r.store.get('bozo:score-finals:nfl:2026')));
-  assert.equal(out.nfl.health, 'ok'); assert.equal(out.nfl.degraded, 'live_scores_unavailable');
-  assert.equal(api.opsOutcome('bozo:scores', out), 'ok'); assert.equal(oddsCalls.length, 1);
+  assert.equal(out.nfl.health, 'fail'); assert.equal(out.nfl.degraded, 'live_scores_unavailable');
+  assert.equal(api.opsOutcome('bozo:scores', out), 'fail'); assert.equal(oddsCalls.length, 1);
   await api.runBozoLiveScores(r.env, now + 2 * 3600_000, 2026, r.fetcher);
   assert.equal(oddsCalls.length, 1, 'a 401 is not re-asked within the day');
   await api.runBozoLiveScores(r.env, now + 24 * 3600_000 + 60_000, 2026, r.fetcher);
@@ -260,7 +260,7 @@ test('no ODDS_API_KEY: skipped quietly; ESPN success needs no key at all', async
   oddsCalls.length = 0;
   const r = rig({ schedule: { nfl: [tbDal], cfb: [] }, routes: [[u => /espn\.com/.test(u), status(500)]] });
   const out = await api.runBozoLiveScores(r.env, T('2026-10-09T03:00:00Z'), 2026, r.fetcher);
-  assert.equal(out.nfl.odds.skipped, 'no_key'); assert.equal(oddsCalls.length, 0); assert.equal(out.nfl.health, 'ok');
+  assert.equal(out.nfl.odds.skipped, 'no_key'); assert.equal(oddsCalls.length, 0); assert.equal(out.nfl.health, 'fail');
   const ok = rig({ schedule: { nfl: [tbDal], cfb: [] }, routes: [scoreboard(nflBoard, '20261008')] });
   const good = await api.runBozoLiveScores(ok.env, T('2026-10-09T03:00:00Z'), 2026, ok.fetcher);
   assert.equal(good.nfl.source, 'espn'); assert.equal(good.nfl.health, 'ok');
@@ -326,4 +326,31 @@ test('the daily ESPN ceiling holds and records no false attempt', async () => {
   r.store.set('bozo:score-espn:nfl:2026', { games: [], calls: { day: '2026-10-09', n: 600 }, checkedAt: null });
   const out = await api.runBozoLiveScores(r.env, now, 2026, r.fetcher);
   assert.equal(r.urls.length, 0); assert.equal(out.nfl.espn.skipped, 'daily_cap'); assert.notEqual(out.nfl.health, 'fail');
+});
+
+
+test('successful empty live response cannot clear overdue score failure; a genuine final can', async () => {
+  const now = T('2026-10-09T08:00:00Z');
+  const r = rig({schedule:{nfl:[tbDal],cfb:[]}, routes:[scoreboard({events:[]}, '20261008')]});
+  const missing = await api.runBozoLiveScores(r.env, now, 2026, r.fetcher);
+  assert.equal(missing.nfl.health, 'fail');
+  assert.equal(missing.nfl.overdue, 1);
+  assert.equal(missing.nfl.degraded, 'overdue_scores_missing');
+  const recovered = rig({schedule:{nfl:[tbDal],cfb:[]}, routes:[scoreboard(nflBoard, '20261008')]});
+  const final = await api.runBozoLiveScores(recovered.env, now, 2026, recovered.fetcher);
+  assert.equal(final.nfl.health, 'ok'); assert.equal(final.nfl.overdue, 0);
+});
+
+test('a throttled failed provider does not clear the health latch', async () => {
+  const r = rig({schedule:{nfl:[tbDal],cfb:[]},routes:[[u=>/espn\.com/.test(u),status(403)]]});
+  const now = T('2026-10-09T03:00:00Z');
+  const failed = await api.runBozoLiveScores(r.env,now,2026,r.fetcher);
+  await api.opsRecord(r.env,'bozo:scores',api.opsOutcome('bozo:scores',failed),now);
+  const held = await api.runBozoLiveScores(r.env,now+5*60000,2026,r.fetcher);
+  await api.opsRecord(r.env,'bozo:scores',api.opsOutcome('bozo:scores',held),now+5*60000);
+  assert.equal(r.store.get('ops:health:bozo:scores').failing,true);
+});
+
+test('one successful sport cannot clear another sport in failed-provider backoff',()=>{
+ assert.equal(api.opsOutcome('bozo:scores',{nfl:{due:1,health:'ok'},cfb:{due:2,health:'noop'}}),'noop');
 });

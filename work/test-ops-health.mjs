@@ -134,7 +134,7 @@ async function readRoute(env) {
   await tick(FIVE, at("2026-10-10T11:46:00Z"), env);         // epa-daily slot: another success
   ok("one write per transition: two transitions, two writes", opsPuts(kv, "ops:health:gh:pacer").length === 2);
   ok("jobs that only no-op'd never wrote health at all",
-    ["bozo:close", "bozo:scores", "bozo:nearclose", "bozo:autograde", "forecast:live"].every(j => !kv.store.has("ops:health:" + j)));
+    ["bozo:close", "bozo:nearclose", "bozo:autograde", "forecast:live"].every(j => !kv.store.has("ops:health:" + j)));
   ok("the existing lasterror trail is untouched by a dispatch failure (it never threw)", !kv.store.has("gh:pacer:lasterror"));
 }
 
