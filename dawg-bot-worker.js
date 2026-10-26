@@ -8023,13 +8023,16 @@ async function bozoRefreshOneSchedule(env, sport, season, nowMs, fetcher = fetch
   const key = bozoScheduleKey(sport, season), previous = await bozoScheduleDoc(env, sport, season);
   const headers = previous?.etag ? { "If-None-Match": previous.etag } : {};
   const response = await fetcher(BOZO_SCHEDULE_SOURCE[sport], { headers });
-  if (response.status === 304) return { sport, season, key, status: "not_modified", games: (previous.games || []).length };
+  if (response.status === 304) {
+    await env.RL.put(key, JSON.stringify({ ...previous, checkedAt: new Date(nowMs).toISOString() }));
+    return { sport, season, key, status: "not_modified", games: (previous.games || []).length };
+  }
   if (!response.ok) throw new Error(`${sport} schedule HTTP ${response.status}`);
   const csv = await response.text();
   const games = sport === "nfl" ? bozoNormalizeNflSchedule(csv, season) : bozoNormalizeCfbSchedule(csv, season);
   if (!games.length) throw new Error(`${sport} schedule contained no ${season} games`);
   const doc = { schemaVersion: 1, sport, season, etag: response.headers.get("ETag") || null,
-    fetchedAt: new Date(nowMs).toISOString(), source: BOZO_SCHEDULE_SOURCE[sport], games };
+    fetchedAt: new Date(nowMs).toISOString(), checkedAt: new Date(nowMs).toISOString(), source: BOZO_SCHEDULE_SOURCE[sport], games };
   await env.RL.put(key, JSON.stringify(doc));
   return { sport, season, key, status: "updated", games: games.length, etag: doc.etag };
 }
@@ -9124,8 +9127,18 @@ async function bozoOddsApiRequest(env, path, params, options = {}) {
       }
       console.log("bozo-odds-api",JSON.stringify({status:response.status,...quota}));
       // The quota rides on a refusal too: an exhausted account still reports what is left.
-      if (!response.ok) throw fault(response.status===429?"rate_limited":"provider_error","Odds API HTTP "+response.status,
-        {quota, httpStatus:response.status, failureKind:"http_error"});
+      if (!response.ok) {
+        // Retain only documented fixed codes, never provider messages or echoed URLs.
+        let providerCode = null;
+        try {
+          const body = await response.json();
+          if (["MISSING_KEY", "INVALID_KEY", "DEACTIVATED_KEY", "OUT_OF_USAGE_CREDITS",
+            "EXCEEDED_FREQ_LIMIT", "HISTORICAL_UNAVAILABLE_ON_FREE_USAGE_PLAN"].includes(body?.error_code))
+            providerCode = body.error_code;
+        } catch {}
+        throw fault(response.status===429?"rate_limited":"provider_error","Odds API HTTP "+response.status,
+          {quota, httpStatus:response.status, failureKind:"http_error", providerCode});
+      }
       let data;
       try { data = await response.json(); }
       catch { throw fault("provider_error","Odds API returned invalid JSON",
@@ -10349,7 +10362,11 @@ function bozoScoreDiagnostic(value) {
   if (!value || !["http_error", "network_error", "invalid_response", "timeout"].includes(value.kind)) return null;
   const httpStatus = Number.isInteger(value.httpStatus) && value.httpStatus >= 100 && value.httpStatus <= 599
     ? value.httpStatus : null;
-  return { kind: value.kind, httpStatus };
+  const diagnostic = { kind: value.kind, httpStatus };
+  if (["MISSING_KEY", "INVALID_KEY", "DEACTIVATED_KEY", "OUT_OF_USAGE_CREDITS",
+    "EXCEEDED_FREQ_LIMIT", "HISTORICAL_UNAVAILABLE_ON_FREE_USAGE_PLAN"].includes(value.providerCode))
+    diagnostic.providerCode = value.providerCode;
+  return diagnostic;
 }
 /* ⚠️ THIS IS THE LIVE HALF OF THE SCORE FEED, NOT A BACKUP. cfbfastR-data publishes its
    schedule CSV from four cron slots a week (Sat 16:00 and 20:15 UTC, Sun and Mon 06:30 UTC,
@@ -10552,7 +10569,7 @@ async function bozoFallbackScores(env, sport, season, nowMs = Date.now(), option
     next = { ...saved, checkedAt: new Date(nowMs).toISOString(), calls,
       error: "score_fallback_unavailable",
       errorCode: ["rate_limited", "timeout"].includes(e && e.code) ? e.code : "provider_error",
-      diagnostic: bozoScoreDiagnostic({kind:e && e.failureKind, httpStatus:e && e.httpStatus}),
+      diagnostic: bozoScoreDiagnostic({kind:e && e.failureKind, httpStatus:e && e.httpStatus, providerCode:e && e.providerCode}),
       quotaRemaining: Number.isFinite(remaining) ? remaining : saved.quotaRemaining };
   }
   try { await env.RL?.put(key, JSON.stringify(next)); } catch {}
@@ -10921,9 +10938,8 @@ async function bozoLoadLiveFinals(env, sport, season) {
 /* The five-minute tick's score job. Reads the scheduled games, decides whether any is due,
    and refreshes the live archives only then. Per sport the result carries `health`, which
    opsOutcome reads:
-     ok   — ESPN (or the Odds API) answered this pass, or ESPN failed while the schedule
-            feeds are healthy (degraded: grading still lands, later; see `degraded`).
-     fail — ESPN failed, the Odds API did not rescue it, AND the schedule feed is failing.
+     ok   - a live provider answered and no overdue score remains unresolved.
+     fail - live providers failed, or a game six hours past kickoff still has no final.
      noop — nothing due, or throttled. */
 async function runBozoLiveScores(env, nowMs = Date.now(), season = SEASON,
     fetcher = (typeof fetch === "function" ? fetch : null)) {
@@ -10933,7 +10949,7 @@ async function runBozoLiveScores(env, nowMs = Date.now(), season = SEASON,
   for (const sport of ["nfl", "cfb"]) {
     let doc = null;
     try { doc = await bozoScheduleDoc(env, sport, season); } catch { doc = null; }
-    if (!doc || !Array.isArray(doc.games)) { out[sport] = { skipped: "no_schedule" }; continue; }
+    if (!doc || !Array.isArray(doc.games)) { out[sport] = { skipped: "no_schedule", health: "fail" }; continue; }
     const live = await bozoLoadLiveFinals(env, sport, season);
     const dueGames = [];
     let freshest = Infinity;
@@ -10992,14 +11008,21 @@ async function runBozoLiveScores(env, nowMs = Date.now(), season = SEASON,
     const oddsOk = odds.refreshed === true && !odds.error && !odds.skipped;
     const oddsTried = odds.refreshed === true && !odds.skipped;
 
+    // Retrieval health is not score completeness. A valid, unchanged static CSV can
+    // omit tonight's finals until tomorrow. Do not infer a result from elapsed time.
+    const refreshedLive = await bozoLoadLiveFinals(env, sport, season);
+    const overdue = dueGames.filter(game => nowMs - Date.parse(game.startsAt) >= 6 * 3600000 &&
+      !bozoAttachLiveFinal(refreshedLive.index, game)).length;
     let health;
-    if (espnOk || oddsOk) health = "ok";
+    if (overdue) health = "fail";
+    else if (espnOk || oddsOk) health = "ok";
     else if (!espn.attempted && !oddsTried) health = "noop";              // throttled pass
-    else health = scheduleOk ? "ok" : "fail";
-    const result = { due, health, source: espnOk ? "espn" : oddsOk ? "the-odds-api" : null, espn, odds,
+    else health = "fail";
+    const result = { due, overdue, health, source: espnOk ? "espn" : oddsOk ? "the-odds-api" : null, espn, odds,
       scheduleOk, refreshed: espn.refreshed || oddsTried,
       error: espnOk || oddsOk ? null : (espn.error || odds.error || null) };
-    if (!espnOk && !oddsOk && health === "ok") result.degraded = "live_scores_unavailable";
+    if (overdue) result.degraded = "overdue_scores_missing";
+    else if (!espnOk && !oddsOk) result.degraded = "live_scores_unavailable";
     if (!espnOk && odds.skipped === "daily_cap") result.skipped = "daily_cap";   // the pre-ESPN contract
     if (health === "fail") bozoEspnLog("bozo-scores-all-sources-failed", { sport, espn: espn.error, odds: odds.error || odds.skipped || null });
     out[sport] = result;
@@ -11345,10 +11368,12 @@ function opsOutcome(job, r) {
       // A provider outage is counted as a skip, not an error, so it can only read as a no-op.
       return r.captured > 0 ? "ok" : "noop";
     case "bozo:scores": {
-      // runBozoLiveScores names each sport's health: fail only when ESPN, the optional
-      // Odds API and the schedule feeds all failed; ok when ESPN answered (see its comment).
+      // A healthy static download does not establish that due live finals are available.
+      if (sports.length === 2 && sports.every(x => x.due === 0)) return "ok";
       if (sports.some(x => "health" in x)) {
-        return sports.some(x => x.health === "fail") ? "fail" : sports.some(x => x.health === "ok") ? "ok" : "noop";
+        if (sports.some(x => x.health === "fail")) return "fail";
+        if (sports.some(x => x.due > 0 && x.health === "noop")) return "noop";
+        return sports.some(x => x.health === "ok") ? "ok" : "noop";
       }
       const tried = sports.filter(x => x.refreshed === true);
       return tried.some(x => x.error) ? "fail" : tried.length ? "ok" : "noop";
