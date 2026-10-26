@@ -18,8 +18,8 @@ const makeSlate = require("./mkslate.js");
 // ⚠️ COUNTS, NOT A GUESS — bump these in the same commit that adds or retires a tool.
 // 58 = 26 core + 32 full, including account-scoped fantasy league discovery and the
 // Phase 2.7 dd_bozo_admin_actions audit read (core).
-const N_TOOLS = 88, N_CORE = 57;
-const WRITE_TOOLS = ["dd_correct_bozo_pick","dd_dfs_history_save","dd_dfs_history_archive","dd_dfs_portfolio","dd_bozo_menu_publish","dd_bozo_menu_save","dd_verify_bozo_entry","dd_dfs_draft","dd_dfs_sync","dd_dfs_compare","dd_dfs_create","dd_dfs_upload","dd_dfs_players","dd_dfs_settings","dd_dfs_solve","dd_dfs_explore","dd_dfs_simulate","dd_dfs_select","dd_dfs_delete","dd_submit_bozo_leg", "sd_start_session", "sd_log_set", "sd_log_sets",
+const N_TOOLS = 89, N_CORE = 58;
+const WRITE_TOOLS = ["dd_record_bozo_result","dd_correct_bozo_pick","dd_dfs_history_save","dd_dfs_history_archive","dd_dfs_portfolio","dd_bozo_menu_publish","dd_bozo_menu_save","dd_verify_bozo_entry","dd_dfs_draft","dd_dfs_sync","dd_dfs_compare","dd_dfs_create","dd_dfs_upload","dd_dfs_players","dd_dfs_settings","dd_dfs_solve","dd_dfs_explore","dd_dfs_simulate","dd_dfs_select","dd_dfs_delete","dd_submit_bozo_leg", "sd_start_session", "sd_log_set", "sd_log_sets",
                      "sd_finish_session", "sd_log_measurement", "sd_log_nutrition"];
 let pass = 0, fail = 0;
 const ok = (cond, name) => { if (cond) pass++; else { fail++; console.error("FAIL:", name); } };
@@ -868,6 +868,10 @@ ok((await req(null, { method: "OPTIONS" })).status === 200 || (await req(null, {
   ok(d.legs[0].player === "Jeff" && d.legs[1].player === "Kap", "legs in SUBMISSION ORDER (ts), not key order");
   ok(Array.isArray(d.caveats) && d.caveats.some(c => c.includes("CLV")), "caveats ship in the payload, incl. never-state-CLV");
   ok(d.legs[0].priceSource === "self", "priceSource label survives");
+  ok(d.legs[0].memberKey === "Jeff" && /^[a-f0-9]{64}$/.test(d.legs[0].resultRevision), "assembled HTTP read exposes exact target and revision");
+  ok(d.legs[0].pendingResult === true && !!d.legs[0].fallbackBlockedReason && d.legs[0].result === null, "missing grade is distinct from fallback eligibility");
+  const rejected = await (await req(call("dd_record_bozo_result", {league:"main", forUid:"Jeff"}))).json();
+  ok(rejected.result.isError === true, "assembled HTTP result write rejects shared credential");
 }
 // dd_bozo_standings on an empty ledger: an answer, not a crash
 {

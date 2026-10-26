@@ -48,6 +48,9 @@ const DQ_START = "/* ===== DD-DISCORD-QUEUE START ===== */";
 const DQ_END = "/* ===== DD-DISCORD-QUEUE END ===== */";
 const discordInbound = readFileSync("discord-inbound.js", "utf8").trimEnd()+"\n"+readFileSync("discord-owner-smoke.js", "utf8").trimEnd()+"\n"+readFileSync("discord-pack.js", "utf8").trimEnd()+"\n"+readFileSync("discord-grok-routine.js", "utf8").trimEnd()+"\n"+readFileSync("discord-retrieval.js", "utf8").trimEnd()+"\n"+readFileSync("discord-gateway.js", "utf8").trimEnd();
 const TARGET = "../dawg-bot-worker.js";
+const BR_START = "/* ===== DD-BOZO-RESULT-FALLBACK START ===== */";
+const BR_END = "/* ===== DD-BOZO-RESULT-FALLBACK END ===== */";
+const bozoResultFallback = readFileSync("bozo-result-fallback.js", "utf8").trimEnd();
 const START = "/* ===== DD-MCP-BLOCK START — generated from work/mcp-block.js; edit THERE ===== */";
 const END   = "/* ===== DD-MCP-BLOCK END ===== */";
 const ROUTE =
@@ -190,6 +193,8 @@ function transform(input) {
   const fs = t.indexOf(F_START), fe = t.indexOf(F_END);
   if (fs >= 0 && fe > fs) t = t.slice(0, fs) + t.slice(fe + F_END.length);
 
+  const brs = t.indexOf(BR_START), bre = t.indexOf(BR_END);
+  if (brs >= 0 && bre > brs) t = t.slice(0, brs) + t.slice(bre + BR_END.length);
   /* 4. strip any previously injected route (marked or legacy) */
   t = t
     .split("\n")
@@ -248,6 +253,7 @@ function transform(input) {
     + "\n\n" + F_START + "\n" + forecast.trimEnd() + "\n" + F_END
     + "\n\n" + D_START + "\n" + dfsModules + "\n" + D_END
     + "\n\n" + BM_START + "\n" + bozoMenu + "\n" + BM_END
+    + "\n\n" + BR_START + "\n" + bozoResultFallback + "\n" + BR_END
     + "\n\n" + START + "\n" + block + "\n" + END + "\n";
 }
 

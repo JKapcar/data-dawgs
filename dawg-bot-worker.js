@@ -19176,6 +19176,154 @@ return {runMenu, menuSchema, getPublicMenu, publishMenu, publicMenuSchema, rende
 })();
 /* ===== DD-BOZO-MENU END ===== */
 
+/* ===== DD-BOZO-RESULT-FALLBACK START ===== */
+/* Result-only recovery for an already played game on the current, placed ticket.
+ * Evidence is explicitly an authenticated manager attestation, not a server fetch.
+ * No arbitrary paths, pick edits, ledger writes or week resolution are exposed. */
+const BOZO_RESULT_SCHEMA = {
+  type: "object", additionalProperties: false,
+  properties: {
+    league: { type: "string" }, forUid: { type: "string", description: "Exact memberKey from dd_bozo_week." },
+    revision: { type: "string", description: "resultRevision from the current leg read." },
+    reason: { type: "string", minLength: 5, maxLength: 300 },
+    evidence: { type: "object", additionalProperties: false, properties: {
+      sourceUrl: { type: "string", description: "ESPN game URL for this exact event, inspected by the caller." },
+      eventId: { type: "string" }, completed: { type: "boolean", const: true },
+      status: { type: "string", enum: ["Final", "Final/OT"] },
+      observedAt: { type: "string", description: "ISO time the caller verified the final score." },
+      homeScore: { type: "integer", minimum: 0, maximum: 200 },
+      awayScore: { type: "integer", minimum: 0, maximum: 200 },
+      homeTeam: { type: "string" }, awayTeam: { type: "string" }
+    }, required: ["sourceUrl", "eventId", "completed", "status", "observedAt", "homeScore", "awayScore", "homeTeam", "awayTeam"] },
+    confirm: { type: "string", description: "Approved preview code. Repeat this exact code after an uncertain response; never create a new preview." }
+  }, required: ["league", "forUid"],
+  oneOf: [{ required: ["revision", "reason", "evidence"], not: { required: ["confirm"] } },
+    { required: ["confirm"], not: { anyOf: ["revision", "reason", "evidence"].map(k => ({required:[k]})) } }]
+};
+
+async function bozoResultRevision(state, key) {
+  return sha256hex(JSON.stringify(bozoCanonical({ season: state.season || SEASON,
+    week: state.week || 1, status: state.status, pick: state.picks?.[key] || null,
+    result: state.results?.[key] || null })));
+}
+
+function bozoResultGate(state, key, now) {
+  if (state.status !== "placed" || state.bozo != null || state.gradeStartedWeek === (state.week || 1) || state.royale?.chops?.[state.week || 1])
+    return "Only an unresolved placed ticket is supported; no week settlement is performed.";
+  const p = state.picks?.[key], r = state.results?.[key];
+  if (!p || !Object.hasOwn(state.members || {}, key)) return "Exact current memberKey required.";
+  if (r?.result != null || r?.won != null || r?.actual != null || r?.resultSource === "manual")
+    return "An existing grade or manual stamp is preserved. This tool fills missing results only.";
+  if (!["nfl", "cfb"].includes(p.sport) || !["spread", "ml", "total"].includes(p.mkt) || bozoPeriodOf(p) !== "game")
+    return "Only full-game NFL/CFB spread, moneyline and total legs are supported.";
+  if (!(Date.parse(p.startsAt || p.commenceTime) < now)) return "Kickoff is future or unresolved.";
+  if (p.mkt !== "ml" && (typeof p.line !== "number" || !Number.isFinite(p.line))) return "Stored line is unresolved.";
+  if (p.mkt === "total" && !["over", "under"].includes(p.side)) return "Stored total selection is unresolved.";
+  return null;
+}
+
+async function bozoResultEvidence(env, state, key, e, now) {
+  const p = state.picks[key];
+  if (!e || Array.isArray(e) || Object.keys(e).some(k => !Object.hasOwn(BOZO_RESULT_SCHEMA.properties.evidence.properties, k)) ||
+      BOZO_RESULT_SCHEMA.properties.evidence.required.some(k => !Object.hasOwn(e, k))) throw new Error("Complete final-score evidence required.");
+  const id = String(p.espnEventId || p.eventId || "");
+  if (!/^\d+$/.test(id) || e.eventId !== id || e.completed !== true || !["Final", "Final/OT"].includes(e.status))
+    throw new Error("Evidence must identify this exact completed event.");
+  const observed = Date.parse(e.observedAt), start = Date.parse(p.startsAt || p.commenceTime);
+  if (!Number.isFinite(observed) || observed < start || observed > now || now - observed > 30 * 60 * 1000)
+    throw new Error("Verify the final score now; evidence must be within the last 30 minutes and after kickoff.");
+  const url = new URL(e.sourceUrl);
+  const sportPath = p.sport === "nfl" ? "nfl" : "college-football";
+  if (url.origin !== "https://www.espn.com" || url.username || url.password || url.search || url.hash ||
+      !url.pathname.startsWith(`/${sportPath}/game/_/gameId/${id}/`)) throw new Error("Use the exact ESPN game source URL, without credentials or query parameters.");
+  if (![e.homeScore,e.awayScore].every(n => Number.isInteger(n) && n >= 0 && n <= 200)) throw new Error("Both final scores must be integers from 0 to 200.");
+  const doc = await bozoScheduleDoc(env, p.sport, state.season || SEASON);
+  const game = bozoScheduleFindGame(doc, p);
+  if (!game || String(game.espnEventId) !== id || !(Date.parse(game.startsAt) < now)) throw new Error("Schedule identity or kickoff is unresolved; no result was written.");
+  const aliases = bozoBuildTeamRegistry(p.sport).aliases;
+  const matches = (s, team) => typeof s === "string" && s.length > 0 && s.length <= 100 &&
+    [team?.name,team?.abbr].some(t => t && bozoTeamNorm(s, aliases) === bozoTeamNorm(t, aliases));
+  if (!matches(e.homeTeam,game.home) || !matches(e.awayTeam,game.away)) throw new Error("Evidence teams do not match the schedule's home and away teams.");
+  if (game.completed === true && (game.homeScore !== e.homeScore || game.awayScore !== e.awayScore))
+    throw new Error("Evidence disagrees with the cached official final; resolve the conflict manually.");
+  const final = {...game, completed:true, homeScore:e.homeScore, awayScore:e.awayScore};
+  const grade = bozoScheduledOutcome(p, final);
+  if (grade.pending) throw new Error("The stored selection cannot be graded: " + grade.reason);
+  const edge = p.mkt === "ml" ? grade.actual : p.mkt === "total" && p.side === "under" ? p.line - grade.actual : grade.actual - p.line;
+  return {grade, arithmetic:{homeScore:e.homeScore,awayScore:e.awayScore,actual:grade.actual,
+    line:p.mkt === "ml" ? null : p.line,edge,result:grade.result},
+    evidence:{...e,verification:"manager_attested",scheduleSource:doc.source || null}};
+}
+
+async function bozoRecordResultCore(env, auth, body) {
+  const reply = (body,status=200) => ({body,status});
+  const fail = (error,status=409) => reply({error},status);
+  if (!auth?.uid || auth.err) return fail("A personal authenticated account is required.",401);
+  if (!body || Object.keys(body).some(k => !Object.hasOwn(BOZO_RESULT_SCHEMA.properties,k)) ||
+      !validLeagueId(body.league || "") || typeof body.forUid !== "string" || !body.forUid) return fail("Supply league and exact forUid.",400);
+  const confirming = body.confirm !== undefined, lid = body.league, key = body.forUid, actor = auth.uid;
+  if (confirming ? (typeof body.confirm !== "string" || !/^[a-f0-9-]{36}$/.test(body.confirm) || ["revision","reason","evidence"].some(k => body[k] !== undefined))
+    : (typeof body.revision !== "string" || typeof body.reason !== "string" || body.reason.trim().length < 5 || body.reason.length > 300))
+    return fail("Preview with revision, reason and evidence; confirm with only league, forUid and confirm.",400);
+  const receiptFor = s => {
+    const r = s?.audit?.[body.confirm];
+    return r?.type === "record_result" && r.actor === actor && r.forUid === key && r.leagueId === lid ? r : null;
+  };
+  const readback = async (state, receipt) => ({ok:true, committed:true, confirmationId:receipt.confirmationId,
+    league:lid,forUid:key,season:receipt.season,week:receipt.week,recorded:receipt.after,
+    current:state.results?.[key] || null,resultRevision:await bozoResultRevision(state,key),
+    matchesRecorded:(state.week || 1) === receipt.week && (state.season || SEASON) === receipt.season && bozoSame(state.results?.[key],receipt.after),
+    arithmetic:receipt.arithmetic,audit:{at:receipt.at,actor:receipt.actor,reason:receipt.reason},
+    status:state.status,scope:"result_and_audit_only"});
+  try {
+    const {data:state,etag} = await fbGet(env,LG(lid),true);
+    if (!bozoCorrectionManager(state,auth)) return fail("Only a verified league manager, delegate or site administrator may record a result.",403);
+    if (confirming && receiptFor(state)) return reply(await readback(state,receiptFor(state)));
+    const gate = bozoResultGate(state,key,Date.now());
+    if (gate) return fail(gate);
+    if (!env.RL || !etag) return fail("Confirmation storage or concurrency token unavailable.",503);
+    let pending;
+    if (!confirming) {
+      if (body.revision !== await bozoResultRevision(state,key)) return fail("The leg changed. Read dd_bozo_week again.");
+      const verified = await bozoResultEvidence(env,state,key,body.evidence,Date.now());
+      const code = crypto.randomUUID();
+      pending = {code,actor,lid,key,revision:body.revision,reason:body.reason.trim(),evidenceInput:body.evidence,...verified,expiresAt:Date.now()+300000};
+      await env.RL.put("bozoresult:"+actor+":"+lid+":"+code,JSON.stringify(pending),{expirationTtl:300});
+      return reply({status:"confirm_required",confirm_code:code,expires_in:300,league:lid,forUid:key,
+        season:state.season || SEASON,week:state.week || 1,selection:state.picks[key],before:state.results?.[key] || null,
+        arithmetic:verified.arithmetic,evidence:verified.evidence,reason:pending.reason,
+        echo:"Record only this missing historical result and audit. Evidence is manager-attested. No picks, prices, stakes, ledger, status, elimination or funding are changed.",
+        writeTargets:["results/"+key,"audit/"+code]});
+    }
+    pending = JSON.parse(await env.RL.get("bozoresult:"+actor+":"+lid+":"+body.confirm) || "null");
+    if (!pending || pending.actor !== actor || pending.lid !== lid || pending.key !== key || pending.expiresAt < Date.now()) return fail("Confirmation missing or expired.");
+    if (pending.revision !== await bozoResultRevision(state,key)) return fail("The leg changed after preview; nothing was written.");
+    // Recheck final identity/conflict gates; never silently change the approved arithmetic.
+    const checked = await bozoResultEvidence(env,state,key,pending.evidenceInput,Date.now());
+    if (!bozoSame(checked.grade,pending.grade)) return fail("The evidence changed after preview.");
+    const before = state.results?.[key] || null, at = new Date().toISOString();
+    const after = {...(before || {}),actual:pending.grade.actual,result:pending.grade.result,won:pending.grade.won,
+      resultSource:"manual",resultEvidence:{...pending.evidence,reason:pending.reason,recordedAt:at,byUid:actor}};
+    const receipt = {type:"record_result",confirmationId:body.confirm,actor,by:auth.name || null,at,leagueId:lid,forUid:key,
+      season:state.season || SEASON,week:state.week || 1,path:"results/"+key,reason:pending.reason,before,after,arithmetic:pending.arithmetic};
+    state.results = {...(state.results || {}),[key]:after};
+    state.audit = {...(state.audit || {}),[body.confirm]:receipt};
+    try {
+      if (!await fbPut(env,LG(lid),state,etag)) return fail("Concurrent league change; retry the same confirmation after rereading.");
+    } catch {
+      // A response can be lost after the atomic commit. Same-code retry finds the receipt.
+      return reply({error:"Commit outcome uncertain. Retry only the same confirmation code.",uncertain:true,confirm_code:body.confirm},503);
+    }
+    try {
+      const fresh = (await fbGet(env,LG(lid))).data;
+      if (!bozoCorrectionManager(fresh,auth)) return reply({committed:true,readbackVerified:false,confirmationId:body.confirm},200);
+      if (!receiptFor(fresh)) return reply({committed:true,readbackVerified:false,confirmationId:body.confirm},200);
+      return reply(await readback(fresh,receiptFor(fresh)));
+    } catch { return reply({committed:true,readbackVerified:false,confirmationId:body.confirm},200); }
+  } catch (e) { return fail(e.message,400); }
+}
+/* ===== DD-BOZO-RESULT-FALLBACK END ===== */
+
 /* ===== DD-MCP-BLOCK START — generated from work/mcp-block.js; edit THERE ===== */
 /* Shared DFS engine — generated verbatim from work/dfs-engine.js except for its private root. */
 const mcpDdfsRoot = {};
@@ -22881,7 +23029,8 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG, reauth
           "the caller's own Bozo leg, in an open week, and only after the human has read back the parsed bet and " +
           "confirmed with the code it returns. Never call its confirm step without showing the human the echo first. " +
           "On a spread leg `line` is points the side gives up (positive lays, negative takes) while `label` reads as the slip prints it — CLE +8.5 is label \"CLE +8.5\", line -8.5 — and the server rejects a sign conflict rather than pricing the wrong side. " +
-          "Everything else is the league's own data, public play-by-play, " +
+          "dd_record_bozo_result fills a missing historical scoreboard result only, with an authorized manager's exact-event final-score attestation, preview and confirmation. It does not fetch or independently verify that score. Read back matchesRecorded before reporting success; never settle a ticket or change a wager through this recovery tool. " +
+          "Other reads expose the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
           "The CFB reads separate observed 2025 results from one end-of-2025 retrodictive Elo row. Compact profiles also expose non-ranked expected-versus-observed Elo diagnostics; these are not luck, team-quality labels, forecasts or grades. dd_find_cfb_games reads the actual canonical 2025 schedule/results surface; it is historical and not the unpublished 2026 schedule. dd_find_cfb_team_games and dd_find_cfb_team_periods return schedule-derived results only, for one exact team by default or for every team's most recent game or period under scope=latest-per-team; latest means latest within the 2025 FBS-involved surface, not current 2026 form, and FCS records are partial. dd_find_cfb_historical_market returns book-identified prices whose observation time is unknown: never call them closing lines, compute CLV or cite them as prospective inputs. dd_get_cfb_model_card returns generated governance and retrodictive evidence, not a current forecast or leaderboard. dd_get_cfb_rating_system describes registered methods and output availability; registration is not evidence of prospective skill. dd_rank_cfb_teams returns one declared system's dated ranking, not a consensus or current power ranking. dd_project_cfb_matchup and dd_project_cfb_schedule_path are hypothetical rating-period calculations, not scheduled 2026 forecasts. dd_find_cfb_record_divergence returns descriptive record-versus-scoring gaps whose small held-out lift does not authorize current-team labels. dd_get_cfb_model_disagreement returns a blocked study whose untimestamped market input prevents a winner or blend conclusion. dd_get_cfb_model_receipt_status reports the append-only prospective ledger honestly; receipt rows remain ungraded and outcomes belong in a separate surface. All CFB outputs are ungraded, not market-adjusted and are not a consensus. " +
@@ -23380,7 +23529,7 @@ const MCP_TOOLS = [
     title: "Bozo board this week",
     catalog: "core",
     readOnlyHint: true,
-    description: "The current Bozo board: every leg IN SUBMISSION ORDER (whoever went last saw every other leg first — that is the social point), plus the drawn lever hierarchy once the ticket is placed. Read the caveats field before analysing.",
+    description: "The current Bozo board, in submission order, with exact memberKey, event, market, period, line, result and resultRevision for missing-result recovery. A spread line is points GIVEN, opposite the displayed slip sign. pendingResult identifies missing grades; it does not mean the game is final. Verify final-score evidence separately before dd_record_bozo_result. Read caveats before analysing.",
     inputSchema: { type: "object", properties: { league: { type: "string", description: "League id (default: main)" } }, additionalProperties: false },
     async run(args, env, caller) {
       const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
@@ -23393,6 +23542,7 @@ const MCP_TOOLS = [
         return toolText({ season: lg.season || SEASON, week: lg.week || 1, status: lg.status || "open", legs: [], note: "No legs are in yet this week." });
       // ⚠️ SUBMISSION ORDER, not object-key order.
       keys.sort((a, b) => (picks[a].ts || 0) - (picks[b].ts || 0));
+      const resultRevisions = Object.fromEntries(await Promise.all(keys.map(async k => [k, await bozoResultRevision(lg,k)])));
       const me = caller && caller.kind === "user" ? caller.name : null;
       const legs = keys.map((k, i) => {
         const x = picks[k];
@@ -23401,6 +23551,10 @@ const MCP_TOOLS = [
           // would print a bare uid; reading it off the members map would go blank for
           // anyone who has since left the league.
           order: i + 1, player: x.who || playerName(k),
+          memberKey:k, resultRevision:resultRevisions[k], result:lg.results?.[k] || null,
+          pendingResult:!lg.results?.[k]?.result && lg.results?.[k]?.won == null,
+          fallbackBlockedReason:bozoResultGate(lg,k,Date.now()),
+          espnEventId:x.espnEventId || x.eventId || null,
           you: me ? (x.who || playerName(k)) === me : undefined,
           sport: x.sport, game: x.game, eventId: x.eventId,
           mkt: x.mkt, side: x.side, line: x.mkt === "ml" ? null : x.line,
@@ -23941,6 +24095,20 @@ const MCP_TOOLS = [
         warning: captured.captureWarning || null,
         note: "NOTHING has been submitted. Show the human the echo verbatim; only after they approve, call this tool again with {confirm: \"" + code + "\"}.",
       });
+    },
+  },
+  {
+    name: "dd_record_bozo_result",
+    title: "Record a missing historical Bozo result (two-phase)",
+    catalog: "core",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Verified manager/delegate/site-admin personal connector only. Fill ONE missing full-game NFL/CFB result on the current placed ticket using caller-verified ESPN final-score evidence. Read dd_bozo_week for exact memberKey, event, selection and resultRevision. Preview returns score arithmetic, evidence and confirmation code; confirm only within explicit user grading authorization after reviewing the echo. Evidence is manager-attested, not fetched by this tool. Rejects existing/manual grades, future games, unsupported periods and cached-final conflicts. Atomic result+audit only: never wagers, prices, stakes, ledger, week status, elimination or payouts. Confirm with only league, forUid and code; retry that same code after uncertain responses. Response includes exact post-write readback; matchesRecorded=false requires investigation, never a blind rewrite.",
+    inputSchema: BOZO_RESULT_SCHEMA,
+    async run(args, env, caller) {
+      if (caller?.kind !== "user") return toolErr("A personal authenticated manager connector is required; shared connections cannot record results.");
+      const out = await bozoRecordResultCore(env,caller,args);
+      return {...toolText(out.body), ...(out.status !== 200 ? {isError:true} : {})};
     },
   },
   {
