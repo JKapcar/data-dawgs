@@ -220,6 +220,49 @@ try {
 } catch (e) { keyThrew = /SGO_KEY/.test(e.message); }
 ok("missing SGO secret fails by name", keyThrew && missingKeyKV.store.has("cfb:market:24h:lasterror"));
 
+// Schedule gate: SportsGameOdds bills an empty response, so an hour with no CFB kickoff
+// near the window must not reach the provider. The gate fails open without a schedule.
+const jsonKV = (seed = {}) => {
+  const base = makeKV();
+  for (const [k, v] of Object.entries(seed)) base.store.set(k, JSON.stringify(v));
+  const get = base.get;
+  base.get = async (key, type) => {
+    const raw = await get(key);
+    return type === "json" && raw !== null ? JSON.parse(raw) : raw;
+  };
+  return base;
+};
+const scheduleWith = (...kickoffs) => ({ "schedule:cfb:2026": {
+  schemaVersion: 1, sport: "cfb", season: 2026,
+  games: kickoffs.map((t, i) => ({ espnEventId: "g" + i, startsAt: new Date(t).toISOString() })),
+} });
+const marketOnly = () => calls.filter(c => c.url.searchParams.get("leagueID") === "NCAAF");
+mode = "normal"; currentEvents = [event()];
+
+calls = [];
+const quietKV = jsonKV(scheduleWith(T0 + 72 * 3600e3));
+const quiet = await worker.scheduled({ cron: "9 * * * *", scheduledTime: T0 }, { SGO_KEY: "top-secret", RL: quietKV }, {});
+ok("no scheduled kickoff near the window spends no provider object",
+  marketOnly().length === 0 && quiet.skipped === "no_scheduled_kickoff_in_window" &&
+  ![...quietKV.store.keys()].some(k => /^cfb:market:24h:2026:/.test(k)));
+ok("a gated tick still leaves an operational last-run",
+  JSON.parse(quietKV.store.get("cfb:market:24h:last-run")).skipped === "no_scheduled_kickoff_in_window");
+
+calls = [];
+const busyKV = jsonKV(scheduleWith(T0 + 72 * 3600e3, T0 + 24.5 * 3600e3));
+const busy = await worker.scheduled({ cron: "9 * * * *", scheduledTime: T0 }, { SGO_KEY: "top-secret", RL: busyKV }, {});
+ok("a scheduled kickoff inside the window still captures", marketOnly().length === 1 && busy.stored === 1);
+
+calls = [];
+const nearKV = jsonKV(scheduleWith(T0 + 26.5 * 3600e3));
+await worker.scheduled({ cron: "9 * * * *", scheduledTime: T0 }, { SGO_KEY: "top-secret", RL: nearKV }, {});
+ok("a kickoff just outside the window still asks (schedule and provider times can differ)", marketOnly().length === 1);
+
+calls = [];
+const blankKV = jsonKV({ "schedule:cfb:2026": { games: [{ startsAt: "TBD" }] } });
+await worker.scheduled({ cron: "9 * * * *", scheduledTime: T0 }, { SGO_KEY: "top-secret", RL: blankKV }, {});
+ok("a schedule with no parseable kickoff fails open", marketOnly().length === 1);
+
 let unknownThrew = false;
 try { await worker.scheduled({ cron: "17 4 * * *", scheduledTime: T0 }, { RL: makeKV() }, {}); }
 catch (e) { unknownThrew = /unknown scheduled trigger/.test(e.message); }
