@@ -18,6 +18,7 @@ on:
       - "tests/worker-config-guard.test.mjs"
       - "work/**"
       - "tools/validate-data.js"
+      - "tests/bozo-provider-usage.test.cjs"
       - "data/**"
 
 permissions:
@@ -43,6 +44,7 @@ jobs:
       - run: node --check dawg-bot-worker.js
       - run: node --test tests/worker-config-guard.test.mjs
       - run: node --test tests/bozo-clv-estimate.test.cjs
+      - run: node --test tests/bozo-provider-usage.test.cjs
       - run: node --test tests/discord-bridge.test.cjs tests/discord-inbound.test.cjs tests/discord-owner-smoke.test.cjs tests/discord-pack.test.cjs tests/discord-pack-mcp.test.mjs tests/discord-grok-routine.test.cjs tests/discord-retrieval.test.cjs tests/discord-gateway.test.cjs tests/bozo-mcp-auth-status.test.js
       - run: node --test tests/dawg-pound.test.cjs
       - run: node --test tests/research-project.test.cjs
