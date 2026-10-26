@@ -9487,7 +9487,7 @@ async function bozoClv(request, url, env, cors) {
          chart displays — what was typed is what reads back. */
       clvPts: r.clvPts ?? null,
       clvSource: r.clvSource || null,
-      clvEstimate: r.clvEstimate ? {...r.clvEstimate,stale:!bozoEstimateBasisSame(r.clvEstimate.basis,bozoEstimateBasis(bozoEstimateSettledRow(r,rowKey,lg)))} : null,
+      clvEstimate: r.clvEstimate ? {...r.clvEstimate,settlementWarning:bozoEstimateLegacyFinalBasis(r.clvEstimate.basis)?'Legacy estimate: actual was not recorded in its basis; score/stat changes cannot be checked until reviewed.':null,stale:!bozoEstimateBasisSame(r.clvEstimate.basis,bozoEstimateBasis(bozoEstimateSettledRow(r,rowKey,lg)))} : null,
 
       result: RESULT[bozoEstimateSettledRow(r,rowKey,lg,true).result] || null,
       gradedAt: r.gradedAt || null,
@@ -10050,8 +10050,17 @@ function bozoAssumedOpposite(close) { return null; }
 // BEGIN BOZO ESTIMATED CLV: separate from captured prices and manual overrides.
 function bozoEstimateCanonical(value){if(Array.isArray(value))return value.map(bozoEstimateCanonical);if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).filter(k=>value[k]!=null).sort().map(k=>[k,bozoEstimateCanonical(value[k])]));return value;}
 function bozoEstimateSame(a,b){return bozoSame(bozoEstimateCanonical(a),bozoEstimateCanonical(b));}
+// Legacy finalized estimates never tracked actual; retain their original comparison
+// contract visibly instead of silently discarding them at a code-only release.
+function bozoEstimateLegacyFinalBasis(basis){return !!basis&&!Object.hasOwn(basis,'basisVersion')&&!Object.hasOwn(basis,'actual')&&!basis.estimateSettlement&&['won','lost','push'].includes(basis.result);}
 // Observation refresh time is provenance, not a material settlement change.
-function bozoEstimateBasisSame(a,b){const stable=x=>{if(!x?.estimateSettlement)return x;const {gradeObservedAt,...settlement}=x.estimateSettlement;return {...x,estimateSettlement:settlement};};return bozoEstimateSame(stable(a),stable(b));}
+function bozoEstimateBasisSame(a,b){
+  // Finalization removes the transient current-results wrapper, not the market evidence.
+  // Compare settlement details when both snapshots retain them; top-level result always remains material.
+  const both=!!(a?.estimateSettlement&&b?.estimateSettlement),legacy=bozoEstimateLegacyFinalBasis(a)&&!b?.estimateSettlement;
+  const stable=x=>{if(!x)return x;const {estimateSettlement,basisVersion,...basis}=x;if(!legacy)basis.actual=x.actual??estimateSettlement?.actual??null;else delete basis.actual;if(both){const {gradeObservedAt,...settlement}=estimateSettlement;basis.estimateSettlement=settlement;}return basis;};
+  return bozoEstimateSame(stable(a),stable(b));
+}
 function bozoEstimateSettledRow(row,rowKey,live,includeVoid=false){
   if(row.result!=null)return row;
   if(!live||row.season!==live.season||row.week!==live.week)return row;
@@ -10061,24 +10070,32 @@ function bozoEstimateSettledRow(row,rowKey,live,includeVoid=false){
   if(!result||!(includeVoid?['won','lost','push','void']:['won','lost','push']).includes(result.result))return row;
   return {...row,result:result.result,estimateSettlement:{source:'current_results',result:result.result,actual:result.actual??null,resultSource:result.resultSource??null,gradeSource:result.gradeSource??null,gradeObservedAt:result.gradeObservedAt??null}};
 }
-function bozoEstimateBasis(row){const basis=Object.fromEntries(['selectionKey','entryBook','price','priceOpp','entryOppSource','close','closeOpp','closeOppSource','verificationStatus','result','startsAt'].map(k=>[k,row[k]??null]));if(row.estimateSettlement)basis.estimateSettlement=row.estimateSettlement;return basis;}
+function bozoEstimateBasis(row){const basis=Object.fromEntries(['selectionKey','entryBook','price','priceOpp','entryOppSource','close','closeOpp','closeOppSource','verificationStatus','result','startsAt'].map(k=>[k,row[k]??null]));basis.basisVersion=2;basis.actual=(row.estimateSettlement?row.estimateSettlement.actual:row.actual)??null;if(row.estimateSettlement)basis.estimateSettlement=row.estimateSettlement;return basis;}
 function bozoEstimateClv(row, input) {
   const fail = message => { throw new Error(message); };
-  const price = x => typeof x === 'number' && Number.isFinite(x) && Math.abs(x) >= 100;
+  const price = x => typeof x === 'number' && Number.isFinite(x) && Math.abs(x) >= 100 && Math.abs(x) <= 100000;
   const imp = x => x < 0 ? -x / (100-x) : 100 / (100+x);
   const pair = (a,b) => price(a) && price(b) ? {fair:imp(a)/(imp(a)+imp(b)),hold:imp(a)+imp(b)-1} : null;
+  if(input?.method==='opposite_ladder_proxy_v1')return bozoEstimateOppositeProxy(row,input);
+  if(input?.method==='owner_push_zero_v1')return bozoEstimatePushZero(row,input);
   if (!input || Object.keys(input).some(k=>!['closeQuote','scenarios','rationale'].includes(k))) fail('Invalid estimate fields');
   if(!['won','lost','push'].includes(row.result))fail('Only settled non-void legs support this estimate');
   const q=input.closeQuote;
-  if (!q || Object.keys(q).some(k=>!['price','opposite','book','selectionKey','sourceUrl','quotedAt','retrievedAt','evidence'].includes(k))) fail('Invalid closing quote');
-  if (!row.selectionKey || q.selectionKey!==row.selectionKey || q.book!=='draftkings' || row.entryBook!=='draftkings') fail('Exact same-book selection identity required');
+  if (!q || Object.keys(q).some(k=>!['price','opposite','book','selectionKey','sourceUrl','quotedAt','retrievedAt','evidence','originalDecimal'].includes(k))) fail('Invalid closing quote');
+  if (!row.selectionKey || q.selectionKey!==row.selectionKey || !/^[-a-z0-9_]{2,40}$/.test(q.book||'') || !row.entryBook) fail('Exact selection identity and explicit source book required');
   if (!price(row.price) || !price(q.price) || (q.opposite!==null&&!price(q.opposite))) fail('Sourced entry and closing prices required');
+  if(q.originalDecimal!=null){
+    const d=q.originalDecimal,american=x=>x>=2?(x-1)*100:-100/(x-1);
+    if(typeof d!=='object'||Object.keys(d).some(k=>!['price','opposite'].includes(k))||!['price','opposite'].every(k=>typeof d[k]==='number'&&Number.isFinite(d[k])&&d[k]>1&&d[k]<=1001&&price(q[k])&&Math.abs(american(d[k])-q[k])<1e-7))fail('Original decimal pair must exactly match unrounded American inputs');
+  }
   let url;try { url=new URL(q.sourceUrl); } catch { fail('Source URL required'); }
   if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash)fail('Use a public source URL without credentials or query');
   if(!['source_reported_closing','observed_pregame','untimed_quote_proxy'].includes(q.evidence)||!Number.isFinite(Date.parse(q.retrievedAt))||(q.quotedAt!==null&&!Number.isFinite(Date.parse(q.quotedAt))))fail('Explicit evidence and timestamps required');
+  if(q.quotedAt!=null&&(Date.parse(q.quotedAt)>Date.parse(q.retrievedAt)||(Number.isFinite(Date.parse(row.startsAt))&&Date.parse(q.quotedAt)>=Date.parse(row.startsAt))))fail('Quote must precede retrieval and known kickoff');
   if(q.evidence==='untimed_quote_proxy'&&q.quotedAt!==null)fail('Untimed quote proxy must leave quote time unknown');
   if(q.evidence==='observed_pregame'&&(!Number.isFinite(Date.parse(row.startsAt))||q.quotedAt===null||Date.parse(q.quotedAt)>=Date.parse(row.startsAt)))fail('Observed pregame evidence requires a quote timestamp before known kickoff');
   if(typeof input.rationale!=='string'||!input.rationale.trim()||input.rationale.length>400)fail('Assumption rationale required');
+  if(q.book!==row.entryBook&&!price(q.opposite))fail('Cross-book quote requires both observed sides');
   const entry=row.entryOppSource==='assumed'?null:pair(row.price,row.priceOpp),close=pair(q.price,q.opposite);
   // When a row already has a measured pair, a recovery candidate cannot replace it.
   const measuredClose=pair(row.close,row.closeOpp);
@@ -10094,7 +10111,37 @@ function bozoEstimateClv(row, input) {
     if(!Array.isArray(holds)||holds.length!==3||holds.some(x=>typeof x!=='number'||!Number.isFinite(x)||x<0||x>0.30)||!(holds[0]<holds[1]&&holds[1]<holds[2]))fail('Choose three increasing overround scenarios, not a universal default');
   }
   const values=holds.map(h=>100*((close?close.fair:imp(q.price)/(1+h))-(entry?entry.fair:imp(row.price)/(1+h))));
-  return {version:1,kind:'estimated',method:'proportional_overround_v1',units:'probability_percentage_points',point:values[Math.floor(values.length/2)],low:Math.min(...values),high:Math.max(...values),scenarios:holds,scenarioValues:values,assumption:entry&&close?'both pairs de-vigged; quote timing/provenance remains unverified':calibration?(close?'entry hold assumed equal to observed close hold':'close hold assumed equal to observed entry hold'):'same assumed overround at entry and close',sensitivity:entry&&close?'quote provenance/timing uncertainty; no inferred vig interval':'illustrative overround sensitivity, not a confidence interval',confidence:'model_assumption_not_statistical_confidence',rationale:input.rationale,entryVerified:row.verificationStatus==='verified',basis:bozoEstimateBasis(row),entryPrice:row.price,entryOpposite:row.priceOpp??null,closeQuote:{...q},selectionKey:row.selectionKey};
+  return {version:2,provenance:q.book===row.entryBook?'same_book_reconstruction':'cross_book_proxy',kind:'estimated',method:'proportional_overround_v1',units:'probability_percentage_points',point:values[Math.floor(values.length/2)],low:Math.min(...values),high:Math.max(...values),scenarios:holds,scenarioValues:values,assumption:entry&&close?'both pairs de-vigged; quote timing/provenance remains unverified':calibration?(close?'entry hold assumed equal to observed close hold':'close hold assumed equal to observed entry hold'):'same assumed overround at entry and close',sensitivity:entry&&close?'quote provenance/timing uncertainty; no inferred vig interval':'illustrative overround sensitivity, not a confidence interval',confidence:'model_assumption_not_statistical_confidence',rationale:input.rationale,entryVerified:row.verificationStatus==='verified',basis:bozoEstimateBasis(row),entryPrice:row.price,entryOpposite:row.priceOpp??null,closeQuote:{...q},selectionKey:row.selectionKey};
+}
+// A bounded one-sided model: infer selected probability from the observed opposite
+// and proportional overround from paired neighboring markets. No client CLV number.
+function bozoEstimateOppositeProxy(row,input){
+  const fail=m=>{throw new Error(m);},num=x=>typeof x==='number'&&Number.isFinite(x),odds=x=>num(x)&&Math.abs(x)>=100&&Math.abs(x)<=100000,imp=x=>x<0?-x/(100-x):100/(100+x);
+  if(Object.keys(input).some(k=>!['method','closeQuote','calibrationPairs','rationale'].includes(k)))fail('Invalid model fields');
+  const q=input.closeQuote,pairs=input.calibrationPairs;
+  if(!q||q.price!==null||!odds(q.opposite)||!Array.isArray(pairs)||pairs.length<2||pairs.length>8)fail('Observed opposite and 2–8 paired calibration markets required');
+  if(row.entryOppSource==='assumed'||!odds(row.priceOpp))fail('Model requires an observed entry pair');
+  // selectionKeyOf: event|market|side|line|prop[|non-game period].
+  // A neighboring line is allowed; a neighboring event/side/period/prop is not.
+  const identity=key=>{if(typeof key!=='string')return null;const k=key.split('|');if(![5,6].includes(k.length)||!k[0]||!['spread','total','prop'].includes(k[1])||!k[2]||!k[3].trim()||!Number.isFinite(Number(k[3]))||(k.length===6&&(!k[5]||k[5]==='game'))||(k[1]==='prop'&&!k[4]))return null;return {context:[k[0],k[1],k[2],k[4],k[5]||'game'].join('|'),line:Number(k[3])};};
+  const target=identity(row.selectionKey),ids=pairs.map(p=>identity(p?.selectionKey));
+  if(!target||!pairs.every((p,i)=>p&&Object.keys(p).every(k=>['selectionKey','price','opposite'].includes(k))&&ids[i]&&ids[i].context===target.context&&ids[i].line!==target.line&&odds(p.price)&&odds(p.opposite)))fail('Calibration requires exact event, market, side, prop and period with alternate finite lines');
+  if(new Set(ids.map(p=>p.line)).size!==pairs.length)fail('Distinct calibration lines required');
+  const holds=pairs.map(p=>imp(p.price)+imp(p.opposite)-1).sort((a,b)=>a-b);
+  if(holds.some(h=>h<0||h>.30))fail('Calibration overround outside supported range');
+  // Reuse quote identity, timing, URL, settlement and measured-precedence guards.
+  const modeledImplied=1+holds[0]-imp(q.opposite);
+  if(modeledImplied<=0||modeledImplied>=1)fail('Invalid inferred selected probability');
+  const validationPrice=modeledImplied>=.5?-100*modeledImplied/(1-modeledImplied):100*(1-modeledImplied)/modeledImplied;
+  const probe=bozoEstimateClv(row,{closeQuote:{...q,price:validationPrice},rationale:input.rationale});
+  const entry=imp(row.price)/(imp(row.price)+imp(row.priceOpp));
+  const values=holds.map(h=>100*(1-imp(q.opposite)/(1+h)-entry)).sort((a,b)=>a-b);
+  if(values.some(v=>entry+v/100<0||entry+v/100>1))fail('Invalid modeled probability');
+  return {...probe,method:input.method,provenance:'modeled_proxy',closeQuote:{...q},calibrationPairs:JSON.parse(JSON.stringify(pairs)),point:values[Math.floor(values.length/2)],low:values[0],high:values[values.length-1],scenarios:holds,scenarioValues:values,assumption:'Selected probability inferred from opposite quote using neighboring-market proportional overround; selected quote was not observed',sensitivity:'Calibration-market sensitivity only; not a statistical confidence interval or observed closing price'};
+}
+function bozoEstimatePushZero(row,input){
+  if(Object.keys(input).some(k=>!['method','rationale'].includes(k))||row.result!=='push'||typeof input.rationale!=='string'||!input.rationale.trim()||input.rationale.length>400)throw new Error('Owner convention requires a recorded push and rationale');
+  return {version:2,kind:'convention',method:'owner_push_zero_v1',units:'probability_percentage_points',point:0,basis:bozoEstimateBasis(row),rationale:input.rationale,assumption:'Owner-requested push display convention, not measured or estimated market movement'};
 }
 async function bozoSaveClvEstimate(env,lid,auth,rowKey,row,body,cors){
   if(Object.keys(body).some(k=>!['league','row','estimate','expectedEstimateRevision','requestId'].includes(k)))return json({error:'Estimate saves cannot edit other fields'},400,cors);
