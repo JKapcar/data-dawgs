@@ -13,10 +13,10 @@
   "source_commit": "68a2549cc7d873fd2cfdc17439ad6b0e0ce186dc",
   "source_committed_at": "2026-10-18T23:37:22Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-10-25T23:36:40Z"
+  "captured_at": "2026-10-26T03:22:40Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:447297fb103c2e71c9f7bd3911878579730728d27cf21f9c4fa1417808817861",
+  "snapshot_id": "sha256:cf77adec95cb243df83222d7f9f75b6d37f42ec8c58a1a489ee1174e90be5a7c",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -1822,9 +1822,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 10,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 3,
+    "home_score": 20
    },
    {
     "game_id": "2026_07_DAL_PHI",
