@@ -264,6 +264,7 @@ async function readRoute(env) {
     ["forecast:live", { status: "already_running" }, "noop", "lease held elsewhere"],
     ["forecast:live", { status: "attention", missing_upcoming: ["g"] }, "ok", "a completed run, whatever the data says"],
     ["cfb:market:24h", { events: 0, stored: 0 }, "ok", "a completed capture"],
+    ["cfb:market:24h", { skipped: "no_scheduled_kickoff_in_window" }, "noop", "a gated tick asked the provider nothing"],
     ["bozo:schedule", [{ sport: "nfl" }, { sport: "cfb" }], "ok", "a completed refresh"],
     ["backup", { day: "2026-10-10", bytes: 10 }, "ok", "a completed backup"],
   ];

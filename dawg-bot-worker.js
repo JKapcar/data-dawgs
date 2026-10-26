@@ -688,10 +688,38 @@ async function cfbFetchMarketEvents(env, window) {
   throw new Error(`SportsGameOdds pagination exceeded ${CFB_MARKET_MAX_PAGES} pages`);
 }
 
+/* SportsGameOdds bills an empty response as one object, so an hourly query into a window
+   with no games spent most of the 2,500-object month on nothing (about 720 of it) and left
+   the Bozo close, near-close and submit captures to hit the monthly 429 first. Ask only when
+   the cached CFB schedule has a kickoff near the window. Fails OPEN: no schedule, an
+   unreadable one or one with no parseable kickoffs still queries, so a schedule outage can
+   cost objects but never a receipt. The padding absorbs kickoff times that differ between
+   the schedule and the provider. */
+const CFB_MARKET_GATE_PAD_MS = 2 * 60 * 60 * 1000;
+
+async function cfbMarketWindowHasKickoff(env, window) {
+  let doc = null;
+  try { doc = await bozoScheduleDoc(env, "cfb", cfbSeasonFromKickoff(window.start)); } catch { return true; }
+  const starts = ((doc && typeof doc === "object" && Array.isArray(doc.games)) ? doc.games : [])
+    .map(g => Date.parse((g && g.startsAt) || "")).filter(Number.isFinite);
+  if (!starts.length) return true;
+  return starts.some(t => t >= window.start - CFB_MARKET_GATE_PAD_MS && t < window.end + CFB_MARKET_GATE_PAD_MS);
+}
+
 async function runCfbMarketCapture(env, nowMs) {
   const kv = cfbMarketKV(env);
   if (!kv) throw new Error("no KV binding for CFB market receipts");
   const window = cfbMarketWindow(nowMs);
+  if (!(await cfbMarketWindowHasKickoff(env, window))) {
+    const summary = {
+      at: new Date(nowMs).toISOString(),
+      window_start: new Date(window.start).toISOString(),
+      window_end: new Date(window.end).toISOString(),
+      skipped: "no_scheduled_kickoff_in_window",
+    };
+    try { await kv.put(CFB_MARKET_PREFIX + "last-run", JSON.stringify(summary)); } catch {}
+    return summary;
+  }
   const fetched = await cfbFetchMarketEvents(env, window);
   let stored = 0, existing = 0, priced = 0, unpriced = 0;
   for (const event of fetched.events) {
@@ -11363,7 +11391,10 @@ function opsOutcome(job, r) {
       return (r.failed || []).length ? "fail" : (r.dispatched || []).length ? "ok" : "noop";
     case "forecast:live":
       return r.status === "already_running" ? "noop" : "ok";
-    default:            // cfb:market:24h, bozo:schedule, backup: returning at all is succeeding
+    case "cfb:market:24h":
+      // A tick the schedule gate skipped asked the provider nothing, so it proves nothing.
+      return r.skipped ? "noop" : "ok";
+    default:            // bozo:schedule, backup: returning at all is succeeding
       return "ok";
   }
 }
