@@ -4,10 +4,15 @@
   const implied=x=>x<0?-x/(100-x):100/(100+x);
   const valid=x=>typeof x==='number'&&Number.isFinite(x)&&Math.abs(x)>=100&&Math.abs(x)<=100000;
   function editableInput(input){return !input?.method||input.method==='owner_push_zero_v1';}
+  function attachOriginalDecimals(input,price,opposite){
+    if(price===null&&opposite===null)return input;
+    if(![price,opposite].every(x=>typeof x==='number'&&Number.isFinite(x)&&x>1&&x<=1001))throw Error('Enter both original decimal prices greater than 1, or leave both blank.');
+    input.closeQuote.originalDecimal={price,opposite};return input;
+  }
   function preserveDecimals(old,input){
     const d=old?.closeQuote?.originalDecimal;if(!d)return input;
     const q=input.closeQuote,o=old.closeQuote;
-    if(!q||q.book!==o.book||q.price!==o.price||q.opposite!==o.opposite)throw Error('Original decimal evidence is attached. Review through the supported evidence workflow before changing its book or prices.');
+    if(!q||q.book!==o.book||q.price!==o.price||q.opposite!==o.opposite||(q.originalDecimal&&(q.originalDecimal.price!==d.price||q.originalDecimal.opposite!==d.opposite)))throw Error('Original decimal evidence is attached. Review through the supported evidence workflow before changing its book or prices.');
     q.originalDecimal=structuredClone(d);return input;
   }
   function preview(row,input){
@@ -44,12 +49,15 @@
     host.innerHTML=`<details class="method" data-ddb-skip><summary>Manager: save estimated CLV</summary>
       <p>Supplemental estimates only. Original prices, manual overrides, results and week status stay unchanged.</p>
       <button type="button" class="btn ghost" data-load>Load league ledger</button>
-      <style>.cem-form{display:grid;gap:12px;max-width:680px;min-width:0;overflow-wrap:anywhere}.cem-form[hidden]{display:none}.cem-form label{min-width:0}.cem-form input,.cem-form select,.cem-form textarea{max-width:100%;box-sizing:border-box}</style><form class="cem-form" hidden>
+      <style>.cem-form{display:grid;gap:12px;max-width:680px;min-width:0;overflow-wrap:anywhere}.cem-form[hidden]{display:none}.cem-form label,.cem-form fieldset{min-width:0}.cem-form input,.cem-form select,.cem-form textarea{max-width:100%;box-sizing:border-box}</style><form class="cem-form" hidden>
       <label>Ledger leg <select name="row" style="width:100%;max-width:100%"></select></label><p data-basis></p>
       <label>Method <select name="method"><option value="quote">Sourced quote estimate</option><option value="owner_push_zero_v1">Owner push-zero convention</option></select></label>
       <label>Source book (lowercase identifier) <input name="book" value="draftkings" required pattern="[-a-z0-9_]{2,40}"></label>
       <label>Closing price (American) <input name="price" type="number" step="any" required></label>
       <label>Opposite closing price (blank if unknown) <input name="opposite" type="number" step="any"></label>
+      <fieldset><legend>Original decimal evidence (optional)</legend><p>For a decimal source, enter both original prices. American prices above must match exact conversions, not rounded odds. Leave both blank for an American source.</p>
+      <label>Original selected decimal <input name="decimalPrice" type="number" step="any" min="1.000000001" max="1001"></label>
+      <label>Original opposite decimal <input name="decimalOpposite" type="number" step="any" min="1.000000001" max="1001"></label></fieldset>
       <label>Public source URL <input name="sourceUrl" type="url" required style="width:100%;box-sizing:border-box"></label>
       <label>Evidence <select name="evidence"><option value="source_reported_closing">Source-reported closing quote</option><option value="observed_pregame">Observed pregame quote</option><option value="untimed_quote_proxy">Untimed quote used as closing proxy</option></select></label>
       <label>Quote timestamp (ISO; blank if unknown) <input name="quotedAt" placeholder="2026-10-22T20:00:00-04:00"></label>
@@ -61,13 +69,14 @@
       <p data-status role="status" aria-live="polite"></p></details>`;
     const form=host.querySelector('form'),field=n=>form.elements.namedItem(n),status=host.querySelector('[data-status]'),save=host.querySelector('[data-save]'),output=host.querySelector('[data-preview]');
     let rows={},row=null,pending=null,busy=false,readOnly=false;
-    const quoteFields=['book','price','opposite','sourceUrl','evidence','quotedAt','retrievedAt','scenarios'];
+    const quoteFields=['book','price','opposite','decimalPrice','decimalOpposite','sourceUrl','evidence','quotedAt','retrievedAt','scenarios'];
     function methodState(){const convention=field('method').value==='owner_push_zero_v1';for(const n of quoteFields){field(n).disabled=convention||readOnly;field(n).required=!convention&&['book','price','sourceUrl','retrievedAt'].includes(n);}field('method').disabled=readOnly;field('rationale').disabled=readOnly;form.querySelector('[type=submit]').disabled=readOnly;}
     const active=()=>api.isManager()&&context===api.league()+'|'+api.identity()&&host.dataset.context===context;
     const ensure=()=>{if(!active())throw Error('Account or league changed. Reload the ledger before saving.');};
     function select(){if(busy)return;row=rows[field('row').value];pending=null;save.disabled=true;output.textContent='';if(!row)return;
       host.querySelector('[data-basis]').textContent=`Entry ${row.price??'unknown'} / ${row.priceOpp??'unknown'}; ledger result ${row.result??'pending (server checks current result)'}; estimate revision ${row.clvEstimate?.revision||0}. Manual override ${row.clvPts??'none'} stays authoritative.`;
       const old=row.clvEstimate?.input;readOnly=!editableInput(old);field('method').value=old?.method==='owner_push_zero_v1'?'owner_push_zero_v1':'quote';field('book').value=old?.closeQuote?.book||row.entryBook||'';field('price').value=old?.closeQuote?.price??row.close??'';field('opposite').value=old?.closeQuote?.opposite??row.closeOpp??'';
+      field('decimalPrice').value=old?.closeQuote?.originalDecimal?.price??'';field('decimalOpposite').value=old?.closeQuote?.originalDecimal?.opposite??'';
       for(const n of ['sourceUrl','quotedAt'])field(n).value=old?.closeQuote?.[n]??'';
       field('retrievedAt').value=old?.closeQuote?.retrievedAt||'';field('evidence').value=old?.closeQuote?.evidence||'source_reported_closing';field('rationale').value=old?.rationale||'';field('scenarios').value=old?.scenarios?.map(x=>x*100).join(', ')||'';methodState();if(readOnly)output.textContent='This modeled estimate is read-only in this form; its evidence and method will not be converted.';
     }
@@ -80,7 +89,7 @@
     form.onsubmit=event=>{event.preventDefault();try{ensure();if(!row)throw Error('Load a ledger row first.');if(readOnly)throw Error('This modeled estimate is read-only in this form.');const numeric=n=>field(n).value.trim()===''?null:Number(field(n).value);
       const estimate=field('method').value==='owner_push_zero_v1'?{method:'owner_push_zero_v1',rationale:field('rationale').value.trim()}:{closeQuote:{price:numeric('price'),opposite:numeric('opposite'),book:field('book').value.trim(),selectionKey:row.selectionKey,sourceUrl:field('sourceUrl').value.trim(),quotedAt:field('quotedAt').value.trim()||null,retrievedAt:field('retrievedAt').value.trim(),evidence:field('evidence').value},rationale:field('rationale').value.trim()};
       if(!estimate.method&&field('scenarios').value.trim())estimate.scenarios=field('scenarios').value.split(',').map(x=>Number(x.trim())/100);
-      if(!estimate.method)preserveDecimals(row.clvEstimate?.input,estimate);const calc=preview(row,estimate),signature=JSON.stringify({row:field('row').value,estimate});
+      if(!estimate.method){attachOriginalDecimals(estimate,numeric('decimalPrice'),numeric('decimalOpposite'));preserveDecimals(row.clvEstimate?.input,estimate);}const calc=preview(row,estimate),signature=JSON.stringify({row:field('row').value,estimate});
       if(!pending||pending.signature!==signature)pending={signature,body:{league:api.league(),row:field('row').value,requestId:crypto.randomUUID(),expectedEstimateRevision:row.clvEstimate?.revision||0,estimate}};
       output.textContent=estimate.method==='owner_push_zero_v1'?'Owner push convention: 0 pp. Not measured or estimated CLV. Recorded outcome remains unchanged.':(estimate.closeQuote.evidence==='untimed_quote_proxy'?'Untimed quote used as closing proxy. Not a verified closing price. ':'')+`Estimated ${calc.point.toFixed(2)} pp; sensitivity ${calc.low.toFixed(2)} to ${calc.high.toFixed(2)} pp. Overround ${calc.holds.map(x=>(100*x).toFixed(2)+'%').join(' / ')}. Not a confidence interval or expected ROI. Price preview only; server checks settlement and evidence precedence.`;save.disabled=false;status.textContent='Review the preview, then save.';
     }catch(e){save.disabled=true;status.textContent=e.message;}};
@@ -89,7 +98,7 @@
       row=read.value;rows[body.row]=row;verified=true;status.textContent=`Saved and verified revision ${stored.revision}: ${stored.kind==='convention'?'owner convention':'estimated'} ${stored.point.toFixed(2)} pp.`;await api.refresh();
     }catch(e){status.textContent=e.message;}finally{busy=false;Array.from(form.elements).forEach(e=>e.disabled=false);host.querySelector('[data-load]').disabled=false;methodState();save.disabled=verified||readOnly;}};
   }
-  root.DDClvEstimateManager={mount,preview,editableInput,preserveDecimals};
-  if(typeof module!=='undefined')module.exports={preview,editableInput,preserveDecimals};
+  root.DDClvEstimateManager={mount,preview,editableInput,preserveDecimals,attachOriginalDecimals};
+  if(typeof module!=='undefined')module.exports={preview,editableInput,preserveDecimals,attachOriginalDecimals};
   if(typeof document!=='undefined')document.addEventListener('DOMContentLoaded',()=>root.mountBozoEstimateManager?.());
 })(typeof window!=='undefined'?window:globalThis);
