@@ -20,7 +20,7 @@ const state={season:2026,week:1,status:'placed',order:[3,1,2,0],closeTs:17916400
 // Fulfill local assets directly: no local listening socket and no production fetches.
 const origin='https://diagnostics.fixture.invalid';
 const leg=(extra={})=>({selectionKey:'synthetic-0',eventId:'fixture-0',label:'Synthetic team moneyline',player:players[0],sport:'nfl',mkt:'ml',week:1,result:'win',entryPrice:100,entryPriceOpp:100,closePrice:-150,closePriceOpp:150,...extra});
-const legs=[leg({closePrice:null,closePriceOpp:null,clvEstimate:{kind:'estimated',stale:false,point:2.102895,entryPrice:100,scenarios:[.05],closeQuote:{evidence:'untimed_quote_proxy',sourceUrl:'https://example.com/quote'}}}),leg({player:players[1],result:'loss',week:2,closePrice:150,closePriceOpp:-150}),leg({result:'win',week:2,closePrice:null}),leg({result:'pending',week:3,sport:'nba'}),leg({result:'push',week:3}),leg({result:'win',week:4,clvPts:90})];
+const legs=[leg({closePrice:null,closePriceOpp:null,clvEstimate:{kind:'estimated',stale:false,point:2.102895,entryPrice:100,scenarios:[.05],settlementWarning:'Legacy estimate: actual was not recorded in its basis; score/stat changes cannot be checked until reviewed.',closeQuote:{evidence:'untimed_quote_proxy',sourceUrl:'https://example.com/quote'}}}),leg({player:players[1],result:'loss',week:2,closePrice:150,closePriceOpp:-150}),leg({result:'win',week:2,closePrice:null}),leg({result:'pending',week:3,sport:'nba'}),leg({result:'push',week:3}),leg({result:'win',week:4,clvPts:90})];
 const {chromium}=loadPlaywright();
 let browser;
 try{
@@ -64,7 +64,8 @@ try{
     await page.locator('#clvAllBets tbody tr').first().waitFor({state:'attached'});
     assert.equal(await page.locator('html').getAttribute('data-dd-view'),'tldr');
     await page.evaluate(manager=>DDClvEstimateManager.mount(document.getElementById('clvEstimateManager'),{isManager:()=>manager,league:()=> 'synthetic',identity:()=> 'synthetic-owner',read:async()=>({value:{}}),write:async()=>{throw Error('No writes allowed')},who:x=>x,refresh:async()=>{}}),manager);
-    for(const id of ['clvAllBets','clvFoot','clvEstimateManager'])assert.equal(await page.locator('#'+id).isVisible(),false,id+' absent in TLDR');
+    assert.equal(await page.locator('#clvAllBets').isVisible(),true,'accounting available in TLDR');
+    for(const id of ['clvFoot','clvEstimateManager'])assert.equal(await page.locator('#'+id).isVisible(),false,id+' absent in TLDR');
     assert.equal(await page.locator('#clvCard > details.bz-help').isVisible(),false);
     assert.equal(await page.locator('#clvSvg').isVisible(),true);
     await page.locator('#clvCard').screenshot({path:path.join(output,`${width}-${theme}-${manager?'manager':'viewer'}-tldr.png`)});
@@ -72,7 +73,7 @@ try{
     assert.equal(await page.locator('#clvAllBets').isVisible(),true);
     assert.equal(await page.locator('#clvEstimateManager summary').isVisible(),manager);
     await page.getByRole('button',{name:'TL;DR',exact:true,includeHidden:true}).evaluate(e=>e.click());
-    assert.equal(await page.locator('#clvAllBets').isVisible(),false);
+    assert.equal(await page.locator('#clvAllBets').isVisible(),true,'accounting survives mode change');
     assert.equal(await page.locator('#clvEstimateManager').isVisible(),false);
     await page.getByRole('button',{name:'AI / technical details',exact:true,includeHidden:true}).evaluate(e=>e.click());
     assert.equal(await page.locator('#clvAllBets tbody tr').count(),legs.length);
@@ -84,6 +85,7 @@ try{
     await page.locator('#clvAllBets > details summary').click();
 
     assert.match(await page.locator('#clvAllBets').innerText(),/2.10 estimated/);
+    assert.match(await page.locator('#clvAllBets').textContent(),/Legacy estimate: actual was not recorded/);
     assert.equal(await page.locator('#bozoRecovered').isVisible(),false);
     assert.match(await page.locator('#diagCard').innerText(),/2.10 estimated/);
     assert.ok(await page.locator('#clvSvg').evaluate(e=>e.__pts.some(p=>Math.abs(p.x-2.102895)<.000001)));
