@@ -104,54 +104,22 @@ globalThis.fetch = async (input, init = {}) => {
   }), { status: 200, headers: { "Content-Type": "application/json" } });
 };
 
-// Normal capture: API contract, immutable KV record, provenance and quote gates.
+// Existing immutable receipts remain readable; scheduled ticks buy nothing.
 const kv = makeKV();
-const first = await worker.scheduled(
-  { cron: "9 * * * *", scheduledTime: T0 },
-  { SGO_KEY: "top-secret", RL: kv },
-  {},
-);
-ok("hourly trigger queries exactly one API page", calls.length === 1 && first.pages === 1);
-const request = calls[0];
-ok("request is NCAAF-only", request.url.searchParams.get("leagueID") === "NCAAF");
-ok("request asks for the declared 24-to-25-hour window",
-  Date.parse(request.url.searchParams.get("startsAfter")) === T0 + 24 * 3600e3 - 1 &&
-  Date.parse(request.url.searchParams.get("startsBefore")) === T0 + 25 * 3600e3);
-ok("API credential stays in a header, never the URL",
-  !request.url.href.includes("top-secret") && request.init.headers["x-api-key"] === "top-secret");
-ok("only main markets are requested and opposing sides are explicit",
-  request.url.searchParams.get("oddID").includes("points-home-game-ml-home") &&
-  request.url.searchParams.get("includeOpposingOdds") === "true" &&
-  request.url.searchParams.get("includeAltLines") === "false");
-
-const receiptKey = [...kv.store.keys()].find(k => k.startsWith("cfb:market:24h:2026:"));
-const receipt = JSON.parse(kv.store.get(receiptKey));
-ok("receipt is keyed by season, kickoff and event", /cfb:market:24h:2026:\d+:sgo-cfb-1/.test(receiptKey));
-ok("capture time and lead are prospective facts",
-  receipt.captured_at === "2026-08-20T12:09:00.000Z" && receipt.lead_seconds === 24.5 * 3600);
-ok("named provider and machine-readable observation timestamp are recorded",
-  receipt.source.provider === "SportsGameOdds" && receipt.source.observation_timestamp_available === true);
-ok("valid paired book survives proportional devig",
-  receipt.moneylines.length === 1 && receipt.moneylines[0].bookmaker === "draftkings" &&
-  Math.abs(receipt.moneylines[0].home_probability_no_vig + receipt.moneylines[0].away_probability_no_vig - 1) < 1e-6);
-ok("impossible hold and missing opposing side are published as rejected input",
-  receipt.rejected_quotes.some(x => x.bookmaker === "bovada" && x.reason === "implausible-hold") &&
-  receipt.rejected_quotes.some(x => x.bookmaker === "fanduel" && x.reason === "missing-opposing-side"));
-ok("provider tier notice follows the receipt", /Amateur tier/.test(receipt.source.provider_notice));
-ok("receipt carries a canonical SHA-256 snapshot id", /^[0-9a-f]{64}$/.test(receipt.integrity.snapshot_id));
-ok("nothing is mislabelled as modelled, simulated or graded",
-  receipt.grading.modelled === false && receipt.grading.simulation === false && receipt.grading.graded === false);
-ok("operational last-run summary is separate from immutable data",
-  kv.store.has("cfb:market:24h:last-run") && first.stored === 1 && first.priced === 1);
-
-// Exact replay is idempotent. The provider call still happens because event IDs are
-// only known after the filtered query, but the frozen receipt is not overwritten.
-const immutablePutsBefore = kv.puts.filter(p => p.key === receiptKey).length;
-const second = await worker.scheduled(
-  { cron: "9 * * * *", scheduledTime: T0 }, { SGO_KEY: "top-secret", RL: kv }, {});
-const immutablePutsAfter = kv.puts.filter(p => p.key === receiptKey).length;
-ok("replaying a cron does not overwrite an existing receipt",
-  second.existing === 1 && second.stored === 0 && immutablePutsBefore === immutablePutsAfter);
+const receiptKey = 'cfb:market:24h:2026:1787313600000:sgo-cfb-1';
+const receipt = {schema_version:1,event_id:'sgo-cfb-1',season:2026,
+ kickoff:'2026-08-21T12:00:00.000Z',captured_at:'2026-08-20T12:09:00.000Z',
+ source:{provider:'SportsGameOdds'},moneylines:[{bookmaker:'draftkings',home_price:-150,away_price:130}]};
+const original = JSON.stringify(receipt);
+kv.store.set(receiptKey,original);
+for (const key of ['fixture', undefined]) for (const minutes of [0,5,60,120]) {
+ const result = await worker.scheduled({cron:'9 * * * *',scheduledTime:T0+minutes*60000},
+  {SGO_KEY:key,RL:kv},{});
+ ok('hourly collector explicitly skipped',result.skipped==='bozo_selections_only');
+}
+ok('repeated ticks and missing provider key spend zero requests',calls.length===0);
+ok('existing immutable receipt is untouched',kv.store.get(receiptKey)===original && !kv.puts.some(p=>p.key===receiptKey));
+ok('free schedule refresh still runs',kv.puts.some(p=>/schedule/.test(p.key)));
 
 // Public export uses a fenced prefix and a standard data envelope.
 const publicResponse = await worker.fetch(new Request(
@@ -175,50 +143,6 @@ ok("public export rejects an invalid season", badSeason.status === 400);
 const wrongMethod = await worker.fetch(new Request(
   "https://toto.example/cfb/market-snapshots", { method: "POST" }), { RL: kv });
 ok("public export is read-only", wrongMethod.status === 405);
-
-// API pagination is followed and every page remains inside the same local window.
-mode = "pagination"; calls = [];
-const pagedKV = makeKV();
-const paged = await worker.scheduled(
-  { cron: "9 * * * *", scheduledTime: T0 }, { SGO_KEY: "top-secret", RL: pagedKV }, {});
-ok("provider pagination is exhausted before publishing", paged.pages === 2 && paged.stored === 2 && calls.length === 2);
-ok("opaque provider cursor is passed unchanged", calls[1].url.searchParams.get("cursor") === "page-two");
-
-// A rescheduled event gets a second immutable receipt because kickoff is in the key.
-mode = "normal"; calls = [];
-const T1 = T0 + 3600e3;
-currentEvents = [event({ kickoff: T1 + 24.5 * 3600e3 })];
-const rescheduled = await worker.scheduled(
-  { cron: "9 * * * *", scheduledTime: T1 }, { SGO_KEY: "top-secret", RL: kv }, {});
-ok("reschedule creates a new receipt instead of rewriting the old one",
-  rescheduled.stored === 1 && [...kv.store.keys()].filter(k => k.endsWith(":sgo-cfb-1")).length === 2);
-
-// An event can be honestly frozen as unpriced; absence is evidence, not a dropped row.
-currentEvents = [event({ id: "no-price", kickoff: T1 + 24.6 * 3600e3, prices: false })];
-const noPrice = await worker.scheduled(
-  { cron: "9 * * * *", scheduledTime: T1 }, { SGO_KEY: "top-secret", RL: kv }, {});
-const noPriceKey = [...kv.store.keys()].find(k => k.endsWith(":no-price"));
-const noPriceRecord = JSON.parse(kv.store.get(noPriceKey));
-ok("missing prices produce an explicit unpriced receipt", noPrice.unpriced === 1 && noPriceRecord.status === "unpriced");
-
-// Provider and configuration failures leave an operational trail and publish no row.
-mode = "rate-limit"; calls = [];
-const failedKV = makeKV();
-let rateThrew = false;
-try {
-  await worker.scheduled({ cron: "9 * * * *", scheduledTime: T0 }, { SGO_KEY: "top-secret", RL: failedKV }, {});
-} catch (e) { rateThrew = /429/.test(e.message) && !e.message.includes("top-secret"); }
-ok("provider failure propagates without leaking the credential", rateThrew);
-ok("provider failure leaves lasterror but no receipt",
-  failedKV.store.has("cfb:market:24h:lasterror") &&
-  ![...failedKV.store.keys()].some(k => /^cfb:market:24h:2026:/.test(k)));
-
-const missingKeyKV = makeKV();
-let keyThrew = false;
-try {
-  await worker.scheduled({ cron: "9 * * * *", scheduledTime: T0 }, { RL: missingKeyKV }, {});
-} catch (e) { keyThrew = /SGO_KEY/.test(e.message); }
-ok("missing SGO secret fails by name", keyThrew && missingKeyKV.store.has("cfb:market:24h:lasterror"));
 
 let unknownThrew = false;
 try { await worker.scheduled({ cron: "17 4 * * *", scheduledTime: T0 }, { RL: makeKV() }, {}); }

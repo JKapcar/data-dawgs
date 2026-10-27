@@ -36,7 +36,7 @@ ok(/can't be overwritten/.test(worker),
    from a licensed feed are different kinds of evidence; the day they become
    indistinguishable in this column, every CLV figure built on them becomes unauditable. */
 ok(/closeSource: "manual"/.test(worker), "a hand-entered close is stamped manual");
-ok(/closeSource: "sgo"/.test(worker) || /both\("closeSource", "sgo"\)/.test(worker),
+ok(/closeSource: "sgo"/.test(worker) || /both\("closeSource", quote.provider \|\| "sgo"\)/.test(worker),
    "a captured close is stamped with the source it came through");
 ok(/closeSource: null \}\s*:\s*\{ close, closeOpp/.test(worker) || /closeEnteredBy: auth\.name/.test(worker),
    "who typed it and when are recorded alongside the number");

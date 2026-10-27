@@ -689,30 +689,7 @@ async function cfbFetchMarketEvents(env, window) {
 }
 
 async function runCfbMarketCapture(env, nowMs) {
-  const kv = cfbMarketKV(env);
-  if (!kv) throw new Error("no KV binding for CFB market receipts");
-  const window = cfbMarketWindow(nowMs);
-  const fetched = await cfbFetchMarketEvents(env, window);
-  let stored = 0, existing = 0, priced = 0, unpriced = 0;
-  for (const event of fetched.events) {
-    const record = await cfbMarketRecord(event, nowMs, fetched.notice);
-    const prior = await kv.get(record.storage_key);
-    if (prior !== null) { existing++; continue; }
-    await kv.put(record.storage_key, JSON.stringify(record));
-    stored++;
-    if (record.status === "priced") priced++; else unpriced++;
-  }
-  const summary = {
-    at: new Date(nowMs).toISOString(),
-    window_start: new Date(window.start).toISOString(),
-    window_end: new Date(window.end).toISOString(),
-    pages: fetched.pages,
-    events: fetched.events.length,
-    stored, existing, priced, unpriced,
-    provider_notice: fetched.notice,
-  };
-  await kv.put(CFB_MARKET_PREFIX + "last-run", JSON.stringify(summary));
-  return summary;
+  return { skipped: "bozo_selections_only", stored: 0 };
 }
 
 async function handleCfbMarketSnapshots(request, url, env, cors) {
@@ -7314,13 +7291,13 @@ async function bozoCorrectPickCore(env, auth, body, via = "site") {
     const version = await sha256hex(JSON.stringify(bozoCanonical(state)));
     let pending;
     if (!confirming) {
-      const captured = await bozoCaptureEntry(env, body.pick);
+      const captured = await bozoCaptureEntry(env, body.pick, {receiptOnly:true});
       if (!captured.ok) return fail(captured.error, 400);
       const p = captured.p;
       const snapshot = Date.parse(p.entrySnapshotAt);
       if (p.priceSource !== "captured" || p.clvEligible !== true || !Number.isFinite(Number(p.priceOpp)) || Math.abs(Number(p.priceOpp)) < 100 ||
           !Number.isFinite(snapshot) || snapshot > Date.now() + 60000 || Date.now() - snapshot > 300000)
-        return fail("A fresh captured two-sided quote is required for correction; manual or stale fallback is not accepted.", 409);
+        return fail("Manual pending: correction requires an existing fresh captured two-sided quote. No paid preview was requested; manual or stale fallback is not accepted.", 409);
       const schedule = await bozoCorrectionSchedule(env, state, p, Date.now());
       if (schedule.error) return fail(schedule.error);
       const error = validatePick(p, memberNameAt(state, key), state.picks, bandOf(state), settingsOf(state).format, key, schedule.gate);
@@ -7388,6 +7365,10 @@ async function bozoGuardedPatch(env, lid, expected, patch) {
   const { data: live, etag } = await fbGet(env, LG(lid), true);
   if (!live || !etag || (live.week || 1) !== (expected.week || 1) || (live.season || SEASON) !== (expected.season || SEASON) ||
       !bozoSame(live.picks || {}, expected.picks || {})) return false;
+  for(const path of Object.keys(patch).filter(p=>/\/close(?:Opp)?$/.test(p))){
+    const read=obj=>path.split('/').reduce((value,key)=>value?.[key],obj)??null;
+    if(!bozoSame(read(live),read(expected)))return false;
+  }
   // A grading policy/receipt change invalidates the snapshot before its CAS write.
   if (!bozoSame(live.worstBeatPolicy || null, expected.worstBeatPolicy || null) ||
       !bozoSame(live.worstBeatReceipt || null, expected.worstBeatReceipt || null)) return false;
@@ -7457,6 +7438,7 @@ async function commitBozoLeg(env, lid, state, name, p, via = null, mkey = null, 
   if (need > 0 && Object.keys(picks).length >= need) {
     placed = await placeAndDraw(env, lid, picks, state);
   }
+  if(state.synthetic!==true)try { await bozoCommittedEntry(env,lid,key,pick); } catch {}
   return { ok: true, ts: pick.ts, placed, size, need, pick };
 }
 
@@ -8230,6 +8212,7 @@ function ledgerEntries(lid, season, week, picks, order) {
       entrySnapshotAt: x.entrySnapshotAt || null,
       providerEventIds: x.providerEventIds || {},
       canonicalKey: x.canonicalKey || null,
+      entryCapture: x.entryCapture || null,
       selectionKey: x.selectionKey || null,
       startsAt: x.startsAt || null,             // what schedules the close capture
       dkSgpEligible: x.dkSgpEligible || null,   // "asserted" — see bozoPick
@@ -8851,20 +8834,13 @@ async function bozoCloseTargets(env, nowMs) {
       if (!p || !p.eventId) continue;
       const r = results[key] || {};
       if (r.close != null && r.closeOpp != null) continue; // complete pairs are immutable
-      if (r.closeUnavailableReason && p.mkt === "other") continue;
+      if (p.mkt === "other") continue;
       const start = Date.parse(p.startsAt || "");
       if (!Number.isFinite(start)) continue;                       // no kickoff, no window
       if (start > nowMs + BOZO_CLOSE_LEAD_MS) continue;            // too early
       if (lg.status === "graded" && start > nowMs) continue;
-      if (start < nowMs - BOZO_CLOSE_STALE_MS) {
-        if (!env.ODDS_API_KEY || !env.RL || !bozoOddsApiMarkets(p) || nowMs-start > BOZO_CLOSE_RECOVERY_MS) continue;
-        const retryKey = `bozo:close-retry:${lid}:${lg.season || SEASON}:${lg.week || 1}:${key}:${start}`;
-        try {
-          const last = Number(await env.RL.get(retryKey));
-          if (last && nowMs-last < BOZO_CLOSE_RETRY_MS) continue;
-          await env.RL.put(retryKey, String(nowMs), {expirationTtl: 3*24*60*60});
-        } catch { continue; } // do not spend historical credits without the retry gate
-      }
+      if (start <= nowMs) continue; // No automatic historical purchases.
+
       const player = p.who || memberNameAt(lg, key) || playerName(key);
       const uid = UID_RE.test(key) ? key : (uidByName.get(player) || null);
       out.push({ lid, key, pick: p, player, uid, startMs: start,
@@ -8903,6 +8879,9 @@ async function bozoSgoFailure(response, env, context, suppliedText) {
 // Shared 60-second KV cache: submits can reuse a cron fetch across datacenters.
 // Preserve fetchedAt; close quote validation still enforces pregame freshness.
 async function bozoSgoRequest(env, url, context, options = {}) {
+  const budgetPath='/bozoCaptureBudget/sgo';
+  const budget=(await fbGet(env,budgetPath)).data;
+  if(budget?.exhausted)throw Object.assign(new Error('Provider exhausted; manual fallback'),{code:'quota_exceeded'});
   const submit = context.caller === "submit" || context.caller === "draft";
   const deadline = options.deadline || Date.now() + (submit ? 7000 : 8000);
   const fault = (code, message) => Object.assign(new Error(message), {code});
@@ -8924,7 +8903,7 @@ async function bozoSgoRequest(env, url, context, options = {}) {
     } catch { cache = null; }
   }
   let last;
-  for (let attempt = 0; attempt < (submit ? 3 : 1); attempt++) {
+  for (let attempt = 0; attempt < 1; attempt++) {
     const remaining = deadline - Date.now();
     if (remaining <= 0) throw last || fault("timeout", "SGO capture deadline reached");
     const controller = new AbortController();
@@ -8935,6 +8914,7 @@ async function bozoSgoRequest(env, url, context, options = {}) {
         if (!res.ok) {
           const err = await bozoSgoFailure(res, env, context);
           const quota = res.status === 429 && /monthly|quota|object.{0,30}(limit|exhaust)|billing.{0,20}limit/i.test(err.detail);
+          if(quota || res.status===402 || res.status===429)await fbPut(env,budgetPath,{exhausted:true,at:new Date().toISOString()});
           err.code = quota ? "quota_exceeded" : res.status === 429 ? "rate_limited" : res.status >= 500 ? "provider_error" : "provider_rejected";
           throw err;
         }
@@ -8981,9 +8961,8 @@ async function bozoFetchEvents(env, sport, startMs, needProps, periods = ["game"
   if (!leagueID) return [];
   const url = new URL(BOZO_CLOSE_API);
   url.searchParams.set("leagueID", leagueID);
-  // A generous window around the kickoff — the join is on teams, not on this.
-  url.searchParams.set("startsAfter", new Date(startMs - 6 * 3600 * 1000).toISOString());
-  url.searchParams.set("startsBefore", new Date(startMs + 6 * 3600 * 1000).toISOString());
+  if (!options.eventId) return [];
+  url.searchParams.set("eventID", options.eventId);
   // ⚠️ The oddID filter is dropped when any leg in this bucket is a prop. A prop's market
   // id contains the player's entity id, which we don't know until we've seen the event's
   // markets — so filtering by id first would rule out the very rows we need to search.
@@ -9001,7 +8980,13 @@ async function bozoFetchEvents(env, sport, startMs, needProps, periods = ["game"
   // line — and a close snapped off the main line would be a different market's price.
   url.searchParams.set("includeAltLines", "true");
   url.searchParams.set("limit", needProps ? "25" : "100");
-  return bozoSgoRequest(env, url, {sport, needProps, caller: options.caller || "submit"}, options);
+  const receipt=await bozoCaptureOnce(env,['sgo-request',options.caller||'submit',url.toString()],async()=>{
+    const events=await bozoSgoRequest(env,url,{sport,needProps,caller:options.caller||'submit'},options);
+    return {ok:true,events,fetchedAt:events.fetchedAt||null};
+  });
+  if(!receipt.ok)throw Object.assign(new Error(receipt.reason),{code:receipt.code});
+  Object.defineProperty(receipt.events,'fetchedAt',{value:receipt.fetchedAt,configurable:true});
+  return receipt.events;
 }
 
 // Join an ESPN-sourced pick to an aggregator event. The pick's `game` is "AWAY VS HOME"
@@ -9101,7 +9086,27 @@ function bozoOddsApiQuote(ev, p, registry) {
   }
   return {reason:"exact two-sided DraftKings line missing",code:"market_missing"};
 }
-async function bozoOddsApiRequest(env, path, params, options = {}) {
+async function bozoOddsApiRequest(env,path,params,options={}) {
+  if(path.startsWith('historical/') || path.endsWith('/scores'))throw Object.assign(new Error('Automatic historical and paid score requests are disabled'),{code:'capture_disabled'});
+  const budgetPath='/bozoCaptureBudget/odds_api';
+  const budget=(await fbGet(env,budgetPath)).data;
+  if(budget?.exhausted)throw Object.assign(new Error('Provider exhausted; manual fallback'),{code:'quota_exceeded'});
+  const identity=['provider-request',options.caller||'entry',options.discoveryDate||null,path,params];
+  const receipt=await bozoCaptureOnce(env,identity,async()=>{
+    try {
+      const value=await bozoOddsApiRequestRaw(env,path,params,options);
+      if(value.quota?.['x-requests-remaining']===0)await fbPut(env,budgetPath,{exhausted:true,at:new Date().toISOString()});
+      return {ok:true,value};
+    }catch(e){
+      if(e.quota?.['x-requests-remaining']===0 || [402,429].includes(e.httpStatus))
+        await fbPut(env,budgetPath,{exhausted:true,at:new Date().toISOString()});
+      return {ok:false,code:e.code||'provider_error',reason:'Provider unavailable; manual fallback'};
+    }
+  });
+  if(!receipt.ok)throw Object.assign(new Error(receipt.reason),{code:receipt.code});
+  return receipt.value;
+}
+async function bozoOddsApiRequestRaw(env, path, params, options = {}) {
   const fault = (code,message,diagnostic = {})=>Object.assign(new Error(message),{code, ...diagnostic});
   const url = new URL("https://api.the-odds-api.com/v4/" + path);
   for (const [k,v] of Object.entries(params)) url.searchParams.set(k,String(v));
@@ -9153,11 +9158,12 @@ async function bozoOddsApiCapture(env,p,registry,options = {}) {
     const sport = BOZO_ODDS_API_SPORT[p.sport];
     const start = Date.parse(p.startsAt || p.commenceTime || "");
     const now = options.nowMs ?? Date.now();
-    const historical = options.caller === "close" && now >= start;
+    if (now >= start) return miss("window_closed", "Automatic historical purchases are disabled; attach manual evidence.");
+    const historical = false;
     const date = historical ? new Date(start-1000).toISOString() : null;
     const prefix = historical ? "historical/" : "";
     const base = `${prefix}sports/${sport}/events`;
-    const listed = await bozoOddsApiRequest(env,base,date?{date}:{},{...options,ttl:300});
+    const listed = await bozoOddsApiRequest(env,base,date?{date}:{},{...options,ttl:300,discoveryDate:new Date(start).toISOString().slice(0,10)});
     const events = historical ? listed.data.data : listed.data;
     if (!Array.isArray(events)) throw Object.assign(new Error("Odds API events missing"),{code:"provider_error"});
     const event = bozoMatchEvent(events.map(bozoOddsApiEvent),p,registry);
@@ -9225,6 +9231,9 @@ async function bozoCaptureEntry(env, input, options = {}) {
     error: "Kickoff time (startsAt) could not be resolved from the schedule cache." };
   if (p.mkt === "other") return bozoSelfPricedEntry(p, "Other markets require manual verification of the original quote for CLV.", "unsupported_market");
 
+  if (options.receiptOnly) return bozoEntryReceiptOnly(env,p);
+  if (!options.committed) return bozoSelfPricedEntry(p, "Capture occurs once after commitment; entered odds remain the original receipt.", "awaiting_commit");
+  if (Date.now() >= startMs) return bozoSelfPricedEntry(p, "Pregame entry capture window has passed.", "window_closed");
   const captureAttempts = [];
   const failed = (provider, code, reason) => {
     captureAttempts.push({provider, code, reason});
@@ -9242,8 +9251,7 @@ async function bozoCaptureEntry(env, input, options = {}) {
         events = [backup.event];
         captureAttempts.push({provider:"odds_api",code:"captured",reason:"Exact two-sided quote captured"});
       } else {
-        captureAttempts.push({provider:"odds_api",code:backup.code,reason:backup.reason});
-        backup = null;
+        return failed("odds_api", backup.code, backup.reason);
       }
     } catch (e) {
       captureAttempts.push({provider:"odds_api",code:e.code || "provider_error",reason:"Odds API capture failed"});
@@ -9253,7 +9261,7 @@ async function bozoCaptureEntry(env, input, options = {}) {
   if (!backup) try {
     [events, registry] = await Promise.race([
       Promise.all([
-        bozoFetchEvents(env, p.sport, startMs, p.mkt === "prop", [p.period], {caller: options.caller || "submit", deadline}),
+        bozoFetchEvents(env, p.sport, startMs, p.mkt === "prop", [p.period], {caller: options.caller || "submit", deadline, eventId: input.providerEventIds?.sgo}),
         bozoTeamRegistry(env, p.sport),
       ]),
       new Promise((_, reject) => { timer = setTimeout(() => reject(Object.assign(new Error("Capture timed out"), {code:"timeout"})), 7000); }),
@@ -9272,6 +9280,9 @@ async function bozoCaptureEntry(env, input, options = {}) {
   }
   if (!backup) captureAttempts.push({provider:"sgo",code:"captured",reason:"Exact two-sided quote captured"});
   p.captureAttempts = captureAttempts;
+  const entryStamp=Date.parse(quote.snapshotAt);
+  if(!Number.isFinite(entryStamp)||entryStamp>=startMs||entryStamp>Date.now()+60000||Date.now()-entryStamp>5*60000)
+    return failed("capture","stale_snapshot","Stored entry quote is not fresh; manual fallback");
   const facts = bozoDevigPair(quote.price, quote.opp);
   const commenceTime = event.status?.startsAt || p.startsAt;
   const typed = bzAmerican(p.typedPrice ?? p.price);
@@ -9314,22 +9325,70 @@ function bozoCloseMutation(t, quote, reason, observedAt) {
     both("closeObservedAt", quote.snapshotAt || observedAt);
     both("closeUnavailableReason", null);
   } else {
-    both("close", null);
-    both("closeOpp", null);
-    both("closeBook", null);
-    both("closeObservedAt", null);
     both("closeUnavailableReason", reason);
-    both("closeSource", "sgo");
+
   }
   return patch;
 }
+
+// BEGIN BOZO CAPTURE RECEIPTS
+async function bozoCaptureOnce(env, identity, work) {
+  const hash = await sha256hex(JSON.stringify(identity));
+  const path = '/bozoCaptureReceipts/v1/' + hash;
+  let saved;
+  try {
+    saved = await fbGet(env, path, true);
+    if (saved.data) return saved.data.result || {ok:false, code:'capture_pending', reason:'Capture already attempted; manual evidence may be required'};
+    if (!saved.etag || !await fbPut(env,path,{state:'pending',at:new Date().toISOString()},saved.etag))
+      return {ok:false,code:'capture_pending',reason:'Another caller owns this capture'};
+  } catch { return {ok:false,code:'receipt_unavailable',reason:'No durable spend guard; manual fallback'}; }
+  let result;
+  try { result = await work(); }
+  catch { result = {ok:false,code:'provider_error',reason:'Capture failed; manual fallback'}; }
+  try { await fbPut(env,path,{state:'complete',result,at:new Date().toISOString()}); } catch {}
+  return result;
+}
+function bozoCaptureIdentity(p, stage) {
+  return [stage,p.sport,String(p.eventId),Number.isFinite(Date.parse(p.startsAt))?new Date(p.startsAt).toISOString():p.startsAt,selectionKeyOf(p),BOZO_CLOSE_BOOK];
+}
+async function bozoEntryReceiptOnly(env,p){
+  const missing=()=>bozoSelfPricedEntry(p,'Manual pending: no existing fresh captured pair for this exact selection','capture_pending');
+  try {
+    const hash=await sha256hex(JSON.stringify(bozoCaptureIdentity(p,'entry')));
+    const saved=(await fbGet(env,'/bozoCaptureReceipts/v1/'+hash)).data;
+    const q=saved?.state==='complete'&&saved.result;
+    const stamp=Date.parse(q?.snapshotAt),start=Date.parse(p.startsAt),now=Date.now();
+    if(!q?.ok||assertQuote(q,p)||!Number.isFinite(stamp)||stamp>=start||stamp>now||now-stamp>300000)return missing();
+    const facts=bozoDevigPair(q.price,q.opp);
+    return {ok:true,p:{...p,price:q.price,priceOpp:q.opp,entryBook:BOZO_CLOSE_BOOK,entryProvider:q.provider,
+      entrySnapshotAt:q.snapshotAt,entryOppSource:'captured',priceSource:'captured',verificationStatus:'verified',
+      fairEntry:facts.fair,entryHold:facts.hold,clvEligible:true,providerEventIds:q.providerEventIds||{}}};
+  }catch{return missing();}
+}
+async function bozoCommittedEntry(env,lid,key,pick) {
+  const result = await bozoCaptureOnce(env,bozoCaptureIdentity(pick,'entry'), async()=>{
+    const captured=await bozoCaptureEntry(env,pick,{committed:true});
+    const p=captured.p;
+    return p?.priceSource==='captured' ? {ok:true,price:p.price,opp:p.priceOpp,line:p.line,
+      snapshotAt:p.entrySnapshotAt,provider:p.entryProvider,providerEventIds:p.providerEventIds,observedAfterCommit:true}
+      : {ok:false,code:p?.captureFailureCode||'unavailable',reason:p?.captureFailureReason||'Entry unavailable'};
+  });
+  // Supplemental evidence never rewrites the confirmed price, stake or decision inputs.
+  const {data:live,etag}=await fbGet(env,LG(lid),true);
+  if (!live || !etag || !bozoSame(live.picks?.[key],pick)) return;
+  live.picks[key].entryCapture=result;
+  const row=live.ledger?.[ledgerKey(live.season||SEASON,live.week||1,key)];
+  if(row && row.selectionKey===pick.selectionKey)row.entryCapture=result;
+  await fbPut(env,LG(lid),live,etag);
+}
+// END BOZO CAPTURE RECEIPTS
 
 /* The cron body. Writes at most one close per leg, ever. */
 async function runBozoCloseCapture(env, nowMs) {
   const targets = await bozoCloseTargets(env, nowMs);
   if (!targets.length) return { captured: 0, skipped: 0, checked: 0 };
 
-  // One fetch per (sport, hour-bucket) rather than one per leg.
+  // Group registry reads; durable request receipts deduplicate provider calls globally.
   const byBucket = new Map();
   for (const t of targets) {
     const k = t.pick.sport + "|" + Math.floor(t.startMs / (3600 * 1000));
@@ -9346,58 +9405,32 @@ async function runBozoCloseCapture(env, nowMs) {
   };
 
   for (const bucket of byBucket.values()) {
-    let events = [];
-    let fetchErr = null;
-    const needProps = bucket.legs.some(t => t.pick.mkt === "prop");
-    const periods = [...new Set(bucket.legs.map(t => bozoPeriodOf(t.pick)))];
-    let sgoLoaded = false;
     const registry = await bozoTeamRegistry(env, bucket.sport);
 
     for (const t of bucket.legs) {
-      let reason = null, quote = null;
-      if (env.ODDS_API_KEY && bozoOddsApiMarkets(t.pick)) {
-        try {
-          const capture = await bozoOddsApiCapture(env,t.pick,registry,{caller:"close",nowMs,deadline:Date.now()+7000});
-          quote = capture.quote || null;
-          if (!quote) console.log("bozo-close-odds-api", JSON.stringify({code:capture.code,reason:capture.reason,canonicalKey:t.pick.canonicalKey}));
-        } catch (e) { console.log("bozo-close-odds-api", JSON.stringify({code:e.code || "provider_error"})); }
-      }
-      // After kickoff only historical pregame snapshots qualify; never request live SGO.
-      if (!quote && nowMs >= t.startMs) { skipped++; continue; }
-      if (!quote && !sgoLoaded) {
-        sgoLoaded = true;
-        try { events = await bozoFetchEvents(env,bucket.sport,bucket.startMs,needProps,periods,{caller:"close"}); }
-        catch (e) { fetchErr = String((e && e.message) || e); }
-      }
-      if (!quote && fetchErr) { skipped++; continue; } // retry next tick
-
-      // ⚠️ `other` is the one market type with no principled way in. It is free text
-      // describing an arbitrary game market ("favourite to lead at halftime", "no
-      // overtime"), with no player, no stat and no number to join on — unlike a prop,
-      // which has all three. It stays a null with a reason.
-      if (quote) { /* exact independent-provider quote already resolved */ }
-      else if (t.pick.mkt === "other") {
-        reason = "No closing price captured: an “other” leg describes an arbitrary game market in free text, "
-               + "with no stat, player or number to match on at the odds source.";
-      } else {
-        const ev = bozoMatchEvent(events, t.pick, registry);
-        if (!ev) reason = "No closing price captured: this game couldn't be matched at the odds source.";
-        else {
-          const q = bozoDkQuote(ev, t.pick, registry);
-          if (q.reason) reason = "No closing price captured: " + q.reason + ".";
-          else quote = q;
+      const receipt = await bozoCaptureOnce(env,bozoCaptureIdentity(t.pick,'close'),async()=>{
+        if (nowMs >= t.startMs || t.pick.mkt==='other') return {ok:false,reason:'No supported pregame close'};
+        if(env.ODDS_API_KEY && bozoOddsApiMarkets(t.pick)) {
+          const capture=await bozoOddsApiCapture(env,t.pick,registry,{caller:'close',nowMs,deadline:Date.now()+7000});
+          if(capture.ok)return {ok:true,quote:capture.quote};
+          // A refusal never triggers a second paid provider.
+          return {ok:false,reason:capture.reason||'Close unavailable'};
         }
-      }
-
-      // ⚠️ Written in TWO places, on purpose. `results/<key>` is this week's live board
-      // and gets cleared by bozoNext; the ledger row is the permanent receipt. Refuse
-      // an incomplete/stale target before adding EITHER path to the shared patch.
-      // A missing market may reopen before kickoff. Keep it retryable.
-      if (!quote && t.pick.mkt !== "other") { skipped++; continue; }
+        const events=await bozoFetchEvents(env,t.pick.sport,t.startMs,t.pick.mkt==='prop',[bozoPeriodOf(t.pick)],
+          {caller:'close',eventId:t.pick.providerEventIds?.sgo || t.pick.entryCapture?.providerEventIds?.sgo});
+        const ev=bozoMatchEvent(events,t.pick,registry);
+        const q=ev&&bozoDkQuote(ev,t.pick,registry);
+        const stamp=Date.parse(q?.snapshotAt);
+        return q && !assertQuote(q,t.pick) && Number.isFinite(stamp) && stamp<t.startMs && t.startMs-stamp<=15*60000
+          ? {ok:true,quote:q} : {ok:false,reason:'Exact pregame line unavailable; manual evidence required'};
+      });
+      const existing=(await fbGet(env,LG(t.lid)+'/results/'+t.key)).data||{};
+      const conflict=receipt.ok && ((existing.close!=null&&existing.close!==receipt.quote.price)||(existing.closeOpp!=null&&existing.closeOpp!==receipt.quote.opp));
+      const quote=receipt.ok&&!conflict?receipt.quote:null, reason=conflict?'Saved partial price conflicts; manual review':receipt.reason||'Close pending';
       const mutation = bozoCloseMutation(t, quote, reason, observedAt);
       if (!mutation) { skipped++; continue; }
       for (const [path, value] of Object.entries(mutation)) add(t.lid, path, value);
-      if (quote) captured++; else skipped++;
+      if (!quote) skipped++;
     }
   }
 
@@ -9407,11 +9440,24 @@ async function runBozoCloseCapture(env, nowMs) {
       const group = targets.filter(t => t.lid === lid);
       const live = (await fbGet(env, LG(lid))).data;
       if (!live || group.some(t => t.week !== (live.week || 1) || t.season !== (live.season || SEASON) || !bozoSame(live.picks?.[t.key], t.pick))) continue;
-      if (!await bozoGuardedPatch(env, lid, live, patch)) console.log("bozo close: concurrent change; retry next tick");
+      // A manager or another capture may have supplied prices after target discovery.
+      // Keep those exact values, including partial pairs, instead of overwriting them.
+      for(const t of group){
+        const result=live.results?.[t.key]||{},row=live.ledger?.[ledgerKey(t.season,t.week,t.key)]||{};
+        const protectedPrice=[result.close,result.closeOpp,row.close,row.closeOpp].some(v=>v!=null);
+        if(protectedPrice)for(const path of Object.keys(patch)){
+          if(path.startsWith(`results/${t.key}/`)||path.startsWith(`ledger/${ledgerKey(t.season,t.week,t.key)}/`))delete patch[path];
+        }
+      }
+      if(!Object.keys(patch).length)continue;
+      if (await bozoGuardedPatch(env, lid, live, patch)) {
+        captured += group.filter(t=>patch[`results/${t.key}/close`]!=null && patch[`results/${t.key}/closeOpp`]!=null).length;
+      } else console.log("bozo close: concurrent change; reuse receipt next tick");
     }
     catch (e) { console.log("bozo close: write failed for " + lid + " — " + e.message); }
   }
 
+  skipped = targets.length - captured;
   const kv = cfbMarketKV(env);
   if (kv) {
     try {
@@ -9465,6 +9511,7 @@ async function bozoClv(request, url, env, cors) {
       label: r.label, selectionKey: r.selectionKey || null,
       dkSgpEligible: r.dkSgpEligible || null,
 
+      entryCapture: r.entryCapture || null, startsAt: r.startsAt || null,
       entryPrice: r.price ?? null,
       entryPriceOpp: r.priceOpp ?? null,
       priceSource: r.priceSource || null,
@@ -10070,12 +10117,13 @@ function bozoEstimateSettledRow(row,rowKey,live,includeVoid=false){
   if(!result||!(includeVoid?['won','lost','push','void']:['won','lost','push']).includes(result.result))return row;
   return {...row,result:result.result,estimateSettlement:{source:'current_results',result:result.result,actual:result.actual??null,resultSource:result.resultSource??null,gradeSource:result.gradeSource??null,gradeObservedAt:result.gradeObservedAt??null}};
 }
-function bozoEstimateBasis(row){const basis=Object.fromEntries(['selectionKey','entryBook','price','priceOpp','entryOppSource','close','closeOpp','closeOppSource','verificationStatus','result','startsAt'].map(k=>[k,row[k]??null]));basis.basisVersion=2;basis.actual=(row.estimateSettlement?row.estimateSettlement.actual:row.actual)??null;if(row.estimateSettlement)basis.estimateSettlement=row.estimateSettlement;return basis;}
+function bozoEstimateBasis(row){const basis=Object.fromEntries(['selectionKey','entryBook','price','priceOpp','entryOppSource','close','closeOpp','closeOppSource','verificationStatus','result','startsAt'].map(k=>[k,row[k]??null]));basis.basisVersion=2;if(row.clvEstimate?.method==='historical_exchange_probability_v1')basis.exchangeIdentity={eventId:row.eventId,overtime:row.overtime??null};basis.actual=(row.estimateSettlement?row.estimateSettlement.actual:row.actual)??null;if(row.estimateSettlement)basis.estimateSettlement=row.estimateSettlement;return basis;}
 function bozoEstimateClv(row, input) {
   const fail = message => { throw new Error(message); };
   const price = x => typeof x === 'number' && Number.isFinite(x) && Math.abs(x) >= 100 && Math.abs(x) <= 100000;
   const imp = x => x < 0 ? -x / (100-x) : 100 / (100+x);
   const pair = (a,b) => price(a) && price(b) ? {fair:imp(a)/(imp(a)+imp(b)),hold:imp(a)+imp(b)-1} : null;
+  if(input?.method==='historical_exchange_probability_v1')return bozoEstimateExchange(row,input);
   if(input?.method==='opposite_ladder_proxy_v1')return bozoEstimateOppositeProxy(row,input);
   if(input?.method==='owner_push_zero_v1')return bozoEstimatePushZero(row,input);
   if (!input || Object.keys(input).some(k=>!['closeQuote','scenarios','rationale'].includes(k))) fail('Invalid estimate fields');
@@ -10139,6 +10187,50 @@ function bozoEstimateOppositeProxy(row,input){
   if(values.some(v=>entry+v/100<0||entry+v/100>1))fail('Invalid modeled probability');
   return {...probe,method:input.method,provenance:'modeled_proxy',closeQuote:{...q},calibrationPairs:JSON.parse(JSON.stringify(pairs)),point:values[Math.floor(values.length/2)],low:values[0],high:values[values.length-1],scenarios:holds,scenarioValues:values,assumption:'Selected probability inferred from opposite quote using neighboring-market proportional overround; selected quote was not observed',sensitivity:'Calibration-market sensitivity only; not a statistical confidence interval or observed closing price'};
 }
+function bozoEstimateExchange(row,input){
+  const fail=m=>{throw new Error(m);},num=x=>typeof x==='number'&&Number.isFinite(x);
+  if(Object.keys(input).some(k=>!['method','evidence','rationale'].includes(k)))fail('Invalid exchange evidence fields');
+  if(!['won','lost','push'].includes(row.result))fail('Settled non-void leg required');
+  const e=input.evidence;
+  if(!e||Object.keys(e).some(k=>!['selectionKey','eventId','startsAt','period','overtime','sourceUrl','historyUrl','quotedAt','retrievedAt','probability','feeRate','liquidity','rules','originalOvertime','originalRulesUrl','entryProbability','feeTreatment','oppositeProbability','oppositeQuotedAt','oppositeHistoryUrl','archiveRecordedAt','retrievalTiming','feeMetadata','liquidityDetails','ruleEquivalence','contractId','contractSlug','historyDocumentationUrl'].includes(k)))fail('Invalid exchange evidence');
+  const k=String(row.selectionKey||'').split('|'),period=k[5]||'game';
+  if(![5,6].includes(k.length)||e.selectionKey!==row.selectionKey||String(e.eventId)!==String(row.eventId)||e.startsAt!==row.startsAt||e.period!==period)fail('Exact event, selection, line, period and kickoff required');
+  // OT semantics must be independently recorded on the original row; never infer them from a venue name.
+  if(!['included','excluded'].includes(e.originalOvertime)||e.overtime!==e.originalOvertime||(row.overtime!=null&&e.overtime!==row.overtime))fail('Original overtime rules must be known and identical');
+  for(const key of ['sourceUrl','historyUrl','originalRulesUrl',...(e.oppositeHistoryUrl?['oppositeHistoryUrl']:[]),...(e.historyDocumentationUrl?['historyDocumentationUrl']:[])]){
+    let u;try{u=new URL(e[key]);}catch{fail('Source and historical evidence URLs required');}
+    if(u.protocol!=='https:'||u.username||u.password||u.hash)fail('Public credential-free evidence URLs required');
+    if(u.search && !(key.endsWith('HistoryUrl')||key==='historyUrl'))fail('Only historical API URLs may carry bounded query parameters');
+    if(u.search && !(u.hostname==='clob.polymarket.com'&&u.pathname==='/prices-history'&&[...u.searchParams.keys()].sort().join(',')==='endTs,fidelity,market,startTs'&&[...u.searchParams.values()].every(v=>/^\d+$/.test(v))))fail('Unrecognized historical URL parameters');
+  }
+  const quote=Date.parse(e.quotedAt),start=Date.parse(row.startsAt),retrieved=Date.parse(e.retrievedAt ?? e.archiveRecordedAt);
+  if(![quote,start,retrieved].every(Number.isFinite)||quote>=start||start-quote>15*60000||retrieved<quote||retrieved>Date.now()+60000)fail('Historical quote must be within 15 minutes before kickoff and before retrieval');
+  const feeTreatment=e.feeTreatment||'net_winnings_commission';
+  if(!['excluded','net_winnings_commission'].includes(feeTreatment)||!num(e.probability)||e.probability<=0||e.probability>=1)fail('Probability and explicit fee treatment required');
+  if(feeTreatment==='excluded' ? e.feeRate!=null : !num(e.feeRate)||e.feeRate<0||e.feeRate>.2)fail('Excluded fees require unknown applied rate; commission requires explicit rate');
+  if(e.retrievedAt==null && (!e.archiveRecordedAt||e.retrievalTiming!=='archive_time_not_http_receipt'))fail('Unknown HTTP retrieval time requires explicit archive timestamp provenance');
+  let normalized=e.probability;
+  if(e.oppositeProbability!==undefined){
+    const oppositeAt=Date.parse(e.oppositeQuotedAt);
+    if(!num(e.oppositeProbability)||e.oppositeProbability<=0||e.oppositeProbability>=1||Math.abs(e.probability+e.oppositeProbability-1)>.1||!Number.isFinite(oppositeAt)||oppositeAt>=start||start-oppositeAt>15*60000||oppositeAt>retrieved||!e.oppositeHistoryUrl)fail('Valid paired pregame history observations required');
+    normalized=e.probability/(e.probability+e.oppositeProbability);
+  }
+  for(const key of ['feeMetadata','liquidityDetails','ruleEquivalence','contractId','contractSlug'])if(e[key]!==undefined&&(typeof e[key]!=='string'||!e[key].trim()||e[key].length>2000))fail('Bounded textual provenance required');
+  if(!['thin','liquid','unknown'].includes(e.liquidity)||typeof e.rules!=='string'||e.rules.trim().length<10||e.rules.length>4000||typeof input.rationale!=='string'||!input.rationale.trim()||input.rationale.length>1000)fail('Liquidity, settlement rules and rationale required');
+  const imp=x=>x<0?-x/(100-x):100/(100+x),odds=x=>num(x)&&Math.abs(x)>=100;
+  const entry=odds(row.price)&&odds(row.priceOpp)&&row.entryOppSource!=='assumed'?imp(row.price)/(imp(row.price)+imp(row.priceOpp)):null;
+  if(entry===null)fail('Observed entry pair required; do not invent missing entry probability');
+  if(e.entryProbability!==undefined && e.entryProbability!==entry)fail('Entry probability is server computed');
+  if(odds(row.close)&&odds(row.closeOpp)&&row.closeOppSource!=='assumed')fail('Captured sportsbook close takes precedence');
+  // Commission on net winnings: fee-adjusted break-even probability, explicitly an estimate.
+  const close=feeTreatment==='excluded'?normalized:normalized/(1-e.feeRate*(1-normalized)),point=100*(close-entry);
+  return {version:3,kind:'estimated',method:input.method,provenance:'historical_exchange',units:'probability_percentage_points',point,low:point,high:point,
+    entryProbability:entry,entryPrice:row.price,entryOpposite:row.priceOpp,closeProbability:close,
+    evidence:JSON.parse(JSON.stringify(e)),closeQuote:{sourceUrl:e.sourceUrl,quotedAt:e.quotedAt,retrievedAt:e.retrievedAt,evidence:'historical_exchange'},
+    basis:{...bozoEstimateBasis(row),exchangeIdentity:{eventId:row.eventId,overtime:row.overtime??null}},selectionKey:row.selectionKey,rationale:input.rationale,
+    assumption:feeTreatment==='excluded'?'Paired historical exchange probability proxy; fees excluded; not trades, executable prices or a captured sportsbook close':'Exchange probability with commission on net winnings; not a captured sportsbook close',
+    sensitivity:'No confidence interval; thin or unknown liquidity and different venue settlement can distort prices'};
+}
 function bozoEstimatePushZero(row,input){
   if(Object.keys(input).some(k=>!['method','rationale'].includes(k))||row.result!=='push'||typeof input.rationale!=='string'||!input.rationale.trim()||input.rationale.length>400)throw new Error('Owner convention requires a recorded push and rationale');
   return {version:2,kind:'convention',method:'owner_push_zero_v1',units:'probability_percentage_points',point:0,basis:bozoEstimateBasis(row),rationale:input.rationale,assumption:'Owner-requested push display convention, not measured or estimated market movement'};
@@ -10156,7 +10248,7 @@ async function bozoSaveClvEstimate(env,lid,auth,rowKey,row,body,cors){
   }
   if(!bozoSame(current,row)||(current.clvEstimate?.revision||0)!==body.expectedEstimateRevision)return json({error:'Ledger changed; refresh estimate'},409,cors);
   let computed;try{computed=bozoEstimateClv(settled,body.estimate);}catch(e){return json({error:e.message},400,cors);}
-  const at=new Date().toISOString(),record={...computed,revision:body.expectedEstimateRevision+1,requestId:body.requestId,input:JSON.parse(JSON.stringify(body.estimate)),recordedAt:at};
+  const at=new Date().toISOString(),record={...computed,revision:body.expectedEstimateRevision+1,requestId:body.requestId,input:JSON.parse(JSON.stringify(body.estimate)),recordedAt:at,recordedBy:{name:auth.name||null,uid:auth.uid||null},manual:true};
   current.clvEstimate=record;
   // Store only supplemental evidence on this ledger row, never result/close/clvPts.
   live.audit||={};live.audit['estimate-'+crypto.randomUUID()]={at,by:auth.name,type:'clv_estimate',row:rowKey,from:row.clvEstimate||null,to:record};
@@ -10564,47 +10656,10 @@ async function bozoFallbackScores(env, sport, season, nowMs = Date.now(), option
     checkedAt: previous?.checkedAt || null, games: previous?.games || [],
     quotaRemaining: previous?.quotaRemaining ?? null, calls: previous?.calls || null,
     diagnostic: bozoScoreDiagnostic(previous?.diagnostic) };
-  const age = nowMs - Date.parse(previous?.checkedAt || "");
-  const day = new Date(nowMs).toISOString().slice(0, 10);
-  // The grader also calls this shared function: enforcing the cap only in the cron
-  // lets grading spend beyond it. A skipped call never advances the attempt timestamp.
-  const capped = saved.calls && saved.calls.day === day && Number(saved.calls.n) >= BOZO_SCORE_DAILY_CAP;
-  if (!env.ODDS_API_KEY || capped || (age >= 0 && age < minAgeMs))
-    return { ...saved, error: previous?.error || null, errorCode: previous?.errorCode || null };
-  const calls = { day, n: (saved.calls && saved.calls.day === day ? Number(saved.calls.n) || 0 : 0) + 1 };
-  let next;
-  try {
-    const response = await bozoOddsApiRequest(env, `sports/${BOZO_ODDS_API_SPORT[sport]}/scores`,
-      { daysFrom: 3, dateFormat: "iso" }, { ttl: 60 });
-    let games;
-    try { games = bozoNormalizeOddsScores(sport, response.data, response.fetchedAt); }
-    catch { throw Object.assign(new Error("Score provider returned an invalid scores response"),
-      {code:"provider_error", failureKind:"invalid_response", httpStatus:response.httpStatus, quota:response.quota}); }
-    // Identity is the provider's event id: canonicalKey embeds the registry, which changes.
-    const id = g => g.providerEventId || g.canonicalKey;
-    const merged = new Map(saved.games.map(g => [id(g), g]));
-    for (const game of games) {
-      const old = merged.get(id(game));
-      if (!old || Date.parse(game.scoreObservedAt) >= Date.parse(old.scoreObservedAt))
-        merged.set(id(game), game);
-    }
-    const remaining = response.quota && response.quota["x-requests-remaining"];
-    next = { ...saved, fetchedAt: response.fetchedAt, checkedAt: new Date(nowMs).toISOString(),
-      games: [...merged.values()], error: null, errorCode: null, diagnostic: null, calls,
-      quotaRemaining: Number.isFinite(remaining) ? remaining : saved.quotaRemaining };
-  } catch (e) {
-    // Never store provider error bodies/URLs, which can contain credentials. The code is
-    // one of three fixed words, so a quota or rate-limit outage is visible without them.
-    const remaining = e && e.quota && e.quota["x-requests-remaining"];
-    next = { ...saved, checkedAt: new Date(nowMs).toISOString(), calls,
-      error: "score_fallback_unavailable",
-      errorCode: ["rate_limited", "timeout"].includes(e && e.code) ? e.code : "provider_error",
-      diagnostic: bozoScoreDiagnostic({kind:e && e.failureKind, httpStatus:e && e.httpStatus}),
-      quotaRemaining: Number.isFinite(remaining) ? remaining : saved.quotaRemaining };
-  }
-  try { await env.RL?.put(key, JSON.stringify(next)); } catch {}
-  return next;
+  return {...saved, skipped:"paid_scores_disabled"}; // ESPN remains the free grading source.
 }
+
+
 
 
 
@@ -11033,7 +11088,8 @@ async function runBozoLiveScores(env, nowMs = Date.now(), season = SEASON,
         const refreshed = archive.checkedAt === nowIso;
         const unauthorized = bozoOddsUnauthorized(archive);
         odds = { refreshed, error: unauthorized ? null : (archive.errorCode || archive.error || null) };
-        if (unauthorized) odds.skipped = "unauthorized";
+        if (archive.skipped) odds.skipped = archive.skipped;
+        else if (unauthorized) odds.skipped = "unauthorized";
       }
     }
     const oddsOk = odds.refreshed === true && !odds.error && !odds.skipped;
@@ -11061,20 +11117,9 @@ function bozoOddsUnauthorized(archive) {
 }
 /* ===== DD-BOZO-ESPN-SCORES END ===== */
 
-/* ======================= near-close archive: every game ======================
-   The league close capture prices only the legs on a board. Grading anything else —
-   the Bozo Menu, a model's lean, a source's CLV — needs the market at kickoff for EVERY
-   NFL/FBS game, under the same rules: DraftKings, both sides of the same number, before
-   kickoff, never back-filled from an entry price. SportsGameOdds' free tier trails the
-   book by about ten minutes (docs/bozo-workplan.md D5), so these are labelled
-   NEAR-CLOSE, never close: the last pre-kickoff DraftKings quote this tier can see,
-   captured inside BOZO_NEARCLOSE_LEAD_MS of kickoff.
-   One request per sport per tick, and only while a scheduled game kicks off inside the
-   gate, so an idle tick spends nothing. Each game costs one or two SGO objects (about a
-   hundred a week across NFL and FBS, against 2,500 a month).
-     bozo:nearclose:<sport>:<eastern-date>  — { events: { <sgo event id>: record } }
-   A later pre-kickoff capture replaces an earlier one, because it is closer to the
-   close; a capture at or after kickoff is never written. */
+/* ======================= near-close archive: every game (legacy read-only)
+   Archived near-close readers remain available. Background all-game collection is
+   retired: only committed Bozo selections get an immutable kickoff receipt. */
 const BOZO_NEARCLOSE_PREFIX = "bozo:nearclose:";
 const BOZO_NEARCLOSE_LEAD_MS = 7 * 60 * 1000;
 const BOZO_NEARCLOSE_GATE_MS = 20 * 60 * 1000;
@@ -11132,62 +11177,7 @@ function bozoNearCloseRecord(event, sport, capturedMs) {
 }
 
 async function runBozoNearCloses(env, nowMs = Date.now(), season = SEASON) {
-  const kv = env && env.RL;
-  if (!kv) throw new Error("no KV binding for near-close captures");
-  if (!env.SGO_KEY) return { skipped: "sgo_unconfigured" };
-  const out = {};
-  for (const sport of ["nfl", "cfb"]) {
-    let doc = null;
-    try { doc = await bozoScheduleDoc(env, sport, season); } catch { doc = null; }
-    const soon = ((doc && doc.games) || []).some(g => {
-      const t = Date.parse((g && g.startsAt) || "");
-      return Number.isFinite(t) && t > nowMs && t - nowMs <= BOZO_NEARCLOSE_GATE_MS;
-    });
-    if (!soon) { out[sport] = { skipped: "no_kickoff_in_gate" }; continue; }
-    const url = new URL(BOZO_CLOSE_API);
-    url.searchParams.set("leagueID", BOZO_SGO_LEAGUE[sport]);
-    url.searchParams.set("startsAfter", new Date(nowMs).toISOString());
-    url.searchParams.set("startsBefore", new Date(nowMs + BOZO_NEARCLOSE_LEAD_MS).toISOString());
-    url.searchParams.set("oddID", ["ml", "spread", "total"].flatMap(m => bozoOddIds(m, "game")).join(","));
-    url.searchParams.set("includeOpposingOdds", "true");
-    url.searchParams.set("includeAltLines", "true");
-    url.searchParams.set("limit", "100");
-    let events;
-    try { events = await bozoSgoRequest(env, url, { sport, needProps: false, caller: "near-close" }); }
-    catch (e) {
-      // One sport's refusal must not cost the other its closes. Fixed codes only: provider
-      // detail text stays out of KV.
-      out[sport] = { error: ["quota_exceeded", "rate_limited", "timeout", "provider_rejected", "invalid_response"]
-        .includes(e && e.code) ? e.code : "provider_error" };
-      continue;
-    }
-    const byDate = new Map();
-    let unpriced = 0;
-    for (const event of events || []) {
-      const record = bozoNearCloseRecord(event, sport, nowMs);
-      if (!record) { unpriced++; continue; }
-      const date = bozoEasternDate(record.kickoff);
-      if (!byDate.has(date)) byDate.set(date, []);
-      byDate.get(date).push(record);
-    }
-    let stored = 0;
-    for (const [date, records] of byDate) {
-      const key = bozoNearCloseKey(sport, date);
-      let day = null;
-      try { day = await kv.get(key, "json"); } catch { day = null; }
-      if (!day || typeof day.events !== "object" || !day.events) day = { schema_version: 1, sport, date, events: {} };
-      for (const record of records) {
-        const prior = day.events[record.event_id];
-        if (prior && Date.parse(prior.captured_at) >= Date.parse(record.captured_at)) continue;
-        day.events[record.event_id] = { ...record, captures: ((prior && prior.captures) || 0) + 1 };
-        stored++;
-      }
-      await kv.put(key, JSON.stringify(day));
-    }
-    out[sport] = { events: (events || []).length, stored, unpriced };
-  }
-  try { await kv.put(BOZO_NEARCLOSE_PREFIX + "last-run", JSON.stringify({ at: new Date(nowMs).toISOString(), ...out })); } catch {}
-  return out;
+  return { skipped: "bozo_selections_only", stored: 0 };
 }
 
 // A near-close record in the SCHEDULED orientation: home means the schedule's home team,

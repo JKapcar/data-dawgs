@@ -241,19 +241,19 @@ test('precedence in grading: ESPN grades while the schedule is open; the officia
 });
 
 /* ------------------------------ Odds API optional ------------------------------ */
-test('Odds API 401 is tolerated: no failure while the schedule feeds are healthy, probed once a day', async () => {
+test('ESPN failure preserves schedule grading without paid score probes', async () => {
   oddsCalls.length = 0;
   const blocked = [[u => /espn\.com/.test(u), status(403)]];
   const r = rig({ schedule: { nfl: [tbDal], cfb: [] }, routes: blocked, key: 'revoked' });
   const now = T('2026-10-09T03:00:00Z');
   const out = await api.runBozoLiveScores(r.env, now, 2026, r.fetcher);
-  assert.equal(out.nfl.espn.error, 'espn_blocked'); assert.equal(out.nfl.odds.skipped, 'unauthorized', JSON.stringify(out.nfl) + JSON.stringify(r.store.get('bozo:score-finals:nfl:2026')));
+  assert.equal(out.nfl.espn.error, 'espn_blocked'); assert.equal(out.nfl.odds.skipped, 'paid_scores_disabled');
   assert.equal(out.nfl.health, 'ok'); assert.equal(out.nfl.degraded, 'live_scores_unavailable');
-  assert.equal(api.opsOutcome('bozo:scores', out), 'ok'); assert.equal(oddsCalls.length, 1);
+  assert.equal(api.opsOutcome('bozo:scores', out), 'ok'); assert.equal(oddsCalls.length, 0);
   await api.runBozoLiveScores(r.env, now + 2 * 3600_000, 2026, r.fetcher);
-  assert.equal(oddsCalls.length, 1, 'a 401 is not re-asked within the day');
+  assert.equal(oddsCalls.length, 0, 'paid score probes remain disabled');
   await api.runBozoLiveScores(r.env, now + 24 * 3600_000 + 60_000, 2026, r.fetcher);
-  assert.equal(oddsCalls.length, 2, 'one daily probe notices a fixed key');
+  assert.equal(oddsCalls.length, 0, 'no daily paid probe');
 });
 
 test('no ODDS_API_KEY: skipped quietly; ESPN success needs no key at all', async () => {

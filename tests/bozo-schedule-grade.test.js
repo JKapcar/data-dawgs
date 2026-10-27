@@ -254,7 +254,7 @@ const clemsonFinal = scoreEvent('synthetic-clemson', 'Clemson Tigers', 'Californ
 const indianaFinal = scoreEvent('synthetic-indiana', 'Northwestern Wildcats', 'Indiana Hoosiers', 23, 29);
 const finalPick = (game, mkt, side, line = 0) => ({ sport: 'cfb', game, mkt, side, line,
   period: 'game', startsAt: scoreStart });
-function scoreRig(rows, state) {
+function scoreRig(rows, state, archived = true) {
   const store = new Map(), calls = [];
   const env = { ODDS_API_KEY: 'test-only', RL: {
     async get(k) { return store.get(k) || null; },
@@ -263,10 +263,11 @@ function scoreRig(rows, state) {
   context.bozoOddsApiRequest = async (_env, path, params) => {
     calls.push({path, params}); return { data: rows, fetchedAt: new Date().toISOString() };
   };
+  if(archived)for(const sport of ['nfl','cfb']){const games=api.bozoNormalizeOddsScores(sport,rows,new Date(scoreNow).toISOString());if(games.length)store.set('bozo:score-finals:'+sport+':2026',{games,fetchedAt:new Date(scoreNow).toISOString(),checkedAt:null});}
   return { env, store, calls, state };
 }
 
-test('stale CFB feed: both Friday legs win using one backup request; future leg stays pending', async () => {
+test('stale CFB feed: archived finals grade both legs without paid requests; future leg stays pending', async () => {
   const state = { season: 2026, picks: {
     Roger: finalPick('CLEM @ CAL', 'ml', 'CLEM'),
     Tony: finalPick('NU @ IU', 'total', 'over', 45.5),
@@ -280,7 +281,7 @@ test('stale CFB feed: both Friday legs win using one backup request; future leg 
   assert.equal(out.results.Roger.gradeSource, 'the-odds-api');
   assert.equal(out.results.Roger.gradeObservedAt, scoreUpdated);
   assert.equal(out.pending.length, 1); assert.equal(out.pending[0].key, 'Kap');
-  assert.equal(r.calls.length, 1); assert.equal(r.calls[0].params.daysFrom, 3);
+  assert.equal(r.calls.length, 0);
 });
 
 test('NFL fallback handles underdogs and does not depend on CFB availability', async () => {
@@ -289,7 +290,7 @@ test('NFL fallback handles underdogs and does not depend on CFB availability', a
   const r = scoreRig([event]);
   const out = await api.bozoGradeFromScheduleKv(r.env, { season: 2026, picks: { A: pick } });
   assert.equal(out.results.A.result, 'won'); assert.equal(out.results.A.actual, -4);
-  assert.match(r.calls[0].path, /americanfootball_nfl\/scores$/);
+  assert.equal(r.calls.length,0);
 });
 
 test('in-progress, blank, wrong sport, wrong date, and incomplete score pairs cannot settle', async () => {
@@ -310,13 +311,13 @@ test('cached finals survive provider three-day expiry and outages without refres
   const r = scoreRig([clemsonFinal]);
   const first = await api.bozoFallbackScores(r.env, 'cfb', 2026, scoreNow);
   await api.bozoFallbackScores(r.env, 'cfb', 2026, scoreNow + 1000);
-  assert.equal(r.calls.length, 1);
+  assert.equal(r.calls.length, 0);
   context.bozoOddsApiRequest = async () => ({ data: [], fetchedAt: new Date(scoreNow + 5 * 86400_000).toISOString() });
   const later = await api.bozoFallbackScores(r.env, 'cfb', 2026, scoreNow + 5 * 86400_000);
   assert.equal(later.games.length, 1); assert.equal(later.games[0].scoreObservedAt, scoreUpdated);
   context.bozoOddsApiRequest = async () => { throw Error('private URL must not be copied'); };
   const failed = await api.bozoFallbackScores(r.env, 'cfb', 2026, scoreNow + 6 * 86400_000);
-  assert.equal(failed.games.length, 1); assert.equal(failed.error, 'score_fallback_unavailable');
+  assert.equal(failed.games.length, 1); assert.equal(failed.skipped, 'paid_scores_disabled');
   assert.ok(!JSON.stringify(failed).includes('private URL'));
   assert.equal(first.games[0].homeScore, 10);
 });
@@ -414,87 +415,25 @@ test('the archive dedupes by provider event id, so a registry change cannot doub
     canonicalKey: 'cfb|libertyflames~samhoustonbearkats|old-key' }], checkedAt: null });
   const out = await api.bozoFallbackScores(r.env, 'cfb', 2026, scoreNow);
   assert.equal(out.games.length, 1); assert.equal(out.games[0].providerEventId, 'synthetic-lib');
-  assert.equal(out.calls.n, 1); assert.equal(out.error, null);
+  assert.equal(out.calls,null);assert.equal(r.calls.length,0);assert.equal(out.skipped,'paid_scores_disabled');
 });
 
-test('live scores: no due game, no provider call; a due game refreshes every ten minutes, then stops once final', async () => {
-  const due = { ...libRow, startsAt: new Date(scoreNow - 3 * 3600_000).toISOString() };
-  const future = { ...libRow, espnEventId: 'f', startsAt: new Date(scoreNow + 3600_000).toISOString() };
-  const r = scoreRig([]);
-  r.store.set('schedule:cfb:2026', { games: [future, { ...due, completed: true, homeScore: 1, awayScore: 0 }] });
-  r.store.set('schedule:nfl:2026', { games: [] });
-  let out = await api.runBozoLiveScores(r.env, scoreNow, 2026);
-  assert.equal(r.calls.length, 0); assert.equal(out.cfb.due, 0);
-
-  r.store.set('schedule:cfb:2026', { games: [future, due] });
-  out = await api.runBozoLiveScores(r.env, scoreNow, 2026);
-  assert.equal(r.calls.length, 1); assert.equal(out.cfb.due, 1); assert.equal(out.cfb.refreshed, true);
-  await api.runBozoLiveScores(r.env, scoreNow + 5 * 60_000, 2026);
-  assert.equal(r.calls.length, 1, 'throttled inside the window');
-  await api.runBozoLiveScores(r.env, scoreNow + 10 * 60_000, 2026);
-  assert.equal(r.calls.length, 2);
-
-  // The final arrives: the game attaches and polling stops.
-  const final = { ...scoreEvent('synthetic-due', 'Sam Houston State Bearkats', 'Liberty Flames', 3, 7),
-    commence_time: due.startsAt, last_update: new Date(scoreNow - 60_000).toISOString() };
-  context.bozoOddsApiRequest = async (_env, path, params) => {
-    r.calls.push({ path, params }); return { data: [final], fetchedAt: new Date(scoreNow).toISOString(), quota: { 'x-requests-remaining': 4321 } };
-  };
-  out = await api.runBozoLiveScores(r.env, scoreNow + 20 * 60_000, 2026);
-  assert.equal(r.calls.length, 3); assert.equal(r.store.get('bozo:score-finals:cfb:2026').quotaRemaining, 4321);
-  out = await api.runBozoLiveScores(r.env, scoreNow + 40 * 60_000, 2026);
-  assert.equal(r.calls.length, 3); assert.equal(out.cfb.due, 0);
+test('live score ticks never pay for scores; archived finals stop polling',async()=>{
+ const r=scoreRig([]),due={...libRow,startsAt:scoreStart};r.store.set('schedule:cfb:2026',{games:[due]});r.store.set('schedule:nfl:2026',{games:[]});
+ for(const m of [0,5,10,60,1440])await api.runBozoLiveScores(r.env,scoreNow+m*60000,2026);
+ assert.equal(r.calls.length,0);
+ r.store.set('bozo:score-finals:cfb:2026',{games:api.bozoNormalizeOddsScores('cfb',[scoreEvent('synthetic-due','Sam Houston State Bearkats','Liberty Flames',3,7)],new Date(scoreNow).toISOString())});
+ assert.equal((await api.runBozoLiveScores(r.env,scoreNow,2026)).cfb.due,0);
 });
 
-test('live scores spend credits by what is left, and closes keep a protected floor', async () => {
-  // docs/bozo-workplan.md D6: the 500-credit free tier, ~345-390 of it owed to closes.
-  const due = { ...libRow, startsAt: new Date(scoreNow - 3 * 3600_000).toISOString() };
-  const withQuota = async (remaining, ticksMin) => {
-    const r = scoreRig([]);
-    r.store.set('schedule:cfb:2026', { games: [due] });
-    r.store.set('bozo:score-finals:cfb:2026', { games: [], checkedAt: new Date(scoreNow).toISOString(), quotaRemaining: remaining });
-    for (const m of ticksMin) await api.runBozoLiveScores(r.env, scoreNow + m * 60_000, 2026);
-    return r.calls.length;
-  };
-  assert.equal(await withQuota(5000, [10]), 1, 'plenty left: ten-minute cadence');
-  assert.equal(await withQuota(1200, [10, 25]), 0, 'thrifty: not before thirty minutes');
-  assert.equal(await withQuota(1200, [30]), 1);
-  assert.equal(await withQuota(300, [45]), 0, 'under 500: hourly');
-  assert.equal(await withQuota(300, [60]), 1);
-  assert.equal(await withQuota(100, [60, 12 * 60]), 0, 'below the floor: closes keep the credits');
-  assert.equal(await withQuota(100, [24 * 60]), 1, 'one daily probe notices the monthly reset');
-  // A refused call records the quota the provider still reports, and backs off to hourly.
-  const r = scoreRig([]);
-  r.store.set('schedule:cfb:2026', { games: [due] });
-  context.bozoOddsApiRequest = async (_env, path, params) => {
-    r.calls.push({ path, params });
-    throw Object.assign(new Error('Odds API HTTP 401'), { code: 'provider_error', quota: { 'x-requests-remaining': 0 } });
-  };
-  await api.runBozoLiveScores(r.env, scoreNow, 2026);
-  const archive = r.store.get('bozo:score-finals:cfb:2026');
-  assert.equal(archive.errorCode, 'provider_error'); assert.equal(archive.quotaRemaining, 0);
-  await api.runBozoLiveScores(r.env, scoreNow + 2 * 3600_000, 2026);
-  assert.equal(r.calls.length, 1, 'an exhausted account is not hammered');
-  assert.equal((await api.bozoFallbackScores(r.env, 'cfb', 2026, scoreNow + 2 * 3600_000)).quotaRemaining, 0,
-    'grading shares the same budget throttle');
-  assert.equal(r.calls.length, 1);
+test('paid score polling stays disabled at every quota level and across reset days',async()=>{
+ for(const remaining of [0,100,300,1200,5000]){const r=scoreRig([]);r.store.set('bozo:score-finals:cfb:2026',{games:[],quotaRemaining:remaining});
+ for(const days of [0,1,31]){const out=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow+days*86400000);assert.equal(out.quotaRemaining,remaining);assert.equal(out.skipped,'paid_scores_disabled');}assert.equal(r.calls.length,0);}
 });
 
-test('live scores: long-overdue games poll hourly, and the daily cap holds', async () => {
-  const stale = { ...libRow, startsAt: new Date(scoreNow - 20 * 3600_000).toISOString() };
-  const r = scoreRig([]);
-  r.store.set('schedule:cfb:2026', { games: [stale] });
-  await api.runBozoLiveScores(r.env, scoreNow, 2026);
-  await api.runBozoLiveScores(r.env, scoreNow + 15 * 60_000, 2026);
-  assert.equal(r.calls.length, 1, 'slow cadence');
-  await api.runBozoLiveScores(r.env, scoreNow + 61 * 60_000, 2026);
-  assert.equal(r.calls.length, 2);
-  const archive = r.store.get('bozo:score-finals:cfb:2026');
-  r.store.set('bozo:score-finals:cfb:2026', { ...archive, checkedAt: null, calls: { day: new Date(scoreNow + 3 * 3600_000).toISOString().slice(0, 10), n: 150 } });
-  const out = await api.runBozoLiveScores(r.env, scoreNow + 3 * 3600_000, 2026);
-  assert.equal(out.cfb.skipped, 'daily_cap'); assert.equal(r.calls.length, 2);
-  const gone = await api.runBozoLiveScores(r.env, scoreNow + 80 * 3600_000, 2026);
-  assert.equal(gone.cfb.due, 0, 'past the provider horizon nothing is due');
+test('overdue games and old daily caps never enable paid score calls',async()=>{
+ const r=scoreRig([]);r.store.set('schedule:cfb:2026',{games:[{...libRow,startsAt:new Date(scoreNow-20*3600000).toISOString()}]});
+ for(const hours of [0,1,24,80])await api.runBozoLiveScores(r.env,scoreNow+hours*3600000,2026);assert.equal(r.calls.length,0);
 });
 
 /* ---- near-close archive: every NFL/FBS game, DraftKings, both sides, before kickoff ---- */
@@ -534,80 +473,27 @@ test('near-close keeps both sides of the same number, alternates in a band, and 
   assert.equal(api.bozoNearCloseRecord(e, 'cfb', scoreNow + 5 * 60_000), null, 'never written at or after kickoff');
 });
 
-test('near-close runs only near a kickoff, keeps the latest pre-kick capture, and reads back oriented', async () => {
-  const kick = scoreNow + 6 * 60_000;
-  const store = new Map(), calls = [];
-  const env = { SGO_KEY: 'test-only', RL: { async get(k) { return store.get(k) || null; }, async put(k, v) { store.set(k, JSON.parse(v)); } } };
-  const ev = sgoEvent('sgo-lib', 'Sam Houston Bearkats', 'Liberty Flames', new Date(kick).toISOString());
-  context.bozoSgoRequest = async (_env, url) => { calls.push(String(url)); return [ev]; };
-  store.set('schedule:nfl:2026', { games: [] });
-  store.set('schedule:cfb:2026', { games: [{ ...libRow, startsAt: new Date(scoreNow + 3 * 3600_000).toISOString() }] });
-  let out = await api.runBozoNearCloses(env, scoreNow, 2026);
-  assert.equal(calls.length, 0, 'no kickoff inside the gate: no request'); assert.equal(out.cfb.skipped, 'no_kickoff_in_gate');
-
-  const game = { ...libRow, startsAt: new Date(kick).toISOString() };
-  store.set('schedule:cfb:2026', { games: [game] });
-  out = await api.runBozoNearCloses(env, scoreNow, 2026);
-  assert.equal(calls.length, 1); assert.equal(out.cfb.stored, 1);
-  assert.match(calls[0], /leagueID=NCAAF/); assert.match(calls[0], /includeAltLines=true/);
-  const key = 'bozo:nearclose:cfb:' +
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(kick));
-  assert.equal(store.get(key).events['sgo-lib'].label, 'near-close');
-
-  ev.odds['points-home-game-ml-home'].byBookmaker.draftkings.odds = '-240';
-  await api.runBozoNearCloses(env, scoreNow + 3 * 60_000, 2026);
-  assert.equal(store.get(key).events['sgo-lib'].markets.moneyline.home_price, -240, 'the later pre-kick capture wins');
-  assert.equal(store.get(key).events['sgo-lib'].captures, 2);
-  ev.odds['points-home-game-ml-home'].byBookmaker.draftkings.odds = '-900';
-  await api.runBozoNearCloses(env, kick + 60_000, 2026);
-  assert.equal(store.get(key).events['sgo-lib'].markets.moneyline.home_price, -240, 'an in-play quote is never a close');
-
-  // A refusal for one sport is recorded by code and does not throw away the other's run.
-  store.set('schedule:nfl:2026', { games: [{ ...game, espnEventId: 'nfl-x' }] });
-  context.bozoSgoRequest = async (_env, url) => {
-    if (/leagueID=NFL/.test(String(url))) throw Object.assign(new Error('secret detail'), { code: 'quota_exceeded' });
-    calls.push(String(url)); return [];
-  };
-  const split = await api.runBozoNearCloses(env, scoreNow + 4 * 60_000, 2026);
-  assert.equal(split.nfl.error, 'quota_exceeded'); assert.equal(split.cfb.events, 0);
-  assert.ok(!JSON.stringify(store.get('bozo:nearclose:last-run')).includes('secret detail'));
-
-  const index = await api.bozoNearCloseIndexFor(env, 'cfb', [game]);
-  const close = api.bozoNearCloseForGame(index, game);
-  assert.equal(close.label, 'near-close'); assert.equal(close.moneyline.home_price, -240);
-  assert.equal(close.spread.home_line, -4.5);
-  // The same game listed the other way round by the provider reads back in the schedule's orientation.
-  const swapped = { ...game, home: game.away, away: game.home };
-  const flip = api.bozoNearCloseForGame(index, swapped);
-  assert.equal(flip.spread.home_line, 4.5); assert.equal(flip.moneyline.home_price, 170);
-  assert.equal(flip.spread.alternates.map(a => a.home_line).join(','), '2.5,7.5');
-  assert.equal(flip.total.line, 52.5);
+test('retired all-game collector preserves archive and its orientation without requests',async()=>{
+ const kick=scoreNow+360000,game={...libRow,startsAt:new Date(kick).toISOString()},store=new Map();let calls=0;
+ const env={SGO_KEY:'fixture',RL:{get:async k=>store.get(k)||null,put:async()=>{throw Error('archive must remain unchanged');}}};
+ context.bozoSgoRequest=async()=>{calls++;throw Error('No paid collector');};
+ const event=sgoEvent('sgo-lib','Sam Houston Bearkats','Liberty Flames',game.startsAt),record=api.bozoNearCloseRecord(event,'cfb',scoreNow);
+ const date=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(kick));
+ store.set('bozo:nearclose:cfb:'+date,{events:{'sgo-lib':record}});const before=JSON.stringify([...store]);
+ for(const time of [scoreNow,kick-1000,kick+1000])assert.equal((await api.runBozoNearCloses(env,time,2026)).skipped,'bozo_selections_only');
+ assert.equal(calls,0);assert.equal(JSON.stringify([...store]),before);
+ const index=await api.bozoNearCloseIndexFor(env,'cfb',[game]);assert.equal(api.bozoNearCloseForGame(index,game).spread.home_line,-4.5);
+ assert.equal(api.bozoNearCloseForGame(index,{...game,home:game.away,away:game.home}).spread.home_line,4.5);
 });
 
-test('score diagnostics survive throttled reads, preserve finals, and clear on real recovery', async()=>{
- const r=scoreRig([clemsonFinal]);
- const first=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow);
- const fetchedAt=first.fetchedAt, games=JSON.stringify(first.games);
- context.bozoOddsApiRequest=async()=>{throw Object.assign(Error('private apiKey fixture'),{
-  code:'provider_error',failureKind:'http_error',httpStatus:401,quota:{'x-requests-remaining':0},body:'private provider body'});};
- const failed=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow+86400_000);
- assert.deepEqual(JSON.parse(JSON.stringify(failed.diagnostic)),{kind:'http_error',httpStatus:401});
- assert.equal(failed.fetchedAt,fetchedAt);assert.equal(JSON.stringify(failed.games),games);
- assert.equal(failed.quotaRemaining,0);assert.ok(!JSON.stringify(failed).includes('private'));
- const cached=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow+86400_000+300_000);
- assert.equal(cached.diagnostic.httpStatus,401);
- context.bozoOddsApiRequest=async()=>({data:[],fetchedAt:new Date(scoreNow+2*86400_000).toISOString(),quota:{'x-requests-remaining':2000}});
- const recovered=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow+2*86400_000);
- assert.equal(recovered.diagnostic,null);assert.equal(recovered.error,null);assert.equal(recovered.errorCode,null);
- assert.equal(JSON.stringify(recovered.games),games);
+test('archived score diagnostics and timestamps remain unchanged without paid recovery',async()=>{
+ const r=scoreRig([clemsonFinal]),key='bozo:score-finals:cfb:2026',old={...r.store.get(key),diagnostic:{kind:'http_error',httpStatus:401},quotaRemaining:0};r.store.set(key,old);
+ for(const days of [0,1,31]){const out=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow+days*86400000);assert.equal(out.diagnostic.httpStatus,401);assert.equal(out.fetchedAt,old.fetchedAt);assert.equal(JSON.stringify(out.games),JSON.stringify(old.games));assert.equal(out.skipped,'paid_scores_disabled');}
+ assert.equal(r.calls.length,0);assert.equal(r.store.get(key),old);
 });
-test('score schema errors retain safe diagnostics and successful-response quota without inventing finals', async()=>{
- const r=scoreRig([]);
- context.bozoOddsApiRequest=async()=>({data:{error:'secret provider body'},httpStatus:200,fetchedAt:new Date(scoreNow).toISOString(),quota:{'x-requests-remaining':125}});
- const out=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow);
- assert.equal(out.errorCode,'provider_error');assert.equal(out.diagnostic.kind,'invalid_response');
- assert.equal(out.diagnostic.httpStatus,200);assert.equal(out.quotaRemaining,125);
- assert.equal(out.games.length,0);assert.equal(out.fetchedAt,null);assert.ok(!JSON.stringify(out).includes('secret'));
+test('no paid response means no invented finals, quota or successful observation',async()=>{
+ const r=scoreRig([]);context.bozoOddsApiRequest=async()=>{throw Error('Forbidden provider call');};
+ const out=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow);assert.equal(out.games.length,0);assert.equal(out.fetchedAt,null);assert.equal(out.quotaRemaining,null);assert.equal(out.skipped,'paid_scores_disabled');
 });
 test('public score diagnostics are allowlisted, omit quotas and do not guess legacy causes', async()=>{
  context.SEASON=2026;context.json=(body,status,headers)=>Response.json(body,{status,headers});
@@ -626,18 +512,9 @@ test('public score diagnostics are allowlisted, omit quotas and do not guess leg
  }
 });
 
-test('direct grading fallback obeys the same daily score cap and resumes on the next UTC day', async()=>{
- const r=scoreRig([clemsonFinal]);
- const key='bozo:score-finals:cfb:2026', day=new Date(scoreNow).toISOString().slice(0,10);
- const previous={games:[],checkedAt:null,fetchedAt:null,calls:{day,n:150},error:'score_fallback_unavailable',errorCode:'provider_error',
-  diagnostic:{kind:'http_error',httpStatus:503}};
- r.store.set(key,previous);
- const skipped=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow);
- assert.equal(r.calls.length,0);assert.equal(skipped.calls.n,150);assert.equal(skipped.checkedAt,null);
- assert.equal(skipped.errorCode,'provider_error');assert.equal(skipped.diagnostic.httpStatus,503);
- assert.equal(r.store.get(key),previous,'a capped read writes no false success or new attempt');
- const nextDay=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow+86400_000);
- assert.equal(r.calls.length,1);assert.equal(nextDay.calls.n,1);assert.equal(nextDay.errorCode,null);
+test('direct grading fallback never resets a saved daily cap or makes a paid request',async()=>{
+ const r=scoreRig([]),key='bozo:score-finals:cfb:2026',old={games:[],calls:{day:'2026-01-01',n:150},diagnostic:{kind:'http_error',httpStatus:503}};r.store.set(key,old);
+ for(const d of [0,1]){const out=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow+d*86400000);assert.equal(out.calls.n,150);assert.equal(out.diagnostic.httpStatus,503);assert.equal(out.skipped,'paid_scores_disabled');}assert.equal(r.calls.length,0);assert.equal(r.store.get(key),old);
 });
 
 test('an exhausted daily score cap still grades verified archived finals and leaves new finals pending', async()=>{
@@ -651,12 +528,6 @@ test('an exhausted daily score cap still grades verified archived finals and lea
  assert.equal(r.calls.length,0);assert.equal(r.store.get('bozo:score-finals:cfb:2026').games.length,1);
 });
 
-test('malformed score arrays preserve response metadata and do not invent a missing HTTP status', async()=>{
- for(const httpStatus of [undefined,201]) {
-  const r=scoreRig([]);
-  context.bozoOddsApiRequest=async()=>({data:[null],httpStatus,quota:{'x-requests-remaining':0},fetchedAt:new Date(scoreNow).toISOString()});
-  const out=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow);
-  assert.equal(out.diagnostic.kind,'invalid_response');assert.equal(out.diagnostic.httpStatus,httpStatus??null);
-  assert.equal(out.quotaRemaining,0);assert.equal(out.games.length,0);assert.equal(out.fetchedAt,null);
- }
+test('archived malformed diagnostics are allowlisted without inventing HTTP status',async()=>{
+ for(const httpStatus of [undefined,201]){const r=scoreRig([]);r.store.set('bozo:score-finals:cfb:2026',{games:[],diagnostic:{kind:'invalid_response',httpStatus,secret:'private'}});const out=await api.bozoFallbackScores(r.env,'cfb',2026,scoreNow);assert.equal(out.diagnostic.kind,'invalid_response');assert.equal(out.diagnostic.httpStatus,httpStatus??null);assert.ok(!JSON.stringify(out).includes('private'));assert.equal(r.calls.length,0);}
 });

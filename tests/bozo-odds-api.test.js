@@ -3,19 +3,21 @@ const src=fs.readFileSync('dawg-bot-worker.js','utf8');
 const cut=(a,b)=>src.slice(src.indexOf(a),src.indexOf(b,src.indexOf(a)));
 const fixture=n=>JSON.parse(fs.readFileSync(`tests/fixtures/odds-api-${n}-20260924.json`,'utf8'));
 const bills=fixture('bills'), lions=fixture('lions'), clemson=fixture('clemson'), history=fixture('lions-history');
+for(const f of [bills,lions,clemson])f.data.commence_time=new Date(Date.now()+3600000).toISOString();
 const {buildPick,assertHistorical}=require('./fixtures/bozo-provenance-pipeline.cjs');
 const seed=fs.readFileSync('bozo-team-registry.mjs','utf8').match(/export const BOZO_ESPN_TEAM_SEED = ([\s\S]*);\s*$/)[1];
 function rig(fetcher=async()=>{throw Error('Unexpected fetch')}) {
- const logs=[], ctx={Request,Response,URL,AbortController,setTimeout,clearTimeout,Date,fetch:fetcher,console:{log:(...x)=>logs.push(x)},BOZO_CLOSE_BOOK:'draftkings',SEASON:2026};
+ const db=new Map(),versions=new Map();
+ const logs=[], ctx={sha256hex:async s=>require('node:crypto').createHash('sha256').update(s).digest('hex'),selectionKeyOf:p=>[p.eventId,p.mkt,p.side,p.line,p.period].join('|'),fbGet:async(_e,k)=>({data:db.get(k)||null,etag:String(versions.get(k)||0)}),fbPut:async(_e,k,v,tag)=>{if(tag!==undefined&&tag!==String(versions.get(k)||0))return false;db.set(k,structuredClone(v));versions.set(k,(versions.get(k)||0)+1);return true;},Request,Response,URL,AbortController,setTimeout,clearTimeout,Date,fetch:fetcher,console:{log:(...x)=>logs.push(x)},BOZO_CLOSE_BOOK:'draftkings',SEASON:2026};
  vm.createContext(ctx);vm.runInContext([
  `const BOZO_ESPN_TEAM_SEED=${seed};`,
  cut('const BOZO_GRADEABLE_SPORTS','const ledgerKey'),
  cut('const bzNorm =','/* ---------------- player props'),
  cut('const bzAmerican =','/* Resolve one free-text prop'),
  cut('function bozoMatchEvent(','/* The cron body.'),
- 'this.api={bozoBuildTeamRegistry,bozoOddsApiQuote,bozoOddsApiEvent,bozoOddsApiCapture,bozoOddsApiRequest,bozoCaptureEntry,bozoCloseMutation};',
+ 'this.api={bozoBuildTeamRegistry,bozoOddsApiQuote,bozoOddsApiEvent,bozoOddsApiCapture,bozoOddsApiRequest,bozoOddsApiRequestRaw,bozoCaptureEntry,bozoCloseMutation};',
  ].join('\n'),ctx);
- return {ctx,logs,...ctx.api,reg:s=>ctx.api.bozoBuildTeamRegistry(s).aliases};
+ return {ctx,logs,...ctx.api,bozoCaptureEntry:(env,p)=>ctx.api.bozoCaptureEntry(env,p,{committed:true}),reg:s=>ctx.api.bozoBuildTeamRegistry(s).aliases};
 }
 const bp={sport:'nfl',game:'LAC @ BUF',side:'BUF',mkt:'spread',line:2.5,startsAt:bills.data.commence_time,eventId:'espn-bills',label:'BUF -2.5'};
 const lp={...bp,game:'NYJ @ DET',side:'DET',line:1.5,startsAt:lions.data.commence_time};
@@ -49,11 +51,11 @@ test('entry integration uses paid source without SGO, strips forged receipt, kee
  assert.equal(out.p.entrySnapshotAt,fresh.bookmakers[0].markets[3].last_update);assert.ok(out.p.fairEntry>0);
  assert.equal(calls,2);assert.equal(sgo,0);
 });
-test('paid-provider failure falls back to SGO and then actionable unverified manual entry',async()=>{
+test('paid-provider failure stops spending and returns actionable manual entry',async()=>{
  const r=rig(async()=>new Response('',{status:429}));let sgo=0;
  r.ctx.bozoFetchEvents=async()=>{sgo++;throw Error('SGO 429');};
  const out=await r.bozoCaptureEntry({ODDS_API_KEY:'test-key'},{...bp,typedPrice:-259});
- assert.equal(sgo,1);assert.equal(out.p.priceSource,'self');assert.equal(out.p.clvEligible,false);
+ assert.equal(sgo,0);assert.equal(out.p.priceSource,'self');assert.equal(out.p.clvEligible,false);
  assert.ok(!JSON.stringify(r.logs).includes('test-key'));
 });
 
@@ -67,18 +69,10 @@ test('observed ML capture survives real pick builder, ledger, CLV and historical
  await assertHistorical(pick,'captured');
  assert.equal(buildPick({...out.p,entryOppSource:undefined}).entryOppSource,null,'old frozen captures are not backfilled');
 });
-test('historical retrieval requests a pre-kickoff snapshot; in-play/stale history rejected',async()=>{
- // Shift the real historical response and kickoff together so this tests the close window.
- const h=structuredClone(history.data), start=Date.parse(h.timestamp)+120000;
- const p={...lp,startsAt:new Date(start).toISOString()};h.data.commence_time=p.startsAt;
- let urls=[];const r=rig(async url=>{urls.push(new URL(url));return Response.json(String(url).includes('/odds?')?h:{data:[h.data]});});
- const out=await r.bozoOddsApiCapture({ODDS_API_KEY:'test-key'},p,r.reg('nfl'),{caller:'close',nowMs:start+1000});
- assert.ok(out?.quote);assert.ok(urls.every(u=>u.pathname.includes('/historical/')&&Date.parse(u.searchParams.get('date'))===start-1000));
- assert.ok((await r.bozoOddsApiCapture({ODDS_API_KEY:'test-key'},p,r.reg('nfl'),{caller:'close',nowMs:start+24*3600000}))?.quote, 'next-day recovery uses the pregame snapshot');
- h.data.bookmakers[0].markets[0].last_update=new Date(start+1).toISOString();
- assert.equal((await r.bozoOddsApiCapture({ODDS_API_KEY:'test-key'},p,r.reg('nfl'),{caller:'close',nowMs:start+1000})).code,'stale_snapshot');
- h.data.bookmakers[0].markets[0].last_update=new Date(start-16*60000).toISOString();
- assert.equal((await r.bozoOddsApiCapture({ODDS_API_KEY:'test-key'},p,r.reg('nfl'),{caller:'close',nowMs:start+1000})).code,'stale_snapshot');
+test('historical retrieval is disabled at and after kickoff with zero requests',async()=>{
+ let calls=0;const r=rig(async()=>{calls++;throw Error('No historical requests');});
+ for(const offset of [0,1000,86400000]){const start=Date.now()-1000;const out=await r.bozoOddsApiCapture({ODDS_API_KEY:'fixture'},{...lp,startsAt:new Date(start).toISOString()},r.reg('nfl'),{caller:'close',nowMs:start+offset});assert.equal(out.code,'window_closed');}
+ assert.equal(calls,0);
 });
 test('cache preserves observation times and excludes credentials; receipt records source at both paths',async()=>{
  let calls=0,stored;const r=rig(async()=>{calls++;return Response.json([bills.data]);});
@@ -94,33 +88,37 @@ test('cache preserves observation times and excludes credentials; receipt record
 });
 test('closing cron uses the backup, writes both receipts, and never fetches live odds after kickoff',async()=>{
  const r=rig();let sgo=0,patches=[],capturedCalls=[];
+ const dbRead=r.ctx.fbGet;
  const start=Date.parse(bp.startsAt),q=r.bozoOddsApiQuote(bills.data,bp,r.reg('nfl'));
  q.snapshotAt=new Date(start-120000).toISOString();
  Object.assign(r.ctx,{
   bozoCloseTargets:async()=>[{pick:bp,key:'pat',player:'Pat',uid:'pat',lid:'main',season:2026,week:3,startMs:start}],
-  bozoOddsApiCapture:async(e,p,reg,opt)=>{capturedCalls.push(opt);return {quote:q};},
+  bozoOddsApiCapture:async(e,p,reg,opt)=>{capturedCalls.push(opt);return {ok:true,quote:q};},
   bozoFetchEvents:async()=>{sgo++;throw Error('SGO 429');},
   bozoTeamRegistry:async()=>r.reg('nfl'),ledgerKey:(s,w,k)=>`${s}-w${w}-${k}`,
-  fbGet:async()=>({data:{week:3,season:2026,picks:{pat:bp}}}),
+  fbGet:async(e,path,tag)=>path==='main'?{data:{week:3,season:2026,picks:{pat:bp}}}:path==='main/results/pat'?{data:null}:dbRead(e,path,tag),
   bozoSame:(a,b)=>JSON.stringify(a)===JSON.stringify(b),
   bozoGuardedPatch:async(e,lid,state,patch)=>{patches.push(patch);return true;},LG:l=>l,cfbMarketKV:()=>null,
  });
  vm.runInContext(cut('async function runBozoCloseCapture(','/* GET /bozo/clv?')+'this.runClose=runBozoCloseCapture;',r.ctx);
- const out=await r.ctx.runClose({ODDS_API_KEY:'test-key'},start+1000);
+ const out=await r.ctx.runClose({ODDS_API_KEY:'test-key'},start-1000);
  assert.equal(out.captured,1);assert.equal(sgo,0);assert.equal(capturedCalls[0].caller,'close');
  assert.equal(patches[0]['results/pat/closeSource'],'odds_api');
  r.ctx.bozoOddsApiCapture=async()=>null;patches=[];
- const missed=await r.ctx.runClose({ODDS_API_KEY:'test-key'},start+1000);
- assert.equal(missed.captured,0);assert.equal(sgo,0);assert.equal(patches.length,0);
+ const reused=await r.ctx.runClose({ODDS_API_KEY:'test-key'},start-500);
+ assert.equal(reused.captured,1);assert.equal(sgo,0);assert.equal(capturedCalls.length,1);
+ r.ctx.bozoGuardedPatch=async()=>false;
+ const conflict=await r.ctx.runClose({ODDS_API_KEY:'test-key'},start-400);
+ assert.equal(conflict.captured,0);assert.equal(conflict.skipped,1);assert.equal(capturedCalls.length,1);
 });
 
-test('both provider failure codes survive manual fallback and warning',async()=>{
+test('first provider failure survives manual fallback without cascading spend',async()=>{
  const r=rig(async()=>Response.json([]));
  r.ctx.bozoFetchEvents=async()=>{throw Object.assign(Error('SGO 429'),{code:'rate_limited'});};
  const out=await r.bozoCaptureEntry({ODDS_API_KEY:'fixture'},{...bp,typedPrice:-259});
  assert.equal(out.p.priceSource,'self');
- assert.deepEqual(Array.from(out.p.captureAttempts,a=>a.code),['event_not_matched','rate_limited']);
- assert.match(out.captureWarning,/odds_api: event_not_matched.*sgo: rate_limited/);
+ assert.deepEqual(Array.from(out.p.captureAttempts,a=>a.code),['event_not_matched']);
+ assert.match(out.captureWarning,/odds_api: event_not_matched/);
  assert.equal(out.p.captureFailureReason,out.captureWarning);
 });
 test('provider name fixtures resolve SHSU and both accent spellings of SJSU without merging Ohio State',()=>{
@@ -157,7 +155,7 @@ test('canonical event and schedule keys use the UTC day for offset-bearing times
 test('request diagnostics preserve HTTP status and quota, never response bodies or credential URLs', async()=>{
  for(const status of [401,403,429,500,503]) {
   const r=rig(async()=>new Response('private provider message apiKey=test-key',{status,headers:{'x-requests-remaining':'0'}}));
-  await assert.rejects(r.bozoOddsApiRequest({ODDS_API_KEY:'test-key'},'sports/americanfootball_ncaaf/scores',{}),e=>{
+  await assert.rejects(r.bozoOddsApiRequestRaw({ODDS_API_KEY:'test-key'},'sports/americanfootball_ncaaf/events',{}),e=>{
    assert.equal(e.httpStatus,status);assert.equal(e.failureKind,'http_error');
    assert.equal(e.code,status===429?'rate_limited':'provider_error');
    assert.equal(e.quota['x-requests-remaining'],0);
@@ -174,7 +172,7 @@ test('request diagnostics distinguish malformed JSON, network failure and deadli
    return new Response('not json test-key',{headers:{'x-requests-remaining':'432'}});
   });
   r.ctx.caches={default:{match:async()=>null,put:async()=>{puts++;}}};
-  await assert.rejects(r.bozoOddsApiRequest({ODDS_API_KEY:'test-key'},'sports/americanfootball_ncaaf/scores',{},
+  await assert.rejects(r.bozoOddsApiRequestRaw({ODDS_API_KEY:'test-key'},'sports/americanfootball_ncaaf/events',{},
    mode==='deadline'?{deadline:Date.now()-1}:{}),e=>{
     assert.equal(e.failureKind,mode==='json'?'invalid_response':mode==='network'?'network_error':'timeout');
     assert.equal(e.httpStatus,mode==='json'?200:undefined);

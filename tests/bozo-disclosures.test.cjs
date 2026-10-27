@@ -36,7 +36,7 @@ function fixture(measured = 1) {
 
 test('long chart and dashboard guides are native, closed disclosures',()=>{
   const {document:d}=fixture();
-  for(const id of ['hierHistoryCard','diagExploreCard','clvCard','survCard']){
+  for(const id of ['hierHistoryCard','diagExploreCard','survCard']){
     const details=d.querySelector('#'+id+' details.bz-help');
     assert.ok(details,id);
     assert.equal(details.open,false);

@@ -61,31 +61,19 @@ try{
     await page.route('**/bozo/clv?*',route=>route.fulfill({json:{players,legs,weeks:[1,2,3,4].map(week=>({week,label:'Week '+week,phase:'regular'})),coverage:{legs:legs.length},synthetic:true,season:2026}}));
     await page.goto(origin+'/bozo.html?l=main#diagnostics',{waitUntil:'domcontentloaded'});
     await page.goto(origin+'/bozo.html?l=main#overview',{waitUntil:'domcontentloaded'});
-    await page.locator('#clvAllBets tbody tr').first().waitFor({state:'attached'});
+    await page.locator('#clvSvg circle').first().waitFor({state:'attached'});
     assert.equal(await page.locator('html').getAttribute('data-dd-view'),'tldr');
     await page.evaluate(manager=>DDClvEstimateManager.mount(document.getElementById('clvEstimateManager'),{isManager:()=>manager,league:()=> 'synthetic',identity:()=> 'synthetic-owner',read:async()=>({value:{}}),write:async()=>{throw Error('No writes allowed')},who:x=>x,refresh:async()=>{}}),manager);
-    assert.equal(await page.locator('#clvAllBets').isVisible(),true,'accounting available in TLDR');
-    for(const id of ['clvFoot','clvEstimateManager'])assert.equal(await page.locator('#'+id).isVisible(),false,id+' absent in TLDR');
-    assert.equal(await page.locator('#clvCard > details.bz-help').isVisible(),false);
+    assert.equal(await page.locator('#clvAllBets table').count(),0,'human accounting table removed');
+    assert.equal(await page.locator('#clvCard > details.bz-help').count(),0,'methodology clutter removed');
     assert.equal(await page.locator('#clvSvg').isVisible(),true);
+    assert.equal(await page.locator('#clvEstimateManager').isVisible(),false);
     await page.locator('#clvCard').screenshot({path:path.join(output,`${width}-${theme}-${manager?'manager':'viewer'}-tldr.png`)});
     await page.getByRole('button',{name:'AI / technical details',exact:true,includeHidden:true}).evaluate(e=>e.click());
-    assert.equal(await page.locator('#clvAllBets').isVisible(),true);
+    assert.equal(await page.locator('#clvAllBets table').count(),0,'mode switch cannot restore accounting clutter');
     assert.equal(await page.locator('#clvEstimateManager summary').isVisible(),manager);
-    await page.getByRole('button',{name:'TL;DR',exact:true,includeHidden:true}).evaluate(e=>e.click());
-    assert.equal(await page.locator('#clvAllBets').isVisible(),true,'accounting survives mode change');
-    assert.equal(await page.locator('#clvEstimateManager').isVisible(),false);
-    await page.getByRole('button',{name:'AI / technical details',exact:true,includeHidden:true}).evaluate(e=>e.click());
-    assert.equal(await page.locator('#clvAllBets tbody tr').count(),legs.length);
-    assert.equal(await page.locator('#clvAllBets > details').getAttribute('open'),null);
-    assert.equal(await page.locator('#clvAllBets > details p').isVisible(),false);
-    assert.ok(await page.locator('#clvAllBets').evaluate(e=>e.scrollWidth<=e.clientWidth+1),'accounting table has no clipped horizontal content');
-    await page.locator('#clvAllBets > details summary').click();
-    assert.equal(await page.locator('#clvAllBets > details p').isVisible(),true);
-    await page.locator('#clvAllBets > details summary').click();
-
-    assert.match(await page.locator('#clvAllBets').innerText(),/2.10 estimated/);
-    assert.match(await page.locator('#clvAllBets').textContent(),/Legacy estimate: actual was not recorded/);
+    assert.doesNotMatch(await page.locator('#clvCard').innerText(),/Every bet.*CLV accounting|Source \/ assumptions|Methodology/);
+    assert.match(await page.locator('#clvCard').innerText(),/estimated/i);
     assert.equal(await page.locator('#bozoRecovered').isVisible(),false);
     assert.match(await page.locator('#diagCard').innerText(),/2.10 estimated/);
     assert.ok(await page.locator('#clvSvg').evaluate(e=>e.__pts.some(p=>Math.abs(p.x-2.102895)<.000001)));
@@ -94,10 +82,10 @@ try{
     await page.locator('#clv-season').click();
     assert.ok(await page.locator('#clvSvg').evaluate(e=>e.__pts.length>0));
     await page.locator('#clv-week').click();
-    assert.equal(await page.locator('#clvAllBets tbody tr').count(),legs.length);
-    await page.locator('#clvAllBets').screenshot({path:path.join(output,`${width}-${theme}-accounting.png`)});
+    assert.equal(await page.locator('#clvAllBets table').count(),0);
+    await page.locator('#clvCard').screenshot({path:path.join(output,`${width}-${theme}-chart.png`)});
     await page.screenshot({path:path.join(output,`${width}-${theme}-effective.png`),fullPage:true});
     }finally{await context.close();}
   }
-  console.log('PASS: full-page effective CLV, estimated bet plotted, all rows retained, season toggle, Overview cleanup, mobile/desktop');
+  console.log('PASS: full-page effective CLV, estimated bet plotted, unresolved statuses retained without audit clutter, season toggle, Overview cleanup, mobile/desktop');
 }finally{await browser?.close();}

@@ -104,7 +104,7 @@ test('docs/bozo-sd.json is pinned to the grader, and the page scales the same wa
   assert.match(sdDoc.period_rule, /sqrt\(period_fraction\)/);
   assert.match(page, /const PERIOD_FRACTION = \{game:1,'1h':\.5,'2h':\.5,'1q':\.25,'2q':\.25,'3q':\.25,'4q':\.25\};/);
   assert.match(page, /return base \* Math\.sqrt\(PERIOD_FRACTION\[x\.period\|\|'game'\] \?\? 1\); \}/);
-  assert.match(page, /const need = live\.filter\(isManualLeg\);/);
+  assert.match(page, /x\.period && x\.period!=='game' && r\.actual==null/);
   assert.match(page, /needs manual grade/);
   assert.match(page, /scaled by the square root of the fraction played/);
 });
