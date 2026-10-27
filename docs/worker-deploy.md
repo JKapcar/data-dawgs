@@ -25,8 +25,8 @@ The file contains secret **names only**. Secret values stay encrypted in Cloudfl
   `BOZO_TOKENS` is optional: `bozoConfig()` no longer requires it once `/users` is seeded, and it is not
   set on the production Worker (checked 2026-10-16 on versions `32ed5314` and `a074cd75`).
 - Daily `0 9 * * *` trigger: private Firebase disaster-recovery backup.
-- Hourly `9 * * * *` trigger: prospective CFB 24-hour market receipts.
-- Five-minute `*/5 * * * *` trigger: Bozo close-price capture.
+- Hourly `9 * * * *` trigger: free schedule refresh; all-game CFB odds collection is disabled.
+- Five-minute `*/5 * * * *` trigger: scan committed Bozo selections; each exact selection gets at most one durable near-kickoff attempt.
 
 The scheduled handler dispatches by the exact cron expression. An unknown expression
 fails closed. Never change the hourly trigger to the daily expression or remove the

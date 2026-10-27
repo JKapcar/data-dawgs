@@ -3901,8 +3901,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
        puts what it cannot stand behind. Everything here is also in Toto's sys block,
        because a caveat that lives only in page prose is one he gets talked past. -->
   <div class="pb-fine">
-    <p><b>Game-market prices are checked automatically when available.</b> At submit, the Worker reads both sides from
-      DraftKings through the odds feeds and freezes that quote for confirmation. If the checker fails, manually entered odds are accepted as Unverified. The manager can verify the original entry prices afterward for CLV.</p>
+    <p><b>Your confirmed price stays on the entry.</b> After you commit a leg, Bozo attempts one exact two-sided DraftKings capture, then one near kickoff. Unavailable evidence stays pending for manager review; a later quote never becomes an original entry quote.</p>
     <p><b>Bozo odds are simulation.</b> Anywhere this site quotes a chance of wearing it, that is
       Monte Carlo output, not an observation, and the simulation draws every leg independently.
       Two legs on the same game are not independent, so a ticket carrying a stack is wrong in a
@@ -4195,12 +4194,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <div class="card" id="clvCard" style="display:none">
   <div class="bz-hdr"><h2 class="bz" style="margin:0">Beating the number vs. beating the close</h2>
     <span class="tm" id="clvHead"></span></div>
-  <details class="bz-help" data-dd-agent-only><summary>How to read this chart</summary>
-  <p class="note" id="clvSub" style="margin:0 0 14px">Each dot is one resolved bet; Season average groups by player. Horizontal is the price
-    obtained against the measured or estimated close; vertical is outcome minus expected probability. Unknown axes, pending outcomes, pushes and voids remain in the all-bets table. Hover or pick a name to trace a season.</p>
-  <div class="clv-legnote">Click a name to trace it &middot; shift-click to hide &middot; shape and colour both carry
-    identity, because eight series is past the point where colour alone is reliable &middot; dot size is sample size,
-    so a week-1 dot is one coin flip and a Super Bowl dot is twenty-two.</div></details>
+
 
   <!-- ⚠️ This does NOT go in the methodology drawer, and it is not a paragraph of the
        footnote. It is a truth claim about the numbers on screen, the demo-badge
@@ -4245,7 +4239,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div id="clvEstimateManager" data-dd-agent-only></div>
   <script src="bozo-effective-clv.js"></script>
   <script src="bozo-estimate-manager.js" defer></script>
-  <style>html:not([data-dd-view="agent"]) #clvCard [data-dd-agent-only]{display:none!important}#clvCard .weekbox{max-width:100%;min-width:0;flex-wrap:wrap}#clvCard .weekbox input{min-width:0;max-width:100%;flex:1 1 100px}#clvAllBets td{white-space:normal;overflow-wrap:anywhere;max-width:28rem}.clv-tablewrap{max-width:100%;overflow:auto}@media(max-width:600px){#clvAllBets table,#clvAllBets tbody{display:block;width:100%}#clvAllBets thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}#clvAllBets tr{display:grid;grid-template-columns:minmax(0,1fr);border-bottom:1px solid var(--grid);padding:8px 0}#clvAllBets td{display:block;text-align:left;border:0;padding:4px 0;max-width:none;min-width:0}#clvAllBets td::before{display:block;font-size:10px;color:var(--muted);text-transform:uppercase}#clvAllBets td:nth-child(1)::before{content:"Week / player / bet"}#clvAllBets td:nth-child(2)::before{content:"Outcome"}#clvAllBets td:nth-child(3)::before{content:"CLV pp / evidence"}#clvAllBets td:nth-child(4)::before{content:"Chart status"}}</style><div id="clvAllBets" style="max-width:100%;overflow:auto"></div>
+  <style>html:not([data-dd-view="agent"]) #clvCard [data-dd-agent-only]{display:none!important}#clvCard .weekbox{max-width:100%;min-width:0;flex-wrap:wrap}#clvCard .weekbox input{min-width:0;max-width:100%;flex:1 1 100px}#clvAllBets{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}#clvAllBets .pchip{display:inline-flex;max-width:100%;padding:5px 8px;border:1px solid var(--grid);border-radius:8px;font-size:11px;line-height:1.4;overflow-wrap:anywhere}.clv-tablewrap{max-width:100%;overflow:auto}</style><div id="clvAllBets" style="max-width:100%;overflow:auto"></div>
 </div>
 
 <!-- ---------- Bozo Royale: survival odds ----------
@@ -9516,7 +9510,8 @@ function clvRender(){
   const scope = CLV.data.legs.filter(l => l.week<=st.week && st.on.has(l.player) && (st.sport==='all'||l.sport===st.sport));
   const items=window.DDEffectiveClv.rows(scope),counts=window.DDEffectiveClv.counts(items);
   document.getElementById('clvHead').textContent=`${counts.charted} of ${counts.total} bets ${st.mode==='season'?'included in player averages':'plotted'}; ${counts.measured} measured, ${counts.estimated} estimated, ${counts.override} overrides, ${counts.convention} owner-convention zeros, ${counts.unknown} unknown. ${counts.pending} pending, ${counts.push} push, ${counts.void} void. `;
-  document.getElementById('clvAllBets').innerHTML='<h3>Every bet — CLV accounting</h3><details class="bz-help"><summary>Methodology</summary><p>Estimated values are scenario analytics, not official contest tiebreaker decisions. Unknown axes are never zero-filled.</p></details><table class="clv-tbl"><thead><tr><th>Week / player / bet</th><th>Outcome</th><th>CLV pp / evidence</th><th>Chart status</th></tr></thead><tbody>'+items.map(d=>'<tr><td>'+esc('W'+d.leg.week+' / '+teamOf(d.leg.player)+' / '+d.leg.label)+'</td><td>'+esc(d.result||'pending')+'</td><td>'+(d.point===null?'Unknown':(d.point>0?'+':'')+d.point.toFixed(2)+' '+esc(d.kind))+'<details><summary>Source / assumptions</summary>'+esc(d.reason)+(d.source?'<br>'+esc(d.source):'')+(d.kind==='estimated'?'<br>'+esc(d.leg.clvEstimate.assumption||'')+'<br>'+esc(d.leg.clvEstimate.rationale||'')+'<br>Overround scenarios: '+esc((d.leg.clvEstimate.scenarios||[]).map(x=>(x*100).toFixed(2)+'%').join(' / '))+'<br>'+esc(d.leg.clvEstimate.sensitivity||'')+'<br>Source book: '+esc(d.leg.clvEstimate.closeQuote?.book??'unknown')+'<br>Quote time: '+esc(d.leg.clvEstimate.closeQuote?.quotedAt??'unknown')+'; retrieved: '+esc(d.leg.clvEstimate.closeQuote?.retrievedAt??'unknown'):'')+'</details>'+'</td><td>'+(d.charted?(st.mode==='season'?'Included in player average':'Plotted'):d.result==='push'||d.result==='void'?esc(d.result)+' — no binary outcome axis':d.y===null?'Pending or unavailable outcome/probability axis':'Missing CLV axis')+'</td></tr>').join('')+'</tbody></table>';
+  // Compact missing-coordinate rail; full provenance stays in the API/manager evidence tool.
+  document.getElementById('clvAllBets').innerHTML=items.filter(d=>!d.charted).map(d=>'<span class="pchip">'+esc('W'+d.leg.week+' · '+teamOf(d.leg.player)+' · '+d.leg.label)+' — '+esc(d.kind==='convention'?'push convention':d.result==='void'?'void':d.result==='push'?'push':d.result?'CLV unresolved':'pending')+'</span>').join('');
 
   CLV_D = clvDom(st.mode, st.sport);
   clvRenderLegend();
@@ -9525,7 +9520,7 @@ function clvRender(){
   const svg = document.getElementById('clvSvg');
   if(!pts.length){
     svg.innerHTML = `<text x="${CLV_W/2}" y="${CLV_H/2}" text-anchor="middle" class="tick">`
-      + `${counts.charted} / ${counts.total} plotted — ${counts.unknown} missing usable CLV; inspect Every bet accounting.</text>`;
+      + `${counts.charted} / ${counts.total} plotted — ${counts.unknown} missing usable CLV. No invented coordinates.</text>`;
     return;
   }
 
@@ -9717,18 +9712,6 @@ function clvShowTip(d,px,py){
       one checked number with one unchecked one, and that has to be readable next to it.
       The full paragraph is still in the drawer.
    Everything static goes below, verbatim. */
-function clvFootLive(){return '<p>Analytics use manager overrides first, valid measured CLV next, then non-stale estimates. Each bet stays visible; missing coordinates are unknown, not zero. Pushes and voids are distinct. Official contest decisions are unchanged.</p>';}
-function clvEstimateEvidence(){
-  const rows=(CLV.data?.legs||[]).filter(l=>l.clvEstimate?.kind==='estimated');
-  if(!rows.length)return '';
-  return '<details class="method" open style="overflow-wrap:anywhere"><summary>Estimated CLV · separate evidence ('+rows.length+')</summary><div class="method-body">Estimates are not measured CLV, expected ROI, or a confidence interval. They enter labeled analytics, never official rankings or settlement. Manual overrides remain authoritative.'+rows.map(l=>{
-    const e=l.clvEstimate;
-    if(e.stale)return '<p><b>'+esc(teamOf(l.player))+' · '+esc(l.label)+' · Week '+esc(l.week??'unknown')+'</b>: stale estimate; selection/prices/status changed. Recalculate before using.</p>';
-    const fmt=n=>Number.isFinite(n)?(n>0?'+':'')+n.toFixed(2):'unknown';
-    return '<p><b>'+esc(teamOf(l.player))+' · '+esc(l.label)+' · Week '+esc(l.week??'unknown')+'</b><br>Estimated '+fmt(e.point)+' pp; sensitivity '+fmt(e.low)+' to '+fmt(e.high)+' pp'+(l.clvPts!=null?' · existing manual override retained':'')+'<br>'+esc(e.assumption)+'; overround scenarios '+esc((e.scenarios||[]).map(x=>(x*100).toFixed(2)+'%').join(' / '))+'<br>'+esc(e.rationale)+'<br>Source: '+esc(e.closeQuote?.sourceUrl)+' · quote time '+esc(e.closeQuote?.quotedAt??'unknown')+' · retrieved '+esc(e.closeQuote?.retrievedAt)+'<br>'+esc(e.closeQuote?.evidence==='untimed_quote_proxy'?'Untimed quote used as closing proxy — not a verified closing price':e.closeQuote?.evidence)+' · entry '+(e.entryVerified?'verified':'unverified')+' · revision '+esc(e.revision)+'</p>';
-  }).join('')+'</div></details>';
-}
-function clvMethod(){return '<details class="method"><summary>CLV methodology</summary><div class="method-body">CLV is fair close minus fair entry in probability percentage points. Estimated prices retain their source and assumptions. Every-bet mode plots one resolved bet with usable axes; Season average aggregates those bets. The all-bets table retains unknown, pending, push and void records. No estimate changes official settlement or tiebreaker policy.</div></details>';}
 
 let SURV = null, survKey = '';
 function paintSurvival(){
@@ -9865,7 +9848,7 @@ async function clvLoad(force){
     // The demo warning is a strip above the plot, not a line in the footnote — see the
     // note above clvFootLive for why it does not go in the drawer.
     document.getElementById('clvSim').style.display = CLV.data.synthetic ? '' : 'none';
-    document.getElementById('clvFoot').innerHTML = clvFootLive() + clvMethod();
+    document.getElementById('clvFoot').replaceChildren();
     clvRender();
     mountBozoEstimateManager();
     if(view()==='overview'){paintSurvival();if(boardReady)render();}

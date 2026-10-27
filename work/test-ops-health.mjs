@@ -172,7 +172,7 @@ async function readRoute(env) {
   net.sgo = "rate-limit";
   const hourly = await tick(HOURLY, at("2026-10-12T11:09:00Z"), env);
   net.sgo = "ok";
-  ok("a failing market capture still fails its tick, as before", hourly.error && /429/.test(hourly.error.message));
+  ok("retired hourly capture does not call exhausted provider", !hourly.error);
   const trail = kv.store.get("forecast:live:lasterror") || "";
   ok("forecast-live now leaves a lasterror trail in the same pattern",
     /"at":/.test(trail) && trail.includes(SECRET), "(the trail is a private post-mortem; the route must not echo it)");
@@ -188,14 +188,14 @@ async function readRoute(env) {
       .every(j => byJob[j] && typeof byJob[j].failing === "boolean"));
   ok("failing jobs carry the tick that first saw them",
     byJob["forecast:live"].failing && byJob["forecast:live"].since === "2026-10-12T10:17:00.000Z" &&
-    byJob["bozo:autograde"].failing && byJob["cfb:market:24h"].failing && byJob["cfb:market:24h"].since === "2026-10-12T11:09:00.000Z");
+    byJob["bozo:autograde"].failing && !byJob["cfb:market:24h"].failing);
   ok("crons carry their last heartbeat",
     body.crons.find(c => c.cron === FIVE).last_fired_at === "2026-10-12T10:17:00.000Z" &&
     body.crons.find(c => c.cron === HOURLY).last_fired_at === "2026-10-12T11:09:00.000Z" &&
     body.crons.find(c => c.cron === DAILY).last_fired_at === null);
   const errorTexts = [...kv.store.entries()].filter(([k]) => k.endsWith(":lasterror")).map(([, v]) => JSON.parse(v).error);
   ok("the planted secret never reaches the route", !text.includes(SECRET) && !text.includes("auth="));
-  ok("no lasterror text reaches the route", errorTexts.length >= 3 && errorTexts.every(e => !text.includes(e)));
+  ok("no lasterror text reaches the route", errorTexts.length >= 2 && errorTexts.every(e => !text.includes(e)));
   ok("no provider or database detail reaches the route", !/429|RTDB|ECONNREFUSED|firebaseio|monthly object limit/i.test(text));
   ok("each job row is exactly {job, cron, failing, since, last_ok_at}",
     body.jobs.every(j => Object.keys(j).sort().join() === "cron,failing,job,last_ok_at,since"));

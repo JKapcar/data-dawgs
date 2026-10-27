@@ -34,7 +34,7 @@ test('failed atomic save reports failure, invalid points and incomplete pairs wr
  assert.equal(r.writes.length,0);r.ctx.fbPatch=async()=>{throw Error('unavailable')};
  assert.equal((await r.save({clvPts:0})).status,502);
 });
-test('recovery retries missing and half closes, keeps complete pairs, and throttles paid history',async()=>{
+test('finished missing and half closes remain manual pending without historical purchases',async()=>{
  const now=Date.parse('2026-09-28T12:00:00Z'),start=new Date(now-24*3600000).toISOString(),kv=new Map();
  const picks={a:{eventId:'1',startsAt:start,sport:'nfl',mkt:'ml'},b:{eventId:'2',startsAt:start,sport:'nfl',mkt:'ml'}};
  const league={week:3,season:2026,status:'graded',picks,results:{a:{close:-150},b:{close:-150,closeOpp:130}}};
@@ -42,9 +42,10 @@ test('recovery retries missing and half closes, keeps complete pairs, and thrott
  loadLeagues:async()=>({main:league}),loadUsers:async()=>({}),playerName:k=>k,memberNameAt:()=>null,accountName:()=>'',UID_RE:/^u_/,bozoOddsApiMarkets:()=>['h2h']};
  vm.createContext(ctx);vm.runInContext(cut('async function bozoCloseTargets(','// `periods`'),ctx);
  const env={ODDS_API_KEY:'fixture',RL:{get:async k=>kv.get(k),put:async(k,v)=>kv.set(k,v)}};
- assert.equal((await ctx.bozoCloseTargets(env,now)).length,1);
+ assert.equal((await ctx.bozoCloseTargets(env,now)).length,0);
  assert.equal((await ctx.bozoCloseTargets(env,now+300000)).length,0);
- assert.equal((await ctx.bozoCloseTargets(env,now+3600000)).length,1);
+ assert.equal((await ctx.bozoCloseTargets(env,now+3600000)).length,0);
+ assert.equal(kv.size,0);assert.deepEqual(league.results,{a:{close:-150},b:{close:-150,closeOpp:130}});
  assert.equal((await ctx.bozoCloseTargets(env,now+49*3600000)).length,0);
 });
 test('phone form saves signed and zero overrides without closing prices; blank does not erase',async()=>{

@@ -36,15 +36,16 @@ function fixture(measured = 1) {
 
 test('long chart and dashboard guides are native, closed disclosures',()=>{
   const {document:d}=fixture();
-  for(const id of ['hierHistoryCard','diagExploreCard','clvCard','survCard']){
+  for(const id of ['hierHistoryCard','diagExploreCard','survCard']){
     const details=d.querySelector('#'+id+' details.bz-help');
     assert.ok(details,id);
     assert.equal(details.open,false);
     assert.equal(details.firstElementChild.tagName,'SUMMARY');
     assert.ok(details.firstElementChild.textContent.trim());
   }
-  assert.ok(d.getElementById('clvSub').closest('details'));
-  assert.ok(d.querySelector('.clv-legnote').closest('details'));
+  assert.equal(d.getElementById('clvSub'),null);
+  assert.equal(d.querySelector('.clv-legnote'),null);
+  assert.equal(d.querySelector('#clvCard > details.bz-help'),null);
   assert.ok(!d.getElementById('clvSim').closest('details'),'demo warning stays outside');
   assert.match(html,/\.bz-help>summary:focus-visible\{outline:2px solid/);
   assert.match(html,/\.bz-help>summary\{[^}]*min-height:44px/);

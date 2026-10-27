@@ -3,7 +3,7 @@
   const stable=x=>JSON.stringify(x,(_k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).filter(k=>v[k]!=null).sort().map(k=>[k,v[k]])):v);
   const implied=x=>x<0?-x/(100-x):100/(100+x);
   const valid=x=>typeof x==='number'&&Number.isFinite(x)&&Math.abs(x)>=100&&Math.abs(x)<=100000;
-  function editableInput(input){return !input?.method||input.method==='owner_push_zero_v1';}
+  function editableInput(input){return !input?.method||input.method==='owner_push_zero_v1'||input.method==='historical_exchange_probability_v1';}
   function attachOriginalDecimals(input,price,opposite){
     if(price===null&&opposite===null)return input;
     if(![price,opposite].every(x=>typeof x==='number'&&Number.isFinite(x)&&x>1&&x<=1001))throw Error('Enter both original decimal prices greater than 1, or leave both blank.');
@@ -17,6 +17,20 @@
   }
   function preview(row,input){
     if(!editableInput(input))throw Error('This modeled estimate is read-only in this form; use the reviewed evidence workflow.');
+    if(input.method==='historical_exchange_probability_v1'){
+      const e=input.evidence;
+      if(!e||e.selectionKey!==row.selectionKey||String(e.eventId)!==String(row.eventId)||e.startsAt!==row.startsAt||!valid(row.price)||!valid(row.priceOpp)||row.entryOppSource==='assumed')throw Error('Exact ledger identity and observed entry pair required.');
+      if(!['won','lost','push'].includes(row.result))throw Error('Settled ledger leg required.');
+      const start=Date.parse(row.startsAt),times=[e.quotedAt,...(e.oppositeProbability!==undefined?[e.oppositeQuotedAt]:[])];
+      if(!Number.isFinite(start)||times.some(t=>!Number.isFinite(Date.parse(t))||Date.parse(t)>=start||start-Date.parse(t)>900000))throw Error('Each historical observation must be strictly pregame and within 15 minutes.');
+      if(!Number.isFinite(e.probability)||e.probability<=0||e.probability>=1||e.oppositeProbability!==undefined&&(!Number.isFinite(e.oppositeProbability)||e.oppositeProbability<=0||e.oppositeProbability>=1))throw Error('Explicit historical probabilities required.');
+      const normalized=e.probability/(e.oppositeProbability===undefined?1:e.probability+e.oppositeProbability);
+      const excluded=e.feeTreatment==='excluded';
+      if(excluded?e.feeRate!=null:!Number.isFinite(e.feeRate)||e.feeRate<0||e.feeRate>.2)throw Error('Explicit fee treatment required.');
+      const close=excluded?normalized:normalized/(1-e.feeRate*(1-normalized));
+      const point=100*(close-implied(row.price)/(implied(row.price)+implied(row.priceOpp)));
+      return {point,low:point,high:point,holds:[],kind:'estimated'};
+    }
     if(input.method==='owner_push_zero_v1'){
       if(row.result!=='push'||typeof input.rationale!=='string'||!input.rationale.trim()||input.rationale.length>400)throw Error('Push-zero convention requires a recorded push and a rationale.');
       return {point:0,low:0,high:0,holds:[],kind:'convention'};
@@ -51,7 +65,8 @@
       <button type="button" class="btn ghost" data-load>Load league ledger</button>
       <style>.cem-form{display:grid;gap:12px;max-width:680px;min-width:0;overflow-wrap:anywhere}.cem-form[hidden]{display:none}.cem-form label,.cem-form fieldset{min-width:0}.cem-form input,.cem-form select,.cem-form textarea{max-width:100%;box-sizing:border-box}</style><form class="cem-form" hidden>
       <label>Ledger leg <select name="row" style="width:100%;max-width:100%"></select></label><p data-basis></p>
-      <label>Method <select name="method"><option value="quote">Sourced quote estimate</option><option value="owner_push_zero_v1">Owner push-zero convention</option></select></label>
+      <label>Method <select name="method"><option value="quote">Sourced quote estimate</option><option value="owner_push_zero_v1">Owner push-zero convention</option><option value="historical_exchange_probability_v1">Reviewed historical exchange evidence</option></select></label>
+      <label data-exchange hidden>Reviewed exchange estimate JSON <textarea name="exchangeJson" rows="12" style="width:100%" spellcheck="false"></textarea></label>
       <label>Source book (lowercase identifier) <input name="book" value="draftkings" required pattern="[-a-z0-9_]{2,40}"></label>
       <label>Closing price (American) <input name="price" type="number" step="any" required></label>
       <label>Opposite closing price (blank if unknown) <input name="opposite" type="number" step="any"></label>
@@ -70,12 +85,13 @@
     const form=host.querySelector('form'),field=n=>form.elements.namedItem(n),status=host.querySelector('[data-status]'),save=host.querySelector('[data-save]'),output=host.querySelector('[data-preview]');
     let rows={},row=null,pending=null,busy=false,readOnly=false;
     const quoteFields=['book','price','opposite','decimalPrice','decimalOpposite','sourceUrl','evidence','quotedAt','retrievedAt','scenarios'];
-    function methodState(){const convention=field('method').value==='owner_push_zero_v1';for(const n of quoteFields){field(n).disabled=convention||readOnly;field(n).required=!convention&&['book','price','sourceUrl','retrievedAt'].includes(n);}field('method').disabled=readOnly;field('rationale').disabled=readOnly;form.querySelector('[type=submit]').disabled=readOnly;}
+    function methodState(){const convention=field('method').value==='owner_push_zero_v1',exchange=field('method').value==='historical_exchange_probability_v1';for(const n of quoteFields){field(n).disabled=convention||exchange||readOnly;field(n).required=!convention&&!exchange&&['book','price','sourceUrl','retrievedAt'].includes(n);}host.querySelector('[data-exchange]').hidden=!exchange;field('exchangeJson').disabled=!exchange||readOnly;field('exchangeJson').required=exchange;field('method').disabled=readOnly;field('rationale').disabled=readOnly||exchange;field('rationale').required=!exchange;form.querySelector('[type=submit]').disabled=readOnly;}
+
     const active=()=>api.isManager()&&context===api.league()+'|'+api.identity()&&host.dataset.context===context;
     const ensure=()=>{if(!active())throw Error('Account or league changed. Reload the ledger before saving.');};
     function select(){if(busy)return;row=rows[field('row').value];pending=null;save.disabled=true;output.textContent='';if(!row)return;
       host.querySelector('[data-basis]').textContent=`Entry ${row.price??'unknown'} / ${row.priceOpp??'unknown'}; ledger result ${row.result??'pending (server checks current result)'}; estimate revision ${row.clvEstimate?.revision||0}. Manual override ${row.clvPts??'none'} stays authoritative.`;
-      const old=row.clvEstimate?.input;readOnly=!editableInput(old);field('method').value=old?.method==='owner_push_zero_v1'?'owner_push_zero_v1':'quote';field('book').value=old?.closeQuote?.book||row.entryBook||'';field('price').value=old?.closeQuote?.price??row.close??'';field('opposite').value=old?.closeQuote?.opposite??row.closeOpp??'';
+      const old=row.clvEstimate?.input;readOnly=!editableInput(old);field('method').value=['owner_push_zero_v1','historical_exchange_probability_v1'].includes(old?.method)?old.method:'quote';field('exchangeJson').value=old?.method==='historical_exchange_probability_v1'?JSON.stringify(old,null,2):'';field('book').value=old?.closeQuote?.book||row.entryBook||'';field('price').value=old?.closeQuote?.price??row.close??'';field('opposite').value=old?.closeQuote?.opposite??row.closeOpp??'';
       field('decimalPrice').value=old?.closeQuote?.originalDecimal?.price??'';field('decimalOpposite').value=old?.closeQuote?.originalDecimal?.opposite??'';
       for(const n of ['sourceUrl','quotedAt'])field(n).value=old?.closeQuote?.[n]??'';
       field('retrievedAt').value=old?.closeQuote?.retrievedAt||'';field('evidence').value=old?.closeQuote?.evidence||'source_reported_closing';field('rationale').value=old?.rationale||'';field('scenarios').value=old?.scenarios?.map(x=>x*100).join(', ')||'';methodState();if(readOnly)output.textContent='This modeled estimate is read-only in this form; its evidence and method will not be converted.';
@@ -87,14 +103,15 @@
     field('row').onchange=select;
     form.oninput=event=>{if(busy)return;if(event.target===field('method'))methodState();if(event.target===field('sourceUrl'))field('retrievedAt').value='';save.disabled=true;output.textContent='Preview the changed evidence before saving.';};
     form.onsubmit=event=>{event.preventDefault();try{ensure();if(!row)throw Error('Load a ledger row first.');if(readOnly)throw Error('This modeled estimate is read-only in this form.');const numeric=n=>field(n).value.trim()===''?null:Number(field(n).value);
-      const estimate=field('method').value==='owner_push_zero_v1'?{method:'owner_push_zero_v1',rationale:field('rationale').value.trim()}:{closeQuote:{price:numeric('price'),opposite:numeric('opposite'),book:field('book').value.trim(),selectionKey:row.selectionKey,sourceUrl:field('sourceUrl').value.trim(),quotedAt:field('quotedAt').value.trim()||null,retrievedAt:field('retrievedAt').value.trim(),evidence:field('evidence').value},rationale:field('rationale').value.trim()};
+      const estimate=field('method').value==='historical_exchange_probability_v1'?JSON.parse(field('exchangeJson').value):field('method').value==='owner_push_zero_v1'?{method:'owner_push_zero_v1',rationale:field('rationale').value.trim()}:{closeQuote:{price:numeric('price'),opposite:numeric('opposite'),book:field('book').value.trim(),selectionKey:row.selectionKey,sourceUrl:field('sourceUrl').value.trim(),quotedAt:field('quotedAt').value.trim()||null,retrievedAt:field('retrievedAt').value.trim(),evidence:field('evidence').value},rationale:field('rationale').value.trim()};
+      if(field('method').value==='historical_exchange_probability_v1'&&estimate.method!=='historical_exchange_probability_v1')throw Error('Exchange JSON must explicitly name the supported method.');
       if(!estimate.method&&field('scenarios').value.trim())estimate.scenarios=field('scenarios').value.split(',').map(x=>Number(x.trim())/100);
       if(!estimate.method){attachOriginalDecimals(estimate,numeric('decimalPrice'),numeric('decimalOpposite'));preserveDecimals(row.clvEstimate?.input,estimate);}const calc=preview(row,estimate),signature=JSON.stringify({row:field('row').value,estimate});
       if(!pending||pending.signature!==signature)pending={signature,body:{league:api.league(),row:field('row').value,requestId:crypto.randomUUID(),expectedEstimateRevision:row.clvEstimate?.revision||0,estimate}};
-      output.textContent=estimate.method==='owner_push_zero_v1'?'Owner push convention: 0 pp. Not measured or estimated CLV. Recorded outcome remains unchanged.':(estimate.closeQuote.evidence==='untimed_quote_proxy'?'Untimed quote used as closing proxy. Not a verified closing price. ':'')+`Estimated ${calc.point.toFixed(2)} pp; sensitivity ${calc.low.toFixed(2)} to ${calc.high.toFixed(2)} pp. Overround ${calc.holds.map(x=>(100*x).toFixed(2)+'%').join(' / ')}. Not a confidence interval or expected ROI. Price preview only; server checks settlement and evidence precedence.`;save.disabled=false;status.textContent='Review the preview, then save.';
+      output.textContent=estimate.method==='historical_exchange_probability_v1'?`Estimated ${calc.point.toFixed(2)} pp from historical exchange samples. Fees ${estimate.evidence.feeTreatment==='excluded'?'excluded':'adjusted'}. Not a measured sportsbook close. Server validates exact rules, sources and timestamps before saving.`:estimate.method==='owner_push_zero_v1'?'Owner push convention: 0 pp. Not measured or estimated CLV. Recorded outcome remains unchanged.':(estimate.closeQuote.evidence==='untimed_quote_proxy'?'Untimed quote used as closing proxy. Not a verified closing price. ':'')+`Estimated ${calc.point.toFixed(2)} pp; sensitivity ${calc.low.toFixed(2)} to ${calc.high.toFixed(2)} pp. Overround ${calc.holds.map(x=>(100*x).toFixed(2)+'%').join(' / ')}. Not a confidence interval or expected ROI. Price preview only; server checks settlement and evidence precedence.`;save.disabled=false;status.textContent='Review the preview, then save.';
     }catch(e){save.disabled=true;status.textContent=e.message;}};
     save.onclick=async()=>{if(busy||!pending||readOnly)return;busy=true;let verified=false;const snapshot=structuredClone(row),protectedFields=x=>{const {clvEstimate,...rest}=x;return stable(rest);};Array.from(form.elements).forEach(e=>e.disabled=true);host.querySelector('[data-load]').disabled=true;status.textContent='Saving; awaiting persisted readback…';try{ensure();const body=pending.body;const result=await api.write('/bozo/close',body);ensure();const read=await api.read('ledger/'+body.row);ensure();const stored=read.value?.clvEstimate;if(field('row').value!==body.row||protectedFields(read.value||{})!==protectedFields(snapshot))throw Error('Ledger or selection changed during save. Reload and review before using the estimate.');
-      if(!result.ok||!stored||stored.requestId!==body.requestId||stored.revision!==result.estimate?.revision||stable(stored.input)!==stable(body.estimate)||stable(stored)!==stable(result.estimate)||!Number.isFinite(stored.point))throw Error('Save not verified. Reload or retry identical evidence; do not assume success.');
+      if(!result.ok||!stored||stored.stale===true||stored.requestId!==body.requestId||stored.revision!==result.estimate?.revision||stable(stored.input)!==stable(body.estimate)||stable(stored)!==stable(result.estimate)||!Number.isFinite(stored.point))throw Error('Save not verified. Reload or retry identical evidence; do not assume success.');
       row=read.value;rows[body.row]=row;verified=true;status.textContent=`Saved and verified revision ${stored.revision}: ${stored.kind==='convention'?'owner convention':'estimated'} ${stored.point.toFixed(2)} pp.`;await api.refresh();
     }catch(e){status.textContent=e.message;}finally{busy=false;Array.from(form.elements).forEach(e=>e.disabled=false);host.querySelector('[data-load]').disabled=false;methodState();save.disabled=verified||readOnly;}};
   }

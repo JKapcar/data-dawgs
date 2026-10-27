@@ -2190,10 +2190,8 @@ const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", sid
 }
 {
   const d = text(await (await asUser(USER_TOKEN, { ...LEG, price: 150 })).json());
-  ok(d.accepted === true && d.agreement.needsConfirmation === true,
-     "a typed-price disagreement is surfaced while the captured price drives validation");
-  ok(d.captured.price === -110 && d.band && d.band.ceil !== undefined,
-     "the captured price and band are returned together");
+  ok(d.accepted === false, "out-of-band typed draft cannot be replaced by purchased odds");
+  ok(d.captured.price === 150 && d.captured.priceOpp == null, "rejected draft preserves entered price without an invented opposite");
 }
 {
   // ⚠️ Uniqueness is keyed on the SELECTION, not on the label. Two people can spell the
@@ -2254,10 +2252,10 @@ const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", sid
   const d = text(await (await asUser(USER_TOKEN, LEG)).json());
   ok(d.accepted === true, "a legal leg is accepted");
   ok(d.you === "The Kid", "the caller is resolved from the per-user token, decoded");
-  ok(/dd_submit_bozo_leg/.test(d.submit.how) && d.captured.price === -110 && d.captured.priceOpp === -110,
-     "the draft returns the two-sided captured quote and points at the write tool");
-  ok(d.willBeStoredAs.priceSource === "captured" && /set by the server/.test(String(d.willBeStoredAs.ts)),
-     "what the server will store is shown, including its captured source and server timestamp");
+  ok(/dd_submit_bozo_leg/.test(d.submit.how) && d.captured.price === LEG.price && d.captured.priceOpp == null,
+     "draft has no invented opposite and points at the write tool");
+  ok(d.willBeStoredAs.priceSource === "self" && /set by the server/.test(String(d.willBeStoredAs.ts)),
+     "what the server will store is shown, including its manual source and server timestamp");
   ok(d.editingAnExistingLeg === false, "The Kid has no leg in yet");
   // ⚠️ three members, two legs in — The Kid's would be the last one
   ok(d.wouldLockTheBoard === true && /LAST LEG/.test(d.warning) && /never redone/.test(d.warning),
@@ -2265,7 +2263,7 @@ const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", sid
   ok(Array.isArray(d.stillWaitingOn) && d.stillWaitingOn.length === 1 && d.stillWaitingOn[0] === "The Kid",
      "stillWaitingOn is who has no leg in");
   ok(d.caveats.some(c => /Nothing was submitted/.test(c)), "the payload says nothing was submitted");
-  ok(d.caveats.some(c => /Both prices were captured/.test(c)), "…and that both DK sides were captured");
+  ok(!d.caveats.some(c => /Both prices were captured/.test(c)), "…does not claim unpurchased DK sides were captured");
 }
 {
   const d = text(await (await asUser("u_kap", { ...LEG, label: "SF -6.5 (edit)" })).json());
@@ -2318,8 +2316,8 @@ const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", sid
      "the echo says it replaces the existing leg and resets the clock");
   ok(p1.wouldLockTheBoard === false, "replacing an already-counted leg does not lock the board");
   ok(legWrites.length === 0, "phase one wrote NOTHING to the board");
-  ok(p1.captured.price === -110 && p1.captured.priceOpp === -110 && p1.captured.startsAt !== null,
-     "both prices and kickoff are frozen in phase one's receipt");
+  ok(p1.captured.price === NEWLEG.price && p1.captured.priceOpp == null && p1.captured.startsAt !== null,
+     "entered price and kickoff frozen without purchased opposite");
 
   // a wrong code commits nothing
   const wrong = await (await submit({ confirm: "NOPE99" })).json();
@@ -2334,8 +2332,8 @@ const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", sid
   const stored = legWrites[0].body;
   ok(stored.via === "mcp", "the stored leg is stamped via:'mcp' — the audit answer to 'did a human do this?'");
   ok(typeof stored.ts === "number" && stored.ts >= NOW, "the server stamped the time, not the client");
-  ok(stored.priceSource === "captured" && stored.entryPriceOpp === -110 && stored.startsAt === "2026-09-13T17:00:00.000Z",
-     "captured priceOpp and startsAt rode through to the stored pick");
+  ok(stored.priceSource === "self" && stored.entryPriceOpp == null && stored.startsAt === "2026-09-13T17:00:00.000Z",
+     "original manual provenance and startsAt rode through to the stored pick");
   ok(!!stored.selectionKey && !!stored.marketKey, "selection and market keys are stored at write time");
   ok(p2.boardLocked === false, "2 of 3 legs in — the board did not lock");
 
@@ -2353,8 +2351,8 @@ const LEG = { sport: "nfl", eventId: "403", game: "SF @ SEA", mkt: "spread", sid
     price: -140, label: "GB ML" }, USER_TOKEN)).json());
   ok(kid.status === "confirm_required" && kid.wouldLockTheBoard === true && /LAST LEG/.test(kid.echo),
      "the echo shouts when confirming would lock the board and draw the hierarchy");
-  ok(kid.captured.priceOpp === -110 && kid.captured.startsAt === "2026-09-13T17:00:00.000Z",
-     "eventId-only submission resolves kickoff from KV and captures the opposite price");
+  ok(kid.captured.priceOpp == null && kid.captured.startsAt === "2026-09-13T17:00:00.000Z",
+     "eventId-only proposal resolves kickoff from KV without purchasing odds");
   ok(legWrites.length === 1, "…and proposing it still wrote nothing");
 
   // identity: a uid-keyed account resolves to its display name end to end

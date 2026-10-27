@@ -4,15 +4,16 @@ const slice=(a,b)=>source.slice(source.indexOf(a),source.indexOf(b,source.indexO
 function rig(sequence){
  let calls=0,reads=0,writes=0;const map=new Map();
  const cache={get:async key=>{reads++;return map.has(key)?JSON.parse(map.get(key)):null;},put:async(key,res,options)=>{assert.equal(options.expirationTtl,60);writes++;map.set(key,res);}};
- const ctx={console:{log:()=>{}},Date,Request,Response,URL,TextEncoder,crypto:require('node:crypto').webcrypto,AbortController,setTimeout,clearTimeout,caches:{default:cache},
+ const budget=new Map();
+ const ctx={fbGet:async(_e,k)=>({data:budget.get(k)}),fbPut:async(_e,k,v)=>{budget.set(k,v);return true;},console:{log:()=>{}},Date,Request,Response,URL,TextEncoder,crypto:require('node:crypto').webcrypto,AbortController,setTimeout,clearTimeout,caches:{default:cache},
  fetch:async(...args)=>{const action=sequence[Math.min(calls++,sequence.length-1)];return typeof action==='function'?action(...args):new Response(action.body??'{"data":[]}',{status:action.status||200,headers:action.headers});}};
  vm.createContext(ctx);vm.runInContext(slice('async function bozoSgoFailure(', 'async function bozoFetchEvents(')+'this.request=bozoSgoRequest;',ctx);
  const env={SGO_KEY:'synthetic-fixture-key',RL:cache},url=new URL('https://example.test/events?leagueID=NFL&oddID=spread&includeAltLines=true');
  return {ctx,map,url,request:(caller='submit',options={})=>ctx.request(env,url,{caller,sport:'nfl',needProps:false},options),stats:()=>({calls,reads,writes})};
 }
-test('transient 429 retries; known monthly quota, long Retry-After and terminal 4xx fall back without retry',async()=>{
+test('provider refusal stops immediately; budget stop prevents another call',async()=>{
  const r=rig([{status:429,body:'slow down',headers:{'retry-after':'0'}},{body:'{"data":[{"eventID":"one"}]}'}]);
- assert.equal((await r.request())[0].eventID,'one');assert.equal(r.stats().calls,2);
+ await assert.rejects(r.request(),e=>e.code==='rate_limited');await assert.rejects(r.request(),e=>e.code==='quota_exceeded');assert.equal(r.stats().calls,1);
  for(const [response,code] of [[{status:429,body:'monthly object quota exceeded'},'quota_exceeded'],[{status:429,headers:{'retry-after':'8'}},'rate_limited'],[{status:401},'provider_rejected']]){
   const q=rig([response]);await assert.rejects(q.request(),e=>e.code===code);assert.equal(q.stats().calls,1);assert.equal(q.stats().writes,0);
  }

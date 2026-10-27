@@ -420,7 +420,8 @@ async function runBozoLiveScores(env, nowMs = Date.now(), season = SEASON,
         const refreshed = archive.checkedAt === nowIso;
         const unauthorized = bozoOddsUnauthorized(archive);
         odds = { refreshed, error: unauthorized ? null : (archive.errorCode || archive.error || null) };
-        if (unauthorized) odds.skipped = "unauthorized";
+        if (archive.skipped) odds.skipped = archive.skipped;
+        else if (unauthorized) odds.skipped = "unauthorized";
       }
     }
     const oddsOk = odds.refreshed === true && !odds.error && !odds.skipped;

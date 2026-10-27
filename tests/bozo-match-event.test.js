@@ -14,7 +14,7 @@ assert.ok(seedMatch, 'generated ESPN registry exports its seed');
 function between(start, end) {
   const a = worker.indexOf(start);
   const b = worker.indexOf(end, a);
-  assert.ok(a >= 0 && b > a, `source markers exist: ${start} … ${end}`);
+  assert.ok(a >= 0 && b > a, `source markers exist: ${start} â€¦ ${end}`);
   return worker.slice(a, b);
 }
 
@@ -130,20 +130,18 @@ test('a missing alternate never falls through to the main-line quote', () => {
   assert.equal(quote.price, undefined);
 });
 
-test('submit-time capture freezes the real two-sided DK alternate and receipt', async () => {
+test('draft preserves the typed price and leaves capture until committed', async () => {
   const out = await bozoCaptureEntry({}, {
     sport: 'cfb', eventId: '401752661', game: 'UNT @ IU', mkt: 'spread', side: 'IU',
     line: 39.5, label: 'IU -39.5', startsAt: '2026-09-05T16:00:00.000Z', typedPrice: -120,
   });
   assert.equal(out.ok, true);
-  assert.equal(out.p.price, -122);
-  assert.equal(out.p.priceOpp, -109);
-  assert.equal(out.p.priceSource, 'captured');
-  assert.equal(out.p.clvEligible, true);
-  assert.equal(out.p.providerEventIds.sgo, 'QzGmzxPGyovJ48j1BUHc');
-  assert.equal(out.p.canonicalKey, 'cfb|indianahoosiers~northtexasmeangreen|2026-09-05');
-  assert.equal(out.p.entrySnapshotAt, '2026-09-03T23:19:46.604Z');
-  assert.equal(out.agreement.needsConfirmation, false);
+  assert.equal(out.p.price, -120);
+  assert.equal(out.p.priceOpp, null);
+  assert.equal(out.p.priceSource, 'self');
+  assert.equal(out.p.verificationStatus, 'unverified');
+  assert.equal(out.p.clvEligible, false);
+  assert.ok(out.p.entrySnapshotAt == null);
 });
 
 test('missing odds accept unverified manual entries pending manager review', async () => {

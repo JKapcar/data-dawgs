@@ -49,7 +49,7 @@ test('429/network failures accept manual odds; blank price remains actionable an
  assert.equal(out.ok,true);assert.equal(out.p.price,-150);assert.equal(out.p.verificationStatus,'unverified');
  assert.equal(out.p.priceSource,'self');assert.equal(out.p.clvEligible,false);assert.equal(out.p.entryVerification,null);
  assert.equal(out.p.entryOppSource,null);assert.equal(buildPick(out.p).entryOppSource,null);
- assert.equal(out.p.priceOpp,null);assert.match(out.p.captureFailureReason,/429/);assert.equal(r.writes(),0);
+ assert.equal(out.p.priceOpp,null);assert.match(out.p.captureFailureReason,/after commitment/);assert.equal(r.writes(),0);
  const empty=await r.capture({typedPrice:undefined});assert.equal(empty.ok,false);assert.match(empty.error,/Enter the DraftKings odds/);
  const v=r.api.validatePick; const band={ceil:-100,floor:-500};
  assert.equal(v(out.p,'Pat',{},band,'standard','pat'),null);
@@ -138,7 +138,7 @@ test('supplied kickoff plus provider failure still resolves schedule identity; c
  assert.equal(out.ok,true);assert.equal(out.p.priceSource,'self');assert.equal(out.p.canonicalKey,liberty.canonicalKey);
  assert.equal(out.p.espnEventId,liberty.espnEventId);assert.equal(out.p.startsAt,liberty.startsAt);assert.equal(r.writes(),0);
  const conflict=await r.capture({...libPick,startsAt:'2026-10-09T03:00:01Z'});
- assert.equal(conflict.reason,'starts_at_conflict');assert.equal(r.requests(),1);
+ assert.equal(conflict.reason,'starts_at_conflict');assert.equal(r.requests(),0);
  assert.equal((await r.capture({...libPick,startsAt:'2026-10-09T02:00:00Z'})).p.startsAt,liberty.startsAt);
 });
 test('entry verification repairs identity in the same audited fields without moving timestamps',async()=>{
