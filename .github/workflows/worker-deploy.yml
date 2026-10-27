@@ -59,6 +59,7 @@ jobs:
       - run: node --check dawg-bot-worker.js
       - run: node --test tests/bozo-capture-policy.test.cjs tests/bozo-exchange-evidence.test.cjs tests/bozo-effective-clv.test.cjs
       - run: node --test tests/worker-config-guard.test.mjs
+      - run: node --test tests/jobs-deployment.test.mjs
       - run: node --test tests/dawg-pound.test.cjs
       - run: node --test tests/research-project.test.cjs research-lab/decision-controls.test.mjs research-lab/pound-portraits.test.mjs
       - run: node --test research-lab/robokap-core.test.mjs research-lab/robokap.test.mjs
@@ -157,6 +158,13 @@ jobs:
           echo "Version uploaded but NOT serving. Re-run with promote checked to move traffic." \
             >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Verify approved Job Hunter privacy settings after promotion
+        if: ${{ inputs.promote }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/job-privacy-gate.mjs > job-privacy-receipt.json
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -164,4 +172,5 @@ jobs:
           path: |
             previous-config.json
             config-verification.json
+            job-privacy-receipt.json
             work/artifacts/research-lab/build-manifest.json

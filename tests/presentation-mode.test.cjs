@@ -1,5 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process'),vm=require('node:vm');
-const root=path.resolve(__dirname,'..'),paths=[...fs.readdirSync(root).filter(p=>p.endsWith('.html')),...fs.readdirSync(path.join(root,'research-lab')).filter(p=>p.endsWith('.html')).map(p=>'research-lab/'+p)];
+// Job Hunter deliberately excludes shared page scripts and browser preference storage.
+const root=path.resolve(__dirname,'..'),paths=[...fs.readdirSync(root).filter(p=>p.endsWith('.html')&&p!=='jobs.html'),...fs.readdirSync(path.join(root,'research-lab')).filter(p=>p.endsWith('.html')).map(p=>'research-lab/'+p)];
 test('all 63 integrated pages load the View script deferred and restore layout-changing choices inline',()=>{
  assert.equal(paths.length,63);
  const js=fs.readFileSync(path.join(root,'presentation-mode.js'),'utf8'),maps={};

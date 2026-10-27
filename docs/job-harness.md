@@ -1,8 +1,8 @@
 # Job Harness: local review version
 
-## October 27 integration (not activated)
+## October 27 integration and approved release configuration
 
-Reuses PR #325 and its reviewed hardening patch. The production activation flag and logging settings remain unchanged. The public page contains no real job records. Current additional functionality:
+Reuses PR #325 and its reviewed hardening patch. The owner approved activation and privacy tightening on October 27. The release manifest adds only `JOB_HARNESS_ENABLED="true"`, sets `observability.redact_query_string=true` and `logs.invocation_logs=false`, retains logs, and explicitly retains disabled tracing. The existing owner UID, member access, credentials and all unrelated configuration remain unchanged. The configuration guard permits the one absent-to-true flag only from deployed version `f0b1a335-6182-4365-9b40-9c8ca6ce90be`; concurrent or unrelated changes fail closed. A post-promotion read-only gate checks actual settings without emitting bindings. Production success still requires a deployment and privacy readback receipt; the manifest alone is not evidence of launch. The public page contains no real job records. Current additional functionality:
 
 - Discovered (`opportunity`), screened, approved, prepared, submitted, interview, offer and closed stages; blocked and no-later-decision outcomes remain explicit.
 - `work.update` adds an append-only preparation entry with match, gaps, resume version, optional exact SHA-256, answer-source reference, next step and nullable ISO UTC deadline. Each new status captures a preparation snapshot. These references are owner-entered; the app does not certify source authenticity or compute an uploaded resume hash.
@@ -14,6 +14,8 @@ Reuses PR #325 and its reviewed hardening patch. The production activation flag 
 Narrow launch checklist: reconcile latest main; pass unit, browser, backup, assembly/cache, data and CI checks on final commit; review current direct database denials and platform telemetry privacy; receive required activation/logging approval; verify candidate configuration preserves unrelated settings; promote verified Worker before publishing page; verify signed-out/unauthorized denials and authenticated synthetic save/reload with CAS/idempotency; only then import an approved private packet and verify its private readback. No live deployment or real import is claimed by local checks.
 
 Remaining: production gates and private import; no inbox automation, no automatic employer submissions, no external-agent onboarding. Ambiguous employer/requisition matches require explicit reconciliation; canonical exact duplicates are rejected. Unknown resume hashes, receipt dates, and application answers remain unknown.
+
+The sections below retain the original PR #325 design and disabled-review history. The dated configuration and coordination additions above supersede their original release-state descriptions.
 
 Proposed route: `/jobs.html`, consistent with the site's standalone app pages. This is a new app, not a migration from a vault or a claim that an old tracker has been imported. No global navigation, account permissions, connector grants, schedules or credentials change in this patch. Existing daily Gmail checking remains independent and must report website integration as pending.
 

@@ -10,6 +10,9 @@ const hash = x => createHash('sha256').update(stable(x)).digest('hex');
 // One-time owner-approved restoration, bound to the exact regressed version.
 // Future configuration changes require a reviewed migration, never a broad bypass.
 const REPAIR_FROM = 'c531aa77-fae9-4f43-8bd6-dd052537dc50';
+// Owner approved Job Hunter activation on 2026-10-27. Exact deployed baseline,
+// one absent-to-true flag only; no member list, owner identity or credential change.
+const JOB_ACTIVATE_FROM = 'f0b1a335-6182-4365-9b40-9c8ca6ce90be';
 const repaired = Object.fromEntries(['ROBOKAP_ENABLED', 'DISCORD_MENTIONS_ENABLED', 'DISCORD_GROK_WAKE_ENABLED', 'DISCORD_GROK_INCLUDED_USAGE_CONFIRMED', 'DISCORD_PACK_ENABLED', 'DISCORD_RETRIEVAL_ENABLED', 'DISCORD_DFS_SHARE_ENABLED', 'DISCORD_PACK_DELIVERY_ENABLED'].map(name => [name, ['false', 'true']]));
 repaired.DISCORD_PACK_SEATS = ['{}', '{"grok":{"key_label":"pack-grok"}}'];
 const bindingHash = (name, text) => hash({ name, type: 'plain_text', text });
@@ -31,12 +34,13 @@ export function compare(before, after) {
   const changes = [];
   for (const name of names) {
     if (before.bindings[name] === after.bindings[name]) continue;
+    if(before.version_id===JOB_ACTIVATE_FROM&&name==='JOB_HARNESS_ENABLED'&&before.bindings[name]===undefined&&after.bindings[name]===bindingHash(name,'true')){changes.push(name);continue;}
     const pair = repaired[name];
     check(before.version_id === REPAIR_FROM && pair && before.bindings[name] === bindingHash(name, pair[0]) && after.bindings[name] === bindingHash(name, pair[1]));
     changes.push(name);
   }
   // The approved restoration must be atomic: never restore only some seats/flags.
-  if (changes.length) check(changes.length === Object.keys(repaired).length);
+  if (changes.length) check(before.version_id===JOB_ACTIVATE_FROM?changes.length===1&&changes[0]==='JOB_HARNESS_ENABLED':changes.length === Object.keys(repaired).length);
   return changes.sort();
 }
 
