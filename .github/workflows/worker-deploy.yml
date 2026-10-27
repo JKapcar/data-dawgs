@@ -102,6 +102,9 @@ jobs:
       # Package the research route around the verified assembled Worker. Shared
       # access stays disabled unless explicitly configured and granted separately.
       - run: node --test research-lab/owner-apps.test.mjs research-lab/agent-setup.test.mjs research-lab/agent-integration.test.mjs research-lab/repair-owner-envelope.test.mjs research-lab/lab.test.mjs research-lab/gateway.test.mjs
+      - run: npm install --prefix /tmp/dd-worker-qa miniflare@4.20260730.0 --no-audit --no-fund
+      - name: Verify packaged Worker runtime before upload
+        run: DD_NODE_MODULES=/tmp/dd-worker-qa/node_modules node --test research-lab/discord-smoke-worker.test.mjs research-lab/portraits-worker.test.mjs research-lab/owner-apps-worker.test.mjs research-lab/worker.test.mjs research-lab/upload-worker.test.mjs research-lab/archive-reconcile-worker.test.mjs
       - run: node research-lab/build-worker.mjs
 
       # Fails closed on a malformed manifest without uploading anything.
