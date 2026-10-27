@@ -59,9 +59,11 @@ jobs:
       - run: node --check dawg-bot-worker.js
       - run: node --test tests/bozo-capture-policy.test.cjs tests/bozo-exchange-evidence.test.cjs tests/bozo-effective-clv.test.cjs
       - run: node --test tests/worker-config-guard.test.mjs
+      - run: node --test tests/jobs-deployment.test.mjs
       - run: node --test tests/dawg-pound.test.cjs
       - run: node --test tests/research-project.test.cjs research-lab/decision-controls.test.mjs research-lab/pound-portraits.test.mjs
       - run: node --test research-lab/robokap-core.test.mjs research-lab/robokap.test.mjs
+      - run: node --test tests/jobs.test.cjs tests/jobs-history.test.cjs tests/jobs-members.test.cjs tests/jobs-privacy.test.cjs tests/jobs-coordination.test.cjs tests/jobs-worker-logging.test.cjs tests/jobs-import.test.cjs
       - run: node --test tests/bozo-correction.test.cjs
       - run: node --test tests/bozo-sgo-diagnostics.test.js tests/bozo-sgo-capture.test.js tests/bozo-odds-api.test.js tests/bozo-clv-repair.test.js
       - run: node work/test-espn-connections.mjs
@@ -100,6 +102,9 @@ jobs:
       # Package the research route around the verified assembled Worker. Shared
       # access stays disabled unless explicitly configured and granted separately.
       - run: node --test research-lab/owner-apps.test.mjs research-lab/agent-setup.test.mjs research-lab/agent-integration.test.mjs research-lab/repair-owner-envelope.test.mjs research-lab/lab.test.mjs research-lab/gateway.test.mjs
+      - run: npm install --prefix /tmp/dd-worker-qa miniflare@4.20260730.0 --no-audit --no-fund
+      - name: Verify packaged Worker runtime before upload
+        run: DD_NODE_MODULES=/tmp/dd-worker-qa/node_modules node --test research-lab/discord-smoke-worker.test.mjs research-lab/portraits-worker.test.mjs research-lab/owner-apps-worker.test.mjs research-lab/worker.test.mjs research-lab/upload-worker.test.mjs research-lab/archive-reconcile-worker.test.mjs
       - run: node research-lab/build-worker.mjs
 
       # Fails closed on a malformed manifest without uploading anything.
@@ -156,6 +161,13 @@ jobs:
           echo "Version uploaded but NOT serving. Re-run with promote checked to move traffic." \
             >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Verify approved Job Hunter privacy settings after promotion
+        if: ${{ inputs.promote }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node tools/job-privacy-gate.mjs > job-privacy-receipt.json
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -163,4 +175,5 @@ jobs:
           path: |
             previous-config.json
             config-verification.json
+            job-privacy-receipt.json
             work/artifacts/research-lab/build-manifest.json

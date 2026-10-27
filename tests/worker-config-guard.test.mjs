@@ -29,6 +29,17 @@ test('preflight catches committed defaults and preserves remote-only variables',
 });
 function options(results) { return { account: 'a'.repeat(32), token: 'synthetic_only_token', fetcher: async (url, o) => { assert.equal(o.method, 'GET'); assert.equal(o.redirect, 'error'); assert.match(url, /\/(deployments|versions\/[a-f0-9-]+)$/); return Response.json({ success: true, result: results.shift() }); } }; }
 const deployment = (id = oldId) => ({ deployments: [{ id: dep, versions: [{ version_id: id, percentage: 100 }] }] });
+
+test('Job Hunter approval permits only absent-to-true activation from the exact baseline',()=>{
+ const before=v(true);before.id='f0b1a335-6182-4365-9b40-9c8ca6ce90be';const after=structuredClone(before);after.id=newId;
+ after.resources.bindings.push({name:'JOB_HARNESS_ENABLED',type:'plain_text',text:'true'});
+ assert.deepEqual(compare(fingerprint(before),fingerprint(after)),['JOB_HARNESS_ENABLED']);
+ for(const mutate of [x=>x.resources.bindings.push({name:'JOB_HARNESS_MEMBER_UIDS',type:'plain_text',text:'u_other'}),x=>x.resources.bindings[0].text='false',x=>x.resources.bindings.at(-1).text='false']){
+ const bad=structuredClone(after);mutate(bad);assert.throws(()=>compare(fingerprint(before),fingerprint(bad)));
+ }
+ const stale=structuredClone(before);stale.id=newId;assert.throws(()=>compare(fingerprint(stale),fingerprint(after)));
+ assert.deepEqual(compare(fingerprint(after),fingerprint(after)),[]);
+});
 test('GET-only snapshot and candidate verification detect concurrent deployment', async () => {
   const before = await snapshot(options([deployment(), v(), deployment()]));
   assert.equal((await verify(options([deployment(), v(), deployment(), v(true), deployment()]), before, newId)).changed_bindings.length, 9);

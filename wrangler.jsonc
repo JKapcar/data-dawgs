@@ -11,13 +11,17 @@
   },
   "observability": {
     "enabled": true,
+    "redact_query_string": true,
     "logs": {
-      "enabled": true
-    }
+      "enabled": true,
+      "invocation_logs": false
+    },
+    "traces": {"enabled": false}
   },
   "durable_objects": {"bindings": [{"name": "DISCORD_GATEWAY", "class_name": "DiscordMentionGateway"}]},
   "migrations": [{"tag": "discord-mentions-v1", "new_sqlite_classes": ["DiscordMentionGateway"]}],
   "vars": {
+    "JOB_HARNESS_ENABLED": "true",
     "DISCORD_MENTIONS_ENABLED": "true",
     "BOZO_ADMIN": "Kap",
     "AGENT_FEEDBACK_ENABLED": "false",

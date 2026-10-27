@@ -174,10 +174,11 @@ async function readRoute(env) {
   net.sgo = "ok";
   ok("retired hourly capture does not call exhausted provider", !hourly.error);
   const trail = kv.store.get("forecast:live:lasterror") || "";
-  ok("forecast-live now leaves a lasterror trail in the same pattern",
-    /"at":/.test(trail) && trail.includes(SECRET), "(the trail is a private post-mortem; the route must not echo it)");
-  ok("autograde's trail also carries the leaked secret, for the route to prove it never echoes",
-    (kv.store.get("bozo:autograde:lasterror") || "").includes(SECRET));
+  ok("forecast-live preserves a dated failure without leaking the transport credential",
+    /"at":/.test(trail) && trail.includes('RTDB transport unavailable') && !trail.includes(SECRET));
+  const gradeTrail = kv.store.get("bozo:autograde:lasterror") || "";
+  ok("autograde preserves a sanitized failure without the transport credential",
+    gradeTrail.includes('RTDB transport unavailable') && !gradeTrail.includes(SECRET));
   const { res, text } = await readRoute(env);
   const body = JSON.parse(text);
   ok("GET /ops/health answers 200 JSON", res.status === 200 && /application\/json/.test(res.headers.get("Content-Type")));
