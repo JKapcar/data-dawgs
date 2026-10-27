@@ -6,13 +6,14 @@ window.DD_BOTCTX={label:'Job Harness',sys:'Private job records must never be rea
 const $=id=>document.getElementById(id),API='https://toto.jkapcar4.workers.dev/api/jobs/v1',C=JOBS_CORE;
 const stages={opportunity:'Discovered',screened:'Screened',approved:'Approved to apply',prepared:'Prepared',submitted:'Submitted',interview:'Interview',offer:'Offer',closed:'Closed'};
 const stageOne={opportunity:'Discovered',screened:'Screened',approved:'Approved to apply',prepared:'Prepared',submitted:'Submitted',interview:'Interview',offer:'Offer',closed:'Closed'};
-const outcomes={none:'No decision recorded',no_later_decision:'No later decision found',rejected:'Rejected',position_closed:'Position closed',blocked_not_submitted:'Blocked · not submitted',withdrawn:'Withdrawn',accepted:'Offer accepted'};
+const outcomes={none:'No decision recorded',no_later_decision:'No later decision found',rejected:'Rejected',position_closed:'Position closed',no_current_match:'No current match',blocked_not_submitted:'Blocked · not submitted',withdrawn:'Withdrawn',accepted:'Offer accepted'};
 const provenance={unknown:'Unknown / not stated',explicit:'Explicit in evidence',inferred:'Inferred hypothesis · not a fact'};
 const labels={employer_key:'Employer key',employer:'Employer',role:'Role',requisition:'Requisition',url:'Listing link',url_verified_at:'Listing checked'};
 // Fixed copy for every code the server can return. Unknown codes never reach the screen.
 const MESSAGES={claim_confirmation_required:'This work is claimed. Open the latest record and review its claim before editing.',claim_changed:'The claim changed. Reopen the latest record.',work_already_claimed:'Another worker already claimed this record.',invalid_resume_hash:'Use the exact 64-character lowercase SHA-256 hash or leave it blank.',invalid_deadline:'Use an ISO UTC deadline such as 2026-12-01T12:00:00.000Z, or leave it blank.',
  revision_conflict:'This workspace changed in another tab or device. The latest history is loaded. Review it, then save again: the retry reuses this request, so it cannot be recorded twice.',
  request_id_reused:'That request was already used for different details. Nothing new was saved. Cancel and start the change again.',
+ duplicate_source_identity:'This source is already tracked. Reconcile the existing record before importing again.',
  duplicate_requisition:'This employer and requisition are already tracked. Nothing new was saved.',
  duplicate_event:'That update is already in the history. Nothing new was saved.',
  older_evidence_requires_reconciliation:'This update is dated before the latest one. If an earlier update is wrong, use Correct on it instead.',
@@ -42,7 +43,7 @@ const DISCLAIMER={owner:'No inbox connected. No automatic applications. Friends 
 const BY_STATUS={400:'Check the required fields, dates and evidence.',401:'Sign in again.',403:'Private access denied.',404:'Not found. Reload the workspace.',409:'Record changed or duplicated. Reload before trying again.',413:'Workspace limit reached.',503:'Private setup pending. No data loaded.'};
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 const button=(text,fn,cls)=>{const b=node('button',text,cls);b.type='button';b.onclick=fn;return b;};
-let state=null,demo=false,epoch=0,token='',pending=null,mode=null,busy=false,controller=null,openId=null,confirmUrl='',opener=null;
+let state=null,demo=false,epoch=0,token='',pending=null,mode=null,busy=false,controller=null,openId=null,confirmUrl='',opener=null,importPlan=null;
 const session=()=>{try{return localStorage.getItem('dd-bozo-sess')||'';}catch{return '';}};
 const link=(url,label)=>{const a=node('a',label);try{const u=new URL(url);if(u.protocol!=='https:'||u.username||u.password)return node('span',label);a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';}catch{return node('span',label);}return a;};
 const host=url=>{try{return new URL(url).host;}catch{return 'link';}};
@@ -52,7 +53,7 @@ const when=iso=>{const t=node('time',iso?new Date(iso).toLocaleString(undefined,
 const zone=()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'local time';}catch{return 'local time';}};
 const row=id=>state?.records.find(r=>r.id===id)||null;
 const archivedOf=r=>!!C.history(r).archived;
-function clear(){epoch++;controller?.abort();controller=null;state=null;pending=null;mode=null;busy=false;token='';openId=null;confirmUrl='';$('summary').replaceChildren();$('due').replaceChildren();$('board').replaceChildren();$('detail').replaceChildren();$('detail').hidden=true;$('fields').replaceChildren();$('formTitle').textContent='Add opportunity';$('formHint').textContent='';$('error').textContent='';hideAction();$('editor').close();$('add').disabled=true;$('verified').textContent='Not available';$('health').textContent='Not connected';$('archivedCount').textContent='Archived';$('disclaimer').textContent=DISCLAIMER.owner;}
+function clear(){epoch++;importPlan=null;$('importFile').value='';$('importFile').disabled=true;$('importApply').disabled=true;$('importPreview').textContent='';$('contacts').replaceChildren();controller?.abort();controller=null;state=null;pending=null;mode=null;busy=false;token='';openId=null;confirmUrl='';$('summary').replaceChildren();$('due').replaceChildren();$('board').replaceChildren();$('detail').replaceChildren();$('detail').hidden=true;$('fields').replaceChildren();$('formTitle').textContent='Add opportunity';$('formHint').textContent='';$('error').textContent='';hideAction();$('editor').close();$('add').disabled=true;$('verified').textContent='Not available';$('health').textContent='Not connected';$('archivedCount').textContent='Archived';$('disclaimer').textContent=DISCLAIMER.owner;}
 function hideAction(){const b=$('errorAction');b.hidden=true;b.textContent='';b.onclick=null;}
 function showAction(text,fn){const b=$('errorAction');b.textContent=text;b.onclick=fn;b.hidden=false;}
 const UNCONFIRMED='Could not confirm whether that saved. Save again to retry: it reuses the same request, so it cannot be recorded twice.';
@@ -74,16 +75,17 @@ async function load(){demo=false;clear();token=session();if(!token){$('status').
 // Same session, fresh data: keeps an open editor and its pending request.
 async function refresh(){const out=await request();state=out.workspace;render();if(openId)detail(openId,false);}
 function render(){
- $('board').replaceChildren();$('add').disabled=!state||busy;if(!state)return;
+ $('board').replaceChildren();$('contacts').replaceChildren();$('add').disabled=!state||busy;$('importFile').disabled=!state||demo||busy;$('importApply').disabled=!state||demo||busy||!importPlan;if(!state)return;
  const verified=state.records.flatMap(r=>[r.url_verified_at,...C.history(r).timeline.map(e=>e.verified_at)]).filter(Boolean).sort().at(-1);
  $('verified').textContent=verified?new Date(verified).toLocaleString()+(demo?' · synthetic':' · record evidence'):'Not available';$('health').textContent=demo?'Synthetic fixtures only':'Not connected';
- const funnel=C.funnel(state.records);$('summary').textContent=funnel.verified_submissions+' evidence-backed submissions / '+funnel.tracked+' tracked; '+funnel.interviews+' verified interviews / '+funnel.verified_submissions+' submissions; '+funnel.no_later_decision+' with no later decision found.';
+ const funnel=C.funnel(state.records);$('summary').textContent=funnel.verified_submissions+' evidence-backed submissions / '+funnel.tracked+' tracked; '+funnel.interviews+' verified interviews / '+funnel.verified_submissions+' submissions; '+funnel.no_later_decision+' with no later decision found. '+funnel.historical_acknowledgments+' historical portal acknowledgments; '+funnel.contacts+' contacts kept outside the application funnel.';
  $('due').replaceChildren();const due=state.records.filter(r=>!archivedOf(r)).filter(r=>{const w=C.work(r).details;return C.current(r).blocker||(w.deadline&&Date.parse(w.deadline)<=Date.now());});
  if(due.length){$('due').append(node('h2','Needs attention'));for(const r of due){const action=card(r);action.classList.remove('job');action.classList.add('due-action');$('due').append(action);}}
+ const contacts=state.records.filter(r=>r.record_type==='contact'&&!archivedOf(r));if(contacts.length){$('contacts').append(node('h2','Contacts — not applications'));for(const r of contacts)$('contacts').append(card(r));}
  const archived=state.records.filter(archivedOf);$('archivedCount').textContent='Archived ('+archived.length+')';
  const filter=$('filter').value,lanes=filter==='archived'?[['archived','Archived']]:Object.entries(stages).filter(([key])=>filter==='all'||filter===key);
  for(const [key,label] of lanes){
-  const lane=node('section','','lane'),rows=key==='archived'?archived:state.records.filter(r=>!archivedOf(r)&&C.current(r).stage===key),heading=node('h2',label),count=node('span',String(rows.length),'count');
+  const lane=node('section','','lane'),rows=key==='archived'?archived:state.records.filter(r=>r.record_type!=='contact'&&!archivedOf(r)&&C.current(r).stage===key),heading=node('h2',label),count=node('span',String(rows.length),'count');
   heading.append(count);lane.append(heading);if(!rows.length)lane.append(node('p',key==='archived'?'Nothing archived':'No records','empty'));
   for(const r of rows)lane.append(card(r));
   $('board').append(lane);
@@ -91,7 +93,7 @@ function render(){
 }
 function card(r){
  const c=C.current(r),b=button('',()=>detail(r.id,true),'job');
- for(const [tag,text,cls] of [['span',r.employer,'employer'],['strong',r.role,''],['span',outcomes[c.outcome]||'Status unavailable','badge'],['span',r.requisition,'meta'],['span',C.work(r).details.next_action||c.next_action||'Next action not set','meta']])b.append(node(tag,text,cls));
+ for(const [tag,text,cls] of [['span',r.employer,'employer'],['strong',r.record_type==='contact'?'Recruiter contact':r.role||'Role not recorded',''],['span',outcomes[c.outcome]||'Status unavailable','badge'],['span',r.requisition||'Requisition unknown','meta'],['span',C.work(r).details.next_action||c.next_action||'Next action not set','meta']])b.append(node(tag,text,cls));
  const w=C.work(r);if(w.claim)b.append(node('span','Claimed: '+w.claim.label+' (self-reported)','meta'));if(w.details.deadline)b.append(times([['Due',w.details.deadline]]));
  if(archivedOf(r))b.append(node('span','Archived · '+stageOne[c.stage],'tag'));
  return b;
@@ -104,8 +106,8 @@ function entry(r,e,i,h,archived){
   top.append(node('strong',(stageOne[e.stage]||'Unknown stage')+' · '+(outcomes[e.outcome]||'Unknown outcome')));
   const s=h.superseded.get(i);if(s){li.classList.add('superseded');top.append(node('span',(s.action==='void'?'Removed by #':'Corrected by #')+(s.by+1),'tag'));}
   li.append(times([['Happened',e.occurred_at],['Verified',e.verified_at],['Recorded',e.recorded_at]]),node('p','Reason ('+(provenance[e.reason_kind]||'Unknown')+'): '+(e.reason||'Not stated')));
-  working(li,e);if(e.evidence_url)li.append(link(e.evidence_url,'Open evidence · '+host(e.evidence_url)));
-  if(!archived)li.append(button('Correct #'+(i+1),()=>editor({op:'event.correct',id:r.id,target:i}),'small'));
+  working(li,e);if(e.evidence)li.append(node('p',(e.evidence.kind==='historical_portal_acknowledgment'?'Historical portal acknowledgment — not a current portal check. ':'Historical audited status. ')+e.evidence.description),node('p','Private source: '+e.evidence.source_ref+'; timestamp precision: '+e.evidence.precision));if(e.evidence_url)li.append(link(e.evidence_url,'Open evidence · '+host(e.evidence_url)));
+  if(!archived&&!e.evidence)li.append(button('Correct #'+(i+1),()=>editor({op:'event.correct',id:r.id,target:i}),'small'));
  }else if(kind==='correction'){
   top.append(node('strong',(e.action==='void'?'Removed #':'Corrected #')+(Number(e.target)+1)));
   if(e.action==='replace'&&e.replacement){const n=e.replacement;li.append(node('p','Now: '+(stageOne[n.stage]||'Unknown stage')+' · '+(outcomes[n.outcome]||'Unknown outcome')),times([['Happened',n.occurred_at],['Verified',n.verified_at]]));working(li,n);if(n.evidence_url)li.append(link(n.evidence_url,'Open evidence · '+host(n.evidence_url)));}
@@ -128,13 +130,14 @@ function detail(id,scroll){
  const now=node('p','','current');now.append(node('strong',stageOne[c.stage]+' · '+outcomes[c.outcome]));
  if(c.at===null)now.append(' — no updates yet. Nothing is recorded as submitted.');else{now.append(' — happened ');now.append(when(c.occurred_at));}
  const dl=node('dl');
- for(const [key,value] of [['Requisition',r.requisition],['Canonical employer',r.employer_key],['Verified listing',r.url],['URL checked',r.url_verified_at],['Resume version',c.resume_version||'Not recorded'],['Next action',c.next_action||'Not recorded'],['Blocker',c.blocker||'None recorded'],['Created',r.created_at]]){const dd=node('dd');dd.append(key==='Verified listing'?link(value,value):key==='URL checked'||key==='Created'?when(value):node('span',value));dl.append(node('dt',key),dd);}
+ for(const [key,value] of [['Requisition',r.requisition||'Unknown'],['Canonical employer',r.employer_key],['Posting URL',r.url],['Posting checked',r.url_verified_at],['Resume version',c.resume_version||'Not recorded'],['Next action',c.next_action||'Not recorded'],['Blocker',c.blocker||'None recorded'],['Created',r.created_at]]){const dd=node('dd');dd.append(key==='Posting URL'?(value?link(value,value):node('span','Unknown — no posting URL recovered')):key==='Posting checked'||key==='Created'?when(value):node('span',value));dl.append(node('dt',key),dd);}
  const w=C.work(r);for(const [k,v] of Object.entries(w.details)){if(v)dl.append(node('dt',k.replaceAll('_',' ')),node('dd',v));}
  if(w.claim)dl.append(node('dt','Work claim'),node('dd',w.claim.label+' (self-reported label; authenticated owner account)'));
  const actions=node('div','','toolbar');
  if(!archived){actions.append(button('Work details',()=>editor({op:'work.update',id})));actions.append(button(w.claim?'Release claim':'Claim work',()=>editor({op:w.claim?'work.release':'work.claim',id})));}
+ if(r.provenance){const audit=node('details'),pre=node('pre',JSON.stringify(r.provenance,null,2));audit.append(node('summary','Private source audit'),pre);box.append(audit);}
  if(archived)actions.append(button('Restore record',()=>editor({op:'record.restore',id})));
- else actions.append(button('Record verified update',()=>editor({op:'event.append',id})),button('Fix listing details',()=>editor({op:'record.correct',id})),button('Archive',()=>editor({op:'record.archive',id})));
+ else if(r.record_type!=='contact')actions.append(button('Record verified update',()=>editor({op:'event.append',id})),button('Fix listing details',()=>editor({op:'record.correct',id})),button('Archive',()=>editor({op:'record.archive',id})));
  const list=node('ol','','log');r.events.forEach((e,i)=>list.append(entry(r,e,i,h,archived)));if(!r.events.length)list.append(node('li','Opportunity recorded. No submission evidence.'));
  const audit=node('details');audit.append(node('summary','Evidence & history'),list);box.append(now,dl,actions,audit);
  if(scroll)box.scrollIntoView({behavior:'instant',block:'start'});
@@ -144,7 +147,7 @@ function field(name,label,value='',options,hint){
  const l=node('label',label),input=document.createElement(options?'select':'input');input.name=name;
  if(options)for(const [v,t] of Object.entries(options)){const o=node('option',t);o.value=v;input.append(o);}
  else{input.type=name.endsWith('_at')?'datetime-local':name.endsWith('url')?'url':'text';input.maxLength=LIMITS[name]||500;}
- if(input.type==='datetime-local'){input.step='any';input.defaultValue=localInput(value);if(value)input.dataset.iso=value;}else input.value=value;
+ if(input.type==='datetime-local'){input.step='any';input.defaultValue=value===null?'':localInput(value);if(value)input.dataset.iso=value;}else input.value=value;
  l.append(input);if(hint)l.append(node('small',hint));$('fields').append(l);return input;
 }
 const slug=text=>String(text).normalize('NFKD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80);
@@ -154,9 +157,9 @@ function listingFields(r){
  let touched=!!r;key.oninput=()=>{touched=true;};
  employer.oninput=()=>{if(touched)return;const name=employer.value.trim().toLowerCase(),same=state?.records.find(x=>x.employer.trim().toLowerCase()===name);key.value=same?same.employer_key:slug(employer.value);};
  field('role','Role',r?.role||'');
- field('requisition','Requisition or job ID',r?.requisition||'',null,'Copy it exactly. No ID? Use something unique to this posting, such as title and city.');
- field('url','Listing link (https)',r?.url||'');
- field('url_verified_at','Listing checked',r?.url_verified_at||'');
+ field('requisition','Requisition or job ID',r?.requisition||'',null,'Copy it exactly. Leave blank when unknown. An internal identity is kept separately; never invent a requisition.');
+ field('url','Posting link (https; blank if unknown)',r?.url||'');
+ field('url_verified_at','Posting checked (blank if unverified)',r?r.url_verified_at:null);
  if(!r)for(const [n,l] of [['resume_version','Resume version'],['next_action','Next action'],['blocker','Blocker']])field(n,l);
 }
 function statusFields(base,{noSubmission=false,minStage=null}={}){
@@ -207,19 +210,19 @@ function editor(m){
 }
 function collect(){
  const f=$('form').elements,v=n=>{const el=f.namedItem(n);return el&&!el.disabled?String(el.value).trim():'';};
- const iso=n=>{const el=f.namedItem(n);if(!el)return '';if(el.dataset.iso&&el.value===el.defaultValue)return el.dataset.iso;const d=new Date(el.value);return el.value&&Number.isFinite(d.getTime())?d.toISOString():'';};
+ const iso=n=>{const el=f.namedItem(n);if(!el)return '';if(el.dataset.iso&&el.value===el.defaultValue)return el.dataset.iso;if(!el.value)return null;const d=new Date(el.value);return Number.isFinite(d.getTime())?d.toISOString():'';};
  const status=()=>({stage:v('stage'),outcome:v('outcome'),occurred_at:iso('occurred_at'),verified_at:iso('verified_at'),evidence_url:v('evidence_url')||null,reason_kind:v('reason_kind'),reason:v('reason'),next_action:v('next_action'),blocker:v('blocker'),resume_version:v('resume_version')});
  const m=mode;
  if(m.op==='work.claim')return {id:m.id,actor_label:v('actor_label')};
  if(m.op==='work.update')return {id:m.id,details:Object.fromEntries(['match','gaps','resume_version','resume_sha256','answers_provenance','next_action','deadline'].map(k=>[k,k==='deadline'?(v(k)||null):v(k)]))};
- if(m.op==='record.create')return {employer_key:v('employer_key'),employer:v('employer'),role:v('role'),requisition:v('requisition'),url:v('url'),url_verified_at:iso('url_verified_at'),resume_version:v('resume_version'),next_action:v('next_action'),blocker:v('blocker')};
+ if(m.op==='record.create')return {employer_key:v('employer_key'),employer:v('employer'),role:v('role')||null,requisition:v('requisition')||null,url:v('url')||null,url_verified_at:iso('url_verified_at'),source_id:(m.sourceId||=( 'local:'+crypto.randomUUID())),resume_version:v('resume_version'),next_action:v('next_action'),blocker:v('blocker')};
  if(m.op==='event.append')return {id:m.id,...status()};
  if(m.op==='event.correct'){const choice=f.namedItem('action')?.value,original=row(m.id)?.events[m.target];
   if(choice==='restore'&&original)return {id:m.id,target:m.target,action:'replace',replacement:C.pick(original,C.STATUS_FIELDS),note:v('note')};
   const action=choice==='void'?'void':'replace';return {id:m.id,target:m.target,action,replacement:action==='void'?null:status(),note:v('note')};}
  // Diff against what the form opened with, never the latest record: after a 409 refresh an
  // untouched field must not travel back and undo another tab's edit.
- if(m.op==='record.correct'){const changes={};for(const k of C.LISTING_FIELDS){const value=k==='url_verified_at'?iso(k):v(k);if(value!==m.base[k])changes[k]=value;}return {id:m.id,changes,note:v('note')};}
+ if(m.op==='record.correct'){const changes={};for(const k of C.LISTING_FIELDS){const value=k==='url_verified_at'?iso(k):['role','requisition','url'].includes(k)?v(k)||null:v(k);if(value!==m.base[k])changes[k]=value;}return {id:m.id,changes,note:v('note')};}
  return {id:m.id,note:v('note')};
 }
 // After a 409 refresh: fields the user has not touched take the refreshed values, so the form
@@ -231,7 +234,7 @@ function rebaseListing(){
   if(at){el.defaultValue=localInput(r[k]);el.value=el.defaultValue;el.dataset.iso=r[k];}else el.value=r[k];mode.base[k]=r[k];}
 }
 function check(data){
- const stamps=[data.url_verified_at,data.occurred_at,data.verified_at,data.replacement?.occurred_at,data.replacement?.verified_at,data.changes?.url_verified_at].filter(x=>x!==undefined);
+ const stamps=[data.url_verified_at,data.occurred_at,data.verified_at,data.replacement?.occurred_at,data.replacement?.verified_at,data.changes?.url_verified_at].filter(x=>x!==undefined&&x!==null);
  if(stamps.some(x=>!x))return 'Enter a valid date and time.';if(stamps.some(x=>Date.parse(x)>Date.now()))return 'Times cannot be in the future.';
  const s=data.replacement||data;if(s.reason_kind==='unknown'&&s.reason)return MESSAGES.unknown_reason_must_be_empty;
  if(mode.op==='record.correct'&&!Object.keys(data.changes).length)return MESSAGES.correction_changes_nothing;
@@ -254,9 +257,39 @@ function synthetic(){clear();demo=true;const at='2026-01-10T12:00:00.000Z',later
    if(e.status===401||e.status===403){clear();$('status').textContent=e.message;return;}
    if(e.code==='revision_conflict'){try{await refresh();rebaseListing();if(pending)pending.body.expected_revision=state.revision;}catch(x){if(x.superseded)return;$('error').textContent=x.message;return;}}
    $('error').textContent=e.message;
-   const dup=e.code==='duplicate_requisition'&&e.detail?.duplicate_of;
+   const dup=['duplicate_requisition','duplicate_source_identity'].includes(e.code)&&e.detail?.duplicate_of;
    if(dup)showAction(e.detail.archived?'Open the archived record':'Open the existing record',()=>{$('editor').close();mode=null;pending=null;if(e.detail.archived)$('filter').value='archived';render();detail(dup,true);});}
   finally{busy=false;$('save').disabled=false;$('cancel').disabled=false;$('add').disabled=!state;}};
+ const digest=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),b=>b.toString(16).padStart(2,'0')).join('');
+ $('importFile').onchange=async()=>{
+  importPlan=null;$('importApply').disabled=true;const generation=epoch,file=$('importFile').files[0];
+  if(!file||!state||demo||busy)return;
+  try{if(file.size>300000)throw Error('Private packet exceeds the import limit.');
+   const bytes=await file.arrayBuffer(),sha=await digest(bytes);
+   if(generation!==epoch||!state||document.hidden)return;
+   importPlan=JOBS_IMPORT.plan(JSON.parse(new TextDecoder().decode(bytes)),sha);
+   const c=importPlan.counts;$('importPreview').textContent=c.jobs+' jobs, '+c.contacts+' contacts, '+c.submissions+' submissions; '+c.linked_targets+' linked targets deduplicated. SHA-256: '+sha;
+   $('importApply').disabled=false;
+  }catch{$('importPreview').textContent='Packet needs reconciliation. Nothing imported.';}
+ };
+ $('importApply').onclick=async()=>{
+  if(!importPlan||!state||demo||busy)return;const plan=importPlan,generation=epoch;busy=true;render();
+  try{
+   for(const item of plan.records){
+    const write=async(op,data,step)=>{
+     const request_id=await digest(new TextEncoder().encode(plan.sha+'|'+item.source_id+'|'+step));
+     if(generation!==epoch)throw Object.assign(Error('Import stopped.'),{superseded:true});
+     const out=await request({op,data,request_id,expected_revision:state.revision});state=out.workspace;return out;
+    };
+    const created=await write('record.create',item.create,'create'),id=created.receipt.id;
+    const verify=()=>{if(!JOBS_IMPORT.compatible(row(id),item))throw Error('Existing edits or claims need reconciliation. Import stopped without overwriting them.');};
+    verify();await write('work.update',{id,details:item.details},'details');verify();
+    for(let i=0;i<item.events.length;i++){await write('event.append',{id,...item.events[i]},'event:'+i);verify();}
+   }
+   render();$('status').textContent='Private import saved at revision '+state.revision+'. Reload to verify persisted records. No applications were sent.';
+  }catch(e){if(e.superseded)return;$('status').textContent=e.message+' Import stopped. Reload and reselect the same packet to resume using the same request IDs.';}
+  finally{if(generation===epoch){busy=false;render();}}
+ };
  $('refresh').onclick=load;$('demo').onclick=synthetic;$('add').onclick=()=>editor({op:'record.create'});$('cancel').onclick=()=>$('editor').close();$('filter').onchange=render;
  // Keyboard users land back on the control that opened the dialog, if it still exists.
  $('editor').addEventListener('cancel',e=>{if(busy)e.preventDefault();});

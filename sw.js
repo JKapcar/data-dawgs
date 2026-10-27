@@ -4,7 +4,7 @@
 // this set so changes to the modular research UI also invalidate the cache key.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "7cbb641695";
+const VERSION = "203e75da8a";
 // A cache revision also invalidates old images when only precached artwork changes.
 const CACHE = "dd-" + VERSION + "-public-v3";
 
@@ -89,7 +89,7 @@ function canStore(response, allowOpaque = false){
 function publicRequest(req){
   const url = new URL(req.url);
   // The private job app is network-only: page, script, shared core, style and API.
-  if(["/jobs.html", "/jobs.js", "/jobs-core.js", "/jobs.css"].includes(url.pathname) || url.pathname.startsWith("/api/jobs")) return false;
+  if(["/jobs.html", "/jobs.js", "/jobs-core.js", "/jobs-import.js", "/jobs.css"].includes(url.pathname) || url.pathname.startsWith("/api/jobs")) return false;
   if(url.pathname.startsWith("/research-lab/agent-setup") || url.pathname.startsWith("/agent-setup/") || ["/dawg-pound.html", "/dawg-pound.js"].includes(url.pathname) || url.pathname.startsWith("/api/pound") || url.pathname.startsWith("/mcp/pound")) return false;
   if(req.headers.has("x-dawg-session") || req.headers.has("x-bozo-session")) return false;
   if(url.pathname === "/vault.html" || url.pathname === "/vault-setup.js") return false;

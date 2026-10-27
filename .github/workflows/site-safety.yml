@@ -214,7 +214,8 @@ jobs:
       - run: node --test tests/presentation-mode.test.cjs
       - run: PLAYWRIGHT_MODULE=/tmp/dd-feedback-pw/node_modules/playwright node tests/presentation-view.browser.cjs
       # Job Harness: API suites plus the four browser suites (real page against the real handler).
-      - run: node --test tests/jobs.test.cjs tests/jobs-history.test.cjs tests/jobs-members.test.cjs tests/jobs-privacy.test.cjs tests/jobs-coordination.test.cjs tests/jobs-worker-logging.test.cjs
+      - run: node --test tests/jobs.test.cjs tests/jobs-history.test.cjs tests/jobs-members.test.cjs tests/jobs-privacy.test.cjs tests/jobs-coordination.test.cjs tests/jobs-worker-logging.test.cjs tests/jobs-import.test.cjs
+      - run: NODE_PATH=/tmp/dd-feedback-pw/node_modules node tests/jobs-import-browser.cjs
       - run: NODE_PATH=/tmp/dd-feedback-pw/node_modules node tests/jobs-browser.cjs
       - run: NODE_PATH=/tmp/dd-feedback-pw/node_modules node tests/jobs-privacy-browser.cjs
       - run: NODE_PATH=/tmp/dd-feedback-pw/node_modules node tests/jobs-history-browser.cjs

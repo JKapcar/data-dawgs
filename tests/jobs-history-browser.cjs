@@ -41,7 +41,7 @@ const listing=(employer,key,req,role='Analyst')=>({employer_key:key,employer,rol
   // 1. a verified update: stage menu starts at the current stage, evidence becomes required
   await $('.job').click();await page.getByRole('button',{name:'Record verified update'}).click();
   assert.deepEqual(await options('stage'),['approved','prepared','submitted','interview','offer','closed'],'append cannot pick an earlier stage');
-  await field('stage').selectOption('closed');assert.deepEqual(await options('outcome'),['','rejected','position_closed','withdrawn','accepted']);assert.equal(await field('outcome').inputValue(),'','closed never defaults to an outcome');
+  await field('stage').selectOption('closed');assert.deepEqual(await options('outcome'),['','rejected','position_closed','no_current_match','withdrawn','accepted']);assert.equal(await field('outcome').inputValue(),'','closed never defaults to an outcome');
   await field('stage').selectOption('submitted');assert.deepEqual(await options('outcome'),['none','no_later_decision']);assert.equal(await field('outcome').inputValue(),'none');
   assert.match(await page.locator('label:has([name="evidence_url"])').textContent(),/required/);
   await field('evidence_url').fill('https://example.com/receipt/px-1');

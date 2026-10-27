@@ -1,0 +1,17 @@
+const {chromium}=require('playwright'),fs=require('node:fs'),assert=require('node:assert/strict');
+const origin='https://job-import.test',api='https://toto.jkapcar4.workers.dev/api/jobs/v1';
+const packet={schema_version:'job-hunter-migration-evidence-v1',applications:[],approved_batch_targets:[],intake_targets:[],recruiter_contacts:[{id:'synthetic-contact',company:'Synthetic Contact',next_action:'Review synthetic source',fit_limits:'Unknown'}]};
+(async()=>{const browser=await chromium.launch({headless:true});try{
+ const context=await browser.newContext(),page=await context.newPage(),workspace={revision:0,records:[]},receipts=new Map(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await context.route('**/*',async route=>{const req=route.request(),url=req.url();if(url===api){const b=req.postDataJSON();let receipt,replayed=false;
+  if(b){if(receipts.has(b.request_id)){receipt=receipts.get(b.request_id);replayed=true;}else{assert.equal(b.expected_revision,workspace.revision);if(b.op==='record.create')workspace.records.push({...b.data,id:'synthetic',created_at:'2026-01-01T00:00:00.000Z',events:[]});else if(b.op==='work.update')workspace.records[0].events.push({kind:'work_details',details:b.data.details});else throw Error('Unexpected operation');workspace.revision++;receipt={id:'synthetic',revision:workspace.revision};receipts.set(b.request_id,receipt);}}
+  return route.fulfill({json:{workspace,receipt,replayed}});
+ }if(url.startsWith(origin+'/')){const name=new URL(url).pathname.slice(1);if(['jobs.html','jobs.js','jobs-core.js','jobs-import.js','jobs.css'].includes(name))return route.fulfill({body:fs.readFileSync(name),contentType:name.endsWith('.html')?'text/html':name.endsWith('.css')?'text/css':'text/javascript'});}return route.abort();});
+ await page.goto(origin+'/jobs.html');await page.evaluate(()=>localStorage.setItem('dd-bozo-sess','SYNTHETIC_SESSION'));await page.locator('#refresh').click();await page.waitForFunction(()=>!document.querySelector('#importFile').disabled);
+ await page.getByText('Import a private audit',{exact:true}).click();await page.locator('#importFile').setInputFiles({name:'synthetic.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(packet))});await page.waitForFunction(()=>!document.querySelector('#importApply').disabled);
+ await page.locator('#importApply').click();await page.waitForFunction(()=>document.querySelector('#status').textContent.startsWith('Private import saved'));assert.equal(workspace.revision,2);assert.equal(workspace.records.length,1);
+ await page.locator('#importApply').click();await page.waitForFunction(()=>!document.querySelector('#importApply').disabled);assert.equal(workspace.revision,2);
+ workspace.records[0].events.push({kind:'claim',claim_id:'synthetic-claim',actor_uid:'owner'});await page.locator('#importApply').click();await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('reconciliation'));assert.equal(workspace.revision,2);
+ await page.locator('#lock').click();assert.equal(await page.locator('#importFile').inputValue(),'');assert.equal(await page.locator('#importPreview').textContent(),'');assert.deepEqual(errors,[]);
+ console.log('PASS: synthetic private file preview, persisted import, idempotent resume, changed/claimed history stop, and lock clears import data.');
+}finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1});

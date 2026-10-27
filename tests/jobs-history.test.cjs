@@ -185,7 +185,7 @@ test('history core is deterministic and agrees with the stored log',()=>{
  assert.equal(core.conflict([{stage:'submitted',outcome:'none',at:0},{stage:'approved',outcome:'blocked_not_submitted',at:1}]).kind,'stage_regression');
  assert.equal(core.conflict([{stage:'submitted',outcome:'none',at:0},{stage:'submitted',outcome:'none',at:1}]),null);
  for(const [stage,outcomes] of Object.entries(core.OUTCOMES_BY_STAGE))for(const o of core.OUTCOMES)assert.equal(outcomes.includes(o),valid(stage,o),stage+'/'+o);
- function valid(stage,outcome){if(['rejected','position_closed','withdrawn','accepted'].includes(outcome))return stage==='closed';if(stage==='closed')return false;if(outcome==='blocked_not_submitted')return ['opportunity','screened','approved','prepared'].includes(stage);if(outcome==='no_later_decision')return ['submitted','interview'].includes(stage);return true;}
+ function valid(stage,outcome){if(['rejected','position_closed','no_current_match','withdrawn','accepted'].includes(outcome))return stage==='closed';if(stage==='closed')return false;if(outcome==='blocked_not_submitted')return ['opportunity','screened','approved','prepared'].includes(stage);if(outcome==='no_later_decision')return ['submitted','interview'].includes(stage);return true;}
 });
 // Review findings, 2026-10-20: each case below was reproduced against the previous rule.
 test('a downgraded or voided submission cannot be re-upgraded by correction; exact restore can',async()=>{

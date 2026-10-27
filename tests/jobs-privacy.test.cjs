@@ -13,14 +13,14 @@ test('job handler errors never echo private payloads, credentials or unexpected 
 });
 test('SW bypasses private job requests before cache access and refuses all private/JSON responses',()=>{
  const handlers={};let cacheCalls=0;const context={URL,Request,Response,Headers,console, self:{location:{origin:'https://site.test'},addEventListener:(n,fn)=>handlers[n]=fn},caches:{open:()=>{cacheCalls++;throw Error('private cache access');}}};vm.createContext(context);vm.runInContext(fs.readFileSync('sw.js','utf8')+'\nthis.api={publicRequest,canStore};',context);
- for(const path of ['/jobs.html','/jobs.js','/jobs-core.js','/jobs.css','/api/jobs/v1','/api/jobs/v1?synthetic=private']){const request=new Request('https://site.test'+path);assert.equal(context.api.publicRequest(request),false);handlers.fetch({request,respondWith:()=>assert.fail('private fetch intercepted')});}
+ for(const path of ['/jobs.html','/jobs.js','/jobs-core.js','/jobs-import.js','/jobs.css','/api/jobs/v1','/api/jobs/v1?synthetic=private']){const request=new Request('https://site.test'+path);assert.equal(context.api.publicRequest(request),false);handlers.fetch({request,respondWith:()=>assert.fail('private fetch intercepted')});}
  assert.equal(context.api.publicRequest(new Request('https://site.test/public.html',{headers:{Authorization:'Bearer synthetic'}})),false);
  for(const headers of [{'Cache-Control':'private, no-store'},{'Content-Type':'application/json'},{Vary:'Authorization'}])assert.equal(context.api.canStore(new Response('{}',{headers})),false);
  assert.equal(cacheCalls,0);
 });
 test('public job shell has no analytics, form navigation, embedded records or third-party scripts',()=>{
  const html=fs.readFileSync('jobs.html','utf8'),ui=fs.readFileSync('jobs.js','utf8')+'\n'+fs.readFileSync('jobs-core.js','utf8');
- assert.deepEqual([...html.matchAll(/<script[^>]*src="([^"]+)"/g)].map(x=>x[1]),['jobs-core.js','jobs.js']);
+ assert.deepEqual([...html.matchAll(/<script[^>]*src="([^"]+)"/g)].map(x=>x[1]),['jobs-core.js','jobs-import.js','jobs.js']);
  assert.match(html,/form-action 'none'/);assert.match(html,/autocomplete="off"/);assert.match(html,/name="referrer" content="no-referrer"/);
  for(const pattern of [/console\./,/sendBeacon/,/localStorage\.setItem/,/sessionStorage/,/indexedDB/,/innerHTML/,/document\.cookie/])assert.ok(!pattern.test(ui),String(pattern));
  const urls=[...ui.matchAll(/https:\/\/[^'"`\s]+/g)].map(x=>x[0]);assert.ok(urls.every(u=>u.startsWith('https://example.com/')||u==='https://toto.jkapcar4.workers.dev/api/jobs/v1'));

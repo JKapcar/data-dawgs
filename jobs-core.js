@@ -15,10 +15,10 @@
 const JOBS_CORE = (() => {
   'use strict';
   const STAGES = ['opportunity', 'screened', 'approved', 'prepared', 'submitted', 'interview', 'offer', 'closed'];
-  const OUTCOMES = ['none', 'no_later_decision', 'rejected', 'position_closed', 'blocked_not_submitted', 'withdrawn', 'accepted'];
+  const OUTCOMES = ['none', 'no_later_decision', 'rejected', 'position_closed', 'no_current_match', 'blocked_not_submitted', 'withdrawn', 'accepted'];
   // Stages that assert an application actually reached the employer.
   const SUBMISSION_STAGES = ['submitted', 'interview', 'offer'];
-  const CLOSED_OUTCOMES = ['rejected', 'position_closed', 'withdrawn', 'accepted'];
+  const CLOSED_OUTCOMES = ['rejected', 'position_closed', 'no_current_match', 'withdrawn', 'accepted'];
   // Exactly the server's status rules, as a table the page can build its menus from.
   const OUTCOMES_BY_STAGE = Object.freeze({
     opportunity: ['none', 'blocked_not_submitted'],
@@ -43,7 +43,7 @@ const JOBS_CORE = (() => {
     return String(text).normalize('NFKC').replace(/\p{Cf}/gu, '').trim().replace(/\s+/g, ' ').toLowerCase();
   }
   function identityOf(listing) {
-    return listing.employer_key + '|' + normalizeRequisition(listing.requisition);
+    return listing.requisition === null ? listing.employer_key + '|source:' + (listing.source_id || listing.id) : listing.employer_key + '|' + normalizeRequisition(listing.requisition);
   }
   // Advisory only (shared career pages host many roles): same host, path and query.
   function listingKey(url) {
@@ -53,7 +53,9 @@ const JOBS_CORE = (() => {
     } catch { return null; }
   }
   const sameFact = (a, b) => a.stage === b.stage && a.outcome === b.outcome &&
-    a.occurred_at === b.occurred_at && (a.evidence_url || null) === (b.evidence_url || null);
+    a.occurred_at === b.occurred_at && (a.evidence_url || null) === (b.evidence_url || null) && JSON.stringify(a.evidence||null)===JSON.stringify(b.evidence||null);
+  const statusOf = source => ({...pick(source,STATUS_FIELDS),...(source.evidence?{evidence:source.evidence}:{})});
+  const hasEvidence = e => !!(e.evidence_url || (e.evidence?.kind==='historical_portal_acknowledgment' && e.evidence.source_ref && e.evidence.source_id));
 
   function history(record) {
     const events = Array.isArray(record && record.events) ? record.events : [];
@@ -69,13 +71,14 @@ const JOBS_CORE = (() => {
     events.forEach((entry, at) => {
       if (kindOf(entry) !== 'status') return;
       const by = latestCorrection.get(at);
-      if (by === undefined) { timeline.push({...pick(entry, STATUS_FIELDS), at, corrected_by: null}); return; }
+      if (by === undefined) { timeline.push({...statusOf(entry), at, corrected_by: null}); return; }
       const correction = events[by];
       superseded.set(at, {by, action: correction.action});
       if (correction.action === 'void') return;
-      timeline.push({...pick(correction.replacement || {}, STATUS_FIELDS), at, corrected_by: by});
+      timeline.push({...statusOf(correction.replacement || {}), at, corrected_by: by});
     });
-    timeline.sort((a, b) => (a.occurred_at < b.occurred_at ? -1 : a.occurred_at > b.occurred_at ? 1 : a.at - b.at));
+    // Unknown dates cannot establish chronology. Preserve append order in that case.
+    if(timeline.every(e=>e.occurred_at!==null))timeline.sort((a, b) => (a.occurred_at < b.occurred_at ? -1 : a.occurred_at > b.occurred_at ? 1 : a.at - b.at));
     return {timeline, current: timeline.length ? timeline[timeline.length - 1] : null, archived, superseded};
   }
 
@@ -83,6 +86,8 @@ const JOBS_CORE = (() => {
   // by the server: plain appends cannot create a conflict, corrections are refused if
   // they would.
   function conflict(timeline) {
+    let dated=null;
+    for(const e of timeline)if(e.occurred_at){if(dated&&e.occurred_at<dated.occurred_at)return {kind:'chronology',before:dated.at,after:e.at};dated=e;}
     for (let i = 1; i < timeline.length; i++) {
       if (stageRank(timeline[i].stage) < stageRank(timeline[i - 1].stage))
         return {kind: 'stage_regression', before: timeline[i - 1].at, after: timeline[i].at};
@@ -103,7 +108,7 @@ const JOBS_CORE = (() => {
   function correctionMaySubmit(original, effective, replacement) {
     if (!SUBMISSION_STAGES.includes(replacement.stage)) return true;
     if (effective && SUBMISSION_STAGES.includes(effective.stage)) return true;
-    return SUBMISSION_STAGES.includes(original.stage) && STATUS_FIELDS.every(k => original[k] === replacement[k]);
+    return SUBMISSION_STAGES.includes(original.stage) && STATUS_FIELDS.every(k => original[k] === replacement[k]) && JSON.stringify(original.evidence||null)===JSON.stringify(replacement.evidence||null);
   }
 
   function current(record) {
@@ -123,8 +128,10 @@ const JOBS_CORE = (() => {
     return {details,claim};
   }
   function funnel(records) {
-    const submitted=records.filter(r=>history(r).timeline.some(e=>e.stage==='submitted'&&e.evidence_url&&e.occurred_at));
-    return {tracked:records.length,verified_submissions:submitted.length,
+    const jobs=records.filter(r=>r.record_type!=='contact');
+    const submitted=jobs.filter(r=>history(r).timeline.some(e=>e.stage==='submitted'&&hasEvidence(e)&&e.occurred_at));
+    return {tracked:jobs.length,contacts:records.length-jobs.length,verified_submissions:submitted.length,
+      historical_acknowledgments:submitted.filter(r=>history(r).timeline.some(e=>e.stage==='submitted'&&e.evidence?.kind==='historical_portal_acknowledgment')).length,
       interviews:submitted.filter(r=>history(r).timeline.some(e=>e.stage==='interview'&&e.evidence_url)).length,
       no_later_decision:submitted.filter(r=>current(r).outcome==='no_later_decision').length};
   }
