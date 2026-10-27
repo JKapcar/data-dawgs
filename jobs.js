@@ -273,9 +273,13 @@ function synthetic(){clear();demo=true;const at='2026-01-10T12:00:00.000Z',later
   }catch{$('importPreview').textContent='Packet needs reconciliation. Nothing imported.';}
  };
  $('importApply').onclick=async()=>{
-  if(!importPlan||!state||demo||busy)return;const plan=importPlan,generation=epoch;busy=true;render();
+  if(!importPlan||!state||demo||busy)return;const plan=importPlan,generation=epoch,total=plan.records.length;busy=true;render();
+  // An import is one write per step and can run for minutes. Leaving, reloading or hiding the
+  // tab stops it, so say how far it got and warn before the page is left mid-run.
+  const leave=e=>{e.preventDefault();e.returnValue='';};addEventListener('beforeunload',leave);
   try{
-   for(const item of plan.records){
+   for(const [n,item] of plan.records.entries()){
+    $('status').textContent='Importing record '+(n+1)+' of '+total+'. Keep this tab open and in front until it says saved. If it stops, reselect the same file: it resumes without duplicating.';
     const write=async(op,data,step)=>{
      const request_id=await digest(new TextEncoder().encode(plan.sha+'|'+item.source_id+'|'+step));
      if(generation!==epoch)throw Object.assign(Error('Import stopped.'),{superseded:true});
@@ -288,7 +292,7 @@ function synthetic(){clear();demo=true;const at='2026-01-10T12:00:00.000Z',later
    }
    render();$('status').textContent='Private import saved at revision '+state.revision+'. Reload to verify persisted records. No applications were sent.';
   }catch(e){if(e.superseded)return;$('status').textContent=e.message+' Import stopped. Reload and reselect the same packet to resume using the same request IDs.';}
-  finally{if(generation===epoch){busy=false;render();}}
+  finally{removeEventListener('beforeunload',leave);if(generation===epoch){busy=false;render();}}
  };
  $('refresh').onclick=load;$('demo').onclick=synthetic;$('add').onclick=()=>editor({op:'record.create'});$('cancel').onclick=()=>$('editor').close();$('filter').onchange=render;
  // Keyboard users land back on the control that opened the dialog, if it still exists.
