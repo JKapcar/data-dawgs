@@ -44,7 +44,9 @@ const listing=(employer,key,req,role='Analyst')=>({employer_key:key,employer,rol
   await field('stage').selectOption('closed');assert.deepEqual(await options('outcome'),['','rejected','position_closed','withdrawn','accepted']);assert.equal(await field('outcome').inputValue(),'','closed never defaults to an outcome');
   await field('stage').selectOption('submitted');assert.deepEqual(await options('outcome'),['none','no_later_decision']);assert.equal(await field('outcome').inputValue(),'none');
   assert.match(await page.locator('label:has([name="evidence_url"])').textContent(),/required/);
-  await field('evidence_url').fill('https://example.com/receipt/px-1');await save('ok');
+  await field('evidence_url').fill('https://example.com/receipt/px-1');
+  await field('occurred_at').fill('2026-01-04T12:00:28.123');await field('verified_at').fill('2026-01-04T12:01:29.456');await save('ok');
+  assert.equal(w.row(pine).events[1].occurred_at,new Date('2026-01-04T12:00:28.123').toISOString(),'new receipts preserve entered seconds and milliseconds');
   assert.match(await status(),/Saved to your tracker · revision \d+\. Saving records evidence; it never submits anything to an employer\./);
   assert.match(await $('#detail').textContent(),/#2Submitted · No decision recorded/);assert.equal(w.row(pine).events.length,2);
 

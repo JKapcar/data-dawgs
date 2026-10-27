@@ -144,7 +144,7 @@ function field(name,label,value='',options,hint){
  const l=node('label',label),input=document.createElement(options?'select':'input');input.name=name;
  if(options)for(const [v,t] of Object.entries(options)){const o=node('option',t);o.value=v;input.append(o);}
  else{input.type=name.endsWith('_at')?'datetime-local':name.endsWith('url')?'url':'text';input.maxLength=LIMITS[name]||500;}
- if(input.type==='datetime-local'){input.defaultValue=localInput(value);if(value)input.dataset.iso=value;}else input.value=value;
+ if(input.type==='datetime-local'){input.step='any';input.defaultValue=localInput(value);if(value)input.dataset.iso=value;}else input.value=value;
  l.append(input);if(hint)l.append(node('small',hint));$('fields').append(l);return input;
 }
 const slug=text=>String(text).normalize('NFKD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80);
