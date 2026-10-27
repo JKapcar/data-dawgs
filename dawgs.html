@@ -521,7 +521,11 @@ footer a{color:var(--accent)}
 #dateTab{left:66.2%;top:27%;width:15.1%;height:47%;padding:7px 10px;color:#2a160a;
   border:2px solid #b77a37;background:linear-gradient(#dcb36b,#b97930);clip-path:polygon(7% 0,93% 0,100% 24%,100% 76%,93% 100%,7% 100%,0 76%,0 24%);
   display:grid;place-content:center;text-align:center;text-shadow:0 1px rgba(255,255,255,.35)}
-#dateTab strong,#dateTab span,#dateTab small{position:static!important;width:auto;height:auto;padding:0;margin:0;overflow:visible;clip:auto;white-space:normal;border:0}
+#jobTab{left:81.8%;top:27%;width:11.5%;height:47%;padding:7px 5px;color:#2a160a;border:2px solid #b77a37;background:linear-gradient(#dcb36b,#b97930);border-radius:10px;display:grid;place-content:center;text-align:center}
+#jobTab strong{font:900 clamp(12px,1vw,17px)/1 var(--display)}
+#jobTab span{font:800 9px/1.2 ui-monospace,monospace;margin-top:4px}
+#jobTab small{display:none}
+#jobTab strong,#jobTab span,#jobTab small,#dateTab strong,#dateTab span,#dateTab small{position:static!important;width:auto;height:auto;padding:0;margin:0;overflow:visible;clip:auto;white-space:normal;border:0}
 #dateTab strong{font:900 clamp(12px,1vw,17px)/1 var(--display);letter-spacing:.04em;color:#2a160a}
 #dateTab span{margin-top:3px;font:800 clamp(7px,.55vw,10px)/1.1 ui-monospace,monospace;letter-spacing:.1em;text-transform:uppercase;color:#5c3516}
 #dateTab small{display:none}
@@ -2306,7 +2310,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <section class="dp-hero" aria-labelledby="poundTitle" data-dp-hero-composition="rollo-camera-cleveland-lab">
     <div class="dp-hero-scroll" id="dpHeroScroll" tabindex="0" aria-describedby="dpHeroHint">
       <img class="dp-hero-art" src="assets/dawg-pound/hero-cleveland.webp" width="1725" height="448" alt="Illustrated Dawg Pound yard where Rollo operates a vintage movie camera, several dogs run an active laboratory beneath the Cleveland skyline, a smaller dog works at a probability board, and a bulldog carries a receipt beside an orange doghouse">
-      <div class="dp-welcome"><p class="dp-eyebrow">Welcome to the</p><h1 id="poundTitle">Dawg Pound</h1><p class="lede"><strong>Good ideas need room to run.</strong>A home for stories, experiments, and whatever we build next.</p><span class="dp-count"><span id="dpProjectCount">3</span>&nbsp; projects at play</span></div>
+      <div class="dp-welcome"><p class="dp-eyebrow">Welcome to the</p><h1 id="poundTitle">Dawg Pound</h1><p class="lede"><strong>Good ideas need room to run.</strong>A home for stories, experiments, and whatever we build next.</p><span class="dp-count"><span id="dpProjectCount">5</span>&nbsp; projects at play</span></div>
     </div><p id="dpHeroHint" class="dp-pan-hint">Swipe to explore &rarr;</p>
   </section>
   <section class="dp-rack" aria-labelledby="dpRackTitle" data-rack-asset="approved-physical-collar-rack">
@@ -2314,7 +2318,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="dp-rack-stage">
      <img class="dp-rack-art" src="assets/dawg-pound/rack-wood-hooks-swoledawg.webp" width="1725" height="224" alt="" aria-hidden="true">
      <header class="dp-rack-head"><div><h2 id="dpRackTitle">The Collar Rack</h2><p class="dp-rack-helper">Hover or focus a collar for details. Select it to open.</p></div></header>
-     <span class="dp-position" id="dpPosition">01 / 04</span>
+     <span class="dp-position" id="dpPosition">01 / 05</span>
      <button class="dp-rack-arrow" id="dpPrev" type="button" aria-label="Previous project">&larr;</button>
      <div class="dp-tabs">
       <button class="dp-tab" id="rolloTab" role="tab" aria-selected="true" aria-controls="rolloSheet" tabindex="0" data-sheet="rollo" data-collar-asset="orange-leather-rollo">
@@ -2329,6 +2333,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <button class="dp-tab" id="dateTab" role="tab" aria-selected="false" aria-controls="dateSheet" tabindex="-1" data-sheet="datedawg">
        <small>Local analysis</small><strong>DateDawg</strong><span>Match analysis</span>
       </button>
+      <button class="dp-tab" id="jobTab" role="tab" aria-selected="false" aria-controls="jobSheet" tabindex="-1" data-sheet="jobhound"><small>Private workspace</small><strong>Job Hound</strong><span>Job search</span></button>
       <div class="dp-future" aria-hidden="true">Future projects</div>
      </div>
      <button class="dp-rack-arrow" id="dpNext" type="button" aria-label="Next project">&rarr;</button>
@@ -2449,6 +2454,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       <aside class="swole-pound-plate" aria-label="DateDawg collar identity plate"><div><strong>DATEDAWG</strong><small>RECIPROCAL ACCEPTANCE</small></div></aside>
     </div>
   </section>
+  <section class="dp-sheet" id="jobSheet" role="tabpanel" aria-labelledby="jobTab" hidden>
+    <button class="dp-sheet-close" type="button" aria-label="Collapse Job Hound project">&times;</button>
+    <header class="sheet-head"><p class="dp-eyebrow">Private job search</p><h2>Job Hound</h2><p>Keep the next move and its evidence together.</p></header>
+    <article class="swole-pound-card"><h3>Your search, with receipts.</h3><p>Track opportunities, preparation, submission evidence and later decisions in the private workspace. Access requires the existing authorized owner account. Opening this page does not grant access or send applications.</p><a class="ddcc-action" href="jobs.html">Open Job Hound</a></article>
+  </section>
 </div>
 <div id="ytwrap"><div id="ytplayer"></div></div>
 
@@ -2478,7 +2488,7 @@ document.querySelectorAll("[data-rollo-copy]").forEach(el => {
 
 (function () {
   const tabs = [...document.querySelectorAll(".dp-tab")];
-  const sheets = { rollo: document.getElementById("rolloSheet"), ddcc: document.getElementById("ddccSheet"), swole: document.getElementById("swoleSheet"), datedawg: document.getElementById("dateSheet") };
+  const sheets = { rollo: document.getElementById("rolloSheet"), ddcc: document.getElementById("ddccSheet"), swole: document.getElementById("swoleSheet"), datedawg: document.getElementById("dateSheet"), jobhound: document.getElementById("jobSheet") };
   const rack = document.querySelector(".dp-rack");
   const rackTrack = document.getElementById("dpRackTrack");
   const medallion = document.querySelector(".dp-medallion");
@@ -2488,6 +2498,7 @@ document.querySelectorAll("[data-rollo-copy]").forEach(el => {
     rollo:{status:"STORY · LIVE",title:"Rollo",description:"Meet the OG Data Dawg through his music-synced photo tribute and evolving story."},
     ddcc:{status:"EXPERIMENT · LIVE",title:"DDCC Profile",description:"Put probabilities on 40 claims and build a permanent calibration profile. Sign-in is required to take the challenge."},
     swole:{status:"BODY & TRAINING · LIVE",title:"SwoleDawg",description:"Log training, recovery, nutrition, and body measurements—then follow the trend into the full SwoleDawg workspace."},
+    jobhound:{status:"PRIVATE WORKSPACE",title:"Job Hound",description:"Track job opportunities, preparation, submissions and outcomes with their evidence. Existing owner access required."},
     datedawg:{status:"LOCAL ANALYSIS · LIVE",title:"DateDawg",description:"Analyze reciprocal acceptance from a Hinge export locally, with no upload and no backend memory."}
   });
   const preview = sheet => { const p=registry[sheet]; document.getElementById("dpPreviewStatus").textContent=p.status; document.getElementById("dpPreviewTitle").textContent=p.title; document.getElementById("dpPreviewDescription").textContent=p.description; document.getElementById("dpPosition").textContent=String(tabs.findIndex(t=>t.dataset.sheet===sheet)+1).padStart(2,"0")+" / "+String(tabs.length).padStart(2,"0"); };
@@ -2513,6 +2524,7 @@ document.querySelectorAll("[data-rollo-copy]").forEach(el => {
     if (hash==="#ddcc") return "ddcc";
     if (hash==="#swole") return "swole";
     if (hash==="#datedawg") return "datedawg";
+    if (hash==="#jobhound") return "jobhound";
     history.replaceState(null,"",location.pathname+location.search+"#rollo");
     return "rollo";
   }
@@ -2527,7 +2539,7 @@ document.querySelectorAll("[data-rollo-copy]").forEach(el => {
     });
     preview(sheet);
     requestAnimationFrame(()=>{ centerTab(tabs.find(tab=>tab.dataset.sheet===sheet)); syncMedallion(); });
-    document.title = ({ddcc:"DDCC Profile",swole:"SwoleDawg",datedawg:"DateDawg"}[sheet] || "The Dawg Pound") + " — Data Dawgs";
+    document.title = ({ddcc:"DDCC Profile",swole:"SwoleDawg",datedawg:"DateDawg",jobhound:"Job Hound"}[sheet] || "The Dawg Pound") + " — Data Dawgs";
     if (sheet === "ddcc" && window.DDRolloPause) window.DDRolloPause();
   }
   tabs.forEach((tab, i) => {
