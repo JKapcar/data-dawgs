@@ -18,7 +18,7 @@ export async function fixture(){
  const context=vm.createContext({Request,Response,URL,TextEncoder,TextDecoder,Uint8Array,Date,crypto:webcrypto,fetch,btoa,atob,encodeURIComponent,
   te:new TextEncoder(),SESSION_DAYS:30,DB:'https://db.invalid',b64:bytes=>Buffer.from(bytes).toString('base64'),b64urlStr:s=>Buffer.from(s).toString('base64url'),unb64urlStr:s=>Buffer.from(s,'base64url').toString(),
   playerName:x=>x,entitlementOf:()=>null,mcpRoute:()=>({rest:[]}),loadUsers:async()=>Object.fromEntries([...rows].filter(([k])=>k.startsWith('/users/')).map(([k,v])=>[k.slice(7),v]))});
- vm.runInContext("const fbUrl=(env,path)=>`${DB}${path}.json?auth=${env.FB_SECRET}`;\n"+['fbGet','fbPut','hmac','timingSafeEqual','makeSession','readSession','bozoConfig','sessionAuth','mcpHeaderPass','mcpPassOf','mcpAuth'].map(extract).join('\n')+'\nconst mcpTokenHash=(env,token)=>hmac(env.BOZO_PEPPER,"mcp|"+token);',context);
+ vm.runInContext("const fbUrl=(env,path)=>`${DB}${path}.json?auth=${env.FB_SECRET}`;\n"+['fbFetch','fbJson','fbBody','fbGet','fbPut','hmac','timingSafeEqual','makeSession','readSession','bozoConfig','sessionAuth','mcpHeaderPass','mcpPassOf','mcpAuth'].map(extract).join('\n')+'\nconst mcpTokenHash=(env,token)=>hmac(env.BOZO_PEPPER,"mcp|"+token);',context);
  const token='u_synthetic-agent-token',digest=await context.hmac(env.BOZO_PEPPER,'mcp|'+token);put('/users/u_agent',{name:'Agent',mcpToken:digest});
  const session=await context.makeSession(env,'Owner',0,'u_owner');
  const dependencies={fbGet:context.fbGet,fbPut:context.fbPut,sessionAuth:context.sessionAuth,mcpAuth:context.mcpAuth,transition,view,codeHash:hash('test-source')};
