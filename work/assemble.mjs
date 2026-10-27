@@ -41,6 +41,17 @@ const PJ_ROUTE =
   '    if (setupPath === "/api/project" || setupPath.startsWith("/api/project/")) return handleProject(request, env); // DD-PROJECT-ROUTE';
 const PJ_ANCHOR =
   '    if (setupPath === "/api/pound" || setupPath.startsWith("/api/pound/") || setupPath === "/mcp/pound" || setupPath.startsWith("/mcp/pound/")) return handlePound(request, env);';
+/* Private job harness (docs/job-harness.md). Same placement contract as the project block:
+ * it reuses Pound's identity, body reader and canonical hash, and it commits with fbPut, so
+ * it must sit above the MCP write-scope boundary. Its route goes between the Pound and
+ * project routes; the handler itself is default off (JOB_HARNESS_ENABLED). The block is
+ * ../jobs-core.js (the history fold the page also loads) followed by work/jobs.js; the
+ * marker keeps its original name so existing assembled output strips cleanly. */
+const JB_START = "/* ===== DD-JOBS START - generated from work/jobs.js ===== */";
+const JB_END = "/* ===== DD-JOBS END ===== */";
+const jobs = readFileSync("../jobs-core.js", "utf8").trimEnd() + "\n" + readFileSync("jobs.js", "utf8").trimEnd();
+const JB_ROUTE =
+  '    if (setupPath === "/api/jobs" || setupPath.startsWith("/api/jobs/")) return handleJobs(request, env); // DD-JOBS-ROUTE';
 const DC_START = "/* ===== DD-DISCORD START ===== */";
 const DC_END = "/* ===== DD-DISCORD END ===== */";
 const discordBridge = readFileSync("discord-bridge.js", "utf8").trimEnd();
@@ -146,6 +157,8 @@ function transform(input) {
   if(ps>=0 && pe>ps)t=t.slice(0,ps)+t.slice(pe+P_END.length);
   const pjs=t.indexOf(PJ_START), pje=t.indexOf(PJ_END);
   if(pjs>=0 && pje>pjs)t=t.slice(0,pjs)+t.slice(pje+PJ_END.length);
+  const jbs=t.indexOf(JB_START), jbe=t.indexOf(JB_END);
+  if(jbs>=0 && jbe>jbs)t=t.slice(0,jbs)+t.slice(jbe+JB_END.length);
   const es = t.indexOf(E_START), ee = t.indexOf(E_END);
   if (es >= 0 && ee > es) t = t.slice(0, es) + t.slice(ee + E_END.length).replace(/^\n\n/, "");
   if (t.includes("async function runBozoLiveScores("))
@@ -198,6 +211,7 @@ function transform(input) {
       if (line.includes("DD-DISCORD-ROUTE")) return false;
       if (line.includes("DD-WARROOM-ROUTE")) return false;
       if (line.includes("DD-PROJECT-ROUTE")) return false;
+      if (line.includes("DD-JOBS-ROUTE")) return false;
       if (line.includes("DD-MCP-ROUTE")) return false;
       if (/if \(url\.pathname === "\/mcp"/.test(line)) return false;
       // the legacy one-line comment that used to sit above the route
@@ -220,6 +234,8 @@ function transform(input) {
     fail("strip left a handleYahoo reference behind — the markers did not cover everything");
   if (t.includes("handleProject"))
     fail("strip left a handleProject reference behind — the markers did not cover everything");
+  if (t.includes("handleJobs"))
+    fail("strip left a handleJobs reference behind — the markers did not cover everything");
 
   /* 6. inject the routes. Each anchor must appear EXACTLY once: an anchor that has drifted
    * into two places would put a live route somewhere nobody is looking, which is the same
@@ -232,7 +248,7 @@ function transform(input) {
   t = t.replace(ANCHOR, ANCHOR + "\n" + '    if (url.pathname === "/discord/owner-pack") return handleDiscordPackOwner(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/discord/owner-smoke") return handleDiscordOwnerSmoke(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/mcp/discord-queue") return handleDiscordQueueMcp(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/discord/interactions") return handleDiscordAsk(request, env, arguments[2]); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/discord/queue") return handleDiscordQueue(request, env); // DD-DISCORD-QUEUE-ROUTE\n    if (url.pathname === "/mcp/discord") return handleDiscordBridge(request, env); // DD-DISCORD-ROUTE\n' + ROUTE);
   t = t.replace(R_ANCHOR, R_ANCHOR + "\n" + R_ROUTE);
   t = t.replace(Y_ANCHOR, Y_ANCHOR + "\n" + Y_ROUTE + "\n" + W_ROUTE);
-  t = t.replace(PJ_ANCHOR, PJ_ANCHOR + "\n" + PJ_ROUTE);
+  t = t.replace(PJ_ANCHOR, PJ_ANCHOR + "\n" + JB_ROUTE + "\n" + PJ_ROUTE);
 
   /* 7. inject the blocks, Yahoo and rankings before MCP's write-scope boundary */
   return t.replace(/\s+$/, "")
@@ -240,6 +256,7 @@ function transform(input) {
     + "\n\n" + DC_START + "\n" + discordBridge + "\n" + DC_END
     + "\n\n" + P_START + "\n" + pound + "\n" + P_END
     + "\n\n" + PJ_START + "\n" + project + "\n" + PJ_END
+    + "\n\n" + JB_START + "\n" + jobs + "\n" + JB_END
     + "\n\n" + AB_START + "\n" + agentBoard + "\n" + AB_END
     + "\n\n" + AF_START + "\n" + agentFeedback + "\n" + AF_END
     + "\n\n" + Y_START + "\n" + yahoo + "\n" + Y_END
@@ -272,6 +289,13 @@ once(PJ_END, "research project block end");
 once("async function handleProject(", "research project handler");
 once("DD-PROJECT-ROUTE", "research project route");
 if(!(out.indexOf(P_START)<out.indexOf(PJ_START)&&out.indexOf(PJ_START)<out.indexOf(START))) fail("project block must follow Pound (shared helpers) and precede the MCP write-scope boundary");
+once(JB_START, "job harness block start");
+once(JB_END, "job harness block end");
+once("async function handleJobs(", "job harness handler");
+once("const JOBS_CORE =", "job harness shared core (one copy, from jobs-core.js)");
+once("DD-JOBS-ROUTE", "job harness route");
+if(!(out.indexOf(PJ_START)<out.indexOf(JB_START)&&out.indexOf(JB_START)<out.indexOf(START))) fail("job harness block must follow the project block (shared Pound helpers) and precede the MCP write-scope boundary — it commits with fbPut");
+if(!(out.indexOf("DD-PROJECT-ROUTE")>out.indexOf("DD-JOBS-ROUTE")&&out.indexOf("DD-JOBS-ROUTE")>out.indexOf(PJ_ANCHOR))) fail("job harness route must sit between the Pound and project routes");
 once(AB_START, "agent board block start");
 once(AB_END, "agent board block end");
 once("async function handleAgentBoard(", "agent board handler");
