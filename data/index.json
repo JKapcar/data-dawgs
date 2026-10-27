@@ -201,9 +201,9 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 165000,
+    "bytes": 164899,
     "as_of": "2026-10-27",
-    "sha256": "274fc843edc8cd4a3f38bdce721986eebf0a9899f1c92809d3a4fb60a2bd859f",
+    "sha256": "fd9a8452ae79ed97ab9896f2c8e70ce1743ba5b7f010e0cf07a448ed7c1251aa",
     "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 107/272 regular-season games are settled and banked in wins_tracker; 165 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    },
    {
@@ -337,16 +337,16 @@
     "path": "/data/models.json",
     "url": "https://datadawgs216.com/data/models.json",
     "bytes": 3267,
-    "as_of": "2026-10-26",
-    "sha256": "a3da03ab4b51f9c412b466e3aa70b3b34b7e0827451fa73b85738c4e0a7137d7",
+    "as_of": "2026-10-27",
+    "sha256": "64b9e4c114490adbd90ffe09d6364bb800b91cf9079371d0b6f93efb59c43a3b",
     "note": "Survivor uses nfelo published probabilities or nfelo-season-v1, not the legacy margin model below. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
     "path": "/data/nfelo.json",
     "url": "https://datadawgs216.com/data/nfelo.json",
-    "bytes": 144536,
-    "as_of": "2026-10-26",
-    "sha256": "b1ac86cd11277c3dff07ba1d236ee930437af139946bdb300a50958cac61cd9c",
+    "bytes": 155727,
+    "as_of": "2026-10-27",
+    "sha256": "e2b295a1ade7090abc64144be72f75677e33c82035a694ef39c3ce1a314815be",
     "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp)."
    },
    {
@@ -440,9 +440,9 @@
    {
     "path": "/data/survivor.json",
     "url": "https://datadawgs216.com/data/survivor.json",
-    "bytes": 116586,
-    "as_of": "2026-10-26",
-    "sha256": "d92cf6dad3dd555873b3e37212548c3051090e2c3857ee9cd7b602b43fbe83d3",
+    "bytes": 117099,
+    "as_of": "2026-10-27",
+    "sha256": "26e9752df3827a37f71b9d5ef53e0dbffecf4c50e4eab8e23a169595a946188f",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"nfelo\" = published nfelo forecast without an extra blend; \"nfelo-season\" = nfelo pre-market calculation with current team/QB strength and game-specific HFA. Ownership is modelled, not observed."
    },
    {
@@ -472,9 +472,9 @@
    {
     "path": "/data/nfl-playoff-leverage.json",
     "url": "https://datadawgs216.com/data/nfl-playoff-leverage.json",
-    "bytes": 14204,
-    "as_of": "2026-10-26",
-    "sha256": "7c51265fb275185c4a21a2a041937ffe20d6509ef5319dcfd49e29644d5da3f5",
+    "bytes": 33940,
+    "as_of": "2026-10-27",
+    "sha256": "1ca50c94ffeabbd33243b1dcc157050bf13a070283d14a27d367bcd560808199",
     "note": "SIMULATION OUTPUT, ungraded — not a forecast receipt and not a betting signal. Each of 100,000 simulated seasons keeps every finished game's real result and plays every unplayed 2026 regular-season game once at its /data/survivor.json home-win probability (the published nfelo forecast for the current week, the nfelo season projection after it). Leverage is paired: every season is also played with one game's result flipped while every other game keeps its simulated result. Team strength is held fixed and games are independent, so probabilities near 0% and 100% are overconfident. Seeding follows the NFL tie-breaking procedures through strength of schedule; a tie that survives SOS goes to a coin toss because points are not simulated. Daily snapshot: rebuilt after the nfelo refresh, deterministic for identical inputs."
    },
    {
