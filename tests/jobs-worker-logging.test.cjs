@@ -14,7 +14,9 @@ test('shared RTDB errors exclude transport URL, credential, body, cause and pars
  const actions=[()=>r.api.fbGet(env,'/privateJobs/v1/u_synthetic',true),()=>r.api.fbPut(env,'/synthetic',privateText,'etag'),()=>r.api.fbPatch(env,'/synthetic',privateText),()=>r.api.fbDelete(env,'/synthetic','etag'),()=>r.api.fbPost(env,'/synthetic',privateText)];
  r.respond(async()=>{throw Error('https://synthetic.invalid/?auth='+secret+' '+privateText);});
  for(const action of actions)await assert.rejects(action,e=>{assert.equal(e.message,'RTDB transport unavailable');assert.equal(e.cause,undefined);assert.ok(!e.stack.includes(secret));return true;});
- assert.ok(r.calls.every(([,options])=>options.redirect==='error'));
+ assert.ok(r.calls.every(([,options])=>options.redirect==='manual'));
+ r.respond(async()=>new Response(privateText,{status:302,headers:{Location:'https://synthetic.invalid/?auth='+secret}}));
+ for(const action of actions)await assert.rejects(action,/^Error: RTDB transport unavailable$/);
  r.respond(async()=>new Response(privateText));
  for(const action of [actions[0],actions[4]])await assert.rejects(action,/^Error: RTDB invalid response$/);
  await assert.rejects(()=>r.api.fbPut(env,'/synthetic',{toJSON(){throw Error(privateText);}}),/^Error: RTDB invalid request$/);

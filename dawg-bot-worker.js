@@ -2602,7 +2602,12 @@ const fbUrl = (env, path) => `${DB}${path}.json?auth=${env.FB_SECRET}`;
 
 // Application boundary only; provider logging is checked separately.
 async function fbFetch(env, path, options) {
-  try { return await fetch(fbUrl(env, path), { ...options, redirect: "error" }); }
+  try {
+    const response = await fetch(fbUrl(env, path), { ...options, redirect: "manual" });
+    // Workers supports manual/follow only. Never forward credentials to a redirect.
+    if (response.status >= 300 && response.status < 400) throw new Error();
+    return response;
+  }
   catch { throw new Error("RTDB transport unavailable"); }
 }
 async function fbJson(response) {
