@@ -2,7 +2,7 @@
  "source_page": "/stats.html",
  "tier": "dawg",
  "graded": false,
- "as_of": "2026-10-27",
+ "as_of": "2026-10-28",
  "source": "nflverse play-by-play; current-season completed games refreshed daily, with corrections; historical seasons retain their dated snapshots. See data.coverage for exact games, source hash and timestamps.",
  "note": "Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback minimum for QBs; the pooled table uses 500. 2026 covers Weeks 1-7 ONLY (107 games) — a small sample sensitive to opponent and game script; its QB minimum is the 200 bar prorated to 79 dropbacks. The pooled table spans every season in the snapshot, including the partial one. These are descriptive aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026, and do not interpret an incomplete season as a complete season. Dropback EPA counts every dropback including scrambles and penalty-nullified plays and uses play epa, not qb_epa; Rush EPA excludes scrambles and kneels. These will not match nflverse passing_epa / rushing_epa.",
  "field_notes": {
@@ -2641,7 +2641,7 @@
       "plays": 414,
       "off_epa_play": 0.1538,
       "off_success": 0.5266,
-      "off_dropback_epa": 0.2659,
+      "off_dropback_epa": 0.266,
       "off_rush_epa": -0.0008,
       "def_epa_play": -0.0404,
       "def_success": 0.436,
@@ -2851,7 +2851,7 @@
       "off_success": 0.4127,
       "off_dropback_epa": 0.0691,
       "off_rush_epa": -0.1476,
-      "def_epa_play": 0.0666,
+      "def_epa_play": 0.0667,
       "def_success": 0.4756,
       "def_dropback_epa": 0.1447,
       "def_rush_epa": -0.0853
@@ -3089,11 +3089,11 @@
       "team": "SF",
       "dropbacks": 239,
       "plays": 251,
-      "epa_per_dropback": 0.2715,
-      "epa_per_play": 0.2671,
+      "epa_per_dropback": 0.2716,
+      "epa_per_play": 0.2672,
       "dropback_success": 0.5397,
       "cpoe": 4.2541,
-      "total_epa": 67.05
+      "total_epa": 67.06
      },
      {
       "player": "T.Lawrence",
@@ -3180,7 +3180,7 @@
       "epa_per_dropback": 0.1328,
       "epa_per_play": 0.0758,
       "dropback_success": 0.4169,
-      "cpoe": -3.0681,
+      "cpoe": -2.9722,
       "total_epa": 29.04
      },
      {
@@ -3846,7 +3846,7 @@
      "epa_per_play": 0.2596,
      "dropback_success": 0.5362,
      "cpoe": 4.4969,
-     "total_epa": 437.21
+     "total_epa": 437.22
     },
     {
      "player": "J.Allen",
@@ -3900,7 +3900,7 @@
      "epa_per_dropback": 0.188,
      "epa_per_play": 0.176,
      "dropback_success": 0.4785,
-     "cpoe": 1.4334,
+     "cpoe": 1.4487,
      "total_epa": 363.6
     },
     {
@@ -4536,12 +4536,12 @@
      "WAS": 6
     },
     "through": "2026-10-26",
-    "captured": "2026-10-27",
-    "refreshed_at": "2026-10-27T16:51:48.783862Z",
+    "captured": "2026-10-28",
+    "refreshed_at": "2026-10-28T17:23:51.118331Z",
     "source_url": "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2026.csv.gz",
-    "source_updated": "Tue, 27 Oct 2026 15:19:48 GMT",
-    "source_sha256": "30f31f1faf184be5a3014395c6830ed81ac5f60a03790e3e4a849dc020a70396",
-    "schedule_sha256": "533248dd9963c641f8bb9507841b4e8ab29971679e4caa53f9c9abe537048023",
+    "source_updated": "Wed, 28 Oct 2026 15:57:39 GMT",
+    "source_sha256": "5badd819b0c4c836dc0d5406f4a3e40af2244cbc8221e1f7389a098ec55eecc4",
+    "schedule_sha256": "5eb945391c3efe8842bc165b27a96fd7eef44afcb826fe678037c75cf49e7252",
     "pending_games": [],
     "refresh_frequency": "daily at 11:43 UTC",
     "note": "Completed games only, including incomplete weeks. Daily published nflverse EPA; not live. Historical seasons retained; current-season corrections incorporated."
@@ -4556,6 +4556,6 @@
   }
  },
  "tier_meaning": "Working Dawg — earned its collar. Evidence survived validation: receipts against a benchmark chosen in advance for forecasters, named sources and reproducible maths for measurement tools.",
- "built": "2026-10-27",
+ "built": "2026-10-28",
  "canonical_url": "https://datadawgs216.com/data/epa-teams.json"
 }
