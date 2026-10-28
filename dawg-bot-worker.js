@@ -9239,6 +9239,113 @@ async function bozoOddsApiCapture(env,p,registry,options = {}) {
   }
 }
 
+/* ===================== ESPN's DraftKings line: the keyless first source =====================
+   Bozo is the one feature that needs a live price, and both paid feeds refused the Worker
+   in October 2026 (Odds API 401 since about Oct 9, SportsGameOdds 429 since Oct 22). ESPN's
+   public core API publishes DraftKings (provider id 100) per event, both sides, with no key
+   and no quota, and sports.core.api.espn.com answers Worker egress (D19). So it is tried
+   first for every full-game moneyline, spread and total; a paid feed is reached only for
+   what ESPN does not carry: alternate numbers, props and periods.
+   ⚠️ ESPN states no licence for this API, and it publishes no observation time. The quote
+   is stamped with OUR fetch time and kept only pregame, and it is the main number only, so
+   a leg at an alternate number never matches it. */
+const BOZO_ESPN_ODDS_HOST = "https://sports.core.api.espn.com";
+const BOZO_ESPN_ODDS_LEAGUE = {nfl:"nfl", cfb:"college-football"};
+const BOZO_ESPN_DK_PROVIDER = "100";
+const bozoEspnOddsSupports = p => !!BOZO_ESPN_ODDS_LEAGUE[p.sport] && bozoPeriodOf(p) === "game" &&
+  ["ml","spread","total"].includes(p.mkt) && /^\d{5,12}$/.test(String(p.espnEventId || p.eventId || ""));
+
+// ESPN's "+10.5", "-110" and "EVEN" strings, or the bare numbers on older rows.
+function bozoEspnNumber(v) {
+  if (v && typeof v === "object") v = v.american ?? v.alternateDisplayValue;
+  if (typeof v === "string" && /^even$/i.test(v.trim())) return 100;
+  const n = Number(typeof v === "string" ? v.trim() : v);
+  return v === null || v === undefined || v === "" || !Number.isFinite(n) ? null : n;
+}
+
+// One ESPN odds item as the Odds API event shape, so bozoOddsApiQuote prices it under the
+// same exact-number, both-sides rules. Each market takes ESPN's `current` group whole, or
+// its top-level fields whole, never a mix of the two.
+function bozoEspnOddsEvent(item, game, id, observedAt) {
+  const h = item.homeTeamOdds || {}, a = item.awayTeamOdds || {};
+  const home = game.home.name, away = game.away.name;
+  const pair = (x, y) => x !== null && y !== null ? [x, y] : null;
+  const markets = [];
+  const ml = pair(bozoEspnNumber(h.current?.moneyLine), bozoEspnNumber(a.current?.moneyLine)) ||
+    pair(bozoEspnNumber(h.moneyLine), bozoEspnNumber(a.moneyLine));
+  if (ml) markets.push({key:"h2h", last_update:observedAt, outcomes:[{name:home, price:ml[0]}, {name:away, price:ml[1]}]});
+  const points = pair(bozoEspnNumber(h.current?.pointSpread), bozoEspnNumber(a.current?.pointSpread));
+  const spreadPrices = pair(bozoEspnNumber(h.current?.spread), bozoEspnNumber(a.current?.spread));
+  if (points && spreadPrices && Math.abs(points[0] + points[1]) < 0.001)
+    markets.push({key:"spreads", last_update:observedAt, outcomes:[
+      {name:home, price:spreadPrices[0], point:points[0]}, {name:away, price:spreadPrices[1], point:points[1]}]});
+  const cur = item.current || {};
+  const total = cur.total ? [bozoEspnNumber(cur.total), bozoEspnNumber(cur.over), bozoEspnNumber(cur.under)]
+    : [bozoEspnNumber(item.overUnder), bozoEspnNumber(item.overOdds), bozoEspnNumber(item.underOdds)];
+  if (total.every(x => x !== null))
+    markets.push({key:"totals", last_update:observedAt, outcomes:[
+      {name:"Over", price:total[1], point:total[0]}, {name:"Under", price:total[2], point:total[0]}]});
+  return {id, commence_time:game.startsAt, home_team:home, away_team:away,
+    bookmakers:[{key:"draftkings", last_update:observedAt, markets}]};
+}
+
+async function bozoEspnOddsRequest(sport, id, options = {}) {
+  const fault = (code, message, diagnostic = {}) => Object.assign(new Error(message), {code, ...diagnostic});
+  const url = `${BOZO_ESPN_ODDS_HOST}/v2/sports/football/leagues/${BOZO_ESPN_ODDS_LEAGUE[sport]}/events/${id}/competitions/${id}/odds`;
+  const cache = typeof caches !== "undefined" ? caches.default : null;
+  const cacheKey = new Request(url);
+  if (cache) { try { const hit = await cache.match(cacheKey); if (hit) return await hit.json(); } catch {} }
+  const remaining = Math.min(4000, (options.deadline || Date.now() + 4000) - Date.now());
+  if (remaining <= 0) throw fault("timeout", "ESPN odds request timed out");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), remaining);
+  let data;
+  try {
+    const response = await fetch(url, {headers:{accept:"application/json"}, signal:controller.signal});
+    console.log("bozo-espn-odds", JSON.stringify({status:response.status}));
+    if (!response.ok) throw fault(response.status === 429 ? "rate_limited" : "provider_error",
+      "ESPN odds HTTP " + response.status, {httpStatus:response.status});
+    try { data = await response.json(); } catch { throw fault("provider_error", "ESPN odds returned invalid JSON"); }
+  } catch (e) {
+    if (e && e.code) throw e;
+    throw fault(controller.signal.aborted ? "timeout" : "provider_error",
+      controller.signal.aborted ? "ESPN odds request timed out" : "ESPN odds request failed");
+  } finally { clearTimeout(timer); }
+  // ESPN reprices every few minutes; thirty seconds keeps one tick's legs on one request.
+  if (cache) { try { await cache.put(cacheKey, new Response(JSON.stringify(data),
+    {headers:{"content-type":"application/json","cache-control":"public, max-age=30"}})); } catch {} }
+  return data;
+}
+
+async function bozoEspnOddsCapture(env, p, registry, options = {}) {
+  const miss = (code, reason) => ({ok:false, code, reason});
+  try {
+    if (!bozoEspnOddsSupports(p)) return miss("unsupported_market", "ESPN carries full-game main lines only");
+    const id = String(p.espnEventId || p.eventId);
+    const now = options.nowMs ?? Date.now();
+    const start = Date.parse(p.startsAt || p.commenceTime || "");
+    if (!Number.isFinite(start) || now >= start) return miss("window_closed", "ESPN shows no pregame line at or after kickoff");
+    let doc = null;
+    try { doc = await bozoScheduleDoc(env, p.sport, SEASON); } catch { doc = null; }
+    const game = doc && bozoScheduleFindGame(doc, p);
+    if (!game || String(game.espnEventId) !== id || !game.home?.name || !game.away?.name)
+      return miss("event_not_matched", "The scheduled game for this ESPN event was not found");
+    const data = await bozoEspnOddsRequest(p.sport, id, options);
+    const item = (Array.isArray(data?.items) ? data.items : []).find(i => String(i?.provider?.id) === BOZO_ESPN_DK_PROVIDER);
+    if (!item) return miss("book_missing", "ESPN lists no DraftKings line for this game");
+    const observedAt = new Date(now).toISOString();
+    const raw = bozoEspnOddsEvent(item, game, id, observedAt);
+    const event = bozoOddsApiEvent(raw);
+    if (!bozoMatchEvent([event], p, registry)) return miss("event_mismatch", "ESPN's teams did not match the pick");
+    const quote = bozoOddsApiQuote(raw, p, registry);
+    if (assertQuote(quote, p)) return miss(quote?.code || "market_missing", assertQuote(quote, p));
+    return {ok:true, event, quote:{...quote, provider:"espn", providerEventId:id, snapshotAt:observedAt}};
+  } catch (e) {
+    const code = ["rate_limited", "timeout"].includes(e && e.code) ? e.code : "provider_error";
+    return miss(code, code === "provider_error" ? "ESPN odds request failed" : e.message);
+  }
+}
+
 function bozoSelfPricedEntry(p, reason, code = "market_missing") {
   const typed = bzAmerican(p.typedPrice ?? p.price);
   if (typed === null) return { ok: false, reason: "manual_price_required",
@@ -9296,9 +9403,24 @@ async function bozoCaptureEntry(env, input, options = {}) {
   let events, registry, timer;
   const deadline = Date.now() + 7000;
   let backup = null;
-  if (env.ODDS_API_KEY && bozoOddsApiMarkets(p)) {
+  // The keyless ESPN line first: a miss there (an alternate number, no DraftKings row) falls
+  // through to at most one paid provider, exactly as before it existed.
+  if (bozoEspnOddsSupports(p)) {
     try {
       registry = await bozoTeamRegistry(env,p.sport);
+      const free = await bozoEspnOddsCapture(env,p,registry,{deadline:Math.min(deadline,Date.now()+4000)});
+      if (free.ok) {
+        backup = free;
+        events = [free.event];
+        captureAttempts.push({provider:"espn",code:"captured",reason:"Exact two-sided quote captured"});
+      } else captureAttempts.push({provider:"espn",code:free.code,reason:free.reason});
+    } catch (e) {
+      captureAttempts.push({provider:"espn",code:"provider_error",reason:"ESPN odds capture failed"});
+    }
+  }
+  if (!backup && env.ODDS_API_KEY && bozoOddsApiMarkets(p)) {
+    try {
+      registry = registry || await bozoTeamRegistry(env,p.sport);
       backup = await bozoOddsApiCapture(env,p,registry,{deadline:Math.min(deadline,Date.now()+5000),caller:"submit"});
       if (backup.ok) {
         events = [backup.event];
@@ -9349,12 +9471,12 @@ async function bozoCaptureEntry(env, input, options = {}) {
     period: p.period, label: bozoLabelWithPeriod(p.label, p.period),
     line: quote.line, price: quote.price, priceOpp: quote.opp,
     entryOppSource: "captured",
-    priceSource: "captured", verificationStatus: "verified", entryBook: BOZO_CLOSE_BOOK, entryProvider: backup ? "odds_api" : "sgo",
+    priceSource: "captured", verificationStatus: "verified", entryBook: BOZO_CLOSE_BOOK, entryProvider: backup ? backup.quote.provider || "odds_api" : "sgo",
     entrySnapshotAt: quote.snapshotAt || events.fetchedAt || new Date().toISOString(),
     fairEntry: facts.fair, entryHold: facts.hold, clvEligible: true,
     canonicalKey: p.canonicalKey || bozoCanonicalKey(p.sport, event, registry), commenceTime,
     startsAt: p.startsAt, espnEventId: p.espnEventId || String(p.eventId),
-    providerEventIds: { [backup ? "odds_api" : "sgo"]: String(event.eventID) }, closeState: "pending",
+    providerEventIds: { [backup ? backup.quote.provider || "odds_api" : "sgo"]: String(event.eventID) }, closeState: "pending",
   }, agreement };
 }
 
@@ -9463,6 +9585,11 @@ async function runBozoCloseCapture(env, nowMs) {
     for (const t of bucket.legs) {
       const receipt = await bozoCaptureOnce(env,bozoCaptureIdentity(t.pick,'close'),async()=>{
         if (nowMs >= t.startMs || t.pick.mkt==='other') return {ok:false,reason:'No supported pregame close'};
+        // Keyless first; a miss falls through to at most one paid provider.
+        if(bozoEspnOddsSupports(t.pick)) {
+          const free=await bozoEspnOddsCapture(env,t.pick,registry,{nowMs,deadline:Date.now()+4000});
+          if(free.ok)return {ok:true,quote:free.quote};
+        }
         if(env.ODDS_API_KEY && bozoOddsApiMarkets(t.pick)) {
           const capture=await bozoOddsApiCapture(env,t.pick,registry,{caller:'close',nowMs,deadline:Date.now()+7000});
           if(capture.ok)return {ok:true,quote:capture.quote};
