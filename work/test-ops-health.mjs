@@ -134,7 +134,9 @@ async function readRoute(env) {
   await tick(FIVE, at("2026-10-10T11:46:00Z"), env);         // epa-daily slot: another success
   ok("one write per transition: two transitions, two writes", opsPuts(kv, "ops:health:gh:pacer").length === 2);
   ok("jobs that only no-op'd never wrote health at all",
-    ["bozo:close", "bozo:scores", "bozo:nearclose", "bozo:autograde", "forecast:live"].every(j => !kv.store.has("ops:health:" + j)));
+    ["bozo:close", "bozo:scores", "bozo:autograde", "forecast:live"].every(j => !kv.store.has("ops:health:" + j)));
+  // The retired near-close stub returns on every tick, which is a success, so it writes once.
+  ok("the retired near-close collector reads healthy", health(kv, "bozo:nearclose")?.failing === false);
   ok("the existing lasterror trail is untouched by a dispatch failure (it never threw)", !kv.store.has("gh:pacer:lasterror"));
 }
 
@@ -256,6 +258,8 @@ async function readRoute(env) {
     ["bozo:nearclose", { nfl: { error: "quota_exceeded" }, cfb: { skipped: "no_kickoff_in_gate" } }, "fail", "a refused sport"],
     ["bozo:nearclose", { nfl: { events: 3, stored: 1, unpriced: 0 }, cfb: { skipped: "no_kickoff_in_gate" } }, "ok", "a fetched slate"],
     ["bozo:nearclose", { skipped: "sgo_unconfigured" }, "noop", "unconfigured"],
+    ["bozo:nearclose", { skipped: "bozo_selections_only", stored: 0 }, "ok", "the retired collector"],
+    ["cfb:market:24h", { skipped: "bozo_selections_only", stored: 0 }, "ok", "the retired collector"],
     ["bozo:autograde", { checked: 1, leagues: [{ league: "a", error: "bad state" }] }, "fail", "a league that errored"],
     ["bozo:autograde", { checked: 1, leagues: [{ league: "a", week: 5, graded: false, wrote: false }] }, "ok", "a league evaluated"],
     ["bozo:autograde", { checked: 1, leagues: [{ league: "a", skipped: "already-decided" }] }, "noop", "an already-decided week"],
