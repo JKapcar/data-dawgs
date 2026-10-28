@@ -66,6 +66,7 @@ jobs:
       - run: node work/test-warroom-isolation.mjs
       - run: node --test tests/warroom-weekly.test.js
       - run: node work/test-cfb-market-capture.mjs
+      - run: node work/test-forecast-live.mjs
       - run: node work/test-backup.mjs
       - run: node work/test-identity.mjs
       - run: node work/test-identity-league-foundation.mjs
