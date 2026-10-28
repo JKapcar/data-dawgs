@@ -3013,7 +3013,7 @@ const MCP_TOOLS = [
       minutesBeforeKickoff: { type: "number" },
       verification: { type: "string", description: "Accepted for the routine's file shape; not stored" },
       note: { type: "string", description: "Optional, up to 300 characters" },
-      requestId: { type: "string", description: "16-80 letters, digits or hyphens" },
+      requestId: { type: "string", description: "16-120 letters, digits, hyphens, colons, dots or underscores, e.g. 2026-w8-401873024-2026-11-01T17:56:00.000Z" },
     }, required: ["league", "season", "week", "player", "eventId", "mkt", "close", "closeOpp", "book", "source", "observedAt", "requestId"], additionalProperties: false },
     async run(args, env, caller) {
       if (!caller || caller.kind !== "user" || !caller.uid) return toolErr("A personal authenticated account is required.");

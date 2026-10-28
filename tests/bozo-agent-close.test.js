@@ -42,6 +42,10 @@ test('the feed goes first: nothing before kickoff, and a close already there sta
  r=agentRig(l=>Object.assign(l.results.u_kap,{close:-115,closeOpp:-105,closeSource:'espn'}));
  assert.equal((await r.run(entry())).status,409);assert.equal(r.writes.length,0);
 });
+test("the routine's own id shape is accepted, and junk is not",async()=>{
+ assert.equal((await agentRig().run(entry({requestId:'2026-w8-401873024-2026-11-01T17:56:00.000Z'}))).status,200);
+ assert.match((await agentRig().run(entry({requestId:'2026 w8 / ../x'}))).body.error,/requestId/);
+});
 test('a replay with the same requestId is a no-op, not a second write',async()=>{
  const r=agentRig(l=>Object.assign(l.ledger['2026-w8-u_kap'],{close:-112,closeOpp:-108,closeSource:'agent_search',closeEvidence:{requestId:'routine-2026w8-kap-0001'}}));
  const out=await r.run(entry());assert.equal(out.status,200);assert.equal(out.body.unchanged,true);assert.equal(r.writes.length,0);

@@ -10644,8 +10644,9 @@ async function bozoAgentCloseCore(env, auth, args, nowMs = Date.now()) {
   const read = Date.parse(args.observedAt);
   if (typeof args.observedAt !== "string" || !Number.isFinite(read)) return fail("observedAt must be an ISO time.");
   if (read > nowMs + 60000) return fail("observedAt is in the future.");
-  if (typeof args.requestId !== "string" || !/^[-a-zA-Z0-9]{16,80}$/.test(args.requestId))
-    return fail("requestId must be 16-80 letters, digits or hyphens; the same id replays safely.");
+  // Wide enough for "<season>-w<week>-<eventId>-<observedAt ISO>", the routine's own id.
+  if (typeof args.requestId !== "string" || !/^[-a-zA-Z0-9:._]{16,120}$/.test(args.requestId))
+    return fail("requestId must be 16-120 letters, digits, hyphens, colons, dots or underscores; the same id replays safely.");
 
   let live;
   try { live = (await fbGet(env, LG(lid))).data; }
@@ -24519,7 +24520,7 @@ const MCP_TOOLS = [
       minutesBeforeKickoff: { type: "number" },
       verification: { type: "string", description: "Accepted for the routine's file shape; not stored" },
       note: { type: "string", description: "Optional, up to 300 characters" },
-      requestId: { type: "string", description: "16-80 letters, digits or hyphens" },
+      requestId: { type: "string", description: "16-120 letters, digits, hyphens, colons, dots or underscores, e.g. 2026-w8-401873024-2026-11-01T17:56:00.000Z" },
     }, required: ["league", "season", "week", "player", "eventId", "mkt", "close", "closeOpp", "book", "source", "observedAt", "requestId"], additionalProperties: false },
     async run(args, env, caller) {
       if (!caller || caller.kind !== "user" || !caller.uid) return toolErr("A personal authenticated account is required.");
