@@ -2663,7 +2663,7 @@ const MCP_TOOLS = [
         .filter(r => r && r.player && (!want || r.player === want) && (wk == null || r.week === wk))
         .sort((a, b) => (a.week - b.week) || String(a.player).localeCompare(String(b.player)))
         .map(r => ({
-          week: r.week, player: r.player, sport: r.sport, eventId: r.eventId,
+          week: r.week, player: r.player, sport: r.sport, eventId: r.eventId, startsAt: r.startsAt || null,
           mkt: r.mkt, label: r.label, result: r.result || null,
           entryPrice: r.price ?? null, entryPriceOpp: r.priceOpp ?? null,
           priceSource: r.priceSource || null, verificationStatus: r.verificationStatus || null,
@@ -2672,6 +2672,9 @@ const MCP_TOOLS = [
           closePrice: r.close ?? null, closePriceOpp: r.closeOpp ?? null,
           closeBook: r.closeBook || null, closeObservedAt: r.closeObservedAt || null,
           closeSource: r.closeSource || null,
+          // How an agent-read close was observed: page, read time, minutes before kickoff.
+          closeEvidence: r.closeEvidence ? { url: r.closeEvidence.url || null, readAt: r.closeEvidence.readAt || null,
+            minutesBeforeKickoff: r.closeEvidence.minutesBeforeKickoff ?? null } : null,
           closeUnavailableReason: r.closeUnavailableReason || null,
           // The one derived field, and it is a boolean rather than a number: whether
           // this leg is eligible to be in a CLV calculation at all.
@@ -2693,6 +2696,7 @@ const MCP_TOOLS = [
           "Never substitute the entry price for a missing close.",
           "Pushes and voids carry no information about the number and belong in neither the average nor the count.",
           "Measured CLV uses captured DraftKings prices at both entry and close. Self-priced legs are not measurable and must stay out of aggregates.",
+          "closeSource says who observed each close: the feed (espn, odds_api, sgo), a manager (manual) or a Claude routine reading DraftKings before kickoff (agent_search, with closeEvidence). The league counts all of them; split by closeSource when the difference matters.",
           lg.synthetic === true ? "SIMULATED LEAGUE — every price here is fabricated. Never quote it as evidence of anyone's skill." : null,
         ].filter(Boolean),
       });
@@ -2983,6 +2987,38 @@ const MCP_TOOLS = [
           "A pass here is a pass at this instant. Someone else can take your exact leg, or fill the board, before you press submit.",
         ],
       });
+    },
+  },
+  {
+    name: "dd_record_bozo_agent_close",
+    title: "Record a DraftKings close read before kickoff",
+    catalog: "full",
+    readOnlyHint: false,
+    destructiveHint: false,
+    description: "Manager-only. Fills a Bozo leg's missing close with a DraftKings price a Claude routine read on a public page before kickoff. The league counts it as a verified close, so CLV includes it, and it is stored as closeSource agent_search with the page, read time and minutes before kickoff for audit. It only fills a gap: nothing is accepted before kickoff (the Worker's own capture goes first), and a close already on the leg stands. The leg is matched by season, week, player, eventId and mkt; the line and side must be the leg's own, since a moved line is a different selection. DraftKings only. Send the same requestId to retry safely.",
+    inputSchema: { type: "object", properties: {
+      league: { type: "string", description: "League id" },
+      season: { type: "integer" }, week: { type: "integer" },
+      player: { type: "string", description: "Member name as the board shows it" },
+      game: { type: "string" }, eventId: { type: "string", description: "ESPN event id, as a string" }, label: { type: "string" },
+      mkt: { type: "string", enum: ["ml", "spread", "total"] },
+      side: { type: "string", description: "The side the leg took" },
+      line: { type: "number", description: "The leg's line, in the board's own convention" },
+      startsAt: { type: "string", description: "Kickoff, ISO" },
+      close: { type: "integer", description: "American price of the leg's side" },
+      closeOpp: { type: "integer", description: "American price of the other side of the same line" },
+      book: { type: "string", enum: ["draftkings"] },
+      source: { type: "string", description: "The https page the price was read on" },
+      observedAt: { type: "string", description: "ISO time the price was read" },
+      minutesBeforeKickoff: { type: "number" },
+      verification: { type: "string", description: "Accepted for the routine's file shape; not stored" },
+      note: { type: "string", description: "Optional, up to 300 characters" },
+      requestId: { type: "string", description: "16-80 letters, digits or hyphens" },
+    }, required: ["league", "season", "week", "player", "eventId", "mkt", "close", "closeOpp", "book", "source", "observedAt", "requestId"], additionalProperties: false },
+    async run(args, env, caller) {
+      if (!caller || caller.kind !== "user" || !caller.uid) return toolErr("A personal authenticated account is required.");
+      const out = await bozoAgentCloseCore(env, caller, args);
+      return out.status === 200 ? toolText(out.body) : toolErr(out.body.error);
     },
   },
   {
