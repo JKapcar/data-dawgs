@@ -1,11 +1,21 @@
 import {quoteState} from './bozo-menu.mjs';
-export function mountBozoMenu({getSession,worker}) {
+export function mountBozoMenu(options) {
+ const root=document.getElementById('bozoMenu');
+ let syncMounted=null;
+ function sync(){
+  // An unopened private menu does no fetching or DOM construction.
+  if(!syncMounted){if(root.hidden)return;syncMounted=mountVisibleMenu(options);}
+  syncMounted();
+ }
+ window.DDBozoMenu={sync};sync();
+}
+function mountVisibleMenu({getSession,worker}) {
  const root=document.getElementById('bozoMenu');
  const $=id=>root.querySelector('#'+id);
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const et=s=>s?new Date(s).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET':'Not supplied';
  const monday=()=>{const day=new Date(new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'})+'T12:00:00Z');day.setUTCDate(day.getUTCDate()-(day.getUTCDay()+6)%7);return day.toISOString().slice(0,10);};
- let session=null,week=null,seq=0,weeks=[],busy=false;
+ let session=null,week=null,seq=0,weeks=[],busy=false,requested=false;
  root.innerHTML=`<div class="bz-hdr"><div><span class="bm-eyebrow">THE WEEKLY SHORTLIST</span><h2 class="bz">The Bozo Menu</h2></div><span class="bm-pill">−200 to −500</span></div>
  <div class="bm-intro"><p>Find an edge. Check the news. Shop the line.<br>Research only · saving here never submits a leg.</p><a class="btn ghost sm" href="bozo-menu.html">Open shared menu ↗</a></div>
  <div id="bmStats" class="bm-stats" hidden></div>
@@ -36,8 +46,17 @@ export function mountBozoMenu({getSession,worker}) {
   $('bmStats').innerHTML=[[counts.keep+counts.downgrade,'Shortlist'],[counts.hold,'On hold'],[counts.scratch,'Scratched']].map(([n,label])=>`<div class="bm-stat"><strong>${n}</strong><span>${label}</span></div>`).join('');
   const market=$('bmMarket').value;
   const rows=week.candidates.filter(c=>($('bmFilter').value==='all'||c.status===$('bmFilter').value)&&(market==='all'||(market==='prop'?!['moneyline','total','spread'].includes(c.market):c.market===market)));
-  $('bmRows').innerHTML=rows.length?rows.map(c=>`<details class="bm-candidate bm-${esc(c.status)}"><summary><div class="bm-top"><span class="bm-eyebrow">${c.rank?'#'+esc(c.rank)+' · ':''}${esc(c.sport)}</span><span class="bm-status">${esc(c.status)}</span></div><h3>${esc(c.selection)}</h3><p class="bm-event">${esc(c.event)} · ${esc(c.market)}<br>${esc(et(c.kickoff))}</p><span class="bm-open-hint">VIEW LINES &amp; SCREENING +</span></summary><div class="bm-detail"><dl><div><dt>Base bet</dt><dd>${quote(c.base)}</dd></div><div><dt>Raw model edge</dt><dd>${edge(c.edge)}</dd></div>${c.adjusted_edge?`<div><dt>Adjusted edge · judgment</dt><dd>${edge(c.adjusted_edge)}</dd></div>`:''}<div class="bm-alt"><dt>Alternate line</dt><dd>${quote(c.alternate)}</dd></div></dl><p class="bm-price-state">${esc(quoteState(c))}</p><p>${esc(c.reason)}</p><p class="note">Screened ${esc(et(c.screened_at))}</p>${c.probability?`<p>Estimated hit rate: ${(c.probability.value*100).toFixed(1)}%<small>${esc(c.probability.basis)}</small></p>`:''}${c.worst_acceptable?`<p class="note">Limit: ${esc(c.worst_acceptable)}</p>`:''}<details><summary>Evidence & notes</summary>${(c.sources||[]).map(s=>`<p><b>${esc(s.name)}</b>${s.weight!=null?' · '+Math.round(s.weight*100)+'% weight':''}<small>${esc(et(s.as_of))}</small>${esc(s.evidence)}</p>`).join('')||'<p>No sources supplied.</p>'}<p>${esc(c.notes||'')}</p><p>Result: ${esc(c.result||'pending')}</p></details><button type="button" class="btn ghost sm" data-bm-edit="${esc(c.id)}">Update candidate</button></div></details>`).join(''):`<div class="bm-empty"><h3>${week.candidates.length?'No matching candidates':'This week’s menu is open'}</h3><p>${week.candidates.length?'Choose another screening status.':'Send a candidate list through your Data Dawgs connector, or add one below. Hold and scratched candidates stay in the record.'}</p></div>`;
+  $('bmRows').innerHTML=rows.length?rows.map(c=>`<details class="bm-candidate bm-${esc(c.status)}" data-bm-id="${esc(c.id)}"><summary><div class="bm-top"><span class="bm-eyebrow">${c.rank?'#'+esc(c.rank)+' · ':''}${esc(c.sport)}</span><span class="bm-status">${esc(c.status)}</span></div><h3>${esc(c.selection)}</h3><p class="bm-event">${esc(c.event)} · ${esc(c.market)}<br>${esc(et(c.kickoff))}</p><span class="bm-open-hint">VIEW LINES &amp; SCREENING +</span></summary><div class="bm-detail"></div></details>`).join(''):`<div class="bm-empty"><h3>${week.candidates.length?'No matching candidates':'This week’s menu is open'}</h3><p>${week.candidates.length?'Choose another screening status.':'Send a candidate list through your Data Dawgs connector, or add one below. Hold and scratched candidates stay in the record.'}</p></div>`;
  }
+ // Native details keeps keyboard/touch behavior; populate once on first expansion.
+ $('bmRows').addEventListener('toggle',e=>{
+  const card=e.target;
+  if(!card.matches('.bm-candidate')||!card.open||card.dataset.loaded)return;
+  const c=week?.candidates.find(c=>c.id===card.dataset.bmId);
+  if(!c)return;
+  card.querySelector('.bm-detail').innerHTML=`<dl><div><dt>Base bet</dt><dd>${quote(c.base)}</dd></div><div><dt>Raw model edge</dt><dd>${edge(c.edge)}</dd></div>${c.adjusted_edge?`<div><dt>Adjusted edge · judgment</dt><dd>${edge(c.adjusted_edge)}</dd></div>`:''}<div class="bm-alt"><dt>Alternate line</dt><dd>${quote(c.alternate)}</dd></div></dl><p class="bm-price-state">${esc(quoteState(c))}</p><p>${esc(c.reason)}</p><p class="note">Screened ${esc(et(c.screened_at))}</p>${c.probability?`<p>Estimated hit rate: ${(c.probability.value*100).toFixed(1)}%<small>${esc(c.probability.basis)}</small></p>`:''}${c.worst_acceptable?`<p class="note">Limit: ${esc(c.worst_acceptable)}</p>`:''}<details><summary>Evidence & notes</summary>${(c.sources||[]).map(s=>`<p><b>${esc(s.name)}</b>${s.weight!=null?' · '+Math.round(s.weight*100)+'% weight':''}<small>${esc(et(s.as_of))}</small>${esc(s.evidence)}</p>`).join('')||'<p>No sources supplied.</p>'}<p>${esc(c.notes||'')}</p><p>Result: ${esc(c.result||'pending')}</p></details><button type="button" class="btn ghost sm" data-bm-edit="${esc(c.id)}">Update candidate</button>`;
+  card.dataset.loaded='true';
+ },true);
  function clean(c){const {updated_at,quote_state,...row}=c;return row;}
  let pending=null,publicTarget=null;
  function clearPublic(){publicTarget=null;$('bmPublicJson').value='';$('bmPublishGo').disabled=true;$('bmPublishNote').textContent='';}
@@ -46,7 +65,19 @@ export function mountBozoMenu({getSession,worker}) {
   const ticket=++seq;week=null;resetImport();clearPublic();$('bmJson').value='';$('bmRows').innerHTML='';$('bmExport').disabled=true;message('Loading your menu…');
   try{const [list,menu]=await Promise.all([api('list'),api('get',{week:date})]);if(ticket!==seq)return;weeks=list.weeks;week=menu;draw();$('bmExport').disabled=false;message(`${menu.candidates.length} candidates · private to your account. Quotes are saved snapshots; recheck before using.`);}catch(e){if(ticket===seq)message(e.message);}
  }
- function sync(){const next=getSession()?.session||null;if(next===session)return;session=next;seq++;week=null;weeks=[];$('bmStats').hidden=true;resetImport();clearPublic();$('bmJson').value='';$('bmRows').innerHTML='';$('bmControls').hidden=!next;if(next)open(monday());else message('Sign in to open your private weekly menu.');}
+ function sync(){
+  const next=getSession()?.session||null;
+  if(next!==session){
+   session=next;seq++;week=null;weeks=[];requested=false;
+   $('bmStats').hidden=true;resetImport();clearPublic();
+   $('bmJson').value='';$('bmRows').innerHTML='';$('bmWeeks').innerHTML='';
+   $('bmUpdated').textContent='';$('bmControls').hidden=!next;
+   message(next?'Open your private weekly menu.':'Sign in to open your private weekly menu.');
+  }
+  if(next&&!root.hidden&&!requested){requested=true;void open(monday());}
+  else if(!next)message('Sign in to open your private weekly menu.');
+ }
+
  function download(data,name){const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
  $('bmOpen').onclick=()=>open($('bmDate').value);$('bmReload').onclick=()=>open(week?.week||$('bmDate').value||monday());$('bmWeeks').onchange=()=>open($('bmWeeks').value);$('bmFilter').onchange=draw;$('bmMarket').onchange=draw;
  $('bmExport').onclick=()=>week&&download({...week,candidates:week.candidates.map(clean)},'bozo-menu-'+week.week+'.json');
@@ -73,5 +104,5 @@ export function mountBozoMenu({getSession,worker}) {
   try{const args=JSON.parse($('bmPublicJson').value);if(args.week!==publicTarget.week||args.expected_revision!==publicTarget.expected_revision)throw Error('Week or revision changed. Prepare the public copy again.');const result=await api('publish',args);if(ticket!==seq)return;clearPublic();$('bmPublishNote').textContent='Published '+result.candidates.length+' candidates for '+result.week+'. Friends can read the shared menu without signing in.';}
   catch(e){if(ticket===seq){$('bmPublishNote').textContent=e.message;$('bmPublishGo').disabled=false;}}finally{busy=false;}
  };
- window.DDBozoMenu={sync};sync();if(!session)message('Sign in to open your private weekly menu.');
+ return sync;
 }

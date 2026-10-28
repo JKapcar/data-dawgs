@@ -6150,6 +6150,7 @@ function render(){
   const live = players.map(p=>({p, ...(picks[kEnc(p)]||{})})).filter(x=>x.price!=null);
   const hub = onHub();
   document.getElementById('bozoMenu').hidden = hub || view()!=='menu';
+  window.DDBozoMenu?.sync();
   paintHub();
   document.body.classList.toggle('pb-hub', hub);
   // The band reports one league's week, status and roster — nonsense on a directory of
@@ -9936,7 +9937,7 @@ async function clvLoad(force){
 </script>
 
 <script type="module">
-import {mountBozoMenu} from "./bozo-menu-ui.js?v=20261005-sheet";
+import {mountBozoMenu} from "./bozo-menu-ui.js?v=20261028-lazy";
 mountBozoMenu({getSession:()=>ME,worker:WORKER});
 </script>
 <script src="install-help.js" defer></script>
