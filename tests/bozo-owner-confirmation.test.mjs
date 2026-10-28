@@ -9,6 +9,7 @@ const core=source.slice(source.indexOf('async function bozoOwnerConfirmationCore
 test('browser and Worker identity definitions remain identical',()=>{
  const module=readFileSync('bozo-owner-confirmation.mjs','utf8').replaceAll('export function','function').replaceAll('FIELDS','OWNER_CONFIRMATION_FIELDS');
  assert.ok(source.startsWith(module));
+ assert.ok(readFileSync('bozo.html','utf8').includes(module));
 });
 function rig(){
  let state={season:2026,week:9,status:'placed',picks:{pat:{submissionId:'TEST01',ts:123,who:'Pat',label:'B ML',game:'A @ B',price:-150,verificationStatus:'unverified',priceSource:'self',clvEligible:false,closeState:'pending',captureFailureCode:'rate_limited'}},ledger:{x:{stake:10,result:null}},funds:100,eliminations:[]};

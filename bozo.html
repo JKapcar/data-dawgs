@@ -4652,6 +4652,21 @@ function legRow(x){
    supplied one by hand, which is the exact case clvPts exists for. The ticket then
    contradicted the grade card two screens away, where the same leg says "CLV set by
    hand". A leg with a manual CLV has a CLV; the badge says which kind it is. */
+// Inert provenance only. Never used by eligibility, grading, capture or payments.
+const OWNER_CONFIRMATION_FIELDS=['submissionId','ts','who','submittedBy','sport','eventId','espnEventId','canonicalKey','selectionKey','marketKey','game','label','mkt','side','dir','line','period','startsAt','commenceTime','price','entryBook'];
+function ownerConfirmationIdentity(league,season,week,key,pick){
+ if(!pick?.submissionId||!Number.isFinite(pick.ts))return null;
+ return {league,season,week,key,...Object.fromEntries(OWNER_CONFIRMATION_FIELDS.map(k=>[k,pick[k]??null]))};
+}
+function sameOwnerConfirmationIdentity(a,b){
+ return !!a&&!!b&&['league','season','week','key',...OWNER_CONFIRMATION_FIELDS].every(k=>a[k]===b[k]);
+}
+function ownerConfirmationMatches(record,identity){
+ return record?.kind==='owner_confirmation_v1'&&typeof record.at==='string'&&
+  typeof record.receiptId==='string'&&sameOwnerConfirmationIdentity(record.identity,identity);
+}
+
+window.DDBozoOwner={ownerConfirmationIdentity,sameOwnerConfirmationIdentity,ownerConfirmationMatches};
 function ownerConfirmationFor(x){
   const key=x?.key||kEnc(x?.p||x?.who||'');
   const identity=window.DDBozoOwner?.ownerConfirmationIdentity(LID,S.season||2026,S.week||1,key,x);
@@ -9965,11 +9980,8 @@ async function clvLoad(force){
 </script>
 
 <script type="module">
-import * as ownerConfirmation from "./bozo-owner-confirmation.mjs";
-window.DDBozoOwner=ownerConfirmation;
 import {mountBozoMenu} from "./bozo-menu-ui.js?v=20261028-lazy";
 mountBozoMenu({getSession:()=>ME,worker:WORKER});
-render();
 </script>
 <script src="install-help.js" defer></script>
 </body>
