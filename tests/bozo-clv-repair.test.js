@@ -56,7 +56,7 @@ test('phone form saves signed and zero overrides without closing prices; blank d
  const host={innerHTML:'',querySelectorAll:s=>buttons[s]?[buttons[s]]:[]};
  const ctx={S:{season:2026,week:3,picks:{[key]:{price:-150,label:'Fixture',priceSource:'captured'}},results:{}},
   document:{getElementById:id=>id==='godResults'?host:null},esc:x=>String(x??''),memberLabel:()=> 'Fixture',kDec:k=>k,
-  priceSourceBadge:()=>'',isManualLeg:()=>false,clvDeltaOf:()=>null,clvMissingReason:()=> 'closing odds missing',
+  priceSourceBadge:()=>'',isAdmin:()=>false,isManualLeg:()=>false,clvDeltaOf:()=>null,clvMissingReason:()=> 'closing odds missing',
   wPost:async(p,b)=>posts.push({p,b}),refresh:async()=>{},paintGod:()=>{},godErr:()=>{},clvLoad:()=>{}};
  vm.createContext(ctx);vm.runInContext(page.slice(page.indexOf('function clvDisplayEstimate(x){'),page.indexOf('function clvMissingReason('))+page.slice(page.indexOf('function paintGodResults(){'),page.indexOf('async function paintGodAudit(){')),ctx);
  ctx.paintGodResults();assert.ok(host.innerHTML.includes('Save CLV override'));
