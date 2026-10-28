@@ -134,9 +134,10 @@ async function readRoute(env) {
   await tick(FIVE, at("2026-10-10T11:46:00Z"), env);         // epa-daily slot: another success
   ok("one write per transition: two transitions, two writes", opsPuts(kv, "ops:health:gh:pacer").length === 2);
   ok("jobs that only no-op'd never wrote health at all",
-    ["bozo:close", "bozo:scores", "bozo:autograde", "forecast:live"].every(j => !kv.store.has("ops:health:" + j)));
+    ["bozo:scores", "bozo:autograde", "forecast:live"].every(j => !kv.store.has("ops:health:" + j)));
   // The retired near-close stub returns on every tick, which is a success, so it writes once.
   ok("the retired near-close collector reads healthy", health(kv, "bozo:nearclose")?.failing === false);
+  ok("a close tick that found no missed kickoff reads healthy", health(kv, "bozo:close")?.failing === false);
   ok("the existing lasterror trail is untouched by a dispatch failure (it never threw)", !kv.store.has("gh:pacer:lasterror"));
 }
 
@@ -250,7 +251,10 @@ async function readRoute(env) {
     ["bozo:close", { error: "boom" }, "fail", "a thrown job reaches health as { error }"],
     ["bozo:close", { captured: 1, skipped: 0, checked: 1 }, "ok", "a captured close"],
     ["bozo:close", { captured: 0, skipped: 3, checked: 3 }, "noop", "skips alone are not a success"],
-    ["bozo:close", { captured: 0, skipped: 0, checked: 0 }, "noop", "nothing near kickoff"],
+    ["bozo:close", { captured: 0, skipped: 0, checked: 0 }, "noop", "nothing near kickoff, misses unknown"],
+    ["bozo:close", { captured: 0, skipped: 0, checked: 0, missed: [] }, "ok", "nothing near kickoff and nothing missed"],
+    ["bozo:close", { captured: 2, skipped: 0, checked: 2, missed: [{ row: "r" }] }, "fail", "a leg kicked off with no close"],
+    ["bozo:close", { captured: 0, skipped: 1, checked: 1, missed: [] }, "noop", "a pending free read is not yet a success"],
     ["bozo:scores", { nfl: { due: 1, refreshed: true, error: "provider_error" }, cfb: { due: 0 } }, "fail", "a refused refresh"],
     ["bozo:scores", { nfl: { due: 1, refreshed: true, error: null }, cfb: { due: 0 } }, "ok", "a refreshed archive"],
     ["bozo:scores", { nfl: { due: 2, refreshed: false, error: "provider_error" }, cfb: { due: 0 } }, "noop", "a throttled tick is not a new attempt"],
