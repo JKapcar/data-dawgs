@@ -41,7 +41,7 @@ async function fakeFetch(input,init={}){
 class Clock extends Date {constructor(...a){super(...(a.length?a:[clock]));} static now(){return clock;}}
 const ctx=vm.createContext({crypto:webcrypto,fetch:fakeFetch,Date:Clock,Response,Request,URL,Headers,TextEncoder,TextDecoder,
   console,atob,btoa,setTimeout,clearTimeout,structuredClone,BOZO_ESPN_TEAM_SEED});
-vm.runInContext(fs.readFileSync(new URL('../dawg-bot-worker.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/,'').replace('export class DiscordMentionGateway','class DiscordMentionGateway').replace('export default {','const worker = {')+
+vm.runInContext(fs.readFileSync(new URL('../dawg-bot-worker.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replace('export class DiscordMentionGateway','class DiscordMentionGateway').replace('export default {','const worker = {')+
   '\nglobalThis.api={runForecastLive,forecastLiveRoute,fclGrade,fclRatings,fclCandidates,fclBoards,bozoScheduleKey,fclEarliestKickoffs};',ctx);
 const a=ctx.api,root='/forecast/live/nfl/2026';
 const board=async path=>{
