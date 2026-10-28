@@ -4652,12 +4652,34 @@ function legRow(x){
    supplied one by hand, which is the exact case clvPts exists for. The ticket then
    contradicted the grade card two screens away, where the same leg says "CLV set by
    hand". A leg with a manual CLV has a CLV; the badge says which kind it is. */
-const priceSourceBadge = x => {
+// Inert provenance only. Never used by eligibility, grading, capture or payments.
+const OWNER_CONFIRMATION_FIELDS=['submissionId','ts','who','submittedBy','sport','eventId','espnEventId','canonicalKey','selectionKey','marketKey','game','label','mkt','side','dir','line','period','startsAt','commenceTime','price','entryBook'];
+function ownerConfirmationIdentity(league,season,week,key,pick){
+ if(!pick?.submissionId||!Number.isFinite(pick.ts))return null;
+ return {league,season,week,key,...Object.fromEntries(OWNER_CONFIRMATION_FIELDS.map(k=>[k,pick[k]??null]))};
+}
+function sameOwnerConfirmationIdentity(a,b){
+ return !!a&&!!b&&['league','season','week','key',...OWNER_CONFIRMATION_FIELDS].every(k=>a[k]===b[k]);
+}
+function ownerConfirmationMatches(record,identity){
+ return record?.kind==='owner_confirmation_v1'&&typeof record.at==='string'&&
+  typeof record.receiptId==='string'&&sameOwnerConfirmationIdentity(record.identity,identity);
+}
+
+window.DDBozoOwner={ownerConfirmationIdentity,sameOwnerConfirmationIdentity,ownerConfirmationMatches};
+function ownerConfirmationFor(x){
+  const key=x?.key||kEnc(x?.p||x?.who||'');
+  const identity=window.DDBozoOwner?.ownerConfirmationIdentity(LID,S.season||2026,S.week||1,key,x);
+  const record=S.ownerConfirmations?.[x?.submissionId];
+  return window.DDBozoOwner?.ownerConfirmationMatches(record,identity)?record:null;
+}
+const priceSourceBadge = x => (ownerConfirmationFor(x)?'<span class="cst ok" title="Owner confirmed this exact submission text. This does not verify sportsbook quotes or change eligibility or contest outcomes.">Owner approved</span> ':'')+quoteSourceBadge(x);
+const quoteSourceBadge = x => {
   const r = legRow(x);
   if(x && x.priceSource === 'manual' && x.verificationStatus === 'verified')
     return '<span class="cst ok" title="Original entry odds confirmed by a league manager; verification is recorded">Manually verified</span>';
   if(x && x.verificationStatus === 'unverified')
-    return '<span class="cst warn" title="Pick accepted with manually entered odds. Manager review is needed.">Unverified' + (r && r.clvPts != null ? ' · CLV set by hand' : ' · awaiting review') + '</span>';
+    return '<span class="cst warn" title="Sportsbook quote remains unverified. Owner confirmation is separate and supplies no opposing price.">' + (ownerConfirmationFor(x)?'Quote unverified':'Unverified') + (r && r.clvPts != null ? ' · CLV set by hand' : ownerConfirmationFor(x)?'':' · awaiting review') + '</span>';
   if(r && r.clvPts != null && Number.isFinite(+r.clvPts))
     return `<span class="cst warn" title="No two-sided captured entry, so the manager set this leg's CLV by hand. Weaker evidence than a captured pair, and counted separately.">self · CLV set by hand</span>`;
   return x && x.priceSource === 'captured'
@@ -8789,6 +8811,11 @@ function paintGodResults(){
     return `<div class="gr leg" data-god="${esc(k)}">
       <div><b>${esc(x.who || memberLabel(k) || kDec(k))}</b> ${esc(x.label || '')}</div>
       <div class="tm" style="margin:2px 0 6px">took ${x.price ?? '—'} / ${x.entryPriceOpp ?? x.priceOpp ?? '—'} · ${priceSourceBadge({...x,key:k})}</div>
+      ${isAdmin() && x.submissionId ? `<div class="row" style="gap:6px;flex-wrap:wrap" data-ddb-skip>
+        <label>Private confirmation reference <input class="goevidence" aria-label="Private confirmation reference for ${esc(x.submissionId)}" maxlength="500"></label>
+        <button type="button" class="btn ghost sm goapprove" ${ownerConfirmationFor({...x,key:k})?'disabled':''}>Record owner confirmation ${esc(x.submissionId)}</button>
+        <span class="tm">Provenance only. No quote verification or eligibility change.</span>
+      </div>` : ''}
       ${x.priceSource !== 'captured' ? `<div class="row" style="gap:6px;flex-wrap:wrap;margin:8px 0">
         <label>Original entry odds <input class="gvep" aria-label="Original entry odds" value="${esc(x.price ?? '')}" readonly style="max-width:110px"></label>
         <label>Opposite entry odds <input class="gveo" aria-label="Opposite entry odds" inputmode="text" placeholder="e.g. +150" value="${esc(x.entryPriceOpp ?? x.priceOpp ?? '')}" style="max-width:120px"></label>
@@ -8846,6 +8873,22 @@ function paintGodResults(){
     };
   });
 
+  host.querySelectorAll('.goapprove').forEach(b=>{
+    b.onclick=async()=>{
+      const box=b.closest('[data-god]'),key=box.dataset.god,pick=picks[key];
+      const evidenceRef=box.querySelector('.goevidence').value.trim();
+      b.disabled=true;godErr('');
+      try{
+        const expected=window.DDBozoOwner.ownerConfirmationIdentity(LID,S.season||2026,S.week||1,key,pick);
+        const proposal=await wPost('/bozo/owner-confirmation',{forUid:key,expected,evidenceRef});
+        if(!window.confirm(proposal.echo))return;
+        const saved=await wPost('/bozo/owner-confirmation',{forUid:key,confirm:proposal.confirm_code});
+        const check=await wGet('/bozo/owner-confirmation?league='+encodeURIComponent(LID)+'&receiptId='+encodeURIComponent(saved.receipt.receiptId));
+        if(!check.current)throw Error('The confirmation was recorded, but this submission has changed.');
+        await refresh();paintGod();godErr('Owner confirmation recorded and read back. Quotes, eligibility and outcomes unchanged. Receipt '+check.receipt.receiptId,true);
+      }catch(e){godErr(e.message);}finally{b.disabled=false;}
+    };
+  });
   host.querySelectorAll('.gverify').forEach(b=>{
     b.onclick = async ()=>{
       const box=b.closest('[data-god]'), key=box.dataset.god, pick=picks[key];

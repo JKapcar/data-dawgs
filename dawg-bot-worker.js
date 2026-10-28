@@ -1,3 +1,17 @@
+// Inert provenance only. Never used by eligibility, grading, capture or payments.
+const OWNER_CONFIRMATION_FIELDS=['submissionId','ts','who','submittedBy','sport','eventId','espnEventId','canonicalKey','selectionKey','marketKey','game','label','mkt','side','dir','line','period','startsAt','commenceTime','price','entryBook'];
+function ownerConfirmationIdentity(league,season,week,key,pick){
+ if(!pick?.submissionId||!Number.isFinite(pick.ts))return null;
+ return {league,season,week,key,...Object.fromEntries(OWNER_CONFIRMATION_FIELDS.map(k=>[k,pick[k]??null]))};
+}
+function sameOwnerConfirmationIdentity(a,b){
+ return !!a&&!!b&&['league','season','week','key',...OWNER_CONFIRMATION_FIELDS].every(k=>a[k]===b[k]);
+}
+function ownerConfirmationMatches(record,identity){
+ return record?.kind==='owner_confirmation_v1'&&typeof record.at==='string'&&
+  typeof record.receiptId==='string'&&sameOwnerConfirmationIdentity(record.identity,identity);
+}
+
 import { BOZO_ESPN_TEAM_SEED } from "./bozo-team-registry.mjs";
 
 /**
@@ -1944,6 +1958,7 @@ export default {
     if (url.pathname === "/bozo/clv")     return bozoClv(request, url, env, cors);
     if (url.pathname === "/bozo/close")   return bozoCloseFill(request, env, cors);
     if (url.pathname === "/bozo/close-gaps") return bozoCloseGaps(request, url, env, cors);
+    if (url.pathname === "/bozo/owner-confirmation") return bozoOwnerConfirmation(request, env, cors);
     if (url.pathname === "/bozo/verify-entry") return bozoVerifyEntry(request, env, cors);
     if (url.pathname === "/bozo/admin")   return bozoAdmin(request, url, env, cors);
     if (url.pathname === "/bozo/config")  return bozoConfigSet(request, env, cors);
@@ -11792,6 +11807,67 @@ function adminPath(raw) {
   if (parts[0] === "audit")
     return { err: "The audit log is append-only — it is the record of these edits and cannot be one of them." };
   return { path: rel };
+}
+
+// Owner confirmation is administrative provenance, never quote verification.
+async function bozoOwnerConfirmation(request, env, cors) {
+  if (!['GET','POST'].includes(request.method)) return json({error:'GET or POST only'},405,cors);
+  const auth=await sessionAuth(request,env);
+  if(auth.err) return json({error:auth.err},auth.code||403,cors);
+  if(!isSiteAdmin(auth,env)) return json({error:'Site owner only.'},403,cors);
+  let body;
+  try { body=request.method==='GET'?Object.fromEntries(new URL(request.url).searchParams):await readBody(request); }
+  catch { return json({error:'Bad JSON.'},400,cors); }
+  const out=await bozoOwnerConfirmationCore(env,auth,body,request.method);
+  return json(out.body,out.status,cors);
+}
+async function bozoOwnerConfirmationCore(env,auth,body,method='POST') {
+  const result=(body,status=200)=>({body,status}), fail=(error,status)=>result({error},status);
+  if(!isSiteAdmin(auth,env))return fail('Site owner only.',403);
+  if(!body||typeof body!=='object'||Array.isArray(body))return fail('Bad request.',400);
+  const lid=leagueOf(body), actor=auth.uid||auth.name;
+  if(!lid)return fail('Bad league id.',400);
+  if(!env.RL)return fail('Private audit storage unavailable.',503);
+  try {
+    const {data:state,etag}=await fbGet(env,LG(lid),true);
+    if(!state)return fail('No such league.',404);
+    const code=body.confirm||body.receiptId;
+    if(code!=null&&!/^[a-f0-9-]{36}$/.test(code))return fail('Bad receipt id.',400);
+    const audit=code&&state.audit?.[code];
+    if(audit?.type==='owner_confirmation'&&audit.actor===actor&&audit.leagueId===lid){
+      const privateReceipt=JSON.parse(await env.RL.get('bozo-owner-audit:'+code)||'null');
+      if(!privateReceipt)return fail('Private audit receipt unavailable.',503);
+      const current=ownerConfirmationIdentity(lid,state.season||SEASON,state.week||1,audit.forUid,state.picks?.[audit.forUid]);
+      return result({ok:true,receipt:audit.receipt,current:ownerConfirmationMatches(audit.receipt,current),evidenceRef:privateReceipt.evidenceRef});
+    }
+    if(method==='GET')return fail('No owner confirmation receipt.',404);
+    const key=String(body.forUid||'');
+    if(!Object.prototype.hasOwnProperty.call(state.picks||{},key))return fail('Exact member key required.',404);
+    const identity=ownerConfirmationIdentity(lid,state.season||SEASON,state.week||1,key,state.picks[key]);
+    if(!identity)return fail('Submission identity unavailable.',409);
+    const pendingKey='bozo-owner-pending:'+actor+':'+lid+':'+key;
+    if(!code){
+      if(!sameOwnerConfirmationIdentity(body.expected,identity))return fail('Submission changed. Review its exact identity again.',409);
+      if(typeof body.evidenceRef!=='string'||!body.evidenceRef.trim()||body.evidenceRef.length>500)return fail('Private confirmation reference required (up to 500 characters).',400);
+      const confirmation=crypto.randomUUID();
+      await env.RL.put(pendingKey,JSON.stringify({code:confirmation,identity,evidenceRef:body.evidenceRef.trim()}),{expirationTtl:300});
+      return result({status:'confirm_required',confirm_code:confirmation,echo:`Record owner confirmation of ${identity.submissionId}: ${identity.label}, ${identity.game}, ${identity.price}, ${identity.startsAt}. This is only a record that the owner confirmed the text. It does not verify sportsbook prices or change eligibility, picks, CLV or any contest outcome.`});
+    }
+    const pending=JSON.parse(await env.RL.get(pendingKey)||'null');
+    if(!pending||pending.code!==code)return fail('Confirmation expired or does not match.',409);
+    if(!sameOwnerConfirmationIdentity(pending.identity,identity))return fail('Submission changed. Review it again.',409);
+    const at=new Date().toISOString();
+    const receipt={kind:'owner_confirmation_v1',receiptId:code,at,byName:auth.name,identity};
+    // Evidence stays in existing private Worker KV, never in the public league tree.
+    // Write before the public CAS: a failed CAS cannot create a false visible seal.
+    await env.RL.put('bozo-owner-audit:'+code,JSON.stringify({actor,receipt,evidenceRef:pending.evidenceRef}));
+    state.ownerConfirmations=state.ownerConfirmations||{};
+    state.ownerConfirmations[identity.submissionId]=receipt;
+    state.audit=state.audit||{};
+    state.audit[code]={type:'owner_confirmation',actor,by:auth.name,at,leagueId:lid,forUid:key,week:state.week||1,receipt};
+    if(!etag||!await fbPut(env,LG(lid),state,etag))return fail('Board changed concurrently. Read back this receipt before retrying.',409);
+    return result({ok:true,receipt,current:true,evidenceRef:pending.evidenceRef});
+  }catch { return fail('Owner confirmation storage unavailable. Read back the receipt before retrying.',502); }
 }
 
 // Verify a manually entered ORIGINAL quote, without changing the pick or its clock.

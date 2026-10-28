@@ -16,6 +16,7 @@ import { readFileSync } from "fs";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import vm from "node:vm";
+import * as ownerConfirmation from '../bozo-owner-confirmation.mjs';
 
 const WORK = dirname(fileURLToPath(import.meta.url));
 const page = readFileSync(resolve(WORK, "..", "bozo.html"), "utf8");
@@ -48,6 +49,7 @@ const S = {
 
 const ctx = vm.createContext({
   console, Object, Array, Number, JSON, Math, String, Boolean,
+  window:{DDBozoOwner:ownerConfirmation},LID:'main',
   S,
   esc: s => String(s == null ? "" : s),
   kDec: k => k,
@@ -68,7 +70,7 @@ vm.runInContext(
   grab("function clvAssumedOpp(price){", "\n/** proportional de-vig")
   + grab("const devigP = (a,b) => {", "/* The CLV a leg carries right now")
   + grab("function legRow(x){", "/* ⚠️ A HAND-SET CLV OUTRANKS")
-  + grab("const priceSourceBadge = x => {", "\n// Server capture replaced")
+  + grab("function ownerConfirmationFor(", "\n// Server capture replaced")
   + grab("function clvDeltaOf(x, r){", "const amer =")
   + "\nglobalThis.__legRow = legRow; globalThis.__badge = priceSourceBadge;"
   + "\nglobalThis.__delta = clvDeltaOf;", ctx);

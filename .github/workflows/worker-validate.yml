@@ -9,6 +9,8 @@ on:
       - ".github/workflows/**"
       - "dawg-bot-worker.js"
       - "bozo-menu.mjs"
+      - "bozo-owner-confirmation.mjs"
+      - "tests/bozo-owner-confirmation.test.mjs"
       - "tests/bozo-menu*.test.mjs"
       - "tests/bozo-clv-estimate.test.cjs"
       - "tests/discord-*.test.cjs"
@@ -45,6 +47,7 @@ jobs:
           cd work && node assemble.mjs && cd ..
           git diff --exit-code -- dawg-bot-worker.js
       - run: node --check dawg-bot-worker.js
+      - run: node --test tests/bozo-owner-confirmation.test.mjs
       - run: node --test tests/bozo-capture-policy.test.cjs tests/bozo-exchange-evidence.test.cjs tests/bozo-effective-clv.test.cjs
       - run: node --test tests/worker-config-guard.test.mjs
       - run: node --test tests/jobs-deployment.test.mjs
