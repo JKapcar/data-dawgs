@@ -1,0 +1,173 @@
+{
+ "captured": "2026-10-28T23:10:00Z",
+ "source": "https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/events/401873024/competitions/401873024/odds (ARI @ DAL, 2026 week 8)",
+ "note": "Read through a web fetch on 2026-10-28, which returned the body as quoted JSON rather than raw bytes; field names and values are as ESPN served them. ESPN serves no observation timestamp. No credential is involved: the endpoint takes none.",
+ "data": {
+  "count": 1,
+  "pageIndex": 1,
+  "pageSize": 25,
+  "pageCount": 1,
+  "items": [
+   {
+    "provider": {
+     "id": "100",
+     "name": "DraftKings",
+     "priority": 1
+    },
+    "details": "DAL -10.5",
+    "overUnder": 47.5,
+    "spread": -10.5,
+    "overOdds": -110.0,
+    "underOdds": -110.0,
+    "homeTeamOdds": {
+     "favorite": true,
+     "underdog": false,
+     "moneyLine": -500,
+     "spreadOdds": -110.0,
+     "open": {
+      "favorite": true,
+      "pointSpread": {
+       "alternateDisplayValue": "-10.5",
+       "american": "-10.5"
+      },
+      "spread": {
+       "value": 1.9,
+       "displayValue": "10/11",
+       "alternateDisplayValue": "-110",
+       "decimal": 1.9,
+       "fraction": "10/11",
+       "american": "-110"
+      },
+      "moneyLine": {
+       "value": 1.2,
+       "displayValue": "1/5",
+       "alternateDisplayValue": "-500",
+       "decimal": 1.2,
+       "fraction": "1/5",
+       "american": "-500"
+      }
+     },
+     "current": {
+      "pointSpread": {
+       "alternateDisplayValue": "-10.5",
+       "american": "-10.5"
+      },
+      "spread": {
+       "value": 1.9,
+       "displayValue": "10/11",
+       "alternateDisplayValue": "-110",
+       "decimal": 1.9,
+       "fraction": "10/11",
+       "american": "-110"
+      },
+      "moneyLine": {
+       "value": 1.2,
+       "displayValue": "1/5",
+       "alternateDisplayValue": "-500",
+       "decimal": 1.2,
+       "fraction": "1/5",
+       "american": "-500"
+      }
+     }
+    },
+    "awayTeamOdds": {
+     "favorite": false,
+     "underdog": true,
+     "moneyLine": 380,
+     "spreadOdds": -110.0,
+     "open": {
+      "favorite": false,
+      "pointSpread": {
+       "alternateDisplayValue": "+10.5",
+       "american": "+10.5"
+      },
+      "spread": {
+       "value": 1.9,
+       "displayValue": "10/11",
+       "alternateDisplayValue": "-110",
+       "decimal": 1.9,
+       "fraction": "10/11",
+       "american": "-110"
+      },
+      "moneyLine": {
+       "value": 4.8,
+       "displayValue": "19/5",
+       "alternateDisplayValue": "+380",
+       "decimal": 4.8,
+       "fraction": "19/5",
+       "american": "+380"
+      }
+     },
+     "current": {
+      "pointSpread": {
+       "alternateDisplayValue": "+10.5",
+       "american": "+10.5"
+      },
+      "spread": {
+       "value": 1.9,
+       "displayValue": "10/11",
+       "alternateDisplayValue": "-110",
+       "decimal": 1.9,
+       "fraction": "10/11",
+       "american": "-110"
+      },
+      "moneyLine": {
+       "value": 4.8,
+       "displayValue": "19/5",
+       "alternateDisplayValue": "+380",
+       "decimal": 4.8,
+       "fraction": "19/5",
+       "american": "+380"
+      }
+     }
+    },
+    "moneylineWinner": false,
+    "spreadWinner": false,
+    "open": {
+     "over": {
+      "value": 1.9,
+      "displayValue": "10/11",
+      "alternateDisplayValue": "-110",
+      "decimal": 1.9,
+      "fraction": "10/11",
+      "american": "-110"
+     },
+     "under": {
+      "value": 1.9,
+      "displayValue": "10/11",
+      "alternateDisplayValue": "-110",
+      "decimal": 1.9,
+      "fraction": "10/11",
+      "american": "-110"
+     },
+     "total": {
+      "alternateDisplayValue": "49.5",
+      "american": "49.5"
+     }
+    },
+    "current": {
+     "over": {
+      "value": 1.9,
+      "displayValue": "10/11",
+      "alternateDisplayValue": "-110",
+      "decimal": 1.9,
+      "fraction": "10/11",
+      "american": "-110"
+     },
+     "under": {
+      "value": 1.9,
+      "displayValue": "10/11",
+      "alternateDisplayValue": "-110",
+      "decimal": 1.9,
+      "fraction": "10/11",
+      "american": "-110"
+     },
+     "total": {
+      "alternateDisplayValue": "47.5",
+      "american": "47.5"
+     }
+    }
+   }
+  ]
+ }
+}
