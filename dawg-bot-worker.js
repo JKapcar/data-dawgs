@@ -11727,6 +11727,10 @@ function opsOutcome(job, r) {
       return tried.some(x => x.error) ? "fail" : tried.length ? "ok" : "noop";
     }
     case "bozo:nearclose":
+      // Retired (Bozo captures committed selections only): the stub returning is the job
+      // succeeding, as it is for cfb:market:24h. Read as a noop, it could never clear the
+      // failure the last SportsGameOdds refusal left behind.
+      if (r.skipped === "bozo_selections_only") return "ok";
       return sports.some(x => x.error) ? "fail" : sports.some(x => Number.isFinite(x.events)) ? "ok" : "noop";
     case "bozo:autograde": {
       const leagues = Array.isArray(r.leagues) ? r.leagues.filter(Boolean) : [];
