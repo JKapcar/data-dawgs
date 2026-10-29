@@ -3955,8 +3955,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
 <section class="card" id="ownerRepairCard" hidden data-ddb-skip aria-labelledby="ownerRepairHeading">
   <h2 id="ownerRepairHeading">Owner repair · manual ruling</h2>
-  <p>Repair a placed spread, total or moneyline before any ticket game starts. Same member, event, market and side; only the line, price and timestamp treatment change. No provider quote is claimed. Automatic no-vig CLV is unavailable for the repaired pick.</p>
-  <p>Draw, lock, stakes, funding, results and elimination decisions stay unchanged. The ledger remains the original receipt; this ruling is a separate audit entry. Line and price affect future grading and shortest-odds exposure. Owner values override ordinary price-band and duplicate-entry rules; this does not assert sportsbook acceptance.</p>
+  <p>Repair a placed spread or total before any ticket game starts. Same member, event, market and side; only the line, price and timestamp treatment change. Moneyline repairs are unavailable because unverified entry odds can block Worst Beat settlement. No provider quote is claimed. Automatic no-vig CLV is unavailable for the repaired pick.</p>
+  <p>Draw, lock, stakes, funding, results and elimination decisions stay unchanged. The original ledger entry is archived unchanged; the current ledger projection follows the ruling for future closes and grading. Line and price affect future grading and shortest-odds exposure. Owner values override ordinary price-band and duplicate-entry rules; this does not assert sportsbook acceptance.</p>
   <div class="frm">
     <div class="f w2"><label for="ownerRepairMember">Recorded pick</label><select id="ownerRepairMember"></select></div>
     <div class="f"><label for="ownerRepairLine">Posted line (+ gets points)</label><input id="ownerRepairLine" type="number" step="any" min="-10000" max="10000"></div>
@@ -6988,7 +6988,7 @@ function paintOwnerRepair(){
   card.hidden=!ownerRepairAllowed || S.status!=='placed';
   if(card.hidden)return;
   const select=document.getElementById('ownerRepairMember'),old=select.value;
-  const options=Object.entries(S.picks||{}).filter(([,p])=>['spread','total','ml'].includes(p.mkt));
+  const options=Object.entries(S.picks||{}).filter(([,p])=>['spread','total'].includes(p.mkt));
   const signature=JSON.stringify(options.map(([key,p])=>[key,p.submissionId,p.label,p.price]));
   if(select.dataset.signature!==signature){
     select.replaceChildren(...options.map(([key,p])=>new Option(memberLabel(key)+' · '+p.label+' at '+p.price,key)));
@@ -7034,7 +7034,7 @@ async function runOwnerRepair(confirming){
     if(LID!==league || ME?.session!==session)return;
     if(confirming){
       clearOwnerRepairPreview();
-      status.textContent='Owner ruling saved. Receipt '+result.correctionId+'. Original ledger, draw and lock retained. Quote remains unverified.';
+      status.textContent='Owner ruling saved. Receipt '+result.correctionId+'. Original ledger archived; current projection updated. Draw and lock retained. Quote remains unverified.';
       await refresh();
     }else{
       sessionStorage.setItem('bozo-owner-repair:'+league,JSON.stringify({league,forUid:body.forUid,confirm:result.confirm_code,echo:result.echo,expiresAt:result.expiresAt,input:body}));
@@ -7061,7 +7061,7 @@ function paintAdminActions(){
     `${esc(when(ts))} · ${esc(r.byName||'?')} ` + (r.type==='reopen' ? 'unlocked the board'
       : `${verb(r.type)} ${esc(r.forName||'?')}`)
     + (r.after && r.after.label ? ` - ${esc(r.after.label)}` : '') + (r.reason ? ` · Reason: ${esc(r.reason)}` : '')
-    + (r.type==='owner_pick_ruling' ? `<br>${esc(r.before.label)} at ${esc(r.before.price)} → ${esc(r.after.label)} at ${esc(r.after.price)} · ${esc(r.timestampMode==='preserve'?'Original timestamp preserved':'New confirmation time')} · Source observation: ${esc(r.after.ownerRuling.observedAt||'unknown')} · Evidence: ${esc(r.after.ownerRuling.evidenceReference)} · Original ledger retained; automatic no-vig CLV unavailable.` : '')).join('<br>');
+    + (r.type==='owner_pick_ruling' ? `<br>${esc(r.before.label)} at ${esc(r.before.price)} → ${esc(r.after.label)} at ${esc(r.after.price)} · ${esc(r.timestampMode==='preserve'?'Original timestamp preserved':'New confirmation time')} · Source observation: ${esc(r.after.ownerRuling.observedAt||'unknown')} · Evidence: ${esc(r.after.ownerRuling.evidenceReference)} · Original ledger archived; current projection follows ruling; automatic no-vig CLV unavailable.` : '')).join('<br>');
   el.style.display='';
 }
 
@@ -8100,7 +8100,7 @@ function bozoCtx(){
 }
 window.DD_BOTCTX = {
   // Owner rulings are distinct from provider capture, including when the clock is preserved.
-  sys: BOZO_SYS + '\nOwner repair is a separate owner-only manual ruling for placed, unsettled spread/total/moneyline line and price corrections before every ticket game starts. It requires preview and confirmation with an explicit preserve/new timestamp choice. Never call an owner ruling a provider-verified quote, measured CLV or historical close. Its original ledger receipt remains unchanged; the live pick and separate before/after audit reflect the ruling. No result, financial, elimination or role changes are included.\nEstimated CLV is modeled fair-close minus fair-entry in probability percentage points, separately labeled with vig sensitivity and source limitations. Never call it measured CLV or expected ROI. Untimed quote proxies are not verified closing prices. Valid saved estimates enter labeled analytics; missing quotes remain unknown.\nRecovered closing evidence is third-party-reported, uncorroborated reference data only. Page timestamps are not exact per-book quote timestamps. It never fills original captures or changes official CLV, rankings, tiebreakers or settlement.', label: 'LIVE BOZO STATE', ctx: bozoCtx,
+  sys: BOZO_SYS + '\nOwner repair is a separate owner-only manual ruling for placed, unsettled spread/total line and price corrections before every ticket game starts. It requires preview and confirmation with an explicit preserve/new timestamp choice. Never call an owner ruling a provider-verified quote, measured CLV or historical close. Its original ledger receipt is archived unchanged; the canonical ledger projection and live pick follow the ruling, with linked before/after history. Moneyline repair is refused to avoid an unpriced Worst Beat settlement. No result, financial, elimination or role changes are included.\nEstimated CLV is modeled fair-close minus fair-entry in probability percentage points, separately labeled with vig sensitivity and source limitations. Never call it measured CLV or expected ROI. Untimed quote proxies are not verified closing prices. Valid saved estimates enter labeled analytics; missing quotes remain unknown.\nRecovered closing evidence is third-party-reported, uncorroborated reference data only. Page timestamps are not exact per-book quote timestamps. It never fills original captures or changes official CLV, rankings, tiebreakers or settlement.', label: 'LIVE BOZO STATE', ctx: bozoCtx,
   title: 'Ask Toto — he reads the live ticket',
   chrome: {
     sub: 'reads the live ticket',

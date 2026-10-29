@@ -7288,7 +7288,8 @@ async function bozoOwnerRepairCore(env, auth, body) {
     const gate=bozoCorrectionGate(state,key,Date.now());
     if (gate) return fail(gate);
     const before=state.picks[key];
-    if (!["spread","total","ml"].includes(before.mkt) || !Number.isFinite(before.ts)) return fail("Only an existing spread, total or moneyline with a recorded timestamp is supported.");
+    if (before.mkt==="ml") return fail("Moneyline owner repair is unavailable: removing verified entry odds can block Worst Beat settlement. Use the verified correction route; no ruling was proposed.");
+    if (!["spread","total"].includes(before.mkt) || !Number.isFinite(before.ts)) return fail("Only an existing spread or total with a recorded timestamp is supported.");
     if (!env.RL || !etag) return fail("Confirmation or concurrency store unavailable.",503);
     const version=await sha256hex(JSON.stringify(bozoCanonical(state)));
     const kvKey="bozo-owner-repair:"+actor+":"+lid+":"+key;
@@ -7310,18 +7311,19 @@ async function bozoOwnerRepairCore(env, auth, body) {
       });
       // No inherited manual entry-verification receipt can certify this new selection.
       delete after.entryVerification;
+      delete after.entryCapture;
       const schedule=await bozoCorrectionSchedule(env,state,after,Date.now());
       if (schedule.error) return fail(schedule.error);
       const echo=`OWNER RULING for ${memberNameAt(state,key)} in ${lid}: ${before.label} at ${before.price} → ${after.label} at ${after.price}. `+
         `Timestamp: ${body.timestampMode==="preserve"?"preserve "+new Date(before.ts).toISOString():"use new server confirmation time; Last In may change"}. `+
         `Reason: ${body.reason.trim()}. Evidence (owner supplied): ${body.evidenceReference.trim()}. Observed: ${body.observedAt||"unknown"}. `+
-        "Line and price affect future grading and shortest-odds exposure. Owner values override ordinary price-band and duplicate-entry rules, not sportsbook acceptance. This is unverified and ineligible for automatic no-vig CLV. Original ledger receipts, draw, lock, stakes, funding, results and elimination decisions stay unchanged. Both pick versions remain in the audit.";
-      pending={code,actor,lid,key,version,after,reason:body.reason.trim(),timestampMode:body.timestampMode,enteredAt,expiresAt,echo};
+        "Line and price affect future grading and shortest-odds exposure. Owner values override ordinary price-band and duplicate-entry rules, not sportsbook acceptance. This is unverified and ineligible for automatic no-vig CLV. The original ledger entry is archived unchanged; the current ledger projection follows this ruling for future closes and grading. Draw, lock, stakes, funding, results and elimination decisions stay unchanged. Both pick and ledger versions remain in the audit.";
+      pending={protocolVersion:2,code,actor,lid,key,version,after,reason:body.reason.trim(),timestampMode:body.timestampMode,enteredAt,expiresAt,echo};
       await env.RL.put(kvKey,JSON.stringify(pending),{expirationTtl:300});
       return reply({status:"confirm_required",confirm_code:code,expiresAt,echo,before,after,timestampMode:body.timestampMode});
     }
     pending=JSON.parse(await env.RL.get(kvKey)||"null");
-    if (!pending || pending.code!==body.confirm || pending.actor!==actor || pending.lid!==lid || pending.key!==key || Date.now()>=pending.expiresAt) return fail("Repair proposal expired or mismatched. Preview again.");
+    if (!pending || pending.protocolVersion!==2 || pending.code!==body.confirm || pending.actor!==actor || pending.lid!==lid || pending.key!==key || Date.now()>=pending.expiresAt) return fail("Repair proposal expired or mismatched. Preview again.");
     if (pending.version!==version) return fail("League changed since preview. Review a new proposal.");
     const schedule=await bozoCorrectionSchedule(env,state,pending.after,Date.now());
     if (schedule.error) return fail(schedule.error);
@@ -7330,11 +7332,27 @@ async function bozoOwnerRepairCore(env, auth, body) {
     const after={...pending.after,ts:pending.timestampMode==="preserve"?before.ts:now,
       ownerRuling:{...pending.after.ownerRuling,confirmedAt:now},submittedBy:actor,submittedByName:auth.name,commissionerModified:true,via:"owner_ruling"};
     const result={ok:true,status:"owner_repaired",correctionId:pending.code,league:lid,forUid:key,ts:after.ts,confirmedAt:now,timestampMode:pending.timestampMode};
-    const ledgerReceipt=state.ledger[ledgerKey(state.season||SEASON,state.week||1,key)];
+    const rowKey=ledgerKey(state.season||SEASON,state.week||1,key),ledgerReceipt=state.ledger[rowKey];
+    const priorRevision=ledgerReceipt.entryRevision||"original";
+    const history=state.ledgerEntryHistory?.[rowKey]||{};
+    if (history[priorRevision] && !bozoSame(history[priorRevision],ledgerReceipt)) return fail("Archived ledger revision conflicts; review history before repair.");
+    // Canonical ledger is the current analytical projection. Preserve unknown/financial
+    // fields, replace entry identity/provenance, and never attach a new close to an old
+    // verified pair. The exact previous row is retained append-only outside that path.
+    const projected=ledgerEntries(lid,state.season||SEASON,state.week||1,{...state.picks,[key]:after},state.order)[rowKey];
+    const afterLedger={...ledgerReceipt,...projected,entryRevision:pending.code,
+      supersedesEntryRevision:priorRevision,originalEntryRef:`ledgerEntryHistory/${rowKey}/original`,
+      ownerRuling:after.ownerRuling,correctionId:pending.code,originalLockTs:state.closeTs,
+      secToClose:Math.round((state.closeTs-after.ts)/1000),rankBasis:pending.timestampMode,
+      entryCapture:null,entryVerification:null,fairEntry:null,entryHold:null,entryPriceOpp:null,clvEstimate:null,clvPts:null,clvSource:null,
+      close:null,closeOpp:null,closeBook:null,closeSource:null,closeOppSource:null,closeObservedAt:null,closeUnavailableReason:null};
+    if (Object.hasOwn(ledgerReceipt,"slipKey")) afterLedger.slipKey=ledgerReceipt.slipKey;
     const receipt={type:"owner_pick_ruling",actor,byUid:actor,byName:auth.name,forUid:key,forName:memberNameAt(state,key),leagueId:lid,
       week:state.week||1,season:state.season||SEASON,ts:now,reason:pending.reason,timestampMode:pending.timestampMode,
-      before,after,beforeLedger:ledgerReceipt,afterLedger:ledgerReceipt,draw:state.order,lockTs:state.closeTs,result};
+      before,after,beforeLedger:ledgerReceipt,afterLedger,draw:state.order,lockTs:state.closeTs,result};
     state.picks[key]=after;
+    state.ledgerEntryHistory={...state.ledgerEntryHistory,[rowKey]:{...history,[priorRevision]:ledgerReceipt}};
+    state.ledger[rowKey]=afterLedger;
     state.audit={...state.audit,[pending.code]:receipt};
     state.admin={...state.admin,actions:{...state.admin?.actions,[pending.code]:receipt}};
     if (!await fbPut(env,LG(lid),state,etag)) {
@@ -9832,6 +9850,7 @@ async function bozoClv(request, url, env, cors) {
       entryCapture: r.entryCapture || null, startsAt: r.startsAt || null,
       entryPrice: r.price ?? null,
       entryPriceOpp: r.priceOpp ?? null,
+      entryRevision: r.entryRevision || null, originalEntryRef: r.originalEntryRef || null, ownerRuling: r.ownerRuling || null,
       priceSource: r.priceSource || null,
       verificationStatus: r.verificationStatus || null,
       clvEligible: r.clvEligible ?? null, captureFailureCode: r.captureFailureCode || null,

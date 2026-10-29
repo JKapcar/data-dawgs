@@ -33,7 +33,7 @@ paintOwnerRepair();refresh();</script>`;
         if(req.method()==='GET')return route.fulfill({json:{ownerRepair:true}});
         const body=req.postDataJSON();sent.push(body);
         if(!body.confirm)return route.fulfill({json:{confirm_code:'synthetic-confirmation',expiresAt:Date.now()+300000,
-          echo:'OWNER RULING: AAA -4 at -175 → AAA +3.5 at -202. New confirmation time; Last In may change. Unverified; original ledger retained.'}});
+          echo:'OWNER RULING: AAA -4 at -175 → AAA +3.5 at -202. New confirmation time; Last In may change. Unverified; original ledger archived; current projection updated.'}});
         if(!actions.ruling){writes++;actions.ruling={type:'owner_pick_ruling',week:8,ts:Date.now(),byName:'Synthetic Owner',forName:'Synthetic Member',reason:'Correct synthetic line',timestampMode:'confirm_time',before:{label:'AAA -4',price:-175},after:{label:'AAA +3.5',price:-202,ownerRuling:{observedAt:null,evidenceReference:'Owner decision <script>bad()</script>'}}};}
         if(lost)return route.fulfill({status:502,json:{error:'Outcome uncertain; retry same code.'}});
         return route.fulfill({json:{status:'owner_repaired',correctionId:'ruling'}});
@@ -58,7 +58,7 @@ paintOwnerRepair();refresh();</script>`;
     await page.locator('#ownerRepairConfirm').click();await page.getByText(/Owner ruling saved/).waitFor();assert.equal(writes,1);
     assert.deepEqual(sent.at(-1),{league:'main',forUid:'u_member',confirm:'synthetic-confirmation'});
     assert.equal(await page.locator('#ownerRepairConfirm').isVisible(),false);
-    await page.reload();await page.getByText(/Original ledger retained; automatic no-vig CLV unavailable/).waitFor();
+    await page.reload();await page.getByText(/Original ledger archived; current projection follows ruling/).waitFor();
     assert.match(await page.locator('#adminActions').innerText(),/Owner decision <script>bad\(\)<\/script>/);assert.equal(await page.locator('#adminActions script').count(),0);
     await page.setViewportSize({width:1280,height:900});
     if(process.env.OWNER_REPAIR_PREVIEW)await page.screenshot({path:path.join(process.env.OWNER_REPAIR_PREVIEW,'owner-repair-desktop.png'),fullPage:true});
