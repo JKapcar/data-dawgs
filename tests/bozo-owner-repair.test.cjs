@@ -155,7 +155,7 @@ test('repair → real close mutation → grade commit → CLV uses one revised e
     cut('async function ledgerBackfill(', '/* ========================= Bozo closing-price capture')+
     cut('async function bozoCommitGrade(', '/* ===================== the manager\'s override')+
     cut('function bozoEstimateSettledRow(', 'function bozoEstimateBasis(')+
-    cut('async function bozoClv(', '/* ---------------- the parlay price,'),ctx);
+    cut('function bozoLedgerReadProjection(', '/* ---------------- the parlay price,'),ctx);
   const target={season:2026,week:8,key:'u_member',uid:'u_member',player:'Synthetic Member',pick:repaired.picks.u_member};
   const patch=ctx.bozoCloseMutation(target,{price:-210,opp:175,provider:'synthetic',snapshotAt:new Date(NOW+1000).toISOString()},null,new Date(NOW+1000).toISOString());
   assert.equal(await ctx.bozoGuardedPatch(r.env,'main',original,patch),false,'stale original pick cannot attach close');
@@ -190,4 +190,43 @@ test('archived original cannot be overwritten, and repeated repairs retain each 
   assert.deepEqual(next.ledgerEntryHistory['2026-w8-u_member'].original,first.ledgerEntryHistory['2026-w8-u_member'].original);
   assert.deepEqual(next.ledgerEntryHistory['2026-w8-u_member'][a.body.confirm_code],first.ledger['2026-w8-u_member']);
   assert.equal(next.ledger['2026-w8-u_member'].supersedesEntryRevision,a.body.confirm_code);
+});
+test('repaired multi-pick week derives consistent ranks/chalk in page history and MCP without rewriting other rows',async()=>{
+  const r=rig('standard');r.change(s=>{
+    s.members.u_third={name:'Synthetic Third'};
+    s.picks.u_other={...s.picks.u_other,who:'Synthetic Other',price:-250,ts:NOW-40000};
+    s.picks.u_third={...s.picks.u_other,who:'Synthetic Third',ts:NOW-20000,price:-110};
+    s.ledger=r.ctx.ledgerEntries('main',2026,8,s.picks,s.order);
+  });
+  const before=r.state(),p=await r.propose({price:-300,timestampMode:'confirm_time'});r.tick(1);await r.confirm(p.body.confirm_code);
+  const stored=r.state(),page=fs.readFileSync('bozo.html','utf8');
+  const workerHelper=cut('function bozoLedgerReadProjection(', 'async function bozoClv(').trim();
+  const pageHelper=page.slice(page.indexOf('function bozoLedgerReadProjection('),page.indexOf('function sheetRows(')).trim();
+  assert.equal(workerHelper,pageHelper,'page and Worker use identical projection logic');
+  const ctx={};vm.createContext(ctx);vm.runInContext(workerHelper+'\nthis.project=bozoLedgerReadProjection;',ctx);
+  const projected=ctx.project(stored.ledger),rows=Object.values(projected);
+  assert.equal(projected['2026-w8-u_member'].rank,3);assert.equal(projected['2026-w8-u_other'].rank,1);assert.equal(projected['2026-w8-u_third'].rank,2);
+  assert.equal(rows.filter(x=>x.lastIn).length,1);assert.equal(rows.filter(x=>x.shortestOdds).length,1);
+  assert.equal(projected['2026-w8-u_member'].shortestOdds,true);assert.equal(projected['2026-w8-u_other'].shortestOdds,false);
+  assert.deepEqual(stored.ledger['2026-w8-u_other'],before.ledger['2026-w8-u_other']);assert.deepEqual(stored.ledger['2026-w8-u_third'],before.ledger['2026-w8-u_third']);
+  assert.deepEqual(r.state(),stored,'projection is read-only');
+  const nodes=Object.fromEntries(['shName','shMeta','sheetBar','shStats','shWeek','shNote','history'].map(k=>[k,{textContent:'',innerHTML:''}]));
+  Object.assign(ctx,{S:{...stored,week:9,picks:{}},ME:null,ADMIN:'Admin',ROSTER:[],SPORTS:{},names:()=>['new1','new2','new3','new4'],
+    teamOf:x=>x,playerName:x=>x,weekBozoKey:()=>null,displayBozoKey:()=>null,devigP:()=>null,esc:String,kEnc:x=>x,when:String,flagBadge:()=>'',reviewFlag:()=>null,
+    document:{getElementById:id=>nodes[id],querySelector:()=>nodes.history}});
+  vm.runInContext("const resOf=r=>r.result||null;"+page.slice(page.indexOf('function sheetRows('),page.indexOf('/* ---------------- league sheet'))+'\nthis.paint=paintSheet;',ctx);
+  ctx.paint('Synthetic Member');assert.ok(nodes.shStats.innerHTML.replace(/<[^>]*>/g,"").includes("Last in1\u00d7"));assert.ok(nodes.shStats.innerHTML.replace(/<[^>]*>/g,"").includes("Chalkiest in pool1\u00d7"));
+  assert.match(nodes.history.innerHTML,/#3 in/);assert.match(nodes.shNote.textContent,/current entry revisions/);
+  ctx.paint('Synthetic Other');assert.ok(nodes.shStats.innerHTML.replace(/<[^>]*>/g,"").includes("Last in0\u00d7"));assert.ok(nodes.shStats.innerHTML.replace(/<[^>]*>/g,"").includes("Chalkiest in pool0\u00d7"));
+  const block=fs.readFileSync('work/mcp-block.js','utf8'),at=block.indexOf('    name: "dd_bozo_standings"');
+  const tool=block.slice(block.lastIndexOf('  {',at),block.indexOf('\n  },',at)+5).trim().replace(/,$/,'');
+  Object.assign(ctx,{validLeagueId:()=>true,DEFAULT_LEAGUE:'main',loadLeague:async()=>stored,fbGet:async()=>({data:stored.ledger}),LG:x=>x,toolText:x=>x,toolErr:x=>x});
+  vm.runInContext('this.tool=('+tool+');',ctx);const summary=await ctx.tool.run({league:'main'},{},null);
+  assert.equal(summary.players['Synthetic Member'].lastIn,1);assert.equal(summary.players['Synthetic Member'].shortestOdds,1);assert.equal(summary.players['Synthetic Other'].shortestOdds,0);
+});
+test('projection isolates weeks, retains legacy facts and represents ties/missing data honestly',()=>{
+  const ctx={};vm.createContext(ctx);vm.runInContext(cut('function bozoLedgerReadProjection(', 'async function bozoClv(')+'\nthis.project=bozoLedgerReadProjection;',ctx);
+  const rows={a:{season:2026,week:1,ts:100,price:-200,entryRevision:'r',ownerRuling:{}},b:{season:2026,week:1,ts:100,price:-200},old:{season:2025,week:1,rank:7,shortestOdds:true}};
+  const out=ctx.project(rows);assert.equal(out.a.rank,1);assert.equal(out.b.rank,1);assert.equal(out.a.lastIn,true);assert.equal(out.b.lastIn,true);assert.equal(out.b.shortestOdds,true);assert.deepEqual(out.old,rows.old);
+  delete rows.b.ts;delete rows.b.price;const missing=ctx.project(rows);assert.equal(missing.a.rank,null);assert.equal(missing.a.lastIn,null);assert.equal(missing.a.shortestOdds,null);
 });

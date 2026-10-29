@@ -6407,8 +6407,29 @@ function render(){
 // from the stored raw prices, never persisted (the SD table will be retuned and
 // stored derivatives would rot). The ledger starts writing the moment a week locks.
 const resOf = r => r.result || (r.won===true?'won':r.won===false?'lost':null);
+function bozoLedgerReadProjection(ledger) {
+  const out={...ledger},groups=new Map();
+  for(const [key,row] of Object.entries(ledger||{})){
+    if(!row || !Number.isInteger(row.season) || !Number.isInteger(row.week))continue;
+    const id=row.season+":"+row.week;
+    if(!groups.has(id))groups.set(id,[]);
+    groups.get(id).push([key,row]);
+  }
+  for(const rows of groups.values()){
+    if(!rows.some(([,row])=>row.entryRevision && row.ownerRuling))continue;
+    const timed=rows.every(([,row])=>Number.isFinite(row.ts)&&row.ts>0);
+    const priced=rows.every(([,row])=>Number.isFinite(row.price)&&Math.abs(row.price)>=100);
+    const latest=timed?Math.max(...rows.map(([,row])=>row.ts)):null;
+    const chalk=priced?Math.min(...rows.map(([,row])=>row.price)):null;
+    for(const [key,row] of rows)out[key]={...row,
+      rank:timed?1+rows.filter(([,other])=>other.ts<row.ts).length:null,
+      lastIn:timed?row.ts===latest:null,shortestOdds:priced?row.price===chalk:null,
+      entryCount:rows.length,entryAnalyticsBasis:"current_entry_revisions"};
+  }
+  return out;
+}
 function sheetRows(player){
-  return Object.values(S.ledger||{}).filter(r=>r && r.player===player)
+  return Object.values(bozoLedgerReadProjection(S.ledger||{})).filter(r=>r && r.player===player)
     .sort((a,b)=>(b.season-a.season)||(b.week-a.week));
 }
 function paintSheet(player){
@@ -6427,7 +6448,7 @@ function paintSheet(player){
   const priced = rows.filter(r=>Number.isFinite(r.price));
   const avgPx = priced.length ? Math.round(priced.reduce((a,r)=>a+r.price,0)/priced.length) : null;
   const chalk = rows.filter(r=>r.shortestOdds).length;
-  const lastIn = names().length ? rows.filter(r=>r.rank===names().length).length : 0;
+  const lastIn = rows.filter(r=>r.entryAnalyticsBasis==='current_entry_revisions'?r.lastIn===true:(names().length && r.rank===names().length)).length;
   /* ⚠️ De-vigged, matching the CLV chart. This used to be raw implied on both ends,
      which gave a second, different CLV number for the same player on the same page.
      Raw-minus-raw partly cancels the hold, but only when both sides carry the same one —
@@ -6484,7 +6505,7 @@ function paintSheet(player){
       }).join('')
     : '';
   document.getElementById('shNote').textContent = rows.length
-    ? 'Raw inputs from the season ledger. CLV and averages are derived on the fly — the receipts stay up.'
+    ? 'Raw inputs from the season ledger. CLV and averages are derived on the fly - the receipts stay up.' + (rows.some(r=>r.entryAnalyticsBasis==='current_entry_revisions') ? ' Weeks with owner rulings use current entry revisions for rank, Last In and shortest odds across that week. Timestamp/price ties share exposure; original lock-time receipts remain archived.' : '')
     : 'The ledger starts writing the moment a week locks. Nothing on the record yet.';
 }
 

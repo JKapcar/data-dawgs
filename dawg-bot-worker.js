@@ -9816,6 +9816,28 @@ async function bozoCloseRunSummary(env, nowMs, run) {
    reproducible if the method ever changes. Persisting a derived CLV would freeze
    today's formula into last year's rows — the exact mistake the ledger comment warns
    about for imp/clv/beat. */
+// Mirrored in bozo.html; parity and read-only semantics are regression-tested.
+function bozoLedgerReadProjection(ledger) {
+  const out={...ledger},groups=new Map();
+  for(const [key,row] of Object.entries(ledger||{})){
+    if(!row || !Number.isInteger(row.season) || !Number.isInteger(row.week))continue;
+    const id=row.season+":"+row.week;
+    if(!groups.has(id))groups.set(id,[]);
+    groups.get(id).push([key,row]);
+  }
+  for(const rows of groups.values()){
+    if(!rows.some(([,row])=>row.entryRevision && row.ownerRuling))continue;
+    const timed=rows.every(([,row])=>Number.isFinite(row.ts)&&row.ts>0);
+    const priced=rows.every(([,row])=>Number.isFinite(row.price)&&Math.abs(row.price)>=100);
+    const latest=timed?Math.max(...rows.map(([,row])=>row.ts)):null;
+    const chalk=priced?Math.min(...rows.map(([,row])=>row.price)):null;
+    for(const [key,row] of rows)out[key]={...row,
+      rank:timed?1+rows.filter(([,other])=>other.ts<row.ts).length:null,
+      lastIn:timed?row.ts===latest:null,shortestOdds:priced?row.price===chalk:null,
+      entryCount:rows.length,entryAnalyticsBasis:"current_entry_revisions"};
+  }
+  return out;
+}
 async function bozoClv(request, url, env, cors) {
   const lid = validLeagueId(url.searchParams.get("league") || "") ? url.searchParams.get("league") : DEFAULT_LEAGUE;
   let lg;
@@ -9827,6 +9849,7 @@ async function bozoClv(request, url, env, cors) {
   try { ledger = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
   catch (e) { return json({ error: "Database unreachable: " + e.message }, 502, cors); }
 
+  ledger=bozoLedgerReadProjection(ledger);
   const set = settingsOf(lg);
   // The ledger says "won"/"lost"; the chart contract says "win"/"loss". Translate once,
   // here, rather than teaching the page two vocabularies for one fact.
@@ -9883,6 +9906,7 @@ async function bozoClv(request, url, env, cors) {
       // whoever bets the most chalk.
       actual: r.actual ?? null,
       rank: r.rank ?? null,            // 1 = first leg in that week, N = Last In
+      lastIn: r.lastIn ?? null, entryCount: r.entryCount ?? null, entryAnalyticsBasis: r.entryAnalyticsBasis || null,
       shortestOdds: r.shortestOdds === true,
     }));
 
@@ -24423,7 +24447,7 @@ const MCP_TOOLS = [
       let ledger;
       try { ledger = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
       catch (e) { return toolErr("Database unreachable: " + e.message); }
-      const rows = Object.values(ledger);
+      const rows = Object.values(bozoLedgerReadProjection(ledger));
       if (!rows.length) return toolText({ league: lid, note: "The ledger is empty — no week has locked yet." });
       const per = {};
       let graded = 0;
@@ -24437,6 +24461,10 @@ const MCP_TOOLS = [
       const byWeek = {};
       for (const r of rows) (byWeek[`${r.season}-w${r.week}`] = byWeek[`${r.season}-w${r.week}`] || []).push(r);
       for (const wk of Object.values(byWeek)) {
+        if(wk.some(r=>r.entryAnalyticsBasis==="current_entry_revisions")){
+          for(const row of wk)if(row.lastIn===true && per[row.player])per[row.player].lastIn++;
+          continue;
+        }
         const last = wk.reduce((a, b) => (b.rank > a.rank ? b : a));
         if (per[last.player]) per[last.player].lastIn++;
       }
@@ -24444,6 +24472,7 @@ const MCP_TOOLS = [
       if (me && per[me]) per[me].you = true;
       return toolText({
         league: lid, weeksOnLedger: Object.keys(byWeek).length, gradedRows: graded,
+        entryAnalytics: "Weeks with owner rulings derive rank, Last In and shortest odds from all current entry revisions; ties share exposure. Original receipts remain archived.",
         you: me, players: per,
         synthetic,
         syntheticNote: synthetic

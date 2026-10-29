@@ -55,6 +55,15 @@ confirmation remains necessary after reload; discarding a preview does not write
   `/bozo/clv` exposes the revision, history reference and owner-ruling provenance,
   including after week rollover. Old supplemental entryCapture and verification
   evidence survive only in the archived originals, never on the repaired pick.
+- For a season/week containing an owner ruling, rank, Last In and shortest-odds
+  exposure are derived at read time from **all** current ledger entry projections.
+  The player sheet, CLV API and MCP standings use the same calculation. It does
+  not overwrite other members' stored ranks, original receipts or financial rows.
+  Timestamp ties share competition rank and Last In exposure; price ties share
+  shortest-odds exposure. Missing group inputs leave the corresponding derived
+  values unknown. Legacy weeks retain their original semantics. The player sheet
+  labels the revised basis and uses that historical week's entries, not today's
+  roster size, to count Last In.
 - The repaired pick has `priceSource: owner_ruling`, `verificationStatus:
   unverified`, `clvEligible: false`, and no opposite entry price, no-vig facts,
   provider quote timestamp or inherited entry-verification receipt. Owner-entered,
@@ -91,9 +100,9 @@ before merging or deploying; a draft PR does not activate it. No live repair is
 part of these tests. After approved release, verify both deployed surfaces before
 performing any separately approved live ruling through the owner UI.
 
-Validation on 2026-10-29 against `b1f4b9a2`: 51 owner-repair tests passed (including repair → close → grade → CLV → week rollover);
+Validation on 2026-10-29 against `b1f4b9a2`: 53 owner-repair tests passed (including repair → close → grade → CLV → week rollover);
 browser fixture passed at 390px and 1280px; identity 144/144 and MCP 466/466 passed.
-The broad Bozo suite with jsdom available passed 467/474. The same seven failures
+The broad Bozo suite with jsdom available passed 469/476. The same seven failures
 reproduced on untouched main (416/423): two lever-standings expectations, one
 period-market capture source expectation and four roster-anytime tests whose
 requests omit the required client build. Initial runs also lacked jsdom (three
@@ -104,3 +113,5 @@ used in testing.
 Review follow-up: moneylines fail closed at preview; spread/total projections remain unverified through real close mutation, grade commit and CLV read-model functions. Diagnostics browser QA passed locally at 390/1280px in both light/dark themes; the prior GitHub Linux trend-disclosure timeout is tracked separately, not claimed fixed by these data changes.
 
 The follow-up focused repair/correction/service-worker run passed 100/100. The exact diagnostics test also passed on untouched main in all four viewport/theme combinations; the Linux CI-only timeout is not claimed resolved. Pending proposals carry protocolVersion 2 so a preview from the earlier ledger semantics cannot confirm under this revision.
+
+Historical-analytics follow-up: 53 owner-repair tests, 111 focused checks and 466 MCP checks passed. Tests execute the actual player-sheet renderer and MCP standings after a three-pick timestamp/price repair, including historical roster changes, immutable other rows, ties and missing inputs. CI on prior head 910a65c6 completed successfully (Worker validation and both site-check jobs), including the previously failing Linux diagnostics step. Fresh CI is required for this read-projection follow-up.
