@@ -3953,6 +3953,26 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <!-- ---------- submit ---------- -->
 <section class="card" id="bozoMenu" hidden aria-label="The Bozo Menu" data-ddb-skip></section>
 
+<section class="card" id="ownerRepairCard" hidden data-ddb-skip aria-labelledby="ownerRepairHeading">
+  <h2 id="ownerRepairHeading">Owner repair · manual ruling</h2>
+  <p>Repair a placed spread, total or moneyline before any ticket game starts. Same member, event, market and side; only the line, price and timestamp treatment change. No provider quote is claimed. Automatic no-vig CLV is unavailable for the repaired pick.</p>
+  <p>Draw, lock, stakes, funding, results and elimination decisions stay unchanged. The ledger remains the original receipt; this ruling is a separate audit entry. Line and price affect future grading and shortest-odds exposure. Owner values override ordinary price-band and duplicate-entry rules; this does not assert sportsbook acceptance.</p>
+  <div class="frm">
+    <div class="f w2"><label for="ownerRepairMember">Recorded pick</label><select id="ownerRepairMember"></select></div>
+    <div class="f"><label for="ownerRepairLine">Posted line (+ gets points)</label><input id="ownerRepairLine" type="number" step="any" min="-10000" max="10000"></div>
+    <div class="f"><label for="ownerRepairPrice">American price (signed)</label><input id="ownerRepairPrice" type="number" step="1" min="-100000" max="100000"></div>
+    <div class="f w2"><label for="ownerRepairTime">Timestamp treatment</label><select id="ownerRepairTime"><option value="">Choose explicitly</option><option value="preserve">Preserve recorded timestamp</option><option value="confirm_time">New confirmation time · Last In may change</option></select></div>
+    <div class="f w2"><label for="ownerRepairReason">Reason (required)</label><input id="ownerRepairReason" maxlength="300" autocomplete="off"></div>
+    <div class="f w2"><label for="ownerRepairEvidence">Evidence reference or owner decision (required)</label><input id="ownerRepairEvidence" maxlength="500" autocomplete="off" placeholder="Describe the source; do not enter credentials"></div>
+    <div class="f w2"><label for="ownerRepairObserved">Source observation time (ISO with timezone; blank = unknown)</label><input id="ownerRepairObserved" autocomplete="off" placeholder="2026-10-29T12:00:00Z"></div>
+  </div>
+  <button class="btn" type="button" id="ownerRepairPreview">Preview owner ruling</button>
+  <pre id="ownerRepairEcho" style="white-space:pre-wrap;overflow-wrap:anywhere" aria-live="polite"></pre>
+  <button class="btn" type="button" id="ownerRepairConfirm" hidden>Confirm this owner ruling</button>
+  <button class="btn" type="button" id="ownerRepairCancel" hidden>Discard preview</button>
+  <p id="ownerRepairStatus" role="status"></p>
+</section>
+
 <div class="card" id="submitCard" style="display:none">
   <div id="correctionFields" style="display:none" data-ddb-skip><p>Pre-kickoff correction: preserves the draw and lock time. Replaces one pick with a fresh quote and confirmation time; Last In, price and CLV may change. Original receipts stay in the audit. Unavailable after any ticket game starts or results exist.</p><label for="correctionReason">Reason for replacement (required)</label><input id="correctionReason" type="text" minlength="5" maxlength="300" autocomplete="off"></div>
   <h2 class="bz" id="submitH">Your leg</h2>
@@ -4390,6 +4410,7 @@ let JOIN_DIRECTORY = [];    // signed-in directory used by Join Existing League 
 let joinDirectoryLoaded = false, joinDirectoryLoading = false, joinSelected = null;
 let ROSTER = [];            // every account on the site, [{name, claimed}]
 let ME = null;              // {name, session}
+let ownerRepairSession = null, ownerRepairAllowed = false, ownerRepairBusy = false;
 let GAMES = {};             // sport -> games[]
 let drawnOrder = null;      // the key this PAGE LOAD has already revealed; null = not yet
 
@@ -6303,6 +6324,7 @@ function render(){
 
   paintSlip(players, picks, status, live);
   paintAdminActions();
+  paintOwnerRepair();
 
   document.getElementById('placeNote').textContent = open
     ? `Locks when every leg is in — ${Math.max(0, expected-live.length)} to go. That moment is the close for the ticket, and the server draws the hierarchy on the spot.`
@@ -6938,6 +6960,93 @@ async function submitLeg(){
    One line per admin/actions row for the current week. The rows are written by the
    Worker on PROXY writes only — a self-submit never lands here — so an empty list means
    nobody acted for anyone, and the block hides. Names through esc(); they are user text. */
+function ownerRepairPending(){
+  try { return JSON.parse(sessionStorage.getItem('bozo-owner-repair:'+LID)||'null'); } catch { return null; }
+}
+function clearOwnerRepairPreview(){
+  sessionStorage.removeItem('bozo-owner-repair:'+LID);
+  document.getElementById('ownerRepairEcho').textContent='';
+  document.getElementById('ownerRepairConfirm').hidden=true;
+  document.getElementById('ownerRepairCancel').hidden=true;
+  document.querySelectorAll('#ownerRepairCard input, #ownerRepairCard select').forEach(el=>el.disabled=false);
+}
+function fillOwnerRepairPick(){
+  const p=S.picks?.[document.getElementById('ownerRepairMember').value];
+  document.getElementById('ownerRepairLine').value=p?.line==null?'':p.mkt==='spread'?-p.line:p.line;
+  document.getElementById('ownerRepairPrice').value=p?.price??'';
+  document.getElementById('ownerRepairTime').value='';
+}
+function paintOwnerRepair(){
+  const session=ME?.session||'';
+  if(ownerRepairSession!==session){
+    ownerRepairSession=session; ownerRepairAllowed=false;
+    if(session) wGet('/bozo/owner-repair').then(r=>{
+      if(ownerRepairSession===session){ownerRepairAllowed=r.ownerRepair===true;paintOwnerRepair();}
+    }).catch(()=>{});
+  }
+  const card=document.getElementById('ownerRepairCard');
+  card.hidden=!ownerRepairAllowed || S.status!=='placed';
+  if(card.hidden)return;
+  const select=document.getElementById('ownerRepairMember'),old=select.value;
+  const options=Object.entries(S.picks||{}).filter(([,p])=>['spread','total','ml'].includes(p.mkt));
+  const signature=JSON.stringify(options.map(([key,p])=>[key,p.submissionId,p.label,p.price]));
+  if(select.dataset.signature!==signature){
+    select.replaceChildren(...options.map(([key,p])=>new Option(memberLabel(key)+' · '+p.label+' at '+p.price,key)));
+    select.dataset.signature=signature;
+    if(options.some(([key])=>key===old))select.value=old;
+    fillOwnerRepairPick();
+  }
+  const pending=ownerRepairPending();
+  document.getElementById('ownerRepairEcho').textContent='';
+  document.getElementById('ownerRepairConfirm').hidden=true;
+  document.getElementById('ownerRepairCancel').hidden=true;
+  document.querySelectorAll('#ownerRepairCard input, #ownerRepairCard select').forEach(el=>el.disabled=!!pending);
+  if(pending?.league===LID){
+    select.value=pending.forUid;
+    const fields={ownerRepairLine:'line',ownerRepairPrice:'price',ownerRepairTime:'timestampMode',ownerRepairReason:'reason',ownerRepairEvidence:'evidenceReference',ownerRepairObserved:'observedAt'};
+    for(const [id,key] of Object.entries(fields))document.getElementById(id).value=pending.input?.[key]??'';
+    document.getElementById('ownerRepairEcho').textContent=pending.echo;
+    document.getElementById('ownerRepairConfirm').hidden=false;
+    document.getElementById('ownerRepairCancel').hidden=false;
+  }
+}
+document.getElementById('ownerRepairCard').addEventListener('input',clearOwnerRepairPreview);
+document.getElementById('ownerRepairMember').addEventListener('change',()=>{clearOwnerRepairPreview();fillOwnerRepairPick();});
+document.getElementById('ownerRepairCancel').onclick=clearOwnerRepairPreview;
+async function runOwnerRepair(confirming){
+  if(ownerRepairBusy)return;
+  const status=document.getElementById('ownerRepairStatus'),preview=document.getElementById('ownerRepairPreview'),confirm=document.getElementById('ownerRepairConfirm');
+  const league=LID,session=ME?.session;
+  ownerRepairBusy=true;preview.disabled=true;confirm.disabled=true;status.textContent='Checking owner ruling…';
+  try{
+    let body;
+    if(confirming){
+      const pending=ownerRepairPending();
+      if(!pending || pending.league!==league)throw new Error('Preview this ruling first.');
+      body={league,forUid:pending.forUid,confirm:pending.confirm};
+    }else{
+      const value=id=>document.getElementById(id).value.trim();
+      if(!value('ownerRepairLine') || !value('ownerRepairPrice'))throw new Error('Enter both line and price.');
+      body={league,forUid:value('ownerRepairMember'),line:Number(value('ownerRepairLine')),price:Number(value('ownerRepairPrice')),
+        timestampMode:value('ownerRepairTime'),reason:value('ownerRepairReason'),evidenceReference:value('ownerRepairEvidence'),observedAt:value('ownerRepairObserved')||null};
+    }
+    const result=await wPost('/bozo/owner-repair',body);
+    if(LID!==league || ME?.session!==session)return;
+    if(confirming){
+      clearOwnerRepairPreview();
+      status.textContent='Owner ruling saved. Receipt '+result.correctionId+'. Original ledger, draw and lock retained. Quote remains unverified.';
+      await refresh();
+    }else{
+      sessionStorage.setItem('bozo-owner-repair:'+league,JSON.stringify({league,forUid:body.forUid,confirm:result.confirm_code,echo:result.echo,expiresAt:result.expiresAt,input:body}));
+      paintOwnerRepair();
+      status.textContent='Review the old and new values above. Nothing changed yet. Preview expires in five minutes.';
+    }
+  }catch(error){if(LID===league)status.textContent=error.message;}
+  finally{ownerRepairBusy=false;preview.disabled=false;confirm.disabled=false;}
+}
+document.getElementById('ownerRepairPreview').onclick=()=>runOwnerRepair(false);
+document.getElementById('ownerRepairConfirm').onclick=()=>runOwnerRepair(true);
+
 function paintAdminActions(){
   const el=document.getElementById('adminActions'); if(!el) return;
   const wk = S.week||1;
@@ -6946,12 +7055,13 @@ function paintAdminActions(){
     .filter(({r})=>r && (r.week||1)===wk)
     .sort((a,b)=>a.ts-b.ts);
   if(!rows.length){ el.style.display='none'; el.innerHTML=''; return; }
-  const verb = t => t==='replace_before_kickoff' ? 'corrected the placed leg of' : t==='proxy_remove' ? 'removed the leg of' : t==='proxy_edit' ? 'replaced the leg of'
+  const verb = t => t==='owner_pick_ruling' ? 'made an unverified owner ruling for' : t==='replace_before_kickoff' ? 'corrected the placed leg of' : t==='proxy_remove' ? 'removed the leg of' : t==='proxy_edit' ? 'replaced the leg of'
     : t==='verify_entry' ? 'verified the original odds for' : t==='roster_add' ? 'added' : t==='roster_remove' ? 'removed' : 'submitted for';
   el.innerHTML = '<b>Commissioner actions this week</b><br>' + rows.map(({ts,r})=>
     `${esc(when(ts))} · ${esc(r.byName||'?')} ` + (r.type==='reopen' ? 'unlocked the board'
       : `${verb(r.type)} ${esc(r.forName||'?')}`)
-    + (r.after && r.after.label ? ` — ${esc(r.after.label)}` : '') + (r.reason ? ` · Reason: ${esc(r.reason)}` : '')).join('<br>');
+    + (r.after && r.after.label ? ` - ${esc(r.after.label)}` : '') + (r.reason ? ` · Reason: ${esc(r.reason)}` : '')
+    + (r.type==='owner_pick_ruling' ? `<br>${esc(r.before.label)} at ${esc(r.before.price)} → ${esc(r.after.label)} at ${esc(r.after.price)} · ${esc(r.timestampMode==='preserve'?'Original timestamp preserved':'New confirmation time')} · Source observation: ${esc(r.after.ownerRuling.observedAt||'unknown')} · Evidence: ${esc(r.after.ownerRuling.evidenceReference)} · Original ledger retained; automatic no-vig CLV unavailable.` : '')).join('<br>');
   el.style.display='';
 }
 
@@ -7989,7 +8099,8 @@ function bozoCtx(){
   return L.join('\n');
 }
 window.DD_BOTCTX = {
-  sys: BOZO_SYS + '\nEstimated CLV is modeled fair-close minus fair-entry in probability percentage points, separately labeled with vig sensitivity and source limitations. Never call it measured CLV or expected ROI. Untimed quote proxies are not verified closing prices. Valid saved estimates enter labeled analytics; missing quotes remain unknown.\nRecovered closing evidence is third-party-reported, uncorroborated reference data only. Page timestamps are not exact per-book quote timestamps. It never fills original captures or changes official CLV, rankings, tiebreakers or settlement.', label: 'LIVE BOZO STATE', ctx: bozoCtx,
+  // Owner rulings are distinct from provider capture, including when the clock is preserved.
+  sys: BOZO_SYS + '\nOwner repair is a separate owner-only manual ruling for placed, unsettled spread/total/moneyline line and price corrections before every ticket game starts. It requires preview and confirmation with an explicit preserve/new timestamp choice. Never call an owner ruling a provider-verified quote, measured CLV or historical close. Its original ledger receipt remains unchanged; the live pick and separate before/after audit reflect the ruling. No result, financial, elimination or role changes are included.\nEstimated CLV is modeled fair-close minus fair-entry in probability percentage points, separately labeled with vig sensitivity and source limitations. Never call it measured CLV or expected ROI. Untimed quote proxies are not verified closing prices. Valid saved estimates enter labeled analytics; missing quotes remain unknown.\nRecovered closing evidence is third-party-reported, uncorroborated reference data only. Page timestamps are not exact per-book quote timestamps. It never fills original captures or changes official CLV, rankings, tiebreakers or settlement.', label: 'LIVE BOZO STATE', ctx: bozoCtx,
   title: 'Ask Toto — he reads the live ticket',
   chrome: {
     sub: 'reads the live ticket',

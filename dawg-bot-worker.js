@@ -1951,6 +1951,7 @@ export default {
     if (url.pathname === "/forecast/bot")     return forecastBot(request, env, cors);
     if (url.pathname === "/forecast/bots")    return forecastBots(request, env, cors);
     if (url.pathname === "/bozo/correct-pick") return bozoCorrectPick(request, env, cors);
+    if (url.pathname === "/bozo/owner-repair") return bozoOwnerRepair(request, env, cors);
     if (url.pathname === "/bozo/pick")    return bozoPick(request, env, cors);
     if (url.pathname === "/bozo/grade")   return bozoGrade(request, env, cors);
     if (url.pathname === "/bozo/next")    return bozoNext(request, env, cors);
@@ -7246,6 +7247,102 @@ async function forecastBots(request, env, cors) {
     .map(([k, b]) => fcPublicBot(decodeURIComponent(k), b))
     .sort((a, b) => a.bot_name.localeCompare(b.bot_name));
   return json({ ok: true, owner: auth.name, bots: mine, cap: FC_BOTS_PER_OWNER }, 200, cors);
+}
+
+/* ================= owner ruling: recorded line/price repair ================= */
+// Deliberately HTTP session only. No name-based authority or MCP auth adaptation.
+const BOZO_REPAIR_OWNER = "u_y9Pgnfml5AlhtotzlailibDR";
+const bozoRepairAuthorized = auth => !!auth && !auth.err && auth.uid === BOZO_REPAIR_OWNER && auth.user?.roles?.site_admin === true;
+async function bozoOwnerRepair(request, env, cors) {
+  const headers = {...cors, "Cache-Control":"private, no-store"};
+  if (!["GET", "POST"].includes(request.method)) return json({error:"GET or POST only"},405,headers);
+  const auth = await sessionAuth(request, env);
+  if (!bozoRepairAuthorized(auth)) return json({error:"Verified owner account and current site-admin authority required."},auth?.err?401:403,headers);
+  if (request.method === "GET") return json({ownerRepair:true},200,headers);
+  let body; try { body = await readBody(request); } catch { return json({error:"Bad JSON."},400,headers); }
+  const out = await bozoOwnerRepairCore(env, auth, body);
+  return json(out.body,out.status,headers);
+}
+async function bozoOwnerRepairCore(env, auth, body) {
+  const reply = (body,status=200)=>({body,status});
+  const fail = (error,status=409)=>reply({error},status);
+  if (!bozoRepairAuthorized(auth)) return fail("Verified owner account and current site-admin authority required.",403);
+  if (!body || Array.isArray(body) || !validLeagueId(body.league||"") || typeof body.forUid!=="string" || !/^u_[A-Za-z0-9_-]+$/.test(body.forUid))
+    return fail("Supply league and exact member UID.",400);
+  const confirming = body.confirm!==undefined;
+  const allowed = confirming ? ["league","forUid","confirm"] : ["league","forUid","line","price","timestampMode","reason","observedAt","evidenceReference"];
+  if (Object.keys(body).some(k=>!allowed.includes(k))) return fail("Unsupported repair field. Confirmation accepts only league, forUid and code.",400);
+  if (confirming && (typeof body.confirm!=="string" || !/^[a-f0-9-]{36}$/.test(body.confirm))) return fail("Invalid confirmation code.",400);
+  if (!confirming && (!Number.isFinite(body.line) || Math.abs(body.line)>10000 || !Number.isInteger(body.price) || Math.abs(body.price)<100 || Math.abs(body.price)>100000 ||
+      !["preserve","confirm_time"].includes(body.timestampMode) || typeof body.reason!=="string" || body.reason.trim().length<5 || body.reason.length>300 ||
+      typeof body.evidenceReference!=="string" || body.evidenceReference.trim().length<5 || body.evidenceReference.length>500 ||
+      !(body.observedAt===null || (typeof body.observedAt==="string" && /^\d{4}-\d\d-\d\dT/.test(body.observedAt) && /(?:Z|[+-]\d\d:\d\d)$/.test(body.observedAt) && Number.isFinite(Date.parse(body.observedAt)) && Date.parse(body.observedAt)<=Date.now()))))
+    return fail("Enter a finite line, whole American price, timestamp choice, reason, evidence reference and observedAt (ISO time or null if unknown).",400);
+  const lid=body.league,key=body.forUid,actor=auth.uid;
+  try {
+    const {data:state,etag}=await fbGet(env,LG(lid),true);
+    if (!state) return fail("League not found.",404);
+    const receiptResult = s => {const r=s?.audit?.[body.confirm];return r?.type==="owner_pick_ruling" && r.actor===actor && r.leagueId===lid && r.forUid===key ? r.result : null;};
+    if (confirming && receiptResult(state)) return reply(receiptResult(state));
+    // First release: placed, unsettled, pre-kickoff records only. No retroactive grading.
+    const gate=bozoCorrectionGate(state,key,Date.now());
+    if (gate) return fail(gate);
+    const before=state.picks[key];
+    if (!["spread","total","ml"].includes(before.mkt) || !Number.isFinite(before.ts)) return fail("Only an existing spread, total or moneyline with a recorded timestamp is supported.");
+    if (!env.RL || !etag) return fail("Confirmation or concurrency store unavailable.",503);
+    const version=await sha256hex(JSON.stringify(bozoCanonical(state)));
+    const kvKey="bozo-owner-repair:"+actor+":"+lid+":"+key;
+    let pending;
+    if (!confirming) {
+      if (before.mkt==="ml" && body.line!==0) return fail("Moneyline line must be zero.",400);
+      const code=crypto.randomUUID(),enteredAt=Date.now(),expiresAt=enteredAt+300000;
+      // UI/API accepts the posted handicap; grading stores required margin (inverse).
+      const after={...before,line:body.line===0?0:before.mkt==="spread"?-body.line:body.line,price:body.price};
+      const label=before.mkt==="ml" ? before.side+" ML" : before.side+" "+(before.mkt==="spread" && body.line>=0?"+":"")+body.line;
+      Object.assign(after,{
+        label:bozoLabelWithPeriod(label,bozoPeriodOf(before)),selectionKey:selectionKeyOf(after),marketKey:marketKeyOf(after),
+        priceSource:"owner_ruling",verificationStatus:"unverified",clvEligible:false,
+        priceOpp:null,entryPriceOpp:null,entryOppSource:null,entryProvider:null,entryBook:null,entrySnapshotAt:null,
+        fairEntry:null,entryHold:null,canonicalKey:null,providerEventIds:{},captureAttempts:[],
+        captureFailureCode:"owner_ruling",captureFailureReason:"Owner-entered ruling; not a provider-verified quote.",
+        closeState:"pending",submissionId:code,correctionId:code,
+        ownerRuling:{actor,enteredAt,observedAt:body.observedAt,evidenceReference:body.evidenceReference.trim(),timestampMode:body.timestampMode},
+      });
+      // No inherited manual entry-verification receipt can certify this new selection.
+      delete after.entryVerification;
+      const schedule=await bozoCorrectionSchedule(env,state,after,Date.now());
+      if (schedule.error) return fail(schedule.error);
+      const echo=`OWNER RULING for ${memberNameAt(state,key)} in ${lid}: ${before.label} at ${before.price} → ${after.label} at ${after.price}. `+
+        `Timestamp: ${body.timestampMode==="preserve"?"preserve "+new Date(before.ts).toISOString():"use new server confirmation time; Last In may change"}. `+
+        `Reason: ${body.reason.trim()}. Evidence (owner supplied): ${body.evidenceReference.trim()}. Observed: ${body.observedAt||"unknown"}. `+
+        "Line and price affect future grading and shortest-odds exposure. Owner values override ordinary price-band and duplicate-entry rules, not sportsbook acceptance. This is unverified and ineligible for automatic no-vig CLV. Original ledger receipts, draw, lock, stakes, funding, results and elimination decisions stay unchanged. Both pick versions remain in the audit.";
+      pending={code,actor,lid,key,version,after,reason:body.reason.trim(),timestampMode:body.timestampMode,enteredAt,expiresAt,echo};
+      await env.RL.put(kvKey,JSON.stringify(pending),{expirationTtl:300});
+      return reply({status:"confirm_required",confirm_code:code,expiresAt,echo,before,after,timestampMode:body.timestampMode});
+    }
+    pending=JSON.parse(await env.RL.get(kvKey)||"null");
+    if (!pending || pending.code!==body.confirm || pending.actor!==actor || pending.lid!==lid || pending.key!==key || Date.now()>=pending.expiresAt) return fail("Repair proposal expired or mismatched. Preview again.");
+    if (pending.version!==version) return fail("League changed since preview. Review a new proposal.");
+    const schedule=await bozoCorrectionSchedule(env,state,pending.after,Date.now());
+    if (schedule.error) return fail(schedule.error);
+    const now=Date.now();
+    if (now>=pending.expiresAt || bozoCorrectionGate(state,key,now)) return fail("Proposal expired or ticket eligibility changed.");
+    const after={...pending.after,ts:pending.timestampMode==="preserve"?before.ts:now,
+      ownerRuling:{...pending.after.ownerRuling,confirmedAt:now},submittedBy:actor,submittedByName:auth.name,commissionerModified:true,via:"owner_ruling"};
+    const result={ok:true,status:"owner_repaired",correctionId:pending.code,league:lid,forUid:key,ts:after.ts,confirmedAt:now,timestampMode:pending.timestampMode};
+    const ledgerReceipt=state.ledger[ledgerKey(state.season||SEASON,state.week||1,key)];
+    const receipt={type:"owner_pick_ruling",actor,byUid:actor,byName:auth.name,forUid:key,forName:memberNameAt(state,key),leagueId:lid,
+      week:state.week||1,season:state.season||SEASON,ts:now,reason:pending.reason,timestampMode:pending.timestampMode,
+      before,after,beforeLedger:ledgerReceipt,afterLedger:ledgerReceipt,draw:state.order,lockTs:state.closeTs,result};
+    state.picks[key]=after;
+    state.audit={...state.audit,[pending.code]:receipt};
+    state.admin={...state.admin,actions:{...state.admin?.actions,[pending.code]:receipt}};
+    if (!await fbPut(env,LG(lid),state,etag)) {
+      const fresh=(await fbGet(env,LG(lid))).data;
+      return receiptResult(fresh)?reply(receiptResult(fresh)):fail("Concurrent league change. Preview again.");
+    }
+    return reply(result);
+  } catch { return fail("Repair outcome could not be confirmed. Retry the same code to check the durable receipt.",502); }
 }
 
 /* ================= manager pre-kickoff correction ================= */
