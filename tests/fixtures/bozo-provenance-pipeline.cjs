@@ -9,7 +9,7 @@ function buildPick(captured){
 }
 async function assertHistorical(pick,source){
  const {server,ui}=build(page,worker);
- for(const n of ['ledgerEntries','bozoEstimateSettledRow','bozoClv'])vm.runInContext(lift(worker,n),server);
+ for(const n of ['ledgerEntries','bozoEstimateSettledRow','bozoLedgerReadProjection','bozoClv'])vm.runInContext(lift(worker,n),server);
  Object.assign(server,{ledgerKey:(s,w,n)=>`${s}-${w}-${n}`,validLeagueId:()=>true,loadLeague:async()=>({season:2026,week:6}),
   LG:()=>'/test',settingsOf:()=>({format:'standard'}),memberNames:()=>[],ticketPricing:()=>[],BOZO_CLOSE_BOOK:'draftkings',json:x=>x});
  const row=server.ledgerEntries('main',2026,6,{Pat:pick},[1])['2026-6-Pat'];

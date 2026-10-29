@@ -2800,7 +2800,7 @@ const MCP_TOOLS = [
       let ledger;
       try { ledger = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
       catch (e) { return toolErr("Database unreachable: " + e.message); }
-      const rows = Object.values(ledger);
+      const rows = Object.values(bozoLedgerReadProjection(ledger));
       if (!rows.length) return toolText({ league: lid, note: "The ledger is empty — no week has locked yet." });
       const per = {};
       let graded = 0;
@@ -2814,6 +2814,10 @@ const MCP_TOOLS = [
       const byWeek = {};
       for (const r of rows) (byWeek[`${r.season}-w${r.week}`] = byWeek[`${r.season}-w${r.week}`] || []).push(r);
       for (const wk of Object.values(byWeek)) {
+        if(wk.some(r=>r.entryAnalyticsBasis==="current_entry_revisions")){
+          for(const row of wk)if(row.lastIn===true && per[row.player])per[row.player].lastIn++;
+          continue;
+        }
         const last = wk.reduce((a, b) => (b.rank > a.rank ? b : a));
         if (per[last.player]) per[last.player].lastIn++;
       }
@@ -2821,6 +2825,7 @@ const MCP_TOOLS = [
       if (me && per[me]) per[me].you = true;
       return toolText({
         league: lid, weeksOnLedger: Object.keys(byWeek).length, gradedRows: graded,
+        entryAnalytics: "Weeks with owner rulings derive rank, Last In and shortest odds from all current entry revisions; ties share exposure. Original receipts remain archived.",
         you: me, players: per,
         synthetic,
         syntheticNote: synthetic
