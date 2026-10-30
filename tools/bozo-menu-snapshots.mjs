@@ -25,9 +25,9 @@ export function snapshotFiles(menus, checkedAt) {
     const payload = {...m, snapshot:{checked_at:checkedAt, source, notice:n}};
     const nav = `<nav aria-label="Menu formats"><a href="${base}.html">Readable HTML</a><a href="${base}.txt">Plain text for AI</a><a href="${base}.json">JSON</a><a href="/bozo-menu.html">Latest copied menu</a></nav><nav aria-label="Published weeks">${m.published_weeks.map(w => `<a href="/bozo-menu/${w.week}.html">${w.week}</a>`).join('')}</nav>`;
     let html = renderPublicMenu(m).replace(/<nav>[\s\S]*?<\/nav>/g, '');
-    html = html.replace('</head>', `<link rel="canonical" href="https://datadawgs216.com${base}.html"><meta name="description" content="Full public Bozo Menu snapshot, including holds and scratches. No sign-in or JavaScript required."><link rel="stylesheet" href="/install-help.css"></head>`);
+    html = html.replace('</head>', `<link rel="canonical" href="https://datadawgs216.com${base}.html"><meta name="description" content="Full public Bozo Menu snapshot, including holds and scratches. No sign-in or JavaScript required."><link rel="stylesheet" href="/install-help.css"><script src="${base.includes("/bozo-menu/") ? "../" : ""}presentation-mode.js" defer></script></head>`);
     html = html.replace('<main>', `<aside role="note"><p id="snapshotNotice" data-checked-at="${checkedAt}">${escape(n)}</p><p>Publisher feed: <a href="${source}">check source revision</a></p></aside>${nav}<main>`);
-    html = html.replace('</body>', '<script src="/bozo-menu-snapshot.js" defer></script><script src="/presentation-mode.js" defer></script><script src="/install-help.js" defer></script></body>');
+    html = html.replace('</body>', '<script src="/bozo-menu-snapshot.js" defer></script><script src="/install-help.js" defer></script></body>');
     files.set(base.slice(1)+'.html', html+'\n');
     files.set(base.slice(1)+'.txt', renderPublicMenu(m,'md')+'\n\n'+n+'\nPublisher: '+source+'\nHTML: https://datadawgs216.com'+base+'.html\nJSON: https://datadawgs216.com'+base+'.json\n');
     files.set(base.slice(1)+'.json', JSON.stringify(payload,null,2)+'\n');
