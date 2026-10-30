@@ -4,6 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { rkApply, rkBoard, rkWork, rkAlerts, rkEmpty, rkParse, rkSerialize, sha256Hex, RoboKapError, RK_AGENT_OPS, RK_OPS } from './robokap-core.mjs';
+import { createRunner, memoryJournal, RunnerPaused, LeaseLost } from './pack-sled-runner.mjs';
 
 const T0 = Date.parse('2026-10-31T15:00:00Z'), MIN = 60000, HOUR = 60 * MIN, DAY = 24 * HOUR;
 const owner = { kind: 'owner_session' };
@@ -292,4 +293,91 @@ test('every worker sees finished team work and nothing unplanned or private', as
   const tr = await w.card(TR);
   assert.equal(tr.owner.holder, 'Claude research (scoped credential)');
   assert.equal(tr.owner.reviewer, 'Claude review (scoped credential)');
+});
+
+/* ---------------- the runner against these rules ---------------- */
+// A transport that behaves like the scoped gateway: an inactive credential is refused before the
+// board sees the call, and injected faults model a busy service, a lost response and a crash.
+function gatewayTransport(w, who, session, faults = []) {
+  const live = () => w.ctx.agents.find(a => a.agent_id === who.agent_id)?.status === 'active';
+  const gate = () => { if (!live()) throw Object.assign(new Error('agent_grant_required'), { status: 403, code: 'agent_grant_required' }); };
+  const sent = [];
+  return {
+    sent,
+    read: async () => { gate(); return w.work(who, session); },
+    write: async (op, request_id, data) => {
+      sent.push({ op, request_id });
+      const f = faults.find(x => x.op === op && x.left > 0);
+      if (f) f.left--;
+      if (f?.kind === 'busy') throw Object.assign(new Error('busy'), { status: f.status || 503, code: 'busy' });
+      if (f?.kind === 'timeout_before') throw Object.assign(new Error('timeout'), { timeout: true });
+      gate();
+      try {
+        const out = await w.apply(who, op, data, request_id);
+        if (f?.kind === 'lost_response') throw Object.assign(new Error('timeout'), { timeout: true });
+        return out;
+      } catch (e) { if (e instanceof RoboKapError) throw Object.assign(new Error(e.code), { status: e.status, code: e.code, detail: e.detail }); throw e; }
+    },
+  };
+}
+const quick = { backoffMs: 0, sleep: async () => {} };
+const deliverable = async w => ({ outcome: 'succeeded', summary: 'Synthetic deliverable', evidence: await evidenceFor(w), artifacts: [{ kind: 'project_file', ref: '/mnt/project-files/pack-sled/synthetic.pdf', sha256: 'a'.repeat(64) }] });
+
+test('runner: lost responses and a busy service are retried as the identical request and record one outcome', async () => {
+  const w = await world();
+  await approvedSetup(w);
+  await intakeAndDispatch(w);
+  const faults = [{ op: 'rk.claim', kind: 'lost_response', left: 1 }, { op: 'rk.report', kind: 'busy', status: 503, left: 1 }, { op: 'rk.report', kind: 'busy', status: 429, left: 1 }, { op: 'rk.report', kind: 'timeout_before', left: 1 }];
+  const tx = gatewayTransport(w, research, RS, faults);
+  const run = createRunner({ transport: tx, store: memoryJournal(), runId: 'run-synthetic-retry', sessionRef: RS, retries: 4, ...quick });
+  const c = await run.claimNext();
+  assert.equal(c.task_id, TR);
+  await run.report(await deliverable(w));
+  const claims = tx.sent.filter(x => x.op === 'rk.claim'), reports = tx.sent.filter(x => x.op === 'rk.report');
+  assert.equal(new Set(claims.map(x => x.request_id)).size, 1, 'the claim resend was identical');
+  assert.equal(reports.length, 4);
+  assert.equal(new Set(reports.map(x => x.request_id)).size, 1, 'every report resend was identical');
+  assert.equal(w.rk.claims.length, 1);
+  assert.equal(w.rk.receipts.length, 1);
+});
+
+test('runner: an expired credential pauses the run; after renewal a restarted session resends the same report once', async () => {
+  const w = await world();
+  await approvedSetup(w);
+  await intakeAndDispatch(w);
+  const store = memoryJournal();
+  const first = createRunner({ transport: gatewayTransport(w, research, RS), store, runId: 'run-synthetic-pause', sessionRef: RS, ...quick });
+  await first.claimNext();
+  w.grants.get(research.agent_id).status = 'revoked';
+  await assert.rejects(first.report(await deliverable(w)), e => e instanceof RunnerPaused);
+  assert.equal(first.paused.code, 'agent_grant_required');
+  assert.equal(Object.values(store.load().steps).find(x => x.op === 'rk.report').status, 'sent', 'not marked refused');
+  assert.equal(w.rk.receipts.length, 0);
+  // The owner renews; the session restarts on the same journal (a crash or a new routine run).
+  Object.assign(w.grants.get(research.agent_id), { status: 'active', expires_at: w.now + 30 * DAY });
+  const tx = gatewayTransport(w, research, RS);
+  const second = createRunner({ transport: tx, store, runId: 'run-synthetic-pause', sessionRef: RS, ...quick });
+  assert.notEqual(second.execution, first.execution);
+  await second.claimNext();
+  await second.report(await deliverable(w));
+  assert.equal(w.rk.claims.length, 1, 'the resumed session kept its lease');
+  assert.equal(w.rk.receipts.length, 1);
+  assert.equal(second.paused, null);
+});
+
+test('runner: a lease that ended while the session was away is abandoned and the work restarts on a fresh claim', async () => {
+  const w = await world();
+  await approvedSetup(w);
+  await intakeAndDispatch(w);
+  const store = memoryJournal();
+  const run = createRunner({ transport: gatewayTransport(w, research, RS), store, runId: 'run-synthetic-lost', sessionRef: RS, ...quick });
+  const old = await run.claimNext();
+  w.tick(3 * HOUR);
+  await assert.rejects(run.heartbeat(), e => e instanceof LeaseLost && e.cause === 'lease_not_live');
+  const fresh = await run.claimNext();
+  assert.notEqual(fresh.claim_id, old.claim_id);
+  assert.notEqual(fresh.lease_secret, old.lease_secret);
+  await run.report(await deliverable(w));
+  assert.equal(w.rk.receipts.length, 1, 'one result, from the fresh attempt');
+  assert.equal(w.rk.receipts[0].claim_id, fresh.claim_id);
 });

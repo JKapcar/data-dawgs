@@ -43,7 +43,7 @@ async function rig(flags = {}) {
   let req = 0;
   const write = (token, op, data, request_id) => tool(token, 'sled_write', { op, request_id: request_id || 'sled_request_' + String(++req).padStart(8, '0'), data });
   const issue = (seat, scopes, label, ttlDays = 30) => owner({ action: 'issue', audience: 'sled', seat, scopes, label, ttlDays });
-  return { env, db, owner, board, call, tool, write, issue, pound, responses, tick: ms => { clock += ms; }, onNextPut: f => { beforePut = f; }, bump: path => etags.set(path, (etags.get(path) || 0) + 1) };
+  return { env, db, owner, board, call, tool, write, issue, pound, responses, gateway: r => sled(r, env), tick: ms => { clock += ms; }, onNextPut: f => { beforePut = f; }, bump: path => etags.set(path, (etags.get(path) || 0) + 1) };
 }
 
 test('the owner issues seat credentials whose seat and scopes are stored, shown once and never kept in clear', async () => {
@@ -158,4 +158,22 @@ test('a revocation saved while a write is in flight wins: the write is retried a
   assert.deepEqual([res.error, res.out.status, res.out.error], [true, 403, 'agent_grant_required']);
   assert.ok(!(w.db.get(P).robokap || '').includes('synthetic-race-0001'), 'nothing was saved');
   assert.equal(w.db.get(P).agentAccess[coord.id].enabled, false, 'the revocation was not overwritten');
+});
+
+test('the runner HTTP transport speaks to the gateway and turns refusals into statuses it can act on', async () => {
+  const { sledTransport, isPaused, isRetryable } = await import('./pack-sled-runner.mjs');
+  const w = await rig();
+  const coord = (await w.issue('coordinator', ['sled:work:read', 'sled:coordinate'], 'Coordinator')).body;
+  const endpoint = 'https://t/agents/v1/owners/u_owner/sled/mcp';
+  const fetchImpl = (url, init) => w.gateway(new Request(url, init));
+  const tx = sledTransport({ endpoint, credential: coord.secret, fetchImpl });
+  assert.equal((await tx.read('claude-code:synthetic')).identity.seat, 'coordinator');
+  const ok = await tx.write('rk.notice', 'sled_transport_req_0001', { key: 'synthetic-transport-0001', action: 'reserve' });
+  assert.equal(ok.send, true);
+  await assert.rejects(tx.write('rk.claim', 'sled_transport_req_0002', {}), e => e.status === 403 && e.code === 'scope_denied' && !isPaused(e) && !isRetryable(e));
+  await w.owner({ action: 'revoke', audience: 'sled', agentId: coord.id });
+  await assert.rejects(tx.read(), e => e.status === 403 && isPaused(e));
+  assert.throws(() => sledTransport({ endpoint: 'https://evil.example/mcp', credential: coord.secret }), /sled_endpoint_required/);
+  const down = sledTransport({ endpoint, credential: coord.secret, fetchImpl: async () => { throw new Error('network'); } });
+  await assert.rejects(down.read(), e => isRetryable(e) && !String(e.message).includes(coord.secret.slice(37)));
 });

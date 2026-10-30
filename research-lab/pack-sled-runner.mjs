@@ -13,8 +13,15 @@
  *     the same lease instead of claiming twice, and a retry after a failed attempt claims afresh. Each process gets a new execution id, so the board
  *     shows a resume.
  *
- * What it does not do: start, wake or schedule a session, hold credentials, or read mail. The
- * transport is supplied by the caller (an MCP client in a session, or a fake in tests).
+ *   - A busy or briefly unavailable service (408, 429, 5xx, a lost compare-and-swap race) gets the
+ *     identical request again after a short backoff. An expired or revoked credential pauses the
+ *     run without marking the step refused, so the same request goes out after renewal.
+ *   - A lease that ended while the session was away is abandoned, never reused: the next claim
+ *     is a fresh attempt, and the server refuses a late result from the old one.
+ *
+ * What it does not do: start, wake or schedule a session, or read mail. The transport is supplied
+ * by the caller (an MCP client in a session, sledTransport below, or a fake in tests); the runner
+ * never sees, logs or journals a credential.
  *
  * CLI (for a session that calls the connector itself and journals with this file):
  *   node pack-sled-runner.mjs begin  <journal.json> <run_id>
@@ -31,6 +38,8 @@ export const requestIdFor = (runId, step) => 'ps_' + sha(runId + '\u0000' + step
 const token = n => randomBytes(n).toString('base64url');
 
 export class RunnerUncertain extends Error { constructor(step, cause) { super('write_outcome_unknown:' + step); this.code = 'write_outcome_unknown'; this.step = step; this.cause = cause; } }
+export class RunnerPaused extends Error { constructor(step, cause) { super('credential_paused:' + step); this.code = 'credential_paused'; this.step = step; this.cause = cause?.code || cause?.message; } }
+export class LeaseLost extends Error { constructor(claim, cause) { super('lease_lost:' + claim); this.code = 'lease_lost'; this.claim = claim; this.cause = cause; } }
 export class EffectUnknown extends Error { constructor(name) { super('effect_outcome_unknown:' + name); this.code = 'effect_outcome_unknown'; this.effect = name; } }
 
 export function memoryJournal(initial = null) {
@@ -81,13 +90,21 @@ export class Journal {
 }
 
 const isTimeout = e => e && (e.timeout === true || e.code === 'timeout' || e.name === 'TimeoutError');
+// Worth sending again unchanged: the service was busy, briefly down, or lost a write race.
+export const isRetryable = e => isTimeout(e) || [408, 429, 500, 502, 503, 504].includes(e?.status) && e?.code !== 'sled_agents_disabled' || e?.code === 'workspace_changed_retry_same_request';
+// The credential stopped working (expired, revoked, changed or the gateway is off). Nothing about
+// the request is wrong, so the step stays as sent and resends once the owner renews.
+export const isPaused = e => ['agent_grant_required', 'agent_grant_changed', 'agent_credential_required', 'sled_agents_disabled'].includes(e?.code) || [401].includes(e?.status);
+const LOST = ['lease_not_live', 'lease_superseded', 'claim_released', 'claim_closed'];
+const nap = ms => new Promise(r => setTimeout(r, ms));
 
-export function createRunner({ transport, store, runId, sessionRef, executor = 'pack-sled-runner', model, retries = 3 }) {
+export function createRunner({ transport, store, runId, sessionRef, executor = 'pack-sled-runner', model, retries = 3, backoffMs = 500, sleep = nap }) {
   const j = new Journal(store, runId);
   const execution = j.startExecution();
   const declared = { executor, ...(model ? { model } : {}) };
 
-  // Send a journaled step. Timeouts resend the identical request; a refusal is final for the step.
+  // Send a journaled step. Retryable failures resend the identical request after a backoff; a
+  // paused credential leaves it as sent; any other refusal is final for the step.
   async function step(name, op, build) {
     const prior = j.s.steps[name];
     if (prior?.status === 'done') return prior.result;
@@ -95,12 +112,15 @@ export function createRunner({ transport, store, runId, sessionRef, executor = '
     const call = j.prepare(name, op, prior ? prior.data : build());
     let last;
     for (let i = 0; i <= retries; i++) {
+      if (i) await sleep(Math.min(backoffMs * 2 ** (i - 1), 8000));
       try {
         const result = await transport.write(call.op, call.request_id, call.data);
+        if (j.s.paused) delete j.s.paused;
         j.finish(name, result);
         return result;
       } catch (e) {
-        if (!isTimeout(e)) { j.fail(name, { code: e.code || e.message, status: e.status ?? null }); throw e; }
+        if (isPaused(e)) { j.s.paused = { step: name, code: e.code || e.message, at: new Date().toISOString() }; j.save(); throw new RunnerPaused(name, e); }
+        if (!isRetryable(e)) { j.fail(name, { code: e.code || e.message, status: e.status ?? null }); throw e; }
         last = e;
       }
     }
@@ -134,12 +154,24 @@ export function createRunner({ transport, store, runId, sessionRef, executor = '
     return remember(name, data, await step(name, 'rk.claim', () => data), t);
   }
 
+  // The lease ended while this session was away: give the claim up so the next one is fresh.
+  function abandon(cause) {
+    const c = j.s.claim;
+    c.closed = true; c.lost = cause; j.s.closed = [...(j.s.closed || []), c.step]; j.save();
+    return new LeaseLost(c.claim_id, cause);
+  }
   // Heartbeats are not journaled as steps: each one is fresh, and a lost one is harmless.
   async function heartbeat(checkpoint) {
     const c = j.s.claim;
     if (!c || c.closed) throw new Error('no_open_claim');
     const n = j.nextBeat();
-    return transport.write('rk.heartbeat', requestIdFor(j.s.run_id, 'hb:' + n), { task_id: c.task_id, claim_id: c.claim_id, lease_secret: c.lease_secret, execution_id: execution, ...(checkpoint ? { checkpoint } : {}), ...declared });
+    try {
+      return await transport.write('rk.heartbeat', requestIdFor(j.s.run_id, 'hb:' + n), { task_id: c.task_id, claim_id: c.claim_id, lease_secret: c.lease_secret, execution_id: execution, ...(checkpoint ? { checkpoint } : {}), ...declared });
+    } catch (e) {
+      if (LOST.includes(e?.code)) throw abandon(e.code);
+      if (isPaused(e)) throw new RunnerPaused('heartbeat', e);
+      throw e;
+    }
   }
 
   // Run an external effect at most once across every execution of this run.
@@ -164,7 +196,9 @@ export function createRunner({ transport, store, runId, sessionRef, executor = '
       summary: forced ? (summary + ' [Runner: an external step may have happened and was not repeated: ' + unknown.join(', ') + '.]').slice(0, 2000) : summary,
       ...(evidence && !unknown.length ? { evidence } : {}), ...(artifacts ? { artifacts } : {}),
     };
-    const res = await step('report:' + c.claim_id, 'rk.report', () => data);
+    let res;
+    try { res = await step('report:' + c.claim_id, 'rk.report', () => data); }
+    catch (e) { if (LOST.includes(e?.code)) throw abandon(e.code); throw e; }
     c.closed = true; c.receipt_id = res.receipt_id; j.s.closed = [...(j.s.closed || []), c.step]; j.save();
     return res;
   }
@@ -180,7 +214,36 @@ export function createRunner({ transport, store, runId, sessionRef, executor = '
     return step(name, 'rk.review', () => ({ receipt_id: req.receipt_id, session_ref: sessionRef, ...verdict }));
   }
 
-  return { step, claimNext, heartbeat, effect, report, reviewNext, journal: j, execution, get claim() { return j.s.claim; } };
+  return { step, claimNext, heartbeat, effect, report, reviewNext, journal: j, execution, get claim() { return j.s.claim; }, get paused() { return j.s.paused || null; } };
+}
+
+/* ---------------- HTTP transport for a scoped seat credential ---------------- */
+// Speaks MCP JSON-RPC to /agents/v1/owners/<uid>/sled/mcp. The credential is passed in by the
+// caller and sent only as a Bearer header; it is never logged, journaled or put in an error.
+export function sledTransport({ endpoint, credential, fetchImpl = fetch, timeoutMs = 20000 }) {
+  if (!/^https?:\/\/[^/]+\/agents\/v1\/owners\/u_[A-Za-z0-9_-]+\/sled\/mcp$/.test(endpoint || '')) throw new Error('sled_endpoint_required');
+  if (!/^da1_[a-f0-9]{32}_[A-Za-z0-9_-]{43}$/.test(credential || '')) throw new Error('credential_format');
+  let id = 0;
+  async function call(name, args) {
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), timeoutMs);
+    let res;
+    try {
+      res = await fetchImpl(endpoint, { method: 'POST', signal: ctl.signal, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + credential, 'MCP-Protocol-Version': '2025-06-18' }, body: JSON.stringify({ jsonrpc: '2.0', id: ++id, method: 'tools/call', params: { name, arguments: args } }) });
+    } catch (e) { throw Object.assign(new Error('timeout'), { timeout: true, code: 'timeout' }); }
+    finally { clearTimeout(timer); }
+    let body = null;
+    try { body = await res.json(); } catch {}
+    if (body?.error) throw Object.assign(new Error(body.error.message), { code: body.error.message, status: body.error.data?.status ?? res.status });
+    if (!res.ok || !body?.result) throw Object.assign(new Error('http_' + res.status), { code: 'http_' + res.status, status: res.status });
+    const out = body.result.structuredContent ?? JSON.parse(body.result.content?.[0]?.text ?? 'null');
+    if (body.result.isError) throw Object.assign(new Error(out?.error || 'tool_error'), { code: out?.error || 'tool_error', status: out?.status ?? null, detail: out?.detail });
+    return out;
+  }
+  return {
+    read: session_ref => call('sled_read', session_ref ? { session_ref } : {}),
+    write: (op, request_id, data) => call('sled_write', { op, request_id, data }),
+    call,
+  };
 }
 
 /* ---------------- CLI ---------------- */
