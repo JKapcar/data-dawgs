@@ -8,6 +8,16 @@ const account={name:'Kap',passwordSetAt:1,mcpToken:sign('mcp|'+token)};
 const body=Buffer.from(JSON.stringify({u:uid,n:'Kap',p:1,i:Date.now(),e:Date.now()+86400000})).toString('base64url');
 const session=body+'.'+sign(body);
 const env={BOZO_PEPPER:pepper,FB_SECRET:'fixture-secret',DAWG_PASS:'fixture-shared',RL:{get:async()=>null,put:async()=>{}}};
+test('crawler policy is anonymous and reads no storage; only public menu is advertised',async()=>{
+ const original=globalThis.fetch;globalThis.fetch=async()=>{throw Error('robots must not access storage');};
+ try{
+  const r=await worker.fetch(new Request('https://toto.jkapcar4.workers.dev/robots.txt'),{});
+  assert.equal(r.status,200);assert.match(r.headers.get('content-type'),/^text\/plain/);
+  const body=await r.text();assert.match(body,/Allow: \/bozo\/menu/);assert.match(body,/Disallow: \/\n/);assert.match(body,/Sitemap: https:\/\/datadawgs216.com\/sitemap.xml/);
+  const head=await worker.fetch(new Request('https://toto.jkapcar4.workers.dev/robots.txt',{method:'HEAD'}),{});assert.equal(head.status,200);assert.equal(await head.text(),'');
+  assert.equal((await worker.fetch(new Request('https://toto.jkapcar4.workers.dev/robots.txt',{method:'POST'}),{})).status,405);
+ }finally{globalThis.fetch=original;}
+});
 test('browser API and personal MCP share records; no public or shared access and no contest writes',async()=>{
  const real=globalThis.fetch;let library=null,version=0;const writes=[];
  globalThis.fetch=async(input,init={})=>{

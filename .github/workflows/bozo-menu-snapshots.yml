@@ -1,0 +1,62 @@
+name: Public Bozo Menu snapshots
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/bozo-menu-snapshots.yml'
+      - 'tools/bozo-menu-snapshots.mjs'
+      - 'bozo-menu.mjs'
+      - 'bozo-menu-snapshot.js'
+      - 'tests/bozo-menu-snapshots.test.mjs'
+permissions:
+  contents: read
+concurrency:
+  group: bozo-menu-snapshots-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'refresh' }}
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: node --test tests/bozo-menu-snapshots.test.mjs tests/bozo-menu.test.mjs tests/bozo-menu-api.test.mjs
+  refresh:
+    needs: test
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: main, fetch-depth: 0}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Copy public archive, validate, and publish
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            node tools/bozo-menu-snapshots.mjs
+            python work/stamp-sw-version.py
+            git add bozo-menu.html bozo-menu.txt bozo-menu.json bozo-menu/ sitemap.xml sw.js
+            node work/verify-sw.mjs
+            git diff --cached --check
+            git commit -m 'Refresh dated public Bozo Menu snapshots'
+            if git push origin HEAD:main; then exit 0; fi
+            # This is an isolated disposable Actions checkout. Rebuild on concurrent changes.
+            git fetch origin main
+            git reset --hard origin/main
+          done
+          echo '::error::Snapshot publication lost three concurrent-update races'
+          exit 1
+      - name: Request Pages publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash work/request-survivor-pages-build.sh

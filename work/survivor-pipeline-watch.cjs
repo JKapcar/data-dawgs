@@ -29,6 +29,7 @@ const WATCHED = [
   { file: 'draft-picks.yml', name: 'Record draft picks', max_age_hours: 33, window: 'always' },
   { file: 'guillotine-refresh.yml', name: 'Guillotine daily weekly inputs and receipts', max_age_hours: 33, window: 'always' },
   { file: 'bozo-menu-ledger.yml', name: 'Bozo Menu ledger', max_age_hours: 26, window: 'always' },
+  { file: 'bozo-menu-snapshots.yml', name: 'Public Bozo Menu snapshots', max_age_hours: 10, window: 'always' },
   { file: 'rankings-mirror.yml', name: 'Dog Track grades mirror', max_age_hours: 33, window: 'always' },
   { file: 'resolve-grade.yml', name: 'forecast-resolve-grade', max_age_hours: 33, window: 'always' },
   { file: 'pool.yml', name: 'forecast-pool', max_age_hours: 192, window: 'always' },
