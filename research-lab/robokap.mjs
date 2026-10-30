@@ -1,4 +1,4 @@
-/* RoboKap Worker integration. Default off: ROBOKAP_ENABLED must be exactly "true" (and the
+/* Pack Sled Worker integration. Default off: ROBOKAP_ENABLED must be exactly "true" (and the
  * existing DAWG_POUND_ENABLED too). Adds no credential, grant, schedule, store or external call.
  *
  * Storage: the existing Pound record /privatePounds/<owner>. Coordination records live in its
@@ -8,11 +8,11 @@
  * keep it out of general backups.
  *
  * Lab: read only, through the owner's existing research access, to check links and receipt
- * hashes. RoboKap never writes /researchLab, never claims or runs a Lab task.
+ * hashes. Pack Sled never writes /researchLab, never claims or runs a Lab task.
  *
  * Callers:
  *   /robokap/v1                 signed site session of RESEARCH_OWNER_UID (board + owner ops)
- *   dd_owner_robokap_read/write the owner connector, listed only while the RoboKap (pound) app
+ *   dd_owner_robokap_read/write the owner connector, listed only while the Pack Sled (pound) app
  *                               grant is on; principal = owner_key with the verified key label. */
 import { rkApply, rkBoard, rkWork, rkParse, rkSerialize, RoboKapError, RK_CONNECTOR_OPS, RK_TOOL_DESCRIPTION, RK_LIMITS } from './robokap-core.mjs';
 import { decodeEnvelope } from './exact-store.mjs';
@@ -83,13 +83,13 @@ export function createRoboKap({ fbGet, fbPut, ownerIdentity, now = Date.now }) {
 
   const definitions = () => [
     {
-      name: 'dd_owner_robokap_read', title: 'RoboKap work queue',
-      description: 'Read the RoboKap coordination queue for THIS connector key: ready work addressed to your seat, your live leases, review requests and role offers, with each task\'s brief, plan version and pinned context reference. view "board" returns the owner\'s full board instead. Includes private text. Key label is server-verified; session_ref is declared; model identity is never verified. Nothing here wakes a session, schedules work or runs a model.',
+      name: 'dd_owner_robokap_read', title: 'Pack Sled work queue',
+      description: 'Read the Pack Sled coordination queue for THIS connector key: ready work addressed to your seat, your live leases, review requests and role offers, with each task\'s brief, plan version and pinned context reference. view "board" returns the owner\'s full board instead. Includes private text. Key label is server-verified; session_ref is declared; model identity is never verified. Nothing here wakes a session, schedules work or runs a model.',
       inputSchema: { type: 'object', additionalProperties: false, properties: { session_ref: { type: 'string', minLength: 1, maxLength: 200, description: 'Declare which session is reading, for example claude-code:<session id>. Routing only; never authorization.' }, view: { type: 'string', enum: ['work', 'board'] } } },
       annotations: { readOnlyHint: true },
     },
     {
-      name: 'dd_owner_robokap_write', title: 'RoboKap coordination write', description: RK_TOOL_DESCRIPTION,
+      name: 'dd_owner_robokap_write', title: 'Pack Sled coordination write', description: RK_TOOL_DESCRIPTION,
       inputSchema: { type: 'object', additionalProperties: false, required: ['op', 'request_id', 'data'], properties: { op: { type: 'string', enum: [...RK_CONNECTOR_OPS] }, request_id: { type: 'string', pattern: '^[A-Za-z0-9_-]{16,80}$', description: 'Idempotency key. Resend the identical call after a timeout.' }, data: { type: 'object', description: 'Per-op fields; see the description.' } } },
       annotations: { readOnlyHint: false, destructiveHint: false },
     },

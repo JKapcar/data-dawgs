@@ -1,4 +1,4 @@
-// RoboKap owner board. Private UI: memory only, no persistence, telemetry or third-party code.
+// Pack Sled owner board. Private UI: memory only, no persistence, telemetry or third-party code.
 // Lanes are computed by the Worker from recorded claims, receipts, reviews and decisions;
 // this page renders them and sends owner decisions. Success is shown only after the server says so.
 const API = 'https://toto.jkapcar4.workers.dev/robokap/v1';
@@ -84,7 +84,7 @@ async function request(body) {
   if (generation !== epoch || credential !== token() || document.hidden) throw Object.assign(new Error('Account changed. Refresh the board.'), { aborted: true });
   if (!res.ok) {
     globalThis.DDAccount?.failed(res.status);
-    const known = { robokap_disabled: 'RoboKap coordination is not switched on for this Worker yet.', configured_owner_required: 'Only the configured owner can open this board.' };
+    const known = { robokap_disabled: 'Pack Sled coordination is not switched on for this Worker yet.', configured_owner_required: 'Only the configured owner can open this board.' };
     const detail = data?.detail;
     throw Object.assign(new Error(known[data?.error] || (data?.error || 'Request failed') + (detail ? ' · ' + (Array.isArray(detail) ? detail.join(', ') : typeof detail === 'string' ? detail : JSON.stringify(detail)) : '')), { status: res.status });
   }
@@ -241,11 +241,11 @@ function render() {
   const others = board.roles.filter(r => r.state !== 'accepted');
   for (const r of others) $('rkRoleList').append(el('li', {}, el('p', { text: SEATS[r.seat] + ' · key ' + r.key_label + ' · ' + r.role + ' · ' + r.state }), r.state === 'effective' ? el('div', { class: 'rk-actions' }, button('Revoke role', () => act('rk.decide', { subject: 'role', id: r.id, decision: 'revoke' }, 'Revoke role'), 'secondary')) : null));
   $('rkRoles').hidden = !board.roles.length;
-  $('rkPinList').replaceChildren(...board.pins.map(p => el('li', {}, el('p', { text: p.kind.replace(/_/g, ' ') + ' · ' + p.project_id + ' · v' + p.version + ' · ' + p.status }), el('p', { class: 'rk-help' }, (p.ref.type === 'claude_doc' ? 'Claude Doc ' + p.ref.id + ' revision ' + p.ref.rev : p.ref.type === 'repo_file' ? p.ref.path + ' @ ' + p.ref.commit.slice(0, 7) : 'RoboKap context version ' + p.ref.version), el('span', { class: 'rk-badge v-' + p.verification, text: VERIFY[p.verification] || p.verification }), ' · ' + p.history + ' version' + (p.history === 1 ? '' : 's') + ' kept'))));
+  $('rkPinList').replaceChildren(...board.pins.map(p => el('li', {}, el('p', { text: p.kind.replace(/_/g, ' ') + ' · ' + p.project_id + ' · v' + p.version + ' · ' + p.status }), el('p', { class: 'rk-help' }, (p.ref.type === 'claude_doc' ? 'Claude Doc ' + p.ref.id + ' revision ' + p.ref.rev : p.ref.type === 'repo_file' ? p.ref.path + ' @ ' + p.ref.commit.slice(0, 7) : 'Pack Sled context version ' + p.ref.version), el('span', { class: 'rk-badge v-' + p.verification, text: VERIFY[p.verification] || p.verification }), ' · ' + p.history + ' version' + (p.history === 1 ? '' : 's') + ' kept'))));
   $('rkPins').hidden = !board.pins.length;
   $('rkUnplannedList').replaceChildren(...board.unplanned.map(c => el('li', {}, el('p', { text: c.title }), el('p', { class: 'rk-help', text: 'Reported ' + (c.reported.status || 'no status') + ' · ' + (c.reported.source || '').replace(/_/g, ' ') + (c.reported.note ? ' · ' + c.reported.note : '') }), el('div', { class: 'rk-actions' }, button('Plan this task', () => openPlan(c.task_id), 'secondary')))));
   $('rkUnplanned').hidden = !board.unplanned.length;
-  $('rkHonesty').replaceChildren(...board.honesty.map(h => el('li', { text: h })), el('li', { text: 'Waking an assistant is unsupported: open the session and ask it to check its RoboKap queue.' }), el('li', { text: 'Lab checks: ' + (board.lab.status === 'checked' ? 'read-only, through your research access.' : 'unavailable right now, so Lab-linked work waits.') }));
+  $('rkHonesty').replaceChildren(...board.honesty.map(h => el('li', { text: h })), el('li', { text: 'Waking an assistant is unsupported: open the session and ask it to check its Pack Sled queue.' }), el('li', { text: 'Lab checks: ' + (board.lab.status === 'checked' ? 'read-only, through your research access.' : 'unavailable right now, so Lab-linked work waits.') }));
   fillForms();
   $('rkOwnerForms').hidden = false;
   // Forget finished flows of your own: no lease on the board and nothing left to resend.

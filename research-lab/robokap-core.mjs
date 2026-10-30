@@ -1,10 +1,10 @@
-/* RoboKap coordination core. Pure computation: no storage, network, clock or credentials.
+/* Pack Sled coordination core. Pure computation: no storage, network, clock or credentials.
  *
  * Canonical store is the EXISTING Pound record /privatePounds/<owner>. Pound keeps tasks,
  * messages and context versions in `payload`; this overlay keeps coordination records in
  * the sibling `robokap` key of the same record, so one ETag compare-and-swap covers both and
  * there is no second task store. The Lab stays authoritative for hypotheses, experiments and
- * findings: RoboKap stores references to Lab records and checks them read-only. Nothing here
+ * findings: Pack Sled stores references to Lab records and checks them read-only. Nothing here
  * writes the Lab, starts an experiment, schedules anything or grants access.
  *
  * Principals come from the caller layer, never from input:
@@ -12,7 +12,7 @@
  *   owner_key        the owner's connector key. key_label is server-verified, but every key
  *                    carries owner authority, so it proves WHICH KEY acted, not which agent.
  *   delegated_agent  a separate least-privilege credential. Modelled for review independence;
- *                    no transport issues one for RoboKap yet.
+ *                    no transport issues one for Pack Sled yet.
  * Self-declared text (session_ref, summaries, notes, model names) is stored and labelled as
  * declared; it routes work but never authorizes it. */
 
@@ -1036,7 +1036,7 @@ export async function rkApply(rkIn, pound, input, principal, now, ctx = {}) {
 
 /* Flat tool input schemas: several MCP clients reject a top-level oneOf. Exact per-op rules
  * live in the descriptions and in server validation. */
-export const RK_TOOL_DESCRIPTION = 'One RoboKap coordination write. Read first (dd_owner_robokap_read) for plan_version, pin versions and ids. '
+export const RK_TOOL_DESCRIPTION = 'One Pack Sled coordination write. Read first (dd_owner_robokap_read) for plan_version, pin versions and ids. '
   + 'Ops for a connector key: rk.role.accept {role_id} (only the key a role names can accept it); rk.claim {task_id, plan_version, pin_version (when the plan pins context), session_ref, lease_secret (fresh random 22-80 chars [A-Za-z0-9_-] you keep; resend the same values to renew until max_expires_at; renewal is refused once the task, pin, Lab link or a dependency changes)}; '
   + 'rk.release {task_id, claim_id, lease_secret}; rk.report {task_id, claim_id, lease_secret, outcome succeeded|failed|uncertain, summary 1-2000, artifacts? up to 8 of {kind pound_context|lab_receipt|lab_discussion|github_commit|github_pr|claude_artifact|discord_message|url|note, ref?, sha256?, note?}}; '
   + 'rk.review {receipt_id, verdict accept|revise|reject, note?} (connector-key reviews are advisory, never independent; a revise or reject closes review for the owner); rk.plan {task_id, expected_plan_version, seat claude|grok|gemini|muse|dot|owner, review none|advisory|independent, decision required|not_required, data_scope none|synthetic|development, priority? 1-5 (1 most urgent, default 3), session_ref?, role?, depends_on?, pin? {kind, version, require approved|any, project_id?}, acceptance? [{text, check_ref?}], lab? {hypothesis_id, hypothesis_version, evidence required|optional}, budget? {attempts 1-5, lease_minutes 5-120}, thread? {discord_thread_id}, note?} is recorded as a PROPOSAL for the owner; '

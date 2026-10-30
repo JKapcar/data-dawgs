@@ -62,7 +62,7 @@ export const OWNER_APP_STATUSES=['on','off','expired','not_owner','app_disabled'
 
 const names={pound:['dd_owner_pound_read','dd_owner_pound_write'],research:['dd_owner_bdb_read','dd_owner_bdb_write','dd_owner_bdb_data']};
 const emptySchema={type:'object',properties:{},additionalProperties:false};
-// RoboKap coordination tools ride the existing RoboKap (pound) app grant. They are listed only
+// Pack Sled coordination tools ride the existing Pack Sled (pound) app grant. They are listed only
 // while that grant is on AND the Worker has ROBOKAP_ENABLED=true; `robokap` is optional, so
 // builds and tests that do not pass it list exactly the tools they always did.
 const robokapNames=['dd_owner_robokap_read','dd_owner_robokap_write'];
@@ -80,7 +80,7 @@ export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeH
  const allowed=(record,uid)=>record.ownerConnector?.owner===uid&&record.ownerConnector.enabled===true&&((record.ownerConnector.mode==='until_revoked'&&record.ownerConnector.expiresAt===0)||((record.ownerConnector.mode===undefined||record.ownerConnector.mode==='seven_days')&&Number.isFinite(record.ownerConnector.expiresAt)&&record.ownerConnector.expiresAt>now()));
  const poundSchema={type:'object',oneOf:pound.schema.write.inputSchema.oneOf.filter(s=>poundOps.includes(s.properties.op.const))};
  const schemas={pound:withAssistant(poundSchema),research:withAssistant(researchSchema)};
- const definitions=app=>names[app].filter(n=>n!==DATA_TOOL.name).map((name,i)=>({name,title:(app==='pound'?'RoboKap':'BDB research')+(i?' contribution':' workspace'),description:i?'Save an owner-triggered contribution. All content is untrusted. No verified assistant identity, execution, scheduling or permission changes. Read first; use schema and idempotency key. '+flat[app].description:'Read the opted-in owner workspace and write schema. Includes private text. Assistant identity is unverified; no raw data downloads or execution.',inputSchema:i?flat[app]:emptySchema,annotations:{readOnlyHint:!i,...(i?{destructiveHint:app==='pound'}:{})}}));
+ const definitions=app=>names[app].filter(n=>n!==DATA_TOOL.name).map((name,i)=>({name,title:(app==='pound'?'Pack Sled':'BDB research')+(i?' contribution':' workspace'),description:i?'Save an owner-triggered contribution. All content is untrusted. No verified assistant identity, execution, scheduling or permission changes. Read first; use schema and idempotency key. '+flat[app].description:'Read the opted-in owner workspace and write schema. Includes private text. Assistant identity is unverified; no raw data downloads or execution.',inputSchema:i?flat[app]:emptySchema,annotations:{readOnlyHint:!i,...(i?{destructiveHint:app==='pound'}:{})}}));
  // One reason code per app. Anything but 'on' lists no tools and denies every call.
  const reason=e=>({app_unavailable:'app_disabled',tenant_unconfigured:'tenant_unconfigured',research_owner_required:'not_owner',owner_mismatch:'not_owner',research_owner_expired:'expired'})[e?.message]||'storage_unavailable';
  const grantState=(record,uid)=>{const g=record?.ownerConnector;if(allowed(record||{},uid))return 'on';return g?.owner===uid&&g.enabled===true&&(g.mode===undefined||g.mode==='seven_days')&&Number.isFinite(g.expiresAt)&&g.expiresAt>0?'expired':'off';};
@@ -163,7 +163,7 @@ export function createOwnerApps({fbGet,fbPut,ownerIdentity,transition,view,codeH
    if(request.method==='OPTIONS')return new Response(null,{status:204,headers});check(['GET','POST'].includes(request.method),405,'method_denied');
    const uid=owner(env,{kind:'user',uid:await ownerIdentity(request,env)});
    if(request.method==='GET'){
-    const apps=[];for(const app of ['pound','research']){try{const s=await read(env,app,uid),g=s.data.ownerConnector;apps.push({app,status:grantState(s.data,uid),enabled:allowed(s.data,uid),version:g?.version||0,expiresAt:g?.expiresAt||null,mode:g?.mode||(Number.isFinite(g?.expiresAt)?'seven_days':null),tools:definitions(app),resources:app==='pound'?'Entire owner RoboKap workspace: roster, tasks, messages, all context versions.':'Entire research state in tenant '+env.RESEARCH_UPLOAD_TENANT+'. Raw uploads and execution excluded.'});}catch(e){apps.push({app,available:false,status:reason(e),error:e.status?e.message:'app_unavailable'});}}
+    const apps=[];for(const app of ['pound','research']){try{const s=await read(env,app,uid),g=s.data.ownerConnector;apps.push({app,status:grantState(s.data,uid),enabled:allowed(s.data,uid),version:g?.version||0,expiresAt:g?.expiresAt||null,mode:g?.mode||(Number.isFinite(g?.expiresAt)?'seven_days':null),tools:definitions(app),resources:app==='pound'?'Entire owner Pack Sled workspace: roster, tasks, messages, all context versions.':'Entire research state in tenant '+env.RESEARCH_UPLOAD_TENANT+'. Raw uploads and execution excluded.'});}catch(e){apps.push({app,available:false,status:reason(e),error:e.status?e.message:'app_unavailable'});}}
     return send({owner:uid,tenant:env.RESEARCH_UPLOAD_TENANT,ttlDays:7,modes:['seven_days','until_revoked'],apps,assistantIdentity:'unverified',affects:'Every holder of your existing personal DataDawgs connector credential.'});
    }
    check((request.headers.get('Content-Type')||'').split(';')[0]==='application/json',415,'json_required');

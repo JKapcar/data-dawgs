@@ -136,7 +136,7 @@ async function poundWrite(state,input,uid,actorKind='owner',authorLabel=null,cre
       poundCheck(fields.status!=='blocked'||reason,400,'blocked requires blocked_reason.code');
       poundCheck(fields.status==='blocked'||!fields.blocked_reason,400,'blocked_reason applies to blocked tasks only');
       poundCheck(fields.status!=='canceled'||actorKind==='owner',403,'Only the owner cancels a task');
-      // Reopening undoes a cancel, so it is the owner's decision too (RoboKap treats canceled as closed).
+      // Reopening undoes a cancel, so it is the owner's decision too (Pack Sled treats canceled as closed).
       poundCheck(!row||row.status!=='canceled'||!Object.hasOwn(fields,'status')||fields.status==='canceled'||actorKind==='owner',403,'Only the owner reopens a canceled task');
       // Leaving review for done needs an accepting reviewer on the record.
       if(row&&row.status==='review'&&fields.status==='done'){const review=Object.hasOwn(fields,'review')?fields.review:row.review;poundCheck(review&&review.verdict==='accept'&&review.reviewed_by,400,'done after review requires an accept verdict and reviewed_by');}
@@ -183,7 +183,7 @@ async function handlePound(request,env){
     poundCheck(['/api/pound','/api/pound/schema'].includes(url.pathname),404,'Route not found');
     const uid=await poundIdentity(request,env);
     if(url.pathname==='/api/pound/schema'){poundCheck(request.method==='GET',405,'GET required');return reply(POUND_SCHEMA);}
-    poundCheck(env.DAWG_POUND_ENABLED==='true',503,'RoboKap is awaiting private workspace setup');
+    poundCheck(env.DAWG_POUND_ENABLED==='true',503,'Pack Sled is awaiting private workspace setup');
     poundCheck(request.method==='GET'||request.method==='POST',405,'GET or POST required');
     const writing=request.method==='POST',input=writing?await poundBody(request):null;
     if(writing)poundValidate(input,POUND_SCHEMA.write.inputSchema);
