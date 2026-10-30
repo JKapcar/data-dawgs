@@ -39,7 +39,7 @@ export function createAgentSetup({fbGet,fbPut,ownerIdentity,now=Date.now}){
    // Pound and Pack Sled grants share the private record's agentAccess; the audience tells them apart.
    const all=s=>s.data.agentAccess||{};
    const grants=(s,a)=>a==='research'?(s.data.access?.delegated||{}):Object.fromEntries(Object.entries(all(s)).filter(([,g])=>(g?.audience===sledAud)===(a==='sled')));
-   const daysLeft=g=>Math.max(0,Math.floor((g.expiresAt-now())/86400000));
+   const daysLeft=g=>Math.max(0,Math.ceil((g.expiresAt-now())/86400000));
    const list=(s,a)=>Object.entries(grants(s,a)).map(([id,g])=>({id,label:g.label||'Existing agent',enabled:g.enabled===true,expiresAt:g.expiresAt,capabilities:g.capabilities,audience:a,status:g.enabled!==true?'revoked':g.expiresAt<=now()?'expired':'issued_not_connection_verified',...(a==='sled'?{seat:g.seat,daysLeft:g.enabled===true?daysLeft(g):null,renewedAt:g.renewedAt??null}:{})}));
    if(request.method==='GET'){
     const p=await read('pound'),r=await read('research'),state=JSON.parse(p.data.payload);

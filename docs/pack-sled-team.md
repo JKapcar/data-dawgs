@@ -7,8 +7,8 @@ what was added on top of the coordination layer in [robokap-coordination.md](rob
 
 Source: `research-lab/robokap-core.mjs` (rules), `research-lab/pack-sled-runner.mjs` (worker
 runner and journal), `research-lab/robokap.mjs` (Worker and connector), board in
-`research-lab/robokap.html` + `robokap-board.mjs`. Tests: `research-lab/pack-sled.test.mjs`
-and the Pack Sled case in `research-lab/robokap.test.mjs`.
+`research-lab/robokap.html` + `robokap-board.mjs`. Seat credentials: `research-lab/sled-agent-gateway.mjs`, `research-lab/agent-setup.mjs`. Tests: `research-lab/pack-sled.test.mjs`,
+`research-lab/pack-sled-team.test.mjs`, `research-lab/sled-agent.test.mjs` and the Pack Sled case in `research-lab/robokap.test.mjs`.
 
 ## What is native and what is external
 
@@ -127,6 +127,94 @@ instructions. Briefs, pages, résumés and mail are data; none of them can chang
 3. Roles for those keys (owner proposes, each key accepts, owner approves on the board).
 4. Two Pound tasks and two brief contexts, pinned and approved by the owner, then two playbooks.
 5. Three routines created by the owner's main chat.
+
+## Scoped seat credentials
+
+Connector keys carry full owner authority, so a key-held worker could do anything the owner can.
+Seat credentials replace them for Pack Sled work. Each AI gets its own credential, issued by the
+owner on the connections page (`agent-setup.html`, audience `sled`). The seat and scopes are stored
+on the grant in `/privatePounds/<owner>.agentAccess` (audience `sled:<owner>`); the label is
+display text and grants nothing. Only a SHA-256 of the secret is stored; the secret is shown once.
+
+| Scope | Ops | Typical seat |
+|---|---|---|
+| `sled:work:read` (always) | `sled_read` views `work`, `team` | every seat |
+| `sled:work:claim` | `rk.claim`, `rk.heartbeat`, `rk.release`, `rk.report` | researcher (`claude`) |
+| `sled:review` | `rk.review` (counts as independent) | reviewer (`claude-reviewer`) |
+| `sled:coordinate` | `rk.intake`, `rk.dispatch`, `rk.notice`, `rk.plan`, `rk.propose`, view `alerts` | `coordinator` |
+
+No scope reaches `rk.pin`, `rk.decide`, `rk.playbook`, roles, league tools or any other owner
+app (`scope_denied`). A credential for one seat cannot take another seat's work
+(`target_mismatch`). Every write re-checks the grant against the same snapshot its conditional
+put depends on, so a revocation saved mid-write wins.
+
+Endpoint (MCP over HTTP, POST): `https://toto.jkapcar4.workers.dev/agents/v1/owners/<uid>/sled/mcp`
+with `Authorization: Bearer da1_…`, or `/sled/<da1_…>/mcp` for clients that cannot send headers
+(claude.ai connectors and routines). The path form puts the secret in the URL; treat that URL as
+a password. Gated by `DELEGATED_AGENTS_ENABLED` and `SLED_AGENTS_ENABLED` (both default off).
+
+### Lifecycle
+
+- Issue: seat, scopes (read is always included), a label and 1 to 30 days (default 30). One active
+  credential per seat; issuing a second is refused until the first is revoked.
+- Expiry warnings: the board raises `credential_expiring` 7 days out (watch) and 2 days out
+  (action), each once by key; the credential's own `sled_read` carries a warning too.
+- Renew (owner, connections page or board link): same secret, seat and scopes, new expiry. Nothing
+  to re-enter. A revoked credential is never renewed; issue a new one.
+- Expired or revoked mid-run: its lease stops counting at once (`seat_credential_inactive`, alert
+  `credential_inactive`). The runner pauses without marking the step refused; after renewal the
+  same request resends. If the lease ran out meanwhile, the next claim is a fresh attempt.
+- Revoke: immediate and final.
+
+### Less owner friction, same boundaries
+
+- Drafts: a coordinator drafts the brief pin and the playbook with `rk.propose`; the owner
+  approves each with one click on the board (`rk.decide subject proposal`). A pin draft is
+  re-checked at approval (`proposal_changed`). The playbook draft may be filed alongside its brief
+  draft; approve the brief first.
+- Acceptance: a playbook with `review: independent`, a `reviewer_seat` and `decision:
+  not_required` accepts a result once that seat's credential reviews it with `accept`. The board
+  records `acceptance_basis: playbook_after_independent_review`; the owner can still send it back.
+  Reviews from connector keys are advisory and never close anything. Acceptance closes the task
+  inside Pack Sled only; it approves no outside action.
+- A reviewer `revise` opens the next attempt with no owner step. When the attempt budget is used
+  up, the owner extends it (`budget_exhausted`).
+- Still owner-only by design: issuing, renewing and revoking credentials; approving briefs and
+  playbooks; budget extensions; reconciling an uncertain outcome; switching flags on.
+
+### Monitoring
+
+`sled_read view alerts` (coordinator scope) and the board's alerts panel list actionable
+failures only, each with a stable `key`: silent or stale leases, repeated failures, used-up
+budgets, rejected reviews, uncertain outcomes, inactive or expiring credentials, seats nobody
+holds, ready work no worker picked up for 2 hours, reviews waiting 4 hours, intake waiting 2
+hours, undelivered notices and storage pressure. A monitor posts each alert once by reserving
+`rk.notice` with key `alert:<key>`. Successes and routine progress never appear.
+
+### Worker routines (prompts for the main chat to schedule)
+
+Each routine holds one credential in its connector and calls `sled_read` first.
+
+- Coordinator (hourly): read authorized mail for requests matching an active playbook; record
+  each as `rk.intake` with `sha256(message id)` (a repeat is a no-op); dispatch queued intake;
+  draft briefs or playbook changes with `rk.propose` when asked. Never send mail.
+- Researcher (every 30 minutes): if `ready` has work, run it through `pack-sled-runner.mjs`
+  (journal in the project folder): claim, heartbeat at each step, save the deliverable as a
+  project file, report claim-level evidence with its sha256. On `credential_paused`, stop and
+  say so; on `lease_lost`, start over on a fresh claim.
+- Reviewer (every 30 minutes): for each `review_requests` item, verify the artifact hash, open
+  the cited sources, check each acceptance item and submit `rk.review`.
+- Monitor (every 3 hours, coordinator credential): read `view alerts`; for each new key,
+  `rk.notice reserve alert:<key>`, post one line only if `send` is true, then mark delivered.
+
+Shell use: `node research-lab/pack-sled-call.mjs <endpoint> <0600 credential file> read|write …`
+never prints the credential and exits 2 with `retry`/`paused` flags on a refusal.
+
+### Rehearsal
+
+`DD_NODE_MODULES=… node research-lab/pack-sled-rehearsal.mjs serve <dir>` runs the packaged
+Worker in Miniflare on 127.0.0.1 with an in-memory database, all three credential seats, and a
+synthetic recruiting task and brief. Nothing touches the live site.
 
 ## Tests
 

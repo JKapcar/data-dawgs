@@ -295,7 +295,7 @@ const REASONS = {
   budget_exhausted: 'All attempts for this plan version are used. Extend the budget or amend the plan.',
   owner_task: 'This task is yours to do. Claim it here and attach evidence when finished.',
   awaiting_review: 'Waiting for a reviewer.',
-  needs_independent_review: 'Needs an independent reviewer. Shared owner keys only give advisory reviews, and no separate agent credential is connected.',
+  needs_independent_review: 'Needs an independent reviewer: a separate seat credential with the review scope. Reviews from shared owner keys are advisory only.',
   review_revise: 'A revision was requested; a new attempt is open.',
   dependency_changed: 'A dependency was redone after this result. A new attempt is open.',
   lab_evidence_missing: 'The plan requires Lab evidence and this result has none that executed and did not fail. A new attempt is open.',
@@ -691,7 +691,7 @@ function credentialViews(rk, now, ctx) {
   const playbooks = [...new Set(rk.playbooks.map(p => p.playbook_id))].map(id => currentPlaybook(rk, id));
   return (ctx.agents || []).map(a => ({
     agent_id: a.agent_id, label: a.label || null, seat: a.seat, scopes: [...a.scopes], status: a.status, expires_at: iso(a.expires_at),
-    days_left: Math.floor((a.expires_at - now) / DAY), expiring: a.status === 'active' && a.expires_at - now <= RK_CREDENTIAL_WARN_DAYS * DAY,
+    days_left: Math.ceil((a.expires_at - now) / DAY), expiring: a.status === 'active' && a.expires_at - now <= RK_CREDENTIAL_WARN_DAYS * DAY,
     used_by: playbooks.filter(pb => [pb.seat, pb.reviewer_seat, pb.coordinator_seat].includes(a.seat)).map(pb => pb.playbook_id),
   }));
 }
@@ -775,7 +775,7 @@ export async function rkWork(rk, pound, now, ctx, { key_label, principal: given,
     dependencies: (d.deps || []).map(x => x.id),
     result: d.accepted ? { receipt_id: d.evidence.receipt.id, summary: d.evidence.receipt.summary, artifacts: d.evidence.receipt.artifacts.map(a => ({ kind: a.kind, ref: a.ref ?? null, sha256: a.sha256 ?? null })), at: d.evidence.receipt.at } : null,
   }));
-  const days = self ? Math.floor((self.expires_at - now) / DAY) : null;
+  const days = self ? Math.ceil((self.expires_at - now) / DAY) : null;
   const identity = agent
     ? { agent_id: principal.agent_id, label: principal.label || null, seat: principal.seat, scopes: [...principal.scopes], credential_trust: 'server_verified_scoped_credential', session_ref_declared: session_ref ?? null, session_ref_trust: 'declared', model_identity: 'unverified',
         expires_at: self ? iso(self.expires_at) : null, days_left: days, renewal: 'The owner renews this credential on the connections page. Nothing you do extends it.',
@@ -1023,7 +1023,11 @@ async function buildPlaybook(rk, pound, data, principal, at) {
     const budget = normalizeBudget(data.budget);
     only(data.criteria, ['project_id', 'kind'], ['project_id', 'kind']);
     check(RX.project.test(data.criteria.project_id) && PIN_KINDS.includes(data.criteria.kind), 400, 'invalid_criteria');
-    check(rk.pins.some(p => p.project_id === data.criteria.project_id && p.kind === data.criteria.kind), 409, 'criteria_pin_not_found', 'Pin the brief first.');
+    // A coordinator may draft the playbook alongside its brief draft; approval re-checks, so the
+    // brief must be approved first.
+    const pinned = rk.pins.some(p => p.project_id === data.criteria.project_id && p.kind === data.criteria.kind);
+    const drafted = principal.kind !== 'owner_session' && rk.proposals.some(x => x.state === 'open' && x.type === 'pin' && x.project_id === data.criteria.project_id && x.pin_kind === data.criteria.kind);
+    check(pinned || drafted, 409, 'criteria_pin_not_found', principal.kind === 'owner_session' ? 'Approve or pin the brief first.' : 'Pin the brief first, or draft it with rk.propose.');
     // Two playbooks never share a criteria pin, so one role's brief cannot leak into another's.
     check(!rk.playbooks.some(p => p.playbook_id !== data.playbook_id && p.criteria.project_id === data.criteria.project_id && p.criteria.kind === data.criteria.kind), 409, 'criteria_shared_with_another_playbook');
     check((data.coordinator_key === undefined) !== (data.coordinator_seat === undefined), 400, 'one_coordinator_required', 'Name either coordinator_key or coordinator_seat.');
