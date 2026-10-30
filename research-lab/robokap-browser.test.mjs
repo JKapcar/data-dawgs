@@ -76,8 +76,8 @@ try {
   await page.locator('#rkUnplanned li').first().waitFor();
   assert.equal(await page.locator('#rkUnplanned li').count(), 4);
   assert.match(await page.locator('#rkEvidence').innerText(), /authenticated owner request/);
-  assert.match(await page.locator('#rkEvidence').innerText(), /Connected assistants: unknown/);
-  assert.match(await page.locator('#rkEvidence').innerText(), /Executing: unverified. 0 leases held/);
+  assert.match(await page.locator('#rkEvidence').innerText(), /Workers seen: none yet\. Key acceptance records do not prove a session is online/);
+  assert.match(await page.locator('#rkEvidence').innerText(), /Executing: 0 leases checked in within 15 minutes; 0 silent; 0 dispatched with no worker yet; 0 tasks in Done/);
   assert.match(await page.locator('#rkUnplanned').innerText(), /Reported working · owner connector reported · Reported working; no execution receipt/);
   // Propose Claude's role from the form; Claude accepts with its own key; you approve on the board.
   await page.locator('#rkRoleBox summary').click();
@@ -146,7 +146,7 @@ try {
   const cardB = page.locator('.rk-card[data-task="' + B + '"]');
   await cardB.locator('.rk-proposal').waitFor();
   assert.equal(await tab('Running').locator('b').innerText(), '0');
-  assert.match(await page.locator('#rkEvidence').innerText(), /Executing: unverified. 1 leases held; 1 tasks in Done/);
+  assert.match(await page.locator('#rkEvidence').innerText(), /Executing: 1 leases checked in within 15 minutes; 0 silent; 0 dispatched with no worker yet; 1 tasks in Done/);
   const proposal = await cardB.locator('.rk-proposal').innerText();
   for (const line of [/Proposed plan v2 · connector key "Claude"/, /Review\s*none → advisory/, /Priority\s*3 → 2/, /Discord thread\s*none → 111111111111111111/, /Acceptance\s*none → Synthetic check one; Synthetic check two/]) assert.match(proposal, line);
   await page.screenshot({ path: path.join(output, 'robokap-board-proposal-390.png'), fullPage: true });
