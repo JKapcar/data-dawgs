@@ -457,3 +457,42 @@ test('runner: a claim the server refused is not resent forever; the next attempt
   assert.ok(claim.claim_id, 'the retry got a claim');
   assert.equal(w.rk.claims.filter(c => c.task_id === SF).length, 1);
 });
+
+test('live demo dry run: research, a failed attempt, recovery on a fresh claim, review by the other seat, owner acceptance and a saved result', async () => {
+  const w = await world();
+  await setup(w);
+  const { plan } = await intakeAndDispatch(w, 'synthetic-tr', 'demo-1', 'Total Rewards contractors near the office');
+  const t = w.transport(research, 'PackResearch');
+  const store = memoryJournal();
+  const run = createRunner({ transport: t, store, runId: 'demo-research', sessionRef: RS, executor: 'claude-code-routine' });
+  const a1 = await run.claimNext();
+  await run.heartbeat({ step: 'search' });
+  // Injected failure: the attempt reports failed, as a session would when a source is down.
+  const failed = await run.report({ outcome: 'failed', summary: 'Demo attempt 1: injected failure before any result.' });
+  assert.equal((await w.card(TR)).lane, 'ready');
+  // The same session crashes and restarts on its journal, then recovers on a fresh claim.
+  const restarted = createRunner({ transport: t, store, runId: 'demo-research', sessionRef: RS, executor: 'claude-code-routine' });
+  const a2 = await restarted.claimNext();
+  assert.notEqual(a2.claim_id, a1.claim_id);
+  const card2 = await w.card(TR);
+  assert.equal(card2.claim.attempt, 2, 'the board shows the second attempt');
+  await restarted.heartbeat({ step: 'write-up' });
+  const saved = { kind: 'project_file', ref: '/mnt/project-files/synthetic/demo-shortlist.pdf', sha256: 'b'.repeat(64) };
+  const ok = await restarted.report({ outcome: 'succeeded', summary: 'Demo attempt 2: shortlist saved.', evidence: await evidenceFor(w, 1, TR_TEXT), artifacts: [saved] });
+  assert.equal(ok.validity, 'current');
+  assert.notEqual(ok.receipt_id, failed.receipt_id);
+  // The researcher's key cannot review; the reviewer seat's key does, on the newest receipt.
+  assert.equal((await w.work('PackResearch', RS)).review_requests.length, 0);
+  const reviewer = createRunner({ transport: w.transport(review, 'PackReview'), store: memoryJournal(), runId: 'demo-review', sessionRef: VS });
+  const verdict = await reviewer.reviewNext(async req => { assert.equal(req.receipt_id, ok.receipt_id, 'review targets the recovered attempt'); return acceptVerdict(); });
+  assert.equal(verdict.mode, 'advisory');
+  await w.apply(owner, 'rk.decide', { subject: 'receipt', id: ok.receipt_id, decision: 'accept' });
+  const done = await w.card(TR);
+  assert.equal(done.lane, 'done');
+  assert.equal(done.evidence.receipt_id, ok.receipt_id);
+  assert.equal(done.evidence.artifacts[0].ref, saved.ref);
+  assert.equal(done.evidence.artifacts[0].verification, 'hash_recorded');
+  assert.equal(w.rk.claims.filter(c => c.task_id === TR).length, 2);
+  assert.equal(w.rk.receipts.filter(r => r.task_id === TR).length, 2);
+  assert.equal(plan.status, 'approved');
+});
