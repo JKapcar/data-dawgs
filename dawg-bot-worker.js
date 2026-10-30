@@ -5033,8 +5033,22 @@ const isMember = (lg, name) => memberKeyOf(lg, { name }) !== null;
 // The one admin-identity check in this file. Two shapes are accepted on purpose: the
 // uid-era role flag on the account record, and the legacy BOZO_ADMIN display-name var
 // that predates roles. An MCP caller carries `roles` directly (it has no `user`).
+// THE SITE OWNER IS SITE ADMIN EVERYWHERE. The configured owner (RESEARCH_OWNER_UID, a
+// non-secret var) gets every manager and admin power in every league, on a site session or
+// on any of their own full-access MCP keys, without a role flag having to be set by hand.
+// Decided by the verified uid alone. ⚠️ A pack-… seat key carries the owner's uid but is
+// NOT the owner: it is refused here by kind and by label, so no seat can inherit this.
+function isOwnerPrincipal(auth, env) {
+  if (!auth || auth.err || !env) return false;
+  const owner = typeof env.RESEARCH_OWNER_UID === "string" ? env.RESEARCH_OWNER_UID : "";
+  if (!/^u_[A-Za-z0-9_-]{1,100}$/.test(owner) || auth.uid !== owner) return false;
+  if (auth.kind === "pack_seat" || auth.kind === "shared") return false;
+  return !(typeof auth.keyLabel === "string" && /^pack-/i.test(auth.keyLabel));
+}
+
 function isSiteAdmin(auth, env) {
   if (!auth) return false;
+  if (isOwnerPrincipal(auth, env)) return true;
   const roles = (auth.user && auth.user.roles) || auth.roles || null;
   if (roles && roles.site_admin === true) return true;
   return !!(env && env.BOZO_ADMIN && auth.name === env.BOZO_ADMIN);
@@ -7270,10 +7284,14 @@ const BOZO_CORRECTION_SCHEMA = {
   oneOf: [{ required: ["reason", "pick"], not: { required: ["confirm"] } },
     { required: ["confirm"], not: { anyOf: [{ required: ["reason"] }, { required: ["pick"] }] } }],
 };
-function bozoCorrectionManager(state, auth) {
+function bozoCorrectionManager(state, auth, env) {
   // A verified UID is mandatory. A matching display name alone is not authority.
   if (!state || !auth?.uid || auth.err) return false;
-  return auth.user?.roles?.site_admin === true || state.managerUid === auth.uid ||
+  // The site owner, by uid (never a pack seat). Role flags in either shape: a site session
+  // carries auth.user.roles, an MCP caller carries auth.roles read from the account record.
+  if (isOwnerPrincipal(auth, env)) return true;
+  if (auth.user?.roles?.site_admin === true || (auth.kind === "user" && auth.roles?.site_admin === true)) return true;
+  return state.managerUid === auth.uid ||
     (Object.hasOwn(state.members || {}, auth.uid) && state.delegates?.[auth.uid] === true);
 }
 function bozoCanonical(value) {
@@ -7337,7 +7355,7 @@ async function bozoCorrectPickCore(env, auth, body, via = "site") {
   const lid = body.league, key = body.forUid, actor = auth.uid;
   try {
     const { data: state, etag } = await fbGet(env, LG(lid), true);
-    if (!bozoCorrectionManager(state, auth)) return fail("Only a verified league manager, delegate or site administrator may correct a pick.", 403);
+    if (!bozoCorrectionManager(state, auth, env)) return fail("Only a verified league manager, delegate or site administrator may correct a pick.", 403);
     const replay = code => {
       const row = state.audit?.[code];
       return row?.type === "replace_before_kickoff" && row.actor === actor && row.forUid === key && row.leagueId === lid ? row.result : null;
@@ -7409,7 +7427,7 @@ async function bozoCorrectPickCore(env, auth, body, via = "site") {
     // Atomic audit + pick + one ledger row. Failure cannot commit an unaudited edit.
     if (!await fbPut(env, LG(lid), state, etag)) {
       const fresh = (await fbGet(env, LG(lid))).data;
-      if (!bozoCorrectionManager(fresh, auth)) return fail("Correction access changed.", 403);
+      if (!bozoCorrectionManager(fresh, auth, env)) return fail("Correction access changed.", 403);
       const won = fresh?.audit?.[pending.code];
       if (won?.actor === actor && won.forUid === key && won.type === body.type) return reply(won.result);
       return fail("Concurrent league change. Review a new proposal.");
@@ -10659,7 +10677,7 @@ async function bozoAgentCloseCore(env, auth, args, nowMs = Date.now()) {
   catch (e) { return fail("Database unreachable: " + e.message, 502); }
   if (!live) return fail("No such league.", 404);
   if (live.synthetic === true) return fail("Simulated league: its prices are fabricated by design.", 409);
-  if (!bozoCorrectionManager(live, auth)) return fail("Only a verified league manager, delegate or site administrator may record a close.", 403);
+  if (!bozoCorrectionManager(live, auth, env)) return fail("Only a verified league manager, delegate or site administrator may record a close.", 403);
 
   // The leg is found by what the routine saw on the board, never by a key it was handed.
   const matches = Object.entries(live.ledger || {}).filter(([, r]) => r &&
