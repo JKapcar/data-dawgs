@@ -217,18 +217,18 @@
    {
     "path": "/data/epa-players.json",
     "url": "https://datadawgs216.com/data/epa-players.json",
-    "bytes": 194884,
-    "as_of": "2026-10-29",
-    "sha256": "af50785eb23cea7774a192af3e63dac0085d13a89070efd581db4c4907a888cd",
-    "note": "Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name per play, so the whole value of a completed pass is credited to the quarterback and a receiver appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, not projections: do not read 2025 as 2026. 2026 is Weeks 1-7 ONLY (107 games): incomplete-season coverage, with the season minimums prorated to 60 dropbacks / 30 rushes. The pooled table spans every season in the snapshot, including the partial one."
+    "bytes": 195270,
+    "as_of": "2026-10-30",
+    "sha256": "6c902103126c639191b14ec2b40e3574c33d34376dbec14568eeae8dce5fef9c",
+    "note": "Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name per play, so the whole value of a completed pass is credited to the quarterback and a receiver appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, not projections: do not read 2025 as 2026. 2026 is Weeks 1-8 ONLY (108 games): incomplete-season coverage, with the season minimums prorated to 60 dropbacks / 30 rushes. The pooled table spans every season in the snapshot, including the partial one."
    },
    {
     "path": "/data/epa-teams.json",
     "url": "https://datadawgs216.com/data/epa-teams.json",
-    "bytes": 111073,
-    "as_of": "2026-10-29",
-    "sha256": "f1b42b28e1c0c67dc8589b9d621bc8ada60b14d6d8fb590d2333b219affd1109",
-    "note": "Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback minimum for QBs; the pooled table uses 500. 2026 covers Weeks 1-7 ONLY (107 games) — a small sample sensitive to opponent and game script; its QB minimum is the 200 bar prorated to 79 dropbacks. The pooled table spans every season in the snapshot, including the partial one. These are descriptive aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026, and do not interpret an incomplete season as a complete season. Dropback EPA counts every dropback including scrambles and penalty-nullified plays and uses play epa, not qb_epa; Rush EPA excludes scrambles and kneels. These will not match nflverse passing_epa / rushing_epa."
+    "bytes": 111119,
+    "as_of": "2026-10-30",
+    "sha256": "acd38311a72ce981d407f8162c202ed7f52bc961729481634d963d1cb8280e08",
+    "note": "Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback minimum for QBs; the pooled table uses 500. 2026 covers Weeks 1-8 ONLY (108 games) — a small sample sensitive to opponent and game script; its QB minimum is the 200 bar prorated to 80 dropbacks. The pooled table spans every season in the snapshot, including the partial one. These are descriptive aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026, and do not interpret an incomplete season as a complete season. Dropback EPA counts every dropback including scrambles and penalty-nullified plays and uses play epa, not qb_epa; Rush EPA excludes scrambles and kneels. These will not match nflverse passing_epa / rushing_epa."
    },
    {
     "path": "/data/forecast-toto.json",
@@ -266,7 +266,7 @@
     "url": "https://datadawgs216.com/data/fourth-down.json",
     "bytes": 19217,
     "as_of": "2026-10-30",
-    "sha256": "3becb3ee7d009844631b4b98322ae37eff907be09b32b1779c66cf2264391e83",
+    "sha256": "bafe84a37638633ee479577dcde0759fe38b09bd6428523db1fbabd32c531ae0",
     "note": "Delayed game-decision snapshot. Check per-game capture time and refresh_error. No overtime recommendations. Pregame lines, not live betting prices."
    },
    {

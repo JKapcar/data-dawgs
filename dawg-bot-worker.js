@@ -1860,6 +1860,12 @@ export default {
 
     if (request.method === "OPTIONS") return new Response(null, { headers: cors });
 
+    // Public feed crawler policy. Do not advertise private/API routes for crawling.
+    if (url.pathname === "/robots.txt") {
+      const headers = {"Content-Type":"text/plain; charset=utf-8", "Cache-Control":"public, max-age=3600", "Access-Control-Allow-Origin":"*"};
+      if (!["GET", "HEAD"].includes(request.method)) return new Response("Read-only crawler policy", {status:405, headers});
+      return new Response(request.method === "HEAD" ? null : "User-agent: *\nAllow: /bozo/menu\nDisallow: /\n\nSitemap: https://datadawgs216.com/sitemap.xml\n", {headers});
+    }
     if (url.pathname === "/scores")       return handleScores(url, env, cors);
     if (url.pathname === "/ops/health")   return handleOpsHealth(request, env, cors);
     if (url.pathname === "/dk/lobby")     return handleDkLobby(request, url, cors);
