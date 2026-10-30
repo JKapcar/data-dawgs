@@ -83,7 +83,7 @@ test('default off: tools appear only with the flag AND the RoboKap app grant, an
   assert.deepEqual(names(await on.api.list(on.env, keys.claude)), ['dd_owner_pound_read', 'dd_owner_pound_write', 'dd_owner_robokap_read', 'dd_owner_robokap_write']);
   for (const t of await on.api.list(on.env, keys.claude)) for (const k of ['oneOf', 'anyOf', 'allOf']) assert.equal(t.inputSchema[k], undefined);
   const write = (await on.api.list(on.env, keys.claude)).find(t => t.name === 'dd_owner_robokap_write');
-  assert.deepEqual(write.inputSchema.properties.op.enum, ['rk.plan', 'rk.role.propose', 'rk.role.accept', 'rk.claim', 'rk.release', 'rk.report', 'rk.review', 'rk.intake', 'rk.dispatch', 'rk.heartbeat', 'rk.notice']);
+  assert.deepEqual(write.inputSchema.properties.op.enum, ['rk.plan', 'rk.role.propose', 'rk.role.accept', 'rk.claim', 'rk.release', 'rk.report', 'rk.review', 'rk.intake', 'rk.dispatch', 'rk.heartbeat', 'rk.notice', 'rk.propose']);
   assert.deepEqual(names(await on.api.list(on.env, { kind: 'user', uid: 'u_other', keyLabel: 'primary' })), []);
   assert.deepEqual(names(await on.api.list(on.env, { kind: 'shared' })), []);
 });
