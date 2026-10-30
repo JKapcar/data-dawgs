@@ -26,7 +26,8 @@ const CAPABILITY = Object.freeze({
   receive_task: 'supported by pull: dd_owner_robokap_read lists work addressed to the caller\'s key',
   wake_session: 'unsupported: nothing here can start or wake an assistant session; the owner opens it',
   execute: 'in-session only: the bound session does the work and returns evidence',
-  scheduler: 'unconfigured',
+  scheduler: 'external: sessions such as Claude Code routines poll this queue on their own schedule; nothing here starts, wakes or schedules them',
+  intake: 'external pull: a coordinator session reads authorized mail and records hashed message ids; Pack Sled never reads mail',
 });
 
 export function createRoboKap({ fbGet, fbPut, ownerIdentity, now = Date.now }) {

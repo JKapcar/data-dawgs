@@ -69,5 +69,16 @@
 .rk-reconcile p{margin:0 0 6px;overflow-wrap:anywhere}
 .rk-brief{white-space:pre-wrap;overflow-wrap:anywhere}
 .rk-pending{opacity:.6}
+.rk-exec{margin:0 0 10px;font-size:14px;color:var(--muted)}
+.rk-exec b{color:var(--ink);text-transform:capitalize}
+.rk-exec.x-running_silent b,.rk-exec.x-dispatched_waiting_for_worker b,.rk-exec.x-saved_not_dispatched b{color:var(--review)}
+.rk-claims,.rk-steps{margin:6px 0;padding-left:20px}
+.rk-claims li{margin:6px 0;overflow-wrap:anywhere}
+.rk-claims .support-inference .rk-badge,.rk-claims .support-absence .rk-badge{border-style:dashed}
+.rk-review{margin:8px 0;padding:6px 10px;border-left:3px solid var(--review)}
+.rk-review .check-fail{color:var(--needs)}
+.rk-review .check-fail::before{content:"✕ "}
+.rk-review .check-pass::before{content:"✓ ";color:var(--done)}
+.rk-panel h3{margin:16px 0 4px;font-size:16px}
 @media(min-width:720px){.rk-tabs{grid-template-columns:repeat(6,1fr)}}
 @media(prefers-reduced-motion:reduce){.rk-tab,.rk-actions button{transition:none}.rk-tab[aria-pressed=true],.rk-actions button:active{transform:none}}
