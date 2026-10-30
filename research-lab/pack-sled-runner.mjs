@@ -9,8 +9,8 @@
  *   - An external effect (anything outside Pack Sled, such as posting a message) is journaled as
  *     started before it runs. A crash between start and finish leaves it "unknown": the runner
  *     never runs it again and reports the attempt as uncertain for the owner to reconcile.
- *   - The lease secret is generated once per claim and journaled, so a resumed session renews the
- *     same lease instead of claiming twice. Each process gets a new execution id, so the board
+ *   - The lease secret is generated once per claim attempt and journaled, so a resumed session renews
+ *     the same lease instead of claiming twice, and a retry after a failed attempt claims afresh. Each process gets a new execution id, so the board
  *     shows a resume.
  *
  * What it does not do: start, wake or schedule a session, hold credentials, or read mail. The
@@ -21,7 +21,7 @@
  *   node pack-sled-runner.mjs step   <journal.json> <step> <op> '<data json>'   prints the exact call to send
  *   node pack-sled-runner.mjs done   <journal.json> <step> '<result json>'
  *   node pack-sled-runner.mjs effect <journal.json> <name> start|done|status
- *   node pack-sled-runner.mjs secret <journal.json> <task_id>                  prints the lease secret for this run
+ *   node pack-sled-runner.mjs secret <journal.json> <claim step>               prints the lease secret for that claim attempt
  *   node pack-sled-runner.mjs status <journal.json> */
 import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync, writeFileSync, renameSync, existsSync } from 'node:fs';
@@ -56,7 +56,8 @@ export class Journal {
   // A new process on the same journal is a new execution of the same run.
   startExecution() { const e = 'exe_' + token(12); this.s.executions = [...this.s.executions, e].slice(-8); this.save(); return e; }
   get execution() { return this.s.executions.at(-1) || null; }
-  leaseSecret(taskId) { if (!this.s.secrets[taskId]) { this.s.secrets[taskId] = 'ls_' + token(24); this.save(); } return this.s.secrets[taskId]; }
+  // One secret per claim attempt (keyed by its step name), kept so a resumed session renews the same lease.
+  leaseSecret(key) { if (!this.s.secrets[key]) { this.s.secrets[key] = 'ls_' + token(24); this.save(); } return this.s.secrets[key]; }
   // Journal the exact call before it is sent; a repeat returns the same call.
   prepare(step, op, data) {
     const prior = this.s.steps[step];
@@ -122,9 +123,14 @@ export function createRunner({ transport, store, runId, sessionRef, executor = '
     const work = await transport.read(sessionRef);
     const t = work.ready?.[0];
     if (!t) return null;
-    const lease_secret = j.leaseSecret(t.task_id);
+    // Each attempt is its own step: a retry after a failed or refused attempt on the same plan
+    // version gets a new request id and a new lease secret, so the server records a new claim
+    // instead of replaying the closed one.
+    const base = 'claim:' + t.task_id + ':v' + t.plan_version;
+    const tried = Object.keys(j.s.steps).filter(k => k === base || k.startsWith(base + ':a')).length;
+    const name = base + ':a' + (tried + 1);
+    const lease_secret = j.leaseSecret(name);
     const data = { task_id: t.task_id, plan_version: t.plan_version, ...(t.pin ? { pin_version: t.pin.version } : {}), session_ref: sessionRef, lease_secret, ...declared };
-    const name = 'claim:' + t.task_id + ':v' + t.plan_version;
     return remember(name, data, await step(name, 'rk.claim', () => data), t);
   }
 
@@ -191,7 +197,7 @@ if (isMain) {
       if (cmd === 'step') out(j.prepare(a, b, JSON.parse(c)));
       else if (cmd === 'done') { j.finish(a, JSON.parse(b)); out({ step: a, status: 'done' }); }
       else if (cmd === 'effect') { if (b === 'start') out({ effect: a, decision: j.effectStart(a) }); else if (b === 'done') { j.effectDone(a); out({ effect: a, status: 'done' }); } else out({ effect: a, status: j.s.effects[a] || 'not_started' }); }
-      else if (cmd === 'secret') out({ task_id: a, lease_secret: j.leaseSecret(a) });
+      else if (cmd === 'secret') out({ step: a, lease_secret: j.leaseSecret(a) });
       else if (cmd === 'status') out({ run_id: j.s.run_id, execution_id: j.execution, steps: Object.fromEntries(Object.entries(j.s.steps).map(([k, v]) => [k, { op: v.op, status: v.status, request_id: v.request_id }])), unknown_effects: j.unknownEffects() });
       else throw new Error('unknown_command');
     }

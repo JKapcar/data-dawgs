@@ -415,3 +415,45 @@ test('runner: a write whose outcome stays unknown is kept as sent and resent ide
   assert.equal(w.rk.claims.length, 1, 'four sends of one claim made one claim');
   assert.ok(claim.claim_id);
 });
+
+test('runner: a retry after a failed attempt takes a fresh claim with a fresh lease, never the old one', async () => {
+  const w = await world();
+  await setup(w);
+  await intakeAndDispatch(w, 'synthetic-sf', 'retry-1');
+  const store = memoryJournal();
+  const t = w.transport(research, 'PackResearch');
+  const run = createRunner({ transport: t, store, runId: 'run-retry', sessionRef: RS });
+  const first = await run.claimNext();
+  await run.report({ outcome: 'failed', summary: 'Synthetic attempt 1: search source unavailable.' });
+  assert.equal((await w.card(SF)).lane, 'ready', 'a failed attempt puts the task back in Ready');
+  // Same journal, same session: the next attempt must be a new claim on the server.
+  const second = await run.claimNext();
+  assert.notEqual(second.claim_id, first.claim_id, 'a fresh claim, not the closed one');
+  assert.notEqual(second.lease_secret, first.lease_secret, 'a fresh lease secret');
+  assert.equal(w.rk.claims.filter(c => c.task_id === SF).length, 2, 'two claims recorded');
+  assert.equal((await w.card(SF)).lane, 'running');
+  const r = await run.report({ outcome: 'succeeded', summary: 'Synthetic attempt 2.', evidence: await evidenceFor(w, 1, SF_TEXT) });
+  assert.ok(!r.replayed, 'the second report is new, not a replay of the first');
+  assert.equal(w.rk.receipts.filter(x => x.task_id === SF).length, 2);
+  // A new execution on the same journal after both reports starts nothing.
+  const again = createRunner({ transport: t, store, runId: 'run-retry', sessionRef: RS });
+  assert.equal(again.claim.claim_id, second.claim_id);
+  assert.equal(again.claim.closed, true);
+  assert.equal(w.rk.claims.filter(c => c.task_id === SF).length, 2);
+});
+
+test('runner: a claim the server refused is not resent forever; the next attempt is a new request', async () => {
+  const w = await world();
+  await setup(w);
+  await intakeAndDispatch(w, 'synthetic-sf', 'refused-1');
+  const store = memoryJournal();
+  const t = w.transport(research, 'PackResearch');
+  const run = createRunner({ transport: t, store, runId: 'run-refused', sessionRef: RS });
+  // Pause the role so the first claim is refused, then restore it.
+  const realWrite = t.write;
+  t.write = async (op, rid, data) => { if (op === 'rk.claim') { t.write = realWrite; throw Object.assign(new Error('synthetic_refusal'), { code: 'synthetic_refusal', status: 409 }); } return realWrite(op, rid, data); };
+  await assert.rejects(run.claimNext(), e => e.code === 'synthetic_refusal');
+  const claim = await run.claimNext();
+  assert.ok(claim.claim_id, 'the retry got a claim');
+  assert.equal(w.rk.claims.filter(c => c.task_id === SF).length, 1);
+});
