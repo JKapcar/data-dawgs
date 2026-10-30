@@ -1,4 +1,4 @@
-// RoboKap owner board. Private UI: memory only, no persistence, telemetry or third-party code.
+// Pack Sled owner board. Private UI: memory only, no persistence, telemetry or third-party code.
 // Lanes are computed by the Worker from recorded claims, receipts, reviews and decisions;
 // this page renders them and sends owner decisions. Success is shown only after the server says so.
 const API = 'https://toto.jkapcar4.workers.dev/robokap/v1';
@@ -14,8 +14,9 @@ const LANES = [
 const ORDER = ['needs_you', 'ready', 'running', 'blocked', 'review', 'done'];
 const LINK_HOSTS = ['github.com', 'claude.ai', 'discord.com', 'www.kaggle.com', 'kaggle.com', 'datadawgs216.com', 'www.datadawgs216.com'];
 const VERIFY = { server_verified: 'server-verified', format_checked: 'format checked', commit_and_hash_recorded: 'commit and hash recorded', owner_attested: 'your attestation', claimed: 'declared', unverified_lab_unavailable: 'Lab unavailable: unchecked' };
-const SEATS = { claude: 'Claude', grok: 'Grok', gemini: 'Gemini', muse: 'Muse', dot: 'Scout/dot', owner: 'You' };
-const FIELD = { seat: 'Seat', session_ref: 'Target session', role: 'Required role', priority: 'Priority', depends_on: 'Depends on', pin: 'Pinned context', acceptance: 'Acceptance', review: 'Review', decision: 'Your decision', lab: 'Lab link', data_scope: 'Data scope', budget: 'Budget', thread: 'Discord thread', note: 'Note' };
+const SEATS = { claude: 'Claude', 'claude-reviewer': 'Claude reviewer', grok: 'Grok', gemini: 'Gemini', muse: 'Muse', dot: 'Scout/dot', owner: 'You' };
+const VERIFY_EXTRA = { hash_recorded: 'hash recorded' };
+const FIELD = { reviewer_seat: 'Reviewer seat', evidence_required: 'Evidence', seat: 'Seat', session_ref: 'Target session', role: 'Required role', priority: 'Priority', depends_on: 'Depends on', pin: 'Pinned context', acceptance: 'Acceptance', review: 'Review', decision: 'Your decision', lab: 'Lab link', data_scope: 'Data scope', budget: 'Budget', thread: 'Discord thread', note: 'Note' };
 const CAUSE = { plan_changed: 'the plan changed', task_changed: 'the task text changed', dependency_not_accepted: 'a dependency is no longer accepted', dependency_changed: 'a dependency was redone', lab_link_stale: 'the Lab hypothesis moved on', pin_superseded: 'a newer pin exists', pin_not_approved: 'the pin is a draft', pin_behind_context: 'the context has a newer version', pin_missing: 'the pin is missing', pin_context_missing: 'the pinned context is gone', pin_hash_mismatch: 'the pinned context hash changed' };
 let epoch = 0, board = null, lane = null, laneChosen = false, busy = false;
 // Writes that got no definite answer, and your own tasks in flight (lease secret and claim), live in
@@ -63,16 +64,16 @@ function forgetIfAccountChanged() {
 }
 function clearView() {
   epoch++; board = null; laneChosen = false; carry = null;
-  for (const id of ['rkCards', 'rkRoleList', 'rkPinList', 'rkUnplannedList', 'rkTabs', 'rkBar', 'rkEvidenceList']) $(id).replaceChildren();
+  for (const id of ['rkCards', 'rkRoleList', 'rkPinList', 'rkUnplannedList', 'rkTabs', 'rkBar', 'rkEvidenceList', 'rkPlaybookList', 'rkWorkerList', 'rkIntakeList', 'rkNoticeList', 'rkCapacity']) $(id).replaceChildren();
   $('rkEvidence').hidden = true;
-  for (const id of ['rkSummary', 'rkLane', 'rkRoles', 'rkOwnerForms', 'rkPins', 'rkUnplanned', 'rkResend']) $(id).hidden = true;
+  for (const id of ['rkSummary', 'rkLane', 'rkRoles', 'rkOwnerForms', 'rkPins', 'rkUnplanned', 'rkResend', 'rkTeam', 'rkCapacity']) $(id).hidden = true;
   // Forms and the task lists inside them hold private titles: reset and empty them too.
-  for (const id of ['rkPlanForm', 'rkPinForm', 'rkRoleForm']) $(id).reset();
+  for (const id of ['rkPlanForm', 'rkPinForm', 'rkRoleForm', 'rkPlaybookForm']) $(id).reset();
   const f = $('rkPlanForm').elements;
-  for (const s of [f.task_id, f.depends_on, f.pin, $('rkPinForm').elements.context_id]) s.replaceChildren();
+  for (const s of [f.task_id, f.depends_on, f.pin, $('rkPinForm').elements.context_id, $('rkPlaybookForm').elements.task_id, $('rkPlaybookForm').elements.criteria]) s.replaceChildren();
   $('rkPlanCarry').replaceChildren();
   $('rkPlanCarry').hidden = true;
-  for (const id of ['rkPlanBox', 'rkPinBox', 'rkRoleBox']) $(id).open = false;
+  for (const id of ['rkPlanBox', 'rkPinBox', 'rkRoleBox', 'rkPlaybookBox']) $(id).open = false;
   globalThis.DDAccount?.reset();
 }
 async function request(body) {
@@ -84,7 +85,7 @@ async function request(body) {
   if (generation !== epoch || credential !== token() || document.hidden) throw Object.assign(new Error('Account changed. Refresh the board.'), { aborted: true });
   if (!res.ok) {
     globalThis.DDAccount?.failed(res.status);
-    const known = { robokap_disabled: 'RoboKap coordination is not switched on for this Worker yet.', configured_owner_required: 'Only the configured owner can open this board.' };
+    const known = { robokap_disabled: 'Pack Sled coordination is not switched on for this Worker yet.', configured_owner_required: 'Only the configured owner can open this board.' };
     const detail = data?.detail;
     throw Object.assign(new Error(known[data?.error] || (data?.error || 'Request failed') + (detail ? ' · ' + (Array.isArray(detail) ? detail.join(', ') : typeof detail === 'string' ? detail : JSON.stringify(detail)) : '')), { status: res.status });
   }
@@ -193,11 +194,20 @@ function cardView(card) {
     card.plan ? el('li', { class: 'rk-chip', text: 'plan v' + card.plan.version }) : null,
     card.plan && card.plan.review !== 'none' ? el('li', { class: 'rk-chip', text: card.plan.review + ' review' }) : null,
     card.plan && card.plan.decision === 'required' ? el('li', { class: 'rk-chip', text: 'your decision' }) : null,
-    card.owner?.session_ref_target ? el('li', { class: 'rk-chip', text: 'session ' + card.owner.session_ref_target + ' (declared)' }) : null);
+    card.owner?.session_ref_target ? el('li', { class: 'rk-chip', text: 'session ' + card.owner.session_ref_target + ' (declared)' }) : null,
+    card.plan?.approved_via?.kind === 'owner_playbook' ? el('li', { class: 'rk-chip', text: 'via playbook ' + card.plan.approved_via.playbook_id + ' v' + card.plan.approved_via.playbook_version }) : null,
+    card.plan?.reviewer_seat ? el('li', { class: 'rk-chip', text: 'reviewer ' + (SEATS[card.plan.reviewer_seat] || card.plan.reviewer_seat) }) : null);
+  // What is really happening, from stored records only.
+  const exec = card.execution ? el('p', { class: 'rk-exec x-' + card.execution.state }, el('b', { text: card.execution.state.replace(/_/g, ' ') }), ' · ' + card.execution.text) : null;
   const facts = el('dl', { class: 'rk-facts' });
   const fact = (k, v) => facts.append(el('dt', { text: k }), el('dd', {}, v));
   if (card.dependencies.length) fact('Depends on', el('ul', { class: 'rk-deps' }, card.dependencies.map(d => el('li', { class: 'rk-dep ' + (d.accepted ? 'ok' : d.closed || d.missing || d.cycle ? 'bad' : 'wait'), text: (d.title || d.id) + ' · ' + (d.accepted ? 'accepted' : d.cycle ? 'in a cycle' : d.closed ? d.closed : d.missing ? 'missing' : d.lane.replace('_', ' ')) + (d.source === 'pound_live' ? ' · live Pound edge, not yet in an approved plan' : '') }))));
-  if (card.claim) fact('Lease', el('span', {}, card.claim.by + ' · session ' + (card.claim.session_ref_declared || 'none') + ' (declared) · attempt ' + card.claim.attempt + ' · expires ', when(card.claim.expires_at), ' · renewals stop ', when(card.claim.max_expires_at)));
+  if (card.claim) {
+    fact('Lease', el('span', {}, card.claim.by + ' · session ' + (card.claim.session_ref_declared || 'none') + ' (declared) · attempt ' + card.claim.attempt + ' · expires ', when(card.claim.expires_at), ' · renewals stop ', when(card.claim.max_expires_at)));
+    fact('Executor', document.createTextNode((card.claim.executor_declared || 'not declared') + (card.claim.model_declared ? ' · model ' + card.claim.model_declared : '') + ' (declared, unverified)' + (card.claim.resumes ? ' · resumed ' + card.claim.resumes + ' time' + (card.claim.resumes === 1 ? '' : 's') : '')));
+    fact('Last check-in', card.claim.heartbeat_at ? when(card.claim.heartbeat_at) : document.createTextNode('none yet'));
+    if (card.claim.checkpoints.length) fact('Checkpoints', el('ol', { class: 'rk-steps' }, card.claim.checkpoints.map(c => el('li', {}, c.step + (c.note ? ' · ' + c.note : '') + ' · ', when(c.at)))));
+  }
   const stale = card.reasons.find(r => r.code === 'lease_stale');
   if (stale) fact('Lease is stale', document.createTextNode((stale.detail?.causes || []).map(c => CAUSE[c] || c.replace(/_/g, ' ')).join('; ') + '. Its result will not count.'));
   if (card.plan?.attempts) fact('Attempts', document.createTextNode(card.plan.attempts.used + ' of ' + card.plan.attempts.limit + ' used'));
@@ -214,12 +224,17 @@ function cardView(card) {
     evidence = el('details', {}, el('summary', { text: 'Evidence · ' + ev.outcome + ' · ' + ev.artifacts.length + ' artifact' + (ev.artifacts.length === 1 ? '' : 's') + (ev.late ? ' · late' : '') + (ev.current ? '' : ' · does not count now') }),
       el('p', {}, 'Receipt from ' + ev.by + ', session ' + (ev.session_ref_declared || 'none') + ' (declared), ', when(ev.at), '.'),
       el('p', { text: ev.summary }),
-      el('ul', { class: 'rk-artifacts' }, ev.artifacts.map(a => el('li', {}, el('span', { text: a.kind.replace('_', ' ') + ': ' }), a.ref ? refText(a.ref) : document.createTextNode(a.note || ''), el('span', { class: 'rk-badge v-' + a.verification, text: VERIFY[a.verification] || a.verification })))),
-      ev.review ? el('p', { text: 'Review: ' + ev.review.verdict + ' · ' + ev.review.mode + ' · ' + ev.review.by }) : null,
+      el('ul', { class: 'rk-artifacts' }, ev.artifacts.map(a => el('li', {}, el('span', { text: a.kind.replace('_', ' ') + ': ' }), a.ref ? refText(a.ref) : document.createTextNode(a.note || ''), el('span', { class: 'rk-badge v-' + a.verification, text: VERIFY[a.verification] || VERIFY_EXTRA[a.verification] || a.verification })))),
+      ev.criteria ? el('p', { class: 'rk-help', text: 'Bound to brief v' + ev.criteria.pin_version + (ev.criteria.sha256 ? ' · ' + ev.criteria.sha256.slice(0, 12) + '…' : '') }) : null,
+      ev.claims.length ? el('ol', { class: 'rk-claims' }, ev.claims.map(c => el('li', { class: 'support-' + c.support }, el('span', { class: 'rk-badge', text: c.support }), ' ' + c.text, c.sources.length ? el('ul', {}, c.sources.map(x => el('li', {}, refText(x.url), ' · seen ', when(x.observed_at)))) : null))) : null,
+      ev.gaps.length ? el('div', {}, el('b', { text: 'Still unknown' }), el('ul', {}, ev.gaps.map(g => el('li', { text: g })))) : null,
+      ...(ev.reviews || []).map(v => el('div', { class: 'rk-review' }, el('p', { text: 'Review: ' + v.verdict + ' · ' + v.mode + ' · ' + v.by + (v.note ? ' · ' + v.note : '') }),
+        v.checks.length ? el('ul', {}, v.checks.map(c => el('li', { class: 'check-' + c.result, text: (typeof c.criterion === 'number' ? 'Acceptance ' + (c.criterion + 1) + (card.plan?.acceptance?.[c.criterion] ? ' (' + card.plan.acceptance[c.criterion].text + ')' : '') : c.criterion) + ': ' + c.result + (c.note ? ' · ' + c.note : '') }))) : null,
+        v.sources_checked.length ? el('p', { class: 'rk-help', text: 'Sources opened: ' + v.sources_checked.map(x => x.result + (x.cited ? '' : ' (not cited)')).join(', ') }) : null)),
       ev.decision ? el('p', { text: 'Your decision: ' + ev.decision.decision }) : null,
       el('p', { class: 'rk-help', text: 'Receipt hash ' + ev.hash.slice(0, 16) + '…' }));
   }
-  return el('li', { class: 'rk-card lane-' + (card.lane === 'unplanned' ? 'blocked' : card.lane), 'data-task': card.task_id }, el('h3', { text: card.title }), chips, next, card.pending_plan ? pendingView(card) : null, unsure, facts, brief, evidence, actionsFor(card));
+  return el('li', { class: 'rk-card lane-' + (card.lane === 'unplanned' ? 'blocked' : card.lane), 'data-task': card.task_id }, el('h3', { text: card.title }), chips, exec, next, card.pending_plan ? pendingView(card) : null, unsure, facts, brief, evidence, actionsFor(card));
 }
 function render() {
   renderEvidence();
@@ -241,16 +256,41 @@ function render() {
   const others = board.roles.filter(r => r.state !== 'accepted');
   for (const r of others) $('rkRoleList').append(el('li', {}, el('p', { text: SEATS[r.seat] + ' · key ' + r.key_label + ' · ' + r.role + ' · ' + r.state }), r.state === 'effective' ? el('div', { class: 'rk-actions' }, button('Revoke role', () => act('rk.decide', { subject: 'role', id: r.id, decision: 'revoke' }, 'Revoke role'), 'secondary')) : null));
   $('rkRoles').hidden = !board.roles.length;
-  $('rkPinList').replaceChildren(...board.pins.map(p => el('li', {}, el('p', { text: p.kind.replace(/_/g, ' ') + ' · ' + p.project_id + ' · v' + p.version + ' · ' + p.status }), el('p', { class: 'rk-help' }, (p.ref.type === 'claude_doc' ? 'Claude Doc ' + p.ref.id + ' revision ' + p.ref.rev : p.ref.type === 'repo_file' ? p.ref.path + ' @ ' + p.ref.commit.slice(0, 7) : 'RoboKap context version ' + p.ref.version), el('span', { class: 'rk-badge v-' + p.verification, text: VERIFY[p.verification] || p.verification }), ' · ' + p.history + ' version' + (p.history === 1 ? '' : 's') + ' kept'))));
+  $('rkPinList').replaceChildren(...board.pins.map(p => el('li', {}, el('p', { text: p.kind.replace(/_/g, ' ') + ' · ' + p.project_id + ' · v' + p.version + ' · ' + p.status }), el('p', { class: 'rk-help' }, (p.ref.type === 'claude_doc' ? 'Claude Doc ' + p.ref.id + ' revision ' + p.ref.rev : p.ref.type === 'repo_file' ? p.ref.path + ' @ ' + p.ref.commit.slice(0, 7) : 'Pack Sled context version ' + p.ref.version), el('span', { class: 'rk-badge v-' + p.verification, text: VERIFY[p.verification] || p.verification }), ' · ' + p.history + ' version' + (p.history === 1 ? '' : 's') + ' kept'))));
   $('rkPins').hidden = !board.pins.length;
   $('rkUnplannedList').replaceChildren(...board.unplanned.map(c => el('li', {}, el('p', { text: c.title }), el('p', { class: 'rk-help', text: 'Reported ' + (c.reported.status || 'no status') + ' · ' + (c.reported.source || '').replace(/_/g, ' ') + (c.reported.note ? ' · ' + c.reported.note : '') }), el('div', { class: 'rk-actions' }, button('Plan this task', () => openPlan(c.task_id), 'secondary')))));
   $('rkUnplanned').hidden = !board.unplanned.length;
-  $('rkHonesty').replaceChildren(...board.honesty.map(h => el('li', { text: h })), el('li', { text: 'Waking an assistant is unsupported: open the session and ask it to check its RoboKap queue.' }), el('li', { text: 'Lab checks: ' + (board.lab.status === 'checked' ? 'read-only, through your research access.' : 'unavailable right now, so Lab-linked work waits.') }));
+  $('rkHonesty').replaceChildren(...board.honesty.map(h => el('li', { text: h })), el('li', { text: 'Waking an assistant is unsupported here. Scheduled sessions such as Claude Code routines check the queue on their own timers; anything else needs you to open the session.' }), el('li', { text: 'Lab checks: ' + (board.lab.status === 'checked' ? 'read-only, through your research access.' : 'unavailable right now, so Lab-linked work waits.') }));
+  renderTeam();
   fillForms();
   $('rkOwnerForms').hidden = false;
   // Forget finished flows of your own: no lease on the board and nothing left to resend.
   for (const taskId of [...ownerFlows.keys()]) if (!allCards().find(c => c.task_id === taskId)?.claim && pending?.body.data.task_id !== taskId) ownerFlows.delete(taskId);
   showResend();
+}
+function renderTeam() {
+  const pb = board.playbooks || [];
+  $('rkPlaybookList').replaceChildren(...(pb.length ? pb.map(p => el('li', {},
+    el('p', {}, el('b', { text: p.playbook_id }), ' v' + p.version + ' · ' + p.status + ' · ' + titleOf(p.task_id)),
+    el('p', { class: 'rk-help', text: 'Research ' + (SEATS[p.seat] || p.seat) + ' · review ' + p.review + (p.reviewer_seat ? ' by ' + (SEATS[p.reviewer_seat] || p.reviewer_seat) : '') + ' · your decision ' + p.decision.replace('_', ' ') + ' · brief ' + p.criteria.project_id + (p.criteria_pin ? ' v' + p.criteria_pin.version + ' ' + p.criteria_pin.status : ' (no pin)') + ' · coordinator key ' + p.coordinator_key + ' · ' + p.runs_last_day + ' of ' + p.max_runs_per_day + ' runs in the last day · ' + p.queued_intakes.length + ' queued' }),
+    el('div', { class: 'rk-actions' }, button(p.status === 'active' ? 'Pause playbook' : 'Resume playbook', () => act('rk.playbook', playbookData(p, { status: p.status === 'active' ? 'paused' : 'active' }), p.status === 'active' ? 'Pause playbook' : 'Resume playbook'), 'secondary'))))
+    : [el('li', { class: 'rk-empty', text: 'No playbooks yet. Without one, every plan from a key waits for your approval.' })]));
+  const workers = board.workers || [];
+  $('rkWorkerList').replaceChildren(...(workers.length ? workers.map(w => el('li', {}, 'Key ' + w.key_label + ' · session ' + (w.session_ref_declared || 'none') + (w.executor_declared ? ' · ' + w.executor_declared : '') + (w.model_declared ? ' · ' + w.model_declared : '') + ' · last ' + w.last_op.replace('rk.', '') + ' ', when(w.last_seen))) : [el('li', { class: 'rk-empty', text: 'No worker has acted yet.' })]));
+  const intakes = board.intakes || [];
+  $('rkIntakeList').replaceChildren(...(intakes.length ? intakes.map(x => el('li', {}, x.playbook_id + ' · message ' + x.message + '… · ' + x.state + (x.plan_version ? ' as plan v' + x.plan_version : '') + ' · received ', when(x.received_at), x.ask_declared ? el('p', { class: 'rk-help', text: 'Declared ask: ' + x.ask_declared }) : null)) : [el('li', { class: 'rk-empty', text: 'No intake recorded.' })]));
+  const notices = board.notices || [];
+  $('rkNoticeList').replaceChildren(...(notices.length ? notices.map(n => el('li', {}, n.key + ' · ' + n.state.replace(/_/g, ' ') + ' · ', when(n.at))) : [el('li', { class: 'rk-empty', text: 'No notifications recorded.' })]));
+  const warn = board.capacity_warnings || [];
+  $('rkCapacity').replaceChildren(...(warn.length ? ['Storage is filling: ' + warn.map(w => w.list + ' ' + w.used + ' of ' + w.limit).join(', ') + '. Export or archive before it refuses new work.'] : []));
+  $('rkCapacity').hidden = !warn.length;
+  $('rkTeam').hidden = false;
+}
+// A playbook change resends the whole current version with your edits, so nothing is dropped.
+function playbookData(p, change) {
+  const keep = ['playbook_id', 'status', 'task_id', 'seat', 'role', 'reviewer_seat', 'review', 'decision', 'data_scope', 'acceptance', 'budget', 'criteria', 'coordinator_key', 'max_runs_per_day', 'evidence_required', 'note'];
+  const data = Object.fromEntries(keep.filter(k => p[k] !== undefined && p[k] !== null).map(k => [k, p[k]]));
+  return { ...data, intake: { source: p.intake.source, ...(p.intake.note ? { note: p.intake.note } : {}) }, expected_version: p.version, ...change };
 }
 const allCards = () => board ? [...Object.values(board.lanes).flat(), ...board.done, ...board.closed, ...board.unplanned] : [];
 function renderEvidence() {
@@ -258,8 +298,8 @@ function renderEvidence() {
   const latest = cards.map(c => c.last_verified).filter(e => e?.at).sort((a, b) => Date.parse(b.at) - Date.parse(a.at))[0];
   $('rkEvidenceList').replaceChildren(
     el('li', {}, 'Installed and enabled: this Worker answered an authenticated owner request. Snapshot ', when(board.as_of), '.'),
-    el('li', { text: 'Connected assistants: unknown. Key acceptance records do not prove a session is online.' }),
-    el('li', { text: 'Executing: unverified. ' + cards.filter(c => c.claim).length + ' leases held; ' + (counts.done || 0) + ' tasks in Done.' }),
+    el('li', { text: 'Workers seen: ' + ((board.workers || []).length ? board.workers.length + ' key and session pairs have acted. That shows past activity, not that a session is online now.' : 'none yet. Key acceptance records do not prove a session is online.') }),
+    el('li', { text: 'Executing: ' + cards.filter(c => c.execution?.state === 'running').length + ' leases checked in within 15 minutes; ' + cards.filter(c => c.execution?.state === 'running_silent').length + ' silent; ' + cards.filter(c => c.execution?.state === 'dispatched_waiting_for_worker').length + ' dispatched with no worker yet; ' + (counts.done || 0) + ' tasks in Done.' }),
     el('li', { text: 'Waiting: ' + (counts.ready || 0) + ' ready for a foreground session; ' + (counts.blocked || 0) + ' blocked; ' + (counts.needs_you || 0) + ' need you. Open a task for its exact next action.' }),
     latest ? el('li', {}, 'Latest retained task event: ' + latest.op + ' by ' + latest.by_text + ', ', when(latest.at), '. This is recorded activity, not a heartbeat.') : el('li', { text: 'No retained coordination event for these tasks yet.' })
   );
@@ -279,6 +319,12 @@ function fillForms() {
   plan.pin.replaceChildren(el('option', { value: '', text: 'No pin' }), ...board.pins.flatMap(p => ['any', 'approved'].map(require => el('option', { value: pinValue({ ...p, require }), text: p.kind.replace(/_/g, ' ') + ' · ' + p.project_id + ' v' + p.version + (require === 'any' ? ' · any status' : ' · must be approved') }))));
   if (keepPin && ![...plan.pin.options].some(o => o.value === keepPin)) plan.pin.append(el('option', { value: keepPin, text: keepPinText || keepPin }));
   plan.pin.value = keepPin;
+  const pf = $('rkPlaybookForm').elements, keepTask = pf.task_id.value, keepCriteria = pf.criteria.value;
+  pf.task_id.replaceChildren(...tasks.map(([v, t]) => el('option', { value: v, text: t })));
+  if (keepTask) pf.task_id.value = keepTask;
+  const projects = [...new Map(board.pins.map(p => [p.project_id + '|' + p.kind, p])).values()];
+  pf.criteria.replaceChildren(...projects.map(p => el('option', { value: JSON.stringify({ project_id: p.project_id, kind: p.kind }), text: p.kind.replace(/_/g, ' ') + ' · ' + p.project_id + ' (now v' + p.version + ', ' + p.status + ')' })));
+  if (keepCriteria) pf.criteria.value = keepCriteria;
   const pin = $('rkPinForm').elements, keepContext = pin.context_id.value;
   pin.context_id.replaceChildren(...board.contexts.map(c => el('option', { value: c.id, text: c.title + ' · ' + c.versions + ' version' + (c.versions === 1 ? '' : 's') })));
   if (keepContext) pin.context_id.value = keepContext;
@@ -344,6 +390,20 @@ $('rkPinForm').addEventListener('submit', async e => {
   const f = e.target.elements, type = f.ref_type.value, version = Number(f.version.value);
   const ref = type === 'pound_context' ? { type, context_id: f.context_id.value, version } : type === 'claude_doc' ? { type, id: f.doc_id.value.trim(), rev: version } : { type, path: f.path.value.trim(), commit: f.commit.value.trim(), sha256: f.sha256.value.trim() };
   if (await act('rk.pin', { project_id: f.project_id.value.trim(), kind: f.kind.value, status: f.status.value, ref }, 'Pin version')) $('rkPinBox').open = false;
+});
+$('rkPlaybookForm').elements.max_runs_per_day.addEventListener('input', e => { $('rkPlaybookForm').elements.runsOut.value = e.target.value; });
+$('rkPlaybookForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.target.elements, id = f.playbook_id.value.trim();
+  if (!f.task_id.value || !f.criteria.value) { note('Choose a task and a criteria pin. Pin the brief first if none is listed.'); return; }
+  const prev = (board.playbooks || []).find(p => p.playbook_id === id);
+  const acceptance = f.acceptance.value.split('\n').map(x => x.trim()).filter(Boolean).map(text => ({ text }));
+  const data = {
+    playbook_id: id, expected_version: prev?.version || 0, status: f.status.value, task_id: f.task_id.value, seat: f.seat.value, review: f.review.value, decision: f.decision.value, data_scope: prev?.data_scope || 'none',
+    criteria: JSON.parse(f.criteria.value), coordinator_key: f.coordinator_key.value.trim(), intake: prev ? { source: prev.intake.source, ...(prev.intake.note ? { note: prev.intake.note } : {}) } : { source: 'gmail', note: 'External mail check by a session; not native intake.' },
+    max_runs_per_day: Number(f.max_runs_per_day.value), ...(acceptance.length ? { acceptance } : {}), ...(f.reviewer_seat.value ? { reviewer_seat: f.reviewer_seat.value } : {}), ...(prev?.budget ? { budget: prev.budget } : {}),
+  };
+  if (await act('rk.playbook', data, 'Save playbook')) $('rkPlaybookBox').open = false;
 });
 $('rkRoleForm').addEventListener('submit', async e => {
   e.preventDefault();

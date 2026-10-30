@@ -1,5 +1,11 @@
 # RoboKap coordination layer
 
+> **Update 2026-10-30.** The product is now called Pack Sled in everything people see; internal
+> names (`robokap`, `/robokap/v1`, `dd_owner_robokap_*`, storage keys) are unchanged. Playbooks,
+> deduplicated intake, dispatch, heartbeats, claim-level evidence, review checks, notices and a
+> resumable runner are described in [pack-sled-team.md](pack-sled-team.md). Statements below
+> about the flag and deployment describe the original build and may be out of date.
+
 RoboKap now has a coordination layer: an owner-approved work graph over existing RoboKap tasks,
 with seat roles, leased claims, version-bound receipts, typed reviews and owner decisions, a
 mobile owner board, and one pull transport to an assistant session through the existing
@@ -312,7 +318,7 @@ Requires your explicit approval, in this order. Nothing below has been done.
 ## Tests
 
 ```
-node --test research-lab/robokap-core.test.mjs research-lab/robokap.test.mjs
+node --test research-lab/robokap-core.test.mjs research-lab/robokap.test.mjs research-lab/pack-sled.test.mjs
 DD_NODE_MODULES=<node_modules with miniflare> node --test research-lab/robokap-worker.test.mjs
 DD_NODE_MODULES=<node_modules with playwright> node research-lab/robokap-browser.test.mjs
 node work/test-identity-league-foundation.mjs

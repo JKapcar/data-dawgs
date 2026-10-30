@@ -23,7 +23,7 @@ async function request(method,body,generation,token){
   const res=await fetch(API,{method,cache:'no-store',credentials:'omit',redirect:'error',signal:controller.signal,headers:{Authorization:'Bearer '+token,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
   const result=await res.json();
   if(generation!==epoch||token!==session()||document.hidden)throw new DOMException('Account changed','AbortError');
-  if(!res.ok){const e=new Error(res.status===401?'Sign in again to open your workspace.':res.status===503?'RoboKap is awaiting private workspace setup.':result.error||'The request could not be completed.');e.status=res.status;throw e;}
+  if(!res.ok){const e=new Error(res.status===401?'Sign in again to open your workspace.':res.status===503?'Pack Sled is awaiting private workspace setup.':result.error||'The request could not be completed.');e.status=res.status;throw e;}
   return result;
 }
 async function load(){
