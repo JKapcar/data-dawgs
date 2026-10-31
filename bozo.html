@@ -4239,7 +4239,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <div id="clvEstimateManager" data-dd-agent-only></div>
   <script src="bozo-effective-clv.js"></script>
   <script src="bozo-estimate-manager.js" defer></script>
-  <style>html:not([data-dd-view="agent"]) #clvCard [data-dd-agent-only]{display:none!important}#clvCard .weekbox{max-width:100%;min-width:0;flex-wrap:wrap}#clvCard .weekbox input{min-width:0;max-width:100%;flex:1 1 100px}#clvAllBets{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}#clvAllBets .pchip{display:inline-flex;max-width:100%;padding:5px 8px;border:1px solid var(--grid);border-radius:8px;font-size:11px;line-height:1.4;overflow-wrap:anywhere}.clv-tablewrap{max-width:100%;overflow:auto}</style><div id="clvAllBets" style="max-width:100%;overflow:auto"></div>
+  <style>html:not([data-dd-view="agent"]) #clvCard [data-dd-agent-only]{display:none!important}#clvCard .weekbox{max-width:100%;min-width:0;flex-wrap:wrap}#clvCard .weekbox input{min-width:0;max-width:100%;flex:1 1 100px}.clv-tablewrap{max-width:100%;overflow:auto}</style>
 </div>
 
 <!-- ---------- Bozo Royale: survival odds ----------
@@ -9554,8 +9554,6 @@ function clvRender(){
   const scope = CLV.data.legs.filter(l => l.week<=st.week && st.on.has(l.player) && (st.sport==='all'||l.sport===st.sport));
   const items=window.DDEffectiveClv.rows(scope),counts=window.DDEffectiveClv.counts(items);
   document.getElementById('clvHead').textContent=`${counts.charted} of ${counts.total} bets ${st.mode==='season'?'included in player averages':'plotted'}; ${counts.measured} measured, ${counts.estimated} estimated, ${counts.override} overrides, ${counts.convention} owner-convention zeros, ${counts.unknown} unknown. ${counts.pending} pending, ${counts.push} push, ${counts.void} void. `;
-  // Compact missing-coordinate rail; full provenance stays in the API/manager evidence tool.
-  document.getElementById('clvAllBets').innerHTML=items.filter(d=>!d.charted).map(d=>'<span class="pchip">'+esc('W'+d.leg.week+' · '+teamOf(d.leg.player)+' · '+d.leg.label)+' — '+esc(d.kind==='convention'?'push convention':d.result==='void'?'void':d.result==='push'?'push':d.result?'CLV unresolved':'pending')+'</span>').join('');
 
   CLV_D = clvDom(st.mode, st.sport);
   clvRenderLegend();

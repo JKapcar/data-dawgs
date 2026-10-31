@@ -22,8 +22,12 @@ const legs=[leg,{...leg,label:'Synthetic exchange estimate',closePrice:null,clos
   await page.waitForFunction(()=>typeof CLV!=='undefined'&&CLV.data?.legs?.length===5);
   await page.evaluate(()=>{document.getElementById('clvCard').style.display='';CLV.state.mode='week';clvRender();});
   const card=page.locator('#clvCard');await card.scrollIntoViewIfNeeded();
-  const text=await card.innerText();assert.doesNotMatch(text,/Every bet.*CLV accounting|Source \/ assumptions|CLV methodology|Overround scenarios/i);assert.match(text,/estimated/);assert.match(text,/CLV unresolved/);assert.match(text,/push convention/);assert.match(text,/pending/);
-  assert.equal(await card.locator('#clvAllBets table, #clvAllBets details').count(),0);
+  const text=await card.innerText();assert.doesNotMatch(text,/Every bet.*CLV accounting|Source \/ assumptions|CLV methodology|Overround scenarios/i);assert.match(text,/estimated/);assert.match(text,/2 unknown/);assert.match(text,/1 owner-convention zeros/);assert.match(text,/1 pending, 1 push/);
+  assert.equal(await card.locator('#clvAllBets').count(),0,'per-entry status rail must not render');
+  assert.doesNotMatch(text,/Synthetic unresolved|Synthetic push|Synthetic pending/);
+  assert.equal(await page.evaluate(()=>CLV.data.legs.length),5,'all source records retained');
+  await page.evaluate(()=>{CLV.state.mode='season';clvRender();CLV.state.mode='week';clvRender();});
+  assert.equal(await card.locator('#clvAllBets').count(),0,'rerender cannot restore the list');
   const metrics=await card.evaluate(el=>({width:el.clientWidth,scrollWidth:el.scrollWidth,points:document.getElementById('clvSvg').__pts?.length,head:document.getElementById('clvHead').textContent}));assert.equal(metrics.points,2);assert.ok(metrics.scrollWidth<=metrics.width+2,JSON.stringify(metrics));
   await card.screenshot({path:path.join(out,league+'-'+width+'.png')});assert.deepEqual(errors,[]);assert.equal(writes,0);
   results.push({league,width,...metrics,errors,writes});await context.close();
