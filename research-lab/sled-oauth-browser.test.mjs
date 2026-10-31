@@ -24,7 +24,7 @@ try{
   const result=b.action==='inspect'?{transaction:'synthetic-transaction',csrf:'synthetic-csrf',client_name:'<img src=x onerror=alert(1)>',grants}:{redirect:'https://chatgpt.com/connector_platform_oauth_redirect?'+(b.action==='approve'?'code=synthetic-code':'error=access_denied')+'&state=synthetic-state&iss=https%3A%2F%2Ftoto.jkapcar4.workers.dev%2Fsled%2Foauth'};
   return route.fulfill({headers:{...headers,'Content-Type':'application/json'},body:JSON.stringify(result)});
  });
- const start=async()=>{await page.goto('about:blank');await page.goto('https://datadawgs216.com/research-lab/sled-connect.html#client_id=test-client');};
+ const start=async()=>{await page.goto('about:blank');await page.goto('https://datadawgs216.com/research-lab/sled-connect.html#client_id=test-client&redirect_uri=https%3A%2F%2Fchatgpt.com%2Fconnector_platform_oauth_redirect');};
  await start();await page.locator('#signin').waitFor();assert.equal(writes.length,0);
  await page.addInitScript(()=>{if(location.origin==='https://datadawgs216.com')localStorage.setItem('dd-bozo-sess','synthetic-owner');});
  await start();await page.locator('#consent').waitFor();assert.equal(new URL(page.url()).hash,'');assert(await page.locator('#approve').isDisabled());assert.equal(await page.locator('img').count(),0);

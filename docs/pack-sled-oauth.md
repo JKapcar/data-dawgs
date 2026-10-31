@@ -35,7 +35,7 @@ the canonical resource, never in a URL.
 * Discovery: `/.well-known/oauth-protected-resource` and
   `/.well-known/oauth-authorization-server/sled/oauth`. HTTP 401 challenges identify resource
   metadata; protected tools expose OAuth scopes. No registration endpoint is advertised.
-* Authorization requires exact configured HTTPS ChatGPT callback, matching resource, both mail
+* Authorization requires exact operator-configured HTTPS callback, matching resource, both mail
   scopes, opaque client state (16–512 non-whitespace characters), and S256 challenge. Duplicate
   or unexpected parameters are refused. No redirect occurs for an invalid callback/client.
 * Consent uses `research-lab/sled-connect.html`, the existing owner session in an Authorization
@@ -81,7 +81,7 @@ enablement; this code cannot guarantee a hosting provider never records protocol
    Configure `SLED_OAUTH_CLIENTS` as a JSON array with a nonsecret client ID, display name and
    exact `redirect_uris`. No client secret is used. Example placeholders only:
    `[{"client_id":"<approved-public-client-id>","name":"ChatGPT Pack Sled mail","redirect_uris":["<exact-ChatGPT-callback>"]}]`.
-   Accepted callbacks are the documented stable
+   For ChatGPT, use the documented stable
    `https://chatgpt.com/connector_platform_oauth_redirect` or the exact account-specific
    `https://chatgpt.com/connector/oauth/<callback_id>`. Copy the actual management-page callback;
    never authorize a wildcard or guessed callback. Predefined public-client configuration must
@@ -124,3 +124,17 @@ With the repository's test dependencies in `DD_NODE_MODULES`:
   interrupted navigation. No live connection is made.
 
 The existing Pack Sled/agent regression suites and service-worker/data checks remain required.
+
+## Future provider registration (not enabled)
+
+Callback validation and consent return are provider-neutral: every client has its own exact,
+operator-approved HTTPS callback list; there are no wildcard/default Google registrations.
+The consent browser returns only to the exact callback validated during inspection.
+[Google documents private custom MCP testing](https://developers.google.com/connected-apps/mcp/dev-mode/usage)
+and [pre-registered OAuth clients or DCR](https://developers.google.com/connected-apps/mcp/oauth).
+This draft supports public-client `none` only. Google's documented client-secret requirement
+and nested discovery behavior need a separately reviewed extension/compatibility test if its
+actual private-client form cannot use that profile. No Google client, secret, grant or app is
+created here; do not claim Gemini compatibility from generic protocol support. Gemini write
+confirmation and scheduled-task support remain separate limitations; unattended posting/voting
+has not been verified. Primary acceptance remains ChatGPT cloud.

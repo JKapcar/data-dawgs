@@ -82,6 +82,13 @@ test('token endpoint refuses browser origin, query credentials, unknown grants a
  assert.equal((await w.call('/sled/oauth/token?access_token=redacted',{grant_type:'authorization_code'})).status,400);
  assert.equal((await w.call('/sled/oauth/token',{code:'x'.repeat(9000)})).status,413);
 });
+test('operator-registered callbacks are provider-neutral but exact; wildcards and unsafe registrations fail closed',async()=>{
+ const w=await rig(),callback2='https://oauth.example.test/return/synthetic-client';
+ w.env.SLED_OAUTH_CLIENTS=JSON.stringify([{client_id:'test-client',name:'Synthetic other provider',redirect_uris:[callback2]}]);
+ assert.equal((await w.inspect({...w.params,redirect_uri:callback2})).status,200);
+ assert.equal((await w.inspect({...w.params,redirect_uri:callback2+'/other'})).status,400);
+ for(const redirect of ['https://oauth.example.test/*','http://oauth.example.test/return','https://user:secret@oauth.example.test/return','https://oauth.example.test/return#x','https://127.0.0.1/return','https://oauth.example.test/return?next=x']){w.env.SLED_OAUTH_CLIENTS=JSON.stringify([{client_id:'test-client',name:'Synthetic',redirect_uris:[redirect]}]);assert.equal((await w.call('/.well-known/oauth-protected-resource')).status,503);}
+});
 test('refresh rotates once; replay revokes the entire family, including the replacement',async()=>{
  const w=await rig(),first=(await w.exchange(await w.code())).body;
  const refresh=(token,over={})=>w.call('/sled/oauth/token',{grant_type:'refresh_token',client_id:'test-client',resource:w.params.resource,refresh_token:token,...over});

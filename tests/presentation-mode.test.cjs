@@ -1,6 +1,11 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process'),vm=require('node:vm');
-// Job Hunter deliberately excludes shared page scripts and browser preference storage.
-const root=path.resolve(__dirname,'..'),paths=[...fs.readdirSync(root).filter(p=>p.endsWith('.html')&&p!=='jobs.html'),...fs.readdirSync(path.join(root,'research-lab')).filter(p=>p.endsWith('.html')).map(p=>'research-lab/'+p)];
+// Job Hunter and the isolated OAuth consent surface deliberately exclude shared page scripts.
+const root=path.resolve(__dirname,'..'),paths=[...fs.readdirSync(root).filter(p=>p.endsWith('.html')&&p!=='jobs.html'),...fs.readdirSync(path.join(root,'research-lab')).filter(p=>p.endsWith('.html')&&p!=='sled-connect.html').map(p=>'research-lab/'+p)];
+test('OAuth consent loads only its own controller, without shared bots or preferences',()=>{
+ const source=fs.readFileSync(path.join(root,'research-lab/sled-connect.html'),'utf8');
+ assert.deepEqual([...source.matchAll(/<script\b[^>]*src="([^"]+)"/g)].map(m=>m[1]),['sled-connect.mjs']);
+ assert.match(source,/default-src 'none'/);assert.match(source,/name="referrer" content="no-referrer"/);
+});
 test('all 63 integrated pages load the View script deferred and restore layout-changing choices inline',()=>{
  assert.equal(paths.length,63);
  const js=fs.readFileSync(path.join(root,'presentation-mode.js'),'utf8'),maps={};

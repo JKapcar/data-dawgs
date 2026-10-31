@@ -12,6 +12,9 @@ const b64=bytes=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(
 const random=()=>b64(crypto.getRandomValues(new Uint8Array(32)));
 const challenge=async s=>b64(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))));
 const same=(a,b)=>{if(typeof a!=='string'||typeof b!=='string'||a.length!==b.length)return false;let d=0;for(let i=0;i<a.length;i++)d|=a.charCodeAt(i)^b.charCodeAt(i);return d===0;};
+// Operator-supplied exact callbacks, never request-supplied registrations or wildcards.
+// No callback is fetched by this server. Provider-specific client authentication is separate.
+function validRedirect(value){try{const u=new URL(value);return typeof value==='string'&&value.length<=512&&u.href===value&&u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&!u.search&&!u.hash&&!value.includes('*')&&/^[a-z0-9.-]+$/.test(u.hostname)&&u.hostname.includes('.')&&!/^(?:\d+\.){3}\d+$/.test(u.hostname)&&!u.hostname.endsWith('.localhost')&&!u.hostname.endsWith('.local');}catch{return false;}}
 export const oauthResource=uid=>OAUTH_ORIGIN+'/agents/v1/owners/'+uid+'/sled/mcp';
 export const oauthRoute=p=>p===META||p===AS_META||p.startsWith('/sled/oauth/');
 export const oauthEnabled=env=>['SLED_OAUTH_ENABLED','SLED_AGENTS_ENABLED','DELEGATED_AGENTS_ENABLED','ROBOKAP_ENABLED','DAWG_POUND_ENABLED'].every(k=>env[k]==='true');
@@ -20,7 +23,7 @@ function clients(env){
  check(Array.isArray(list)&&list.length>0&&list.length<=8,503,'oauth_unconfigured');
  for(const c of list){
   check(c&&/^[A-Za-z0-9_-]{8,100}$/.test(c.client_id)&&typeof c.name==='string'&&c.name.length<=80&&Array.isArray(c.redirect_uris)&&c.redirect_uris.length>0&&c.redirect_uris.length<=4,503,'oauth_unconfigured');
-  check(c.redirect_uris.every(u=>typeof u==='string'&&/^https:\/\/chatgpt\.com\/(?:connector_platform_oauth_redirect|connector\/oauth\/[A-Za-z0-9_-]+)$/.test(u)),503,'oauth_unconfigured');
+  check(c.redirect_uris.every(validRedirect),503,'oauth_unconfigured');
  }
  check(new Set(list.map(c=>c.client_id)).size===list.length,503,'oauth_unconfigured');return list;
 }
