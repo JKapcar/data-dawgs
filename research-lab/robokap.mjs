@@ -21,6 +21,7 @@ import { rkApply, rkBoard, rkWork, rkAlerts, rkParse, rkSerialize, RoboKapError,
 import {mailView} from './sled-mail.mjs';
 import { decodeEnvelope } from './exact-store.mjs';
 import { authorizeAgent } from './agent-identity.mjs';
+import {resolveOAuthCredential} from './sled-oauth.mjs';
 
 const ORIGINS = ['https://datadawgs216.com', 'https://www.datadawgs216.com'];
 const check = (ok, status, code, detail) => { if (!ok) throw new RoboKapError(status, code, detail); };
@@ -158,10 +159,11 @@ export function createRoboKap({ fbGet, fbPut, ownerIdentity, now = Date.now }) {
         annotations: { readOnlyHint: false, destructiveHint: false } }] : []),
     ];
   };
-  const grantOf = (data, uid, credential) => {
+  const grantOf = (data, uid, credential, env) => {
+    if(credential.oauthHash)credential=resolveOAuthCredential(data,uid,credential,env,now());
     const g = authorizeAgent(credential, data?.agentAccess?.[credential.id], sledAudience(uid), RK_AGENT_SCOPES, now());
     check(RK_AGENT_SEATS.includes(g.seat), 403, 'agent_grant_required');
-    return g;
+    return {...g,agent_id:credential.id};
   };
   const principalOf = (id, g) => ({ kind: 'delegated_agent', agent_id: id, seat: g.seat, scopes: [...g.capabilities], ...(typeof g.label === 'string' && g.label.trim() ? { label: g.label.slice(0, 40) } : {}) });
 
@@ -170,7 +172,7 @@ export function createRoboKap({ fbGet, fbPut, ownerIdentity, now = Date.now }) {
     check(enabled(env) && env.SLED_AGENTS_ENABLED === 'true', 503, 'sled_agents_disabled');
     ownerUid(env, uid);
     const loaded = await load(env, uid);
-    return grantOf(loaded.snapshot.data, uid, credential);
+    return grantOf(loaded.snapshot.data, uid, credential, env);
   }
 
   async function agentCall(name, args, env, { uid, credential }) {
@@ -178,7 +180,7 @@ export function createRoboKap({ fbGet, fbPut, ownerIdentity, now = Date.now }) {
     ownerUid(env, uid);
     check(isObj(args) && JSON.stringify(args).length <= RK_LIMITS.request_bytes, 400, 'invalid_arguments');
     const loaded = await load(env, uid);
-    const grant = grantOf(loaded.snapshot.data, uid, credential), principal = principalOf(credential.id, grant);
+    const grant = grantOf(loaded.snapshot.data, uid, credential, env), principal = principalOf(grant.agent_id, grant);
     if (name === 'sled_read') {
       check(Object.keys(args).every(k => ['session_ref', 'view'].includes(k)), 400, 'unexpected_arguments');
       check(args.session_ref === undefined || (typeof args.session_ref === 'string' && args.session_ref.trim() && args.session_ref.length <= 200), 400, 'invalid_session_ref');
@@ -196,7 +198,7 @@ export function createRoboKap({ fbGet, fbPut, ownerIdentity, now = Date.now }) {
       check(Object.keys(args).every(k => ['op', 'request_id', 'data'].includes(k)), 400, 'unexpected_arguments');
       check(RK_SCOPE_FOR_OP[args.op], 403, 'scope_denied', { op: args.op, needs: 'owner_session' });
       return write(env, uid, principal, args, async fresh => {
-        const g = grantOf(fresh.snapshot.data, uid, credential);
+        const g = grantOf(fresh.snapshot.data, uid, credential, env);
         check(g.seat === principal.seat && g.capabilities.length === principal.scopes.length && g.capabilities.every(c => principal.scopes.includes(c)), 403, 'agent_grant_changed');
       });
     }
