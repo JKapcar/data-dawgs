@@ -80,7 +80,7 @@ test('each credential sees and runs only what its stored scopes allow, whatever 
   const ops = async t => (await w.call(t, 'tools/list')).body.result.tools.find(x => x.name === 'sled_write').inputSchema.properties.op.enum;
   assert.deepEqual(await ops(research), ['rk.claim', 'rk.heartbeat', 'rk.release', 'rk.report']);
   assert.deepEqual(await ops(review), ['rk.review']);
-  assert.deepEqual(await ops(coord), ['rk.intake', 'rk.dispatch', 'rk.notice', 'rk.plan', 'rk.propose']);
+  assert.deepEqual(await ops(coord), ['rk.message', 'rk.mail', 'rk.intake', 'rk.dispatch', 'rk.notice', 'rk.plan', 'rk.propose']);
   const me = await w.tool(research, 'sled_read', { session_ref: 'claude-code:synthetic' });
   assert.equal(me.error, false);
   assert.equal(me.out.identity.seat, 'claude');
