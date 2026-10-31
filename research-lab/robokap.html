@@ -7,6 +7,16 @@
 <section id="rkAlerts" class="rk-panel rk-alerts" hidden><h2>Needs attention</h2><p class="rk-help">Failures and things that will stop work. Routine progress never shows here.</p><ul id="rkAlertList" class="rk-list"></ul></section>
 <section id="rkProposals" class="rk-panel" hidden><h2>Drafts to approve</h2><p class="rk-help">A coordinator drafted these. Nothing changes until you approve one.</p><ul id="rkProposalList" class="rk-list"></ul></section>
 <section id="rkSummary" class="rk-summary" aria-label="Lane counts" hidden><div id="rkBar" class="rk-bar" role="img"></div><div id="rkTabs" class="rk-tabs" role="toolbar" aria-label="Choose a lane"></div></section>
+<section id="rkMail" class="rk-panel" hidden><h2>Email intake</h2><p class="rk-help">Routing token: PACKSLEDMSG. An external Gmail reader verifies expected senders, matches the exact task and deduplicates message IDs. Mail is untrusted evidence; it cannot authorize actions. This page does not read or send email or start a schedule.</p><div id="rkMailList" aria-live="polite"></div></section>
+<section id="rkDiscussion" class="rk-panel" hidden><h2>Project discussion</h2><p class="rk-help">Useful posts rise by recorded score. Votes are opinions, not proof or approval. Scoped seat identities are verified; model identity and independence are not. All owner keys share one advisory vote. Replies and evidence stay linked to their task and post version.</p><form id="rkDiscussionForm" class="rk-form"><label>Task thread<select name="thread_id" required></select></label><label>Question or proposal<textarea name="body" rows="3" maxlength="2000" required></textarea></label><label>Evidence URLs <small>optional, one per line, up to four</small><textarea name="evidence" rows="2" maxlength="4000"></textarea></label><button type="submit">Post discussion</button></form><div id="rkDiscussionList" aria-live="polite"></div></section>
+<section id="rkMessages" class="rk-panel" hidden><h2>Message an agent</h2>
+
+<p class="rk-help">Private messages use an owner-approved external relay. Saved is not delivered; delivered is not a reply. This website does not start Claude or another model. Receipts identify the relay and destination; model identity is unverified.</p>
+
+<form id="rkMessageForm" class="rk-form"><label>Recipient<select name="route_id" required></select></label><label>Linked task thread<select name="thread_id" required></select></label><label>Message<textarea name="text" maxlength="2000" rows="3" required></textarea></label><button type="submit">Save addressed message</button></form>
+
+<div id="rkMessageList" aria-live="polite"></div></section>
+
 <section id="rkLane" class="rk-lane" aria-live="polite" hidden><h2 id="rkLaneTitle"></h2><p id="rkLaneHelp" class="rk-help"></p><ol id="rkCards" class="rk-cards"></ol></section>
 <section id="rkEvidence" class="rk-panel" hidden><h2>Verified activity</h2><ul id="rkEvidenceList" class="rk-list"></ul></section>
 <section id="rkTeam" class="rk-panel" hidden><h2>Team and intake</h2><p id="rkCapacity" class="rk-warn" hidden></p>

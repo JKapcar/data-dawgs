@@ -1,3 +1,5 @@
+import {renderMessages,renderDiscussion,renderMail} from './sled-message-ui.mjs';
+
 // Pack Sled owner board. Private UI: memory only, no persistence, telemetry or third-party code.
 // Lanes are computed by the Worker from recorded claims, receipts, reviews and decisions;
 // this page renders them and sends owner decisions. Success is shown only after the server says so.
@@ -66,6 +68,10 @@ function forgetIfAccountChanged() {
   flowToken = token();
 }
 function clearView() {
+  $('rkMail').hidden=true; $('rkMailList').replaceChildren();
+  $('rkDiscussion').hidden=true; $('rkDiscussionList').replaceChildren(); $('rkDiscussionForm').reset(); $('rkDiscussionForm').elements.thread_id.replaceChildren();
+  $('rkMessages').hidden=true; $('rkMessageList').replaceChildren(); $('rkMessageForm').reset(); $('rkMessageForm').elements.route_id.replaceChildren(); $('rkMessageForm').elements.thread_id.replaceChildren();
+
   epoch++; board = null; laneChosen = false; carry = null;
   for (const id of ['rkCards', 'rkRoleList', 'rkPinList', 'rkUnplannedList', 'rkTabs', 'rkBar', 'rkEvidenceList', 'rkPlaybookList', 'rkWorkerList', 'rkIntakeList', 'rkNoticeList', 'rkCapacity']) $(id).replaceChildren();
   $('rkEvidence').hidden = true;
@@ -280,6 +286,12 @@ function render() {
   $('rkUnplanned').hidden = !board.unplanned.length;
   $('rkHonesty').replaceChildren(...board.honesty.map(h => el('li', { text: h })), el('li', { text: 'Waking an assistant is unsupported here. Scheduled sessions such as Claude Code routines check the queue on their own timers; anything else needs you to open the session.' }), el('li', { text: 'Lab checks: ' + (board.lab.status === 'checked' ? 'read-only, through your research access.' : 'unavailable right now, so Lab-linked work waits.') }));
   renderTeam();
+  $('rkMail').hidden=false; renderMail(board,$('rkMailList'));
+  $('rkDiscussion').hidden=false; renderDiscussion(board,{root:$('rkDiscussionList'),form:$('rkDiscussionForm'),act});
+  $('rkMessages').hidden=false;
+
+  renderMessages(board,{root:$('rkMessageList'),form:$('rkMessageForm'),act});
+
   fillForms();
   $('rkOwnerForms').hidden = false;
   // Forget finished flows of your own: no lease on the board and nothing left to resend.
@@ -440,3 +452,16 @@ window.addEventListener('pagehide', clearView);
 window.addEventListener('pageshow', e => { if (e.persisted) load(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) { clearView(); note('Board hidden. Return to reload securely.' + (pending ? ' "' + pending.label + '" is kept for a resend.' : '')); } else load(); });
 load();
+$('rkMessageForm').addEventListener('submit', async e => {
+
+ e.preventDefault();if(!board||busy||pending)return;const f=e.currentTarget.elements,route=board.messaging?.routes.find(r=>r.id===f.route_id.value&&r.enabled);
+
+ if(!route)return note('No approved delivery connection.');const text=f.text.value;
+
+ const out=await act('rk.message',{action:'send',thread_id:f.thread_id.value,route_id:route.id,route_version:route.version,text},'Message to '+route.recipient);
+
+ if(out&&f.text.value===text)f.text.value='';
+
+});
+
+$('rkDiscussionForm').addEventListener('submit',async e=>{e.preventDefault();if(!board||busy||pending)return;const f=e.currentTarget.elements,body=f.body.value,evidence=f.evidence.value.split('\n').map(s=>s.trim()).filter(Boolean);const out=await act('rk.discuss',{action:'post',thread_id:f.thread_id.value,body,evidence},'Post discussion');if(out&&f.body.value===body){f.body.value='';f.evidence.value='';}});

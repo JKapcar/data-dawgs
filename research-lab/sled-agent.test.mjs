@@ -43,7 +43,8 @@ async function rig(flags = {}) {
   let req = 0;
   const write = (token, op, data, request_id) => tool(token, 'sled_write', { op, request_id: request_id || 'sled_request_' + String(++req).padStart(8, '0'), data });
   const issue = (seat, scopes, label, ttlDays = 30) => owner({ action: 'issue', audience: 'sled', seat, scopes, label, ttlDays });
-  return { env, db, owner, board, call, tool, write, issue, pound, responses, gateway: r => sled(r, env), tick: ms => { clock += ms; }, onNextPut: f => { beforePut = f; }, bump: path => etags.set(path, (etags.get(path) || 0) + 1) };
+  const ownerWrite=(op,data)=>robokap.route(new Request('https://t/robokap/v1',{method:'POST',headers:{Authorization:'Bearer owner-session','Content-Type':'application/json'},body:JSON.stringify({op,request_id:'owner_request_'+String(++req).padStart(8,'0'),data})}),env).then(kept);
+  return { env, db, ownerWrite, owner, board, call, tool, write, issue, pound, responses, gateway: r => sled(r, env), tick: ms => { clock += ms; }, onNextPut: f => { beforePut = f; }, bump: path => etags.set(path, (etags.get(path) || 0) + 1) };
 }
 
 test('the owner issues seat credentials whose seat and scopes are stored, shown once and never kept in clear', async () => {
@@ -80,7 +81,7 @@ test('each credential sees and runs only what its stored scopes allow, whatever 
   const ops = async t => (await w.call(t, 'tools/list')).body.result.tools.find(x => x.name === 'sled_write').inputSchema.properties.op.enum;
   assert.deepEqual(await ops(research), ['rk.claim', 'rk.heartbeat', 'rk.release', 'rk.report']);
   assert.deepEqual(await ops(review), ['rk.review']);
-  assert.deepEqual(await ops(coord), ['rk.intake', 'rk.dispatch', 'rk.notice', 'rk.plan', 'rk.propose']);
+  assert.deepEqual(await ops(coord), ['rk.message', 'rk.mail', 'rk.intake', 'rk.dispatch', 'rk.notice', 'rk.plan', 'rk.propose']);
   const me = await w.tool(research, 'sled_read', { session_ref: 'claude-code:synthetic' });
   assert.equal(me.error, false);
   assert.equal(me.out.identity.seat, 'claude');
@@ -176,4 +177,33 @@ test('the runner HTTP transport speaks to the gateway and turns refusals into st
   assert.throws(() => sledTransport({ endpoint: 'https://evil.example/mcp', credential: coord.secret }), /sled_endpoint_required/);
   const down = sledTransport({ endpoint, credential: coord.secret, fetchImpl: async () => { throw new Error('network'); } });
   await assert.rejects(down.read(), e => isRetryable(e) && !String(e.message).includes(coord.secret.slice(37)));
+});
+
+test('mail-only credential has route-limited reads and ingestion without coordination authority',async()=>{
+ const w=await rig(),issued=(await w.issue('dot',['sled:work:read','sled:mail:ingest'],'Mail only')).body,token=issued.secret;
+ const defs=(await w.call(token,'tools/list')).body.result.tools;
+ assert.deepEqual(defs.find(x=>x.name==='sled_write').inputSchema.properties.op.enum,['rk.mail']);
+ assert.deepEqual(defs.find(x=>x.name==='sled_read').inputSchema.properties.view.enum,['mail']);
+ for(const op of ['rk.plan','rk.dispatch','rk.intake','rk.notice','rk.message','rk.discuss'])assert.equal((await w.write(token,op,{})).out.error,'scope_denied');
+ for(const view of ['work','team','alerts'])assert.equal((await w.tool(token,'sled_read',{view})).out.error,'view_denied');
+ const route={action:'route',id:'email-test',expected_version:0,sender_address:'agent@example.com',seat:'claude',thread_id:TASK,project_id:'synthetic',recipient:'dot',mailbox_ref:'test',relay_agent_id:issued.id,enabled:true};
+ assert.equal((await w.ownerWrite('rk.mail',route)).status,200);
+ assert.equal((await w.write(token,'rk.mail',route)).out.error,'owner_session_required');
+ const post=(await w.ownerWrite('rk.discuss',{action:'post',thread_id:TASK,body:'Allowed thread'}));assert.equal(post.status,200);
+ const stored=w.db.get(P),payload=JSON.parse(stored.payload),other='p_00000009-0000-4000-8000-000000000000';payload.tasks.push({...payload.tasks[0],id:other,project_id:'secret'});stored.payload=JSON.stringify(payload);
+ assert.equal((await w.ownerWrite('rk.discuss',{action:'post',thread_id:other,body:'Unmapped secret'})).status,200);
+ const read=await w.tool(token,'sled_read',{});assert.equal(read.error,false);assert.equal(read.out.mail.posts.length,1);assert.ok(!JSON.stringify(read.out).includes('Unmapped secret'));assert.ok(!('team' in read.out));
+ const data={action:'ingest',route_id:route.id,route_version:1,gmail_message_id:'email1',mailbox_ref:'test',sender_address:route.sender_address,sender_auth:'aligned_provider_pass',subject:'PACKSLEDMSG',received_at:'2026-10-31T00:00:00Z',body:JSON.stringify({schema:'pack-sled-mail/v1',project_id:'synthetic',thread_id:TASK,recipient:'dot',action:'post',body:'Mail report'})};
+ const ingested=await w.write(token,'rk.mail',data);assert.equal(ingested.error,false);assert.equal(ingested.out.receipt.status,'accepted');
+ const otherRelay=(await w.issue('grok',['sled:work:read','sled:mail:ingest'],'Other relay')).body.secret;
+ assert.equal((await w.tool(otherRelay,'sled_read',{})).out.mail.posts.length,0);
+ assert.equal((await w.write(otherRelay,'rk.mail',data)).out.error,'scoped_mail_relay_required');
+ const moved=w.db.get(P),movedPayload=JSON.parse(moved.payload);movedPayload.tasks.find(t=>t.id===TASK).project_id='secret';moved.payload=JSON.stringify(movedPayload);
+ await w.ownerWrite('rk.discuss',{action:'post',thread_id:TASK,body:'Moved project secret'});
+ assert.equal((await w.ownerWrite('rk.discuss',{action:'revise',id:read.out.mail.posts[0].id,expected_version:1,body:'Revised original with B project secret'})).status,200);
+ const stale=(await w.tool(token,'sled_read',{})).out.mail;assert.equal(stale.routes.length,0);assert.equal(stale.posts.length,0);assert.equal(stale.receipts.length,0);
+ assert.ok(!JSON.stringify(stale).includes('B project secret'));
+ movedPayload.tasks.find(t=>t.id===TASK).project_id='synthetic';w.db.get(P).payload=JSON.stringify(movedPayload);
+ assert.equal((await w.ownerWrite('rk.mail',{...route,expected_version:1,enabled:false})).status,200);
+ const disabled=(await w.tool(token,'sled_read',{})).out.mail;assert.equal(disabled.routes.length,0);assert.equal(disabled.posts.length,0);assert.equal(disabled.receipts.length,0);
 });

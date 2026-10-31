@@ -1,3 +1,5 @@
+import {rkApply,rkParse,rkSerialize} from './robokap-core.mjs';
+
 // Browser proof of the RoboKap board against the REAL route handler and coordination core,
 // running in this process over an in-memory conditional-write database. Synthetic tasks, keys
 // and sessions only; every request is intercepted, nothing reaches the network.
@@ -28,6 +30,8 @@ const claudeWrite = (op, data) => claude('dd_owner_robokap_write', { op, request
 const stored = () => JSON.parse(db.get(POUND).robokap);
 const editTask = (taskId, change) => { const record = db.get(POUND), payload = JSON.parse(record.payload); Object.assign(payload.tasks.find(t => t.id === taskId), change); record.payload = JSON.stringify(payload); };
 const STATIC = new Map([
+  ['/research-lab/sled-message-ui.mjs','sled-message-ui.mjs'],
+
   ['/research-lab/robokap.html', 'robokap.html'], ['/research-lab/robokap-board.mjs', 'robokap-board.mjs'], ['/research-lab/robokap.css', 'robokap.css'],
   ['/research-lab/account.js', 'account.js'], ['/research-lab/agent-setup.css', 'agent-setup.css'], ['/research-lab/navigation.css', 'navigation.css'], ['/research-lab/navigation.js', 'navigation.js'],
   ['/presentation-mode.js', '../presentation-mode.js'], ['/presentation-mode.css', '../presentation-mode.css'], ['/install-help.js', '../install-help.js'], ['/install-help.css', '../install-help.css'],
@@ -219,10 +223,92 @@ try {
   await page.getByText('Record your task: saved (already recorded)', { exact: false }).waitFor();
   assert.equal(stored().receipts.filter(r => r.task_id === D).length, 1, 'exactly one receipt for your task');
   assert.equal(await tab('Done').locator('b').innerText(), '2');
+  // Addressed-message UI against the same real CAS route; external replies are synthetic.
+
+  const relayId='a'.repeat(32),relayPrincipal={kind:'delegated_agent',agent_id:relayId,seat:'coordinator',scopes:['sled:work:read','sled:coordinate']};
+
+  const messageApply=async(data,principal={kind:'owner_session'})=>{
+
+    const record=db.get(POUND),out=await rkApply(rkParse(record.robokap),JSON.parse(record.payload),{op:'rk.message',request_id:'browser_message_'+String(++rq).padStart(6,'0'),data},principal,Date.now(),{agents:[{agent_id:relayId,status:'active',scopes:relayPrincipal.scopes}]});
+
+    record.robokap=rkSerialize(out.rk);return out.result;
+
+  };
+
+  await messageApply({action:'route',id:'dot-demo',expected_version:0,recipient:'Synthetic dot task',transport:'dot_child',target_ref:'synthetic-child',relay_agent_id:relayId,enabled:true});
+
+  await page.locator('#rkRefresh').click();
+
+  await page.locator('#rkMessageForm [name=route_id] option').waitFor({state:'attached'});
+
+  await page.locator('#rkMessageForm [name=thread_id]').selectOption(A);
+
+  await page.locator('#rkMessageForm [name=text]').fill('Synthetic hello <script>inert</script>');
+
+  dropOp='rk.message';expectedAborts=1;
+
+  await page.locator('#rkMessageForm button[type=submit]').click();
+
+  await page.getByText('Message to Synthetic dot task: no answer from the server',{exact:false}).waitFor();
+
+  await page.locator('#rkResend').click();
+
+  await page.getByText('Message to Synthetic dot task: saved (already recorded)',{exact:false}).waitFor();
+
+  assert.equal(stored().messages.length,1);
+
+  const msg=stored().messages[0],attempt_id='browser_attempt_123';
+
+  assert.match(await page.locator('#rkMessageList').innerText(),/Saved · not delivered/);
+
+  await messageApply({action:'reserve',id:msg.id,attempt_id},relayPrincipal);
+
+  await messageApply({action:'delivered',id:msg.id,attempt_id,receipt:'synthetic-delivery'},relayPrincipal);
+
+  await messageApply({action:'reply',id:msg.id,attempt_id,receipt:'synthetic-turn',text:'Synthetic reply only; no external model ran.'},relayPrincipal);
+
+  await page.locator('#rkRefresh').click();
+
+  await page.getByText('Synthetic reply only; no external model ran.',{exact:true}).waitFor();
+
+  await page.locator('#rkMessageForm [name=text]').fill('Cancel this synthetic message');
+
+  await page.locator('#rkMessageForm button[type=submit]').click();
+
+  await page.getByRole('button',{name:'Cancel before delivery',exact:true}).click();
+
+  await page.getByText('Synthetic dot task · Cancelled before delivery',{exact:true}).waitFor();
+
+  await page.screenshot({path:path.join(output,'messages-synthetic-390.png'),fullPage:true});
+
+  await page.locator('#rkMessageForm [name=text]').fill('Private unsent draft');
+
+  await setHidden(true);assert.equal(await page.locator('#rkMessageList').innerText(),'');assert.equal(await page.locator('#rkMessageForm [name=text]').inputValue(),'');
+
+  await setHidden(false);await page.getByText('Synthetic reply only; no external model ran.',{exact:true}).waitFor();
+
+  await page.locator('#rkDiscussionForm [name=thread_id]').selectOption(A);
+  await page.locator('#rkDiscussionForm [name=body]').fill('Synthetic project question <script>inert</script>');
+  await page.locator('#rkDiscussionForm [name=evidence]').fill('https://example.com/synthetic');
+  await page.locator('#rkDiscussionForm button[type=submit]').click();
+  await page.getByText('Synthetic project question <script>inert</script>',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Upvote',exact:true}).click();
+  await page.getByText('Score 1 · version 1',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Downvote',exact:true}).click();
+  await page.getByText('Score -1 · version 1',{exact:true}).waitFor();
+  assert.equal(stored().discussion_votes.length,1);
+  await page.getByLabel('Reply or disagreement',{exact:true}).fill('Synthetic disagreement, not proof.');
+  await page.getByRole('button',{name:'Post reply',exact:true}).click();
+  await page.getByText('Synthetic disagreement, not proof.',{exact:true}).waitFor();
+  assert.equal(stored().discussion_posts.length,2);
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await page.screenshot({path:path.join(output,'discussion-synthetic-390.png'),fullPage:true});
   // Signing out leaves nothing rendered.
   await page.evaluate(() => { localStorage.clear(); dispatchEvent(new StorageEvent('storage', { key: null })); });
   await page.getByText('Sign in to open your board.', { exact: true }).waitFor();
   assert.equal(await page.locator('#rkCards li').count(), 0);
+  assert.equal(await page.locator('#rkMessageList').innerText(),'');
+
   assert.deepEqual(errors, []);
   console.log(JSON.stringify({ passed: true, screenshots: output, posts: posts.length, liveRequests: 0 }));
 } finally { await browser.close(); }

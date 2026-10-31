@@ -1,3 +1,7 @@
+import {applyMail,mailView} from './sled-mail.mjs';
+import {applyDiscussion,discussionView} from './sled-discussions.mjs';
+import {applyMessage, messageView} from './sled-messages.mjs';
+
 /* Pack Sled coordination core. Pure computation: no storage, network, clock or credentials.
  *
  * Canonical store is the EXISTING Pound record /privatePounds/<owner>. Pound keeps tasks,
@@ -27,23 +31,30 @@ export const RK_LIMITS = Object.freeze({
   pins: 48, plans: 160, roles: 48, claims: 300, receipts: 200, reviews: 200, decisions: 300,
   events: 200, idem: 256, bytes: 262144, request_bytes: 24576,
   artifacts: 8, depends: 8, acceptance: 8, summary: 2000, note: 500,
-  playbooks: 32, intakes: 150, seen: 400, notices: 150, workers: 32, proposals: 40,
+  playbooks: 32, intakes: 150, seen: 400, notices: 150, workers: 32, proposals: 40, message_routes: 16, messages: 64, discussion_posts:64, discussion_votes:256, mail_routes:24, mail_receipts:128,
+
   checkpoints: 6, evidence_claims: 12, evidence_gaps: 8, evidence_sources: 3, review_checks: 12, sources_checked: 12,
 });
-export const RK_OPS = Object.freeze(['rk.pin', 'rk.plan', 'rk.role.propose', 'rk.role.accept', 'rk.claim', 'rk.release', 'rk.report', 'rk.review', 'rk.decide', 'rk.playbook', 'rk.intake', 'rk.dispatch', 'rk.heartbeat', 'rk.notice', 'rk.propose']);
+export const RK_OPS = Object.freeze(['rk.pin', 'rk.plan', 'rk.role.propose', 'rk.role.accept', 'rk.claim', 'rk.release', 'rk.report', 'rk.review', 'rk.decide', 'rk.playbook', 'rk.intake', 'rk.dispatch', 'rk.heartbeat', 'rk.notice', 'rk.propose', 'rk.message', 'rk.discuss', 'rk.mail']);
+
 // Operations an owner connector key may perform. Pins, decisions and playbooks stay with the
 // signed owner (a key may only propose them); intake and dispatch are further limited to the
 // coordinator a playbook names.
-export const RK_CONNECTOR_OPS = Object.freeze(['rk.plan', 'rk.role.propose', 'rk.role.accept', 'rk.claim', 'rk.release', 'rk.report', 'rk.review', 'rk.intake', 'rk.dispatch', 'rk.heartbeat', 'rk.notice', 'rk.propose']);
+export const RK_CONNECTOR_OPS = Object.freeze(['rk.plan', 'rk.role.propose', 'rk.role.accept', 'rk.claim', 'rk.release', 'rk.report', 'rk.review', 'rk.intake', 'rk.dispatch', 'rk.heartbeat', 'rk.notice', 'rk.propose', 'rk.message', 'rk.discuss', 'rk.mail']);
+
 // Scoped seat credentials. The owner sets a credential's seat and scopes when issuing it; the
 // server reads them from the stored grant. Each operation needs one scope, and an operation with
 // no scope here (pins, decisions, playbooks, roles) is never available to a seat credential.
-export const RK_AGENT_SCOPES = Object.freeze(['sled:work:read', 'sled:work:claim', 'sled:review', 'sled:coordinate']);
+export const RK_AGENT_SCOPES = Object.freeze(['sled:work:read', 'sled:work:claim', 'sled:review', 'sled:coordinate', 'sled:discuss', 'sled:mail:ingest']);
+
 export const RK_SCOPE_FOR_OP = Object.freeze({
+  'rk.message': 'sled:coordinate', 'rk.discuss':'sled:discuss', 'rk.mail':'sled:mail:ingest',
+
   'rk.claim': 'sled:work:claim', 'rk.heartbeat': 'sled:work:claim', 'rk.release': 'sled:work:claim', 'rk.report': 'sled:work:claim',
   'rk.review': 'sled:review',
   'rk.intake': 'sled:coordinate', 'rk.dispatch': 'sled:coordinate', 'rk.notice': 'sled:coordinate', 'rk.plan': 'sled:coordinate', 'rk.propose': 'sled:coordinate',
 });
+export const rkScopeAllows=(scopes,op)=>scopes.includes(RK_SCOPE_FOR_OP[op])||(op==='rk.mail'&&scopes.includes('sled:coordinate'));
 export const RK_AGENT_OPS = Object.freeze(Object.keys(RK_SCOPE_FOR_OP));
 // A credential within this many days of expiry is flagged to the owner and to the agent itself.
 export const RK_CREDENTIAL_WARN_DAYS = 7;
@@ -56,7 +67,8 @@ const OUTCOMES = ['succeeded', 'failed', 'uncertain'];
 const ARTIFACT_KINDS = ['pound_context', 'lab_receipt', 'lab_discussion', 'github_commit', 'github_pr', 'claude_artifact', 'discord_message', 'url', 'project_file', 'note'];
 const CORE_LISTS = ['pins', 'plans', 'roles', 'claims', 'receipts', 'reviews', 'decisions', 'events', 'idem'];
 // Added after the first stores were written; a store without them reads as empty lists.
-const ADDED_LISTS = ['playbooks', 'intakes', 'seen', 'notices', 'workers', 'proposals'];
+const ADDED_LISTS = ['playbooks', 'intakes', 'seen', 'notices', 'workers', 'proposals', 'message_routes', 'messages', 'discussion_posts', 'discussion_votes', 'mail_routes', 'mail_receipts'];
+
 const LISTS = [...CORE_LISTS, ...ADDED_LISTS];
 const INTAKE_SOURCES = ['gmail'];
 const CLAIM_SUPPORT = ['source', 'inference', 'absence'];
@@ -597,6 +609,8 @@ export async function rkBoard(rk, pound, now, ctx = {}) {
   const pins = [];
   for (const p of rk.pins) { const cur = currentPin(rk, p.project_id, p.kind); if (cur === p) pins.push({ ...p, by: describePrincipal(p.by), history: rk.pins.filter(x => x.project_id === p.project_id && x.kind === p.kind).length }); }
   return {
+    messaging: messageView(rk), discussion:discussionView(rk), mail:mailView(rk,pound),
+
     as_of: iso(now), rk_revision: rk.rev, lanes, done, closed, unplanned,
     counts: { ...Object.fromEntries(RK_LANES.map(l => [l, lanes[l].length])), done: done.length, closed: closed.length, unplanned: unplanned.length, role_decisions: roleInbox.length },
     role_decisions: roleInbox,
@@ -783,6 +797,8 @@ export async function rkWork(rk, pound, now, ctx, { key_label, principal: given,
     : { key_label: principal.key_label, key_label_trust: 'server_verified', session_ref_declared: session_ref ?? null, session_ref_trust: 'declared', model_identity: 'unverified' };
   return {
     as_of: iso(now), rk_revision: rk.rev,
+    messaging: messageView(rk, principal), discussion:discussionView(rk,principal), mail:mailView(rk,pound,principal),
+
     identity,
     seats, review_seats: reviewSeats,
     ready: ready.map(brief),
@@ -1050,6 +1066,8 @@ async function buildPlaybook(rk, pound, data, principal, at) {
 }
 
 const OPS = {
+  'rk.message': applyMessage, 'rk.discuss':applyDiscussion, 'rk.mail':applyMail,
+
   async 'rk.pin'({ rk, pound, data, principal, at }) {
     ownerOnly(principal);
     only(data, ['project_id', 'kind', 'status', 'ref', 'note'], ['project_id', 'kind', 'status', 'ref']);
@@ -1651,7 +1669,7 @@ export async function rkApply(rkIn, pound, input, principal, now, ctx = {}) {
   check(enc.encode(JSON.stringify(input)).length <= RK_LIMITS.request_bytes, 413, 'request_too_large');
   if (principal.kind === 'owner_key') check(RK_CONNECTOR_OPS.includes(input.op), 403, 'owner_session_required');
   // A seat credential may run an operation only when its stored scopes include the one it needs.
-  if (principal.kind === 'delegated_agent') check(RK_SCOPE_FOR_OP[input.op] && principal.scopes.includes(RK_SCOPE_FOR_OP[input.op]), 403, 'scope_denied', { op: input.op, needs: RK_SCOPE_FOR_OP[input.op] ?? 'owner_session' });
+  if (principal.kind === 'delegated_agent') check(RK_SCOPE_FOR_OP[input.op] && rkScopeAllows(principal.scopes,input.op), 403, 'scope_denied', { op: input.op, needs: RK_SCOPE_FOR_OP[input.op] ?? 'owner_session' });
   const who = principalLabel(principal);
   const fingerprint = await sha256Hex(canonical({ op: input.op, data: input.data }));
   const prior = rkIn.idem.find(x => x.p === who && x.k === input.request_id);
@@ -1661,7 +1679,8 @@ export async function rkApply(rkIn, pound, input, principal, now, ctx = {}) {
   }
   const rk = structuredClone(rkIn);
   const at = iso(now);
-  const out = await OPS[input.op]({ rk, pound, data: input.data, principal, now, at, ctx });
+  const out = await OPS[input.op]({ rk, pound, data: input.data, principal, now, at, ctx, request_id: input.request_id });
+
   // A duplicate intake or notice changes nothing and is not stored, so repeats cost no write.
   if (out.noop) { const { noop: _n, quiet: _q, session_ref: _s, ...shown } = out; return { rk: rkIn, result: { ...shown, op: input.op, rk_revision: rkIn.rev, replayed: false }, changed: false }; }
   // A possible external effect must always be recordable, so an uncertain report skips the headroom.
@@ -1689,7 +1708,8 @@ export async function rkApply(rkIn, pound, input, principal, now, ctx = {}) {
 
 /* Flat tool input schemas: several MCP clients reject a top-level oneOf. Exact per-op rules
  * live in the descriptions and in server validation. */
-export const RK_TOOL_DESCRIPTION = 'One Pack Sled coordination write. Read first (dd_owner_robokap_read) for plan_version, pin versions and ids. '
+export const RK_TOOL_DESCRIPTION = 'rk.mail ingest accepts owner-mapped Gmail reports only: action ingest, route_id,route_version,gmail_message_id,mailbox_ref,sender_address,sender_auth aligned_provider_pass,subject,body (strict JSON pack-sled-mail/v1 envelope),received_at. Sender metadata must come from trusted Gmail headers, never message body. Read mail routes first. Unknown identity is quarantined; no outbound send or schedule. ' + 'rk.discuss: post {action:post,thread_id,body,evidence?:httpsURL[],parent_id?,parent_version?}; revise {action:revise,id,expected_version,body,evidence?}; vote {action:vote,id,version,value:-1|0|1}. One changeable vote per scoped seat and post version; owner keys count as one shared opinion. Task access and sled:discuss scope required for agents. Scores are not proof. '+'rk.message manages private addressed messages: send {action:send,thread_id,route_id,route_version,text,reply_to?}; only an owner-approved route may be used. A scoped relay assigned to that route reserves {action:reserve,id,attempt_id}, then records delivered/running {id,attempt_id,receipt}, reply {id,attempt_id,receipt,text}, uncertain {id,attempt_id}, or failed {id,attempt_id,receipt,reason}. Saved and reserved are not delivered. Never resend an uncertain/reserved external send; reconcile at the exact destination. Read messaging in sled_read first. Model identity is unverified. ' + 'One Pack Sled coordination write. Read first (dd_owner_robokap_read) for plan_version, pin versions and ids. '
+
   + 'Ops for a connector key: rk.role.accept {role_id} (only the key a role names can accept it); rk.claim {task_id, plan_version, pin_version (when the plan pins context), session_ref, lease_secret (fresh random 22-80 chars [A-Za-z0-9_-] you keep; resend the same values to renew until max_expires_at; renewal is refused once the task, pin, Lab link or a dependency changes)}; '
   + 'rk.release {task_id, claim_id, lease_secret}; rk.report {task_id, claim_id, lease_secret, outcome succeeded|failed|uncertain, summary 1-2000, artifacts? up to 8 of {kind pound_context|lab_receipt|lab_discussion|github_commit|github_pr|claude_artifact|discord_message|url|note, ref?, sha256?, note?}}; '
   + 'rk.review {receipt_id, verdict accept|revise|reject, note?} (connector-key reviews are advisory, never independent; a revise or reject closes review for the owner); rk.plan {task_id, expected_plan_version, seat claude|grok|gemini|muse|dot|owner, review none|advisory|independent, decision required|not_required, data_scope none|synthetic|development, priority? 1-5 (1 most urgent, default 3), session_ref?, role?, depends_on?, pin? {kind, version, require approved|any, project_id?}, acceptance? [{text, check_ref?}], lab? {hypothesis_id, hypothesis_version, evidence required|optional}, budget? {attempts 1-5, lease_minutes 5-120}, thread? {discord_thread_id}, note?} is recorded as a PROPOSAL for the owner; '

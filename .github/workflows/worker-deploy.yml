@@ -63,7 +63,7 @@ jobs:
       - run: node --test tests/jobs-deployment.test.mjs
       - run: node --test tests/dawg-pound.test.cjs
       - run: node --test tests/research-project.test.cjs research-lab/decision-controls.test.mjs research-lab/pound-portraits.test.mjs
-      - run: node --test research-lab/robokap-core.test.mjs research-lab/robokap.test.mjs research-lab/pack-sled.test.mjs research-lab/pack-sled-team.test.mjs research-lab/sled-agent.test.mjs
+      - run: node --test research-lab/robokap-core.test.mjs research-lab/robokap.test.mjs research-lab/pack-sled.test.mjs research-lab/pack-sled-team.test.mjs research-lab/sled-agent.test.mjs research-lab/sled-mail.test.mjs research-lab/sled-messages.test.mjs research-lab/sled-discussions.test.mjs
       - run: node --test tests/jobs.test.cjs tests/jobs-history.test.cjs tests/jobs-members.test.cjs tests/jobs-privacy.test.cjs tests/jobs-coordination.test.cjs tests/jobs-worker-logging.test.cjs tests/jobs-import.test.cjs
       - run: node --test tests/bozo-correction.test.cjs
       - run: node --test tests/bozo-sgo-diagnostics.test.js tests/bozo-sgo-capture.test.js tests/bozo-odds-api.test.js tests/bozo-espn-odds.test.js tests/bozo-agent-close.test.js tests/bozo-clv-repair.test.js
