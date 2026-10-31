@@ -12,6 +12,18 @@ const b64=bytes=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(
 const random=()=>b64(crypto.getRandomValues(new Uint8Array(32)));
 const challenge=async s=>b64(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))));
 const same=(a,b)=>{if(typeof a!=='string'||typeof b!=='string'||a.length!==b.length)return false;let d=0;for(let i=0;i<a.length;i++)d|=a.charCodeAt(i)^b.charCodeAt(i);return d===0;};
+const ACCESS=/^pso_[A-Za-z0-9_-]{43}$/, REFRESH=/^psr1_([A-Za-z0-9_-]{43})\.([1-9][0-9]{0,15})\.([A-Za-z0-9_-]{43})$/;
+const refreshKey=env=>crypto.subtle.importKey('raw',new TextEncoder().encode(env.BOZO_PEPPER),{name:'HMAC',hash:'SHA-256'},false,['sign','verify']);
+// Different purpose from owner-session/MCP signing; also bound to owner, client and resource.
+const refreshMessage=(env,clientId,family,generation)=>new TextEncoder().encode(JSON.stringify(['pack-sled-oauth-refresh-v1',env.RESEARCH_OWNER_UID,clientId,oauthResource(env.RESEARCH_OWNER_UID),family,generation]));
+const refreshMac=async(env,clientId,family,generation)=>b64(new Uint8Array(await crypto.subtle.sign('HMAC',await refreshKey(env),refreshMessage(env,clientId,family,generation))));
+async function refreshProof(token,clientId,env){
+ const match=typeof token==='string'&&REFRESH.exec(token);if(!match)return null;
+ const generation=Number(match[2]);if(!Number.isSafeInteger(generation))return null;
+ const signature=Uint8Array.from(atob(match[3].replace(/-/g,'+').replace(/_/g,'/')+'='),c=>c.charCodeAt(0));
+ if(b64(signature)!==match[3]||!await crypto.subtle.verify('HMAC',await refreshKey(env),signature,refreshMessage(env,clientId,match[1],generation)))return null;
+ return {family:match[1],generation};
+}
 // Operator-supplied exact callbacks, never request-supplied registrations or wildcards.
 // No callback is fetched by this server. Provider-specific client authentication is separate.
 function validRedirect(value){try{const u=new URL(value);return typeof value==='string'&&value.length<=512&&u.href===value&&u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&!u.search&&!u.hash&&!value.includes('*')&&/^[a-z0-9.-]+$/.test(u.hostname)&&u.hostname.includes('.')&&!/^(?:\d+\.){3}\d+$/.test(u.hostname)&&!u.hostname.endsWith('.localhost')&&!u.hostname.endsWith('.local');}catch{return false;}}
@@ -29,6 +41,26 @@ function clients(env){
 }
 const client=(env,id)=>{const c=clients(env).find(c=>c.client_id===id);check(c,400,'invalid_client');return c;};
 const scope=s=>typeof s==='string'&&s.split(' ').length===2&&OAUTH_SCOPES.every(x=>s.split(' ').includes(x));
+// Reject syntax, unknown clients/targets and unauthentic refresh tokens before any private read.
+async function publicInput(path,b,env,resource){
+ if(path.endsWith('/token')){
+  check(['authorization_code','refresh_token'].includes(b.grant_type),400,'unsupported_grant_type');
+  const fields=b.grant_type==='refresh_token'?['grant_type','client_id','resource','refresh_token','scope']:['grant_type','client_id','redirect_uri','resource','code','code_verifier'];
+  check(Object.keys(b).every(k=>fields.includes(k)),400,'invalid_request');
+  const c=client(env,b.client_id);check(b.resource===resource,400,'invalid_grant');
+  if(b.grant_type==='refresh_token'){
+   check(b.scope===undefined||scope(b.scope),400,'invalid_grant');
+   const proof=await refreshProof(b.refresh_token,b.client_id,env);check(proof,400,'invalid_grant');return {proof};
+  }
+  check(c.redirect_uris.includes(b.redirect_uri)&&opaque.test(b.code||'')&&/^[A-Za-z0-9._~-]{43,128}$/.test(b.code_verifier||''),400,'invalid_grant');
+  return {codeChallenge:await challenge(b.code_verifier)};
+ }
+ check(Object.keys(b).every(k=>['client_id','token','token_type_hint'].includes(k))&&typeof b.token==='string'&&b.token.length<=256&&(b.token_type_hint===undefined||['access_token','refresh_token'].includes(b.token_type_hint)),400,'invalid_request');
+ client(env,b.client_id);
+ const proof=await refreshProof(b.token,b.client_id,env);
+ // RFC 7009: unknown tokens still succeed, without touching private storage.
+ return {proof,revokeUnknown:!proof&&!ACCESS.test(b.token)};
+}
 function parameters(p,env){
  check(p&&typeof p==='object'&&!Array.isArray(p)&&Object.keys(p).every(k=>['client_id','redirect_uri','response_type','scope','resource','state','code_challenge','code_challenge_method'].includes(k)),400,'invalid_request');
  const c=client(env,p.client_id);
@@ -75,6 +107,7 @@ export function createSledOAuth({fbGet,fbPut,ownerIdentity,now=Date.now}){
   const send=(x,status=200)=>new Response(JSON.stringify(x),{status,headers});
   try{
    check(oauthEnabled(env),503,'oauth_disabled');clients(env);
+   check(typeof env.BOZO_PEPPER==='string'&&env.BOZO_PEPPER.length>0,503,'oauth_signing_unconfigured');
    check(/^u_[A-Za-z0-9_-]{1,100}$/.test(env.RESEARCH_OWNER_UID||''),503,'oauth_unconfigured');
    const url=new URL(request.url),p=url.pathname,uid=env.RESEARCH_OWNER_UID;
    check(url.origin===OAUTH_ORIGIN,400,'invalid_target');
@@ -99,26 +132,28 @@ export function createSledOAuth({fbGet,fbPut,ownerIdentity,now=Date.now}){
    check(request.method==='POST',405,'invalid_request');
    if(!consent)check(!request.headers.has('Authorization'),400,'invalid_client');
    const b=await body(request,consent);check(b&&typeof b==='object'&&!Array.isArray(b),400,'invalid_request');
+   const input=consent?null:await publicInput(p,b,env,resource);
+   if(input?.revokeUnknown)return send({});
    let sessionHash;
    if(consent){check(await ownerIdentity(request,env)===uid,403,'owner_required');const auth=request.headers.get('Authorization');check(/^Bearer \S+$/.test(auth||''),401,'owner_required');sessionHash=await oauthHash(auth);}
    const path='/privatePounds/'+uid;
    for(let attempt=0;attempt<4;attempt++){
     const snap=await fbGet(env,path,true);check(snap?.etag&&snap.data?.owner_uid===uid&&typeof snap.data.payload==='string',503,'workspace_unavailable');
-    const data=structuredClone(snap.data),at=now(),state=data.sledOAuth??{transactions:{},codes:{},tokens:{},families:{},refresh:{}};
+    const data=structuredClone(snap.data),at=now(),state=data.sledOAuth??{transactions:{},codes:{},tokens:{},families:{}};
     data.sledOAuth=state;
-    // Retain consumed-code tombstones until the access token expires to detect replay.
+    // Retain consumed-code tombstones until family expiry to detect replay.
     for(const [k,v]of Object.entries(state.transactions))if(v.expires<=at)delete state.transactions[k];
     for(const [k,v]of Object.entries(state.codes))if(v.retainUntil<=at)delete state.codes[k];
     for(const [k,v]of Object.entries(state.tokens))if(v.expires<=at)delete state.tokens[k];
     for(const [k,v]of Object.entries(state.families))if(v.expires<=at)delete state.families[k];
-    for(const [k,v]of Object.entries(state.refresh))if(!state.families[v.family])delete state.refresh[k];
     async function mint(familyId){
      const f=state.families[familyId],g=mailGrant(data,f.grant_id,uid,at);
      check(same(g.credentialHash,f.grant_hash),400,'invalid_grant');
-     check(Object.keys(state.tokens).length<32&&f.rotations<256,429,'connection_capacity');
-     const token='pso_'+random(),refresh='psr_'+random(),tokenHash=await oauthHash(token),expires=Math.min(at+300000,g.expiresAt,f.expires);
+     check(Object.keys(state.tokens).length<32&&Number.isSafeInteger(f.generation)&&f.generation>=0&&f.generation<Number.MAX_SAFE_INTEGER,429,'connection_capacity');
+     const generation=f.generation+1,token='pso_'+random(),tokenHash=await oauthHash(token),expires=Math.min(at+300000,g.expiresAt,f.expires);
+     const refresh='psr1_'+familyId+'.'+generation+'.'+await refreshMac(env,f.client_id,familyId,generation);
      state.tokens[tokenHash]={client_id:f.client_id,resource,grant_id:f.grant_id,grant_hash:g.credentialHash,expires,revoked:false,family:familyId};
-     state.refresh[await oauthHash(refresh)]={family:familyId,used:false};f.rotations++;
+     f.generation=generation;
      return {tokenHash,result:{access_token:token,refresh_token:refresh,token_type:'Bearer',expires_in:Math.floor((expires-at)/1000),scope:OAUTH_SCOPES.join(' ')}};
     }
     let result,status=200;
@@ -142,31 +177,25 @@ export function createSledOAuth({fbGet,fbPut,ownerIdentity,now=Date.now}){
       delete state.transactions[b.transaction];result={redirect:redirect.href};
      }
     }else if(p.endsWith('/token')){
-     check(['authorization_code','refresh_token'].includes(b.grant_type),400,'unsupported_grant_type');client(env,b.client_id);
      if(b.grant_type==='refresh_token'){
-      check(Object.keys(b).every(k=>['grant_type','client_id','resource','refresh_token','scope'].includes(k)),400,'invalid_request');
-      check(/^psr_[A-Za-z0-9_-]{43}$/.test(b.refresh_token||'')&&b.resource===resource&&(b.scope===undefined||scope(b.scope)),400,'invalid_grant');
-      const r=state.refresh[await oauthHash(b.refresh_token)],f=r&&state.families[r.family];
-      check(f&&!f.revoked&&f.expires>at&&f.client_id===b.client_id&&f.resource===resource,400,'invalid_grant');
-      if(r.used){f.revoked=true;result={error:'invalid_grant'};status=400;}
-      else{const minted=await mint(r.family);r.used=true;result=minted.result;}
+      const {family,generation}=input.proof,f=state.families[family];
+      check(f&&!f.revoked&&f.expires>at&&f.client_id===b.client_id&&f.resource===resource&&Number.isSafeInteger(f.generation)&&generation<=f.generation,400,'invalid_grant');
+      if(generation<f.generation){f.revoked=true;result={error:'invalid_grant'};status=400;}
+      else{const minted=await mint(family);result=minted.result;}
      }else{
-     check(Object.keys(b).every(k=>['grant_type','client_id','redirect_uri','resource','code','code_verifier'].includes(k)),400,'invalid_request');
-     check(opaque.test(b.code||'')&&/^[A-Za-z0-9._~-]{43,128}$/.test(b.code_verifier||''),400,'invalid_grant');
      const c=state.codes[await oauthHash(b.code)];
-     check(c&&c.params.client_id===b.client_id&&c.params.redirect_uri===b.redirect_uri&&c.params.resource===b.resource&&same(c.params.code_challenge,await challenge(b.code_verifier)),400,'invalid_grant');
+     check(c&&c.params.client_id===b.client_id&&c.params.redirect_uri===b.redirect_uri&&c.params.resource===b.resource&&same(c.params.code_challenge,input.codeChallenge),400,'invalid_grant');
      parameters(c.params,env);
      if(c.used){if(c.family&&state.families[c.family])state.families[c.family].revoked=true;result={error:'invalid_grant'};status=400;}
      else{
       check(c.expires>at,400,'invalid_grant');const g=mailGrant(data,c.grant_id,uid,at);check(same(g.credentialHash,c.grant_hash),400,'invalid_grant');
       check(Object.keys(state.families).length<16,429,'connection_capacity');
-      const family=random();state.families[family]={client_id:b.client_id,resource,grant_id:c.grant_id,grant_hash:g.credentialHash,approvedAt:c.approvedAt,expires:Math.min(c.approvedAt+7*86400000,g.expiresAt),rotations:0,revoked:false};
+      const family=random();state.families[family]={client_id:b.client_id,resource,grant_id:c.grant_id,grant_hash:g.credentialHash,approvedAt:c.approvedAt,expires:Math.min(c.approvedAt+7*86400000,g.expiresAt),generation:0,revoked:false};
       const minted=await mint(family);c.used=true;c.family=family;c.retainUntil=state.families[family].expires;result=minted.result;
      }
      }
     }else{
-     check(Object.keys(b).every(k=>['client_id','token','token_type_hint'].includes(k))&&typeof b.token==='string'&&b.token.length<=256,400,'invalid_request');client(env,b.client_id);
-     const digest=await oauthHash(b.token),t=state.tokens[digest]||state.refresh[digest],f=t&&state.families[t.family];if(!f||f.client_id!==b.client_id)return send({});f.revoked=true;result={};
+     const t=input.proof||state.tokens[await oauthHash(b.token)],f=t&&state.families[t.family];if(!f||f.client_id!==b.client_id||(input.proof&&input.proof.generation>f.generation))return send({});f.revoked=true;result={};
     }
     if(consent)check(await ownerIdentity(request,env)===uid,403,'owner_required');
     if(await fbPut(env,path,data,snap.etag))return send(result,status);

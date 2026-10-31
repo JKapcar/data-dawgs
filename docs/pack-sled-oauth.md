@@ -14,7 +14,7 @@ It is not a claim of certification, comprehensive OAuth conformance, or verified
 with every ChatGPT account or scheduled-task host.
 
 An established authorization provider is normally preferable. This bounded implementation uses
-Worker-native WebCrypto for random opaque credentials and SHA-256, and the repository's existing
+Worker-native WebCrypto for random opaque credentials, SHA-256 and HMAC-SHA-256, and the repository's existing
 conditional private store and owner sign-in. There is no custom JWT cryptography, remote client
 metadata fetching, dynamic registration, password grant, implicit flow, machine-to-machine flow,
 or new owner-level authority. No new service/account/library or paid API is required.
@@ -51,17 +51,36 @@ the canonical resource, never in a URL.
   refresh tokens. There is no replay grace: an uncertain refresh response requires reconnecting.
   Concurrent refreshes must be serialized by the client. Refresh cannot change scopes/resource,
   renew the underlying grant, or extend seven days from initial consent.
+  A refresh credential carries a random family ID, generation and HMAC; the client treats it
+  as opaque. The HMAC uses existing `BOZO_PEPPER` with the distinct
+  `pack-sled-oauth-refresh-v1` purpose, bound to owner, client and canonical resource. No new
+  secret or live binding is added. Only the current generation is stored per family. A valid
+  older generation revokes the family; an invalid signature is rejected before database access.
+  Conditional writes serialize generation advancement. This preserves detection of the oldest
+  issued token without retaining thousands of hashes or imposing a lifetime renewal quota.
+  Rotating `BOZO_PEPPER` invalidates refresh credentials; existing access tokens still expire
+  within five minutes (or can be stopped immediately by revoking the underlying grant).
 * Revocation accepts an access or refresh token plus its client ID and revokes that family;
   unknown tokens return success without writes. Grant revocation remains the owner's immediate
   stop switch. Client removal or disabling any required flag fails closed too.
 * Store: `sledOAuth` sibling in the existing `/privatePounds/<owner>` envelope. Hashes only for
-  authorization codes, access tokens, refresh tokens, CSRF nonce and owner session. Existing
+  authorization codes, access tokens, CSRF nonce and owner session. Refresh tokens are not stored;
+  their authenticated generation is checked against the family counter. Existing
   envelope fields are preserved. The store contains client state, callback, PKCE challenge and
   bound grant metadata; treat it and its existing private backups as private authentication data.
-* Bounds: 16 consent transactions, 32 code tombstones, 32 unexpired access tokens, 16 families,
-  256 refresh issuances per family. Expired entries are pruned on mutation; refresh replay
-  tombstones remain until family expiry. Capacity fails closed and requires expiry/reconnect,
-  not history deletion. Request bodies are bounded to 8 KiB and ten seconds.
+* Bounds: 16 consent transactions, 32 code tombstones, 32 unexpired access tokens and 16 families.
+  Expired entries are pruned on mutation; family counters remain until expiry. There is no
+  256-renewal cap. A simulation covers 2,016 generations over seven days at five-minute cadence,
+  then detects replay of generation one; its entire OAuth state remains under 4 KiB.
+  Capacity fails closed and requires expiry/reconnect, not history deletion. Request bodies
+  are bounded to 8 KiB and ten seconds.
+* Public token/revoke fields, configured client, exact target/callback and refresh signatures
+  are validated before private reads. Malformed requests and unknown/unverifiable refresh
+  revocations cause zero private reads/writes. Well-formed unknown opaque codes/access tokens
+  still require a lookup. Existing Worker `authLookup` uses route-specific `RL` KV quotas;
+  it does not cover these separately dispatched OAuth routes. No global OAuth IP quota or
+  live edge/WAF protection has been verified or changed by this PR. The prevalidation and
+  body limits reduce needless reads but are not a claim of comprehensive flood protection.
 
 No access/refresh credential appears in a URL, HTML, application log or stored plaintext.
 OAuth authorization-code flow **does** return its single-use, PKCE-bound code in the exact

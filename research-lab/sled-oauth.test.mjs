@@ -6,10 +6,10 @@ import {createSledAgentGateway} from './sled-agent-gateway.mjs';
 const uid='u_owner',id='a'.repeat(32),callback='https://chatgpt.com/connector_platform_oauth_redirect',verifier='V'.repeat(43);
 const pkce=async s=>Buffer.from(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s))).toString('base64url');
 async function rig(){
- let at=1800000000000,version=0,hook=null;
+ let at=1800000000000,version=0,hook=null,reads=0,writes=0;
  let db={owner_uid:uid,payload:JSON.stringify({tasks:[],contexts:[]}),untouched:{picks:'preserved'},agentAccess:{[id]:{enabled:true,audience:'sled:'+uid,seat:'dot',credentialHash:'b'.repeat(64),capabilities:['sled:work:read','sled:mail:ingest'],expiresAt:at+86400000,label:'Mail relay'}}};
- const env={RESEARCH_OWNER_UID:uid,SLED_OAUTH_CLIENTS:JSON.stringify([{client_id:'test-client',name:'Test ChatGPT',redirect_uris:[callback]}]),...Object.fromEntries(['SLED_OAUTH_ENABLED','SLED_AGENTS_ENABLED','DELEGATED_AGENTS_ENABLED','ROBOKAP_ENABLED','DAWG_POUND_ENABLED'].map(k=>[k,'true']))};
- const deps={now:()=>at,ownerIdentity:async r=>r.headers.get('Authorization')==='Bearer owner-session'?uid:null,fbGet:async()=>({data:structuredClone(db),etag:String(version)}),fbPut:async(e,p,d,v)=>{if(hook){const h=hook;hook=null;h(db);version++;}if(v!==String(version))return false;db=structuredClone(d);version++;return true;}};
+ const env={BOZO_PEPPER:'synthetic-oauth-pepper',RESEARCH_OWNER_UID:uid,SLED_OAUTH_CLIENTS:JSON.stringify([{client_id:'test-client',name:'Test ChatGPT',redirect_uris:[callback]}]),...Object.fromEntries(['SLED_OAUTH_ENABLED','SLED_AGENTS_ENABLED','DELEGATED_AGENTS_ENABLED','ROBOKAP_ENABLED','DAWG_POUND_ENABLED'].map(k=>[k,'true']))};
+ const deps={now:()=>at,ownerIdentity:async r=>r.headers.get('Authorization')==='Bearer owner-session'?uid:null,fbGet:async()=>{reads++;return {data:structuredClone(db),etag:String(version)};},fbPut:async(e,p,d,v)=>{writes++;if(hook){const h=hook;hook=null;h(db);version++;}if(v!==String(version))return false;db=structuredClone(d);version++;return true;}};
  const handler=createSledOAuth(deps),gateway=createSledAgentGateway({robokap:createRoboKap(deps)});
  const params={client_id:'test-client',redirect_uri:callback,response_type:'code',scope:'sled:work:read sled:mail:ingest',resource:oauthResource(uid),state:'random-client-state-123456789',code_challenge:await pkce(verifier),code_challenge_method:'S256'};
  async function call(path,body,headers={},method=body?'POST':'GET'){
@@ -21,7 +21,7 @@ async function rig(){
  async function code(){const r=await consent();assert.equal(r.status,200);return new URL(r.body.redirect).searchParams.get('code');}
  const exchange=(code,over={})=>call('/sled/oauth/token',{grant_type:'authorization_code',client_id:params.client_id,redirect_uri:callback,resource:params.resource,code,code_verifier:verifier,...over});
  const rpc=(token,name='sled_read',args={})=>gateway(new Request(params.resource,{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name,arguments:args}})}),env);
- return {env,params,call,inspect,consent,code,exchange,rpc,db:()=>db,tick:n=>{at+=n;},mutate:f=>{f(db);version++;},race:f=>{hook=f;},credential:async token=>({oauthHash:await oauthHash(token)}),resolve:async token=>resolveOAuthCredential(db,uid,{oauthHash:await oauthHash(token)},env,at)};
+ return {env,params,call,inspect,consent,code,exchange,rpc,counts:()=>({reads,writes}),db:()=>db,tick:n=>{at+=n;},mutate:f=>{f(db);version++;},race:f=>{hook=f;},credential:async token=>({oauthHash:await oauthHash(token)}),resolve:async token=>resolveOAuthCredential(db,uid,{oauthHash:await oauthHash(token)},env,at)};
 }
 test('discovery is gated, pinned to canonical issuer/resource, S256 and public code flow only',async()=>{
  const w=await rig();let r=await w.call('/.well-known/oauth-authorization-server/sled/oauth');assert.equal(r.body.issuer,OAUTH_ISSUER);assert.deepEqual(r.body.code_challenge_methods_supported,['S256']);assert.deepEqual(r.body.grant_types_supported,['authorization_code','refresh_token']);assert.equal(r.body.registration_endpoint,undefined);
@@ -52,7 +52,7 @@ test('only existing dot mail-only grant qualifies; no issue, widening or owner a
 test('code is single-use, one minute, bound to verifier/client/redirect/resource; replay revokes token',async()=>{
  const w=await rig(),code=await w.code();
  for(const over of [{code_verifier:'W'.repeat(43)},{client_id:'different-client'},{redirect_uri:callback+'/'},{resource:w.params.resource+'/other'}])assert.equal((await w.exchange(code,over)).status,400);
- const r=await w.exchange(code);assert.equal(r.status,200);assert.equal(r.body.expires_in,300);assert.match(r.body.refresh_token,/^psr_/);assert.equal(r.body.token_type,'Bearer');
+ const r=await w.exchange(code);assert.equal(r.status,200);assert.equal(r.body.expires_in,300);assert.match(r.body.refresh_token,/^psr1_/);assert.equal(r.body.token_type,'Bearer');
  assert.equal((await w.resolve(r.body.access_token)).id,id);
  const stored=JSON.stringify(w.db());assert.ok(!stored.includes(r.body.access_token));assert.ok(!stored.includes(code));assert.ok(!stored.includes('owner-session'));assert.deepEqual(w.db().untouched,{picks:'preserved'});
  assert.equal((await w.exchange(code)).status,400);await assert.rejects(w.resolve(r.body.access_token),/invalid_token/);
@@ -107,4 +107,36 @@ test('refresh races fail closed, grant expiry and explicit revocation stop refre
   if(mode==='race'){const results=await Promise.all([refresh(),refresh()]);assert.deepEqual(results.map(r=>r.status).sort(),[200,400]);await assert.rejects(w.resolve(results.find(r=>r.status===200).body.access_token));}
   else{if(mode==='expire')w.tick(86400000);if(mode==='revoke')await w.call('/sled/oauth/revoke',{client_id:'test-client',token:first.refresh_token});if(mode==='grant')w.mutate(d=>d.agentAccess[id].enabled=false);assert.notEqual((await refresh()).status,200);}
  }
+});
+test('invalid public requests are rejected before private reads; unknown revocation is a no-op',async()=>{
+ const w=await rig(),base=w.counts();
+ const malformed=[{}, {grant_type:'password'}, {grant_type:'authorization_code',client_id:'unknown-client'}, {grant_type:'authorization_code',client_id:'test-client',resource:w.params.resource,redirect_uri:callback,code:'bad',code_verifier:verifier}, {grant_type:'authorization_code',client_id:'test-client',resource:w.params.resource+'/wrong',redirect_uri:callback,code:'A'.repeat(43),code_verifier:verifier}, {grant_type:'refresh_token',client_id:'test-client',resource:w.params.resource,refresh_token:'bad'}, {grant_type:'refresh_token',client_id:'test-client',resource:w.params.resource,refresh_token:'psr1_'+'A'.repeat(43)+'.1.'+'B'.repeat(43)}];
+ for(const b of malformed)assert.notEqual((await w.call('/sled/oauth/token',b)).status,200);
+ for(const b of [{client_id:'test-client'},{client_id:'wrong-client',token:'unknown'},{client_id:'test-client',token:'unknown',extra:'x'}])assert.equal((await w.call('/sled/oauth/revoke',b)).status,400);
+ for(const token of ['unknown','psr1_'+'A'.repeat(43)+'.1.'+'B'.repeat(43)])assert.equal((await w.call('/sled/oauth/revoke',{client_id:'test-client',token})).status,200);
+ assert.deepEqual(w.counts(),base);
+});
+test('refresh MAC binds generation, family, client, owner and signing key before private reads',async()=>{
+ const w=await rig(),first=(await w.exchange(await w.code())).body,base=w.counts();
+ const refresh=(token,over={})=>w.call('/sled/oauth/token',{grant_type:'refresh_token',client_id:'test-client',resource:w.params.resource,refresh_token:token,...over});
+ const parts=first.refresh_token.split('.');
+ for(const token of [parts[0]+'.2.'+parts[2],parts[0]+'.01.'+parts[2],parts[0]+'.9007199254740992.'+parts[2],'psr1_'+'C'.repeat(43)+'.'+parts[1]+'.'+parts[2]])assert.equal((await refresh(token)).status,400);
+ const clients=JSON.parse(w.env.SLED_OAUTH_CLIENTS);w.env.SLED_OAUTH_CLIENTS=JSON.stringify([...clients,{...clients[0],client_id:'other-client'}]);assert.equal((await refresh(first.refresh_token,{client_id:'other-client'})).status,400);
+ w.env.RESEARCH_OWNER_UID='u_other';assert.equal((await refresh(first.refresh_token,{resource:oauthResource('u_other')})).status,400);w.env.RESEARCH_OWNER_UID=uid;
+ w.env.BOZO_PEPPER='different-synthetic-key';assert.equal((await refresh(first.refresh_token)).status,400);assert.deepEqual(w.counts(),base);
+ w.env.BOZO_PEPPER='synthetic-oauth-pepper';assert.equal((await refresh(first.refresh_token)).status,200);
+});
+test('five-minute renewals last the full seven days with constant history and oldest-token replay detection',async()=>{
+ const w=await rig();w.mutate(d=>d.agentAccess[id].expiresAt+=30*86400000);
+ const first=(await w.exchange(await w.code())).body;let current=first,maximumBytes=0;
+ const refresh=token=>w.call('/sled/oauth/token',{grant_type:'refresh_token',client_id:'test-client',resource:w.params.resource,refresh_token:token});
+ for(let n=1;n<7*24*12;n++){
+  w.tick(300000);const next=await refresh(current.refresh_token);assert.equal(next.status,200,'renewal '+n);current=next.body;
+  const state=w.db().sledOAuth;assert.equal(state.refresh,undefined);assert.equal(Object.keys(state.families).length,1);assert.ok(Object.keys(state.tokens).length<=1);maximumBytes=Math.max(maximumBytes,JSON.stringify(state).length);
+ }
+ assert.ok(maximumBytes<4096,'history stays bounded through 2,016 generations');
+ assert.equal((await w.resolve(current.access_token)).id,id);
+ assert.equal((await refresh(first.refresh_token)).status,400);await assert.rejects(w.resolve(current.access_token),/invalid_token/);
+ const expiry=await rig();expiry.mutate(d=>d.agentAccess[id].expiresAt+=30*86400000);const saved=(await expiry.exchange(await expiry.code())).body;expiry.tick(7*86400000);
+ assert.equal((await expiry.call('/sled/oauth/token',{grant_type:'refresh_token',client_id:'test-client',resource:expiry.params.resource,refresh_token:saved.refresh_token})).status,400);
 });
