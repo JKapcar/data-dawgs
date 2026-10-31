@@ -8,7 +8,7 @@ function rig(sequence){
  const ctx={fbGet:async(_e,k)=>({data:budget.get(k)}),fbPut:async(_e,k,v)=>{budget.set(k,v);return true;},console:{log:()=>{}},Date,Request,Response,URL,TextEncoder,crypto:require('node:crypto').webcrypto,AbortController,setTimeout,clearTimeout,caches:{default:cache},
  fetch:async(...args)=>{const action=sequence[Math.min(calls++,sequence.length-1)];return typeof action==='function'?action(...args):new Response(action.body??'{"data":[]}',{status:action.status||200,headers:action.headers});}};
  vm.createContext(ctx);vm.runInContext(slice('async function bozoSgoFailure(', 'async function bozoFetchEvents(')+'this.request=bozoSgoRequest;',ctx);
- const env={SGO_KEY:'synthetic-fixture-key',RL:cache},url=new URL('https://example.test/events?leagueID=NFL&oddID=spread&includeAltLines=true');
+ const env={BOZO_PAID_ODDS:'true',SGO_KEY:'synthetic-fixture-key',RL:cache},url=new URL('https://example.test/events?leagueID=NFL&oddID=spread&includeAltLines=true');
  return {ctx,map,url,request:(caller='submit',options={})=>ctx.request(env,url,{caller,sport:'nfl',needProps:false},options),stats:()=>({calls,reads,writes})};
 }
 test('provider refusal stops immediately; budget stop prevents another call',async()=>{
