@@ -9168,13 +9168,37 @@ function bozoOddsApiQuote(ev, p, registry) {
   }
   return {reason:"exact two-sided DraftKings line missing",code:"market_missing"};
 }
+/* ⚠️ THE ODDS API IS THE BOZO CLOSE'S LAST RESORT AND NOTHING ELSE. Kap pays for it only so a
+   Bozo leg still gets a close when the agent's DraftKings read and ESPN's free DraftKings line
+   both missed. With just the key set, the close fallback is the one caller allowed; entry
+   capture and every other caller stay off unless BOZO_PAID_ODDS is "true", and SportsGameOdds
+   stays off with them. Each leg is capped at an events list plus one odds read, ever. */
+const BOZO_ODDS_API_LEG_CAP = 2;
+function bozoOddsApiAllowed(env, caller) {
+  return !!env.ODDS_API_KEY && (caller === "close" || env.BOZO_PAID_ODDS === "true");
+}
+const BOZO_ODDS_API_REASONS = {
+  paid_feeds_off: "Odds API backup is off for this caller",
+  unconfigured: "Odds API backup key is not set",
+  unauthorized: "Odds API refused the key",
+  quota_exceeded: "Odds API quota is used up",
+  leg_cap: "Odds API per-leg call cap reached",
+  rate_limited: "Odds API rate limited the request",
+  timeout: "Odds API timed out",
+  provider_error: "Odds API request failed",
+};
 async function bozoOddsApiRequest(env,path,params,options={}) {
+  if(!bozoOddsApiAllowed(env,options.caller))throw Object.assign(new Error(env.ODDS_API_KEY?'Paid odds feeds are switched off':'Odds API is not configured'),{code:env.ODDS_API_KEY?'paid_feeds_off':'unconfigured'});
+  if(options.legBudget){
+    if(!(options.legBudget.left>0))throw Object.assign(new Error('Per-leg Odds API cap reached'),{code:'leg_cap'});
+    options.legBudget.left--;
+  }
   if(path.startsWith('historical/') || path.endsWith('/scores'))throw Object.assign(new Error('Automatic historical and paid score requests are disabled'),{code:'capture_disabled'});
   const budgetPath='/bozoCaptureBudget/odds_api';
   const budget=(await fbGet(env,budgetPath)).data;
-  if(budget?.exhausted)throw Object.assign(new Error('Provider exhausted; manual fallback'),{code:'quota_exceeded'});
-  const identity=['provider-request',options.caller||'entry',options.discoveryDate||null,path,params];
-  const receipt=await bozoCaptureOnce(env,identity,async()=>{
+  // A day-old exhausted flag is retried: the subscription may have renewed or been restored.
+  if(budget?.exhausted && Date.now()-Date.parse(budget.at||0) < 24*3600*1000)throw Object.assign(new Error('Provider exhausted; manual fallback'),{code:'quota_exceeded'});
+  const attempt=async()=>{
     try {
       const value=await bozoOddsApiRequestRaw(env,path,params,options);
       if(value.quota?.['x-requests-remaining']===0)await fbPut(env,budgetPath,{exhausted:true,at:new Date().toISOString()});
@@ -9182,9 +9206,13 @@ async function bozoOddsApiRequest(env,path,params,options={}) {
     }catch(e){
       if(e.quota?.['x-requests-remaining']===0 || [402,429].includes(e.httpStatus))
         await fbPut(env,budgetPath,{exhausted:true,at:new Date().toISOString()});
-      return {ok:false,code:e.code||'provider_error',reason:'Provider unavailable; manual fallback'};
+      return {ok:false,code:e.code||'provider_error',reason:BOZO_ODDS_API_REASONS[e.code]||'Provider unavailable; manual fallback'};
     }
-  });
+  };
+  // The close is already once-only per leg and capped above, so its requests skip the shared
+  // receipt: a refused key or a timeout on one leg must not stick to every other leg that day.
+  const receipt=options.caller==='close' ? await attempt()
+    : await bozoCaptureOnce(env,['provider-request',options.caller||'entry',options.discoveryDate||null,path,params],attempt);
   if(!receipt.ok)throw Object.assign(new Error(receipt.reason),{code:receipt.code});
   return receipt.value;
 }
@@ -9192,7 +9220,8 @@ async function bozoOddsApiRequestRaw(env, path, params, options = {}) {
   const fault = (code,message,diagnostic = {})=>Object.assign(new Error(message),{code, ...diagnostic});
   // ⚠️ PAID ODDS FEEDS ARE OFF UNLESS BOZO_PAID_ODDS is "true". The free ESPN DraftKings
   // line and agent-read closes carry Bozo; a paid call is never made while the switch is off.
-  if (env.BOZO_PAID_ODDS !== "true") throw fault("paid_feeds_off","Paid odds feeds are switched off",{failureKind:"disabled"});
+  if (!bozoOddsApiAllowed(env, options.caller)) throw fault(env.ODDS_API_KEY ? "paid_feeds_off" : "unconfigured",
+    "Paid odds feeds are switched off",{failureKind:"disabled"});
   const url = new URL("https://api.the-odds-api.com/v4/" + path);
   for (const [k,v] of Object.entries(params)) url.searchParams.set(k,String(v));
   // Cache keys never contain the credential. Keep provider timestamps on cache hits.
@@ -9214,7 +9243,7 @@ async function bozoOddsApiRequestRaw(env, path, params, options = {}) {
       }
       console.log("bozo-odds-api",JSON.stringify({status:response.status,...quota}));
       // The quota rides on a refusal too: an exhausted account still reports what is left.
-      if (!response.ok) throw fault(response.status===429?"rate_limited":"provider_error","Odds API HTTP "+response.status,
+      if (!response.ok) throw fault(response.status===429?"rate_limited":response.status===401?"unauthorized":"provider_error","Odds API HTTP "+response.status,
         {quota, httpStatus:response.status, failureKind:"http_error"});
       let data;
       try { data = await response.json(); }
@@ -9228,7 +9257,7 @@ async function bozoOddsApiRequestRaw(env, path, params, options = {}) {
     // Fetch errors can carry the credential-bearing request URL. Only our fixed faults
     // cross this boundary; neither native messages nor provider response bodies escape.
     if (["http_error","invalid_response","timeout"].includes(e && e.failureKind) &&
-        ["provider_error","rate_limited","timeout"].includes(e && e.code)) throw e;
+        ["provider_error","rate_limited","timeout","unauthorized"].includes(e && e.code)) throw e;
     throw controller.signal.aborted ? fault("timeout","Odds API capture timed out",{failureKind:"timeout"})
       : fault("provider_error","Odds API request failed",{failureKind:"network_error"});
   }
@@ -9238,8 +9267,10 @@ async function bozoOddsApiCapture(env,p,registry,options = {}) {
   const miss = (code, reason) => ({ok:false, code, reason});
   try {
     const markets = bozoOddsApiMarkets(p);
-    if (env.BOZO_PAID_ODDS !== "true") return miss("paid_feeds_off", "Paid odds feeds are switched off");
-    if (!env.ODDS_API_KEY) return miss("provider_error", "Odds API is not configured");
+    if (!env.ODDS_API_KEY) return miss("unconfigured", BOZO_ODDS_API_REASONS.unconfigured);
+    // Only the Bozo close fallback runs on the key alone; entry capture still needs BOZO_PAID_ODDS.
+    if (!bozoOddsApiAllowed(env, options.caller)) return miss("paid_feeds_off", "Paid odds feeds are switched off");
+    options = {...options, legBudget: options.legBudget || {left: BOZO_ODDS_API_LEG_CAP}};
     if (!markets) return miss("market_missing", "Market is not supported by Odds API");
     const sport = BOZO_ODDS_API_SPORT[p.sport];
     const start = Date.parse(p.startsAt || p.commenceTime || "");
@@ -9267,8 +9298,8 @@ async function bozoOddsApiCapture(env,p,registry,options = {}) {
     if (historical && (!Number.isFinite(Date.parse(response.data.timestamp)) || Date.parse(response.data.timestamp)>=start)) return miss("stale_snapshot", "Quote timestamp is outside the allowed pregame freshness window");
     return {ok:true,event:bozoOddsApiEvent(raw),quote,fetchedAt:response.fetchedAt};
   } catch (e) {
-    const code = ["rate_limited", "timeout"].includes(e.code) ? e.code : "provider_error";
-    return miss(code, code === "provider_error" ? "Odds API request failed" : e.message);
+    const code = Object.hasOwn(BOZO_ODDS_API_REASONS, e.code) ? e.code : "provider_error";
+    return miss(code, BOZO_ODDS_API_REASONS[code]);
   }
 }
 
@@ -9624,6 +9655,13 @@ function bozoMissedCloses(leagues, nowMs) {
 // One cron interval: a free read that misses earlier than this is retried next tick.
 const BOZO_CLOSE_LAST_TICK_MS = 5 * 60 * 1000;
 const BOZO_FREE_MISS_REASON = "No free DraftKings line on ESPN; an agent read recorded before kickoff is applied at kickoff";
+const BOZO_AGENT_HELD_REASON = "No free DraftKings line on ESPN; the agent's DraftKings read is held and applies at kickoff";
+/* The agent's pregame read counts as a source that did not fail: while one is held for a leg,
+   the paid Odds API backup is never asked. */
+function bozoAgentReadHeld(leagues, t) {
+  const cand = leagues?.[t.lid]?.ledger?.[ledgerKey(t.season, t.week, t.key)]?.agentCloseCandidate;
+  return !!(cand && !cand.promotedAt && Date.parse(cand.readAt) < t.startMs);
+}
 
 async function runBozoCloseCapture(env, nowMs) {
   // One league read serves both the misses and the targets.
@@ -9663,19 +9701,23 @@ async function runBozoCloseCapture(env, nowMs) {
       if (nowMs < t.startMs && bozoEspnOddsSupports(t.pick)) {
         const read = await bozoEspnOddsCapture(env,t.pick,registry,{nowMs,deadline:Date.now()+4000});
         if (read.ok) free = {ok:true,quote:read.quote};
-        else if (t.startMs - nowMs > BOZO_CLOSE_LAST_TICK_MS) continue;
       }
-      // Paid switch off: no once-only receipt and no provider call. A staged agent read, if
-      // one was recorded, is applied at kickoff by bozoPromoteAgentCloses.
-      const receipt = free || (env.BOZO_PAID_ODDS !== "true" ? {ok:false,reason:BOZO_FREE_MISS_REASON} :
+      // Nothing paid before the last tick, whether or not ESPN carries the market.
+      if (!free && t.startMs - nowMs > BOZO_CLOSE_LAST_TICK_MS) continue;
+      /* Order: the agent's DraftKings read, ESPN's free line, then the Odds API, and only
+         for a Bozo leg the Odds API can price. A held agent read means no paid call. With
+         no key the miss is recorded with no receipt; SportsGameOdds needs BOZO_PAID_ODDS. */
+      const oddsApiReady = !!env.ODDS_API_KEY && !!bozoOddsApiMarkets(t.pick);
+      const receipt = free || (bozoAgentReadHeld(leagues, t) ? {ok:false,reason:BOZO_AGENT_HELD_REASON} :
+        !oddsApiReady && env.BOZO_PAID_ODDS !== "true" ? {ok:false,reason:BOZO_FREE_MISS_REASON} :
         await bozoCaptureOnce(env,bozoCaptureIdentity(t.pick,'close'),async()=>{
         if (nowMs >= t.startMs || t.pick.mkt==='other') return {ok:false,reason:'No supported pregame close'};
         // The keyless read already missed; at most one paid provider from here.
-        if(env.ODDS_API_KEY && bozoOddsApiMarkets(t.pick)) {
+        if(oddsApiReady) {
           const capture=await bozoOddsApiCapture(env,t.pick,registry,{caller:'close',nowMs,deadline:Date.now()+7000});
           if(capture.ok)return {ok:true,quote:capture.quote};
           // A refusal never triggers a second paid provider.
-          return {ok:false,reason:capture.reason||'Close unavailable'};
+          return {ok:false,reason:'No free DraftKings line and no agent read; Odds API backup failed: '+(capture.reason||'close unavailable')};
         }
         const events=await bozoFetchEvents(env,t.pick.sport,t.startMs,t.pick.mkt==='prop',[bozoPeriodOf(t.pick)],
           {caller:'close',eventId:t.pick.providerEventIds?.sgo || t.pick.entryCapture?.providerEventIds?.sgo});
@@ -9729,7 +9771,8 @@ async function bozoCloseRunSummary(env, nowMs, run) {
   try {
     await kv.put("bozo:close:last-run", JSON.stringify({
       at: new Date(nowMs).toISOString(), ...run,
-      book: BOZO_CLOSE_BOOK, via: env.ODDS_API_KEY ? "espn+odds_api+sgo" : "espn+sportsgameodds",
+      book: BOZO_CLOSE_BOOK,
+      via: ["agent","espn", ...(env.ODDS_API_KEY ? ["odds_api"] : []), ...(env.BOZO_PAID_ODDS === "true" ? ["sgo"] : [])].join("+"),
     }));
   } catch { /* the capture already landed; the summary is a convenience */ }
 }
@@ -26902,7 +26945,7 @@ const MCP_TOOLS = [
     title: "Live scores",
     catalog: "core",
     readOnlyHint: true,
-    description: "NFL/CFB schedule and scores (sport + optional YYYYMMDD dates). The schedule is the Worker's nflverse/cfbfastR cache; games the schedule has not finalized are overlaid from ESPN's public scoreboard (scoreSource espn; completed games only, never in-progress scores), refreshed every 5 minutes while a game is due, with the Odds API archive as an optional fallback. An official nflverse/cfbfastR final always wins over ESPN. Each game names its scoreSource and scoreObservedAt; `feeds` reports each feed's freshness and any refresh error (feeds.live is ESPN). Other sports fail until an adapter exists.",
+    description: "NFL/CFB schedule and scores (sport + optional YYYYMMDD dates). The schedule is the Worker's nflverse/cfbfastR cache; games the schedule has not finalized are overlaid from ESPN's public scoreboard (scoreSource espn; completed games only, never in-progress scores), refreshed every 5 minutes while a game is due; no paid score feed is used. An official nflverse/cfbfastR final always wins over ESPN. Each game names its scoreSource and scoreObservedAt; `feeds` reports each feed's freshness and any refresh error (feeds.live is ESPN). Other sports fail until an adapter exists.",
     inputSchema: {
       type: "object",
       properties: {

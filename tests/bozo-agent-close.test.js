@@ -90,13 +90,14 @@ test('a leg that kicked off with no close is reported until it gets one',()=>{
  assert.equal(c.bozoMissedCloses(lg({a:pick({mkt:'other'})}),at).length,0);
 });
 
-function captureRig(espnReads){
+function captureRig(espnReads,leagues={}){
  const calls={espn:0,once:0},patches=[];
  const t={lid:'main',key:'a',player:'Kap',uid:'u_kap',season:2026,week:8,startMs:kickoff,pick:{sport:'nfl',mkt:'spread',eventId:'1',startsAt:iso(kickoff)}};
  const c={SEASON:2026,Date,JSON,console:{log:()=>{}},BOZO_CLOSE_BOOK:'draftkings',ledgerKey,LG:x=>'/bozo/leagues/'+x,
-  loadLeagues:async()=>({}),bozoCloseTargets:async()=>[t],bozoTeamRegistry:async()=>({}),bozoEspnOddsSupports:()=>true,
+  loadLeagues:async()=>structuredClone(leagues),bozoCloseTargets:async()=>[t],bozoTeamRegistry:async()=>({}),bozoEspnOddsSupports:()=>true,
   bozoEspnOddsCapture:async()=>{const ok=espnReads[calls.espn++];return ok?{ok:true,quote:{price:-112,opp:-108,provider:'espn',snapshotAt:'x'}}:{ok:false,code:'timeout'};},
   bozoCaptureOnce:async()=>{calls.once++;return {ok:false,reason:'paid provider refused'};},bozoCaptureIdentity:()=>[],
+  bozoOddsApiMarkets:p=>p.mkt==='spread'?['spreads']:null,
   fbGet:async (_e,k)=>({data:String(k).endsWith('/main')?{week:8,season:2026,picks:{a:t.pick},results:{},ledger:{}}:{}}),
   bozoSame:(a,b)=>JSON.stringify(a)===JSON.stringify(b),
   bozoCloseMutation:(_t,q,reason)=>q?{'results/a/close':q.price,'results/a/closeOpp':q.opp}:{'results/a/closeUnavailableReason':reason},
@@ -119,8 +120,8 @@ test('a free read that lands on the last tick never touches the paid receipt',as
  assert.equal(r.calls.once,0);assert.equal(out.captured,1);assert.equal(r.patches[0]['results/a/close'],-112);
 });
 
-test('with the paid switch off, an ESPN miss never reaches a paid provider or a once-only receipt',async()=>{
- for(const env of [{},{BOZO_PAID_ODDS:'false'},{BOZO_PAID_ODDS:true},{ODDS_API_KEY:'k',SGO_KEY:'k'}]){
+test('with no Odds API key and the paid switch off, an ESPN miss never reaches a paid provider or a once-only receipt',async()=>{
+ for(const env of [{},{BOZO_PAID_ODDS:'false'},{BOZO_PAID_ODDS:true},{SGO_KEY:'k'},{SGO_KEY:'k',BOZO_PAID_ODDS:'false'}]){
   const r=captureRig([false,false]);
   await r.c.runBozoCloseCapture(env,kickoff-7*60000);
   const out=await r.c.runBozoCloseCapture(env,kickoff-2*60000);
@@ -166,9 +167,75 @@ test('held reads: same id replays, a later read replaces an earlier one, never t
  assert.equal(out.status,409);assert.match(out.body.error,/later read/);assert.equal(earlier.writes.length,0);
 });
 test('every paid odds client is gated by BOZO_PAID_ODDS, and only the exact string "true" opens it',()=>{
- for(const fn of ['async function bozoSgoRequest(','async function bozoFetchEvents(','async function cfbFetchMarketEvents(','async function bozoOddsApiRequestRaw('])
+ for(const fn of ['async function bozoSgoRequest(','async function bozoFetchEvents(','async function cfbFetchMarketEvents('])
   assert.match(cut(fn,'\n}\n'),/env\.BOZO_PAID_ODDS !== "true"/,fn);
- assert.match(cut('async function bozoOddsApiCapture(','\n}\n'),/env\.BOZO_PAID_ODDS !== "true"/);
+ // The Odds API clients go through one gate: the key alone opens only the close fallback.
+ for(const fn of ['async function bozoOddsApiRequest(','async function bozoOddsApiRequestRaw(','async function bozoOddsApiCapture('])
+  assert.match(cut(fn,'\n}\n'),/bozoOddsApiAllowed\(env, ?options\.caller\)/,fn);
  assert.match(cut('async function bozoCaptureEntry(','async function bozoCommittedEntry('),/!backup && env\.BOZO_PAID_ODDS !== "true"/);
  assert.doesNotMatch(fs.readFileSync('wrangler.jsonc','utf8'),/BOZO_PAID_ODDS/,'no manifest change: absent means off');
+});
+
+// The Odds API: Kap's paid backup, for a Bozo close only, after the agent read and ESPN both miss.
+test('the Odds API key alone opens the close fallback, once per leg, on the last tick only',async()=>{
+ const r=captureRig([false,false]),env={ODDS_API_KEY:'k'};
+ await r.c.runBozoCloseCapture(env,kickoff-7*60000);
+ assert.equal(r.calls.once,0,'never before the last tick');
+ await r.c.runBozoCloseCapture(env,kickoff-2*60000);
+ assert.equal(r.calls.once,1,'one once-only receipt for the leg');
+});
+test('a held agent read means the paid backup is never asked',async()=>{
+ const cand={close:-112,closeOpp:-108,readAt:iso(kickoff-30*60000),requestId:'r'.repeat(16)};
+ const r=captureRig([false,false],{main:{ledger:{'2026-w8-a':{agentCloseCandidate:cand}}}});
+ const out=await r.c.runBozoCloseCapture({ODDS_API_KEY:'k',BOZO_PAID_ODDS:'true'},kickoff-2*60000);
+ assert.equal(r.calls.once,0);assert.equal(out.captured,0);
+ assert.match(r.patches[0]['results/a/closeUnavailableReason'],/agent's DraftKings read is held/);
+ // A read already promoted, or one taken after kickoff, holds nothing.
+ const late=captureRig([false],{main:{ledger:{'2026-w8-a':{agentCloseCandidate:{...cand,readAt:iso(kickoff+60000)}}}}});
+ await late.c.runBozoCloseCapture({ODDS_API_KEY:'k'},kickoff-2*60000);assert.equal(late.calls.once,1);
+});
+test('a leg the Odds API cannot price never opens a paid receipt on the key alone',async()=>{
+ const r=captureRig([false]);r.c.bozoOddsApiMarkets=()=>null;
+ await r.c.runBozoCloseCapture({ODDS_API_KEY:'k'},kickoff-2*60000);
+ assert.equal(r.calls.once,0,'SportsGameOdds stays behind BOZO_PAID_ODDS');
+ assert.match(r.patches[0]['results/a/closeUnavailableReason'],/No free DraftKings line on ESPN/);
+});
+
+function oddsRig(responses){
+ let fetches=0;const puts=[];const env={ODDS_API_KEY:'test-key'};
+ const c={Date,URL,JSON,Request,Response,Promise,AbortController,setTimeout,clearTimeout,Number,Object,String,Array,
+  console:{log:()=>{}},caches:undefined,
+  fbGet:async()=>({data:null}),fbPut:async(_e,path,v)=>{puts.push([path,v]);return true;},
+  bozoCaptureOnce:async()=>{throw Error('the close must not use the shared request receipt');},
+  fetch:async()=>{const r=responses[Math.min(fetches,responses.length-1)];fetches++;return typeof r==='function'?r():r;}};
+ vm.createContext(c);
+ vm.runInContext(cut('const BOZO_ODDS_API_LEG_CAP','async function bozoOddsApiCapture(')+'this.cap=BOZO_ODDS_API_LEG_CAP;',c);
+ return {c,env,puts,get fetches(){return fetches;}};
+}
+test('Odds API requests: entry capture stays off on the key alone, and each leg is capped',async()=>{
+ const ok=()=>Response.json([]);
+ let r=oddsRig([ok]);
+ await assert.rejects(r.c.bozoOddsApiRequest(r.env,'sports/x/events',{},{caller:'submit'}),e=>e.code==='paid_feeds_off');
+ await assert.rejects(r.c.bozoOddsApiRequest({},'sports/x/events',{},{caller:'close'}),e=>e.code==='unconfigured');
+ assert.equal(r.fetches,0,'no call without the key, and none for entry capture');
+ const legBudget={left:r.c.cap};
+ await r.c.bozoOddsApiRequest(r.env,'sports/x/events',{},{caller:'close',legBudget});
+ await r.c.bozoOddsApiRequest(r.env,'sports/x/events/1/odds',{},{caller:'close',legBudget});
+ await assert.rejects(r.c.bozoOddsApiRequest(r.env,'sports/x/events',{},{caller:'close',legBudget}),e=>e.code==='leg_cap');
+ assert.equal(r.fetches,2,'events list plus one odds read, never a third');
+});
+test('a refused key fails quietly with a clear reason and is retried for the next leg',async()=>{
+ const r=oddsRig([()=>new Response('nope',{status:401}),()=>Response.json([])]);
+ await assert.rejects(r.c.bozoOddsApiRequest(r.env,'sports/x/events',{},{caller:'close',legBudget:{left:2}}),
+  e=>e.code==='unauthorized'&&e.message==='Odds API refused the key'&&!String(e.message).includes('test-key'));
+ await r.c.bozoOddsApiRequest(r.env,'sports/x/events',{},{caller:'close',legBudget:{left:2}});
+ assert.equal(r.fetches,2,'a 401 on one leg does not stick to the next');
+});
+test('an exhausted quota flag blocks for a day, then the restored subscription is used again',async()=>{
+ const r=oddsRig([()=>Response.json([])]);
+ r.c.fbGet=async()=>({data:{exhausted:true,at:new Date(Date.now()-3600000).toISOString()}});
+ await assert.rejects(r.c.bozoOddsApiRequest(r.env,'sports/x/events',{},{caller:'close'}),e=>e.code==='quota_exceeded');
+ r.c.fbGet=async()=>({data:{exhausted:true,at:new Date(Date.now()-25*3600000).toISOString()}});
+ await r.c.bozoOddsApiRequest(r.env,'sports/x/events',{},{caller:'close'});
+ assert.equal(r.fetches,1);
 });

@@ -100,7 +100,7 @@ test('closing cron uses the backup, writes both receipts, and never fetches live
   bozoSame:(a,b)=>JSON.stringify(a)===JSON.stringify(b),
   bozoGuardedPatch:async(e,lid,state,patch)=>{patches.push(patch);return true;},LG:l=>l,cfbMarketKV:()=>null,
  });
- vm.runInContext(cut('async function runBozoCloseCapture(','/* GET /bozo/clv?')+'this.runClose=runBozoCloseCapture;',r.ctx);
+ vm.runInContext(cut('const BOZO_CLOSE_LAST_TICK_MS','/* GET /bozo/clv?')+'this.runClose=runBozoCloseCapture;',r.ctx);
  const out=await r.ctx.runClose({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'test-key'},start-1000);
  assert.equal(out.captured,1);assert.equal(sgo,0);assert.equal(capturedCalls[0].caller,'close');
  assert.equal(patches[0]['results/pat/closeSource'],'odds_api');
@@ -157,7 +157,7 @@ test('request diagnostics preserve HTTP status and quota, never response bodies 
   const r=rig(async()=>new Response('private provider message apiKey=test-key',{status,headers:{'x-requests-remaining':'0'}}));
   await assert.rejects(r.bozoOddsApiRequestRaw({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'test-key'},'sports/americanfootball_ncaaf/events',{}),e=>{
    assert.equal(e.httpStatus,status);assert.equal(e.failureKind,'http_error');
-   assert.equal(e.code,status===429?'rate_limited':'provider_error');
+   assert.equal(e.code,status===429?'rate_limited':status===401?'unauthorized':'provider_error');
    assert.equal(e.quota['x-requests-remaining'],0);
    assert.ok(!String(e).includes('test-key'));assert.ok(!JSON.stringify(e).includes('private provider'));
    return true;
