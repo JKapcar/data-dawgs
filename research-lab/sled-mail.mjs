@@ -19,6 +19,7 @@ export async function applyMail({rk,pound,data:d,principal:p,at,ctx}) {
   check(/^[A-Za-z0-9:_-]{1,100}$/.test(d.mailbox_ref||'')&&d.recipient==='dot',400,'invalid_mail_destination');
   const task=pound.tasks?.find(t=>t.id===d.thread_id&&!t.archived&&t.project_id===d.project_id);check(task,409,'mail_project_task_required');
   check(!d.enabled||(ctx.agents||[]).some(g=>g.agent_id===d.relay_agent_id&&g.status==='active'&&g.scopes.includes('sled:coordinate')),409,'active_scoped_relay_required');
+  check(!d.enabled||!rk.mail_routes.some(r=>r.id!==d.id&&r.enabled&&r.mailbox_ref===d.mailbox_ref&&r.sender_address===d.sender_address.toLowerCase()&&r.seat!==d.seat),409,'mail_sender_identity_conflict');
   const old=rk.mail_routes.find(r=>r.id===d.id);check(d.expected_version===(old?.version||0),409,'mail_route_changed');check(old||rk.mail_routes.length<24,409,'mail_route_capacity');
   const {action,expected_version,...route}=d;route.sender_address=route.sender_address.toLowerCase();route.version=(old?.version||0)+1;route.approved_at=at;
   if(old)Object.assign(old,route);else rk.mail_routes.push(route);return {route,subject:d.id};

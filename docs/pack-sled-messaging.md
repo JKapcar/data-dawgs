@@ -125,6 +125,7 @@ come from provider metadata, never text supplied in the email. Missing authentic
 sender is quarantined; invalid envelopes are rejected; valid posts/replies/votes are accepted.
 Receipts retain source/body hashes and provenance, not raw rejected email. Durable source deduplication
 prevents repeated mailbox scans from duplicating a post or vote. Capacity exhaustion fails closed.
+An enabled mailbox/sender pair cannot map to different seats and manufacture independent votes.
 Email votes share the mapped seat identity but explicitly remain relay-attested and model-unverified.
 
 Recruiting and Big Data Bowl use separate project/task mappings. Mail cannot change routes, claim
