@@ -64,13 +64,13 @@ try{
     await page.locator('#clvSvg circle').first().waitFor({state:'attached'});
     assert.equal(await page.locator('html').getAttribute('data-dd-view'),'tldr');
     await page.evaluate(manager=>DDClvEstimateManager.mount(document.getElementById('clvEstimateManager'),{isManager:()=>manager,league:()=> 'synthetic',identity:()=> 'synthetic-owner',read:async()=>({value:{}}),write:async()=>{throw Error('No writes allowed')},who:x=>x,refresh:async()=>{}}),manager);
-    assert.equal(await page.locator('#clvAllBets table').count(),0,'human accounting table removed');
+    assert.equal(await page.locator('#clvAllBets').count(),0,'per-entry status list removed');
     assert.equal(await page.locator('#clvCard > details.bz-help').count(),0,'methodology clutter removed');
     assert.equal(await page.locator('#clvSvg').isVisible(),true);
     assert.equal(await page.locator('#clvEstimateManager').isVisible(),false);
     await page.locator('#clvCard').screenshot({path:path.join(output,`${width}-${theme}-${manager?'manager':'viewer'}-tldr.png`)});
     await page.getByRole('button',{name:'AI / technical details',exact:true,includeHidden:true}).evaluate(e=>e.click());
-    assert.equal(await page.locator('#clvAllBets table').count(),0,'mode switch cannot restore accounting clutter');
+    assert.equal(await page.locator('#clvAllBets').count(),0,'mode switch cannot restore the status list');
     assert.equal(await page.locator('#clvEstimateManager summary').isVisible(),manager);
     assert.doesNotMatch(await page.locator('#clvCard').innerText(),/Every bet.*CLV accounting|Source \/ assumptions|Methodology/);
     assert.match(await page.locator('#clvCard').innerText(),/estimated/i);
@@ -82,7 +82,7 @@ try{
     await page.locator('#clv-season').click();
     assert.ok(await page.locator('#clvSvg').evaluate(e=>e.__pts.length>0));
     await page.locator('#clv-week').click();
-    assert.equal(await page.locator('#clvAllBets table').count(),0);
+    assert.equal(await page.locator('#clvAllBets').count(),0);
     await page.locator('#clvCard').screenshot({path:path.join(output,`${width}-${theme}-chart.png`)});
     await page.screenshot({path:path.join(output,`${width}-${theme}-effective.png`),fullPage:true});
     }finally{await context.close();}
