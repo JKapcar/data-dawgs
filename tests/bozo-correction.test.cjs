@@ -39,7 +39,7 @@ function rig(format='standard') {
       if(etag!==String(revision))return false;state=clone(next);revision++;writes++;if(fail==="after")throw new Error("response lost after commit");return true;},
   };
   vm.createContext(ctx);
-  vm.runInContext(cut('/* ================= manager pre-kickoff correction','/* =============================== /bozo/pick')+'\n'+
+  vm.runInContext(cut('function isOwnerPrincipal(','function isSiteAdmin(')+'\n'+cut('/* ================= manager pre-kickoff correction','/* =============================== /bozo/pick')+'\n'+
     cut('function buildBozoLeg(','async function bozoPick(')+'\n'+cut('const ledgerKey =','async function ledgerWriteEntries(')
       .split('async function ledgerWriteEntries(')[0]+'\nthis.api={bozoCorrectPickCore,bozoCorrectPick,bozoGuardedPatch,BOZO_CORRECTION_SCHEMA};',ctx);
   const at=block.indexOf('    name: "dd_correct_bozo_pick"');

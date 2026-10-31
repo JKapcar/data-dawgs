@@ -51,7 +51,7 @@ test('no request at or after kickoff, for another book, or without an ESPN id',a
 test('entry capture verifies from ESPN with no paid request',async()=>{
  let sgo=0;const r=rig(async u=>{if(!String(u).includes('espn.com'))throw Error('paid request');return Response.json(espn);});
  r.ctx.bozoFetchEvents=async()=>{sgo++;throw Error('SGO 429');};
- const out=await r.entry({ODDS_API_KEY:'dead-key',SGO_KEY:'quota-spent'},{...dal,typedPrice:-500});
+ const out=await r.entry({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'dead-key',SGO_KEY:'quota-spent'},{...dal,typedPrice:-500});
  assert.equal(out.ok,true);assert.equal(out.p.priceSource,'captured');assert.equal(out.p.entryProvider,'espn');
  assert.equal(out.p.providerEventIds.espn,'401873024');assert.equal(out.p.clvEligible,true);
  assert.deepEqual([out.p.price,out.p.priceOpp],[-500,380]);assert.equal(sgo,0);assert.equal(r.urls.length,1);
@@ -59,7 +59,7 @@ test('entry capture verifies from ESPN with no paid request',async()=>{
 test('an ESPN miss falls through to one paid provider and keeps both attempts',async()=>{
  let sgo=0;const r=rig(async u=>String(u).includes('espn.com')?Response.json(espn):new Response('',{status:401}));
  r.ctx.bozoFetchEvents=async()=>{sgo++;throw Error('SGO 429');};
- const out=await r.entry({ODDS_API_KEY:'dead-key'},{...dal,mkt:'spread',line:7.5,label:'DAL -7.5',typedPrice:-150});
+ const out=await r.entry({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'dead-key'},{...dal,mkt:'spread',line:7.5,label:'DAL -7.5',typedPrice:-150});
  assert.equal(out.p.priceSource,'self');assert.equal(sgo,0);
  assert.deepEqual(Array.from(out.p.captureAttempts,a=>a.provider),['espn','odds_api']);
 });
@@ -75,7 +75,7 @@ test('the close cron takes ESPN pregame and never calls a paid provider',async()
   bozoGuardedPatch:async(e,lid,state,patch)=>{patches.push(patch);return true;},LG:l=>l,cfbMarketKV:()=>null,
  });
  vm.runInContext(cut('async function runBozoCloseCapture(','/* GET /bozo/clv?')+'this.runClose=runBozoCloseCapture;',r.ctx);
- const out=await r.ctx.runClose({ODDS_API_KEY:'dead-key',SGO_KEY:'quota-spent'},Date.parse(start)-300000);
+ const out=await r.ctx.runClose({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'dead-key',SGO_KEY:'quota-spent'},Date.parse(start)-300000);
  assert.equal(out.captured,1);assert.equal(paid,0);
  assert.equal(patches[0]['results/kap/closeSource'],'espn');assert.equal(patches[0]['results/kap/close'],-500);
  assert.equal(patches[0]['results/kap/closeOpp'],380);
