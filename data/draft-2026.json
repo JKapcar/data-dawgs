@@ -2637,19 +2637,19 @@
     "division": "AFC South",
     "line": 8.0,
     "ew": 7.8,
-    "sd": 1.492,
+    "sd": 1.495,
     "dist": {
-     "2": 0.00095,
-     "3": 0.01127,
-     "4": 0.05259,
-     "5": 0.14065,
-     "6": 0.23543,
-     "7": 0.25682,
-     "8": 0.18723,
-     "9": 0.08599,
-     "10": 0.02472,
-     "11": 0.00407,
-     "12": 0.00028
+     "2": 0.00093,
+     "3": 0.01115,
+     "4": 0.05205,
+     "5": 0.13955,
+     "6": 0.23429,
+     "7": 0.25697,
+     "8": 0.18786,
+     "9": 0.08749,
+     "10": 0.02512,
+     "11": 0.00428,
+     "12": 0.00031
     },
     "p10": 5.0,
     "p50": 7.0,
@@ -2733,7 +2733,7 @@
       "wpf": 0.36001,
       "tier": "model",
       "settled": false,
-      "live": 0.1774
+      "live": 0.1889
      },
      {
       "week": 9,
@@ -2827,28 +2827,28 @@
      }
     ],
     "banked": 2.0,
-    "remaining": 4.724,
-    "projected": 6.724
+    "remaining": 4.736,
+    "projected": 6.736
    },
    "JAX": {
     "name": "Jaguars",
     "division": "AFC South",
     "line": 9.5,
     "ew": 9.03,
-    "sd": 1.529,
+    "sd": 1.532,
     "dist": {
-     "4": 2e-05,
-     "5": 0.00023,
-     "6": 0.00216,
-     "7": 0.01192,
-     "8": 0.04639,
-     "9": 0.11861,
-     "10": 0.21234,
-     "11": 0.25649,
-     "12": 0.20904,
-     "13": 0.106,
-     "14": 0.03263,
-     "15": 0.00417
+     "4": 3e-05,
+     "5": 0.00024,
+     "6": 0.00222,
+     "7": 0.01221,
+     "8": 0.04708,
+     "9": 0.11989,
+     "10": 0.21289,
+     "11": 0.25628,
+     "12": 0.20782,
+     "13": 0.10495,
+     "14": 0.03226,
+     "15": 0.00413
     },
     "p10": 9.0,
     "p50": 11.0,
@@ -2922,7 +2922,7 @@
       "wpf": 0.63999,
       "tier": "model",
       "settled": false,
-      "live": 0.8226
+      "live": 0.8111
      },
      {
       "week": 9,
@@ -3026,8 +3026,8 @@
      }
     ],
     "banked": 4.0,
-    "remaining": 6.89,
-    "projected": 10.89
+    "remaining": 6.878,
+    "projected": 10.878
    },
    "KC": {
     "name": "Chiefs",
@@ -7155,8 +7155,8 @@
      "MIA"
     ],
     "total": 15.0,
-    "projected": 36.106,
-    "remaining": 21.106
+    "projected": 36.094,
+    "remaining": 21.094
    },
    "Chris": {
     "rounds": [
@@ -7189,8 +7189,8 @@
      "CAR"
     ],
     "total": 15.0,
-    "projected": 37.093,
-    "remaining": 22.093
+    "projected": 37.105,
+    "remaining": 22.105
    },
    "Kap": {
     "rounds": [
@@ -7278,7 +7278,7 @@
     "par_delta": 1.63,
     "internal_games": 3,
     "sd_sim": 4.55,
-    "sd_model": 2.841,
+    "sd_model": 2.842,
     "picks_remaining": 0
    },
    "Kevin": {
@@ -7291,12 +7291,12 @@
     ],
     "ew": 33.37,
     "banked": 15.0,
-    "remaining": 21.106,
-    "projected": 36.106,
+    "remaining": 21.094,
+    "projected": 36.094,
     "par_delta": -0.63,
     "internal_games": 4,
     "sd_sim": 4.62,
-    "sd_model": 2.704,
+    "sd_model": 2.706,
     "picks_remaining": 0
    },
    "Chris": {
@@ -7314,7 +7314,7 @@
     "par_delta": -1.86,
     "internal_games": 2,
     "sd_sim": 4.58,
-    "sd_model": 2.859,
+    "sd_model": 2.86,
     "picks_remaining": 0
    },
    "Tyler": {
@@ -7327,8 +7327,8 @@
     ],
     "ew": 35.59,
     "banked": 15.0,
-    "remaining": 22.093,
-    "projected": 37.093,
+    "remaining": 22.105,
+    "projected": 37.105,
     "par_delta": 1.59,
     "internal_games": 1,
     "sd_sim": 4.7,
@@ -7350,7 +7350,7 @@
     "par_delta": 2.78,
     "internal_games": 3,
     "sd_sim": 4.76,
-    "sd_model": 2.849,
+    "sd_model": 2.85,
     "picks_remaining": 0
    },
    "Jared": {
@@ -7812,7 +7812,7 @@
    "trials": 100000,
    "seed": 20260812,
    "method": "game-level Bernoulli over the refitted schedule; one win per game, so every simulated season pays exactly 272",
-   "tie_for_first_rate": 0.03792,
+   "tie_for_first_rate": 0.03784,
    "no_tie_outcome": true,
    "first_place_ties_broken": "at random — the league's real tiebreakers (playoff wins, then point differential) are not in this payload",
    "drafters": {
@@ -7848,8 +7848,8 @@
       "44": 2e-05
      },
      "p_first": 0.0169,
-     "p_second": 0.065,
-     "p_top2": 0.0819
+     "p_second": 0.06492,
+     "p_top2": 0.08182
     },
     "Rob": {
      "mean": 30.055,
@@ -7885,44 +7885,44 @@
       "42": 1e-05
      },
      "p_first": 0.0011,
-     "p_second": 0.00881,
-     "p_top2": 0.00991
+     "p_second": 0.00885,
+     "p_top2": 0.00995
     },
     "Kevin": {
-     "mean": 36.093,
-     "sd": 2.696,
+     "mean": 36.082,
+     "sd": 2.697,
      "p10": 33.0,
      "p50": 36.0,
      "p90": 40.0,
      "dist": {
       "24": 2e-05,
       "25": 2e-05,
-      "26": 7e-05,
-      "27": 0.00064,
-      "28": 0.00149,
-      "29": 0.00474,
-      "30": 0.01116,
-      "31": 0.02537,
-      "32": 0.04764,
-      "33": 0.07569,
-      "34": 0.11015,
-      "35": 0.13603,
-      "36": 0.14553,
-      "37": 0.14033,
-      "38": 0.1154,
-      "39": 0.08382,
-      "40": 0.05247,
-      "41": 0.02776,
-      "42": 0.01373,
+      "26": 8e-05,
+      "27": 0.00063,
+      "28": 0.00153,
+      "29": 0.00479,
+      "30": 0.01128,
+      "31": 0.02564,
+      "32": 0.04794,
+      "33": 0.07612,
+      "34": 0.11027,
+      "35": 0.13657,
+      "36": 0.14524,
+      "37": 0.14019,
+      "38": 0.11487,
+      "39": 0.08363,
+      "40": 0.05223,
+      "41": 0.02744,
+      "42": 0.01359,
       "43": 0.00539,
-      "44": 0.00177,
-      "45": 0.00059,
-      "46": 0.00013,
+      "44": 0.00175,
+      "45": 0.0006,
+      "46": 0.00012,
       "47": 6e-05
      },
-     "p_first": 0.08138,
-     "p_second": 0.22775,
-     "p_top2": 0.30913
+     "p_first": 0.0809,
+     "p_second": 0.2267,
+     "p_top2": 0.3076
     },
     "Chris": {
      "mean": 29.594,
@@ -7959,47 +7959,47 @@
       "42": 1e-05
      },
      "p_first": 0.00091,
-     "p_second": 0.00645,
-     "p_top2": 0.00736
+     "p_second": 0.00646,
+     "p_top2": 0.00737
     },
     "Tyler": {
-     "mean": 37.101,
-     "sd": 3.03,
+     "mean": 37.112,
+     "sd": 3.031,
      "p10": 33.0,
      "p50": 37.0,
      "p90": 41.0,
      "dist": {
-      "23": 1e-05,
-      "25": 3e-05,
-      "26": 0.00016,
-      "27": 0.00059,
-      "28": 0.00146,
-      "29": 0.00367,
-      "30": 0.00881,
-      "31": 0.01745,
-      "32": 0.03203,
-      "33": 0.05255,
-      "34": 0.07841,
-      "35": 0.10301,
-      "36": 0.12197,
-      "37": 0.13091,
-      "38": 0.12607,
-      "39": 0.10806,
-      "40": 0.08313,
-      "41": 0.05937,
-      "42": 0.03623,
-      "43": 0.02035,
-      "44": 0.00966,
-      "45": 0.00391,
-      "46": 0.00143,
-      "47": 0.00051,
-      "48": 0.00017,
+      "24": 1e-05,
+      "25": 2e-05,
+      "26": 0.00017,
+      "27": 0.00058,
+      "28": 0.00144,
+      "29": 0.00364,
+      "30": 0.00878,
+      "31": 0.01736,
+      "32": 0.03167,
+      "33": 0.05245,
+      "34": 0.07818,
+      "35": 0.10278,
+      "36": 0.12156,
+      "37": 0.1309,
+      "38": 0.12622,
+      "39": 0.10838,
+      "40": 0.08315,
+      "41": 0.05973,
+      "42": 0.03656,
+      "43": 0.02047,
+      "44": 0.00984,
+      "45": 0.0039,
+      "46": 0.00148,
+      "47": 0.00049,
+      "48": 0.00019,
       "49": 4e-05,
       "50": 1e-05
      },
-     "p_first": 0.18658,
-     "p_second": 0.28528,
-     "p_top2": 0.47186
+     "p_first": 0.18754,
+     "p_second": 0.28602,
+     "p_top2": 0.47356
     },
     "Kap": {
      "mean": 40.284,
@@ -8033,9 +8033,9 @@
       "50.5": 0.00022,
       "51.5": 4e-05
      },
-     "p_first": 0.62246,
-     "p_second": 0.21031,
-     "p_top2": 0.83277
+     "p_first": 0.62207,
+     "p_second": 0.21071,
+     "p_top2": 0.83278
     },
     "Jared": {
      "mean": 35.689,
@@ -8069,9 +8069,9 @@
       "46.5": 0.00014,
       "47.5": 3e-05
      },
-     "p_first": 0.08972,
-     "p_second": 0.18921,
-     "p_top2": 0.27893
+     "p_first": 0.08963,
+     "p_second": 0.18915,
+     "p_top2": 0.27878
     },
     "Alan": {
      "mean": 29.906,
@@ -8372,44 +8372,44 @@
      }
     },
     "IND": {
-     "mean": 6.727,
-     "sd": 1.492,
+     "mean": 6.738,
+     "sd": 1.495,
      "p10": 5.0,
      "p50": 7.0,
      "p90": 9.0,
      "dist": {
-      "2": 0.00095,
-      "3": 0.01127,
-      "4": 0.05259,
-      "5": 0.14065,
-      "6": 0.23543,
-      "7": 0.25682,
-      "8": 0.18723,
-      "9": 0.08599,
-      "10": 0.02472,
-      "11": 0.00407,
-      "12": 0.00028
+      "2": 0.00093,
+      "3": 0.01115,
+      "4": 0.05205,
+      "5": 0.13955,
+      "6": 0.23429,
+      "7": 0.25697,
+      "8": 0.18786,
+      "9": 0.08749,
+      "10": 0.02512,
+      "11": 0.00428,
+      "12": 0.00031
      }
     },
     "JAX": {
-     "mean": 10.887,
-     "sd": 1.529,
+     "mean": 10.876,
+     "sd": 1.532,
      "p10": 9.0,
      "p50": 11.0,
      "p90": 13.0,
      "dist": {
-      "4": 2e-05,
-      "5": 0.00023,
-      "6": 0.00216,
-      "7": 0.01192,
-      "8": 0.04639,
-      "9": 0.11861,
-      "10": 0.21234,
-      "11": 0.25649,
-      "12": 0.20904,
-      "13": 0.106,
-      "14": 0.03263,
-      "15": 0.00417
+      "4": 3e-05,
+      "5": 0.00024,
+      "6": 0.00222,
+      "7": 0.01221,
+      "8": 0.04708,
+      "9": 0.11989,
+      "10": 0.21289,
+      "11": 0.25628,
+      "12": 0.20782,
+      "13": 0.10495,
+      "14": 0.03226,
+      "15": 0.00413
      }
     },
     "KC": {
@@ -8757,7 +8757,7 @@
    }
   },
   "diagnostics": {
-   "checked_at_as_of": "2026-10-30",
+   "checked_at_as_of": "2026-10-31",
    "hard_failures": [],
    "checks": [
     {
@@ -8852,8 +8852,8 @@
      "id": "sim_vs_ladder",
      "label": "Simulated roster totals land on each roster's projected total",
      "ok": true,
-     "detail": "Across 100,000 simulated seasons the worst roster mean sits 0.013 wins from its projected total. That agreement is the refit and the banked floor working together — simulating the raw preseason schedule instead would have put a roster up to 2.7 wins away from the number printed on its own card, and re-simulating settled games would widen every range for the rest of the season.",
-     "value": 0.013,
+     "detail": "Across 100,000 simulated seasons the worst roster mean sits 0.012 wins from its projected total. That agreement is the refit and the banked floor working together — simulating the raw preseason schedule instead would have put a roster up to 2.7 wins away from the number printed on its own card, and re-simulating settled games would widen every range for the rest of the season.",
+     "value": 0.012,
      "severity": "hard"
     },
     {
@@ -8861,7 +8861,7 @@
      "label": "A tie for first is common, and this payload cannot break one",
      "ok": true,
      "detail": "3.8% of simulated seasons end with two or more rosters level at the top — roughly one in 26. The league breaks that on total playoff wins and then point differential; neither is in this payload, so the simulation breaks it at random and the page reports the rate instead of pretending to a winner. The simulation also has no tie OUTCOME: every game is decided, so no half-wins are produced.",
-     "value": 0.03792,
+     "value": 0.03784,
      "severity": "info"
     },
     {
