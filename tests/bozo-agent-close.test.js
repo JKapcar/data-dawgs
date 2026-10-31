@@ -12,9 +12,10 @@ function agentRig(edit=()=>{}){
  edit(live);const writes=[];
  const c={SEASON:2026,Date,URL,JSON,crypto:{randomUUID:()=>crypto.randomUUID()},ledgerKey,LG:x=>'/bozo/leagues/'+x,
   validLeagueId:x=>/^[a-z0-9_-]+$/.test(x),fbGet:async()=>({data:structuredClone(live)}),
-  bozoCorrectionManager:(s,a)=>a.uid===s.managerUid,bozoGuardedPatch:async(_e,_l,_s,ch)=>{writes.push(ch);return true;}};
+  bozoCorrectionManager:(s,a)=>a.uid===s.managerUid,
+  loadLeagues:async()=>({main:structuredClone(live)}),bozoGuardedPatch:async(_e,_l,_s,ch)=>{writes.push(ch);return true;}};
  vm.createContext(c);vm.runInContext(cut('// BEGIN BOZO AGENT CLOSE','// END BOZO AGENT CLOSE'),c);
- return {writes,run:(args,now=kickoff+3600000,auth={uid:'u_kap',name:'Kap'})=>c.bozoAgentCloseCore({},auth,args,now)};
+ return {writes,live,c,run:(args,now=kickoff+3600000,auth={uid:'u_kap',name:'Kap'})=>c.bozoAgentCloseCore({},auth,args,now)};
 }
 // The routine's file entry, as it writes it, plus where it sits on the board.
 const entry=(x={})=>({league:'main',season:2026,week:8,player:'Kap',game:'ARI @ DAL',eventId:'401873024',label:'DAL -10.5',mkt:'spread',side:'DAL',line:10.5,
@@ -35,8 +36,11 @@ test('an agent-read DraftKings close fills the gap as a verified, labelled close
  assert.equal(ev.readAt,iso(kickoff-4*60000));assert.equal(ev.minutesBeforeKickoff,4);assert.equal(ev.observer,'agent_web_search');
  assert.ok(Object.keys(ch).some(k=>k.startsWith('audit/')&&ch[k].type==='agent_close'));
 });
-test('the feed goes first: nothing before kickoff, and a close already there stands',async()=>{
- let r=agentRig();assert.match((await r.run(entry(),kickoff-60000)).body.error,/Kickoff has not passed/);
+test('the feed goes first: a pregame read is only held, and a close already there stands',async()=>{
+ let r=agentRig();const held=await r.run(entry(),kickoff-60000);
+ assert.equal(held.status,200);assert.equal(held.body.staged,true);
+ const w=r.writes[0];assert.equal(w['ledger/2026-w8-u_kap/agentCloseCandidate'].close,-112);
+ assert.ok(!Object.keys(w).some(k=>/\/close(Opp)?$/.test(k)),'nothing is written as the close before kickoff');
  r=agentRig(l=>Object.assign(l.ledger['2026-w8-u_kap'],{close:-115,closeOpp:-105,closeSource:'espn',closeObservedAt:iso(kickoff-3*60000)}));
  assert.match((await r.run(entry())).body.error,/already has a close \(espn\)/);
  r=agentRig(l=>Object.assign(l.results.u_kap,{close:-115,closeOpp:-105,closeSource:'espn'}));
@@ -96,15 +100,15 @@ function captureRig(espnReads){
   fbGet:async (_e,k)=>({data:String(k).endsWith('/main')?{week:8,season:2026,picks:{a:t.pick},results:{},ledger:{}}:{}}),
   bozoSame:(a,b)=>JSON.stringify(a)===JSON.stringify(b),
   bozoCloseMutation:(_t,q,reason)=>q?{'results/a/close':q.price,'results/a/closeOpp':q.opp}:{'results/a/closeUnavailableReason':reason},
-  bozoGuardedPatch:async(_e,_l,_s,p)=>{patches.push(p);return true;},cfbMarketKV:()=>null};
+  bozoGuardedPatch:async(_e,_l,_s,p)=>{patches.push(p);return true;},cfbMarketKV:()=>null,bozoPromoteAgentCloses:async()=>0};
  vm.createContext(c);vm.runInContext(cut('const BOZO_MISSED_CLOSE_GRACE_MS','/* GET /bozo/clv'),c);
  return {c,calls,patches};
 }
 test('a free read that misses early is retried next tick; the paid fallback waits for the last tick',async()=>{
- const r=captureRig([false,false]);
- let out=await r.c.runBozoCloseCapture({},kickoff-7*60000);
+ const r=captureRig([false,false]),paid={BOZO_PAID_ODDS:'true'};
+ let out=await r.c.runBozoCloseCapture(paid,kickoff-7*60000);
  assert.equal(r.calls.once,0,'no paid call and no stored failure seven minutes out');assert.equal(r.patches.length,0);assert.equal(out.captured,0);
- out=await r.c.runBozoCloseCapture({},kickoff-2*60000);
+ out=await r.c.runBozoCloseCapture(paid,kickoff-2*60000);
  assert.equal(r.calls.espn,2);assert.equal(r.calls.once,1,'the last tick reaches the paid fallback once');
  assert.equal(JSON.stringify(out.missed),'[]');
 });
@@ -113,4 +117,58 @@ test('a free read that lands on the last tick never touches the paid receipt',as
  await r.c.runBozoCloseCapture({},kickoff-7*60000);
  const out=await r.c.runBozoCloseCapture({},kickoff-2*60000);
  assert.equal(r.calls.once,0);assert.equal(out.captured,1);assert.equal(r.patches[0]['results/a/close'],-112);
+});
+
+test('with the paid switch off, an ESPN miss never reaches a paid provider or a once-only receipt',async()=>{
+ for(const env of [{},{BOZO_PAID_ODDS:'false'},{BOZO_PAID_ODDS:true},{ODDS_API_KEY:'k',SGO_KEY:'k'}]){
+  const r=captureRig([false,false]);
+  await r.c.runBozoCloseCapture(env,kickoff-7*60000);
+  const out=await r.c.runBozoCloseCapture(env,kickoff-2*60000);
+  assert.equal(r.calls.once,0,JSON.stringify(env));assert.equal(out.captured,0);
+  assert.match(r.patches[0]['results/a/closeUnavailableReason'],/No free DraftKings line on ESPN/);
+ }
+});
+
+// The held read, the five-minute promotion and the paid gates, from the committed Worker.
+function promoteRig(edit=()=>{}){
+ const r=agentRig(edit);
+ return {...r,promote:async now=>{
+  const leagues={main:structuredClone(r.live)};for(const ch of r.writes)for(const [k,v] of Object.entries(ch)){
+   const parts=k.split('/');let n=leagues.main;for(const p of parts.slice(0,-1))n=n[p]||={};n[parts.at(-1)]=v;}
+  const before=r.writes.length;const n=await r.c.bozoPromoteAgentCloses({},leagues,now);return {n,ch:r.writes[before]};}};
+}
+test('a held read becomes the close at kickoff only when the feed got none',async()=>{
+ let r=promoteRig();await r.run(entry(),kickoff-60000);
+ let p=await r.promote(kickoff-30000);assert.equal(p.n,0,'not before kickoff');
+ p=await r.promote(kickoff+60000);assert.equal(p.n,1);
+ const row='ledger/2026-w8-u_kap';
+ assert.equal(p.ch[row+'/close'],-112);assert.equal(p.ch[row+'/closeOpp'],-108);assert.equal(p.ch['results/u_kap/close'],-112);
+ assert.equal(p.ch[row+'/closeSource'],'agent_search');assert.equal(p.ch[row+'/closeEvidence'].readAt,iso(kickoff-4*60000));
+ assert.equal(p.ch[row+'/closeUnavailableReason'],null,'the free-miss reason is cleared');
+ assert.ok(p.ch[row+'/agentCloseCandidate/promotedAt']);
+ // A feed close that landed first stands; the held read is never applied over it.
+ r=promoteRig(l=>Object.assign(l.results.u_kap,{close:-115,closeOpp:-105,closeSource:'espn'}));
+ r.live.ledger['2026-w8-u_kap'].agentCloseCandidate={close:-112,closeOpp:-108,readAt:iso(kickoff-4*60000),requestId:'x'.repeat(16)};
+ p=await r.promote(kickoff+60000);assert.equal(p.n,0);
+ // Simulated leagues are never touched.
+ r=promoteRig(l=>{l.synthetic=true;l.ledger['2026-w8-u_kap'].agentCloseCandidate={close:-112,closeOpp:-108,readAt:iso(kickoff-4*60000)};});
+ p=await r.promote(kickoff+60000);assert.equal(p.n,0);
+});
+test('held reads: same id replays, a later read replaces an earlier one, never the reverse',async()=>{
+ const r=agentRig();
+ assert.equal((await r.run(entry({observedAt:iso(kickoff-30*60000),minutesBeforeKickoff:30,requestId:'early-read-000001'}),kickoff-20*60000)).body.staged,true);
+ const replay=await r.run(entry({observedAt:iso(kickoff-30*60000),minutesBeforeKickoff:30,requestId:'early-read-000001'}),kickoff-20*60000);
+ assert.equal(replay.status,200);
+ const later=agentRig(l=>{l.ledger['2026-w8-u_kap'].agentCloseCandidate={close:-110,closeOpp:-110,readAt:iso(kickoff-30*60000),requestId:'early-read-000001'};});
+ assert.equal((await later.run(entry({requestId:'later-read-000002'}),kickoff-2*60000)).body.staged,true,'a later read replaces');
+ const earlier=agentRig(l=>{l.ledger['2026-w8-u_kap'].agentCloseCandidate={close:-110,closeOpp:-110,readAt:iso(kickoff-2*60000),requestId:'later-read-000002'};});
+ const out=await earlier.run(entry({requestId:'early-read-000003'}),kickoff-60000);
+ assert.equal(out.status,409);assert.match(out.body.error,/later read/);assert.equal(earlier.writes.length,0);
+});
+test('every paid odds client is gated by BOZO_PAID_ODDS, and only the exact string "true" opens it',()=>{
+ for(const fn of ['async function bozoSgoRequest(','async function bozoFetchEvents(','async function cfbFetchMarketEvents(','async function bozoOddsApiRequestRaw('])
+  assert.match(cut(fn,'\n}\n'),/env\.BOZO_PAID_ODDS !== "true"/,fn);
+ assert.match(cut('async function bozoOddsApiCapture(','\n}\n'),/env\.BOZO_PAID_ODDS !== "true"/);
+ assert.match(cut('async function bozoCaptureEntry(','async function bozoCommittedEntry('),/!backup && env\.BOZO_PAID_ODDS !== "true"/);
+ assert.doesNotMatch(fs.readFileSync('wrangler.jsonc','utf8'),/BOZO_PAID_ODDS/,'no manifest change: absent means off');
 });

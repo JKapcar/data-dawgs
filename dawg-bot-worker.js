@@ -659,6 +659,7 @@ async function cfbMarketRecord(event, capturedMs, sourceNotice) {
 }
 
 async function cfbFetchMarketEvents(env, window) {
+  if (env.BOZO_PAID_ODDS !== "true") throw new Error("Paid odds feeds are switched off (BOZO_PAID_ODDS)");
   if (!env.SGO_KEY) throw new Error("Worker misconfigured: SGO_KEY secret not set");
   const events = [];
   let cursor = null, notice = null;
@@ -8956,6 +8957,9 @@ async function bozoSgoFailure(response, env, context, suppliedText) {
 // Shared 60-second KV cache: submits can reuse a cron fetch across datacenters.
 // Preserve fetchedAt; close quote validation still enforces pregame freshness.
 async function bozoSgoRequest(env, url, context, options = {}) {
+  // ⚠️ PAID ODDS FEEDS ARE OFF UNLESS BOZO_PAID_ODDS is "true". The free ESPN DraftKings
+  // line and agent-read closes carry Bozo; a paid call is never made while the switch is off.
+  if (env.BOZO_PAID_ODDS !== "true") throw Object.assign(new Error("Paid odds feeds are switched off"), {code:"paid_feeds_off"});
   const budgetPath='/bozoCaptureBudget/sgo';
   const budget=(await fbGet(env,budgetPath)).data;
   if(budget?.exhausted)throw Object.assign(new Error('Provider exhausted; manual fallback'),{code:'quota_exceeded'});
@@ -9033,6 +9037,7 @@ async function bozoSgoRequest(env, url, context, options = {}) {
 }
 
 async function bozoFetchEvents(env, sport, startMs, needProps, periods = ["game"], options = {}) {
+  if (env.BOZO_PAID_ODDS !== "true") throw Object.assign(new Error("Paid odds feeds are switched off"), {code:"paid_feeds_off"});
   if (!env.SGO_KEY) throw Object.assign(new Error("Odds capture is not configured"), {code:"capture_unconfigured"});
   const leagueID = BOZO_SGO_LEAGUE[sport];
   if (!leagueID) return [];
@@ -9185,6 +9190,9 @@ async function bozoOddsApiRequest(env,path,params,options={}) {
 }
 async function bozoOddsApiRequestRaw(env, path, params, options = {}) {
   const fault = (code,message,diagnostic = {})=>Object.assign(new Error(message),{code, ...diagnostic});
+  // ⚠️ PAID ODDS FEEDS ARE OFF UNLESS BOZO_PAID_ODDS is "true". The free ESPN DraftKings
+  // line and agent-read closes carry Bozo; a paid call is never made while the switch is off.
+  if (env.BOZO_PAID_ODDS !== "true") throw fault("paid_feeds_off","Paid odds feeds are switched off",{failureKind:"disabled"});
   const url = new URL("https://api.the-odds-api.com/v4/" + path);
   for (const [k,v] of Object.entries(params)) url.searchParams.set(k,String(v));
   // Cache keys never contain the credential. Keep provider timestamps on cache hits.
@@ -9230,6 +9238,7 @@ async function bozoOddsApiCapture(env,p,registry,options = {}) {
   const miss = (code, reason) => ({ok:false, code, reason});
   try {
     const markets = bozoOddsApiMarkets(p);
+    if (env.BOZO_PAID_ODDS !== "true") return miss("paid_feeds_off", "Paid odds feeds are switched off");
     if (!env.ODDS_API_KEY) return miss("provider_error", "Odds API is not configured");
     if (!markets) return miss("market_missing", "Market is not supported by Odds API");
     const sport = BOZO_ODDS_API_SPORT[p.sport];
@@ -9442,6 +9451,10 @@ async function bozoCaptureEntry(env, input, options = {}) {
       captureAttempts.push({provider:"espn",code:"provider_error",reason:"ESPN odds capture failed"});
     }
   }
+  // With the paid switch off, a free miss is the end: the leg is self-priced and a manager
+  // verifies it from the slip, exactly as any failed capture.
+  if (!backup && env.BOZO_PAID_ODDS !== "true")
+    return failed("paid_feeds", "paid_feeds_off", "Paid odds feeds are switched off; the free ESPN line was unavailable");
   if (!backup && env.ODDS_API_KEY && bozoOddsApiMarkets(p)) {
     try {
       registry = registry || await bozoTeamRegistry(env,p.sport);
@@ -9610,12 +9623,15 @@ function bozoMissedCloses(leagues, nowMs) {
 
 // One cron interval: a free read that misses earlier than this is retried next tick.
 const BOZO_CLOSE_LAST_TICK_MS = 5 * 60 * 1000;
+const BOZO_FREE_MISS_REASON = "No free DraftKings line on ESPN; an agent read recorded before kickoff is applied at kickoff";
 
 async function runBozoCloseCapture(env, nowMs) {
   // One league read serves both the misses and the targets.
   let leagues = null, missed = null;
   try { leagues = await loadLeagues(env); missed = bozoMissedCloses(leagues, nowMs); }
   catch { /* capture still runs; health just cannot vouch for the misses this tick */ }
+  // Staged agent reads become closes once kickoff passes and no feed close landed.
+  if (leagues) { try { await bozoPromoteAgentCloses(env, leagues, nowMs); } catch (e) { console.log("bozo agent close promotion failed: " + e.message); } }
   const targets = await bozoCloseTargets(env, nowMs, leagues);
   if (!targets.length) return { captured: 0, skipped: 0, checked: 0, missed };
 
@@ -9649,7 +9665,10 @@ async function runBozoCloseCapture(env, nowMs) {
         if (read.ok) free = {ok:true,quote:read.quote};
         else if (t.startMs - nowMs > BOZO_CLOSE_LAST_TICK_MS) continue;
       }
-      const receipt = free || await bozoCaptureOnce(env,bozoCaptureIdentity(t.pick,'close'),async()=>{
+      // Paid switch off: no once-only receipt and no provider call. A staged agent read, if
+      // one was recorded, is applied at kickoff by bozoPromoteAgentCloses.
+      const receipt = free || (env.BOZO_PAID_ODDS !== "true" ? {ok:false,reason:BOZO_FREE_MISS_REASON} :
+        await bozoCaptureOnce(env,bozoCaptureIdentity(t.pick,'close'),async()=>{
         if (nowMs >= t.startMs || t.pick.mkt==='other') return {ok:false,reason:'No supported pregame close'};
         // The keyless read already missed; at most one paid provider from here.
         if(env.ODDS_API_KEY && bozoOddsApiMarkets(t.pick)) {
@@ -9665,7 +9684,7 @@ async function runBozoCloseCapture(env, nowMs) {
         const stamp=Date.parse(q?.snapshotAt);
         return q && !assertQuote(q,t.pick) && Number.isFinite(stamp) && stamp<t.startMs && t.startMs-stamp<=15*60000
           ? {ok:true,quote:q} : {ok:false,reason:'Exact pregame line unavailable; manual evidence required'};
-      });
+      }));
       const existing=(await fbGet(env,LG(t.lid)+'/results/'+t.key)).data||{};
       const conflict=receipt.ok && ((existing.close!=null&&existing.close!==receipt.quote.price)||(existing.closeOpp!=null&&existing.closeOpp!==receipt.quote.opp));
       const quote=receipt.ok&&!conflict?receipt.quote:null, reason=conflict?'Saved partial price conflicts; manual review':receipt.reason||'Close pending';
@@ -10701,9 +10720,6 @@ async function bozoAgentCloseCore(env, auth, args, nowMs = Date.now()) {
   const minutes = Math.round((start - read) / 60000);
   if (args.minutesBeforeKickoff != null && !(Math.abs(Number(args.minutesBeforeKickoff) - minutes) <= 2))
     return fail(`minutesBeforeKickoff disagrees with observedAt and kickoff (${minutes}); check the time zone.`, 409);
-  if (nowMs < start)
-    return fail("Kickoff has not passed. The Worker's own capture gets the last pregame tick first; record this after the game starts.", 409);
-
   const state = live;
   const currentKey = Object.keys(state.picks || {}).find(key =>
     ledgerKey(state.season || SEASON, state.week || 1, key) === rowKey);
@@ -10716,14 +10732,36 @@ async function bozoAgentCloseCore(env, auth, args, nowMs = Date.now()) {
   }
 
   const note = typeof args.note === "string" && args.note.trim() ? args.note.trim().slice(0, 300) : null;
-  const patch = {
-    close: args.close, closeOpp: args.closeOpp, closeBook: "draftkings", closeSource: "agent_search",
-    closeObservedAt: null, closeUnavailableReason: null, closeOppSource: "agent_search", closeOverround: null,
-    closeEnteredBy: auth.name || null, closeEnteredTs: nowMs,
-    // A query string can carry a session; the page itself is the evidence.
-    closeEvidence: { observer: "agent_web_search", url: url.origin + url.pathname, readAt: new Date(read).toISOString(),
-                     minutesBeforeKickoff: minutes, requestId: args.requestId, note },
-  };
+  const cand = { close: args.close, closeOpp: args.closeOpp, url: url.origin + url.pathname,
+    readAt: new Date(read).toISOString(), minutesBeforeKickoff: minutes, requestId: args.requestId, note,
+    by: auth.name || null, at: new Date(nowMs).toISOString() };
+
+  /* ⚠️ BEFORE KICKOFF THE READ IS HELD, NOT APPLIED. The Worker's own ESPN capture still
+     gets every pregame tick first. The read waits on the ledger row as agentCloseCandidate
+     and bozoPromoteAgentCloses applies it once kickoff passes, only if no feed close
+     landed. A later read replaces an earlier one (closer to kickoff is the better close);
+     an earlier read never replaces a later one. */
+  if (nowMs < start) {
+    const held = row.agentCloseCandidate;
+    if (held && held.requestId === args.requestId && held.close === args.close && held.closeOpp === args.closeOpp)
+      return { status: 200, body: { ok: true, unchanged: true, staged: true, row: rowKey } };
+    if (held && Date.parse(held.readAt) > read)
+      return fail(`A later read (${held.readAt}) is already held for this leg; it stands.`, 409);
+    const changes = { [`ledger/${rowKey}/agentCloseCandidate`]: cand };
+    changes[`audit/${nowMs}-${crypto.randomUUID()}`] = {
+      at: new Date(nowMs).toISOString(), by: auth.name || null, type: "agent_close_staged",
+      row: rowKey, week: row.week, from: held || null, to: cand,
+    };
+    try {
+      if (!await bozoGuardedPatch(env, lid, state, changes))
+        return fail("The board changed while the read was being saved. Read it again and retry with the same requestId.", 409);
+    } catch (e) { return fail("Nothing saved: " + e.message, 502); }
+    return { status: 200, body: { ok: true, staged: true, row: rowKey, label: row.label || null, close: args.close,
+      closeOpp: args.closeOpp, minutesBeforeKickoff: minutes, appliesAt: new Date(start).toISOString(),
+      note: "Held until kickoff. It becomes the close only if the Worker's own capture gets none." } };
+  }
+
+  const patch = bozoAgentClosePatch(cand, auth.name || null, nowMs);
   const changes = {};
   for (const [field, value] of Object.entries(patch)) {
     changes[`ledger/${rowKey}/${field}`] = value;
@@ -10739,6 +10777,56 @@ async function bozoAgentCloseCore(env, auth, args, nowMs = Date.now()) {
   } catch (e) { return fail("Nothing saved: " + e.message, 502); }
   return { status: 200, body: { ok: true, row: rowKey, label: row.label || null, close: args.close, closeOpp: args.closeOpp,
     closeSource: "agent_search", minutesBeforeKickoff: minutes } };
+}
+
+/* The fields an agent-read close writes, on the ledger row and the live result alike.
+   closeObservedAt stays null, as with a manager fill, so a manager can still correct a
+   misread; the read time lives in closeEvidence.readAt. */
+function bozoAgentClosePatch(cand, by, nowMs) {
+  return {
+    close: cand.close, closeOpp: cand.closeOpp, closeBook: "draftkings", closeSource: "agent_search",
+    closeObservedAt: null, closeUnavailableReason: null, closeOppSource: "agent_search", closeOverround: null,
+    closeEnteredBy: by || null, closeEnteredTs: nowMs,
+    // A query string can carry a session; the page itself is the evidence.
+    closeEvidence: { observer: "agent_web_search", url: cand.url, readAt: cand.readAt,
+                     minutesBeforeKickoff: cand.minutesBeforeKickoff, requestId: cand.requestId, note: cand.note ?? null },
+  };
+}
+
+/* Runs on the five-minute cron. A held agent read becomes the close once kickoff has
+   passed, and only when no complete close is on the leg: a feed close always stands. */
+async function bozoPromoteAgentCloses(env, leagues, nowMs) {
+  let promoted = 0;
+  for (const [lid, lg] of Object.entries(leagues || {})) {
+    if (!lg || lg.synthetic === true) continue;
+    const season = lg.season || SEASON, week = lg.week || 1;
+    const changes = {};
+    let n = 0;
+    for (const [key, p] of Object.entries(lg.picks || {})) {
+      const rowKey = ledgerKey(season, week, key);
+      const row = (lg.ledger || {})[rowKey], r = (lg.results || {})[key] || {};
+      const cand = row && row.agentCloseCandidate;
+      if (!cand || cand.promotedAt) continue;
+      const start = Date.parse(row.startsAt || (p && p.startsAt) || "");
+      if (!Number.isFinite(start) || nowMs < start || !(Date.parse(cand.readAt) < start)) continue;
+      if ((row.close != null && row.closeOpp != null) || (r.close != null && r.closeOpp != null)) continue;
+      const patch = bozoAgentClosePatch(cand, cand.by, nowMs);
+      for (const [field, value] of Object.entries(patch)) {
+        changes[`ledger/${rowKey}/${field}`] = value;
+        changes[`results/${key}/${field}`] = value;
+      }
+      changes[`ledger/${rowKey}/agentCloseCandidate/promotedAt`] = new Date(nowMs).toISOString();
+      changes[`audit/${nowMs}-${crypto.randomUUID()}`] = {
+        at: new Date(nowMs).toISOString(), by: cand.by || null, type: "agent_close", promoted: true,
+        row: rowKey, week: row.week, from: Object.fromEntries(Object.keys(patch).map(k => [k, row[k] ?? null])), to: patch,
+      };
+      n++;
+    }
+    if (!n) continue;
+    try { if (await bozoGuardedPatch(env, lid, lg, changes)) promoted += n; }
+    catch (e) { console.log("bozo agent close promotion: write failed for " + lid + " — " + e.message); }
+  }
+  return promoted;
 }
 // END BOZO AGENT CLOSE
 
@@ -24283,6 +24371,10 @@ const MCP_TOOLS = [
           closeOpp: (lg.results || {})[k]?.closeOpp ?? null,
           closeBook: (lg.results || {})[k]?.closeBook ?? null,
           closeObservedAt: (lg.results || {})[k]?.closeObservedAt ?? null,
+          // Who observed it (espn, odds_api, sgo, manual, agent_search) and, for an agent
+          // read, when the page was read. closeObservedAt is only the feed's own stamp.
+          closeSource: (lg.results || {})[k]?.closeSource ?? null,
+          closeReadAt: (lg.results || {})[k]?.closeEvidence?.readAt ?? null,
           closeUnavailableReason: (lg.results || {})[k]?.closeUnavailableReason ?? null,
         };
       });
@@ -24304,7 +24396,7 @@ const MCP_TOOLS = [
           // captured close and both sides of both prices, and the entry is still a
           // server-captured DK quote. State CLV for a leg that has one; say it is
           // unmeasured for a leg that does not; never average across the two.
-          "CLV is computable only where closeObservedAt is set AND both priceOpp and closeOpp are present — de-vig proportionally, and report probability points, not cents.",
+          "CLV is computable where both priceOpp and closeOpp are present on a verified entry, whoever observed the close: closeObservedAt is the feed's own stamp, and a manager or agent close (closeSource manual or agent_search, closeReadAt for an agent read) counts too. De-vig proportionally, and report probability points, not cents.",
           "A leg with closeUnavailableReason has NO CLV. Do not substitute the entry price for a missing close: that fabricates a zero and drags any average toward it.",
           "priceSource=captured means both entry sides came from DraftKings through the odds feeds. Failed captures can be submitted with typed odds, marked verificationStatus=unverified. A manager can verify the original entry pair without changing the submission time; priceSource=manual then permits CLV with a real closing pair. Keep unverified prices out of measured CLV. Existing explicit manual CLV overrides remain supported.",
           "Every leg goes on a real DraftKings bet slip, so every market — props included — exists and closes. A missing close means the capture could not resolve the typed description onto the right market, and closeUnavailableReason says which of stat, player or number failed. \"Other\" legs are the exception: free text for an arbitrary market, with nothing to match on. Either way it is a matching gap, never evidence about a player.",
@@ -24526,7 +24618,7 @@ const MCP_TOOLS = [
     catalog: "full",
     readOnlyHint: false,
     destructiveHint: false,
-    description: "Manager-only. Fills a Bozo leg's missing close with a DraftKings price a Claude routine read on a public page before kickoff. The league counts it as a verified close, so CLV includes it, and it is stored as closeSource agent_search with the page, read time and minutes before kickoff for audit. It only fills a gap: nothing is accepted before kickoff (the Worker's own capture goes first), and a close already on the leg stands. The leg is matched by season, week, player, eventId and mkt; the line and side must be the leg's own, since a moved line is a different selection. DraftKings only. Send the same requestId to retry safely.",
+    description: "Manager-only. Fills a Bozo leg's missing close with a DraftKings price a Claude routine read on a public page before kickoff. The league counts it as a verified close, so CLV includes it, and it is stored as closeSource agent_search with the page, read time and minutes before kickoff for audit. It only fills a gap. Sent before kickoff (up to 3 hours out), the read is held and returns staged:true; at kickoff it becomes the close only if the Worker's own free capture got none. Sent after kickoff, it applies at once. A close already on the leg stands, and a later held read replaces an earlier one. The leg is matched by season, week, player, eventId and mkt; the line and side must be the leg's own, since a moved line is a different selection. DraftKings only. Send the same requestId to retry safely.",
     inputSchema: { type: "object", properties: {
       league: { type: "string", description: "League id" },
       season: { type: "integer" }, week: { type: "integer" },
