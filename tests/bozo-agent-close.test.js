@@ -239,3 +239,19 @@ test('an exhausted quota flag blocks for a day, then the restored subscription i
  await r.c.bozoOddsApiRequest(r.env,'sports/x/events',{},{caller:'close'});
  assert.equal(r.fetches,1);
 });
+
+// dd_bozo_clv's own eligibility rule, cut from the committed Worker: an agent close counts
+// once the leg is graded, with closeObservedAt left null so a manager can still correct it.
+test('an agent-read close is CLV-measurable once the leg is graded, with no feed stamp',()=>{
+ const expr=cut('clvMeasurable: r.verificationStatus','\n        }));').replace(/^clvMeasurable:\s*/,'').trim().replace(/,$/,'');
+ const measurable=new Function('r','return '+expr+';');
+ const tulane={verificationStatus:'verified',price:-345,priceOpp:275,close:-345,closeOpp:275,closeSource:'agent_search',
+  closeObservedAt:null,closeEvidence:{readAt:'2026-10-30T22:35:00.000Z'},result:null};
+ assert.equal(measurable(tulane),false,'ungraded: not yet');
+ assert.equal(measurable({...tulane,result:'won'}),true,'graded: measurable without closeObservedAt');
+ assert.equal(measurable({...tulane,result:'lost'}),true);
+ assert.equal(measurable({...tulane,result:'push'}),false,'a push carries no information');
+ assert.equal(measurable({...tulane,result:'won',closeOpp:null}),false,'both sides still required');
+ // And the dd_bozo_week caveat no longer tells readers the feed stamp is required.
+ assert.doesNotMatch(src,/closeObservedAt (is )?required/i);
+});
