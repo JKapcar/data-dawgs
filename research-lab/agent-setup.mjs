@@ -3,7 +3,7 @@ import {agentCheck as check,RESEARCH_AGENT_SCOPES} from './agent-identity.mjs';
 import {RK_AGENT_SEATS,RK_AGENT_SCOPES} from './robokap-core.mjs';
 // Pack Sled seat credentials: the seat and scopes are stored on the grant and enforced by the
 // server. Presets are suggestions the owner picks from; the scopes saved are the ones shown.
-export const SLED_PRESETS={researcher:{seat:'claude',scopes:['sled:work:read','sled:work:claim']},reviewer:{seat:'claude-reviewer',scopes:['sled:work:read','sled:review']},coordinator:{seat:'coordinator',scopes:['sled:work:read','sled:coordinate']}};
+export const SLED_PRESETS={mail:{seat:'dot',scopes:['sled:work:read','sled:mail:ingest']},researcher:{seat:'claude',scopes:['sled:work:read','sled:work:claim']},reviewer:{seat:'claude-reviewer',scopes:['sled:work:read','sled:review']},coordinator:{seat:'coordinator',scopes:['sled:work:read','sled:coordinate']}};
 export const SLED_MAX_DAYS=30,SLED_ACTIVE_LIMIT=12;
 const scopes=['pound:roster:read','pound:task:read','pound:context:read','pound:message:append'];
 const uid=x=>typeof x==='string'&&/^u_[A-Za-z0-9_-]{1,100}$/.test(x);

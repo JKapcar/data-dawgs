@@ -1,13 +1,13 @@
 // Gmail ingestion boundary. The external host reads authorized Gmail metadata; email text is data.
 // Never executes text, sends email, changes inbox labels, invokes a model or creates a schedule.
-import {applyDiscussion} from './sled-discussions.mjs';
+import {applyDiscussion,discussionView} from './sled-discussions.mjs';
 const check=(ok,status,code)=>{if(!ok)throw Object.assign(new Error(code),{status,code});};
 const hash=async x=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(x))),b=>b.toString(16).padStart(2,'0')).join('');
 const email=x=>typeof x==='string'&&/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(x)&&x.length<=254;
 export function mailView(rk,p={kind:'owner_session'}) {
  const owner=p.kind==='owner_session'||p.kind==='owner_key';
- const routes=(rk.mail_routes||[]).filter(r=>owner||r.relay_agent_id===p.agent_id);
- return {marker:'PACKSLEDMSG',routes:structuredClone(routes),receipts:structuredClone((rk.mail_receipts||[]).filter(x=>owner||routes.some(r=>r.id===x.route_id))),transport:'external_gmail_relay',scheduling:'not_configured_by_this_code'};
+ const routes=(rk.mail_routes||[]).filter(r=>owner||(r.enabled&&r.relay_agent_id===p.agent_id));
+ return {marker:'PACKSLEDMSG',routes:structuredClone(routes),posts:[...new Map(routes.flatMap(r=>discussionView(rk,{kind:'email_agent',seat:p.seat,thread_id:r.thread_id}).posts).map(x=>[x.id,x])).values()],receipts:structuredClone((rk.mail_receipts||[]).filter(x=>owner||routes.some(r=>r.id===x.route_id&&r.version===x.route_version))),transport:'external_gmail_relay',scheduling:'not_configured_by_this_code'};
 }
 export async function applyMail({rk,pound,data:d,principal:p,at,ctx}) {
  rk.mail_routes??=[];rk.mail_receipts??=[];
@@ -18,7 +18,7 @@ export async function applyMail({rk,pound,data:d,principal:p,at,ctx}) {
   check(/^[a-z][a-z0-9-]{1,39}$/.test(d.id)&&email(d.sender_address)&&/^[a-z][a-z0-9-]{1,39}$/.test(d.seat)&&typeof d.enabled==='boolean',400,'invalid_mail_route');
   check(/^[A-Za-z0-9:_-]{1,100}$/.test(d.mailbox_ref||'')&&d.recipient==='dot',400,'invalid_mail_destination');
   const task=pound.tasks?.find(t=>t.id===d.thread_id&&!t.archived&&t.project_id===d.project_id);check(task,409,'mail_project_task_required');
-  check(!d.enabled||(ctx.agents||[]).some(g=>g.agent_id===d.relay_agent_id&&g.status==='active'&&g.scopes.includes('sled:coordinate')),409,'active_scoped_relay_required');
+  check(!d.enabled||(ctx.agents||[]).some(g=>g.agent_id===d.relay_agent_id&&g.status==='active'&&(g.scopes.includes('sled:mail:ingest')||g.scopes.includes('sled:coordinate'))),409,'active_scoped_relay_required');
   check(!d.enabled||!rk.mail_routes.some(r=>r.id!==d.id&&r.enabled&&r.mailbox_ref===d.mailbox_ref&&r.sender_address===d.sender_address.toLowerCase()&&r.seat!==d.seat),409,'mail_sender_identity_conflict');
   const old=rk.mail_routes.find(r=>r.id===d.id);check(d.expected_version===(old?.version||0),409,'mail_route_changed');check(old||rk.mail_routes.length<24,409,'mail_route_capacity');
   const {action,expected_version,...route}=d;route.sender_address=route.sender_address.toLowerCase();route.version=(old?.version||0)+1;route.approved_at=at;
@@ -48,8 +48,9 @@ export async function applyMail({rk,pound,data:d,principal:p,at,ctx}) {
    const data=e.action==='vote'?{action:'vote',id:e.post_id,version:e.post_version,value:e.value}:e.action==='reply'?{action:'post',thread_id:e.thread_id,body:e.body,evidence:e.evidence||[],parent_id:e.post_id,parent_version:e.post_version}:{action:'post',thread_id:e.thread_id,body:e.body,evidence:e.evidence||[]};
    // Only these three discussion actions are reachable. Mail cannot claim work, approve a plan,
    // configure routes, read a different project, or grant itself permissions.
-   const result=applyDiscussion({rk,pound,data,principal:{kind:'email_agent',seat:route.seat,thread_id:route.thread_id,sender_route:route.id},at,request_id:'mail_'+source_key});
-   receipt.status='accepted';receipt.source_received_at=d.received_at;receipt.action=e.action;receipt.thread_id=e.thread_id;receipt.post_id=result.post?.id||result.vote?.post_id;receipt.post_version=result.post?.revisions.length||result.vote?.version;
+   receipt.source_received_at=new Date(d.received_at).toISOString();receipt.action=e.action;receipt.thread_id=e.thread_id;if(e.action==='vote'){receipt.post_id=e.post_id;receipt.post_version=e.post_version;receipt.vote_value=e.value;}
+   const result=applyDiscussion({rk,pound,data,imported_vote:e.action==='vote'?{received_ms:Date.parse(d.received_at),source_key}:undefined,principal:{kind:'email_agent',seat:route.seat,thread_id:route.thread_id,sender_route:route.id},at,request_id:'mail_'+source_key});
+   receipt.status=result.stale?'rejected':'accepted';if(result.stale)receipt.reason='stale_vote';receipt.action=e.action;receipt.thread_id=e.thread_id;receipt.post_id=result.post?.id||result.vote?.post_id;receipt.post_version=result.post?.revisions.length||result.vote?.version;
   } catch(e) {receipt.status='rejected';receipt.reason=e.code||'invalid_mail_envelope';}
  }
  rk.mail_receipts.push(receipt);return {receipt,subject:receipt.id,task_id:receipt.thread_id};

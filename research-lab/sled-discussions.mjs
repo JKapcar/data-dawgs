@@ -10,7 +10,7 @@ export function discussionView(rk,principal={kind:'owner_session'}) {
    return {...structuredClone(p),version,score:votes.reduce((n,v)=>n+v.value,0),scoped_seat_votes:votes.filter(v=>v.by.trust==='scoped_seat_verified_model_unverified'&&v.value!==0).length,email_sender_votes:votes.filter(v=>v.by.trust==='allowlisted_email_sender_relay_attested_model_unverified'&&v.value!==0).length,owner_shared_vote:votes.find(v=>v.by.id==='owner_shared')?.value||0,my_vote:votes.find(v=>v.by.id===me)?.value||0};
  }).sort((a,b)=>b.score-a.score||b.at.localeCompare(a.at))};
 }
-export function applyDiscussion({rk,pound,data:d,principal:p,at,request_id}) {
+export function applyDiscussion({rk,pound,data:d,principal:p,at,request_id,imported_vote}) {
  rk.discussion_posts??=[];rk.discussion_votes??=[];
  const by=identity(p),allowed={post:['action','thread_id','body','evidence','parent_id','parent_version'],revise:['action','id','expected_version','body','evidence'],vote:['action','id','version','value']}[d.action];
  check(allowed&&Object.keys(d).every(k=>allowed.includes(k)),400,'invalid_discussion_fields');
@@ -24,7 +24,15 @@ export function applyDiscussion({rk,pound,data:d,principal:p,at,request_id}) {
   check(d.version===post.revisions.length,409,'discussion_version_changed');check([-1,0,1].includes(d.value),400,'invalid_vote');
   let v=rk.discussion_votes.find(x=>x.post_id===post.id&&x.version===d.version&&x.by.id===by.id);
   check(v||rk.discussion_votes.length<256,409,'discussion_vote_capacity');
-  const next={post_id:post.id,version:d.version,value:d.value,by,at};if(v)Object.assign(v,next);else rk.discussion_votes.push(next);
+  // Provider ordering is supplied only by the trusted ingestion boundary, never post data.
+  if(p.kind==='email_agent') {
+   check(imported_vote&&Number.isFinite(imported_vote.received_ms)&&/^[a-f0-9]{64}$/.test(imported_vote.source_key),400,'mail_vote_order_required');
+   const old=v?.imported_vote;
+   const older=old&&(imported_vote.received_ms<old.received_ms||(imported_vote.received_ms===old.received_ms&&imported_vote.source_key<=old.source_key));
+   const directNewer=v&&v.by.trust!=='allowlisted_email_sender_relay_attested_model_unverified'&&Date.parse(v.at)>=imported_vote.received_ms;
+   if(older||directNewer)return {vote:v,noop:true,stale:true,subject:post.id,task_id:post.thread_id};
+  }
+  const next={post_id:post.id,version:d.version,value:d.value,by,at,...((imported_vote||v?.imported_vote)?{imported_vote:structuredClone(imported_vote||v.imported_vote)}:{})};if(v)Object.assign(v,next);else rk.discussion_votes.push(next);
   return {vote:next,subject:post.id,task_id:post.thread_id};
  }
  check(bodyOK(d.body),400,'invalid_discussion_body');

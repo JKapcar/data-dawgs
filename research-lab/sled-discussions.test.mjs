@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {rkEmpty,rkApply,rkSerialize,rkParse} from './robokap-core.mjs';
-import {discussionView} from './sled-discussions.mjs';
+import {applyDiscussion,discussionView} from './sled-discussions.mjs';
 const owner={kind:'owner_session'},a={kind:'delegated_agent',agent_id:'a'.repeat(32),seat:'claude',scopes:['sled:work:read','sled:discuss']},b={...a,agent_id:'b'.repeat(32),seat:'grok'};
 const thread='p_00000001-0000-4000-8000-000000000000',other='p_00000002-0000-4000-8000-000000000000';
 function fixture(){let rk=rkEmpty(),n=0;const pound={tasks:[{id:thread,title:'Synthetic question',project_id:'synthetic-project',archived:false},{id:other,title:'Other private project',project_id:'other',archived:false}]};rk.plans.push({task_id:thread,status:'approved',seat:'claude',reviewer_seat:'grok'});
@@ -33,4 +33,14 @@ test('project/task boundary, author and explicit discussion scope are enforced',
 test('post dedup survives idempotency-ring eviction and rejects changed content',async()=>{
  const f=fixture(),d={action:'post',thread_id:thread,body:'One post'};await f.call(d,a,'durable_post_key_123');f.rk.idem=[];await f.call(d,a,'durable_post_key_123');assert.equal(f.rk.discussion_posts.length,1);
  await assert.rejects(f.call({...d,body:'Different'},a,'durable_post_key_123'),/idempotency_conflict/);
+});
+
+test('intentional direct votes override imported votes and older mail cannot undo them',()=>{
+ const rk=rkEmpty(),pound={tasks:[{id:thread,archived:false}]},email={kind:'email_agent',seat:'claude',thread_id:thread},direct={...a,scopes:['sled:coordinate','sled:discuss']};
+ const post=applyDiscussion({rk,pound,data:{action:'post',thread_id:thread,body:'Question'},principal:owner,at:'2026-10-31T00:00:00Z',request_id:'post_direct_test'}).post;
+ const vote=(value,p,at,imported_vote)=>applyDiscussion({rk,pound,data:{action:'vote',id:post.id,version:1,value},principal:p,at,imported_vote});
+ vote(1,email,'2026-10-31T02:00:00Z',{received_ms:Date.parse('2026-10-31T01:00:00Z'),source_key:'a'.repeat(64)});
+ vote(-1,direct,'2026-10-31T03:00:00Z');assert.equal(rk.discussion_votes[0].value,-1);
+ assert.equal(vote(1,email,'2026-10-31T04:00:00Z',{received_ms:Date.parse('2026-10-31T02:00:00Z'),source_key:'b'.repeat(64)}).stale,true);
+ vote(0,direct,'2026-10-31T05:00:00Z');assert.equal(rk.discussion_votes[0].value,0);
 });

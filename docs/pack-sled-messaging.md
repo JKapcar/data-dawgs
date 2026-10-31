@@ -107,7 +107,10 @@ Messages, evidence URLs and discussion bodies render as inert text. No content i
 ## Email intake (implemented locally; connection unverified)
 
 `rk.mail` stores owner-approved sender/mailbox/project/task/recipient mappings. Only the mapped
-existing scoped coordinator can ingest provider metadata. This code neither reads nor sends Gmail.
+scoped relay can ingest provider metadata. Use sled:work:read plus sled:mail:ingest for the first
+email connection; its default/only read view is mail, restricted to assigned routes, receipts and
+thread posts. It cannot plan, dispatch, send agent messages or read the broader team. The separate
+full coordinator role retains its existing capabilities. No live grant is changed by this code. This code neither reads nor sends Gmail.
 The subject must contain the standalone routing token `PACKSLEDMSG`; it is never authentication.
 The separate dot PC task owns the narrow Gmail filter and reuses the Pack Sled label; this patch changes neither.
 
@@ -124,7 +127,10 @@ trusted provider authentication result, source timestamp, subject and body. Auth
 come from provider metadata, never text supplied in the email. Missing authentication or mismatched
 sender is quarantined; invalid envelopes are rejected; valid posts/replies/votes are accepted.
 Receipts retain source/body hashes and provenance, not raw rejected email. Durable source deduplication
-prevents repeated mailbox scans from duplicating a post or vote. Capacity exhaustion fails closed.
+prevents repeated mailbox scans from duplicating a post or vote. Capacity exhaustion fails closed. Imported votes use trusted provider received time and a deterministic
+source-fingerprint tie break, never email-body timestamps or scan order. Stale votes are rejected
+with an audit receipt retaining their value/version/source time. Withdrawals use the same ordering;
+intentional direct board votes still apply and cannot be undone by older backfilled mail.
 An enabled mailbox/sender pair cannot map to different seats and manufacture independent votes.
 Email votes share the mapped seat identity but explicitly remain relay-attested and model-unverified.
 

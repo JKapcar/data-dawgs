@@ -45,15 +45,16 @@ export const RK_CONNECTOR_OPS = Object.freeze(['rk.plan', 'rk.role.propose', 'rk
 // Scoped seat credentials. The owner sets a credential's seat and scopes when issuing it; the
 // server reads them from the stored grant. Each operation needs one scope, and an operation with
 // no scope here (pins, decisions, playbooks, roles) is never available to a seat credential.
-export const RK_AGENT_SCOPES = Object.freeze(['sled:work:read', 'sled:work:claim', 'sled:review', 'sled:coordinate', 'sled:discuss']);
+export const RK_AGENT_SCOPES = Object.freeze(['sled:work:read', 'sled:work:claim', 'sled:review', 'sled:coordinate', 'sled:discuss', 'sled:mail:ingest']);
 
 export const RK_SCOPE_FOR_OP = Object.freeze({
-  'rk.message': 'sled:coordinate', 'rk.discuss':'sled:discuss', 'rk.mail':'sled:coordinate',
+  'rk.message': 'sled:coordinate', 'rk.discuss':'sled:discuss', 'rk.mail':'sled:mail:ingest',
 
   'rk.claim': 'sled:work:claim', 'rk.heartbeat': 'sled:work:claim', 'rk.release': 'sled:work:claim', 'rk.report': 'sled:work:claim',
   'rk.review': 'sled:review',
   'rk.intake': 'sled:coordinate', 'rk.dispatch': 'sled:coordinate', 'rk.notice': 'sled:coordinate', 'rk.plan': 'sled:coordinate', 'rk.propose': 'sled:coordinate',
 });
+export const rkScopeAllows=(scopes,op)=>scopes.includes(RK_SCOPE_FOR_OP[op])||(op==='rk.mail'&&scopes.includes('sled:coordinate'));
 export const RK_AGENT_OPS = Object.freeze(Object.keys(RK_SCOPE_FOR_OP));
 // A credential within this many days of expiry is flagged to the owner and to the agent itself.
 export const RK_CREDENTIAL_WARN_DAYS = 7;
@@ -1668,7 +1669,7 @@ export async function rkApply(rkIn, pound, input, principal, now, ctx = {}) {
   check(enc.encode(JSON.stringify(input)).length <= RK_LIMITS.request_bytes, 413, 'request_too_large');
   if (principal.kind === 'owner_key') check(RK_CONNECTOR_OPS.includes(input.op), 403, 'owner_session_required');
   // A seat credential may run an operation only when its stored scopes include the one it needs.
-  if (principal.kind === 'delegated_agent') check(RK_SCOPE_FOR_OP[input.op] && principal.scopes.includes(RK_SCOPE_FOR_OP[input.op]), 403, 'scope_denied', { op: input.op, needs: RK_SCOPE_FOR_OP[input.op] ?? 'owner_session' });
+  if (principal.kind === 'delegated_agent') check(RK_SCOPE_FOR_OP[input.op] && rkScopeAllows(principal.scopes,input.op), 403, 'scope_denied', { op: input.op, needs: RK_SCOPE_FOR_OP[input.op] ?? 'owner_session' });
   const who = principalLabel(principal);
   const fingerprint = await sha256Hex(canonical({ op: input.op, data: input.data }));
   const prior = rkIn.idem.find(x => x.p === who && x.k === input.request_id);
