@@ -2752,6 +2752,10 @@ const MCP_TOOLS = [
           closeOpp: (lg.results || {})[k]?.closeOpp ?? null,
           closeBook: (lg.results || {})[k]?.closeBook ?? null,
           closeObservedAt: (lg.results || {})[k]?.closeObservedAt ?? null,
+          // Who observed it (espn, odds_api, sgo, manual, agent_search) and, for an agent
+          // read, when the page was read. closeObservedAt is only the feed's own stamp.
+          closeSource: (lg.results || {})[k]?.closeSource ?? null,
+          closeReadAt: (lg.results || {})[k]?.closeEvidence?.readAt ?? null,
           closeUnavailableReason: (lg.results || {})[k]?.closeUnavailableReason ?? null,
         };
       });
@@ -2773,7 +2777,7 @@ const MCP_TOOLS = [
           // captured close and both sides of both prices, and the entry is still a
           // server-captured DK quote. State CLV for a leg that has one; say it is
           // unmeasured for a leg that does not; never average across the two.
-          "CLV is computable only where closeObservedAt is set AND both priceOpp and closeOpp are present — de-vig proportionally, and report probability points, not cents.",
+          "CLV is computable where both priceOpp and closeOpp are present on a verified entry, whoever observed the close: closeObservedAt is the feed's own stamp, and a manager or agent close (closeSource manual or agent_search, closeReadAt for an agent read) counts too. De-vig proportionally, and report probability points, not cents.",
           "A leg with closeUnavailableReason has NO CLV. Do not substitute the entry price for a missing close: that fabricates a zero and drags any average toward it.",
           "priceSource=captured means both entry sides came from DraftKings through the odds feeds. Failed captures can be submitted with typed odds, marked verificationStatus=unverified. A manager can verify the original entry pair without changing the submission time; priceSource=manual then permits CLV with a real closing pair. Keep unverified prices out of measured CLV. Existing explicit manual CLV overrides remain supported.",
           "Every leg goes on a real DraftKings bet slip, so every market — props included — exists and closes. A missing close means the capture could not resolve the typed description onto the right market, and closeUnavailableReason says which of stat, player or number failed. \"Other\" legs are the exception: free text for an arbitrary market, with nothing to match on. Either way it is a matching gap, never evidence about a player.",
@@ -2995,7 +2999,7 @@ const MCP_TOOLS = [
     catalog: "full",
     readOnlyHint: false,
     destructiveHint: false,
-    description: "Manager-only. Fills a Bozo leg's missing close with a DraftKings price a Claude routine read on a public page before kickoff. The league counts it as a verified close, so CLV includes it, and it is stored as closeSource agent_search with the page, read time and minutes before kickoff for audit. It only fills a gap: nothing is accepted before kickoff (the Worker's own capture goes first), and a close already on the leg stands. The leg is matched by season, week, player, eventId and mkt; the line and side must be the leg's own, since a moved line is a different selection. DraftKings only. Send the same requestId to retry safely.",
+    description: "Manager-only. Fills a Bozo leg's missing close with a DraftKings price a Claude routine read on a public page before kickoff. The league counts it as a verified close, so CLV includes it, and it is stored as closeSource agent_search with the page, read time and minutes before kickoff for audit. It only fills a gap. Sent before kickoff (up to 3 hours out), the read is held and returns staged:true; at kickoff it becomes the close only if the Worker's own free capture got none. Sent after kickoff, it applies at once. A close already on the leg stands, and a later held read replaces an earlier one. The leg is matched by season, week, player, eventId and mkt; the line and side must be the leg's own, since a moved line is a different selection. DraftKings only. Send the same requestId to retry safely.",
     inputSchema: { type: "object", properties: {
       league: { type: "string", description: "League id" },
       season: { type: "integer" }, week: { type: "integer" },
@@ -5279,7 +5283,7 @@ const MCP_TOOLS = [
     title: "Live scores",
     catalog: "core",
     readOnlyHint: true,
-    description: "NFL/CFB schedule and scores (sport + optional YYYYMMDD dates). The schedule is the Worker's nflverse/cfbfastR cache; games the schedule has not finalized are overlaid from ESPN's public scoreboard (scoreSource espn; completed games only, never in-progress scores), refreshed every 5 minutes while a game is due, with the Odds API archive as an optional fallback. An official nflverse/cfbfastR final always wins over ESPN. Each game names its scoreSource and scoreObservedAt; `feeds` reports each feed's freshness and any refresh error (feeds.live is ESPN). Other sports fail until an adapter exists.",
+    description: "NFL/CFB schedule and scores (sport + optional YYYYMMDD dates). The schedule is the Worker's nflverse/cfbfastR cache; games the schedule has not finalized are overlaid from ESPN's public scoreboard (scoreSource espn; completed games only, never in-progress scores), refreshed every 5 minutes while a game is due; no paid score feed is used. An official nflverse/cfbfastR final always wins over ESPN. Each game names its scoreSource and scoreObservedAt; `feeds` reports each feed's freshness and any refresh error (feeds.live is ESPN). Other sports fail until an adapter exists.",
     inputSchema: {
       type: "object",
       properties: {

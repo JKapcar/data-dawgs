@@ -45,7 +45,7 @@ test('entry integration uses paid source without SGO, strips forged receipt, kee
  const fresh=structuredClone(bills.data);fresh.bookmakers[0].markets.forEach(m=>m.last_update=new Date().toISOString());
  const r=rig(async url=>{calls++;return Response.json(String(url).includes('/odds?')?fresh:[fresh]);});
  r.ctx.bozoFetchEvents=async()=>{sgo++;throw Error('SGO 429');};
- const out=await r.bozoCaptureEntry({ODDS_API_KEY:'test-key'},{...bp,typedPrice:-259,providerEventIds:{sgo:'forged'}});
+ const out=await r.bozoCaptureEntry({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'test-key'},{...bp,typedPrice:-259,providerEventIds:{sgo:'forged'}});
  assert.equal(out.ok,true);assert.equal(out.p.priceSource,'captured');assert.equal(out.p.entryProvider,'odds_api');
  assert.equal(out.p.providerEventIds.odds_api,bills.data.id);assert.equal(out.p.providerEventIds.sgo,undefined);
  assert.equal(out.p.entrySnapshotAt,fresh.bookmakers[0].markets[3].last_update);assert.ok(out.p.fairEntry>0);
@@ -54,7 +54,7 @@ test('entry integration uses paid source without SGO, strips forged receipt, kee
 test('paid-provider failure stops spending and returns actionable manual entry',async()=>{
  const r=rig(async()=>new Response('',{status:429}));let sgo=0;
  r.ctx.bozoFetchEvents=async()=>{sgo++;throw Error('SGO 429');};
- const out=await r.bozoCaptureEntry({ODDS_API_KEY:'test-key'},{...bp,typedPrice:-259});
+ const out=await r.bozoCaptureEntry({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'test-key'},{...bp,typedPrice:-259});
  assert.equal(sgo,0);assert.equal(out.p.priceSource,'self');assert.equal(out.p.clvEligible,false);
  assert.ok(!JSON.stringify(r.logs).includes('test-key'));
 });
@@ -62,7 +62,7 @@ test('paid-provider failure stops spending and returns actionable manual entry',
 test('observed ML capture survives real pick builder, ledger, CLV and historical v2 scorer',async()=>{
  const fresh=structuredClone(clemson.data);fresh.bookmakers[0].markets.forEach(m=>m.last_update=new Date().toISOString());
  const r=rig(async url=>Response.json(String(url).includes('/odds?')?fresh:[fresh]));
- const out=await r.bozoCaptureEntry({ODDS_API_KEY:'test-key'},{sport:'cfb',mkt:'ml',side:'CLEM',line:0,
+ const out=await r.bozoCaptureEntry({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'test-key'},{sport:'cfb',mkt:'ml',side:'CLEM',line:0,
   game:'CLEM @ CAL',eventId:'espn-clemson',startsAt:fresh.commence_time,label:'CLEM ML',typedPrice:-112,entryOppSource:'forged'});
  assert.equal(out.ok,true);assert.equal(out.p.entryOppSource,'captured');assert.equal(out.p.price,-112);assert.equal(out.p.priceOpp,-108);
  const pick=buildPick(out.p);assert.equal(pick.entryOppSource,'captured');
@@ -71,14 +71,14 @@ test('observed ML capture survives real pick builder, ledger, CLV and historical
 });
 test('historical retrieval is disabled at and after kickoff with zero requests',async()=>{
  let calls=0;const r=rig(async()=>{calls++;throw Error('No historical requests');});
- for(const offset of [0,1000,86400000]){const start=Date.now()-1000;const out=await r.bozoOddsApiCapture({ODDS_API_KEY:'fixture'},{...lp,startsAt:new Date(start).toISOString()},r.reg('nfl'),{caller:'close',nowMs:start+offset});assert.equal(out.code,'window_closed');}
+ for(const offset of [0,1000,86400000]){const start=Date.now()-1000;const out=await r.bozoOddsApiCapture({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'fixture'},{...lp,startsAt:new Date(start).toISOString()},r.reg('nfl'),{caller:'close',nowMs:start+offset});assert.equal(out.code,'window_closed');}
  assert.equal(calls,0);
 });
 test('cache preserves observation times and excludes credentials; receipt records source at both paths',async()=>{
  let calls=0,stored;const r=rig(async()=>{calls++;return Response.json([bills.data]);});
  r.ctx.caches={default:{match:async req=>{assert.ok(!req.url.includes('test-key'));return stored?.clone();},put:async(req,res)=>{assert.ok(!req.url.includes('apiKey'));stored=res;}}};
- const a=await r.bozoOddsApiRequest({ODDS_API_KEY:'test-key'},'sports/americanfootball_nfl/events',{});
- const b=await r.bozoOddsApiRequest({ODDS_API_KEY:'test-key'},'sports/americanfootball_nfl/events',{});
+ const a=await r.bozoOddsApiRequest({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'test-key'},'sports/americanfootball_nfl/events',{});
+ const b=await r.bozoOddsApiRequest({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'test-key'},'sports/americanfootball_nfl/events',{});
  assert.equal(calls,1);assert.equal(a.fetchedAt,b.fetchedAt);
  r.ctx.ledgerKey=(s,w,k)=>`${s}-w${w}-${k}`;
  const q=r.bozoOddsApiQuote(bills.data,bp,r.reg('nfl'));
@@ -100,22 +100,22 @@ test('closing cron uses the backup, writes both receipts, and never fetches live
   bozoSame:(a,b)=>JSON.stringify(a)===JSON.stringify(b),
   bozoGuardedPatch:async(e,lid,state,patch)=>{patches.push(patch);return true;},LG:l=>l,cfbMarketKV:()=>null,
  });
- vm.runInContext(cut('async function runBozoCloseCapture(','/* GET /bozo/clv?')+'this.runClose=runBozoCloseCapture;',r.ctx);
- const out=await r.ctx.runClose({ODDS_API_KEY:'test-key'},start-1000);
+ vm.runInContext(cut('const BOZO_CLOSE_LAST_TICK_MS','/* GET /bozo/clv?')+'this.runClose=runBozoCloseCapture;',r.ctx);
+ const out=await r.ctx.runClose({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'test-key'},start-1000);
  assert.equal(out.captured,1);assert.equal(sgo,0);assert.equal(capturedCalls[0].caller,'close');
  assert.equal(patches[0]['results/pat/closeSource'],'odds_api');
  r.ctx.bozoOddsApiCapture=async()=>null;patches=[];
- const reused=await r.ctx.runClose({ODDS_API_KEY:'test-key'},start-500);
+ const reused=await r.ctx.runClose({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'test-key'},start-500);
  assert.equal(reused.captured,1);assert.equal(sgo,0);assert.equal(capturedCalls.length,1);
  r.ctx.bozoGuardedPatch=async()=>false;
- const conflict=await r.ctx.runClose({ODDS_API_KEY:'test-key'},start-400);
+ const conflict=await r.ctx.runClose({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'test-key'},start-400);
  assert.equal(conflict.captured,0);assert.equal(conflict.skipped,1);assert.equal(capturedCalls.length,1);
 });
 
 test('first provider failure survives manual fallback without cascading spend',async()=>{
  const r=rig(async()=>Response.json([]));
  r.ctx.bozoFetchEvents=async()=>{throw Object.assign(Error('SGO 429'),{code:'rate_limited'});};
- const out=await r.bozoCaptureEntry({ODDS_API_KEY:'fixture'},{...bp,typedPrice:-259});
+ const out=await r.bozoCaptureEntry({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'fixture'},{...bp,typedPrice:-259});
  assert.equal(out.p.priceSource,'self');
  assert.deepEqual(Array.from(out.p.captureAttempts,a=>a.code),['event_not_matched']);
  assert.match(out.captureWarning,/odds_api: event_not_matched/);
@@ -139,10 +139,10 @@ test('all Odds API miss exits are explicit and typed',async()=>{
   if(mode==='market')data.bookmakers=[];
   if(mode==='stale')data.bookmakers[0].markets.forEach(m=>m.last_update='2020-01-01T00:00:00Z');
   const r=rig(async url=>mode==='rate'?new Response('',{status:429}):mode==='bad'?Response.json({}):Response.json(String(url).includes('/odds?')?data:[fresh]));
-  const out=await r.bozoOddsApiCapture({ODDS_API_KEY:'fixture'},bp,r.reg('nfl'));
+  const out=await r.bozoOddsApiCapture({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'fixture'},bp,r.reg('nfl'));
   assert.equal(out.ok,false);assert.equal(out.code,expected);assert.ok(out.reason);
  }
- const r=rig();assert.equal((await r.bozoOddsApiCapture({ODDS_API_KEY:'fixture'},bp,r.reg('nfl'),{deadline:Date.now()-1})).code,'timeout');
+ const r=rig();assert.equal((await r.bozoOddsApiCapture({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'fixture'},bp,r.reg('nfl'),{deadline:Date.now()-1})).code,'timeout');
 });
 
 test('canonical event and schedule keys use the UTC day for offset-bearing timestamps',()=>{
@@ -155,9 +155,9 @@ test('canonical event and schedule keys use the UTC day for offset-bearing times
 test('request diagnostics preserve HTTP status and quota, never response bodies or credential URLs', async()=>{
  for(const status of [401,403,429,500,503]) {
   const r=rig(async()=>new Response('private provider message apiKey=test-key',{status,headers:{'x-requests-remaining':'0'}}));
-  await assert.rejects(r.bozoOddsApiRequestRaw({ODDS_API_KEY:'test-key'},'sports/americanfootball_ncaaf/events',{}),e=>{
+  await assert.rejects(r.bozoOddsApiRequestRaw({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'test-key'},'sports/americanfootball_ncaaf/events',{}),e=>{
    assert.equal(e.httpStatus,status);assert.equal(e.failureKind,'http_error');
-   assert.equal(e.code,status===429?'rate_limited':'provider_error');
+   assert.equal(e.code,status===429?'rate_limited':status===401?'unauthorized':'provider_error');
    assert.equal(e.quota['x-requests-remaining'],0);
    assert.ok(!String(e).includes('test-key'));assert.ok(!JSON.stringify(e).includes('private provider'));
    return true;
@@ -172,7 +172,7 @@ test('request diagnostics distinguish malformed JSON, network failure and deadli
    return new Response('not json test-key',{headers:{'x-requests-remaining':'432'}});
   });
   r.ctx.caches={default:{match:async()=>null,put:async()=>{puts++;}}};
-  await assert.rejects(r.bozoOddsApiRequestRaw({ODDS_API_KEY:'test-key'},'sports/americanfootball_ncaaf/events',{},
+  await assert.rejects(r.bozoOddsApiRequestRaw({BOZO_PAID_ODDS:'true',ODDS_API_KEY:'test-key'},'sports/americanfootball_ncaaf/events',{},
    mode==='deadline'?{deadline:Date.now()-1}:{}),e=>{
     assert.equal(e.failureKind,mode==='json'?'invalid_response':mode==='network'?'network_error':'timeout');
     assert.equal(e.httpStatus,mode==='json'?200:undefined);
