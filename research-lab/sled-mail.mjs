@@ -4,9 +4,9 @@ import {applyDiscussion,discussionView} from './sled-discussions.mjs';
 const check=(ok,status,code)=>{if(!ok)throw Object.assign(new Error(code),{status,code});};
 const hash=async x=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(x))),b=>b.toString(16).padStart(2,'0')).join('');
 const email=x=>typeof x==='string'&&/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(x)&&x.length<=254;
-export function mailView(rk,p={kind:'owner_session'}) {
+export function mailView(rk,pound,p={kind:'owner_session'}) {
  const owner=p.kind==='owner_session'||p.kind==='owner_key';
- const routes=(rk.mail_routes||[]).filter(r=>owner||(r.enabled&&r.relay_agent_id===p.agent_id));
+ const routes=(rk.mail_routes||[]).filter(r=>owner||(r.enabled&&r.relay_agent_id===p.agent_id&&pound?.tasks?.some(t=>t.id===r.thread_id&&!t.archived&&t.project_id===r.project_id)));
  return {marker:'PACKSLEDMSG',routes:structuredClone(routes),posts:[...new Map(routes.flatMap(r=>discussionView(rk,{kind:'email_agent',seat:p.seat,thread_id:r.thread_id}).posts.filter(post=>post.project_id===r.project_id)).map(x=>[x.id,x])).values()],receipts:structuredClone((rk.mail_receipts||[]).filter(x=>owner||routes.some(r=>r.id===x.route_id&&r.version===x.route_version))),transport:'external_gmail_relay',scheduling:'not_configured_by_this_code'};
 }
 export async function applyMail({rk,pound,data:d,principal:p,at,ctx}) {

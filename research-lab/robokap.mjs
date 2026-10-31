@@ -184,7 +184,7 @@ export function createRoboKap({ fbGet, fbPut, ownerIdentity, now = Date.now }) {
       check(args.session_ref === undefined || (typeof args.session_ref === 'string' && args.session_ref.trim() && args.session_ref.length <= 200), 400, 'invalid_session_ref');
       const views = agentViews(principal.scopes);
       check(args.view === undefined || views.includes(args.view), 403, 'view_denied');
-      if(args.view==='mail'||mailOnly(principal.scopes))return {mail:mailView(loaded.rk,principal),capability:CAPABILITY,holdout:'sealed'};
+      if(args.view==='mail'||mailOnly(principal.scopes))return {mail:mailView(loaded.rk,loaded.pound,principal),capability:CAPABILITY,holdout:'sealed'};
       const lab = await labIndex(env, uid), ctx = { lab, agents: loaded.agents };
       const work = args.view === 'alerts' ? null : await rkWork(loaded.rk, loaded.pound, now(), ctx, { principal, session_ref: args.session_ref });
       const body = args.view === 'alerts' ? { alerts: await rkAlerts(loaded.rk, loaded.pound, now(), ctx) } : args.view === 'team' ? { identity: work.identity, team: work.team } : work;

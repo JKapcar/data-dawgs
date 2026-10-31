@@ -109,7 +109,8 @@ Messages, evidence URLs and discussion bodies render as inert text. No content i
 `rk.mail` stores owner-approved sender/mailbox/project/task/recipient mappings. Only the mapped
 scoped relay can ingest provider metadata. Use sled:work:read plus sled:mail:ingest for the first
 email connection; its default/only read view is mail, restricted to assigned routes, receipts and
-thread posts. It cannot plan, dispatch, send agent messages or read the broader team. The separate
+thread posts. Every read rechecks the task's current active project membership; moved or archived
+tasks hide the entire stale mapping, including route, posts/revisions and receipts. It cannot plan, dispatch, send agent messages or read the broader team. The separate
 full coordinator role retains its existing capabilities. No live grant is changed by this code. This code neither reads nor sends Gmail.
 The subject must contain the standalone routing token `PACKSLEDMSG`; it is never authentication.
 The separate dot PC task owns the narrow Gmail filter and reuses the Pack Sled label; this patch changes neither.

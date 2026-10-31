@@ -609,7 +609,7 @@ export async function rkBoard(rk, pound, now, ctx = {}) {
   const pins = [];
   for (const p of rk.pins) { const cur = currentPin(rk, p.project_id, p.kind); if (cur === p) pins.push({ ...p, by: describePrincipal(p.by), history: rk.pins.filter(x => x.project_id === p.project_id && x.kind === p.kind).length }); }
   return {
-    messaging: messageView(rk), discussion:discussionView(rk), mail:mailView(rk),
+    messaging: messageView(rk), discussion:discussionView(rk), mail:mailView(rk,pound),
 
     as_of: iso(now), rk_revision: rk.rev, lanes, done, closed, unplanned,
     counts: { ...Object.fromEntries(RK_LANES.map(l => [l, lanes[l].length])), done: done.length, closed: closed.length, unplanned: unplanned.length, role_decisions: roleInbox.length },
@@ -797,7 +797,7 @@ export async function rkWork(rk, pound, now, ctx, { key_label, principal: given,
     : { key_label: principal.key_label, key_label_trust: 'server_verified', session_ref_declared: session_ref ?? null, session_ref_trust: 'declared', model_identity: 'unverified' };
   return {
     as_of: iso(now), rk_revision: rk.rev,
-    messaging: messageView(rk, principal), discussion:discussionView(rk,principal), mail:mailView(rk,principal),
+    messaging: messageView(rk, principal), discussion:discussionView(rk,principal), mail:mailView(rk,pound,principal),
 
     identity,
     seats, review_seats: reviewSeats,
