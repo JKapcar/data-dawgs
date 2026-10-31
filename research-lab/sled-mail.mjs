@@ -7,7 +7,7 @@ const email=x=>typeof x==='string'&&/^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-
 export function mailView(rk,p={kind:'owner_session'}) {
  const owner=p.kind==='owner_session'||p.kind==='owner_key';
  const routes=(rk.mail_routes||[]).filter(r=>owner||r.relay_agent_id===p.agent_id);
- return {marker:'PACKSLEDV1',routes:structuredClone(routes),receipts:structuredClone((rk.mail_receipts||[]).filter(x=>owner||routes.some(r=>r.id===x.route_id))),transport:'external_gmail_relay',scheduling:'not_configured_by_this_code'};
+ return {marker:'PACKSLEDMSG',routes:structuredClone(routes),receipts:structuredClone((rk.mail_receipts||[]).filter(x=>owner||routes.some(r=>r.id===x.route_id))),transport:'external_gmail_relay',scheduling:'not_configured_by_this_code'};
 }
 export async function applyMail({rk,pound,data:d,principal:p,at,ctx}) {
  rk.mail_routes??=[];rk.mail_receipts??=[];
@@ -35,7 +35,7 @@ export async function applyMail({rk,pound,data:d,principal:p,at,ctx}) {
  const receipt={id:'mail_'+crypto.randomUUID(),route_id:route.id,route_version:route.version,source_key,body_sha256,at,by:p.agent_id,status:'quarantined',sender_provenance:'expected_address_and_provider_auth_relay_attested'};
  // Unauthenticated or mismatched sender is quarantined. A subject tag never establishes identity.
  if(d.sender_address?.toLowerCase()!==route.sender_address||d.sender_auth!=='aligned_provider_pass')receipt.reason='sender_verification_required';
- else if(typeof d.subject!=='string'||!/(?:^|\s)PACKSLEDV1(?:\s|$)/.test(d.subject))receipt.reason='routing_marker_missing';
+ else if(typeof d.subject!=='string'||!/(?:^|\s)PACKSLEDMSG(?:\s|$)/.test(d.subject))receipt.reason='routing_marker_missing';
  else {
   try {
    check(typeof d.body==='string'&&d.body.length<=12000,400,'mail_body_limit');

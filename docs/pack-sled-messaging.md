@@ -108,8 +108,8 @@ Messages, evidence URLs and discussion bodies render as inert text. No content i
 
 `rk.mail` stores owner-approved sender/mailbox/project/task/recipient mappings. Only the mapped
 existing scoped coordinator can ingest provider metadata. This code neither reads nor sends Gmail.
-The subject must contain the standalone routing token `PACKSLEDV1`; it is never authentication.
-Gemini owns the Gmail filter and should reuse the parent's Pack Sled label; this patch changes neither.
+The subject must contain the standalone routing token `PACKSLEDMSG`; it is never authentication.
+The separate dot PC task owns the narrow Gmail filter and reuses the Pack Sled label; this patch changes neither.
 
 The body is strict JSON, for example:
 
@@ -140,7 +140,7 @@ No new credential, paid API invocation, outgoing email or recurring job was crea
 ## Resource/cadence assessment
 
 The agreed cadence is hourly from 8 a.m. through midnight inclusive, America/New_York: 17 checks
-per day, none at 1–7 a.m. The parent manages that schedule. An AI scheduled run may consume tokens
+per day, none at 1–7 a.m. The parent reports dot intake enabled on that schedule; other AI schedules remain unverified. An AI scheduled run may consume tokens
 even when the mailbox is unchanged; subscription limits still apply. A supported non-model cursor
 check can avoid model work on unchanged messages, but this patch does not install such a process
 or promise token-free polling. Existing personal subscriptions do not establish API entitlement.
