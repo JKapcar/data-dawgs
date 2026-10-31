@@ -14,7 +14,10 @@ const LANES = [
 const ORDER = ['needs_you', 'ready', 'running', 'blocked', 'review', 'done'];
 const LINK_HOSTS = ['github.com', 'claude.ai', 'discord.com', 'www.kaggle.com', 'kaggle.com', 'datadawgs216.com', 'www.datadawgs216.com'];
 const VERIFY = { server_verified: 'server-verified', format_checked: 'format checked', commit_and_hash_recorded: 'commit and hash recorded', owner_attested: 'your attestation', claimed: 'declared', unverified_lab_unavailable: 'Lab unavailable: unchecked' };
-const SEATS = { claude: 'Claude', 'claude-reviewer': 'Claude reviewer', grok: 'Grok', gemini: 'Gemini', muse: 'Muse', dot: 'Scout/dot', owner: 'You' };
+const SEATS = { claude: 'Claude', 'claude-reviewer': 'Claude reviewer', coordinator: 'Coordinator', grok: 'Grok', gemini: 'Gemini', muse: 'Muse', dot: 'Scout/dot', owner: 'You' };
+const SCOPES = { 'sled:work:read': 'read', 'sled:work:claim': 'claim and report', 'sled:review': 'review', 'sled:coordinate': 'coordinate' };
+const BASIS = { owner_decision: 'accepted by you', playbook_after_independent_review: 'accepted by your playbook after an independent review', plan_without_owner_decision: 'accepted under a plan that needed no decision' };
+const WORKER = { idle: 'idle', working: 'working', silent: 'silent: no recent check-in', credential_inactive: 'credential expired or revoked' };
 const VERIFY_EXTRA = { hash_recorded: 'hash recorded' };
 const FIELD = { reviewer_seat: 'Reviewer seat', evidence_required: 'Evidence', seat: 'Seat', session_ref: 'Target session', role: 'Required role', priority: 'Priority', depends_on: 'Depends on', pin: 'Pinned context', acceptance: 'Acceptance', review: 'Review', decision: 'Your decision', lab: 'Lab link', data_scope: 'Data scope', budget: 'Budget', thread: 'Discord thread', note: 'Note' };
 const CAUSE = { plan_changed: 'the plan changed', task_changed: 'the task text changed', dependency_not_accepted: 'a dependency is no longer accepted', dependency_changed: 'a dependency was redone', lab_link_stale: 'the Lab hypothesis moved on', pin_superseded: 'a newer pin exists', pin_not_approved: 'the pin is a draft', pin_behind_context: 'the context has a newer version', pin_missing: 'the pin is missing', pin_context_missing: 'the pinned context is gone', pin_hash_mismatch: 'the pinned context hash changed' };
@@ -186,7 +189,7 @@ function pendingView(card) {
     card.plan ? null : el('p', { class: 'rk-help', text: SEATS[p.seat] + ' · review ' + p.review + ' · your decision ' + p.decision.replace('_', ' ') + ' · data ' + p.data_scope + ' · priority ' + p.priority }));
 }
 function cardView(card) {
-  const owner = card.owner ? SEATS[card.owner.seat] + (card.owner.key_label ? ' · key ' + card.owner.key_label : '') + (card.owner.role ? ' · role ' + card.owner.role.state : '') : 'No plan';
+  const owner = card.owner ? SEATS[card.owner.seat] + (card.owner.holder ? ' · ' + card.owner.holder : card.owner.key_label ? ' · key ' + card.owner.key_label : '') + (card.owner.role ? ' · role ' + card.owner.role.state : '') : 'No plan';
   const chips = el('ul', { class: 'rk-chips' },
     card.plan ? el('li', { class: 'rk-chip', text: 'P' + card.priority }) : null,
     card.project ? el('li', { class: 'rk-chip', text: card.project }) : null,
@@ -232,11 +235,26 @@ function cardView(card) {
         v.checks.length ? el('ul', {}, v.checks.map(c => el('li', { class: 'check-' + c.result, text: (typeof c.criterion === 'number' ? 'Acceptance ' + (c.criterion + 1) + (card.plan?.acceptance?.[c.criterion] ? ' (' + card.plan.acceptance[c.criterion].text + ')' : '') : c.criterion) + ': ' + c.result + (c.note ? ' · ' + c.note : '') }))) : null,
         v.sources_checked.length ? el('p', { class: 'rk-help', text: 'Sources opened: ' + v.sources_checked.map(x => x.result + (x.cited ? '' : ' (not cited)')).join(', ') }) : null)),
       ev.decision ? el('p', { text: 'Your decision: ' + ev.decision.decision }) : null,
+      ev.acceptance_basis ? el('p', { class: 'rk-help', text: 'How it was accepted: ' + (BASIS[ev.acceptance_basis] || ev.acceptance_basis.replace(/_/g, ' ')) + '.' }) : null,
       el('p', { class: 'rk-help', text: 'Receipt hash ' + ev.hash.slice(0, 16) + '…' }));
   }
   return el('li', { class: 'rk-card lane-' + (card.lane === 'unplanned' ? 'blocked' : card.lane), 'data-task': card.task_id }, el('h3', { text: card.title }), chips, exec, next, card.pending_plan ? pendingView(card) : null, unsure, facts, brief, evidence, actionsFor(card));
 }
+function renderAlerts() {
+  const alerts = board.alerts || [];
+  $('rkAlertList').replaceChildren(...alerts.map(a => el('li', { class: 'rk-alert s-' + a.severity }, el('b', { text: a.severity === 'action' ? 'Action · ' : 'Watch · ' }), a.text)));
+  $('rkAlerts').hidden = !alerts.length;
+  const drafts = board.proposals || [];
+  $('rkProposalList').replaceChildren(...drafts.map(d => el('li', {},
+    el('p', {}, el('b', { text: d.type === 'pin' ? 'Brief pin · ' + d.project_id + ' · ' + d.pin_kind.replace(/_/g, ' ') : 'Playbook · ' + d.playbook.playbook_id + ' v' + (d.current_version + 1) }), ' · drafted by ' + d.by + ' ', when(d.at)),
+    d.type === 'pin' ? el('p', { class: 'rk-help' }, refText(d.ref.type === 'pound_context' ? 'Pack Sled context version ' + d.ref.version : d.ref.type === 'claude_doc' ? 'Claude Doc ' + d.ref.id + ' revision ' + d.ref.rev : d.ref.path + ' @ ' + d.ref.commit.slice(0, 7)), d.verification ? el('span', { class: 'rk-badge v-' + d.verification, text: VERIFY[d.verification] || d.verification }) : null, d.current_version ? ' · replaces v' + d.current_version : '')
+      : el('p', { class: 'rk-help', text: 'Research ' + (SEATS[d.playbook.seat] || d.playbook.seat) + ' · review ' + d.playbook.review + (d.playbook.reviewer_seat ? ' by ' + (SEATS[d.playbook.reviewer_seat] || d.playbook.reviewer_seat) : '') + ' · your decision ' + d.playbook.decision.replace('_', ' ') + ' · coordinator ' + (d.playbook.coordinator_seat ? SEATS[d.playbook.coordinator_seat] || d.playbook.coordinator_seat : 'key ' + d.playbook.coordinator_key) + ' · ' + (d.playbook.acceptance || []).length + ' acceptance checks · ' + d.playbook.max_runs_per_day + ' runs a day' }),
+    d.note ? el('p', { class: 'rk-help', text: 'Note: ' + d.note }) : null,
+    el('div', { class: 'rk-actions' }, button('Approve', () => act('rk.decide', { subject: 'proposal', id: d.id, decision: 'approve' }, 'Approve draft')), button('Reject', () => act('rk.decide', { subject: 'proposal', id: d.id, decision: 'reject' }, 'Reject draft'), 'secondary')))));
+  $('rkProposals').hidden = !drafts.length;
+}
 function render() {
+  renderAlerts();
   renderEvidence();
   const counts = board.counts, total = ORDER.reduce((n, k) => n + (counts[k] || 0), 0);
   const bar = $('rkBar');
@@ -272,11 +290,13 @@ function renderTeam() {
   const pb = board.playbooks || [];
   $('rkPlaybookList').replaceChildren(...(pb.length ? pb.map(p => el('li', {},
     el('p', {}, el('b', { text: p.playbook_id }), ' v' + p.version + ' · ' + p.status + ' · ' + titleOf(p.task_id)),
-    el('p', { class: 'rk-help', text: 'Research ' + (SEATS[p.seat] || p.seat) + ' · review ' + p.review + (p.reviewer_seat ? ' by ' + (SEATS[p.reviewer_seat] || p.reviewer_seat) : '') + ' · your decision ' + p.decision.replace('_', ' ') + ' · brief ' + p.criteria.project_id + (p.criteria_pin ? ' v' + p.criteria_pin.version + ' ' + p.criteria_pin.status : ' (no pin)') + ' · coordinator key ' + p.coordinator_key + ' · ' + p.runs_last_day + ' of ' + p.max_runs_per_day + ' runs in the last day · ' + p.queued_intakes.length + ' queued' }),
+    el('p', { class: 'rk-help', text: 'Research ' + (SEATS[p.seat] || p.seat) + ' · review ' + p.review + (p.reviewer_seat ? ' by ' + (SEATS[p.reviewer_seat] || p.reviewer_seat) : '') + ' · your decision ' + p.decision.replace('_', ' ') + ' · brief ' + p.criteria.project_id + (p.criteria_pin ? ' v' + p.criteria_pin.version + ' ' + p.criteria_pin.status : ' (no pin)') + ' · coordinator ' + (p.coordinator_seat ? SEATS[p.coordinator_seat] || p.coordinator_seat : 'key ' + p.coordinator_key) + ' · ' + p.runs_last_day + ' of ' + p.max_runs_per_day + ' runs in the last day · ' + p.queued_intakes.length + ' queued' }),
     el('div', { class: 'rk-actions' }, button(p.status === 'active' ? 'Pause playbook' : 'Resume playbook', () => act('rk.playbook', playbookData(p, { status: p.status === 'active' ? 'paused' : 'active' }), p.status === 'active' ? 'Pause playbook' : 'Resume playbook'), 'secondary'))))
     : [el('li', { class: 'rk-empty', text: 'No playbooks yet. Without one, every plan from a key waits for your approval.' })]));
   const workers = board.workers || [];
-  $('rkWorkerList').replaceChildren(...(workers.length ? workers.map(w => el('li', {}, 'Key ' + w.key_label + ' · session ' + (w.session_ref_declared || 'none') + (w.executor_declared ? ' · ' + w.executor_declared : '') + (w.model_declared ? ' · ' + w.model_declared : '') + ' · last ' + w.last_op.replace('rk.', '') + ' ', when(w.last_seen))) : [el('li', { class: 'rk-empty', text: 'No worker has acted yet.' })]));
+  const creds = board.credentials || [];
+  $('rkCredentialList').replaceChildren(...(creds.length ? creds.map(c => el('li', { class: c.status !== 'active' || c.expiring ? 'rk-warn' : '' }, el('b', { text: (c.label || SEATS[c.seat] || c.seat) }), ' · seat ' + (SEATS[c.seat] || c.seat) + ' · may ' + c.scopes.map(x => SCOPES[x] || x).join(', ') + ' · ' + (c.status === 'active' ? c.days_left + ' day' + (c.days_left === 1 ? '' : 's') + ' left' : c.status) + (c.used_by.length ? ' · used by ' + c.used_by.join(', ') : ''))) : [el('li', { class: 'rk-empty', text: 'No seat credentials. Workers using connector keys carry owner authority; issue scoped credentials on the connections page.' })]));
+  $('rkWorkerList').replaceChildren(...(workers.length ? workers.map(w => el('li', {}, (w.agent_id ? (w.label || 'Credential') + ' (' + (SEATS[w.seat] || w.seat) + ' seat)' : 'Key ' + w.key_label) + ' · ' + (WORKER[w.status] || w.status || 'seen') + ' · session ' + (w.session_ref_declared || 'none') + (w.executor_declared ? ' · ' + w.executor_declared : '') + (w.model_declared ? ' · ' + w.model_declared : '') + ' · last ' + w.last_op.replace('rk.', '') + ' ', when(w.last_seen))) : [el('li', { class: 'rk-empty', text: 'No worker has acted yet.' })]));
   const intakes = board.intakes || [];
   $('rkIntakeList').replaceChildren(...(intakes.length ? intakes.map(x => el('li', {}, x.playbook_id + ' · message ' + x.message + '… · ' + x.state + (x.plan_version ? ' as plan v' + x.plan_version : '') + ' · received ', when(x.received_at), x.ask_declared ? el('p', { class: 'rk-help', text: 'Declared ask: ' + x.ask_declared }) : null)) : [el('li', { class: 'rk-empty', text: 'No intake recorded.' })]));
   const notices = board.notices || [];
@@ -288,7 +308,7 @@ function renderTeam() {
 }
 // A playbook change resends the whole current version with your edits, so nothing is dropped.
 function playbookData(p, change) {
-  const keep = ['playbook_id', 'status', 'task_id', 'seat', 'role', 'reviewer_seat', 'review', 'decision', 'data_scope', 'acceptance', 'budget', 'criteria', 'coordinator_key', 'max_runs_per_day', 'evidence_required', 'note'];
+  const keep = ['playbook_id', 'status', 'task_id', 'seat', 'role', 'reviewer_seat', 'review', 'decision', 'data_scope', 'acceptance', 'budget', 'criteria', 'coordinator_key', 'coordinator_seat', 'max_runs_per_day', 'evidence_required', 'note'];
   const data = Object.fromEntries(keep.filter(k => p[k] !== undefined && p[k] !== null).map(k => [k, p[k]]));
   return { ...data, intake: { source: p.intake.source, ...(p.intake.note ? { note: p.intake.note } : {}) }, expected_version: p.version, ...change };
 }
@@ -396,11 +416,12 @@ $('rkPlaybookForm').addEventListener('submit', async e => {
   e.preventDefault();
   const f = e.target.elements, id = f.playbook_id.value.trim();
   if (!f.task_id.value || !f.criteria.value) { note('Choose a task and a criteria pin. Pin the brief first if none is listed.'); return; }
+  if (!f.coordinator_seat.value && !f.coordinator_key.value.trim()) { note('Choose a coordinator seat or enter a coordinator key.'); return; }
   const prev = (board.playbooks || []).find(p => p.playbook_id === id);
   const acceptance = f.acceptance.value.split('\n').map(x => x.trim()).filter(Boolean).map(text => ({ text }));
   const data = {
     playbook_id: id, expected_version: prev?.version || 0, status: f.status.value, task_id: f.task_id.value, seat: f.seat.value, review: f.review.value, decision: f.decision.value, data_scope: prev?.data_scope || 'none',
-    criteria: JSON.parse(f.criteria.value), coordinator_key: f.coordinator_key.value.trim(), intake: prev ? { source: prev.intake.source, ...(prev.intake.note ? { note: prev.intake.note } : {}) } : { source: 'gmail', note: 'External mail check by a session; not native intake.' },
+    criteria: JSON.parse(f.criteria.value), ...(f.coordinator_seat.value ? { coordinator_seat: f.coordinator_seat.value } : { coordinator_key: f.coordinator_key.value.trim() }), intake: prev ? { source: prev.intake.source, ...(prev.intake.note ? { note: prev.intake.note } : {}) } : { source: 'gmail', note: 'External mail check by a session; not native intake.' },
     max_runs_per_day: Number(f.max_runs_per_day.value), ...(acceptance.length ? { acceptance } : {}), ...(f.reviewer_seat.value ? { reviewer_seat: f.reviewer_seat.value } : {}), ...(prev?.budget ? { budget: prev.budget } : {}),
   };
   if (await act('rk.playbook', data, 'Save playbook')) $('rkPlaybookBox').open = false;

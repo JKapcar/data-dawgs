@@ -82,3 +82,8 @@
 .rk-panel h3{margin:16px 0 4px;font-size:16px}
 @media(min-width:720px){.rk-tabs{grid-template-columns:repeat(6,1fr)}}
 @media(prefers-reduced-motion:reduce){.rk-tab,.rk-actions button{transition:none}.rk-tab[aria-pressed=true],.rk-actions button:active{transform:none}}
+.rk-alerts{border-left:4px solid var(--needs)}
+.rk-alert{margin:6px 0}
+.rk-alert.s-action b{color:var(--needs)}
+.rk-alert.s-warn b{color:var(--review)}
+.rk-exec.x-retry_after_failure b,.rk-exec.x-retry_after_lost_lease b,.rk-exec.x-retry_after_revision b{color:var(--review)}

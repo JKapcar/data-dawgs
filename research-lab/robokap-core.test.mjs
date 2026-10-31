@@ -9,7 +9,7 @@ const owner = { kind: 'owner_session' };
 const claude = { kind: 'owner_key', key_label: 'Claude' };
 const grok = { kind: 'owner_key', key_label: 'Grok' };
 const gemini = { kind: 'owner_key', key_label: 'Gemini' };
-const reviewer = { kind: 'delegated_agent', agent_id: 'a'.repeat(32) };
+const reviewer = { kind: 'delegated_agent', agent_id: 'a'.repeat(32), seat: 'claude-reviewer', scopes: ['sled:work:read', 'sled:review'] };
 const id = n => 'p_' + String(n).padStart(8, '0') + '-0000-4000-8000-000000000000';
 const A = id(1), B = id(2), C = id(3), D = id(4), CTX = id(9);
 const S1 = 'claude-code:session-one', S2 = 'claude-ai:chat-two';
@@ -266,7 +266,8 @@ test('unauthorized principals are refused before any state changes', async () =>
   await r.refused(grok, 'rk.pin', { project_id: 'bdb-test', kind: 'sourcebook', status: 'approved', ref: { type: 'claude_doc', id: 'SyntheticDocId00000000', rev: 1 } }, 403, 'owner_session_required');
   await r.refused(gemini, 'rk.claim', { task_id: A, plan_version: 1, pin_version: 1, session_ref: S1, lease_secret: secret(1) }, 403, 'target_mismatch');
   await r.refused(owner, 'rk.claim', { task_id: A, plan_version: 1, pin_version: 1, session_ref: S1, lease_secret: secret(1) }, 403, 'target_mismatch');
-  await r.refused(reviewer, 'rk.claim', { task_id: A, plan_version: 1, pin_version: 1, session_ref: S1, lease_secret: secret(1) }, 403, 'delegated_agents_not_connected_to_robokap');
+  // A review-only seat credential has no claim scope, whatever task it names.
+  await r.refused(reviewer, 'rk.claim', { task_id: A, plan_version: 1, pin_version: 1, session_ref: S1, lease_secret: secret(1) }, 403, 'scope_denied');
   await r.refused({ kind: 'owner_key', key_label: 'bad label!' }, 'rk.plan', {}, 401, 'verified_principal_required');
   await r.refused({ kind: 'anonymous' }, 'rk.claim', {}, 401, 'verified_principal_required');
   const claim = await claimA(r);
@@ -342,7 +343,7 @@ test('shared-owner reviews never satisfy an independent-review requirement', asy
   }
   assert.equal(await r.lane(A), 'review');
   await r.refused(owner, 'rk.decide', { subject: 'receipt', id: receipt.receipt_id, decision: 'accept' }, 409, 'review_not_satisfied');
-  // A separate agent credential (modelled here; not wired to RoboKap) is what independence takes.
+  // A separate scoped seat credential is what independence takes.
   const independent = await r.apply(reviewer, 'rk.review', { receipt_id: receipt.receipt_id, verdict: 'accept' });
   assert.equal(independent.mode, 'independent');
   await r.apply(owner, 'rk.decide', { subject: 'receipt', id: receipt.receipt_id, decision: 'accept' });
