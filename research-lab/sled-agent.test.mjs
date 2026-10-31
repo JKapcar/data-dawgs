@@ -198,6 +198,10 @@ test('mail-only credential has route-limited reads and ingestion without coordin
  const otherRelay=(await w.issue('grok',['sled:work:read','sled:mail:ingest'],'Other relay')).body.secret;
  assert.equal((await w.tool(otherRelay,'sled_read',{})).out.mail.posts.length,0);
  assert.equal((await w.write(otherRelay,'rk.mail',data)).out.error,'scoped_mail_relay_required');
+ const moved=w.db.get(P),movedPayload=JSON.parse(moved.payload);movedPayload.tasks.find(t=>t.id===TASK).project_id='secret';moved.payload=JSON.stringify(movedPayload);
+ await w.ownerWrite('rk.discuss',{action:'post',thread_id:TASK,body:'Moved project secret'});
+ assert.ok(!JSON.stringify((await w.tool(token,'sled_read',{})).out).includes('Moved project secret'));
+ movedPayload.tasks.find(t=>t.id===TASK).project_id='synthetic';w.db.get(P).payload=JSON.stringify(movedPayload);
  assert.equal((await w.ownerWrite('rk.mail',{...route,expected_version:1,enabled:false})).status,200);
  const disabled=(await w.tool(token,'sled_read',{})).out.mail;assert.equal(disabled.routes.length,0);assert.equal(disabled.posts.length,0);assert.equal(disabled.receipts.length,0);
 });
