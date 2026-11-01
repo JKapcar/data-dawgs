@@ -1,6 +1,6 @@
 {
- "as_of": "2026-10-30",
- "source": "Data Dawgs reimplementation of FiveThirtyEight 538 Classic Elo at commit fbec1afa38ece5befe24fb21be8ddba8eb160fe6; state extended with nflverse/nfldata at 0ddc5935efa132aa818f6e1aa4e10eef479d2056.",
+ "as_of": "2026-11-01",
+ "source": "Data Dawgs reimplementation of FiveThirtyEight 538 Classic Elo at commit fbec1afa38ece5befe24fb21be8ddba8eb160fe6; state extended with nflverse/nfldata at 8296c9ad2eb573410523158d4e7d48fe91d95400.",
  "tier": "labs",
  "graded": false,
  "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority.",
@@ -14,7 +14,7 @@
   "methodology_url": "https://datadawgs216.com/data/538-classic-methodology.md"
  },
  "provenance": {
-  "generated_at": "2026-10-30T03:26:21.029166Z",
+  "generated_at": "2026-11-01T21:03:43.645157Z",
   "official_reference": {
    "repository": "fivethirtyeight/nfl-elo-game",
    "commit": "fbec1afa38ece5befe24fb21be8ddba8eb160fe6",
@@ -24,15 +24,15 @@
   },
   "modern_history": {
    "repository": "nflverse/nfldata",
-   "commit": "0ddc5935efa132aa818f6e1aa4e10eef479d2056",
+   "commit": "8296c9ad2eb573410523158d4e7d48fe91d95400",
    "source_data_license": "not-verified-for-nfldata-repository",
-   "games_sha256": "eaed0d8412dbe204b380681983ed712e9341c864dd1abcfc27fbff36f318435a",
+   "games_sha256": "c6f695b3fff71585844fa02ce4bf03968eb9e73b05017e279ab5c384451eb3c0",
    "games_replayed": 1424,
    "first_game": "2021_01_DAL_TB",
    "last_game": "2025_22_SEA_NE",
    "last_game_date": "2026-02-08"
   },
-  "schedule_snapshot_id": "sha256:208f9f4cc0fff927dc0f48a1825026179d26492968b72cce2c8fada9451b9926",
+  "schedule_snapshot_id": "sha256:6bae80512e732e13874642d2510a167e65e4c4c5a9f28ccfb6cd60d48a84c9a5",
   "input_material": {
    "model": {
     "id": "538-classic",
@@ -50,11 +50,11 @@
    },
    "modern_history": {
     "repository": "nflverse/nfldata",
-    "commit": "0ddc5935efa132aa818f6e1aa4e10eef479d2056",
-    "games_sha256": "eaed0d8412dbe204b380681983ed712e9341c864dd1abcfc27fbff36f318435a",
+    "commit": "8296c9ad2eb573410523158d4e7d48fe91d95400",
+    "games_sha256": "c6f695b3fff71585844fa02ce4bf03968eb9e73b05017e279ab5c384451eb3c0",
     "games_replayed": 1424
    },
-   "schedule_snapshot_id": "sha256:208f9f4cc0fff927dc0f48a1825026179d26492968b72cce2c8fada9451b9926",
+   "schedule_snapshot_id": "sha256:6bae80512e732e13874642d2510a167e65e4c4c5a9f28ccfb6cd60d48a84c9a5",
    "target_season_ratings": [
     {
      "team": "ARI",
@@ -196,9 +196,9 @@
   "note": "This proves the published mathematics were reproduced; it does not establish current predictive skill or betting profitability."
  },
  "integrity": {
-  "input_snapshot_id": "sha256:ec4ce4bc2c3b9dc3edb5e7e8f5fd818f6aa887c6f012af034a5e1719ee58c1d9",
-  "snapshot_id": "sha256:8dffbbdf4580d2468ddb35855af8f092ef83e473e1edab8d2b2892d07d826a95",
-  "forecast_rows": 164,
+  "input_snapshot_id": "sha256:de007b3df8cc440f7b5df3fc4b93f3b2b1ef6356aaefc8b056feedbeae18cc16",
+  "snapshot_id": "sha256:091a61f86e0e307c7cf286774066509b6df24233d0e113d33e870ede5b286e57",
+  "forecast_rows": 156,
   "team_rows": 32
  },
  "data": {
@@ -334,110 +334,6 @@
    }
   ],
   "forecasts": [
-   {
-    "game_id": "2026_08_ARI_DAL",
-    "season": 2026,
-    "week": 8,
-    "kickoff_at": "2026-11-01T18:00:00Z",
-    "home_team": "DAL",
-    "away_team": "ARI",
-    "neutral_site": false,
-    "home_elo": 1461.458616,
-    "away_elo": 1395.348509,
-    "home_field_elo": 65,
-    "home_win_probability": 0.680209
-   },
-   {
-    "game_id": "2026_08_ATL_TB",
-    "season": 2026,
-    "week": 8,
-    "kickoff_at": "2026-11-01T18:00:00Z",
-    "home_team": "TB",
-    "away_team": "ATL",
-    "neutral_site": false,
-    "home_elo": 1482.806614,
-    "away_elo": 1475.322689,
-    "home_field_elo": 65,
-    "home_win_probability": 0.602825
-   },
-   {
-    "game_id": "2026_08_BAL_BUF",
-    "season": 2026,
-    "week": 8,
-    "kickoff_at": "2026-11-01T18:00:00Z",
-    "home_team": "BUF",
-    "away_team": "BAL",
-    "neutral_site": false,
-    "home_elo": 1609.382196,
-    "away_elo": 1546.590992,
-    "home_field_elo": 65,
-    "home_win_probability": 0.676038
-   },
-   {
-    "game_id": "2026_08_CLE_PIT",
-    "season": 2026,
-    "week": 8,
-    "kickoff_at": "2026-11-01T18:00:00Z",
-    "home_team": "PIT",
-    "away_team": "CLE",
-    "neutral_site": false,
-    "home_elo": 1512.111881,
-    "away_elo": 1426.710159,
-    "home_field_elo": 65,
-    "home_win_probability": 0.703867
-   },
-   {
-    "game_id": "2026_08_IND_JAX",
-    "season": 2026,
-    "week": 8,
-    "kickoff_at": "2026-11-01T18:00:00Z",
-    "home_team": "JAX",
-    "away_team": "IND",
-    "neutral_site": false,
-    "home_elo": 1571.381062,
-    "away_elo": 1470.729752,
-    "home_field_elo": 65,
-    "home_win_probability": 0.721832
-   },
-   {
-    "game_id": "2026_08_LV_NYJ",
-    "season": 2026,
-    "week": 8,
-    "kickoff_at": "2026-11-01T18:00:00Z",
-    "home_team": "NYJ",
-    "away_team": "LV",
-    "neutral_site": false,
-    "home_elo": 1364.333443,
-    "away_elo": 1351.134785,
-    "home_field_elo": 65,
-    "home_win_probability": 0.610674
-   },
-   {
-    "game_id": "2026_08_MIN_DET",
-    "season": 2026,
-    "week": 8,
-    "kickoff_at": "2026-11-01T18:00:00Z",
-    "home_team": "DET",
-    "away_team": "MIN",
-    "neutral_site": false,
-    "home_elo": 1558.744279,
-    "away_elo": 1552.217939,
-    "home_field_elo": 65,
-    "home_win_probability": 0.601505
-   },
-   {
-    "game_id": "2026_08_TEN_CIN",
-    "season": 2026,
-    "week": 8,
-    "kickoff_at": "2026-11-01T18:00:00Z",
-    "home_team": "CIN",
-    "away_team": "TEN",
-    "neutral_site": false,
-    "home_elo": 1483.012378,
-    "away_elo": 1359.592264,
-    "home_field_elo": 65,
-    "home_win_probability": 0.74737
-   },
    {
     "game_id": "2026_08_LAC_LAR",
     "season": 2026,
@@ -2469,6 +2365,6 @@
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-10-30",
+ "built": "2026-11-01",
  "canonical_url": "https://datadawgs216.com/data/538-classic.json"
 }
