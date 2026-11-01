@@ -255,3 +255,35 @@ test('an agent-read close is CLV-measurable once the leg is graded, with no feed
  // And the dd_bozo_week caveat no longer tells readers the feed stamp is required.
  assert.doesNotMatch(src,/closeObservedAt (is )?required/i);
 });
+
+// dd_bozo_clv runs against the committed Worker with a stubbed league: a leg the auto-grader
+// already settled on the live board counts before the whole week commits to the ledger.
+function clvRig(league,ledger){
+ const i=src.indexOf('name: "dd_bozo_clv"');assert.ok(i>=0);
+ const a=src.indexOf('async run(args, env) {',i),b=src.indexOf('\n  },\n  {\n    name: "dd_bozo_week"',i);
+ const body=src.slice(a,b).replace(/^async run\(args, env\) \{/,'').replace(/\},?\s*$/,'');
+ const c={SEASON:2026,DEFAULT_LEAGUE:'main',validLeagueId:x=>/^[a-z0-9_-]+$/.test(x),LG:x=>'/bozo/leagues/'+x,
+  loadLeague:async()=>structuredClone(league),fbGet:async()=>({data:structuredClone(ledger)}),
+  toolErr:m=>({err:m}),toolText:o=>o,Date,JSON,decodeURIComponent};
+ vm.createContext(c);
+ return args=>vm.runInContext('(async function(args, env){'+body+'})',c)(args,{});
+}
+test('dd_bozo_clv counts an agent close on a leg graded on the live board, labelled live_board',async()=>{
+ const row=(player,x={})=>({season:2026,week:8,player,price:-345,priceOpp:275,verificationStatus:'verified',
+  close:-345,closeOpp:275,closeSource:'agent_search',closeObservedAt:null,closeEvidence:{readAt:'2026-10-30T22:35:00.000Z'},...x});
+ const ledger={'2026-w8-u_sq':row('Squatch'),'2026-w8-u_jw':row('JWhite'),'2026-w8-u_un':row('Itz',{verificationStatus:'unverified',priceOpp:null}),
+  '2026-w7-u_sq':row('Squatch',{week:7,result:null}),'2026-w6-u_sq':row('Squatch',{week:6,result:'lost'})};
+ const league={season:2026,week:8,results:{u_sq:{result:'won',won:true},u_un:{result:'won'},u_jw:{}}};
+ const out=await clvRig(league,ledger)({league:'main'});
+ const by=Object.fromEntries(out.legs.map(l=>[l.player+l.week,l]));
+ assert.equal(by.Squatch8.result,'won');assert.equal(by.Squatch8.resultFrom,'live_board');assert.equal(by.Squatch8.clvMeasurable,true);
+ assert.equal(by.JWhite8.result,null,'not graded anywhere: still not measurable');assert.equal(by.JWhite8.clvMeasurable,false);
+ assert.equal(by.Itz8.clvMeasurable,false,'an unverified entry stays out even when graded');
+ assert.equal(by.Squatch7.result,null,'an old week never borrows the live board');
+ assert.equal(by.Squatch6.resultFrom,'ledger');assert.equal(by.Squatch6.clvMeasurable,true);
+ assert.equal(out.counts.clvMeasurable,2);
+ // The ledger's committed grade wins over the live board.
+ const out2=await clvRig(league,{...ledger,'2026-w8-u_sq':row('Squatch',{result:'lost'})})({league:'main'});
+ const sq=out2.legs.find(l=>l.player==='Squatch'&&l.week===8);
+ assert.equal(sq.result,'lost');assert.equal(sq.resultFrom,'ledger');
+});

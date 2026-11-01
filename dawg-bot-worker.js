@@ -24321,12 +24321,38 @@ const MCP_TOOLS = [
 
       const want = args.player ? String(args.player) : null;
       const wk = Number.isFinite(Number(args.week)) ? Number(args.week) : null;
-      const rows = Object.values(ledger)
-        .filter(r => r && r.player && (!want || r.player === want) && (wk == null || r.week === wk))
+      /* ⚠️ A LEG GRADED ON THE LIVE BOARD IS GRADED. The ledger only takes results when
+         the WHOLE week commits, and a week with a hand-graded prop or a Sunday-night game
+         waits days for that. Meanwhile the auto-grader has already settled earlier legs
+         on the live board from the scheduled source (cfbfastR, ESPN). Reading only the
+         ledger left a won Friday leg "not measurable" until Monday, which read as a close
+         that didn't count. For the league's current week, a ledger row with no result
+         takes the live board's result, labelled resultFrom "live_board" so it can always
+         be told apart from a committed grade. Prices are never taken from the board here. */
+      const curSeason = lg.season || SEASON, curWeek = lg.week || 1;
+      const live = lg.results && typeof lg.results === "object" ? lg.results : {};
+      const liveResult = (key, r) => {
+        if (r.season != null && r.season !== curSeason) return null;
+        if (r.week !== curWeek) return null;
+        const prefix = `${curSeason}-w${curWeek}-`;
+        if (!key.startsWith(prefix)) return null;
+        const pk = key.slice(prefix.length);
+        const lr = live[pk] || live[decodeURIComponent(pk)] || null;
+        if (!lr || typeof lr !== "object") return null;
+        const res = lr.result || (lr.won === true ? "won" : lr.won === false ? "lost" : null);
+        return ["won", "lost", "push", "void"].includes(res) ? res : null;
+      };
+      const rows = Object.entries(ledger)
+        .filter(([, r]) => r && r.player && (!want || r.player === want) && (wk == null || r.week === wk))
+        .map(([key, r]) => {
+          if (r.result) return { ...r, resultFrom: "ledger" };
+          const res = liveResult(key, r);
+          return res ? { ...r, result: res, resultFrom: "live_board" } : { ...r, resultFrom: null };
+        })
         .sort((a, b) => (a.week - b.week) || String(a.player).localeCompare(String(b.player)))
         .map(r => ({
           week: r.week, player: r.player, sport: r.sport, eventId: r.eventId, startsAt: r.startsAt || null,
-          mkt: r.mkt, label: r.label, result: r.result || null,
+          mkt: r.mkt, label: r.label, result: r.result || null, resultFrom: r.resultFrom || null,
           entryPrice: r.price ?? null, entryPriceOpp: r.priceOpp ?? null,
           priceSource: r.priceSource || null, verificationStatus: r.verificationStatus || null,
           entryVerification: r.entryVerification || null,
@@ -24357,6 +24383,7 @@ const MCP_TOOLS = [
           "Use ONLY legs where clvMeasurable is true. A leg missing either side of either price cannot be de-vigged, and mixing a de-vigged number with a raw implied one is wrong by roughly the whole hold.",
           "Never substitute the entry price for a missing close.",
           "Pushes and voids carry no information about the number and belong in neither the average nor the count.",
+          "resultFrom says where a leg's result came from: \"ledger\" is a committed grade; \"live_board\" is the current week's automatic grade, read before the whole week commits. Both count; a live result can still change if the manager corrects it before the week is graded.",
           "Measured CLV uses captured DraftKings prices at both entry and close. Self-priced legs are not measurable and must stay out of aggregates.",
           "closeSource says who observed each close: the feed (espn, odds_api, sgo), a manager (manual) or a Claude routine reading DraftKings before kickoff (agent_search, with closeEvidence). The league counts all of them; split by closeSource when the difference matters.",
           lg.synthetic === true ? "SIMULATED LEAGUE — every price here is fabricated. Never quote it as evidence of anyone's skill." : null,
