@@ -1,6 +1,6 @@
 {
  "as_of": "2026-11-01",
- "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit ab2c0900d3f616a959c8a44323912054ae66221c.",
+ "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit a79ae40fa77ddfbbd34526bbfe342a16dd153a7c.",
  "tier": "labs",
  "graded": false,
  "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts.",
@@ -10,13 +10,13 @@
   "loader_license": "MIT",
   "source_repository": "nflverse/nfldata",
   "source_url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-  "source_commit": "ab2c0900d3f616a959c8a44323912054ae66221c",
-  "source_committed_at": "2026-11-01T21:27:25Z",
+  "source_commit": "a79ae40fa77ddfbbd34526bbfe342a16dd153a7c",
+  "source_committed_at": "2026-11-01T21:46:25Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-11-01T21:33:13.582420Z"
+  "captured_at": "2026-11-01T21:50:44.123055Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:3249f192446ad731150433906285b33cfdb25b516ef32ac25be790dc3f1a3dcd",
+  "snapshot_id": "sha256:6b6bf7cfde0b2a61772e3d8a19a945f499dd3b3cfb86932d0481a664b10f6a65",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -1873,9 +1873,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 6,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 33,
+    "home_score": 30
    },
    {
     "game_id": "2026_08_ATL_TB",
@@ -1992,9 +1992,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 36,
+    "home_score": 43
    },
    {
     "game_id": "2026_08_LAC_LAR",
