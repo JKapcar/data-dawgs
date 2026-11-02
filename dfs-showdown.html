@@ -816,6 +816,8 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .sd-chart .bl{position:absolute;font:800 9px/1 var(--sd-mono);letter-spacing:.08em;transform:translateY(-50%)}
 .sd-chart .pt{position:absolute;width:44px;height:44px;transform:translate(-50%,-50%);border:0;background:transparent;padding:0;display:flex;align-items:center;justify-content:center}
 .sd-chart .pt span{border-radius:50%;border:2px solid var(--sd-plot);background:var(--sd-dot);color:var(--sd-dotink);font:800 11px/1 var(--sd-mono);display:flex;align-items:center;justify-content:center;box-shadow:0 1px 6px rgba(0,0,0,.4);transition:width .3s,height .3s,opacity .3s}
+.sd-chart .pt.fs-large span{background:var(--fs-large);color:#fff}
+.sd-chart .pt.fs-cash span{background:var(--fs-cash);color:#fff}
 .sd-chart .pt.me span{background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent),0 0 18px color-mix(in srgb,var(--accent) 55%,transparent)}
 .sd-chart .pt.dim span{opacity:.45}
 .sd-chart .ghost{position:absolute;width:20px;height:20px;border-radius:50%;border:2px dashed var(--sd-ghost);transform:translate(-50%,-50%);pointer-events:none}
@@ -824,6 +826,18 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .sd-axes{display:flex;justify-content:space-between;font:500 9.5px/1.2 var(--sd-mono);letter-spacing:.04em;color:var(--ink-3);margin-top:2px}
 .sd-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11px;color:var(--ink-3);margin-top:10px}
 .sd-legend span{display:inline-flex;align-items:center;gap:6px}
+#sdDotKey{flex-wrap:wrap;gap:6px 14px}
+.sd-legend .fs,.sd-panels .fs{width:11px;height:11px;border-radius:50%;display:inline-block;flex:0 0 auto;border:1px solid var(--sd-line2);background:var(--sd-dot)}
+.fs.fs-large{background:var(--fs-large)} .fs.fs-cash{background:var(--fs-cash)}
+/* Contest panels: each lineup is read against its own contest's field. */
+#sdChartCard{--fs-large:#7b5cc4;--fs-cash:#2f8a5b}
+.sd-panels{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 2px}
+/* Phones keep the chart above the fold: one swipeable row, faded at the edge while more chips sit off-screen. */
+@media(max-width:519px){.sd-panels{flex-wrap:nowrap;overflow-x:auto;padding:2px 1px 4px;scrollbar-width:none}.sd-panels::-webkit-scrollbar{display:none}
+.sd-panels.more{-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}}
+.sd-panels button{flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--sd-line2);background:transparent;border-radius:999px;min-height:36px;padding:0 12px;font-weight:700;font-size:13px;color:var(--ink-2);white-space:nowrap}
+.sd-panels button[aria-pressed="true"]{background:var(--ink-1);color:var(--page);border-color:var(--ink-1)}
+.sd-panels button small{font:700 11px/1 var(--sd-mono);opacity:.75}
 /* Chart comprehension: local to Showdown. */
 .sd #sdPointDetail{margin-top:12px;font-size:1rem;line-height:1.6;overflow-wrap:anywhere}
 .sd #sdPointSelect{display:block;max-width:100%;width:100%;font-size:1rem;margin-top:8px}
@@ -846,6 +860,9 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .sd-simple .sd-chart .pt.dim span{opacity:1}
 .sd-simple .sd-chart .pt span{min-width:20px;min-height:20px;border-color:#fff}
 .sd-simple .sd-chart .pt.me span{background:var(--sd-dot);color:var(--sd-dotink);border:2px solid #fff}
+.sd-simple .sd-chart .pt.me.fs-large span{background:var(--fs-large);color:#fff}
+.sd-simple .sd-chart .pt.me.fs-cash span{background:var(--fs-cash);color:#fff}
+.sd-simple .sd-chart .pt.me span{box-shadow:0 0 0 3px var(--ink-1),0 1px 6px rgba(0,0,0,.4)}
 .sd-simple #sdTop,.sd-simple #sdLeft,.sd-simple #sdRight,.sd-simple #sdBar [data-view]{display:none}
 .sd-simple #sdChartCard>.sd-row:first-child{display:none}
 .sd #sdMore{margin-top:12px;border-top:1px solid var(--border);padding-top:10px}
@@ -2710,6 +2727,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
           <span class="sd-eyebrow" id="sdInputs" style="margin:0"></span>
         </div>
         <h2 class="sd-h2" id="sdChartH" style="margin-top:8px">Where do your builds sit?</h2>
+        <div class="sd-panels" id="sdPanels" role="group" aria-label="Contest shown on the chart"></div>
 
         <details id="sdUncertainty"><summary>Model estimates · unverified cash lines</summary>  <div class="p-disclosure"><b>Simulation, not a promise.</b> Every number here is model output from your
   own inputs and none of it has been graded against results yet. Contest types differ by a field-sharpness
@@ -2727,7 +2745,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
           <div class="sd-seg" id="sdYs" role="group" aria-label="Points shown"></div>
         </div>
         <div class="sd-legend">
-          <span><i style="width:11px;height:11px;border-radius:50%;background:var(--sd-dot);border:1px solid var(--sd-line2)"></i>Your lineups</span>
+          <span id="sdDotKey"><i class="fs"></i>Your lineups</span>
           <span><svg width="18" height="6" viewBox="0 0 18 6" aria-hidden="true"><path d="M0 3H18" fill="none" stroke="var(--sd-fr)" stroke-width="1.5" stroke-dasharray="4 3"></path></svg>Dashed: highest points searched</span>
           <span><svg width="18" height="6" viewBox="0 0 18 6" aria-hidden="true"><path d="M0 3H18" fill="none" stroke="var(--sd-mid)" stroke-opacity=".6" stroke-width="1.2"></path></svg>Solid: simulated middle</span>
           <span><i style="width:4px;height:4px;border-radius:50%;background:var(--sd-cloud)"></i>Tiny dots: simulated opponents</span>
@@ -2812,7 +2830,8 @@ const SCRIPT_COL = [['#ffb454', '#1a0d05'], ['#7a6b5e', '#fff8ef'], ['#4f6a88', 
 const state = {
   me: null, workspaces: [], source: null, players: [], lineups: [], portfolio: null, settings: {},
   rows: [], model: null, running: false, stale: false, runId: 0,
-  view: 'portfolio', type: 'se', ax: 'own', y: 'proj', sel: 0, pro: false, sens: 4
+  view: 'portfolio', type: 'se', ax: 'own', y: 'proj', sel: 0, pro: false, sens: 4,
+  allPanel: false, axGroup: null
 };
 
 /* ------------------------------------------------------------------ small helpers */
@@ -3065,6 +3084,7 @@ async function run() {
       const usd = {}; model.entries.forEach(e => { usd[e.type] = (usd[e.type] || 0) + e.fee; });
       state.type = Object.keys(usd).sort((a, b) => usd[b] - usd[a])[0];
     }
+    if (new Set(model.entries.map(e => e.type)).size < 2) state.allPanel = false;
     progress(null); renderDash();
   } catch (e) {
     if (id !== state.runId) return;
@@ -3076,16 +3096,55 @@ async function run() {
 function setView(v) { state.view = v; if (v === 'lineup' && state.model && state.model.entries[state.sel]) state.type = state.model.entries[state.sel].type; store(PREFS, { pro: state.pro, view: state.view }); renderDash(); window.scrollTo({ top: Math.min(window.scrollY, $('sdDash').offsetTop - 8), behavior: 'smooth' }); }
 function openLineup(i) { state.sel = i; state.view = 'lineup'; if (state.model) state.type = state.model.entries[i].type; store(PREFS, { pro: state.pro, view: state.view }); renderDash(); $('sdDash').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 
+/* Contest panels. Every lineup is read against its own contest's simulated field: a panel
+   shows one contest type's lineups over that type's bands. "All contests" shows every
+   lineup coloured by field size and draws no bands, because no single field fits them all.
+   Tournaments open on ceiling against the shared-lineup estimate; cash opens on projected
+   points (the floor) against ownership. A user's own axis choice holds until the panel
+   switches between tournament and cash. */
+const FIELD = { small: 'Small field (under 20K)', large: 'Large field (20K+)', cash: 'Cash / Double Up' };
+function fieldClass(e) { return e.type === 'cash' ? 'cash' : (e.entrants >= 20000 ? 'large' : 'small'); }
+function groupOf(type) { return type === 'cash' ? 'cash' : 'gpp'; }
+function allView() { return state.view === 'portfolio' && state.allPanel; }
+function onChart(e, i) { return state.view === 'lineup' ? (i === state.sel || e.type === state.type) : (state.allPanel || e.type === state.type); }
+function panelGroup(E) { return allView() ? (E.some(e => e.type !== 'cash') ? 'gpp' : 'cash') : groupOf(state.type); }
+function applyAxisDefaults(M) {
+  const g = panelGroup(M.entries);
+  if (state.axGroup !== g) {
+    state.axGroup = g;
+    if (g === 'cash') { state.ax = 'own'; state.y = 'proj'; } else { state.ax = 'dupe'; state.y = M.hasCeil ? 'ceil' : 'proj'; }
+  }
+  if (state.y === 'ceil' && !M.hasCeil) state.y = 'proj';
+}
+function setPanel(id) {
+  if (id === 'all') state.allPanel = true; else { state.allPanel = false; state.type = id; state.typePicked = true; }
+  state.view = 'portfolio'; store(PREFS, { pro: state.pro, view: state.view }); renderDash();
+}
+function renderPanels(E) {
+  const n = {}; E.forEach(e => { n[e.type] = (n[e.type] || 0) + 1; });
+  const present = TYPES.filter(x => n[x.id]);
+  const chips = (present.length > 1 ? [{ id: 'all', label: 'All contests', n: E.length, fs: null }] : [])
+    .concat(present.map(x => ({ id: x.id, label: x.id === 'cash' ? 'Cash' : x.label, n: n[x.id], fs: fieldClass(E.find(e => e.type === x.id)) })));
+  const box = $('sdPanels'); box.hidden = !chips.length;
+  box.innerHTML = chips.map(c => '<button type="button" data-panel="' + c.id + '" aria-pressed="' + (state.view === 'portfolio' && (c.id === 'all' ? state.allPanel : !state.allPanel && c.id === state.type)) + '">' +
+    (c.fs ? '<i class="fs fs-' + c.fs + '" aria-hidden="true"></i>' : '') + esc(c.label) + ' <small>' + c.n + '</small></button>').join('');
+  const edge = () => box.classList.toggle('more', box.scrollLeft + box.clientWidth < box.scrollWidth - 2);
+  // keep the active panel in view on a phone's swipeable row
+  const on = box.querySelector('[aria-pressed="true"]');
+  if (on && box.scrollWidth > box.clientWidth) { const l = on.offsetLeft - box.offsetLeft, r = l + on.offsetWidth; if (l < box.scrollLeft || r > box.scrollLeft + box.clientWidth) box.scrollLeft = Math.max(0, r - box.clientWidth + 24); }
+  edge(); if (!box.dataset.wired) { box.dataset.wired = '1'; box.addEventListener('scroll', edge, { passive: true }); window.addEventListener('resize', edge); }
+}
+
 function renderDash() {
   const active = document.activeElement;
-  const focusAttr = ['data-type', 'data-ax', 'data-y', 'data-sel'].find(a => active && active.hasAttribute(a));
+  const focusAttr = ['data-type', 'data-ax', 'data-y', 'data-sel', 'data-panel'].find(a => active && active.hasAttribute(a));
   const focusValue = focusAttr ? active.getAttribute(focusAttr) : null;
   const M = state.model, dash = $('sdDash');
   if (!M) { dash.hidden = true; return; }
   dash.hidden = false;
   document.querySelector('main.sd').classList.toggle('sd-simple', !state.pro);
-  if (!state.pro && state.ax === 'dupe') state.ax = 'own';
   const P = M.players, E = M.entries;
+  applyAxisDefaults(M);
   const t = typeById(state.type);
   // bar
   $('sdCtx').textContent = 'SHOWDOWN · ' + M.teams.join(' @ ') + (state.source && state.source.kind === 'demo' ? ' · DEMO' : '');
@@ -3098,10 +3157,11 @@ function renderDash() {
   if (state.view === 'lineup' && !E.length) state.view = 'portfolio';
   const sel = E[state.sel];
   $('sdChartH').textContent = state.view === 'portfolio' ? 'Where do your builds sit?' : 'Where does this build sit?';
+  renderPanels(E);
   // contest chips, axes
   $('sdTypes').innerHTML = TYPES.map(x => '<button type="button" class="sd-chip" data-type="' + x.id + '" aria-pressed="' + (x.id === state.type) + '"><b>' + esc(x.label) +
     (state.view === 'lineup' && sel && sel.type === x.id ? '<span class="home">SELECTED TYPE</span>' : '') + '</b><span>' + esc(x.sub) + '</span></button>').join('');
-  $('sdAxes').innerHTML = AXES.filter(a => state.pro || a.id !== 'dupe').map(a => '<button type="button" data-ax="' + a.id + '" aria-pressed="' + (a.id === state.ax) + '">' + a.label + '</button>').join('');
+  $('sdAxes').innerHTML = AXES.map(a => '<button type="button" data-ax="' + a.id + '" aria-pressed="' + (a.id === state.ax) + '">' + a.label + '</button>').join('');
   $('sdYs').innerHTML = YS.map(y => '<button type="button" data-y="' + y.id + '" aria-pressed="' + (y.id === state.y) + '"' + (y.id === 'ceil' && !M.hasCeil ? ' disabled title="Some players have no ceiling"' : '') + '>' + y.label + '</button>').join('');
   $('sdCeilingStatus').hidden = M.hasCeil;
   $('sdCeilingStatus').textContent = 'Ceiling chart unavailable: some inputs are missing. Lineup ceiling totals may include a 1.6× projection fallback.';
@@ -3122,8 +3182,15 @@ function renderDash() {
   $('sdYT').textContent = state.y === 'proj' ? 'Up: more projected fantasy points' : 'Up: more ceiling fantasy points';
   $('sdXT').textContent = 'Right: ' + (state.ax === 'own' ? 'summed ownership' : ax.label);
   $('sdGuide').textContent = xHelp + ' Up means more ' + (state.y === 'proj' ? 'projected' : 'ceiling') + ' points, not actual points scored. Bands compare simulated opponents at a similar horizontal value: low 25%, middle 25–75%, 75–90%, top 10%. They are not overall grades or chances of winning. The separate lineup grade combines several model comparisons.';
-  $('sdCaption').textContent = 'Bands compare modeled points at similar ' + ax.label.toLowerCase() + ' — not win chances.';
-  $('sdPointSelect').innerHTML = '<option value="">Choose a numbered dot</option>' + E.map((e,i) => '<option value="' + i + '">Lineup ' + (i+1) + ': ' + esc(P[e.cpt].name) + ' (captain)</option>').join('');
+  const shownN = E.filter((e, i) => onChart(e, i)).length;
+  $('sdCaption').textContent = allView()
+    ? 'All contests: dots are coloured by field size and no bands are drawn, because each contest has its own field. Pick a contest above to judge its lineups.'
+    : (state.view === 'lineup' ? 'This build against the ' + t.label.toLowerCase() + ' field' : (shownN ? shownN + (shownN === 1 ? ' lineup' : ' lineups') + ' against the ' : 'No lineups in ') + (state.type === 'cash' ? 'cash field' : t.label.toLowerCase() + ' field'))
+      + '. Bands compare modeled points at similar ' + (state.ax === 'dupe' ? 'shared-lineup estimate' : ax.label.toLowerCase()) + ', not win chances.'
+      + (state.type === 'cash' ? ' Cash reads projected points: the floor.' : ' Tournaments read ceiling and how often a lineup is shared.');
+  const keys = Array.from(new Set(E.filter((e, i) => onChart(e, i)).map(fieldClass)));
+  $('sdDotKey').innerHTML = keys.length > 1 || (keys.length && keys[0] !== 'small') ? keys.map(k => '<span><i class="fs fs-' + k + '"></i>' + FIELD[k] + '</span>').join('') : '<i class="fs"></i>Your lineups';
+  $('sdPointSelect').innerHTML = '<option value="">Choose a numbered dot</option>' + E.map((e,i) => '<option value="' + i + '">Lineup ' + (i+1) + ': ' + esc(P[e.cpt].name) + ' (captain) · ' + esc(typeById(e.type).label) + '</option>').join('');
   $('sdPointSelect').value = (!state.pro || state.view === 'lineup') && sel ? String(state.sel) : '';
   const ceilingFallback = sel && sel.ids.some(i => P[i].ceil == null);
   $('sdPointDetail').innerHTML = (!state.pro || state.view === 'lineup') && sel ? '<b>Lineup ' + (state.sel+1) + ' · ' + esc(P[sel.cpt].name) + ' (captain)</b><div class="sd-values"><span><small>Projected points</small><strong>' + f1(sel.feat.proj) + '</strong></span><span><small>Ceiling estimate</small><strong>' + f1(sel.feat.ceil) + '</strong></span><span><small>' + (state.ax === 'sal' ? 'Salary' : state.ax === 'dupe' ? 'Shared-lineup estimate' : 'Summed ownership') + '</small><strong>' + (state.ax === 'sal' ? money(sel.sal) : state.ax === 'dupe' ? '1 in ' + Math.round(Math.pow(10, -sel.feat.dupe)).toLocaleString() : f1(sel.feat.own) + '%') + '</strong></span></div><details class="sd-value-note"><summary>' + (ceilingFallback ? 'Fallback estimate · details' : 'Supplied estimates · details') + '</summary><p class="sd-small">' + (ceilingFallback ? 'Ceiling includes the existing 1.6× projection fallback for missing inputs; not measured upside.' : 'Ceiling uses supplied high-score estimates; not a maximum or measured outcome.') + '</p></details>' : (E.length ? 'Choose a dot or lineup to keep its values here.' : 'No lineups selected. Open Session, then Entries, to choose lineups.');
@@ -3334,7 +3401,10 @@ const chart = {
       med: mk('path', { class: 'anim', fill: 'none', stroke: 'var(--sd-mid)', 'stroke-opacity': '.5', 'stroke-width': '1.2' }, mk('g', { mask: 'url(#sdFade)' }, g)),
       fr: mk('path', { class: 'anim', fill: 'none', stroke: 'var(--sd-fr)', 'stroke-opacity': '.9', 'stroke-width': '1.5', 'stroke-dasharray': '4 3' }, g),
       cloud: mk('path', { fill: 'var(--sd-cloud)' }, g),
-      cross: mk('path', { fill: 'none', stroke: 'var(--ink-2)', 'stroke-opacity': '.7', 'stroke-width': '1', 'stroke-dasharray': '3 3' }, g)
+      cross: mk('path', { fill: 'none', stroke: 'var(--ink-2)', 'stroke-opacity': '.7', 'stroke-width': '1', 'stroke-dasharray': '3 3' }, g),
+      // a nudged dot keeps a leader line back to its true value, marked by a small anchor
+      lead: mk('path', { fill: 'none', stroke: 'var(--ink-2)', 'stroke-opacity': '.8', 'stroke-width': '1' }, g),
+      anch: mk('path', { fill: 'var(--ink-1)' }, g)
     };
     this.axisX = mk('path', { fill: 'none', stroke: 'var(--sd-line2)', 'stroke-width': '1' });
     this.axisY = mk('path', { fill: 'none', stroke: 'var(--sd-line2)', 'stroke-width': '1' });
@@ -3387,9 +3457,10 @@ const chart = {
     const frAt = x => { if (!fr.length) return PT; let k = 0; while (k < fr.length - 1 && fr[k + 1][0] < x) k++; const a = fr[k], c = fr[Math.min(k + 1, fr.length - 1)]; const tt = c[0] === a[0] ? 0 : Math.max(0, Math.min(1, (x - a[0]) / (c[0] - a[0]))); return a[1] + (c[1] - a[1]) * tt; };
     const bottom = bx.map(x => [px(x), PT + PH]);
     const env = c90.map(p => [p[0], Math.min(p[1], frAt(p[0]))]);
-    this.p.weak.setAttribute('d', area(c25, bottom)); this.p.typ.setAttribute('d', area(c75, c25)); this.p.str.setAttribute('d', area(c90, c75));
-    this.p.eli.setAttribute('d', area(env, c90));
-    this.p.med.setAttribute('d', line(c50)); this.p.fr.setAttribute('d', fr.length > 1 ? line(fr) : '');
+    const noBands = allView();
+    this.p.weak.setAttribute('d', noBands ? '' : area(c25, bottom)); this.p.typ.setAttribute('d', noBands ? '' : area(c75, c25)); this.p.str.setAttribute('d', noBands ? '' : area(c90, c75));
+    this.p.eli.setAttribute('d', noBands ? '' : area(env, c90));
+    this.p.med.setAttribute('d', noBands ? '' : line(c50)); this.p.fr.setAttribute('d', fr.length > 1 ? line(fr) : '');
     // ticks + grid
     const yt = niceTicks(y0, y1, 4);
     const xt = ax === 'dupe' ? dupeTicks(x0, x1) : niceTicks(x0, x1, 4).map(v => [v, ax === 'own' ? Math.round(v) + '%' : '$' + (Math.round(v / 100) / 10) + 'K']);
@@ -3397,35 +3468,51 @@ const chart = {
     this.ticks.innerHTML = yt.map(v => '<span class="tk" style="left:0;width:' + (PL - 5) + 'px;text-align:right;top:' + fx(py(v) - 5) + 'px">' + Math.round(v) + '</span>').join('') +
       xt.map(tk => '<span class="tk" style="top:' + (PT + PH + 6) + 'px;left:' + fx(px(tk[0])) + 'px;transform:translateX(-50%)">' + tk[1] + '</span>').join('');
     // cloud
-    this.p.cloud.setAttribute('d', M.cloud[t].filter(c => inX(cx(c)) && cy(c) >= y0 && cy(c) <= y1).map(c => { const x = px(cx(c)), y = py(cy(c)); return 'M' + fx(x - 1.6) + ' ' + fx(y) + ' a1.6 1.6 0 1 0 3.2 0 a1.6 1.6 0 1 0 -3.2 0'; }).join(' '));
+    this.p.cloud.setAttribute('d', noBands ? '' : M.cloud[t].filter(c => inX(cx(c)) && cy(c) >= y0 && cy(c) <= y1).map(c => { const x = px(cx(c)), y = py(cy(c)); return 'M' + fx(x - 1.6) + ' ' + fx(y) + ' a1.6 1.6 0 1 0 3.2 0 a1.6 1.6 0 1 0 -3.2 0'; }).join(' '));
     // band labels in the right gutter
     const lastY = a => a[a.length - 1][1];
     const labs = [['TOP 10%', 'var(--t-eli)', (lastY(env) + lastY(c90)) / 2 - 2], ['75–90%', 'var(--t-str)', (lastY(c75) + lastY(c90)) / 2], ['25–75%', 'var(--t-typ)', (lastY(c25) + lastY(c75)) / 2], ['LOW 25%', 'var(--t-weak)', (PT + PH + lastY(c25)) / 2]].map(l => ({ l: l[0], c: l[1], y: l[2] }));
     for (let i = 1; i < labs.length; i++) if (labs[i].y - labs[i - 1].y < 12) labs[i].y = labs[i - 1].y + 12;
     const over = labs[3].y - (PT + PH - 5); if (over > 0) labs.forEach(l => { l.y -= over; });
     if (labs[0].y < PT + 4) { const sh = PT + 4 - labs[0].y; labs.forEach(l => { l.y += sh; }); }
-    this.labels.innerHTML = labs.map(l => '<span class="bl" style="left:' + (PL + PW + 6) + 'px;top:' + fx(l.y) + 'px;color:' + l.c + '">' + l.l + '</span>').join('');
-    // points
+    this.labels.innerHTML = noBands ? '' : labs.map(l => '<span class="bl" style="left:' + (PL + PW + 6) + 'px;top:' + fx(l.y) + 'px;color:' + l.c + '">' + l.l + '</span>').join('');
+    // points: only the lineups read against this panel's field. Overlapping dots are nudged
+    // apart with a leader line back to the true value; a selected build never moves.
     const Pname = e => M.players[e.cpt].name;
-    const maxFee = Math.max(1, ...E.map(e => e.fee));
-    const many = E.length > 30;
-    const live = new Set();
-    E.forEach((e, i) => {
+    const shown = E.map((e, i) => ({ e, i })).filter(o => onChart(o.e, o.i));
+    const maxFee = Math.max(1, ...shown.map(o => o.e.fee));
+    const many = shown.length > 30, narrow = this.W < 520, minSz = state.pro ? 0 : 20;
+    const live = new Set(), nodes = [];
+    shown.forEach(({ e, i }) => {
       let btn = this.ptMap.get(e.key);
       if (!btn) { btn = document.createElement('button'); btn.type = 'button'; btn.className = 'pt mv'; btn.innerHTML = '<span></span>'; btn.dataset.key = e.key; this.pts.appendChild(btn); this.ptMap.set(e.key, btn); }
       live.add(e.key);
       const me = (!state.pro || state.view === 'lineup') && i === state.sel;
-      const size = state.view === 'lineup' ? (me ? 26 : 10) : many ? 12 : Math.round(16 + 14 * Math.sqrt(e.fee / maxFee));
+      const size = state.view === 'lineup' ? (me ? 26 : 10) : many ? 12 : narrow ? Math.round(14 + 8 * Math.sqrt(e.fee / maxFee)) : Math.round(16 + 14 * Math.sqrt(e.fee / maxFee));
+      const fc = fieldClass(e);
       btn.classList.toggle('me', me); btn.classList.toggle('dim', state.view === 'lineup' && !me);
-      btn.style.left = fx(px(xv(e.feat))) + 'px'; btn.style.top = fx(py(e.feat[yk])) + 'px'; btn.style.zIndex = me ? 3 : 1;
+      btn.classList.toggle('fs-large', fc === 'large'); btn.classList.toggle('fs-cash', fc === 'cash');
+      btn.style.zIndex = me ? 3 : 1;
       const s = btn.firstChild; s.style.width = size + 'px'; s.style.height = size + 'px';
       s.textContent = String(i + 1); s.style.fontSize = size > 25 ? '12px' : '10px';
       btn.dataset.i = i;
       btn.setAttribute('aria-pressed', String(me));
       btn.setAttribute('aria-describedby', 'sdReadChart');
-      btn.setAttribute('aria-label', 'Lineup ' + (i + 1) + ', captain ' + Pname(e) + ', ' + money(e.fee) + ', ' + f1(e.feat[yk]) + (yk === 'proj' ? ' projected points' : ' ceiling points') + ', ' + (ax === 'own' ? f1(e.feat.own) + '% summed ownership' : ax === 'sal' ? money(e.sal) + ' salary used' : 'ownership-product estimate 1 in ' + Math.round(Math.pow(10, -e.feat.dupe))) + (me ? '' : '. Open details.'));
+      btn.setAttribute('aria-label', 'Lineup ' + (i + 1) + ', captain ' + Pname(e) + ', ' + typeById(e.type).label + ' contest, ' + FIELD[fc].toLowerCase() + ', ' + money(e.fee) + ', ' + f1(e.feat[yk]) + (yk === 'proj' ? ' projected points' : ' ceiling points') + ', ' + (ax === 'own' ? f1(e.feat.own) + '% summed ownership' : ax === 'sal' ? money(e.sal) + ' salary used' : 'ownership-product estimate 1 in ' + Math.round(Math.pow(10, -e.feat.dupe))) + (me ? '' : '. Open details.'));
+      const x0 = px(xv(e.feat)), y0 = py(e.feat[yk]);
+      nodes.push({ btn, i, x0, y0, x: x0, y: y0, r: Math.max(size, minSz) / 2 + 1.5, pin: me });
     });
     for (const [k, btn] of this.ptMap) if (!live.has(k)) { btn.remove(); this.ptMap.delete(k); }
+    spread(nodes, PL, PT, PW, PH);
+    const lead = [], anch = [];
+    nodes.forEach(n => {
+      n.btn.style.left = fx(n.x) + 'px'; n.btn.style.top = fx(n.y) + 'px';
+      if (Math.hypot(n.x - n.x0, n.y - n.y0) > 3) {
+        lead.push('M' + fx(n.x0) + ' ' + fx(n.y0) + ' L' + fx(n.x) + ' ' + fx(n.y));
+        anch.push('M' + fx(n.x0 - 2.2) + ' ' + fx(n.y0) + ' a2.2 2.2 0 1 0 4.4 0 a2.2 2.2 0 1 0 -4.4 0');
+      }
+    });
+    this.p.lead.setAttribute('d', lead.join(' ')); this.p.anch.setAttribute('d', anch.join(' '));
     // crosshair, ghost, tag
     const sel = E[state.sel];
     if (state.view === 'lineup' && sel) {
@@ -3434,10 +3521,34 @@ const chart = {
       this.extra.innerHTML = (state.pro && state.sens ? '<span class="ghost mv" style="left:' + fx(sx) + 'px;top:' + fx(gy) + 'px"></span><span class="gtag mv" style="left:' + fx(sx) + 'px;top:' + fx(gy - 12) + 'px">' + (state.sens > 0 ? '+' : '') + state.sens + '% · ' + f1(gv) + '</span>' : '') +
         '<span class="tag mv" style="left:' + fx(sx > PL + PW * 0.55 ? sx - 122 : sx + 18) + 'px;top:' + fx(sy + (state.sens > 0 ? 14 : -14)) + 'px">THIS BUILD · ' + f1(sel.feat[yk]) + '</span>';
     } else { this.p.cross.setAttribute('d', ''); this.extra.innerHTML = ''; }
-    if (resized) requestAnimationFrame(() => Object.values(this.p).forEach(p => { if (p !== this.p.grid && p !== this.p.cloud && p !== this.p.cross) p.classList.add('anim'); }));
+    if (resized) requestAnimationFrame(() => Object.values(this.p).forEach(p => { if (p !== this.p.grid && p !== this.p.cloud && p !== this.p.cross && p !== this.p.lead && p !== this.p.anch) p.classList.add('anim'); }));
   }
 };
 function fx(v) { return String(Math.round(v * 10) / 10); }
+/* Deterministic collision relaxation for the numbered dots: each pass pulls dots gently back
+   toward their true value, then pushes apart any pair that overlaps. A pinned dot (the
+   selected build) never moves, so its position always reads true. Identical positions
+   split along a golden-angle direction so stacked dots fan out instead of hiding. */
+function spread(nodes, L, T, W, H) {
+  const n = nodes.length; if (n < 2) return;
+  const clamp = o => { if (o.pin) return; o.x = Math.max(L + o.r, Math.min(L + W - o.r, o.x)); o.y = Math.max(T + o.r, Math.min(T + H - o.r, o.y)); };
+  for (let it = 0; it < 200; it++) {
+    if (it) nodes.forEach(o => { if (!o.pin) { o.x += (o.x0 - o.x) * 0.05; o.y += (o.y0 - o.y) * 0.05; } });
+    let hit = false;
+    for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) {
+      const A = nodes[a], B = nodes[b], min = A.r + B.r;
+      let dx = B.x - A.x, dy = B.y - A.y, d = Math.hypot(dx, dy);
+      if (d >= min) continue;
+      hit = true;
+      const push = min - d;
+      if (d < 0.01) { const ang = (B.i + 1) * 2.399963; dx = Math.cos(ang); dy = Math.sin(ang); d = 1; }
+      const ux = dx / d, uy = dy / d, wa = A.pin ? 0 : B.pin ? 1 : 0.5, wb = A.pin ? 1 : B.pin ? 0 : 0.5;
+      A.x -= ux * push * wa; A.y -= uy * push * wa; B.x += ux * push * wb; B.y += uy * push * wb;
+      clamp(A); clamp(B);
+    }
+    if (!hit && it) break;
+  }
+}
 function edgesOf(x) { const n = x.length; if (n < 2) return [x[0] - 1, x[0] + 1]; return [x[0] - (x[1] - x[0]) / 2, x[n - 1] + (x[n - 1] - x[n - 2]) / 2]; }
 function segs(p) {
   let s = '';
@@ -3470,7 +3581,8 @@ function wireStatic() {
   chart.mount($('sdChart'));
   $('sdBar').addEventListener('click', ev => { const v = ev.target.closest('[data-view]'); if (v) setView(v.dataset.view); });
   $('sdPro').addEventListener('click', () => { state.pro = !state.pro; store(PREFS, { pro: state.pro, view: state.view }); renderDash(); });
-  $('sdTypes').addEventListener('click', ev => { const b = ev.target.closest('[data-type]'); if (b) { state.type = b.dataset.type; state.typePicked = true; renderDash(); } });
+  $('sdTypes').addEventListener('click', ev => { const b = ev.target.closest('[data-type]'); if (b) { state.type = b.dataset.type; state.typePicked = true; state.allPanel = false; renderDash(); } });
+  $('sdPanels').addEventListener('click', ev => { const b = ev.target.closest('[data-panel]'); if (b) setPanel(b.dataset.panel); });
   $('sdAxes').addEventListener('click', ev => { const b = ev.target.closest('[data-ax]'); if (b) { state.ax = b.dataset.ax; renderDash(); } });
   $('sdYs').addEventListener('click', ev => { const b = ev.target.closest('[data-y]'); if (b && !b.disabled) { state.y = b.dataset.y; renderDash(); } });
   $('sdPointSelect').addEventListener('change', ev => { if (ev.target.value === '') return; state.sel = +ev.target.value; state.view = 'lineup'; state.type = state.model.entries[state.sel].type; renderDash(); $('sdPointSelect').focus(); });
@@ -3515,6 +3627,7 @@ window.DD_BOTCTX = {
 - ⚠️ THERE IS NO ROI AND NO DOLLAR EV HERE, deliberately. Duplicate prize splitting and the real payout table are not applied. If asked for ROI or expected profit, say it is unknown until the duplicate haircut and the contest's payout table are applied.
 - ⚠️ EXPECTED COPIES are model output from the sampled field's lineup frequency times the field size. They are not a measured duplicate count.
 - THE CHART: numbered dots can be selected by touch, keyboard, or the lineup selector; values remain in the detail panel. Bands are relative comparisons, never overall grades. Summed ownership can exceed 100% because it adds separate player percentages. Simulation percentages, including 100%, are rounded model frequencies, not verified probabilities. Generic contest defaults are not verified actual entries. No actual results are shown here. At each ownership, salary or dupe-risk level the shaded bands are the simulated field's 25th, 50th, 75th and 90th percentile of projected or ceiling points. Band labels are LOW 25%, 25–75%, 75–90%, TOP 10%; these are relative modeled-point ranges. The dashed line is the highest modeled points among legal lineups searched at that level (a search over the top of the player pool, not necessarily the whole pool). A band describes the field; it is not a win chance.
+- CONTEST PANELS: the chart shows one contest type at a time, each lineup only against its own contest type's simulated field bands. "All contests" shows every lineup coloured by field size (small field under 20K, large field 20K+, cash) and deliberately draws no bands, because no single field fits them all. Tournament panels open on ceiling points against the shared-lineup estimate; cash opens on projected points (the floor) against summed ownership; the user can switch either axis. Overlapping dots are nudged apart with a thin leader line back to a small anchor at the true value; read values from the anchor or the detail panel, never from a nudged dot.
 - THE GRADE is a weighted blend of percentiles against that contest type's field lineups: points for the ownership, ceiling, top-1% chance, and cash chance (uniqueness replaces cash in max-entry and flagship). Elite 90+, Strong 75+, Typical 25+, Weak below 25. The weights are placeholders until receipts can grade them; say so if someone treats a grade as proof.
 - Legacy non-cash ranking scores retain their top-22% simulation baseline; that contributor is separate from payout accounting.
 - CASH uses each entry’s resolved supplied cutoff: payouts, paidPlaces, cashLinePct, else an explicitly assumed 22%. All metadata is user-supplied, not independently verified. Fixed finish bins remain unchanged. Wilson intervals describe sampling uncertainty conditional on the model, not its validity. Cash ranking scores are unavailable; do not invent cash weights or recommendations.
@@ -3544,7 +3657,7 @@ window.DD_BOTCTX = {
       if (M.exposure && M.exposure.length) L.push("EXPOSURE BY DOLLARS (yours vs field ownership): " + M.exposure.slice(0, 8).map(x => x.name + " " + x.share + "% vs " + x.field + "%").join(", ") + ".");
       if (M.warnings && M.warnings.length) L.push("MODEL WARNINGS: " + M.warnings.join(" | "));
       const sel = M.entries[S.sel];
-      L.push("ON SCREEN: " + (S.view === 'lineup' && sel ? "the Lineup view for " + sel.label : "the Portfolio view") + "; chart contest type " + (TY[S.type] || S.type) + ", horizontal axis " + S.ax + ", points shown " + (S.y === 'ceil' ? 'ceiling' : 'median') + ", " + (S.pro ? "Pro" : "TL;DR") + " detail.");
+      L.push("ON SCREEN: " + (S.view === 'lineup' && sel ? "the Lineup view for " + sel.label : "the Portfolio view") + "; chart contest panel " + (S.view === 'portfolio' && S.allPanel ? "All contests (no bands)" : (TY[S.type] || (S.type === 'cash' ? 'Cash / Double Up' : S.type))) + ", horizontal axis " + S.ax + ", points shown " + (S.y === 'ceil' ? 'ceiling' : 'median') + ", " + (S.pro ? "Pro" : "TL;DR") + " detail.");
     } else if (src) {
       L.push("No simulation result is on screen yet.");
     }
