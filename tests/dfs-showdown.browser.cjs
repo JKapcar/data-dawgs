@@ -96,7 +96,25 @@ const server = http.createServer((q, r) => {
       assert.equal(calls.length, 0, 'signed out never calls the account');
       assert.equal(await page.locator('#sdLeft .sd-lrow').count(), 6);
       assert.match(await page.locator('#sdTop').innerText(), /of simulated games had at least one entry in the modeled top 1%/);
-      assert.ok(await page.locator('#sdChart .pt').count() === 6, 'one point per entry');
+      // contest panels: the default panel shows only its own contest's lineups over that field's bands
+      const panelState = () => page.evaluate(() => { const S = window.DDShowdownPage.state; return { type: S.type, all: S.allPanel, ax: S.ax, y: S.y, n: S.model.entries.filter(e => e.type === S.type).length }; });
+      const p0 = await panelState();
+      assert.equal(p0.all, false);
+      assert.deepEqual([p0.ax, p0.y], ['dupe', 'ceil'], 'tournament panels open on ceiling vs shared-lineup estimate');
+      assert.equal(await page.locator('#sdChart .pt').count(), p0.n, 'only the panel contest lineups are drawn');
+      assert.deepEqual((await page.locator('#sdPanels button').allInnerTexts()).map(t => t.replace(/\s+/g, ' ').trim()), ['All contests 6', 'Single-entry 4', '5/20-max 1', 'Flagship 1']);
+      assert.notEqual(await page.locator('#sdChart svg path[fill="var(--b-typ)"]').getAttribute('d'), '');
+      await page.locator('#sdPanels [data-panel="all"]').click();
+      assert.equal(await page.locator('#sdChart .pt').count(), 6, 'All contests: one point per entry');
+      assert.equal(await page.locator('#sdChart svg path[fill="var(--b-typ)"]').getAttribute('d'), '', 'All contests draws no bands');
+      assert.match(await page.locator('#sdCaption').innerText(), /no bands are drawn/);
+      assert.ok(await page.locator('#sdChart .pt.fs-large').count() === 1, 'the flagship lineup is coloured as a large field');
+      // no two numbered dots overlap
+      const overlaps = await page.evaluate(() => { const r = [...document.querySelectorAll('#sdChart .pt span')].map(s => s.getBoundingClientRect()), bad = [];
+        for (let a = 0; a < r.length; a++) for (let b = a + 1; b < r.length; b++) { const A = r[a], B = r[b], d = Math.hypot(A.x + A.width / 2 - B.x - B.width / 2, A.y + A.height / 2 - B.y - B.height / 2); if (d < (A.width + B.width) / 2 - 0.5) bad.push(a + '/' + b); } return bad; });
+      assert.deepEqual(overlaps, [], 'numbered dots do not overlap');
+      await page.locator('#sdPanels [data-panel="se"]').click();
+      assert.equal(await page.locator('#sdChart .pt').count(), 4);
       assert.deepEqual(await noSideways(page), []);
       await page.screenshot({ path: path.join(out, 'demo-phone.png'), fullPage: true });
       await page.locator('[data-view="lineup"]').click();
