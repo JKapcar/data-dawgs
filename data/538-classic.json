@@ -14,7 +14,7 @@
   "methodology_url": "https://datadawgs216.com/data/538-classic-methodology.md"
  },
  "provenance": {
-  "generated_at": "2026-11-01T23:58:00Z",
+  "generated_at": "2026-11-02T00:34:01.320028Z",
   "official_reference": {
    "repository": "fivethirtyeight/nfl-elo-game",
    "commit": "fbec1afa38ece5befe24fb21be8ddba8eb160fe6",
@@ -32,7 +32,7 @@
    "last_game": "2025_22_SEA_NE",
    "last_game_date": "2026-02-08"
   },
-  "schedule_snapshot_id": "sha256:a5516cdf367332611c041192b9e07513d810eae5c2678e05529fc57107e5c51e",
+  "schedule_snapshot_id": "sha256:dc6e53850fafd323acbf39253dca3aac8aa5e6460b80cd78d0309e9301cc3448",
   "input_material": {
    "model": {
     "id": "538-classic",
@@ -54,7 +54,7 @@
     "games_sha256": "77fb7279e764cbd1c431a41b1a3da4250695f3e7257487af008e3671fe05fc59",
     "games_replayed": 1424
    },
-   "schedule_snapshot_id": "sha256:a5516cdf367332611c041192b9e07513d810eae5c2678e05529fc57107e5c51e",
+   "schedule_snapshot_id": "sha256:dc6e53850fafd323acbf39253dca3aac8aa5e6460b80cd78d0309e9301cc3448",
    "target_season_ratings": [
     {
      "team": "ARI",
@@ -196,7 +196,7 @@
   "note": "This proves the published mathematics were reproduced; it does not establish current predictive skill or betting profitability."
  },
  "integrity": {
-  "input_snapshot_id": "sha256:54ebd35d35469e22cce3a6ed29f54449b9dfadaa5386efe224a9123101bf6d9c",
+  "input_snapshot_id": "sha256:05bddcf8d3306f2759841a255311de8e120f464a6bc001d77e6fd3673ce7aa5c",
   "snapshot_id": "sha256:9560c172997d8b13e2810be104cf393f5ac4e9cf17a5833e5ab241e7e1dc3cfb",
   "forecast_rows": 153,
   "team_rows": 32
@@ -2326,6 +2326,6 @@
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-11-01",
+ "built": "2026-11-02",
  "canonical_url": "https://datadawgs216.com/data/538-classic.json"
 }
