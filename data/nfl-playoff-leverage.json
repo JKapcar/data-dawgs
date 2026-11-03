@@ -1,10 +1,10 @@
 {
- "as_of": "2026-11-02",
- "source": "Data Dawgs season simulation (playoff-leverage-engine v1, work/playoff-leverage-engine.js) over /data/nfl-schedule.json results (snapshot sha256:e3539652a54d…, captured 2026-11-02T04:28:00Z) and /data/survivor.json game probabilities (nfelo 5e0dadb4, captured 2026-11-02).",
+ "as_of": "2026-11-03",
+ "source": "Data Dawgs season simulation (playoff-leverage-engine v1, work/playoff-leverage-engine.js) over /data/nfl-schedule.json results (snapshot sha256:e3539652a54d…, captured 2026-11-02T04:28:00Z) and /data/survivor.json game probabilities (nfelo 256054e5, captured 2026-11-03).",
  "tier": "labs",
  "graded": false,
  "note": "SIMULATION OUTPUT, ungraded — not a forecast receipt and not a betting signal. Each of 100,000 simulated seasons keeps every finished game's real result and plays every unplayed 2026 regular-season game once at its /data/survivor.json home-win probability (the published nfelo forecast for the current week, the nfelo season projection after it). Leverage is paired: every season is also played with one game's result flipped while every other game keeps its simulated result. Team strength is held fixed and games are independent, so probabilities near 0% and 100% are overconfident. Seeding follows the NFL tie-breaking procedures through strength of schedule; a tie that survives SOS goes to a coin toss because points are not simulated. Daily snapshot: rebuilt after the nfelo refresh, deterministic for identical inputs.",
- "built": "2026-11-02",
+ "built": "2026-11-03",
  "canonical_url": "https://datadawgs216.com/data/nfl-playoff-leverage.json",
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
  "method": {
@@ -34,10 +34,10 @@
   },
   "probabilities": {
    "url": "/data/survivor.json",
-   "as_of": "2026-11-02",
-   "nfelo_sha": "5e0dadb4",
-   "captured": "2026-11-02",
-   "nfelo_observed_at": "2026-11-02T20:40:46.000Z",
+   "as_of": "2026-11-03",
+   "nfelo_sha": "256054e5",
+   "captured": "2026-11-03",
+   "nfelo_observed_at": "2026-11-02T23:40:47.000Z",
    "method": "nfelo-season-v1",
    "current_week": "src \"nfelo\": published nfelo forecast",
    "later_weeks": "src \"nfelo-season\": Current base team strength and QB adjustments held fixed for future games; game-specific HFA from nfelohfa. No extra market regression."
