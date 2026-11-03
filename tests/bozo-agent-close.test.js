@@ -121,7 +121,7 @@ test('a free read that lands on the last tick never touches the paid receipt',as
 });
 
 test('with no Odds API key and the paid switch off, an ESPN miss never reaches a paid provider or a once-only receipt',async()=>{
- for(const env of [{},{BOZO_PAID_ODDS:'false'},{BOZO_PAID_ODDS:true},{SGO_KEY:'k'},{SGO_KEY:'k',BOZO_PAID_ODDS:'false'}]){
+ for(const env of [{},{BOZO_PAID_ODDS:'false'},{BOZO_PAID_ODDS:true},{SGO_KEY:'k'},{SGO_KEY:'k',BOZO_PAID_ODDS:'false'},{SGO_KEY:'k',BOZO_SGO_CLOSE:'false'},{SGO_KEY:'k',BOZO_SGO_CLOSE:true},{BOZO_SGO_CLOSE:'true'}]){
   const r=captureRig([false,false]);
   await r.c.runBozoCloseCapture(env,kickoff-7*60000);
   const out=await r.c.runBozoCloseCapture(env,kickoff-2*60000);
@@ -167,8 +167,11 @@ test('held reads: same id replays, a later read replaces an earlier one, never t
  assert.equal(out.status,409);assert.match(out.body.error,/later read/);assert.equal(earlier.writes.length,0);
 });
 test('every paid odds client is gated by BOZO_PAID_ODDS, and only the exact string "true" opens it',()=>{
- for(const fn of ['async function bozoSgoRequest(','async function bozoFetchEvents(','async function cfbFetchMarketEvents('])
-  assert.match(cut(fn,'\n}\n'),/env\.BOZO_PAID_ODDS !== "true"/,fn);
+ assert.match(cut('async function cfbFetchMarketEvents(','\n}\n'),/env\.BOZO_PAID_ODDS !== "true"/);
+ // SportsGameOdds clients go through one gate: BOZO_SGO_CLOSE opens only the close caller.
+ for(const fn of ['async function bozoSgoRequest(','async function bozoFetchEvents('])
+  assert.match(cut(fn,'\n}\n'),/if \(!bozoSgoAllowed\(env, /,fn);
+ assert.match(cut('function bozoSgoAllowed(','\n}\n'),/env\.BOZO_PAID_ODDS === "true" \|\| \(caller === "close" && env\.BOZO_SGO_CLOSE === "true"\)/);
  // The Odds API clients go through one gate: the key alone opens only the close fallback.
  for(const fn of ['async function bozoOddsApiRequest(','async function bozoOddsApiRequestRaw(','async function bozoOddsApiCapture('])
   assert.match(cut(fn,'\n}\n'),/bozoOddsApiAllowed\(env, ?options\.caller\)/,fn);
