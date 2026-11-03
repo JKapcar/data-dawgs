@@ -8954,15 +8954,26 @@ async function bozoSgoFailure(response, env, context, suppliedText) {
   return error;
 }
 
+/* ⚠️ SPORTSGAMEODDS IS OFF UNLESS A SWITCH OPENS IT. BOZO_PAID_ODDS="true" opens every SGO
+   caller. BOZO_SGO_CLOSE="true" opens only the Bozo close: Kap wants every free source tried
+   before the Odds API backup, and SGO's free tier carries DraftKings alternate numbers and props,
+   which ESPN does not. Entry capture and the collectors stay behind BOZO_PAID_ODDS. */
+function bozoSgoAllowed(env, caller) {
+  return env.BOZO_PAID_ODDS === "true" || (caller === "close" && env.BOZO_SGO_CLOSE === "true");
+}
+// SGO's free tier refreshes about every 10 minutes; a close snapshot this old still counts.
+const BOZO_SGO_CLOSE_MAX_AGE_MS = 15 * 60000;
+// With no stored SGO event id, a close asks for the games starting this close to kickoff.
+const BOZO_SGO_CLOSE_WINDOW_MS = 15 * 60000;
+
 // Shared 60-second KV cache: submits can reuse a cron fetch across datacenters.
 // Preserve fetchedAt; close quote validation still enforces pregame freshness.
 async function bozoSgoRequest(env, url, context, options = {}) {
-  // ⚠️ PAID ODDS FEEDS ARE OFF UNLESS BOZO_PAID_ODDS is "true". The free ESPN DraftKings
-  // line and agent-read closes carry Bozo; a paid call is never made while the switch is off.
-  if (env.BOZO_PAID_ODDS !== "true") throw Object.assign(new Error("Paid odds feeds are switched off"), {code:"paid_feeds_off"});
+  if (!bozoSgoAllowed(env, context.caller)) throw Object.assign(new Error("Paid odds feeds are switched off"), {code:"paid_feeds_off"});
   const budgetPath='/bozoCaptureBudget/sgo';
   const budget=(await fbGet(env,budgetPath)).data;
-  if(budget?.exhausted)throw Object.assign(new Error('Provider exhausted; manual fallback'),{code:'quota_exceeded'});
+  // A day-old exhausted flag is retried: a free allowance resets and a plan can be restored.
+  if(budget?.exhausted && Date.now()-Date.parse(budget.at||0) < 24*3600*1000)throw Object.assign(new Error('Provider exhausted; manual fallback'),{code:'quota_exceeded'});
   const submit = context.caller === "submit" || context.caller === "draft";
   const deadline = options.deadline || Date.now() + (submit ? 7000 : 8000);
   const fault = (code, message) => Object.assign(new Error(message), {code});
@@ -9037,14 +9048,21 @@ async function bozoSgoRequest(env, url, context, options = {}) {
 }
 
 async function bozoFetchEvents(env, sport, startMs, needProps, periods = ["game"], options = {}) {
-  if (env.BOZO_PAID_ODDS !== "true") throw Object.assign(new Error("Paid odds feeds are switched off"), {code:"paid_feeds_off"});
+  if (!bozoSgoAllowed(env, options.caller || "submit")) throw Object.assign(new Error("Paid odds feeds are switched off"), {code:"paid_feeds_off"});
   if (!env.SGO_KEY) throw Object.assign(new Error("Odds capture is not configured"), {code:"capture_unconfigured"});
   const leagueID = BOZO_SGO_LEAGUE[sport];
   if (!leagueID) return [];
   const url = new URL(BOZO_CLOSE_API);
   url.searchParams.set("leagueID", leagueID);
-  if (!options.eventId) return [];
-  url.searchParams.set("eventID", options.eventId);
+  if (options.eventId) url.searchParams.set("eventID", options.eventId);
+  /* A close whose entry came from ESPN or the Odds API has no SGO event id. It asks once for
+     the games starting within 15 minutes of its kickoff; bozoMatchEvent then picks the leg's
+     game by team names. Legs at the same kickoff build the same URL and share one request. */
+  else if (options.caller === "close" && Number.isFinite(startMs)) {
+    url.searchParams.set("startsAfter", new Date(startMs - BOZO_SGO_CLOSE_WINDOW_MS).toISOString());
+    url.searchParams.set("startsBefore", new Date(startMs + BOZO_SGO_CLOSE_WINDOW_MS).toISOString());
+  }
+  else return [];
   // ⚠️ The oddID filter is dropped when any leg in this bucket is a prop. A prop's market
   // id contains the player's entity id, which we don't know until we've seen the event's
   // markets — so filtering by id first would rule out the very rows we need to search.
@@ -9663,6 +9681,30 @@ function bozoAgentReadHeld(leagues, t) {
   return !!(cand && !cand.promotedAt && Date.parse(cand.readAt) < t.startMs);
 }
 
+/* One SportsGameOdds DraftKings close for a leg: the exact number and both sides, from a
+   snapshot taken before kickoff and no more than 15 minutes before it. Alternate numbers and
+   props come from here; ESPN only carries the main number. Never throws. */
+async function bozoSgoCloseQuote(env, t, registry) {
+  let events;
+  try {
+    events=await bozoFetchEvents(env,t.pick.sport,t.startMs,t.pick.mkt==='prop',[bozoPeriodOf(t.pick)],
+      {caller:'close',eventId:t.pick.providerEventIds?.sgo || t.pick.entryCapture?.providerEventIds?.sgo});
+  } catch (e) {
+    const why={paid_feeds_off:'switched off',capture_unconfigured:'no key',quota_exceeded:'allowance used up',
+      rate_limited:'rate limited',timeout:'timed out'}[e.code];
+    return {ok:false,code:e.code||'provider_error',reason:why||'request failed'};
+  }
+  const ev=bozoMatchEvent(events,t.pick,registry);
+  if(!ev)return {ok:false,code:'event_not_matched',reason:'game not found'};
+  const q=bozoDkQuote(ev,t.pick,registry);
+  const bad=assertQuote(q,t.pick);
+  if(bad)return {ok:false,code:q?.code||'line_missing',reason:bad};
+  const stamp=Date.parse(q.snapshotAt);
+  if(!(Number.isFinite(stamp) && stamp<t.startMs && t.startMs-stamp<=BOZO_SGO_CLOSE_MAX_AGE_MS))
+    return {ok:false,code:'stale_snapshot',reason:'DraftKings snapshot older than 15 minutes'};
+  return {ok:true,quote:q};
+}
+
 async function runBozoCloseCapture(env, nowMs) {
   // One league read serves both the misses and the targets.
   let leagues = null, missed = null;
@@ -9707,25 +9749,31 @@ async function runBozoCloseCapture(env, nowMs) {
       /* Order: the agent's DraftKings read, ESPN's free line, then the Odds API, and only
          for a Bozo leg the Odds API can price. A held agent read means no paid call. With
          no key the miss is recorded with no receipt; SportsGameOdds needs BOZO_PAID_ODDS. */
+      /* Order: ESPN's free line, the agent's held DraftKings read, SportsGameOdds' free tier
+         (BOZO_SGO_CLOSE), then the Odds API, Kap's paid backup. A held agent read means no
+         provider call. With no source open the miss is recorded with no receipt. */
       const oddsApiReady = !!env.ODDS_API_KEY && !!bozoOddsApiMarkets(t.pick);
+      const sgoFree = !!env.SGO_KEY && env.BOZO_SGO_CLOSE === "true" && t.pick.mkt !== "other";
       const receipt = free || (bozoAgentReadHeld(leagues, t) ? {ok:false,reason:BOZO_AGENT_HELD_REASON} :
-        !oddsApiReady && env.BOZO_PAID_ODDS !== "true" ? {ok:false,reason:BOZO_FREE_MISS_REASON} :
+        !oddsApiReady && !sgoFree && env.BOZO_PAID_ODDS !== "true" ? {ok:false,reason:BOZO_FREE_MISS_REASON} :
         await bozoCaptureOnce(env,bozoCaptureIdentity(t.pick,'close'),async()=>{
         if (nowMs >= t.startMs || t.pick.mkt==='other') return {ok:false,reason:'No supported pregame close'};
-        // The keyless read already missed; at most one paid provider from here.
+        // The free SGO tier is not a paid provider, so its miss still reaches the backup.
+        let sgoMiss=null;
+        if(sgoFree) {
+          const sgo=await bozoSgoCloseQuote(env,t,registry);
+          if(sgo.ok)return sgo;
+          sgoMiss='SportsGameOdds free tier: '+sgo.reason;
+        }
         if(oddsApiReady) {
           const capture=await bozoOddsApiCapture(env,t.pick,registry,{caller:'close',nowMs,deadline:Date.now()+7000});
           if(capture.ok)return {ok:true,quote:capture.quote};
           // A refusal never triggers a second paid provider.
-          return {ok:false,reason:'No free DraftKings line and no agent read; Odds API backup failed: '+(capture.reason||'close unavailable')};
+          return {ok:false,reason:'No free DraftKings line and no agent read; '+(sgoMiss?sgoMiss+'; ':'')+'Odds API backup failed: '+(capture.reason||'close unavailable')};
         }
-        const events=await bozoFetchEvents(env,t.pick.sport,t.startMs,t.pick.mkt==='prop',[bozoPeriodOf(t.pick)],
-          {caller:'close',eventId:t.pick.providerEventIds?.sgo || t.pick.entryCapture?.providerEventIds?.sgo});
-        const ev=bozoMatchEvent(events,t.pick,registry);
-        const q=ev&&bozoDkQuote(ev,t.pick,registry);
-        const stamp=Date.parse(q?.snapshotAt);
-        return q && !assertQuote(q,t.pick) && Number.isFinite(stamp) && stamp<t.startMs && t.startMs-stamp<=15*60000
-          ? {ok:true,quote:q} : {ok:false,reason:'Exact pregame line unavailable; manual evidence required'};
+        if(sgoFree)return {ok:false,reason:'No free DraftKings line and no agent read; '+sgoMiss};
+        const sgo=await bozoSgoCloseQuote(env,t,registry);
+        return sgo.ok ? sgo : {ok:false,reason:'Exact pregame line unavailable; manual evidence required'};
       }));
       const existing=(await fbGet(env,LG(t.lid)+'/results/'+t.key)).data||{};
       const conflict=receipt.ok && ((existing.close!=null&&existing.close!==receipt.quote.price)||(existing.closeOpp!=null&&existing.closeOpp!==receipt.quote.opp));
