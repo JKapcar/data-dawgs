@@ -2204,6 +2204,7 @@ async function mcpDispatch(m, env, caller, catalog = MCP_DEFAULT_CATALOG, reauth
           "the caller's own Bozo leg, in an open week, and only after the human has read back the parsed bet and " +
           "confirmed with the code it returns. Never call its confirm step without showing the human the echo first. " +
           "On a spread leg `line` is points the side gives up (positive lays, negative takes) while `label` reads as the slip prints it — CLE +8.5 is label \"CLE +8.5\", line -8.5 — and the server rejects a sign conflict rather than pricing the wrong side. " +
+          "When the human gives you a DraftKings screenshot of the bet, read BOTH prices for that exact line and period off it and pass price, priceOpp and priceEvidence \"screenshot\": a league manager's leg then lands verified and counts for CLV. Never fill priceOpp from memory, another book or a different number. " +
           "Everything else is the league's own data, public play-by-play, " +
           "or a deterministic calculation over caller-supplied inputs. Calculator inputs and results are not stored. " +
           "The model scoreboard reads dated prospective receipts and returns descriptive disagreement only; it is ungraded and is not a validated consensus or ranking. " +
@@ -3074,7 +3075,9 @@ const MCP_TOOLS = [
         price: { type: "number", description: "DraftKings entry price. Used as a comparison when capture works, or accepted as unverified when the odds checker fails. Required for any manual fallback; manager verification can later enable CLV." },
         label: { type: "string", description: "How the leg reads on the DraftKings slip, sign included, e.g. \"BUF -6.5\" or \"CLE +8.5\". On a spread the sign is required and is checked against line: they describe one bet from two directions (label = slip display, line = points given up)." },
         prop: { type: "string", description: "Required when mkt is \"other\": what the bet actually is" },
-        priceOpp: { type: "number", description: "Deprecated input; the Worker captures the opposite DraftKings side itself." },
+        priceOpp: { type: "number", description: "The OPPOSITE side's DraftKings price for the same line and period, signed (DEN +4.5 -274 → CAR -4.5 +196). Read only with priceEvidence \"screenshot\" — it must come off the slip screenshot the human gave you, never from memory or another book. Otherwise ignored: the Worker tries to capture the opposite side itself." },
+        priceEvidence: { type: "string", enum: ["screenshot"], description: "Set to \"screenshot\" when price and priceOpp were both read off a DraftKings screenshot the human supplied. When the caller is this league's manager, a delegate or the site admin, the leg lands VERIFIED (priceSource manual) and counts for CLV, with an audit row. For anyone else it lands unverified for manager review, as a typed price does. Phase one only." },
+        evidence: { type: "string", maxLength: 200, description: "Optional short note on the screenshot (e.g. \"DK alt spread, bet slip -274\"). Used with priceEvidence." },
         startsAt: { type: "string", description: "Kickoff ISO timestamp. The schedule is resolved even when supplied; discrepancies over three hours are rejected, otherwise the schedule kickoff is adopted. Phase two needs only confirm." },
         period: { type: "string", enum: ["game", "1h", "2h", "1q", "2q", "3q", "4q"], description: "Which part of the game (default game). Spread, moneyline and total only; props and other are full-game. NFL/CFB/NBA take halves and quarters, NCAAB halves." },
         league: { type: "string", description: "League id (default: main)" },
@@ -3165,22 +3168,31 @@ const MCP_TOOLS = [
           return toolText({ status: "rejected", detail: "The board changed since this was proposed and the leg no longer passes: " + err + " Propose again." });
         }
 
+        // Screenshot verification is manager authority: re-check it at the write, exactly as
+        // the proxy role is, so a demotion between propose and confirm writes nothing verified.
+        if (pend.screenshot && !canActFor(lg, caller, env))
+          return toolText({ status: "stale", detail: "Your league manager access changed since this was proposed, so the screenshot can no longer verify it. Propose again." });
+        const shot = pend.screenshot ? { priceOpp: pend.screenshot.priceOpp, evidence: pend.screenshot.evidence,
+          confirmationId: code, byUid: caller.uid || null, byName: caller.name } : null;
         // The same single write path the site form uses, stamped as agent-submitted.
         const { pick: written, ...out } = await commitBozoLeg(env, lid, lg, who, pend.p, "mcp", mkey,
-          { uid: caller.uid || null, name: caller.name, proxy });
+          { uid: caller.uid || null, name: caller.name, proxy, ...(shot ? { screenshot: shot } : {}) });
+        const verifiedByShot = !!shot && written.entryOppSource === "screenshot-verified";
         // Audit row on a PROXY write only (Phase 2.7). bozoAdminAction lives in the
         // hand-written half of the Worker; this block still calls no Firebase write helper
         // itself, and assemble.mjs pins this call to exactly one place.
         let audit;
-        if (proxy) audit = await bozoAdminAction(env, lid, {
-          type: landed ? "proxy_edit" : "proxy_submit", byUid: caller.uid || null, byName: caller.name,
+        if (proxy || verifiedByShot) audit = await bozoAdminAction(env, lid, {
+          type: proxy ? (landed ? "proxy_edit" : "proxy_submit") : "screenshot_verify", byUid: caller.uid || null, byName: caller.name,
           forUid: mkey, forName: who, leagueId: lid, week: pend.week,
-          before: landed || null, after: written, ticketWasPlaced: false, via: "mcp" });
+          before: landed || null, after: written, ticketWasPlaced: false, via: "mcp",
+          ...(verifiedByShot ? { screenshotVerified: true, evidence: written.entryVerification?.evidence || null } : {}) });
         const result = {
           status: "submitted", league: lid, week: pend.week, you: name,
-          ...(proxy ? { forName: who, commissionerModified: true, audit } : {}),
-          leg: { label: pend.p.label, line: pend.p.line, price: pend.p.price,
-                 priceOpp: pend.p.priceOpp, priceSource: pend.p.priceSource, game: pend.p.game },
+          ...(proxy ? { forName: who, commissionerModified: true, audit } : verifiedByShot ? { audit } : {}),
+          leg: { label: pend.p.label, line: pend.p.line, price: written.price,
+                 priceOpp: written.entryPriceOpp, priceSource: written.priceSource,
+                 verificationStatus: written.verificationStatus, clvEligible: written.clvEligible, game: pend.p.game },
           ts: out.ts, via: "mcp",
           boardLocked: !!out.placed,
           legsIn: null,   // read dd_bozo_week for the live board; this result is frozen for replay
@@ -3251,6 +3263,33 @@ const MCP_TOOLS = [
           captured: { line: p.line, price: p.price, priceOpp: p.priceOpp },
           note: "That is the literal validation failure after capture. Nothing was submitted." });
 
+      // ⚠️ SCREENSHOT EVIDENCE. Both DraftKings prices read off the slip the human supplied.
+      // It is a manager verification folded into the submit, so it carries the same
+      // authority (canActFor, re-checked on confirm) and the same 0–15% hold gate as
+      // dd_verify_bozo_entry. A captured quote always wins; anyone without that authority
+      // keeps the unverified fallback a typed price gets. It rides in the pending envelope
+      // beside `p`, never inside it, so validation and capture semantics are unchanged.
+      let screenshot = null, screenshotNote = null;
+      if (args.priceEvidence !== undefined) {
+        if (args.priceEvidence !== "screenshot")
+          return toolErr("priceEvidence must be \"screenshot\".");
+        if (args.evidence !== undefined && (typeof args.evidence !== "string" || args.evidence.length > 200))
+          return toolErr("evidence must be text of at most 200 characters.");
+        const typed = bzAmerican(args.price), opp = bzAmerican(args.priceOpp);
+        const facts = bozoDevigPair(typed, opp);
+        if (p.priceSource === "captured") screenshotNote = "The server captured a two-sided DraftKings quote, so the captured prices stand and the screenshot is not needed.";
+        else if (p.mkt === "other") screenshotNote = "Other markets stay self-priced and outside CLV; the screenshot was not applied.";
+        else if (typed === null || opp === null)
+          return toolErr("A screenshot submission needs both signed DraftKings prices from the slip: price and priceOpp.");
+        else if (!facts || facts.hold < -1e-9 || facts.hold > .15 + 1e-9)
+          return toolErr("Those two prices do not form a DraftKings market (the two-sided hold must be between 0% and 15%). Re-read both sides of the same line off the screenshot.");
+        else if (typed !== Number(p.price))
+          return toolErr("price does not match the leg's entry price. Re-read the screenshot.");
+        else if (!canActFor(lg, caller, env))
+          screenshotNote = "Only a league manager, delegate or the site admin can verify an entry, so this leg lands UNVERIFIED for manager review like any typed price.";
+        else screenshot = { priceOpp: opp, evidence: args.evidence ? String(args.evidence).trim().slice(0, 200) : null, hold: facts.hold };
+      }
+
       const size = set.format === "royale" ? royaleRoster(lg).length : activeNames(lg).length;
       const need = set.lockRule === "count" ? Math.min(set.lockCount || size, size || set.lockCount) : size;
       const already = Object.keys(picks).length;
@@ -3261,12 +3300,14 @@ const MCP_TOOLS = [
       const echo =
         p.label + " — " + p.game + ", " + (BOZO_PERIOD_LABEL[p.period] ? BOZO_PERIOD_LABEL[p.period] + " " : "") +
         bozoMarketPhrase(p) +
-        " at " + p.price + " (opposite side " + (p.priceOpp == null ? "not captured" : p.priceOpp) + "), for " + who +
+        " at " + p.price + " (opposite side " + (screenshot ? screenshot.priceOpp + " from your DraftKings screenshot" : p.priceOpp == null ? "not captured" : p.priceOpp) + "), for " + who +
         (proxy ? " (submitted by " + name + " as league manager; marked as such and stamped with the server time of the confirm, not backdated)" : "") +
         ", week " + (lg.week || 1) + " in league " + lid + "." +
         (captured.agreement ? " Typed check " + captured.agreement.typedPrice + " vs captured " + captured.agreement.capturedPrice +
           " (" + captured.agreement.probabilityPointDifference.toFixed(2) + " probability points apart" +
           (captured.agreement.needsConfirmation ? "; explicit confirmation required" : "") + ")." : "") +
+        (screenshot ? " Both prices come from the screenshot, so the leg lands VERIFIED and counts for CLV; confirm they are the DraftKings prices for this exact line and period." : "") +
+        (screenshotNote ? " " + screenshotNote : "") +
         (mine ? " ⚠️ This REPLACES " + (proxy ? who + "'s" : "your") + " current leg (" + mine.label + " at " + mine.price + ") and resets " + (proxy ? "their" : "your") + " submission clock — that moves " + (proxy ? "them" : "you") + " in the Last In lever." : "") +
         (wouldLock ? " ⚠️ THIS IS THE LAST LEG: confirming places the ticket, locks the board for all " + size + " and draws the lever hierarchy. No undo." : "");
 
@@ -3283,7 +3324,7 @@ const MCP_TOOLS = [
       try {
         // The TARGET rides in the envelope, so phase two re-resolves and re-gates it.
         await env.RL.put(kvKey, JSON.stringify({ code, lid, week: lg.week || 1, p, echo, ts: Date.now(),
-          forUid: proxy ? mkey : null, forKey: mkey }), { expirationTtl: 300 });
+          forUid: proxy ? mkey : null, forKey: mkey, screenshot }), { expirationTtl: 300 });
         await env.RL.put(codeKey, JSON.stringify({lid,mkey}), {expirationTtl:300});
       } catch (e) { return toolErr("Could not stage the confirmation: " + e.message); }
 
@@ -3301,6 +3342,7 @@ const MCP_TOOLS = [
           entrySnapshotAt: p.entrySnapshotAt, providerEventIds: p.providerEventIds,
           startsAt: p.startsAt, espnEventId: p.espnEventId, canonicalKey: p.canonicalKey },
         agreement: captured.agreement || null,
+        screenshot: screenshot ? { priceOpp: screenshot.priceOpp, verifiesOnConfirm: true } : screenshotNote ? { verifiesOnConfirm: false, detail: screenshotNote } : null,
         warning: captured.captureWarning || null,
         note: "NOTHING has been submitted. Show the human the echo verbatim; only after they approve, call this tool again with {confirm: \"" + code + "\"}.",
       });
