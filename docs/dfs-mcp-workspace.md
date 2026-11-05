@@ -39,11 +39,11 @@ Source and as_of accompany saved inputs. Computed results record their input rev
 
 - 220 players; 150 requested solver lineups; 5,000 saved candidates; 2 MB workspace; 500 KB CSV.
 - Five-second maximum optimizer/exploration search. Showdown enumeration stops at 100,000 stored legal candidates and reports incomplete search; its frontier is then partial.
-- Up to 200 simulation candidates, 16,000 worlds and 10,000 sampled opponents, subject to a 32-million work-unit budget. Four-contest comparisons have a stricter combined budget. Requests exceeding limits fail explicitly.
+- Up to 200 simulation candidates, 50,000 worlds and 20,000 sampled opponents, subject to a 96-million work-unit budget (worlds × (opponents + candidates); measured at about 10 seconds on Node 22, a third of the Worker CPU ceiling). The default is 8,000 worlds. Four-contest comparisons have a stricter combined budget (5×). Requests exceeding limits fail explicitly.
 - Worker CPU ceiling is 30 seconds, verified in the uploaded version metadata and promoted with owner approval. There are no durable background jobs yet.
 - Solver exposure caps are sequential heuristics, not guaranteed final portfolio bounds. The exposure report flags final violations. Exploration does not enforce portfolio exposure limits or minimum differences.
 - Missing projections remain missing; simulations require ownership. Showdown requires captain ownership and reconciled CPT scoring. Ownership product is an uncalibrated independence proxy.
-- Sampling cannot resolve exact first-place probability or top-heavy ROI; shared simulator withholds those metrics. Confidence intervals quantify Monte Carlo sampling error, not model error.
+- Sampling cannot resolve exact first-place probability or top-heavy ROI; shared simulator withholds those metrics. Set `fieldSample` to `fieldSize - 1` for a full modelled field (contests up to 20,001 entrants) and `roi`, `ev` and `win` are reported. Confidence intervals quantify Monte Carlo sampling error, not model error.
 - Browser import does not support MCP-only player groups; it refuses those workspaces rather than dropping the constraints.
 - History tools explicitly archive and retrieve imported results logs, post-lock audits and saved workspace revisions. They do not recover files, import account history automatically, scrape a contest lobby, or submit entries. Presentation-only chart filters remain outside the workspace API.
 
