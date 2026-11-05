@@ -105,7 +105,7 @@ function rig() {
     // Permissive gate so proxy provenance tests stay focused on forUid / audit — week
     // filtering has its own suite. Window covers the fixture kickoff.
     bozoWeekGate: async () => ({ week: 2, window: { loDate: '2026-01-01', hiDate: '2026-12-31', week: 2 }, docs: {} }),
-    bozoCaptureEntry: async (e, input) => ({ ok: true, p: { ...input, price: -150, priceOpp: 130, priceSource: 'captured' } }),
+    bozoCaptureEntry: async (e, input) => ctx.capture ? ctx.capture(input) : ({ ok: true, p: { ...input, price: -150, priceOpp: 130, priceSource: 'captured' } }),
     royaleAliveKey: (state, key) => !((state.royale && state.royale.dead) || []).includes(key),
     royaleStatus: state => Object.fromEntries(((state.royale && state.royale.dead) || []).map(k => [k, { chopped: [1] }])),
     royaleRoster: state => Object.keys(state.members || {}).filter(k => !((state.royale && state.royale.dead) || []).includes(k)),
@@ -121,6 +121,8 @@ function rig() {
   vm.runInContext([
     'const LG = lid => "/bozo/leagues/" + lid;',
     'const playerName = k => { try { return decodeURIComponent(k); } catch { return k; } };',
+    between('const bzAmerican = v =>', '// One DraftKings outcome can have'),
+    between('const bozoRawImplied = price =>', 'function assertQuote('),
     between('const memberRec = (lg, key)', '// Everything that existed before leagues belongs to DEFAULT_LEAGUE'),
     between('const BOZO_PERIODS = [', '/* ---------------- player props ----------------'),   // Phase 2.8 helpers the route calls
     between('async function commitBozoLeg(', 'async function bozoPick('),
@@ -415,4 +417,110 @@ test('MCP code index is isolated by caller; proxy permissions are checked again 
  assert.equal((await r.mcp({confirm:a.confirm_code},{...SUE,kind:'user'})).status,'nothing_pending');
  const lg=r.league();lg.managerUid='u_sue';r.fb.put('/bozo/leagues/main',lg);
  assert.ok((await r.mcp({confirm:a.confirm_code})).error);assert.ok(!r.league().picks);
+});
+
+/* ---------------- screenshot evidence (both DK prices off the slip) ---------------- */
+// Production phase one always self-prices (capture runs after commit), and an alternate
+// number never captures on the free feed — exactly how DEN +4.5 -274 landed unverified.
+const selfPriced = input => ({ ok: true, p: { ...input, price: Math.round(Number(input.typedPrice)), priceOpp: null,
+  priceSource: 'self', verificationStatus: 'unverified', clvEligible: false,
+  captureFailureCode: 'awaiting_commit', captureFailureReason: 'Capture occurs once after commitment' } });
+const DEN = { sport: 'nfl', eventId: '401772', game: 'DEN @ CAR', mkt: 'spread', side: 'DEN', line: -4.5, label: 'DEN +4.5',
+  startsAt: '2026-11-08T18:00:00.000Z', price: -274 };
+
+test('screenshot: a manager\'s own leg with both prices lands verified, CLV-eligible, audited, clock untouched', async () => {
+  const r = rig(); r.seed(); r.ctx.capture = selfPriced;
+  const a = await r.mcp({ ...DEN, priceOpp: 196, priceEvidence: 'screenshot', evidence: 'DK alt spread slip' });
+  assert.equal(a.status, 'confirm_required', JSON.stringify(a));
+  assert.match(a.echo, /opposite side 196 from your DraftKings screenshot/);
+  assert.match(a.echo, /lands VERIFIED and counts for CLV/);
+  assert.deepEqual(JSON.parse(JSON.stringify(a.screenshot)), { priceOpp: 196, verifiesOnConfirm: true });
+  assert.ok(!r.league().picks, 'phase one writes nothing');
+  const t0 = Date.now();
+  const out = await r.mcp({ confirm: a.confirm_code });
+  assert.equal(out.status, 'submitted', JSON.stringify(out));
+  assert.deepEqual([out.leg.price, out.leg.priceOpp, out.leg.priceSource, out.leg.verificationStatus, out.leg.clvEligible],
+    [-274, 196, 'manual', 'verified', true]);
+  const leg = r.league().picks.u_mgr;
+  assert.deepEqual([leg.price, leg.priceOpp, leg.entryPriceOpp, leg.priceSource, leg.verificationStatus, leg.clvEligible, leg.entryOppSource, leg.entryProvider],
+    [-274, 196, 196, 'manual', 'verified', true, 'screenshot-verified', 'screenshot']);
+  assert.ok(leg.fairEntry > 0.68 && leg.fairEntry < 0.69, String(leg.fairEntry));
+  assert.ok(leg.entryHold > 0.07 && leg.entryHold < 0.071, String(leg.entryHold));
+  assert.ok(leg.ts >= t0 && leg.ts <= Date.now());
+  assert.equal(leg.entryVerification.originalSubmittedAt, new Date(leg.ts).toISOString(), 'verification is stamped at the submission, never backdated');
+  assert.deepEqual([leg.entryVerification.byUid, leg.entryVerification.verifiedVia, leg.entryVerification.evidence, leg.entryVerification.confirmationId, leg.entryVerification.priceOpp],
+    ['u_mgr', 'mcp-screenshot', 'DK alt spread slip', a.confirm_code, 196]);
+  assert.ok(!leg.commissionerModified, 'a self-submission is not a proxy write');
+  const rows = r.audit();
+  assert.equal(rows.length, 1);
+  assert.deepEqual([rows[0].type, rows[0].screenshotVerified, rows[0].evidence, rows[0].forUid], ['screenshot_verify', true, 'DK alt spread slip', 'u_mgr']);
+});
+
+test('screenshot: without priceEvidence a typed price and priceOpp stay unverified, exactly as before', async () => {
+  const r = rig(); r.seed(); r.ctx.capture = selfPriced;
+  const a = await r.mcp({ ...DEN, priceOpp: 196 });
+  assert.equal(a.screenshot, null);
+  assert.match(a.echo, /opposite side not captured/);
+  await r.mcp({ confirm: a.confirm_code });
+  const leg = r.league().picks.u_mgr;
+  assert.deepEqual([leg.priceSource, leg.verificationStatus, leg.clvEligible, leg.priceOpp, leg.entryOppSource], ['self', 'unverified', false, null, null]);
+  assert.equal(leg.entryVerification, undefined);
+  assert.equal(r.audit().length, 0);
+});
+
+test('screenshot: a member without manager authority lands unverified for review, nothing verified', async () => {
+  const r = rig(); r.seed(); r.ctx.capture = selfPriced;
+  const a = await r.mcp({ ...DEN, priceOpp: 196, priceEvidence: 'screenshot' }, { ...ROGER, kind: 'user' });
+  assert.equal(a.status, 'confirm_required');
+  assert.equal(a.screenshot.verifiesOnConfirm, false);
+  assert.match(a.echo, /lands UNVERIFIED for manager review/);
+  await r.mcp({ confirm: a.confirm_code }, { ...ROGER, kind: 'user' });
+  const leg = r.league().picks.u_rog;
+  assert.deepEqual([leg.priceSource, leg.verificationStatus, leg.clvEligible], ['self', 'unverified', false]);
+  assert.equal(r.audit().length, 0);
+});
+
+test('screenshot: bad pairs are refused before anything is staged', async () => {
+  const r = rig(); r.seed(); r.ctx.capture = selfPriced;
+  assert.match((await r.mcp({ ...DEN, priceEvidence: 'screenshot' })).error, /both signed DraftKings prices/);
+  assert.match((await r.mcp({ ...DEN, priceOpp: -196, priceEvidence: 'screenshot' })).error, /hold must be between 0% and 15%/);
+  assert.match((await r.mcp({ ...DEN, priceOpp: 400, priceEvidence: 'screenshot' })).error, /hold must be between 0% and 15%/);
+  assert.match((await r.mcp({ ...DEN, priceOpp: 196, priceEvidence: 'photo' })).error, /priceEvidence must be/);
+  assert.equal([...r.kv.store.keys()].length, 0, 'nothing staged');
+  assert.ok(!r.league().picks);
+});
+
+test('screenshot: a captured quote wins and the screenshot is not applied', async () => {
+  const r = rig(); r.seed();   // default stub captures -150 / 130
+  const a = await r.mcp({ ...PICK, price: -150, priceOpp: 125, priceEvidence: 'screenshot' });
+  assert.equal(a.screenshot.verifiesOnConfirm, false);
+  await r.mcp({ confirm: a.confirm_code });
+  const leg = r.league().picks.u_mgr;
+  assert.deepEqual([leg.priceSource, leg.verificationStatus, leg.priceOpp, leg.entryProvider], ['captured', 'verified', 130, null]);
+  assert.equal(r.audit().length, 0);
+});
+
+test('screenshot: losing manager access between propose and confirm writes nothing', async () => {
+  const r = rig(); r.seed(); r.ctx.capture = selfPriced;
+  const a = await r.mcp({ ...DEN, priceOpp: 196, priceEvidence: 'screenshot' });
+  const lg = r.league(); lg.managerUid = 'u_sue'; r.fb.put('/bozo/leagues/main', lg);
+  const out = await r.mcp({ confirm: a.confirm_code });
+  assert.equal(out.status, 'stale');
+  assert.ok(!r.league().picks);
+});
+
+test('screenshot: a manager proxy leg is verified and keeps the proxy audit type', async () => {
+  const r = rig(); r.seed(); r.ctx.capture = selfPriced;
+  const a = await r.mcp({ ...DEN, forUid: 'u_rog', priceOpp: 196, priceEvidence: 'screenshot' });
+  await r.mcp({ confirm: a.confirm_code });
+  const leg = r.league().picks.u_rog;
+  assert.deepEqual([leg.verificationStatus, leg.priceSource, leg.commissionerModified], ['verified', 'manual', true]);
+  const rows = r.audit();
+  assert.deepEqual([rows.length, rows[0].type, rows[0].screenshotVerified], [1, 'proxy_submit', true]);
+});
+
+test('screenshot: the server instructions tell agents to pass both prices from a screenshot', () => {
+  assert.match(block, /When the human gives you a DraftKings screenshot of the bet, read BOTH prices/);
+  assert.match(block, /priceEvidence: \{ type: "string", enum: \["screenshot"\]/);
+  assert.doesNotMatch(block, /priceOpp: \{ type: "number", description: "Deprecated input/);
 });
