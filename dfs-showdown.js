@@ -68,8 +68,10 @@ const FINISH_CUTS = [0.01, 0.05, 0.10, 0.22, 0.50];   // top 1%, 5%, 10%, cash l
 const WORLDS = { standard: 10000, pro: 20000, max: 30000 };
 /* Contest simulation (Stokastic-style sim ROI, first place, top-10, cash): every entry is
    ranked against a complete modelled field of entrants − 1 opponents in every world.
-   Above this size a full field costs too much on a phone, and a scaled sample cannot
-   resolve first place or top-heavy prizes, so those metrics stay unavailable. */
+   Above this size a full field costs too much on a phone. There, and only when the
+   contest's prize table is supplied, entries are ranked against an 11,999-opponent sample
+   and the count above them is extrapolated to the full field (scaledContestTables in
+   dfs-showdown-grading.js), with the method and its tail dependence reported. */
 const FULL_CONTEST_MAX = 12000;
 const BINS = 16;
 const FRONTIER_BINS = 40;
@@ -463,7 +465,8 @@ function upperBound(a, v) { let l = 0, r = a.length; while (l < r) { const m = (
    sharpness weights, so popular rosters repeat as often as the field model expects and
    ties are represented, not assumed away. The field is fixed across worlds, as in
    DDFS.simulate. Entries are independent: a user's other entries are not opponents. */
-function buildContests(E, entries, weights, nF, seed) {
+function buildContests(E, entries, weights, nF, seed, grading, fullMax) {
+  fullMax = fullMax || FULL_CONTEST_MAX;
   const groups = new Map(), out = [];
   entries.forEach((e, k) => {
     const key = e.type + '|' + e.entrants + '|' + (e.payouts ? e.payouts.join(',') : '') + '|' + e.cashLine;
@@ -472,8 +475,15 @@ function buildContests(E, entries, weights, nF, seed) {
   });
   let g = 0;
   for (const c of groups.values()) {
-    const m = c.entrants - 1;
-    if (m > FULL_CONTEST_MAX - 1) { c.unavailable = 'Contest has ' + c.entrants.toLocaleString() + ' entrants; full-field simulation runs up to ' + FULL_CONTEST_MAX.toLocaleString() + '.'; out.push(c); continue; }
+    let m = c.entrants - 1;
+    if (m > fullMax - 1) {
+      // Above the full-field limit: a pasted prize table unlocks the scaled estimate
+      // (dfs-showdown-grading.js). Without one there is nothing honest to report.
+      if (!c.payouts || !grading) { c.unavailable = 'Contest has ' + c.entrants.toLocaleString() + ' entrants; full-field simulation runs up to ' + fullMax.toLocaleString() + '. Paste its prize table for a scaled ROI estimate.'; out.push(c); continue; }
+      m = fullMax - 1;
+      const tableFor = grading.contestTableCache(c.payouts, c.entrants, m);
+      c.scaled = true; c.tables = c.members.map(k => tableFor(entries[k].dupRate || 0));
+    }
     const w = weights[c.type], cum = new Float64Array(nF); let acc = 0;
     for (let i = 0; i < nF; i++) { acc += w[i]; cum[i] = acc; }
     const rand = E.modelHelpers.rng((seed ^ 0x5bd1e995) + 7919 * (++g)), idx = new Int32Array(m);
@@ -487,7 +497,7 @@ function buildContests(E, entries, weights, nF, seed) {
     if (c.payouts) { prefix = new Float64Array(c.entrants + 1); for (let r = 0; r < c.entrants; r++) prefix[r + 1] = prefix[r] + (c.payouts[r] || 0); }
     const K = c.members.length;
     Object.assign(c, { m, idx, paid, prefix, scores: new Float64Array(m),
-      acc: { pay: new Float64Array(K), win: new Float64Array(K), winHits: new Float64Array(K), top10: new Float64Array(K), cash: new Float64Array(K), cashHits: new Float64Array(K), rank: new Float64Array(K) } });
+      acc: { pay: new Float64Array(K), pay2: new Float64Array(K), tailPay: new Float64Array(K), win: new Float64Array(K), winHits: new Float64Array(K), top10: new Float64Array(K), cash: new Float64Array(K), cashHits: new Float64Array(K), rank: new Float64Array(K) } });
     out.push(c);
   }
   return out;
@@ -584,12 +594,22 @@ async function runWorlds(E, P, field, weights, entries, bench, opts, onProgress)
           let above, tied;
           if (scan) { above = 0; tied = 0; const hiV = v + 1e-8, loV = v - 1e-8; for (let j = 0; j < m; j++) { const x = poolScore[idx[j]]; if (x > hiV) above++; else if (x >= loV) tied++; } }
           else { const up = upperBound(sc, v + 1e-8); above = m - up; tied = up - lowerBound(sc, v - 1e-8); }
+          if (c.scaled) {
+            // Expected prize given `above` of the sampled opponents, already scaled to the
+            // full field with copies and tie splits (dfs-showdown-grading.js).
+            const T = c.tables[q], at = above < T.pay.length ? above : -1;
+            const pay = at < 0 ? 0 : T.pay[at];
+            a.pay[q] += pay; a.pay2[q] += pay * pay; if (above === 0) a.tailPay[q] += pay;
+            if (at >= 0) { a.win[q] += T.win[at]; a.top10[q] += T.top10[at]; a.cash[q] += T.cash[at]; }
+            a.rank[q] += 1 + (above + tied / 2) * (c.entrants - 1) / m;
+            return;
+          }
           // Tie-aware settlement, as DDFS.simulate: a tie shares the places it occupies.
           if (above === 0) { a.win[q] += 1 / (tied + 1); a.winHits[q]++; }
           if (above < 10) a.top10[q]++;   // literal places 1–10, not a share of the field
           const share = Math.max(0, Math.min(tied + 1, c.paid - above)) / (tied + 1);
           a.cash[q] += share; if (share > 0) a.cashHits[q]++;
-          if (c.prefix) { const lo = Math.min(above, c.entrants), hi = Math.min(above + tied + 1, c.entrants); a.pay[q] += (c.prefix[hi] - c.prefix[lo]) / (tied + 1); }
+          if (c.prefix) { const lo = Math.min(above, c.entrants), hi = Math.min(above + tied + 1, c.entrants), pay = (c.prefix[hi] - c.prefix[lo]) / (tied + 1); a.pay[q] += pay; a.pay2[q] += pay * pay; }
           a.rank[q] += 1 + above + tied / 2;
         });
       }
@@ -665,10 +685,12 @@ async function analyze(input, opts) {
   let m = 0, s2 = 0; for (let k = 0; k < nF; k++) m += fx.proj[k]; m /= nF;
   for (let k = 0; k < nF; k++) s2 += (fx.proj[k] - m) * (fx.proj[k] - m);
   const sd = Math.sqrt(s2 / nF) || 1;
+  // A fitted preset (from the user's own DK standings) replaces the hypothesis β when supplied.
+  const betaOf = t => opts.betas && finite(opts.betas[t.id]) ? Math.max(-2, Math.min(4, opts.betas[t.id])) : t.beta;
   const weights = {};
   for (const t of TYPES) {
-    const w = new Float64Array(nF);
-    for (let k = 0; k < nF; k++) w[k] = Math.exp(t.beta * (fx.proj[k] - m) / sd);
+    const w = new Float64Array(nF), b = betaOf(t);
+    for (let k = 0; k < nF; k++) w[k] = Math.exp(b * (fx.proj[k] - m) / sd);
     weights[t.id] = normalise(w);
   }
 
@@ -718,20 +740,31 @@ async function analyze(input, opts) {
   const nb = Math.min(240, nF);
   const bench = Array.from({ length: nb }, (_, k) => k);
   if (prog) prog('worlds', 0);
-  const contests = entries.length ? buildContests(E, entries, weights, nF, seed) : [];
+  const grading = opts.grading || root.DDShowdownGrading || null;
+  entries.forEach(e => { e.dupRate = freq[e.type].get(e.canon) || 0; });
+  const contests = entries.length ? buildContests(E, entries, weights, nF, seed, grading, opts.fullContestMax) : [];
   const sim = entries.length ? await runWorlds(E, P, field, weights, entries, bench, { seed, worlds, fieldSim: 3000, contests }, prog) : null;
   // Stokastic-style per-entry contest results against its own complete modelled field.
   contests.forEach(c => c.members.forEach((k, q) => {
     const e = entries[k];
     if (c.unavailable || !sim) { e.contestSim = { available: false, reason: c.unavailable || 'No simulation was run.' }; return; }
     const n = sim.worlds, a = c.acc, ev = c.prefix ? a.pay[q] / n : null;
+    // Monte Carlo interval on mean prize: simulation noise only, not projection or field error.
+    const se = ev == null ? null : Math.sqrt(Math.max(0, a.pay2[q] / n - ev * ev) / n);
+    const roiOf = v => v == null || !(e.fee > 0) ? null : (v - e.fee) / e.fee;
     e.contestSim = {
-      available: true, worlds: n, entrants: c.entrants, paidPlaces: c.paid,
-      roi: ev == null || !(e.fee > 0) ? null : (ev - e.fee) / e.fee, ev,
+      available: true, worlds: n, entrants: c.entrants, paidPlaces: c.paid, scaled: !!c.scaled,
+      roi: roiOf(ev), ev, roiCi: se == null || !(e.fee > 0) ? null : [roiOf(ev - 1.96 * se), roiOf(ev + 1.96 * se)],
       roiReason: c.prefix ? null : 'Add the contest prize table to estimate ROI.',
       win: a.win[q] / n, top10: a.top10[q] / n, cash: a.cash[q] / n, meanRank: a.rank[q] / n,
-      ci: { win: wilson95(a.winHits[q], n), top10: wilson95(a.top10[q], n), cash: wilson95(a.cashHits[q], n) }
+      ci: c.scaled ? { win: null, top10: null, cash: null } : { win: wilson95(a.winHits[q], n), top10: wilson95(a.top10[q], n), cash: wilson95(a.cashHits[q], n) }
     };
+    if (c.scaled) Object.assign(e.contestSim, {
+      sampled: c.m, method: grading.SCALED_METHOD, expectedCopies: round(c.tables[q].lambda, 2),
+      // Share of the expected prize earned in worlds where the entry beat every sampled
+      // opponent: that part rests on extrapolation past the sample, so a high share is rough.
+      tailShare: a.pay[q] > 0 ? round(a.tailPay[q] / a.pay[q], 3) : null
+    });
   }));
 
   // per-entry grades and contributors
@@ -801,7 +834,7 @@ async function analyze(input, opts) {
   if (sim) warnings.push(...sim.warn);
 
   return {
-    version: VERSION, seed, worlds: sim ? sim.worlds : 0, fieldN: nF, fieldSim: sim ? sim.fieldSim : 0,
+    version: VERSION, seed, worlds: sim ? sim.worlds : 0, betas: Object.fromEntries(TYPES.map(t => [t.id, { beta: betaOf(t), source: betaOf(t) === t.beta ? 'preset hypothesis' : 'fitted from your DK standings' }])), fieldN: nF, fieldSim: sim ? sim.fieldSim : 0,
     elapsedMs: Date.now() - started, teams, hasCeil,
     types: TYPES.map(t => ({ ...t })), weightsDoc: SCORE_WEIGHTS, names: CONTRIBUTOR_NAMES,
     players: P.map(p => ({ i: p.i, id: p.id, name: p.name, pos: p.pos, team: p.team, sal: p.sal, cptSal: p.cptSal, proj: p.proj, ceil: p.ceil, own: p.own, cptOwn: p.cptOwn, ok: p.ok })),

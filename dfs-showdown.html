@@ -861,7 +861,7 @@ body:has(main.sd) #ddbLaunch{position:relative!important;inset:auto!important;ma
 .sd-simple>.sd-hero{order:0;padding:4px 0}
 .sd-simple>.sd-hero h1{font-size:22px;line-height:1.15;margin:4px 0}
 .sd-simple>.sd-hero .p-kicker,.sd-simple>.sd-hero .p-lead{display:none}
-.sd-simple>#sdDash{order:1}.sd-simple>#sdSetup{order:2}.sd-simple>#sdMethod{order:3}
+.sd-simple>#sdDash{order:1}.sd-simple>#sdSetup{order:2}.sd-simple>#sdPost{order:2}.sd-simple>#sdMethod{order:3}
 .sd-simple>#sdProgress{order:0}
 #sdSetup>summary,#sdUncertainty>summary,.sd-value-note>summary{cursor:pointer;min-height:44px;padding:10px 0;font-size:14px;line-height:1.4}
 #sdSetup{margin:8px 0 18px}#sdSetup[open]>.sd-source{margin-top:8px}
@@ -986,6 +986,19 @@ body:has(.sd-simple) #ddbLaunch{display:none!important}
 .sd-progress .bar{height:6px;border-radius:999px;background:var(--sd-s2);overflow:hidden}
 .sd-progress .bar i{display:block;height:100%;width:0;background:var(--sd-molten);transition:width .2s}
 .sd-warn{font-size:12.5px;line-height:1.45;color:var(--ink-2);margin:0 0 6px}
+.sd-check{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;padding:10px 0;border-top:1px solid var(--border)}
+.sd-check .tag{font:800 9.5px/1.6 var(--sd-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--sd-amber);white-space:nowrap}
+.sd-check.ok .tag{color:var(--ink-3)}
+.sd-check b{font-size:13px;line-height:1.35}.sd-check p{margin:2px 0 6px;font-size:12px;color:var(--ink-2);line-height:1.4}
+.sd-check input[type=text]{width:100%;max-width:560px;font-size:12px}
+.sd-prize{border-top:1px solid var(--border);padding:8px 0}
+.sd-prize textarea,.sd-post textarea{width:100%;min-height:96px;font:12px/1.4 var(--sd-mono);box-sizing:border-box}
+.sd-score{width:100%;border-collapse:collapse;font-size:12.5px;margin:6px 0 12px}
+.sd-score th,.sd-score td{padding:5px 6px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
+.sd-score th:first-child,.sd-score td:first-child{text-align:left;white-space:normal}
+.sd-score th{font:700 10px/1.2 var(--sd-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.sd-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sd-post>summary{cursor:pointer;font-weight:750}
 .sd-foot{font-size:11.5px;line-height:1.55;color:var(--ink-3);margin:6px 0 0}
 .sd-demo{display:inline-flex;align-items:center;gap:6px;font:800 10px/1 var(--sd-mono);letter-spacing:.08em;color:var(--sd-ghost);border:1px solid color-mix(in srgb,var(--sd-ghost) 45%,transparent);border-radius:999px;padding:4px 9px}
 .sd [hidden]{display:none!important}
@@ -2682,6 +2695,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     </div>
     <p id="sdCsvMsg" class="sd-warn" hidden></p>
     <div class="sd-escroll"><table class="sd-etable" id="sdETable"></table></div>
+    <div id="sdPrizes"></div>
   </details>
 
   </details>
@@ -2714,8 +2728,8 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 
         <details id="sdUncertainty"><summary>Model estimates · unverified cash lines</summary>  <div class="p-disclosure"><b>Simulation, not a promise.</b> Every number here is model output from your
   own inputs and none of it has been graded against results yet. Contest types differ by a field-sharpness
-  preset, not by measured fields. ROI stays unknown until the duplicate prize split is applied, so this page
-  never shows one.</div></details>
+  preset, not by measured fields, unless you have fitted them on your own DK standings. Sim ROI appears only
+  where you supplied the prize table, and it is still simulation on an uncalibrated field.</div></details>
 
         <p class="sd-small" id="sdCeilingStatus" hidden></p><p class="sd-small" id="sdReadChart">Tap a numbered lineup for its values.</p>
         <div class="sd-axes"><span id="sdYT"></span><span id="sdXT"></span></div>
@@ -2747,11 +2761,32 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       </section>
 
     <section class="sd-card span" id="sdCashAccounting" aria-label="Cash-line accounting"></section>
+    <section class="sd-card span" id="sdChecks" aria-label="Pre-lock checks" hidden></section>
       <div id="sdLeft"></div>
       <div id="sdRight"></div>
     </div>
     <p class="sd-foot" id="sdFoot"></p>
   </div>
+
+  <details class="sd-card sd-post" id="sdPost">
+    <summary>After the slate · pool scorecard &amp; field calibration</summary>
+    <p class="sd-small sd-muted" style="margin:8px 0">Add the DraftKings contest-standings CSV for each contest you played (the contest page's Export standings link).
+    The scorecard scores this workspace's lineup pool, and a plain pool of the highest-projected lineups, against what actually happened at each contest's
+    real cut lines. Calibration fits the contest-type field presets to the real field. Files are read in this browser only: other entrants' names and
+    lineups are never stored or sent.</p>
+    <div class="sd-row">
+      <label class="sd-btn" for="sdStand">Add DK standings CSVs</label>
+      <input type="file" id="sdStand" accept=".csv,text/csv" multiple hidden>
+      <label class="sd-small" for="sdPoolPick">Pool</label>
+      <select id="sdPoolPick" class="sd-btn"><option value="pool">Whole workspace pool</option><option value="entries">Selected entries</option></select>
+      <button type="button" class="sd-btn primary" id="sdScoreBtn" disabled>Score the pool</button>
+      <button type="button" class="sd-btn" id="sdCalBtn" disabled>Fit field presets</button>
+    </div>
+    <p id="sdPostMsg" class="sd-warn" hidden></p>
+    <div class="sd-scroll"><table class="sd-etable" id="sdStandTable"></table></div>
+    <div id="sdScoreOut" aria-live="polite"></div>
+    <div id="sdCalOut" aria-live="polite"></div>
+  </details>
 
   <section class="p-section" id="sdMethod">
     <header><div><h2>How these model comparisons work</h2><p class="dek">The short version of what every number on this page is,
@@ -2770,6 +2805,19 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       20,000. Each entry is also ranked against a complete modeled field of its own contest size, which gives the simulated ROI (when
       the prize table is known), win rate, top-10 rate and cash rate, the way contest simulators sort lineups. More games only shrink
       simulation noise; they do not fix projection or field-model error.</p>
+      <p class="sd-small" style="margin:0 0 8px"><b>Big contests.</b> Above 12,000 entrants a complete field is too heavy for a phone. When you paste
+      that contest's prize table, each entry is ranked against an 11,999-opponent sample in every game and the count of opponents above it is
+      extrapolated to the full field (a beta-binomial with a uniform prior, which gives an entry drawn from the field exactly the field's average
+      prize). Exact copies of your lineup come from the field model and share the places they tie for. The lineup row shows a Monte Carlo interval,
+      which covers simulation noise only, and flags estimates that rest mostly on beating the whole sample, where first place is extrapolated.</p>
+      <p class="sd-small" style="margin:0 0 8px"><b>Pre-lock checks.</b> Five warnings from the October 29 TNF CAR@GB audit: exposure 15+ points off the
+      field without a written reason, an underdog QB above field +10, the favourite's top two pass-catchers more than 10 points under the field, sub-3-point
+      players in Double Ups, and kickers without a make-rate note. They are tracked hypotheses from one slate. They never block an export, and a written
+      reason marks a warning explained.</p>
+      <p class="sd-small" style="margin:0 0 8px"><b>After the slate.</b> The scorecard reads actual player points from the standings file, checks them by
+      rescoring the field's own lineups, then reports average, best, top-1% and cash rates for your pool and a plain top-projection pool. Pool lineups share
+      players, so one slate is one observation. Calibration fits each contest type's sharpness to the real field's mean projection and shows the
+      ownership misses beside it; fewer than three contests per type stays provisional.</p>
       <p class="sd-small" style="margin:0"><b>The grade.</b> A weighted blend of four percentiles against that field: points for the
       ownership, ceiling, top-1% chance, and cash chance (uniqueness replaces cash in max-entry and flagship contests). The
       weights are a placeholder until receipts can grade them, and the page shows them in Pro.</p>
@@ -2780,7 +2828,9 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <footer class="foot">Data Dawgs · Data, Not Dogma · <a href="/llms.txt">For machines</a> · All model and market numbers carry their date.</footer>
 
 <script src="work/dfs-engine.js"></script>
-<script src="dfs-showdown.js?v=2"></script>
+<script src="dfs-showdown.js?v=3"></script>
+<script src="dfs-ledger.js"></script>
+<script src="dfs-showdown-grading.js?v=1"></script>
 <script>
 /* =====================================================================================
    dfs-showdown.html — DFS SHOWDOWN. The UI over dfs-showdown.js.
@@ -2798,10 +2848,12 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 (function () {
 'use strict';
 const SD = window.DDShowdown;
+const GR = window.DDShowdownGrading || null, LG = window.DDFSLedger || null;
 const $ = id => document.getElementById(id);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const STORE = 'dd-showdown:v1:';
 const PREFS = 'dd-showdown:prefs';
+const CAL = 'dd-showdown:calibration';
 const TYPES = SD.TYPES;
 const typeById = id => TYPES.find(t => t.id === id) || TYPES[0];
 const AXES = [
@@ -2816,8 +2868,15 @@ const SCRIPT_COL = [['#ffb454', '#1a0d05'], ['#7a6b5e', '#fff8ef'], ['#4f6a88', 
 const state = {
   me: null, workspaces: [], source: null, players: [], lineups: [], portfolio: null, settings: {},
   rows: [], model: null, running: false, stale: false, runId: 0,
-  view: 'portfolio', type: 'se', ax: 'own', y: 'proj', sel: 0, pro: false, sens: 4, entrySort: 'order'
+  view: 'portfolio', type: 'se', ax: 'own', y: 'proj', sel: 0, pro: false, sens: 4, entrySort: 'order',
+  mem: {}, prizeGroups: [], stand: [], scorecard: null, calib: null, checks: null
 };
+
+/* Per-workspace device bag: contest assignments, prize tables, written check reasons and the
+   favourite pick. The demo slate keeps the same bag in memory only. */
+function bag() { return state.source && state.source.kind === 'workspace' ? (store(STORE + state.source.id) || {}) : state.mem; }
+function putBag(b) { if (state.source && state.source.kind === 'workspace') store(STORE + state.source.id, b); else state.mem = b; }
+function calibBetas() { const c = store(CAL); return c && c.betas && Object.keys(c.betas).length ? c.betas : null; }
 
 /* ------------------------------------------------------------------ small helpers */
 function store(key, value) { try { if (value === undefined) return JSON.parse(localStorage.getItem(key) || 'null'); localStorage.setItem(key, JSON.stringify(value)); } catch (e) { return null; } return value; }
@@ -2900,6 +2959,7 @@ async function loadWorkspace(id) {
     state.source = { kind: 'workspace', id, label: first.source || id, as_of: first.as_of || null, revision: first.revision };
     state.players = first.players || []; state.lineups = lineups; state.portfolio = first.portfolio || null;
     state.settings = (first.settings && first.settings.simulation) || {};
+    renderStand();
     try { history.replaceState(null, '', location.pathname + '?w=' + encodeURIComponent(id)); } catch (e) {}
     buildRows(); renderSource(); renderEntries(); run();
   } catch (e) {
@@ -2912,7 +2972,8 @@ function loadDemo(userAsked) {
   state.source = { kind: 'demo', id: 'demo', label: d.source, as_of: null };
   state.players = d.players; state.lineups = d.entries.map(e => ({ cpt: e.cpt, ids: e.ids })); state.portfolio = null;
   state.settings = d.settings;
-  state.demoEntries = d.entries;
+  renderStand();
+  state.demoEntries = d.entries; state.mem = {};
   buildRows(); renderSource(); renderEntries(); run();
   if (userAsked) { try { history.replaceState(null, '', location.pathname); } catch (e) {} }
 }
@@ -3003,6 +3064,62 @@ function renderEntries() {
         '<td><input' + (r.contestMeta && r.contestMeta.fieldSize != null ? ' disabled title="From supplied contest metadata"' : '') + ' type="number" min="2" step="1" inputmode="numeric" data-f="entrants" aria-label="Field size" value="' + esc(r.entrants) + '"></td>' +
         '<td><input type="text" data-f="contest" aria-label="Contest name" value="' + esc(r.contest) + '" placeholder="optional"></td></tr>';
     }).join('') + '</tbody>';
+  renderPrizes();
+}
+
+/* ------------------------------------------------------------------ prize tables */
+function prizeKey(r) { const n = String(r.contest || '').trim().toLowerCase(); return n ? 'c:' + n : 't:' + r.type + ':' + r.entrants; }
+function expandRows(rows) { const max = rows.reduce((m, r) => Math.max(m, r.to), 0), out = new Array(max).fill(0); rows.forEach(r => { for (let k = r.from; k <= r.to; k++) out[k - 1] = r.prize; }); while (out.length && !out[out.length - 1]) out.pop(); return out; }
+function prizeFor(r) {
+  const p = (bag().prizes || {})[prizeKey(r)];
+  if (!p || p.entrants !== +r.entrants || !Array.isArray(p.rows) || !p.rows.length) return null;
+  return { ...p, payouts: expandRows(p.rows) };
+}
+function prizeSummary(p, r) {
+  return p.paidPlaces.toLocaleString() + ' paid places, ' + money(p.total) + ' in cash prizes, ' + money(p.firstPrize) + ' to 1st' +
+    (p.rake != null ? ', rake ' + (p.rake * 100).toFixed(1) + '%' : '') +
+    (+r.entrants > SD.FULL_CONTEST_MAX ? '. Over ' + SD.FULL_CONTEST_MAX.toLocaleString() + ' entrants, so ROI is a scaled estimate.' : '.');
+}
+function renderPrizes() {
+  const box = $('sdPrizes'); if (!box) return;
+  if (!GR) { box.innerHTML = ''; return; }
+  const groups = new Map();
+  state.rows.filter(r => r.on).forEach(r => { const k = prizeKey(r); if (!groups.has(k)) groups.set(k, { key: k, rows: [], r }); groups.get(k).rows.push(r); });
+  state.prizeGroups = [...groups.values()];
+  if (!state.prizeGroups.length) { box.innerHTML = ''; return; }
+  box.innerHTML = '<p class="sd-eyebrow" style="margin:14px 0 2px">Prize tables · for sim ROI</p><p class="sd-small sd-muted" style="margin:0 0 6px">Paste a contest\'s prize list from DraftKings, or upload a CSV of rank and prize. With it, sim ROI appears for that contest; contests over ' +
+    SD.FULL_CONTEST_MAX.toLocaleString() + ' entrants get a scaled estimate with its method shown. Without it, ROI stays unknown. Type the real field size first: the table must fit it.</p>' +
+    state.prizeGroups.map((g, k) => {
+      const r = g.r, p = prizeFor(r), lab = r.contest || (typeById(r.type).label + ' · ' + Number(r.entrants).toLocaleString() + ' entrants');
+      return '<div class="sd-prize" data-g="' + k + '"><div class="sd-row" style="justify-content:space-between"><b>' + esc(lab) + '</b><span class="sd-small">' + g.rows.length + (g.rows.length === 1 ? ' entry' : ' entries') + ' · ' + Number(r.entrants).toLocaleString() + ' entrants</span></div>' +
+        '<p class="sd-small" style="margin:2px 0">' + esc(p ? prizeSummary(p, r) : 'No prize table: ROI unknown.') + '</p>' +
+        '<details><summary class="sd-small">' + (p ? 'Replace' : 'Add') + ' prize table</summary><textarea data-pt aria-label="Prize table for ' + esc(lab) + '" placeholder="1st $5,000&#10;2nd $2,500&#10;3rd - 5th $1,000&#10;6th - 20th $100">' + esc(p ? p.text : '') + '</textarea>' +
+        '<div class="sd-row"><button type="button" class="sd-btn" data-pa="parse">Use this table</button><label class="sd-btn">Upload file<input type="file" accept=".csv,.txt,text/csv,text/plain" data-pf hidden></label>' +
+        (p ? '<button type="button" class="sd-btn" data-pa="clear">Remove</button>' : '') + '</div><p class="sd-warn" data-pm hidden></p></details></div>';
+    }).join('');
+}
+function applyPrize(k, text) {
+  const g = state.prizeGroups[k]; if (!g) return;
+  const msg = $('sdPrizes').querySelector('[data-g="' + k + '"] [data-pm]');
+  const out = GR.parsePrizeTable(text, { fieldSize: +g.r.entrants, fee: +g.r.fee });
+  if (!out.ok) { if (msg) { msg.hidden = false; msg.textContent = (out.problems.join(' ') || 'Could not read that table.') + ' Nothing was saved.'; } return; }
+  const b = bag(); b.prizes = b.prizes || {};
+  b.prizes[g.key] = { text: String(text).slice(0, 20000), rows: out.rows, entrants: +g.r.entrants, paidPlaces: out.paidPlaces, total: out.total, firstPrize: out.firstPrize, rake: out.rake, notes: out.notes, saved_at: new Date().toISOString() };
+  putBag(b); state.stale = true; renderEntries();
+  const m2 = $('sdPrizes').querySelector('[data-g="' + k + '"] [data-pm]');
+  if (m2 && out.notes.length) { m2.hidden = false; m2.textContent = out.notes.join(' '); }
+}
+function onPrizeClick(ev) {
+  const btn = ev.target.closest('[data-pa]'); if (!btn) return;
+  const box = btn.closest('[data-g]'), k = +box.dataset.g, g = state.prizeGroups[k]; if (!g) return;
+  if (btn.dataset.pa === 'parse') applyPrize(k, box.querySelector('[data-pt]').value);
+  else { const b = bag(); if (b.prizes) delete b.prizes[g.key]; putBag(b); state.stale = true; renderEntries(); }
+}
+function onPrizeFile(ev) {
+  const inp = ev.target.closest('[data-pf]'); if (!inp || !inp.files || !inp.files[0]) return;
+  const box = inp.closest('[data-g]'), k = +box.dataset.g, rd = new FileReader();
+  rd.onload = () => { const t = String(rd.result || ''); box.querySelector('[data-pt]').value = t; applyPrize(k, t); };
+  rd.readAsText(inp.files[0]);
 }
 
 function onEntryEdit(ev) {
@@ -3015,6 +3132,7 @@ function onEntryEdit(ev) {
   else if (f === 'contest') r.contest = ev.target.value.slice(0, 120);
   state.stale = true; saveRows();
   $('sdEntriesSum').textContent = 'Entries · ' + state.rows.filter(x => x.on).length + ' of ' + state.rows.length + ' ticked · changed, re-grade to update';
+  if (f !== 'fee') renderPrizes();
 }
 
 function importCsv(file) {
@@ -3052,12 +3170,22 @@ function showError(text) { document.querySelector('main.sd').classList.remove('s
 
 async function run() {
   const id = ++state.runId; state.running = true; state.stale = false;
-  const entries = state.rows.filter(r => r.on).map((r, k) => ({ key: r.key, cpt: r.cpt, ids: r.ids, fee: r.fee, type: r.type, entrants: r.entrants, contest: r.contest, label: '#' + (k + 1), source: r.source, contestMeta: r.contestMeta }));
+  const entries = state.rows.filter(r => r.on).map((r, k) => {
+    const e = { key: r.key, cpt: r.cpt, ids: r.ids, fee: r.fee, type: r.type, entrants: +r.entrants, contest: r.contest, label: '#' + (k + 1), source: r.source, contestMeta: r.contestMeta };
+    // A pasted prize table is the newest evidence for this contest: it sets the payouts and,
+    // through them, the cash line. Older paid-place fields would contradict it, so they go.
+    const p = GR ? prizeFor(r) : null;
+    if (p) {
+      if (r.contestMeta) { const cm = { ...r.contestMeta, payouts: p.payouts, fieldSize: +r.entrants }; delete cm.paidPlaces; delete cm.cashLinePct; e.contestMeta = cm; }
+      else { e.payouts = p.payouts; e.fieldSize = +r.entrants; }
+    }
+    return e;
+  });
   renderEntries();
   const stages = { field: [0.02, 0.4, 'Sampling the field'], frontier: [0.4, 0.5, 'Finding the best possible lineups'], worlds: [0.5, 0.98, 'Simulating games'] };
   try {
     const model = await SD.analyze({ players: state.players, entries, settings: state.settings }, {
-      worlds: state.pro ? SD.WORLDS.pro : SD.WORLDS.standard, fieldN: state.pro ? 40000 : 24000,
+      worlds: state.pro ? SD.WORLDS.pro : SD.WORLDS.standard, fieldN: state.pro ? 40000 : 24000, betas: calibBetas(), grading: GR,
       onProgress: (stage, f) => { if (id !== state.runId) return; const s = stages[stage]; if (s) progress(s[2] + '…', s[0] + (s[1] - s[0]) * (f || 0)); }
     });
     if (id !== state.runId) return;
@@ -3114,7 +3242,7 @@ function renderDash() {
   $('sdCaption').textContent = 'Shaded bands show what the field plays in ' + t.label.toLowerCase() + ' contests at the same ' + ax.label.toLowerCase() +
     '. Higher up means more points for the same ' + ax.noun + '. Not a win chance.';
   const pn = $('sdProNote'); pn.hidden = !state.pro;
-  pn.textContent = 'BANDS: FIELD P25 / P50 / P75 / P90 BY ' + ax.label.toUpperCase() + ' · DASHED: HIGHEST MODELED POINTS IN SEARCHED LINEUPS · ' + M.fieldN.toLocaleString() + ' SAMPLED FIELD LINEUPS · FIELD SHARPNESS PRESET β=' + t.beta + ' (HYPOTHESIS)';
+  pn.textContent = 'BANDS: FIELD P25 / P50 / P75 / P90 BY ' + ax.label.toUpperCase() + ' · DASHED: HIGHEST MODELED POINTS IN SEARCHED LINEUPS · ' + M.fieldN.toLocaleString() + ' SAMPLED FIELD LINEUPS · FIELD SHARPNESS ' + (M.betas && M.betas[t.id] && M.betas[t.id].source !== 'preset hypothesis' ? 'β=' + M.betas[t.id].beta + ' (FITTED ON YOUR DK STANDINGS)' : 'PRESET β=' + t.beta + ' (HYPOTHESIS)');
   // sensitivity
   const sens = $('sdSens'); sens.hidden = !state.pro || state.view !== 'lineup' || !sel;
   if (sel) {
@@ -3136,6 +3264,7 @@ function renderDash() {
   $('sdMore').querySelector('summary').textContent = 'Chart guide · ' + t.label + ' settings';
 
   renderCashAccounting(M);
+  renderChecks(M);
   chart.update();
   if (state.view === 'portfolio') renderPortfolio(M); else renderLineup(M, sel);
   if (focusAttr) { const next = Array.from($('sdDash').querySelectorAll('[' + focusAttr + ']')).find(b => b.getAttribute(focusAttr) === focusValue); if (next) next.focus({ preventScroll: true }); }
@@ -3198,7 +3327,7 @@ function renderPortfolio(M) {
   $('sdLeft').innerHTML = '<section class="sd-card"><div class="sd-row" style="justify-content:space-between;align-items:baseline"><h3 class="sd-h3" style="margin:0">Your entries</h3>' +
     '<span class="sd-eyebrow" style="margin:0">' + (new Set(E.map(e => e.type)).size > 1 ? 'Each in its own contest' : 'Graded for ' + esc(typeById(E[0].type).label)) + '</span></div>' +
     '<div class="sd-seg" id="sdEntrySort" role="group" aria-label="Sort entries" style="margin-top:10px">' + ENTRY_SORTS.map(o => '<button type="button" data-esort="' + o.id + '" aria-pressed="' + (o.id === state.entrySort) + '">' + o.label + '</button>').join('') + '</div>' +
-    '<p class="sd-small sd-muted" style="margin:6px 0 0">Each entry is ranked against a complete modeled field of its own contest in every simulated game (up to ' + SD.FULL_CONTEST_MAX.toLocaleString() + ' entrants). Ties share places. Model output, not a verified probability.</p>' +
+    '<p class="sd-small sd-muted" style="margin:6px 0 0">Each entry is ranked against a complete modeled field of its own contest in every simulated game (up to ' + SD.FULL_CONTEST_MAX.toLocaleString() + ' entrants; above that, a pasted prize table gives a scaled estimate from an 11,999-opponent sample, marked Scaled). Ties share places. The ROI range is simulation noise only. Model output, not a verified probability.</p>' +
     '<div class="sd-list" style="margin-top:10px">' + rows + '</div></section>' +
     (calls.length ? '<section class="sd-card"><h3 class="sd-h3">Bold calls</h3><div class="sd-calls">' + calls.map(b => '<div class="sd-call"><i>' + esc(b.tag) + '</i><b>' + esc(b.head) + '</b><span>' + esc(b.sub) + '</span></div>').join('') + '</div></section>' : '');
   // exposure
@@ -3236,7 +3365,151 @@ function simPct(v, d) { return v == null ? '—' : v > 0 && v * 100 < Math.pow(1
 function contestSimLine(e) {
   const c = e.contestSim;
   if (!c || !c.available) return 'Contest sim: ' + (c && c.reason ? c.reason : 'unavailable');
-  return 'ROI ' + (c.roi == null ? 'needs prize table' : (c.roi >= 0 ? '+' : '') + (c.roi * 100).toFixed(0) + '%') + ' · Win ' + simPct(c.win, 2) + ' · Top-10 ' + simPct(c.top10, 2) + ' · Cash ' + simPct(c.cash, 1);
+  const pc = v => (v >= 0 ? '+' : '') + (v * 100).toFixed(0) + '%';
+  const roi = c.roi == null ? 'ROI needs prize table' : (c.scaled ? 'Scaled ROI ' : 'ROI ') + pc(c.roi) + (c.roiCi ? ' (' + pc(c.roiCi[0]) + ' to ' + pc(c.roiCi[1]) + ' sim noise)' : '');
+  const rough = c.scaled && c.tailShare != null && c.tailShare > 0.5 ? ' · rests mostly on extrapolated first place, rough' : '';
+  return roi + rough + ' · Win ' + simPct(c.win, 2) + ' · Top-10 ' + simPct(c.top10, 2) + ' · Cash ' + simPct(c.cash, 1);
+}
+
+/* ------------------------------------------------------------------ pre-lock checks */
+function ruleTitle(id) { const r = GR ? Object.values(GR.RULES).find(x => x.id === id) : null; return r ? r.title : id; }
+function renderChecks(M) {
+  const box = $('sdChecks'); if (!box) return;
+  if (!GR || !M || !M.entries.length) { box.hidden = true; state.checks = null; return; }
+  const b = bag(), out = GR.preLockChecks(M.players, M.entries, { notes: b.notes || {}, favorite: b.favorite || null });
+  state.checks = out; box.hidden = false;
+  const fav = out.favorite;
+  const auto = fav.source === 'projection' ? ' (' + fav.team + ' by projection)' : fav.source === 'too-close' ? ' (too close to call)' : '';
+  const fsel = '<label class="sd-small" for="sdFav">Favourite</label> <select id="sdFav" class="sd-btn"><option value="">Auto' + esc(auto) + '</option>' +
+    M.teams.map(t => '<option value="' + esc(t) + '"' + (b.favorite === t ? ' selected' : '') + '>' + esc(t) + '</option>').join('') + '</select>';
+  const head = out.summary.open ? out.summary.open + ' open warning' + (out.summary.open === 1 ? '' : 's') : 'No open warnings';
+  box.innerHTML = '<p class="sd-eyebrow hot">Before you upload · pre-lock checks</p><h2 class="sd-h3">' + esc(head) + (out.summary.explained ? ' · ' + out.summary.explained + ' explained' : '') + '</h2>' +
+    '<p class="sd-small sd-muted" style="margin:0 0 6px">' + esc(out.label) + ' From the ' + esc(out.source) + '. Exposure is the share of the ' + out.entries + ' selected entries; field is total ownership from your projection.</p>' +
+    '<div class="sd-row" style="margin:4px 0 6px">' + fsel + '</div>' +
+    (out.checks.length ? out.checks.map(c => '<div class="sd-check' + (c.status === 'explained' || c.level === 'info' ? ' ok' : '') + '"><span class="tag">' + (c.status === 'explained' ? 'Explained' : c.level === 'info' ? 'Allowed' : 'Check') + '</span><div><b>' + esc(c.title) + ': ' + esc(c.head) + '</b><p>' + esc(c.detail) + '</p>' +
+      '<input type="text" data-note="' + esc(c.noteKey) + '" value="' + esc(c.note || '') + '" maxlength="300" placeholder="Write the reason (saved on this device)" aria-label="Reason: ' + esc(c.title + ', ' + c.head) + '"></div></div>').join('')
+      : '<p class="sd-small">Nothing in the selected entries trips the five audit checks.</p>') +
+    (out.skipped.length ? '<p class="sd-small sd-muted" style="margin:8px 0 0">Not run: ' + out.skipped.map(x => esc(ruleTitle(x.rule)) + ' (' + esc(x.reason) + ')').join(' · ') + '</p>' : '') +
+    '<details style="margin-top:6px"><summary class="sd-small">The five checks</summary><ul class="sd-small" style="margin:6px 0 0;padding-left:18px">' + Object.values(GR.RULES).map(r => '<li><b>' + esc(r.title) + '.</b> ' + esc(r.rule) + '</li>').join('') + '</ul></details>';
+}
+function onCheckChange(ev) {
+  const t = ev.target, b = bag();
+  if (t.id === 'sdFav') { b.favorite = t.value || null; putBag(b); renderChecks(state.model); return; }
+  if (t.dataset && t.dataset.note) {
+    b.notes = b.notes || {}; const v = t.value.trim().slice(0, 300);
+    if (v) b.notes[t.dataset.note] = v; else delete b.notes[t.dataset.note];
+    putBag(b); renderChecks(state.model);
+  }
+}
+
+/* ------------------------------------------------------------------ after the slate */
+function postMsg(text) { const m = $('sdPostMsg'); m.hidden = !text; m.textContent = text || ''; }
+function readStandings(files) {
+  if (!LG || !GR) { postMsg('The standings reader did not load on this page.'); return; }
+  const list = Array.from(files || []); let left = list.length; const bad = [];
+  list.forEach(file => {
+    const rd = new FileReader();
+    rd.onload = () => {
+      try {
+        const parsed = LG.parseStandings(String(rd.result || ''), { showdown: true, contestId: LG.contestIdFromFilename(file.name) });
+        if (!parsed.showdown) throw new Error('no CPT slots, so not a Showdown contest');
+        state.stand.push({ name: file.name.replace(/\.csv$/i, '').slice(0, 80), parsed, type: parsed.field_size >= 20000 ? 'flag' : 'se', paid: null, prizeText: '', payouts: null });
+      } catch (e) { bad.push(file.name + ': ' + e.message); }
+      if (--left === 0) { postMsg(bad.length ? bad.join(' ') : ''); renderStand(); }
+    };
+    rd.readAsText(file);
+  });
+}
+function renderStand() {
+  const t = $('sdStandTable'), n = state.stand.length;
+  $('sdScoreBtn').disabled = !n || !state.players.length; $('sdCalBtn').disabled = !n || !state.players.length;
+  if (!n) { t.innerHTML = ''; return; }
+  t.innerHTML = '<thead><tr><th>Standings file</th><th>Entrants</th><th>Contest type</th><th>Paid places</th><th>Prize table</th><th></th></tr></thead><tbody>' +
+    state.stand.map((s, k) => '<tr data-s="' + k + '"><td class="l"><b>' + esc(s.name) + '</b><span>' + (s.parsed.hidden_lineups ? s.parsed.hidden_lineups + ' hidden lineups' : 'all lineups visible') + '</span></td>' +
+      '<td>' + s.parsed.field_size.toLocaleString() + '</td>' +
+      '<td><select data-sf="type" aria-label="Contest type">' + TYPES.map(x => '<option value="' + x.id + '"' + (x.id === s.type ? ' selected' : '') + '>' + esc(x.label) + '</option>').join('') + '</select></td>' +
+      '<td><input type="number" min="1" step="1" data-sf="paid" aria-label="Paid places" value="' + (s.paid || '') + '" placeholder="unknown"></td>' +
+      '<td><details><summary class="sd-small">' + (s.payouts ? s.payouts.filter(v => v > 0).length.toLocaleString() + ' paid' : 'Paste') + '</summary><textarea data-sf="prize" aria-label="Prize table">' + esc(s.prizeText) + '</textarea></details></td>' +
+      '<td><button type="button" class="sd-btn" data-sf="drop" aria-label="Remove file">Remove</button></td></tr>').join('') + '</tbody>';
+}
+function onStandEdit(ev) {
+  const tr = ev.target.closest('tr[data-s]'); if (!tr) return;
+  const s = state.stand[+tr.dataset.s], f = ev.target.dataset.sf; if (!s || !f) return;
+  if (f === 'type') s.type = ev.target.value;
+  else if (f === 'paid') { const v = parseInt(ev.target.value, 10); s.paid = v > 0 ? v : null; }
+  else if (f === 'prize') {
+    s.prizeText = ev.target.value;
+    if (!s.prizeText.trim()) { s.payouts = null; renderStand(); return; }
+    const out = GR.parsePrizeTable(s.prizeText, { fieldSize: s.parsed.field_size });
+    if (!out.ok) { postMsg(s.name + ': ' + out.problems.join(' ')); return; }
+    s.payouts = out.payouts; s.paid = out.paidPlaces; postMsg(''); renderStand();
+  }
+}
+function scorePool() {
+  if (!state.stand.length) return;
+  const pick = $('sdPoolPick').value;
+  const ours = pick === 'entries' ? state.rows.filter(r => r.on).map(r => ({ cpt: r.cpt, ids: r.ids }))
+    : state.lineups.map(l => ({ cpt: Number.isInteger(l.cpt) ? l.cpt : l.ids[0], ids: l.ids }));
+  if (!ours.length) { postMsg('No lineups to score in that pool.'); return; }
+  try {
+    state.scorecard = GR.poolScorecard({ players: SD.preparePlayers(state.players).P, pools: { ours }, contests: state.stand.map(s => ({ name: s.name, standings: s.parsed, paidPlaces: s.paid || undefined, payouts: s.payouts || undefined, type: s.type })) });
+    postMsg(''); renderScore(pick);
+  } catch (e) { postMsg('Scorecard failed: ' + e.message); }
+}
+function renderScore(pick) {
+  const S = state.scorecard, out = $('sdScoreOut'); if (!S) { out.innerHTML = ''; return; }
+  const pr = v => v == null ? '—' : (v * 100).toFixed(1) + '%', f = v => v == null ? '—' : (+v).toFixed(1), sgn = (v, fmt) => v == null ? '—' : (v > 0 ? '+' : '') + fmt(v);
+  out.innerHTML = '<h3 class="sd-h3" style="margin-top:14px">Pool scorecard</h3><p class="sd-small sd-muted">' + (pick === 'entries' ? 'Selected entries' : 'Whole workspace pool') + ': ' + S.pools.ours + ' lineups. Plain pool: ' + esc(S.pools.baselineMethod) + '. ' + S.pools.identical + ' lineups appear in both.</p>' +
+    S.contests.map(c => {
+      const o = c.ours, b = c.baseline, d = c.diff || {};
+      const cut = 'Top 1% = best ' + c.cuts.top1Places.toLocaleString() + ' (' + f(c.cuts.top1Score) + '+ pts) · cash = ' + (c.cuts.paidPlaces ? 'top ' + c.cuts.paidPlaces.toLocaleString() + ' (' + f(c.cuts.cashScore) + '+ pts, ' + esc(c.cuts.cashSource) + ')' : 'unknown: add paid places or the prize table') + ' · winning score ' + f(c.cuts.winning);
+      const row = (lab, a, bb, dd) => '<tr><td>' + lab + '</td><td>' + a + '</td><td>' + bb + '</td><td>' + dd + '</td></tr>';
+      return '<p class="sd-eyebrow" style="margin:12px 0 2px">' + esc(c.name) + ' · ' + c.field.toLocaleString() + ' entrants</p><p class="sd-small" style="margin:0 0 4px">' + cut + '</p>' +
+        '<div class="sd-scroll"><table class="sd-score"><thead><tr><th>Actual result</th><th>Our pool</th><th>Plain pool</th><th>Difference</th></tr></thead><tbody>' +
+        row('Lineups scored', o.scored + ' of ' + o.n, b.scored + ' of ' + b.n, '') +
+        row('Average points', f(o.mean), f(b.mean), sgn(d.mean, f)) +
+        row('Best lineup', f(o.max), f(b.max), sgn(d.max, f)) +
+        row('Best rank', o.bestRank ? o.bestRank.toLocaleString() : '—', b.bestRank ? b.bestRank.toLocaleString() : '—', '') +
+        row('Top-1% rate', pr(o.top1Rate) + ' (' + (o.top1 || 0) + ')', pr(b.top1Rate) + ' (' + (b.top1 || 0) + ')', sgn(d.top1Rate, v => (v * 100).toFixed(1) + ' pts')) +
+        row('Cash rate', o.cashRate == null ? '—' : pr(o.cashRate) + ' (' + o.cash + ')', b.cashRate == null ? '—' : pr(b.cashRate) + ' (' + b.cash + ')', sgn(d.cashRate, v => (v * 100).toFixed(1) + ' pts')) +
+        row('Average percentile', f(o.meanPercentile), f(b.meanPercentile), '') + '</tbody></table></div>' +
+        '<p class="sd-small sd-muted" style="margin:0">Points check: ' + (c.pointsCheck.lineups ? 'rescored ' + c.pointsCheck.lineups.toLocaleString() + ' field lineups from the file\'s player points, mean error ' + c.pointsCheck.meanAbsErr + ' pts' : 'no field lineup could be rescored') +
+        (c.unmatchedPlayers.length ? '. Not in this pool: ' + esc(c.unmatchedPlayers.slice(0, 6).join(', ')) + (c.unmatchedPlayers.length > 6 ? '…' : '') : '') + '.</p>';
+    }).join('') + '<p class="sd-small" style="margin-top:8px">' + S.caveats.map(esc).join(' ') + '</p>';
+}
+async function fitPresets() {
+  if (!state.stand.length) return;
+  const btn = $('sdCalBtn'); btn.disabled = true; postMsg('Fitting the field presets…');
+  const list = [];
+  for (const s of state.stand) {
+    try { list.push(await GR.calibrateContest({ players: state.players, standings: s.parsed, type: s.type, presetBeta: typeById(s.type).beta, settings: state.settings, name: s.name }, { engine: window.DDFS, showdown: SD, fieldN: 12000 })); }
+    catch (e) { list.push({ contest: s.name, error: e.message }); }
+  }
+  state.calib = { list, combined: GR.combineCalibrations(list.filter(x => !x.error)) };
+  btn.disabled = false; postMsg(''); renderCal();
+}
+function renderCal() {
+  const out = $('sdCalOut'), C = state.calib, cur = store(CAL);
+  const status = cur && cur.betas ? 'This device is using fitted presets from ' + fmtTime(cur.fitted_at) + ': ' + Object.entries(cur.betas).map(([t, b]) => typeById(t).label + ' β=' + b).join(', ') + '. Other contest types keep the hypothesis presets.' : 'This device is using the hypothesis presets.';
+  if (!C) { out.innerHTML = cur && cur.betas ? '<p class="sd-small" style="margin-top:10px">' + esc(status) + ' <button type="button" class="sd-btn" data-cal="revert">Back to hypothesis presets</button></p>' : ''; return; }
+  const f = v => v == null ? '—' : (+v).toFixed(2);
+  const ok = C.list.filter(x => !x.error), comb = Object.entries(C.combined);
+  out.innerHTML = '<h3 class="sd-h3" style="margin-top:14px">Field calibration</h3><p class="sd-small sd-muted">β tilts the sampled field toward higher projection. Each fit matches the real field\'s mean projection (your projections applied to the lineups people actually played). Ownership bias is real minus projected, in points.</p>' +
+    (ok.length ? '<div class="sd-scroll"><table class="sd-score"><thead><tr><th>Contest</th><th>Matched</th><th>β preset → fit</th><th>Mean proj: real / preset / fit</th><th>Own bias CPT / FLEX</th><th>Other copies: real / fit</th></tr></thead><tbody>' +
+      ok.map(c => '<tr><td>' + esc(c.contest) + ' · ' + esc(typeById(c.type).label) + '</td><td>' + c.resolved.toLocaleString() + '</td><td>' + f(c.beta.preset) + ' → ' + f(c.beta.fit) + (c.beta.clipped ? ' (at bound)' : '') + '</td><td>' + f(c.projection.observedMean) + ' / ' + f(c.projection.modelAtPreset) + ' / ' + f(c.projection.modelAtFit) + '</td><td>' +
+        f(c.ownership.CPT.bias) + ' / ' + f(c.ownership.FLEX.bias) + '</td><td>' + f(c.dupes.observedMeanOtherCopies) + ' / ' + f(c.dupes.modelAtFit) + '</td></tr>').join('') + '</tbody></table></div>' : '') +
+    C.list.filter(x => x.error).map(x => '<p class="sd-warn">' + esc(x.contest + ': ' + x.error) + '</p>').join('') +
+    (comb.length ? '<p class="sd-small">By contest type: ' + comb.map(([t, v]) => esc(typeById(t).label) + ' β=' + v.beta + ' from ' + v.contests + ' contest' + (v.contests === 1 ? '' : 's') + (v.provisional ? ' (provisional)' : '')).join(' · ') + '. Fewer than three contests per type is provisional: one slate is one observation.</p>' +
+      '<div class="sd-row"><button type="button" class="sd-btn primary" data-cal="apply">Use these presets on this device</button>' + (cur && cur.betas ? '<button type="button" class="sd-btn" data-cal="revert">Back to hypothesis presets</button>' : '') + '</div>' : '') +
+    '<p class="sd-small sd-muted">' + esc(status) + '</p>';
+}
+function onCal(ev) {
+  const b = ev.target.closest('[data-cal]'); if (!b) return;
+  if (b.dataset.cal === 'apply' && state.calib) {
+    const betas = {}; Object.entries(state.calib.combined).forEach(([t, v]) => { betas[t] = v.beta; });
+    store(CAL, { betas, fitted_at: new Date().toISOString(), contests: Object.fromEntries(Object.entries(state.calib.combined).map(([t, v]) => [t, v.contests])), provisional: Object.values(state.calib.combined).some(v => v.provisional) });
+  } else if (b.dataset.cal === 'revert') store(CAL, null);
+  renderCal(); run();
 }
 
 function boldCalls(M) {
@@ -3502,6 +3775,16 @@ function wireStatic() {
   $('sdAllOff').onclick = () => { state.rows.forEach(r => { r.on = false; }); state.stale = true; saveRows(); renderEntries(); };
   $('sdRegrade').onclick = () => run();
   $('sdCsv').addEventListener('change', ev => { const f = ev.target.files && ev.target.files[0]; if (f) importCsv(f); ev.target.value = ''; });
+  $('sdPrizes').addEventListener('click', onPrizeClick);
+  $('sdPrizes').addEventListener('change', onPrizeFile);
+  $('sdChecks').addEventListener('change', onCheckChange);
+  $('sdStand').addEventListener('change', ev => { readStandings(ev.target.files); ev.target.value = ''; });
+  $('sdStandTable').addEventListener('change', onStandEdit);
+  $('sdStandTable').addEventListener('click', ev => { const b = ev.target.closest('[data-sf=drop]'); if (!b) return; const tr = b.closest('tr[data-s]'); state.stand.splice(+tr.dataset.s, 1); renderStand(); });
+  $('sdScoreBtn').addEventListener('click', scorePool);
+  $('sdCalBtn').addEventListener('click', fitPresets);
+  $('sdCalOut').addEventListener('click', onCal);
+  renderStand(); renderCal();
   window.addEventListener('dd-auth', () => { const me = window.DDAuth && window.DDAuth.me ? window.DDAuth.me() : null; if (!!me !== !!state.me) location.reload(); });
 }
 
@@ -3527,9 +3810,11 @@ window.DD_BOTCTX = {
 - ⚠️ THE PROJECTIONS ARE THE USER'S OWN. Signed in, the slate is the user's own DFS Labs workspace, loaded privately. The site has no player opinions and generates no projections. Never present a projection, an ownership figure or a grade as the site's view of a player.
 - ⚠️ IF THE STATE BELOW SAYS DEMO SLATE, every team, player, salary, projection and ownership figure is INVENTED. Say so before discussing any number on it.
 - ⚠️ EVERYTHING HERE IS SIMULATION AND NOTHING IS GRADED. No grade, finish rate, top-1% rate or cash rate on this page has been checked against real contest results. Say "the simulation says", never "you will", and never call an entry a lock or a winner.
-- ⚠️ CONTEST TYPES DIFFER BY A FIELD-SHARPNESS PRESET, NOT BY MEASURED FIELDS. Single-entry, 5/20-max, max-entry and flagship each tilt one ownership-built field toward higher projection by a preset amount. The presets are hypotheses until the user's own contest standings calibrate them.
+- ⚠️ CONTEST TYPES DIFFER BY A FIELD-SHARPNESS PRESET, NOT BY MEASURED FIELDS. Single-entry, 5/20-max, max-entry and flagship each tilt one ownership-built field toward higher projection by a preset amount (β). The presets are hypotheses until the user's own contest standings calibrate them. If the state below says a type uses a FITTED β, it was fitted on this device from the user's own DK standings files by matching the real field's mean projection; with fewer than three contests per type it is provisional, one slate is one observation, and it still does not make the field model validated.
 - ⚠️ THE FIELD IS SAMPLED FROM THE USER'S OWNERSHIP PROJECTION with the DFS Labs legal Showdown sampler. A field built from ownership alone is usually softer than a real one, so finish odds lean optimistic. Say so whenever someone leans on a finish rate.
-- ⚠️ NO ROI WITHOUT THE PRIZE TABLE. Sim ROI appears only for an entry whose contest prize table was supplied and whose contest has at most 12,000 entrants; it ranks the entry against a complete modeled field with tied places shared. Otherwise ROI is unknown. Sim ROI, win, top-10 and cash rates are simulation output on an uncalibrated field model, never expected profit.
+- ⚠️ NO ROI WITHOUT THE PRIZE TABLE. Sim ROI appears only for an entry whose contest prize table was supplied (payout metadata, or a prize table the user pasted or uploaded on this page). Without one, ROI is unknown: never estimate it. Up to 12,000 entrants it ranks the entry against a complete modeled field with tied places shared. Above 12,000 it is a SCALED estimate: the entry is ranked against an 11,999-lineup sample and the rest of the field is scaled up statistically, with exact copies modelled from the field's lineup frequency. Scaled ROI is rougher than full-field ROI, and roughest when most of its value comes from worlds where the entry beat the whole sample (the page flags that as rough). The ROI range shown is simulation noise only, not model error. Sim ROI, win, top-10 and cash rates are simulation output on an uncalibrated field model, never expected profit.
+- ⚠️ PRE-LOCK CHECKS ARE WARNINGS AND TRACKED HYPOTHESES, NOT RULES. Five checks from the user's Oct 29 2026 TNF CAR@GB audit: a player 15+ points off field ownership without a written reason; an underdog QB above field +10; the favourite's top two pass-catchers combined below field -10; a Double Up lineup with a player projected under 3 points (allowed when every alternative costs more than ~2 projected points); a kicker without a season make-rate note. They never block anything, they come from one slate, and the user's ledger has not confirmed them. A written reason on this device marks a warning explained; it does not make the exposure right.
+- ⚠️ THE POST-SLATE SCORECARD AND CALIBRATION READ DK STANDINGS FILES THE USER PICKS, IN THIS BROWSER ONLY. Nothing is uploaded or saved except fitted β values on this device. The scorecard scores the user's pool and a plain top-projection pool against actual points from the file: average, best, top-1% rate and cash rate at the real cut lines (cash only when paid places or a prize table is given). Lineups in a pool share players, so one slate is one correlated observation, not a sample of independent lineups; never call a difference significant or proof the process works.
 - ⚠️ EXPECTED COPIES are model output from the sampled field's lineup frequency times the field size. They are not a measured duplicate count.
 - THE CHART: numbered dots can be selected by touch, keyboard, or the lineup selector; values remain in the detail panel. Bands are relative comparisons, never overall grades. Summed ownership can exceed 100% because it adds separate player percentages. Simulation percentages, including 100%, are rounded model frequencies, not verified probabilities. Generic contest defaults are not verified actual entries. No actual results are shown here. At each ownership, salary or dupe-risk level the shaded bands are the simulated field's 25th, 50th, 75th and 90th percentile of projected or ceiling points. Band labels are LOW 25%, 25–75%, 75–90%, TOP 10%; these are relative modeled-point ranges. The dashed line is the highest modeled points among legal lineups searched at that level (a search over the top of the player pool, not necessarily the whole pool). A band describes the field; it is not a win chance.
 - THE GRADE is a weighted blend of percentiles against that contest type's field lineups: points for the ownership, ceiling, top-1% chance, and cash chance (uniqueness replaces cash in max-entry and flagship). Elite 90+, Strong 75+, Typical 25+, Weak below 25. The weights are placeholders until receipts can grade them; say so if someone treats a grade as proof.
@@ -3560,11 +3845,17 @@ window.DD_BOTCTX = {
       L.push("ENTRIES: " + E.join(" · ") + (M.entries.length > 30 ? " · …and " + (M.entries.length - 30) + " more not listed here." : ""));
       if (M.exposure && M.exposure.length) L.push("EXPOSURE BY DOLLARS (yours vs field ownership): " + M.exposure.slice(0, 8).map(x => x.name + " " + x.share + "% vs " + x.field + "%").join(", ") + ".");
       if (M.warnings && M.warnings.length) L.push("MODEL WARNINGS: " + M.warnings.join(" | "));
+      const C = S.checks;
+      if (C) L.push("PRE-LOCK CHECKS (tracked hypotheses, warnings only): " + (C.checks.length ? C.checks.slice(0, 12).map(c => c.title + ": " + c.head + " [" + (c.status === 'explained' ? 'explained: ' + c.note : c.level === 'info' ? 'allowed' : 'open') + "]").join(" · ") : "none tripped") + (C.skipped.length ? ". Not run: " + C.skipped.map(x => x.rule + " (" + x.reason + ")").join(", ") : "") + ".");
+      if (M.betas) { const fit = Object.entries(M.betas).filter(([, b]) => b.source !== 'preset hypothesis'); if (fit.length) L.push("FITTED FIELD SHARPNESS on this device: " + fit.map(([t, b]) => (TY[t] || t) + " β=" + b.beta).join(", ") + ". Other types use the hypothesis presets."); }
+      const scaled = M.entries.filter(e => e.contestSim && e.contestSim.scaled);
+      if (scaled.length) L.push("SCALED ROI (contests above 12,000 entrants, rougher estimate): " + scaled.slice(0, 10).map(e => e.label + " " + e.contestSim.roi + "%" + (e.contestSim.roiCi ? " (sim noise " + e.contestSim.roiCi[0] + " to " + e.contestSim.roiCi[1] + ")" : "") + (e.contestSim.tailShare > 0.5 ? " ROUGH" : "")).join(", ") + ".");
       const sel = M.entries[S.sel];
       L.push("ON SCREEN: " + (S.view === 'lineup' && sel ? "the Lineup view for " + sel.label : "the Portfolio view") + "; chart contest type " + (TY[S.type] || S.type) + ", horizontal axis " + S.ax + ", points shown " + (S.y === 'ceil' ? 'ceiling' : 'median') + ", " + (S.pro ? "Pro" : "TL;DR") + " detail.");
     } else if (src) {
       L.push("No simulation result is on screen yet.");
     }
+    if (S.scorecard) L.push("POST-SLATE SCORECARD on screen: " + S.scorecard.contests.map(c => c.name + ": our pool avg " + c.ours.mean + " vs plain pool " + c.baseline.mean + ", top-1% rate " + c.ours.top1Rate + " vs " + c.baseline.top1Rate + (c.ours.cashRate != null ? ", cash rate " + c.ours.cashRate + " vs " + c.baseline.cashRate : ", cash unknown")).join(" · ") + ". One correlated slate, not proof.");
     return "DFS SHOWDOWN. Tier: Pup.\n" + L.join("\n") + "\n\n" + scan();
   }
 };

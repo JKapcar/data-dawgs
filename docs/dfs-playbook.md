@@ -121,12 +121,15 @@ Give the user a small menu of the strongest defensible scripts. Quantify weaker 
 
 Return one row per purchased or intended entry: contest ID/name, entry fee, roster and captain where applicable, salary used/left, projected points, game script, reason for this contest, main failure condition and metrics actually computed. Include the source time, workspace/revision, simulation settings and seed. If candidate ranking uses proxies, label them. Keep private projections and account credentials out of public reports.
 
+For Showdown, dfs-showdown.html runs pre-lock checks from the Oct 29 2026 TNF CAR@GB audit: exposure 15+ points off field without a written reason, an underdog QB above field +10, the favorite's top two pass-catchers combined below field −10, sub-3-point players in Double Ups, and kickers without a make-rate note. They are warnings and tracked hypotheses, not rules; log whether they held in the ledger. Contests over 12,000 entrants get a scaled ROI estimate only when the prize table is pasted.
+
 Before export, recheck official inactives, slate, eligibility, salary cap, unique players, team/game constraints, slot IDs, existing locked players, entry count and current exposures. Never re-optimize a locked entry as if every slot were open. Re-run affected comparisons after fresh news. Preserve the selected rosters and their evaluation receipt before selection invalidates prior results. The user reviews and submits entries.
 
 ## 8. Close the loop after the slate
 
 - Build the post-lock audit from DraftKings contest-standings files: sign in, open dfs.html#standings, choose the slate's saved workspace, enter the DraftKings username and add the standings CSVs. The ledger joins each entry to the pre-lock workspace and refuses snapshots saved after lock unless overridden. Command line: `node tools/dfs-ledger.mjs`. Reference: https://datadawgs216.com/docs/dfs-results-ledger.md
 - Check the three ownership misses that sink lineups after lock: the stack's correlated pieces owned more than projected, chalk players owned together more often than their individual ownerships imply, and the intended differentiator becoming popular.
+- Showdown: on dfs-showdown.html, open "After the slate" and add the same standings CSVs. The pool scorecard scores your pool and a plain top-projection pool against actual points (average, best, top-1% rate, and cash rate at the real cut line when paid places or the prize table are given). Field calibration fits each contest type's field sharpness to the real field; with fewer than three contests per type the fit is provisional. Files stay in the browser. Lineups in a pool are correlated, so one slate is one observation.
 - Compare pre-lock and post-lock expectations. One slate never changes a rule.
 - The ledger is the user's own-data rank (section 0). Report sample sizes. ROI needs hundreds of entries in a bucket before it can outrank published research; cash and top-10 rates settle sooner.
 
