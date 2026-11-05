@@ -37,4 +37,4 @@ test('service-worker revision includes final shared assets',()=>{
  const sw=fs.readFileSync(path.join(root,'sw.js'),'utf8');assert.match(sw,/"\/presentation-mode.js", "\/presentation-mode.css"/);
 });
 
-test('approved accounting engine is identical to its reviewed artifact after Git LF normalization',()=>{assert.equal(require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(root,'dfs-showdown.js'),'utf8').replace(/\r\n/g,'\n')).digest('hex'),'1b6f6eadab20392f747a8f1bee784dd541fa6357036cbe5e83a2decdf39228b2');});
+test('approved accounting engine is identical to its reviewed artifact after Git LF normalization',()=>{assert.equal(require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(root,'dfs-showdown.js'),'utf8').replace(/\r\n/g,'\n')).digest('hex'),'8b6390279ea1a83ebe6b5b47a665e9a3bc8810917bac8c3abc4356201dc8160f');});

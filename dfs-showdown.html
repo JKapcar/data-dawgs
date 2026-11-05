@@ -899,6 +899,7 @@ body:has(.sd-simple) #ddbLaunch{display:none!important}
 .sd-lrow .main{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto}
 .sd-lrow .main b{font-size:14.5px;line-height:1.25;overflow-wrap:anywhere}
 .sd-lrow .main span{font-size:12px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sd-lrow .main span+span{white-space:normal}
 .sd-lrow .side{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:0 0 auto}
 .sd-lrow .side>span:not(.sd-pill){font:500 10px/1 var(--sd-mono);color:var(--ink-3)}
 /* bars */
@@ -2765,7 +2766,10 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
       description of the field, not a win chance.</p>
       <p class="sd-small" style="margin:0 0 8px"><b>The worlds.</b> Scores come from the DFS Labs engine's correlated outcome model: one
       draw per game over correlations measured on 2019–2025 nflverse data, with your projections as the means. Finish odds,
-      cash and top-1% rates are counted against the contest type's field in every world.</p>
+      cash and top-1% rates are counted against the contest type's field in every world. A standard run draws 10,000 games and Pro draws
+      20,000. Each entry is also ranked against a complete modeled field of its own contest size, which gives the simulated ROI (when
+      the prize table is known), win rate, top-10 rate and cash rate, the way contest simulators sort lineups. More games only shrink
+      simulation noise; they do not fix projection or field-model error.</p>
       <p class="sd-small" style="margin:0"><b>The grade.</b> A weighted blend of four percentiles against that field: points for the
       ownership, ceiling, top-1% chance, and cash chance (uniqueness replaces cash in max-entry and flagship contests). The
       weights are a placeholder until receipts can grade them, and the page shows them in Pro.</p>
@@ -2776,7 +2780,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
 <footer class="foot">Data Dawgs · Data, Not Dogma · <a href="/llms.txt">For machines</a> · All model and market numbers carry their date.</footer>
 
 <script src="work/dfs-engine.js"></script>
-<script src="dfs-showdown.js?v=1"></script>
+<script src="dfs-showdown.js?v=2"></script>
 <script>
 /* =====================================================================================
    dfs-showdown.html — DFS SHOWDOWN. The UI over dfs-showdown.js.
@@ -2812,7 +2816,7 @@ const SCRIPT_COL = [['#ffb454', '#1a0d05'], ['#7a6b5e', '#fff8ef'], ['#4f6a88', 
 const state = {
   me: null, workspaces: [], source: null, players: [], lineups: [], portfolio: null, settings: {},
   rows: [], model: null, running: false, stale: false, runId: 0,
-  view: 'portfolio', type: 'se', ax: 'own', y: 'proj', sel: 0, pro: false, sens: 4
+  view: 'portfolio', type: 'se', ax: 'own', y: 'proj', sel: 0, pro: false, sens: 4, entrySort: 'order'
 };
 
 /* ------------------------------------------------------------------ small helpers */
@@ -3053,7 +3057,7 @@ async function run() {
   const stages = { field: [0.02, 0.4, 'Sampling the field'], frontier: [0.4, 0.5, 'Finding the best possible lineups'], worlds: [0.5, 0.98, 'Simulating games'] };
   try {
     const model = await SD.analyze({ players: state.players, entries, settings: state.settings }, {
-      worlds: state.pro ? 6000 : 2500, fieldN: state.pro ? 40000 : 24000,
+      worlds: state.pro ? SD.WORLDS.pro : SD.WORLDS.standard, fieldN: state.pro ? 40000 : 24000,
       onProgress: (stage, f) => { if (id !== state.runId) return; const s = stages[stage]; if (s) progress(s[2] + '…', s[0] + (s[1] - s[0]) * (f || 0)); }
     });
     if (id !== state.runId) return;
@@ -3175,7 +3179,7 @@ function renderPortfolio(M) {
       '<div class="sd-tiles"><div class="sd-tile"><b>' + esc(SD.formatSimulationPct(M.portfolio.pCash,M.worlds)) + '</b><span>of modeled games clear at least one entry-specific cash line</span></div>' +
       '<div class="sd-tile"><b>' + M.portfolio.avgCopies.toFixed(1) + '</b><span>expected copies per entry</span></div>' +
       '<div class="sd-tile"><b>' + M.portfolio.captains + '</b><span>different captains</span></div></div>' +
-      (state.pro ? '<p class="mono" style="font-size:10px;color:var(--ink-3);margin:12px 0 0;line-height:1.55">MODEL OUTPUT · ' + (M.worlds || 0).toLocaleString() + ' GAMES · FIELD MODEL UNCALIBRATED, SO TOP-1% CAN RUN HOT · ROI UNKNOWN UNTIL THE DUPE HAIRCUT</p>' : '') +
+      (state.pro ? '<p class="mono" style="font-size:10px;color:var(--ink-3);margin:12px 0 0;line-height:1.55">MODEL OUTPUT · ' + (M.worlds || 0).toLocaleString() + ' GAMES · FIELD MODEL UNCALIBRATED, SO TOP-1% CAN RUN HOT · SIM ROI NEEDS THE CONTEST PRIZE TABLE</p>' : '') +
       '<p class="sd-small"><b>Simulation estimate, not a verified real-world probability.</b> Even 100% here only describes a rounded simulation result. The field assumptions are uncalibrated; cash cutoffs use supplied metadata when available, otherwise an assumed 22%. Contest sizes and fees may be generic defaults: check them against your actual entry records.</p>' +
       '<div class="sd-limit"><span>Fees this slate <b style="color:var(--ink-1)">' + money(fees) + '</b></span><span class="sd-muted">Set limits in your DraftKings account</span></div>' +
       '</div></section>';
@@ -3183,15 +3187,19 @@ function renderPortfolio(M) {
   $('sdTop').innerHTML = top || $('sdTop').innerHTML;
   if (!E.length) { $('sdLeft').innerHTML = ''; $('sdRight').innerHTML = ''; return; }
   // lineups list + calls
-  const rows = E.map((e, i) => {
-    const h = e.type, g = gradeOf(e, h), c = P[e.cpt];
+  const order = SD.sortEntries(E, state.entrySort);
+  const rows = order.map(i => {
+    const e = E[i], h = e.type, g = gradeOf(e, h), c = P[e.cpt];
     return '<button type="button" class="sd-lrow" data-open="' + i + '"><span class="sd-num">' + (i + 1) + '</span>' +
-      '<span class="main"><b>CPT ' + esc(c.name) + '</b><span>' + money(e.fee) + ' · ' + esc(e.contest || typeById(e.type).label) + '</span></span>' +
+      '<span class="main"><b>CPT ' + esc(c.name) + '</b><span>' + money(e.fee) + ' · ' + esc(e.contest || typeById(e.type).label) + '</span><span>' + esc(contestSimLine(e)) + '</span></span>' +
       '<span class="side"><span class="sd-pill g-' + g.word + '">' + g.word + '</span><span>' + (state.pro ? 'SCORE ' + (g.score == null ? 'unavailable' : g.score) + ' · ' + e.dupes[h].toFixed(1) + ' COPIES' : 'TOP 1% · ' + pctTxt(e.top1[h])) + '</span></span>' + ICON.chev + '</button>';
   }).join('');
   const calls = boldCalls(M);
   $('sdLeft').innerHTML = '<section class="sd-card"><div class="sd-row" style="justify-content:space-between;align-items:baseline"><h3 class="sd-h3" style="margin:0">Your entries</h3>' +
-    '<span class="sd-eyebrow" style="margin:0">' + (new Set(E.map(e => e.type)).size > 1 ? 'Each in its own contest' : 'Graded for ' + esc(typeById(E[0].type).label)) + '</span></div><div class="sd-list" style="margin-top:10px">' + rows + '</div></section>' +
+    '<span class="sd-eyebrow" style="margin:0">' + (new Set(E.map(e => e.type)).size > 1 ? 'Each in its own contest' : 'Graded for ' + esc(typeById(E[0].type).label)) + '</span></div>' +
+    '<div class="sd-seg" id="sdEntrySort" role="group" aria-label="Sort entries" style="margin-top:10px">' + ENTRY_SORTS.map(o => '<button type="button" data-esort="' + o.id + '" aria-pressed="' + (o.id === state.entrySort) + '">' + o.label + '</button>').join('') + '</div>' +
+    '<p class="sd-small sd-muted" style="margin:6px 0 0">Each entry is ranked against a complete modeled field of its own contest in every simulated game (up to ' + SD.FULL_CONTEST_MAX.toLocaleString() + ' entrants). Ties share places. Model output, not a verified probability.</p>' +
+    '<div class="sd-list" style="margin-top:10px">' + rows + '</div></section>' +
     (calls.length ? '<section class="sd-card"><h3 class="sd-h3">Bold calls</h3><div class="sd-calls">' + calls.map(b => '<div class="sd-call"><i>' + esc(b.tag) + '</i><b>' + esc(b.head) + '</b><span>' + esc(b.sub) + '</span></div>').join('') + '</div></section>' : '');
   // exposure
   const exp = M.exposure.slice(0, state.pro ? 12 : 6).map(x => '<div class="sd-xrow"><div class="top"><b>' + esc(x.name) + '</b><i>' + esc(x.pos + ' · ' + x.team) + '</i><em>' + money(x.usd) + '</em></div>' +
@@ -3221,6 +3229,14 @@ function renderPortfolio(M) {
     scripts.map(s => '<div style="flex:' + Math.max(0.01, s.usd) + ' 1 0;background:' + s.col[0] + ';color:' + s.col[1] + '">' + (s.pct >= 8 ? s.pct + '%' : '') + '</div>').join('') + '</div>' +
     scripts.map(s => '<div class="sd-srow"><i style="background:' + s.col[0] + '"></i><b>' + esc(s.name) + '</b><span>' + s.ids.map(i => '#' + (i + 1)).join(' ') + '</span><em>' + money(s.usd) + '</em></div>').join('') +
     (fade && fade.field >= 8 ? '<p class="sd-small" style="color:var(--ink-2);margin:10px 0 0">No entry captains ' + esc(fade.name) + ', while the field puts ' + Math.round(fade.field) + '% there.</p>' : '') + '</section>' + ov;
+}
+
+const ENTRY_SORTS = [{ id: 'order', label: 'Entry order' }, { id: 'roi', label: 'Sim ROI' }, { id: 'win', label: 'Win %' }, { id: 'top10', label: 'Top-10' }, { id: 'cash', label: 'Cash %' }];
+function simPct(v, d) { return v == null ? '—' : v > 0 && v * 100 < Math.pow(10, -d) ? '<' + Math.pow(10, -d) + '%' : (v * 100).toFixed(d) + '%'; }
+function contestSimLine(e) {
+  const c = e.contestSim;
+  if (!c || !c.available) return 'Contest sim: ' + (c && c.reason ? c.reason : 'unavailable');
+  return 'ROI ' + (c.roi == null ? 'needs prize table' : (c.roi >= 0 ? '+' : '') + (c.roi * 100).toFixed(0) + '%') + ' · Win ' + simPct(c.win, 2) + ' · Top-10 ' + simPct(c.top10, 2) + ' · Cash ' + simPct(c.cash, 1);
 }
 
 function boldCalls(M) {
@@ -3476,6 +3492,7 @@ function wireStatic() {
   $('sdPointSelect').addEventListener('change', ev => { if (ev.target.value === '') return; state.sel = +ev.target.value; state.view = 'lineup'; state.type = state.model.entries[state.sel].type; renderDash(); $('sdPointSelect').focus(); });
   $('sdChart').addEventListener('click', ev => { const b = ev.target.closest('.pt'); if (!b) return; const i = +b.dataset.i; state.sel = i; state.view = 'lineup'; state.type = state.model.entries[i].type; renderDash(); });
   $('sdDash').addEventListener('click', ev => {
+    const so = ev.target.closest('[data-esort]'); if (so) { state.entrySort = so.dataset.esort; renderDash(); return; }
     const o = ev.target.closest('[data-open]'); if (o) { openLineup(+o.dataset.open); return; }
     const s = ev.target.closest('[data-sel]'); if (s) { state.sel = +s.dataset.sel; if (state.model) state.type = state.model.entries[state.sel].type; renderDash(); }
   });
@@ -3512,7 +3529,7 @@ window.DD_BOTCTX = {
 - ⚠️ EVERYTHING HERE IS SIMULATION AND NOTHING IS GRADED. No grade, finish rate, top-1% rate or cash rate on this page has been checked against real contest results. Say "the simulation says", never "you will", and never call an entry a lock or a winner.
 - ⚠️ CONTEST TYPES DIFFER BY A FIELD-SHARPNESS PRESET, NOT BY MEASURED FIELDS. Single-entry, 5/20-max, max-entry and flagship each tilt one ownership-built field toward higher projection by a preset amount. The presets are hypotheses until the user's own contest standings calibrate them.
 - ⚠️ THE FIELD IS SAMPLED FROM THE USER'S OWNERSHIP PROJECTION with the DFS Labs legal Showdown sampler. A field built from ownership alone is usually softer than a real one, so finish odds lean optimistic. Say so whenever someone leans on a finish rate.
-- ⚠️ THERE IS NO ROI AND NO DOLLAR EV HERE, deliberately. Duplicate prize splitting and the real payout table are not applied. If asked for ROI or expected profit, say it is unknown until the duplicate haircut and the contest's payout table are applied.
+- ⚠️ NO ROI WITHOUT THE PRIZE TABLE. Sim ROI appears only for an entry whose contest prize table was supplied and whose contest has at most 12,000 entrants; it ranks the entry against a complete modeled field with tied places shared. Otherwise ROI is unknown. Sim ROI, win, top-10 and cash rates are simulation output on an uncalibrated field model, never expected profit.
 - ⚠️ EXPECTED COPIES are model output from the sampled field's lineup frequency times the field size. They are not a measured duplicate count.
 - THE CHART: numbered dots can be selected by touch, keyboard, or the lineup selector; values remain in the detail panel. Bands are relative comparisons, never overall grades. Summed ownership can exceed 100% because it adds separate player percentages. Simulation percentages, including 100%, are rounded model frequencies, not verified probabilities. Generic contest defaults are not verified actual entries. No actual results are shown here. At each ownership, salary or dupe-risk level the shaded bands are the simulated field's 25th, 50th, 75th and 90th percentile of projected or ceiling points. Band labels are LOW 25%, 25–75%, 75–90%, TOP 10%; these are relative modeled-point ranges. The dashed line is the highest modeled points among legal lineups searched at that level (a search over the top of the player pool, not necessarily the whole pool). A band describes the field; it is not a win chance.
 - THE GRADE is a weighted blend of percentiles against that contest type's field lineups: points for the ownership, ceiling, top-1% chance, and cash chance (uniqueness replaces cash in max-entry and flagship). Elite 90+, Strong 75+, Typical 25+, Weak below 25. The weights are placeholders until receipts can grade them; say so if someone treats a grade as proof.
