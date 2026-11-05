@@ -3134,7 +3134,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <details class="gear"><summary>Sims · sample · stack share · field salary</summary><div class="gear-body">
     <div class="grid3">
       <label class="fld"><span>Simulations</span><input class="fi" type="number" id="siSims" min="500" max="50000" step="500" value="10000"></label>
-      <label class="fld"><span>Field sample size</span><input class="fi" type="number" id="siSample" min="200" max="10000" step="100" value="2500"></label>
+      <label class="fld"><span>Field sample size</span><input class="fi" type="number" id="siSample" min="200" max="20000" step="100" value="2500"></label>
       <label class="fld"><span>Share of field stacked %</span><input class="fi" type="number" id="siStack" min="0" max="100" value="60"></label>
       <label class="fld"><span>Field min salary</span><input class="fi" type="number" id="siFieldSal" step="100" value="49000"></label>
     </div>
@@ -3158,6 +3158,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <h3>Your lineups, ranked by modelled payout EV or Top-10 proxy <span class="rt" id="simMeta"></span></h3>
     <div id="labsSimChart"></div>
     <details><summary>How to read this comparison</summary><p>Cash rate is the share of simulated contests that pay a prize. It is not profit or ROI. These bars use the current inputs and payout assumptions; model error is not included. Compare with field diagnostics before relying on differences.</p></details>
+    <div class="btnrow"><label class="fld">Sort lineups by<select class="fi" id="simSort" style="width:auto"><option value="ev">Modelled EV, then Top-10 (default)</option><option value="roi">Sim ROI</option><option value="win">First place %</option><option value="top10">Top-10 %</option><option value="top1">Top 1%</option><option value="cash">Cash %</option><option value="mean">Mean score</option></select></label></div>
     <div class="tscroll"><table class="dtab" id="simTab"></table></div>
     <p class="note">Default sort is <b>EV (dupe-adj)</b> with Top-10 tiebreak (I4 / Bible §3.4). <b>Top-10</b> is literal places 1–10 (B5), not a cut of the field. <b>EV (dupe-adj)</b> divides each cashed prize by 1+E[dupes] — prior until ≥3 weeks standings (I5). ROI stays visible but is not the selection key. Proj is the sum of your projections. Mean differs from Proj because scoring is skewed. <b>Dupes</b> (field sample) is the expected number of other entries holding exactly this lineup.</p>
   </div>
@@ -3208,7 +3209,7 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <p class="note">Generate the pool first, then compare contests. The benchmark respects the salary floor, locks, exclusions and team limit. The comparison keeps candidates below the projection frontier so correlated upside remains eligible.</p>
     <div class="btnrow">
       <label class="fld">Game plan<select class="fi" id="labScript"><option value="any">Any legal construction</option><option value="pass">Captain-side passing stack</option><option value="back">Passing stack + bring-back</option><option value="run">Same-team RB + DST</option></select></label>
-      <label class="fld">Score worlds<select class="fi" id="labWorlds"><option value="1600">1,600 · quick, wide intervals</option><option value="8000" selected>8,000 · standard</option><option value="16000">16,000 · more precision</option></select></label>
+      <label class="fld">Score worlds<select class="fi" id="labWorlds"><option value="1600">1,600 · quick, wide intervals</option><option value="8000" selected>8,000 · standard</option><option value="16000">16,000 · more precision</option><option value="32000">32,000 · tightest, slow on phones</option></select></label>
       <label class="fld">Opponent sample<select class="fi" id="labOpponents"><option value="2000">2,000</option><option value="4000" selected>4,000</option><option value="10000">10,000</option></select></label>
       <label class="fld">Field salary preference<input class="fi" id="labFieldSalary" type="number" min="0" max="50000" step="100" value="48000"></label>
     </div>
@@ -8481,10 +8482,7 @@ function renderSim() {
   const cashRows = SIM.perLineup.filter(r => Number.isFinite(r.cash)).slice().sort((a,b) => b.cash-a.cash).slice(0,8);
   $("labsSimChart").innerHTML = `<h4>${S.demo ? "Synthetic demo · " : ""}Modelled cash rate</h4><p class="note">Up to eight lineups, ordered by cash rate. Intervals describe simulation noise, not model accuracy. Full results below.</p>` + cashRows.map(r => `<div class="labs-bar"><span>Lineup ${r.i+1}</span><span class="labs-track"><span style="width:${Math.max(0,Math.min(100,r.cash*100))}%"></span></span><b>${pct(r.cash,1)}</b>${r.ci && r.ci.cash ? `<small class="labs-interval">95% simulation interval: ${pct(r.ci.cash[0],1)}–${pct(r.ci.cash[1],1)}</small>` : ""}</div>`).join("");
   // --- lineups ---
-  const rows = SIM.perLineup.slice().sort((a, b) => {
-    const d = (b.ev == null || a.ev == null) ? 0 : b.ev - a.ev;
-    return d !== 0 ? d : (b.top10 || 0) - (a.top10 || 0);
-  });
+  const rows = sortSimRows(SIM.perLineup, $("simSort") ? $("simSort").value : "ev");
   let h = `<thead><tr><th class="l">#</th><th class="l">Lineup</th><th>Proj</th><th>Own%</th><th>Mean</th><th>SD</th>
     <th>Cash%</th><th title="Share of sims finishing in literal places 1–10 — not a proportional cut of the field (B5 / Bible I4).">Top-10 %</th><th>Top 1%</th><th>First%</th><th>Dupes</th><th title="Modelled payout EV. Represented ties settle once. When unavailable, ordering uses the Top-10 proxy, not payout EV.">Modelled EV $</th><th title="Modelled ROI after occupied-rank tie settlement.">ROI</th></tr></thead><tbody>`;
   rows.slice(0, 200).forEach((r, n) => {
@@ -8501,6 +8499,20 @@ function renderSim() {
   });
   $("simTab").innerHTML = h + "</tbody>";
   renderLev();
+}
+
+/* Stokastic-style re-sort of the simulated lineups. EV with a Top-10 tiebreak stays the
+   default selection key; the other keys only reorder the table. A metric the field
+   resolution cannot support (ROI and first place from a partial field) is null and sorts
+   last rather than counting as zero. */
+function sortSimRows(perLineup, key) {
+  const val = r => { const v = r[key]; return Number.isFinite(v) ? v : null; };
+  return perLineup.slice().sort((a, b) => {
+    if (key === "ev") { const d = (b.ev == null || a.ev == null) ? 0 : b.ev - a.ev; return d !== 0 ? d : (b.top10 || 0) - (a.top10 || 0); }
+    const x = val(a), y = val(b);
+    if (x == null || y == null) return x == null && y == null ? (b.top10 || 0) - (a.top10 || 0) : x == null ? 1 : -1;
+    return y - x || (b.top10 || 0) - (a.top10 || 0) || a.i - b.i;
+  });
 }
 
 function renderLev() {
@@ -8591,7 +8603,7 @@ function runLabCompare(){
  const trust=labTrust();if(!trust.pass){banner('rarityWarn','warn',esc(trust.reason));return;}
  const fieldInputs=DDLabAudit.inspect(S.players.map(p=>({...p,excl:false})),S.site==='dk_showdown');
  if(!fieldInputs.pass){banner('rarityWarn','warn','The opponent field needs valid ownership for all projected players, including players excluded from your own pool.');return;}
- const profiles=labProfiles(),active=labActiveProfile(),worlds=Math.max(1600,Math.min(20000,+$('labWorlds').value||8000));
+ const profiles=labProfiles(),active=labActiveProfile(),worlds=Math.max(1600,Math.min(32000,+$('labWorlds').value||8000));
  const cfg={site:S.site,sims:worlds,fieldSize:active.fieldSize,fieldSample:Math.max(2000,Math.min(20000,+$('labOpponents').value||4000)),fieldMinSalary:Math.max(0,Math.min(50000,+$('labFieldSalary').value||0)),entryFee:1,seed:216,payout:active.payout,contestProfiles:profiles};
  const input=labInputKey(),modelKey=labModelKey(),keys=S.lineups.map(labKey),snapshot=JSON.stringify(S.lineups);
  const finish=r=>{
@@ -9518,6 +9530,7 @@ function boot() {
     $("simProg").hidden = true; $("simGo").disabled = false; $("simStop").hidden = true;
   });
   ["levPos", "levSort"].forEach(id => $(id).addEventListener("change", renderLev));
+  $("simSort").addEventListener("change", renderSim);
   $("expPos").addEventListener("change", renderExposure);
 $("rarityGo").addEventListener("click", runFrontier);
 $('paretoColor').addEventListener('change', drawRarity);

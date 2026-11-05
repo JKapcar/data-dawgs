@@ -141,7 +141,7 @@ test('the page is public code with no paid data in it and only reads the account
   assert.deepEqual([...new Set(ops)].sort(), ['get', 'list'], 'read-only: list and get are the only account calls');
   assert.match(page, /window\.DD_BOTCTX = \{/);
   assert.match(page, /NOTHING IS GRADED/);
-  assert.match(page, /NO ROI/);
+  assert.match(page, /NO ROI WITHOUT THE PRIZE TABLE/);
 });
 
 test('the page is wired into the site: nav, Arena surface, sitemap and Toto map', () => {
@@ -158,4 +158,57 @@ test('the page is wired into the site: nav, Arena surface, sitemap and Toto map'
     assert.equal(s.split('["dfs-showdown.html","DFS SHOWDOWN","dfs-showdown"],').length - 1, 1, f + ' nav');
     assert.equal(s.split('\ndfs-showdown.html — DFS SHOWDOWN:').length - 1, 1, f + ' Toto map');
   }
+});
+
+/* Contest simulation: Stokastic-style sim ROI, first place, top-10 and cash, each entry
+   ranked against a complete modelled field of its own contest. Mechanics only. */
+const oneContest = (copies, meta) => {
+  const d = SD.demoSlate(), e = d.entries[0];
+  d.entries = Array.from({ length: copies }, (_, k) => ({ ...e, key: 'c' + k, label: '#' + (k + 1), entrants: meta.fieldSize, contestMeta: meta }));
+  return d;
+};
+
+test('world counts: standard 10,000, Pro 20,000, and the page uses them', () => {
+  assert.deepEqual(SD.WORLDS, { standard: 10000, pro: 20000, max: 30000 });
+  const html = fs.readFileSync(path.join(root, 'dfs-showdown.html'), 'utf8');
+  assert.match(html, /worlds: state\.pro \? SD\.WORLDS\.pro : SD\.WORLDS\.standard/);
+});
+
+test('contest sim covers fields up to the cap and withholds larger ones', async () => {
+  const m = await demoModel();
+  for (const e of m.entries) {
+    const c = e.contestSim;
+    if (e.entrants > SD.FULL_CONTEST_MAX) { assert.equal(c.available, false); assert.match(c.reason, /entrants/); continue; }
+    assert.equal(c.available, true, e.label);
+    assert.equal(c.worlds, QUICK.worlds);
+    for (const k of ['win', 'top10', 'cash']) assert.ok(c[k] >= 0 && c[k] <= 1, e.label + ' ' + k);
+    assert.ok(c.win <= c.top10 + 1e-12, 'first place is inside the top 10');
+    assert.equal(c.roi, null, 'no prize table, no ROI');
+    assert.match(c.roiReason, /prize table/);
+  }
+});
+
+test('sim ROI settles a supplied prize table with ties shared', async () => {
+  const fieldSize = 1000, payouts = Array.from({ length: 450 }, () => 10);   // flat double-up on a $5 fee
+  const m = await SD.analyze(oneContest(1, { fieldSize, payouts }), QUICK);
+  const c = m.entries[0].contestSim, fee = m.entries[0].fee;
+  assert.equal(c.available, true);
+  assert.equal(c.paidPlaces, 450);
+  assert.ok(Math.abs(c.ev - 10 * c.cash) < 1e-9, 'flat prize EV is prize × tie-adjusted cash rate');
+  assert.ok(Math.abs(c.roi - (c.ev - fee) / fee) < 1e-12);
+});
+
+test('counting and sorting settle a contest identically', async () => {
+  const meta = { fieldSize: 900 };
+  const a = await SD.analyze(oneContest(1, meta), QUICK);      // ≤ 16 entries: counting pass
+  const b = await SD.analyze(oneContest(17, meta), QUICK);     // > 16 entries: sorted field
+  const x = a.entries[0].contestSim, y = b.entries[0].contestSim;
+  for (const k of ['win', 'top10', 'cash', 'meanRank']) assert.equal(x[k], y[k], k);
+});
+
+test('entries sort by a sim metric with unresolved metrics last', () => {
+  const mk = (v, ok = true) => ({ contestSim: ok ? { available: true, roi: v, win: v, top10: v, cash: v } : { available: false } });
+  const E = [mk(0.1), mk(null), mk(0.3), mk(0, false), mk(0.2)];
+  assert.deepEqual(SD.sortEntries(E, 'top10'), [2, 4, 0, 1, 3]);
+  assert.deepEqual(SD.sortEntries(E, 'order'), [0, 1, 2, 3, 4]);
 });
