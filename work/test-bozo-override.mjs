@@ -120,7 +120,7 @@ ok(/class="btn ghost sm gdsave"/.test(sq), "and its own Save");
    fact the prices already settle. */
 ok(/class="gdclv"/.test(html) && /Save CLV override/.test(html), "manual CLV has a dedicated input and save button");
 ok(/CLV/.test(sq), "the CLV is reported on the row");
-ok(/opposite entry odds missing/.test(sq),
+ok(/selected closing odds missing/.test(sq),
    "a leg with no close says what to type rather than showing a zero");
 
 const butts = html.split("<div class=\"gr leg\"").find(r => r.includes("LAR ML"));
