@@ -1,6 +1,27 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const api=require('../bozo-effective-clv.js'),s=fs.readFileSync('dawg-bot-worker.js','utf8');
 const cut=(a,b)=>s.slice(s.indexOf(a),s.indexOf(b,s.indexOf(a)));
+
+test('HTTP, MCP, UI and Royale resolve identical selected-side, saved-estimate and override values',async()=>{
+ const original={player:'Fixture',week:1,price:-200,result:'lost',eventId:'fixture',selectionKey:'fixture',ts:1};
+ for(const evidence of [{close:-150},{clvEstimate:{kind:'estimated',point:2.1,entryPrice:-200,scenarios:[.05],basis:{},closeQuote:{evidence:'untimed_quote_proxy',sourceUrl:'https://example.com/quote'}}},{clvPts:-3}]){
+  const row={...original,...evidence},lg={season:2026,week:1,ledger:{row}};
+  const c={URL,Response,DDEffectiveClv:api,DEFAULT_LEAGUE:'main',SEASON:2026,BOZO_CLOSE_BOOK:'draftkings',validLeagueId:()=>true,loadLeague:async()=>lg,fbGet:async()=>({data:lg.ledger}),LG:x=>x,
+   settingsOf:()=>({format:'standard'}),memberNames:()=>['Fixture'],ticketPricing:()=>[],bozoEstimateLegacyFinalBasis:()=>false,bozoEstimateBasisSame:()=>true,bozoEstimateBasis:()=>({}),bozoEstimateSettledRow:r=>r,json:(data,status)=>Response.json(data,{status}),toolText:x=>x,toolErr:x=>{throw Error(x);}};
+  vm.createContext(c);vm.runInContext(cut('async function bozoClv(','/* ---------------- the parlay price'),c);
+  const m=fs.readFileSync('work/mcp-block.js','utf8');const a=m.indexOf('    name: "dd_bozo_clv",'),b=m.indexOf('    name: "dd_bozo_week",',a);
+  vm.runInContext('var tool={'+m.slice(a,b).replace(/,\s*\{\s*$/,'')+';',c);
+  const http=await (await c.bozoClv(null,new URL('https://example.com/?league=main'),{},{})).json(),mcp=await c.tool.run({},{});
+  assert.deepEqual(mcp.legs[0].effectiveClv,http.legs[0].effectiveClv);assert.equal(mcp.legs[0].clvUsable,true);assert.equal(mcp.legs[0].clvMeasurable,false);
+  assert.ok(mcp.legs[0].clvEstimate||evidence.close||evidence.clvPts);assert.doesNotMatch(mcp.caveats.join(' '),/Use ONLY legs where clvMeasurable|RAW PRICES ONLY/);
+  const html=fs.readFileSync('bozo.html','utf8'),ui={window:{DDEffectiveClv:api},clvDisplayEstimate:()=>null};vm.createContext(ui);
+  vm.runInContext(html.slice(html.indexOf('function clvDeltaOf('),html.indexOf('function clvDisplayEstimate(')),ui);
+  assert.equal(ui.clvDeltaOf(row,row),http.legs[0].effectiveClv.clv);
+  const observed=[],royale={DDEffectiveClv:{...api,resolve:r=>{const v=api.resolve(r);observed.push(v);return v;}}};vm.createContext(royale);
+  vm.runInContext(cut('function royaleApplyLever(','function royaleDecideChop('),royale);
+  royale.royaleApplyLever(3,['a'],{a:row},{a:row});assert.equal(observed[0].point,http.legs[0].effectiveClv.point);
+ }
+});
 test('selected sides compute signed approximate CLV without stamps or invented prices',()=>{
  const p={price:-200,clvEligible:false,verificationStatus:'unverified'},r={close:-150},before=JSON.stringify([p,r]);
  const out=api.resolve(api.fromPick(p,r));assert.equal(out.kind,'estimated');assert.ok(Math.abs(out.point-(-6.666666666666665))<1e-10);

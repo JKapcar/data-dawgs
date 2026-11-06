@@ -2643,7 +2643,7 @@ const MCP_TOOLS = [
     title: "Bozo closing line value",
     catalog: "full",
     readOnlyHint: true,
-    description: "Per-leg entry and closing prices for a Bozo league, with both sides of each market so the caller can de-vig. Returns RAW PRICES ONLY — it does not compute CLV, a delta or a ranking. Legs with no capturable close are returned with the reason and must be excluded from any average, never back-filled from the entry price.",
+    description: "Canonical Bozo CLV values with original evidence, measured/estimated/override labels and missing-data reasons. Same read model as the league chart and shared tiebreaker resolver. Selected-side prices suffice for labeled estimates; missing closes are never zero-filled.",
     inputSchema: { type: "object", properties: {
       league: { type: "string", description: "League id (default: main)" },
       player: { type: "string", description: "Restrict to one player (optional)" },
@@ -2652,54 +2652,32 @@ const MCP_TOOLS = [
     async run(args, env) {
       const lid = validLeagueId(args.league || DEFAULT_LEAGUE) ? (args.league || DEFAULT_LEAGUE) : null;
       if (!lid) return toolErr("Bad league id.");
-      const lg = await loadLeague(env, lid);
-      if (!lg) return toolErr("No such league: " + lid);
-      let ledger = {};
-      try { ledger = (await fbGet(env, LG(lid) + "/ledger")).data || {}; }
-      catch (e) { return toolErr("Database unreachable: " + e.message); }
-
+      // Reuse the HTTP projection, including estimate staleness and outcome normalization.
+      // No network call and no second calculation or independently mapped evidence table.
+      const url = new URL("https://bozo.invalid/bozo/clv");
+      url.searchParams.set("league", lid);
+      const response = await bozoClv(null, url, env, {});
+      const data = await response.json();
+      if (!response.ok) return toolErr(data.error || "CLV read failed.");
       const want = args.player ? String(args.player) : null;
-      const wk = Number.isFinite(Number(args.week)) ? Number(args.week) : null;
-      const rows = Object.values(ledger)
-        .filter(r => r && r.player && (!want || r.player === want) && (wk == null || r.week === wk))
-        .sort((a, b) => (a.week - b.week) || String(a.player).localeCompare(String(b.player)))
-        .map(r => ({
-          week: r.week, player: r.player, sport: r.sport, eventId: r.eventId, startsAt: r.startsAt || null,
-          mkt: r.mkt, label: r.label, result: r.result || null,
-          entryPrice: r.price ?? null, entryPriceOpp: r.priceOpp ?? null,
-          priceSource: r.priceSource || null, verificationStatus: r.verificationStatus || null,
-          entryVerification: r.entryVerification || null,
-          entryBook: r.entryBook || null, entrySubmittedAt: r.ts ? new Date(r.ts).toISOString() : null,
-          closePrice: r.close ?? null, closePriceOpp: r.closeOpp ?? null,
-          closeBook: r.closeBook || null, closeObservedAt: r.closeObservedAt || null,
-          closeSource: r.closeSource || null,
-          // How an agent-read close was observed: page, read time, minutes before kickoff.
-          closeEvidence: r.closeEvidence ? { url: r.closeEvidence.url || null, readAt: r.closeEvidence.readAt || null,
-            minutesBeforeKickoff: r.closeEvidence.minutesBeforeKickoff ?? null } : null,
-          closeUnavailableReason: r.closeUnavailableReason || null,
-          // The one derived field, and it is a boolean rather than a number: whether
-          // this leg is eligible to be in a CLV calculation at all.
-          clvUsable: globalThis.DDEffectiveClv.resolve(globalThis.DDEffectiveClv.fromPick(r,r)).point != null,
-          clvMeasurable: r.verificationStatus !== "unverified" && r.close != null && r.closeOpp != null && r.price != null && r.priceOpp != null
-            && (r.result === "won" || r.result === "lost"),
-        }));
-
-      const measurable = rows.filter(r => r.clvMeasurable).length;
+      const wk = args.week != null && Number.isFinite(Number(args.week)) ? Number(args.week) : null;
+      const rows = data.legs.filter(r => (!want || r.player === want) && (wk == null || r.week === wk))
+        .map(r => ({...r, clvMeasurable:r.effectiveClv.kind === "measured"}));
+      const usable = rows.filter(r => r.clvUsable).length;
+      const measured = rows.filter(r => r.clvMeasurable).length;
       return toolText({
-        league: lid, name: lg.name || lid, season: lg.season || SEASON,
-        synthetic: lg.synthetic === true,
-        devig: "proportional",
-        formula: "imp(o) = o<0 ? -o/(-o+100) : 100/(o+100); p = imp(price)/(imp(price)+imp(oppPrice)); clv = p_close - p_entry, in probability points.",
-        counts: { legs: rows.length, clvUsable: rows.filter(r=>r.clvUsable).length, clvMeasurable: measurable, notMeasurable: rows.length - measurable },
-        legs: rows,
-        caveats: [
-          "This tool returns prices. It deliberately does not return a CLV number, a per-player average or a ranking — the de-vig method is declared so the caller derives those and stays reproducible if the method ever changes.",
-          "Use ONLY legs where clvMeasurable is true. A leg missing either side of either price cannot be de-vigged, and mixing a de-vigged number with a raw implied one is wrong by roughly the whole hold.",
-          "Never substitute the entry price for a missing close.",
-          "Pushes and voids carry no information about the number and belong in neither the average nor the count.",
-          "Measured CLV uses captured DraftKings prices at both entry and close. Self-priced legs are not measurable and must stay out of aggregates.",
-          "closeSource says who observed each close: the feed (espn, odds_api, sgo), a manager (manual) or a Claude routine reading DraftKings before kickoff (agent_search, with closeEvidence). The league counts all of them; split by closeSource when the difference matters.",
-          lg.synthetic === true ? "SIMULATED LEAGUE — every price here is fabricated. Never quote it as evidence of anyone's skill." : null,
+        league:lid, name:data.leagueName, season:data.season, synthetic:data.synthetic,
+        clvPolicy:data.clvPolicy, devig:data.devig,
+        units:{"effectiveClv.point":"probability percentage points", "effectiveClv.clv":"probability fraction"},
+        counts:{legs:rows.length, clvUsable:usable, clvMeasurable:measured, notMeasurable:rows.length-measured, unknown:rows.length-usable},
+        legs:rows,
+        caveats:[
+          "Use effectiveClv as returned. It is the canonical resolver output; do not independently recalculate or gate on clvMeasurable. clvUsable includes labeled selected-side estimates, saved sourced estimates and overrides.",
+          "clvMeasurable only identifies paired measured evidence. Preserve effectiveClv.kind and reason when reporting values or aggregates. An unverified entry can supply approximate CLV without changing its verification record.",
+          "Missing evidence stays unknown, never zero. Never substitute the entry price for a missing close.",
+          "Results are normalized to win/loss/push/void/null, as in the HTTP endpoint. For performance averages use settled win/loss rows; retain separately labeled push conventions. A reached Royale CLV lever requires evidence for every losing leg.",
+          "closeSource, closeBook, closeEvidence and clvEstimate preserve provenance. Cross-book and selected-side values remain estimates, not verified final closes.",
+          data.synthetic ? "SIMULATED LEAGUE - every price here is fabricated. Never quote it as evidence of anyone's skill." : null,
         ].filter(Boolean),
       });
     },
@@ -2774,14 +2752,10 @@ const MCP_TOOLS = [
           "Bozo odds anywhere on the site are simulation output, not market prices.",
           "The simulator draws legs independently; correlated legs (same game, same side of a number) must be flagged by the reader.",
           "The lever hierarchy is a server-side random permutation drawn at lock — it is not chosen by anyone.",
-          // ⚠️ This caveat changed the day the capture shipped, and the change is narrow
-          // on purpose. CLV is now computable — but only for a leg that has BOTH a
-          // captured close and both sides of both prices, and the entry is still a
-          // server-captured DK quote. State CLV for a leg that has one; say it is
-          // unmeasured for a leg that does not; never average across the two.
-          "CLV is computable where both priceOpp and closeOpp are present on a verified entry, whoever observed the close: closeObservedAt is the feed's own stamp, and a manager or agent close (closeSource manual or agent_search, closeReadAt for an agent read) counts too. De-vig proportionally, and report probability points, not cents.",
-          "A leg with closeUnavailableReason has NO CLV. Do not substitute the entry price for a missing close: that fabricates a zero and drags any average toward it.",
-          "priceSource=captured means both entry sides came from DraftKings through the odds feeds. Failed captures can be submitted with typed odds, marked verificationStatus=unverified. A manager can verify the original entry pair without changing the submission time; priceSource=manual then permits CLV with a real closing pair. Keep unverified prices out of measured CLV. Existing explicit manual CLV overrides remain supported.",
+          // The canonical CLV tool owns evidence projection and derived values.
+          "Read dd_bozo_clv for canonical effectiveClv values and measured/estimated/override labels. Selected-side entry and close suffice for approximate CLV; do not recalculate from this board or require opposite odds or verification stamps.",
+          "A capture failure reason is historical context, not an eligibility gate: later estimates or overrides may supply usable CLV. Check effectiveClv. Do not substitute the entry price for a missing close: that fabricates a zero and drags any average toward it.",
+          "priceSource=captured means both entry sides came from DraftKings through the odds feeds. Failed captures can be submitted with typed odds, marked verificationStatus=unverified. A manager can verify the original entry pair without changing the submission time; priceSource=manual then permits CLV with a real closing pair. Unverified prices remain labeled estimated when closing evidence exists; use effectiveClv, not the verification flag, for usability. Existing explicit manual CLV overrides remain supported.",
           "Every leg goes on a real DraftKings bet slip, so every market — props included — exists and closes. A missing close means the capture could not resolve the typed description onto the right market, and closeUnavailableReason says which of stat, player or number failed. \"Other\" legs are the exception: free text for an arbitrary market, with nothing to match on. Either way it is a matching gap, never evidence about a player.",
           "If two legs share an eventId the ticket is a same-game parlay and the displayed parlay price is INDICATIVE — DraftKings reprices correlated legs, so the product of the leg prices is an upper bound, not the payout.",
         ],
@@ -2989,7 +2963,7 @@ const MCP_TOOLS = [
           : undefined,
         caveats: [
           "Nothing was submitted. This tool cannot submit — it reads the board and runs the validator.",
-          p.priceSource === "captured" ? "Both prices were captured from DraftKings through the odds feeds." : "UNVERIFIED: manually entered odds, awaiting manager verification of the original quote for CLV. " + (p.captureFailureReason || ""),
+          p.priceSource === "captured" ? "Both prices were captured from DraftKings through the odds feeds." : "UNVERIFIED original quote; selected-side closing evidence can still supply labeled approximate CLV. " + (p.captureFailureReason || ""),
           "A pass here is a pass at this instant. Someone else can take your exact leg, or fill the board, before you press submit.",
         ],
       });
@@ -3280,7 +3254,7 @@ const MCP_TOOLS = [
         const typed = bzAmerican(args.price), opp = bzAmerican(args.priceOpp);
         const facts = bozoDevigPair(typed, opp);
         if (p.priceSource === "captured") screenshotNote = "The server captured a two-sided DraftKings quote, so the captured prices stand and the screenshot is not needed.";
-        else if (p.mkt === "other") screenshotNote = "Other markets stay self-priced and outside CLV; the screenshot was not applied.";
+        else if (p.mkt === "other") screenshotNote = "Other markets stay self-priced; the screenshot was not applied. Exact selected-side closing evidence can still supply approximate CLV.";
         else if (typed === null || opp === null)
           return toolErr("A screenshot submission needs both signed DraftKings prices from the slip: price and priceOpp.");
         else if (!facts || facts.hold < -1e-9 || facts.hold > .15 + 1e-9)
