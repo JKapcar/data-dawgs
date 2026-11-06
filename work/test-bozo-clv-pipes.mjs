@@ -101,7 +101,7 @@ ok(!/no CLV/.test(badge),
    "a leg with a hand-set CLV is no longer branded 'no CLV' on the ticket");
 ok(/set by hand/.test(badge),
    "it says the CLV was set by hand, so the weaker evidence is still visible");
-ok(/no CLV/.test(ctx.__badge({ p: "Nobody", label: "x", priceSource: "self" })),
+ok(/close pending/.test(ctx.__badge({ p: "Nobody", label: "x", priceSource: "self" })),
    "a self-priced leg with no CLV at all still says so");
 ok(/DK captured/.test(ctx.__badge(kap)), "a captured entry still reads DK captured");
 

@@ -4675,6 +4675,8 @@ function ownerConfirmationFor(x){
 const priceSourceBadge = x => (ownerConfirmationFor(x)?'<span class="cst ok" title="Owner confirmed this exact submission text. This does not verify sportsbook quotes or change eligibility or contest outcomes.">Owner approved</span> ':'')+quoteSourceBadge(x);
 const quoteSourceBadge = x => {
   const r = legRow(x);
+  const estimate = clvDisplayEstimate(x) || window.DDEffectiveClv.resolve(window.DDEffectiveClv.fromPick(x,r));
+  if(estimate?.kind==='estimated')return '<span class="cst warn" title="Approximate CLV from recorded evidence; original entry verification is unchanged">'+(x.verificationStatus==='unverified'?'Entry unverified · ':'')+'CLV estimated</span>';
   if(x && x.priceSource === 'manual' && x.verificationStatus === 'verified')
     return '<span class="cst ok" title="Original entry odds confirmed by a league manager; verification is recorded">Manually verified</span>';
   if(x && x.verificationStatus === 'unverified')
@@ -4683,7 +4685,7 @@ const quoteSourceBadge = x => {
     return `<span class="cst warn" title="No two-sided captured entry, so the manager set this leg's CLV by hand. Weaker evidence than a captured pair, and counted separately.">self · CLV set by hand</span>`;
   return x && x.priceSource === 'captured'
     ? '<span class="cst ok" title="Both sides captured from DraftKings through the odds feeds">DK captured</span>'
-    : '<span class="cst warn" title="Self-priced; no two-sided captured entry, so this leg has no CLV until the manager sets one by hand">self · no CLV</span>';
+    : '<span class="cst warn" title="Self-priced entry; approximate CLV becomes available when selected-side closing evidence arrives">self · close pending</span>';
 };
 
 // Server capture replaced the old browser-side price guesswork. The warning slot stays
@@ -7624,8 +7626,8 @@ function paintDiag(live, players, status){
         simulation CLV picks uniformly among whoever is still tied, which is what "no information" actually means.
         It fills in once the snapshot lands.</div></details></div></div>`);
     else if(withClv < live.length)
-      flags.push(`<div class="flag"><span>⚠</span><div><b>CLV evidence (including labeled scenario estimates) is available on ${withClv} of ${live.length} legs.</b>
-        The rest are awaiting verified two-sided entry and closing prices. Missing sides stay unmeasured; no juice is assumed.
+      flags.push(`<div class="flag"><span>⚠</span><div><b>CLV evidence (including labeled estimates) is available on ${withClv} of ${live.length} legs.</b>
+        The rest are awaiting selected-side closing evidence. Opposite prices are optional for estimates; missing closes are not zero.
         <details class="bz-help" id="dgClvHelp"${clvHelpOpen ? ' open' : ''}><summary>How missing CLV is modelled</summary><div><b>The simulation does not treat those as unmeasurable forever.</b> A leg whose market can be captured draws a
         modelled CLV from <b>that player's own past legs</b>, or from exactly even when they have no history yet, because
         a close that has not landed is not a close that never will &mdash; and with this week's hierarchy drawing Worst
@@ -7661,7 +7663,7 @@ function paintDiag(live, players, status){
     if(delta != null){
       const v = delta * 100;
       const resolved=window.DDEffectiveClv.resolve(window.DDEffectiveClv.fromPick(x,r));
-      if(resolved.kind==='estimated'||clvDisplayEstimate(x))return `<span title="${esc(resolved.reason)}">${v>0?'+':''}${v.toFixed(2)} pts estimated</span>`;
+      if(resolved.kind==='estimated'||clvDisplayEstimate(x))return `<span title="${esc(resolved.reason)}">${v>0?'+':''}${v.toFixed(2)} estimated pts</span>`;
       // ⚠️ NOT .pos/.neg — .pos is already the reel position label ("1ST"), and the
       // carnival skin restyles it. A CLV number would silently inherit both.
       return `<span class="${v>=0?'clvup':'clvdn'}" title="de-vigged close ${(pC*100).toFixed(1)}% − de-vigged entry ${(pE*100).toFixed(1)}%">`
@@ -7906,7 +7908,7 @@ HOW TO TALK ABOUT THE NUMBERS:
 - Prop legs use a placeholder standard deviation (line x 0.55) that is openly a guess. Flag a prop before leaning on its Worst Beat exposure.
 - Period legs (1h, 2h, quarters) use the game SD scaled by the square root of the fraction played (beatBasis "scaled-sd"), a documented model pending calibration. They are hand-graded: no Worker-reachable score source carries per-period scores.
 - Worst CLV is measured only when both sides of the DraftKings entry and both sides of the kickoff close were captured. A missing side is unmeasured, never zero, and the lever passes it.
-- priceSource=captured means both entry prices came from DraftKings through an odds feed. When the checker fails, entered odds are accepted as Unverified (verificationStatus=unverified); manager review is pending. priceSource=manual and verificationStatus=verified means a manager confirmed the original two-sided entry prices without changing the submission time. Those picks can count toward CLV once both closing prices exist. Existing manual CLV overrides remain supported. Never describe unverified prices as verified.
+- priceSource=captured means both entry prices came from DraftKings through an odds feed. When the checker fails, entered odds are accepted as Unverified (verificationStatus=unverified); manager review is pending. priceSource=manual and verificationStatus=verified means a manager confirmed the original two-sided entry prices without changing the submission time. Selected-side entry and closing prices suffice for labeled approximate CLV; paired verified quotes support measured CLV. Existing manual CLV overrides remain supported. Never describe unverified prices as verified.
 - The "As it stands / If every leg lost" panel is a read-only hypothetical over currently filed legs. It assumes every filed leg loses, does not know results, and never names a bozo. Before the card locks there is no running order at all. Never present the panel as a prediction, a probability, or a graded outcome.
 - You may NOT place, edit or remove anyone's leg, and you must never tell someone their bet is guaranteed. Prices and probabilities, never certainties.`;
 

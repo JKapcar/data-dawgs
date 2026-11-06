@@ -29,6 +29,14 @@ test('one-sided pregame evidence stages and promotes without inventing an opposi
  assert.equal(p.ch['ledger/2026-w8-u_kap/closeOpp'],null);
  assert.equal(p.ch['results/u_kap/close'],-112);
 });
+test('cross-book proxy keeps its actual bookmaker and custom markets require exact identity',async()=>{
+ const r=agentRig();assert.equal((await r.run(entry({book:'fanduel',closeOpp:undefined}))).status,200);
+ assert.equal(r.writes[0]['ledger/2026-w8-u_kap/closeBook'],'fanduel');
+ const custom=()=>agentRig(l=>Object.assign(l.ledger['2026-w8-u_kap'],{mkt:'other',selectionKey:'exact-custom',period:'game'}));
+ const args=entry({mkt:'other',selectionKey:'exact-custom',period:'game',closeOpp:undefined});
+ assert.equal((await custom().run(args)).status,200);
+ for(const bad of [{selectionKey:'wrong'},{label:'different'},{period:'1h'},{side:'ARI'},{line:12.5}])assert.equal((await custom().run({...args,...bad})).status,409);
+});
 test('prop capture binds player/stat, selection, side, line and period',async()=>{
  const prop={player:'Fixture Player',stat:'pass_attempts'},key='exact-prop-selection';
  const rig=()=>agentRig(l=>Object.assign(l.ledger['2026-w8-u_kap'],{mkt:'prop',side:'under',line:33.5,prop,selectionKey:key,period:'game'}));
@@ -73,7 +81,7 @@ test('a replay with the same requestId is a no-op, not a second write',async()=>
 });
 test('only the leg itself, at its own line and side, from DraftKings, before kickoff',async()=>{
  const refuse=async(x,re,edit)=>{const r=agentRig(edit);const out=await r.run(entry(x));assert.notEqual(out.status,200,JSON.stringify(x));if(re)assert.match(out.body.error,re);assert.equal(r.writes.length,0);};
- await refuse({book:'fanduel'},/only a DraftKings close counts/);
+ await refuse({book:''},/source bookmaker required/);
  await refuse({line:11},/different selection/);
  await refuse({side:'ARI'},/another side/);
  await refuse({observedAt:iso(kickoff)},/at or after kickoff/);

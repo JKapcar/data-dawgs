@@ -23,7 +23,7 @@ function ownerConfirmationMatches(record,identity){
   const entryCaptured=receipt?.ok===true&&receipt.price===l.entryPrice&&odds(receipt.opp)&&Number.isFinite(stamp)&&stamp<start&&stamp<=submitted&&submitted-stamp<=5*60000;
   const e=l.clvEstimate,base=pair(l.entryPrice,entryCaptured?receipt.opp:l.entryPriceOpp),override=l.clvPts!=null&&Number.isFinite(+l.clvPts);
   if(override)return finish(+l.clvPts,'override',base,l,'Manager override');
-  if((entryCaptured||(l.verificationStatus!=='unverified'&&l.clvEligible!==false&&l.entryOppSource!=='assumed'))&&l.closeOppSource!=='assumed'){
+  if(!(l.entryBook&&l.closeBook&&l.entryBook!==l.closeBook)&&(entryCaptured||(l.verificationStatus!=='unverified'&&l.clvEligible!==false&&l.entryOppSource!=='assumed'))&&l.closeOppSource!=='assumed'){
    const close=pair(l.closePrice,l.closePriceOpp);if(base!==null&&close!==null)return finish(100*(close-base),'measured',base,l,'Captured paired prices');
   }
   if(e?.kind==='convention'&&e.method==='owner_push_zero_v1'&&!e.stale&&e.point===0&&l.result==='push')return finish(0,'convention',null,l,'Owner push convention — not measured CLV');
@@ -34,14 +34,14 @@ function ownerConfirmationMatches(record,identity){
   }
   // Owner-approved selected-side approximation. No opposite price or verification
   // stamp is inferred. This measures the raw implied-probability move, including vig.
-  if(odds(l.entryPrice)&&odds(l.closePrice))return finish(100*(imp(l.closePrice)-imp(l.entryPrice)),'estimated',imp(l.entryPrice),l,'Selected-side implied probability change; includes bookmaker margin; entry verification unchanged',l.closeEvidence?.url||null);
+  if(odds(l.entryPrice)&&odds(l.closePrice))return finish(100*(imp(l.closePrice)-imp(l.entryPrice)),'estimated',imp(l.entryPrice),l,(l.entryBook&&l.closeBook&&l.entryBook!==l.closeBook?'Cross-book '+l.closeBook+' proxy. ':'')+'Selected-side implied probability change; includes bookmaker margin; entry verification unchanged',l.closeEvidence?.url||null);
   return {point:null,kind:'unknown',pE:null,pC:null,clv:null,reason:e?.stale?'Stale estimate; review required':!l.result?'Pending outcome / missing usable CLV':'No usable CLV evidence',source:null};
  }
  function finish(point,kind,pE,l,reason,source=null){const pc=pE===null?null:pE+point/100;return {point,kind,pE,pC:valid(pc)&&pc>=0&&pc<=1?pc:null,clv:point/100,manual:kind==='override',estimated:kind==='estimated',reason,source};}
  function outcome(l){return l.result==='won'?'win':l.result==='lost'?'loss':['win','loss','push','void'].includes(l.result)?l.result:null;}
  function rows(legs){return legs.map((l,index)=>{const e=resolve(l),r=outcome(l),y=(r==='win'||r==='loss')&&e.pC!==null?100*((r==='win'?1:0)-e.pC):null;return {leg:l,index,...e,result:r,x:e.point,y,charted:e.point!==null&&y!==null};});}
  function counts(items){return {convention:items.filter(x=>x.kind==='convention').length,total:items.length,charted:items.filter(x=>x.charted).length,measured:items.filter(x=>x.kind==='measured').length,estimated:items.filter(x=>x.kind==='estimated').length,override:items.filter(x=>x.kind==='override').length,unknown:items.filter(x=>x.point===null).length,pending:items.filter(x=>!x.result).length,push:items.filter(x=>x.result==='push').length,void:items.filter(x=>x.result==='void').length};}
- function fromPick(p,r={}){return {...p,...r,entryPrice:p.price,entryPriceOpp:p.entryPriceOpp??p.priceOpp,closePrice:r.close,closePriceOpp:r.closeOpp,entrySubmittedAt:p.ts?new Date(p.ts).toISOString():null};}
+ function fromPick(p,r={}){r=r||{};return {...p,...r,entryPrice:p.price,entryPriceOpp:p.entryPriceOpp??p.priceOpp,closePrice:r.close,closePriceOpp:r.closeOpp,entrySubmittedAt:p.ts?new Date(p.ts).toISOString():null};}
  root.DDEffectiveClv={resolve,rows,counts,fromPick};if(typeof module!=='undefined')module.exports=root.DDEffectiveClv;
 })(typeof window!=='undefined'?window:globalThis);
 /* END SHARED BOZO CLV */
@@ -10334,7 +10334,7 @@ function royaleDecideChop(state, order) {
     const row=state.ledger?.[String(state.season)+'-w'+String(state.week)+'-'+key];
     if(!row||!pick.selectionKey||row.selectionKey!==pick.selectionKey||String(row.eventId)!==String(pick.eventId)||row.price!==pick.price||(row.ts!=null&&pick.ts!=null&&row.ts!==pick.ts))continue;
     const r={...(results[key]||{})};
-    for(const field of ['close','closeOpp','closeSource','closeEvidence','closeOppSource','clvPts'])if(row[field]!=null)r[field]=row[field];
+    for(const field of ['close','closeOpp','closeBook','closeSource','closeEvidence','closeOppSource','clvPts'])if(row[field]!=null)r[field]=row[field];
     if(row.clvEstimate)r.clvEstimate={...row.clvEstimate,stale:!bozoEstimateBasisSame(row.clvEstimate.basis,bozoEstimateBasis(bozoEstimateSettledRow(row,String(state.season)+'-w'+String(state.week)+'-'+key,state)))};
     results[key]=r;
   }
@@ -10884,10 +10884,9 @@ async function bozoAgentCloseCore(env, auth, args, nowMs = Date.now()) {
   if (!Number.isInteger(args.season) || !Number.isInteger(args.week) || args.week < 1) return fail("season and week must be whole numbers.");
   if (typeof args.player !== "string" || !args.player.trim()) return fail("player is the member's name as the board shows it.");
   if (args.eventId == null || String(args.eventId) === "") return fail("eventId is required.");
-  if (!["ml", "spread", "total", "prop"].includes(args.mkt)) return fail("Unsupported market.");
+  if (!["ml", "spread", "total", "prop", "other"].includes(args.mkt)) return fail("Unsupported market.");
   if (!odds(args.close) || (args.closeOpp != null && !odds(args.closeOpp))) return fail("Selected-side whole American price required; opposite may be omitted.");
-  if (norm(args.book) !== "draftkings")
-    return fail("Bozo legs are DraftKings slips, so only a DraftKings close counts. Another book is a reference, not this close.");
+  if (!/^[a-z0-9_-]{2,40}$/.test(norm(args.book))) return fail("Explicit source bookmaker required.");
   let url;
   try { url = new URL(args.source); } catch { return fail("source must be the https page the price was read on."); }
   if (url.protocol !== "https:" || url.username || url.password) return fail("source must be a public https page with no credentials.");
@@ -10915,6 +10914,7 @@ async function bozoAgentCloseCore(env, auth, args, nowMs = Date.now()) {
   const [rowKey, row] = matches[0];
   if(args.mkt==="prop" && (!args.selectionKey || args.selectionKey!==row.selectionKey || !args.prop || JSON.stringify(args.prop)!==JSON.stringify(row.prop) || args.period!==(row.period||"game")))return fail("Props require exact selectionKey, player/stat prop identity and period.",409);
   if(args.mkt==="prop" && args.side==null)return fail("Prop side is required.");
+  if(args.mkt==="other" && (!args.selectionKey||args.selectionKey!==row.selectionKey||args.label!==row.label||args.period!==(row.period||"game")||args.side==null))return fail("Other markets require exact selectionKey, label, period and side.",409);
   // The line is part of the selection. A moved line is a different bet, not this close.
   if (args.mkt !== "ml" && Number(args.line) !== Number(row.line))
     return fail(`The leg's line is ${row.line}; a price at ${args.line} is a different selection. Record nothing.`, 409);
@@ -10941,7 +10941,7 @@ async function bozoAgentCloseCore(env, auth, args, nowMs = Date.now()) {
   }
 
   const note = typeof args.note === "string" && args.note.trim() ? args.note.trim().slice(0, 300) : null;
-  const cand = { close: args.close, closeOpp: args.closeOpp ?? null, url: url.origin + url.pathname,
+  const cand = { close: args.close, closeOpp: args.closeOpp ?? null, book:norm(args.book), url: url.origin + url.pathname,
     readAt: new Date(read).toISOString(), minutesBeforeKickoff: minutes, requestId: args.requestId, note,
     by: auth.name || null, at: new Date(nowMs).toISOString() };
 
@@ -10993,7 +10993,7 @@ async function bozoAgentCloseCore(env, auth, args, nowMs = Date.now()) {
    misread; the read time lives in closeEvidence.readAt. */
 function bozoAgentClosePatch(cand, by, nowMs) {
   return {
-    close: cand.close, closeOpp: cand.closeOpp, closeBook: "draftkings", closeSource: "agent_search",
+    close: cand.close, closeOpp: cand.closeOpp, closeBook: cand.book || "draftkings", closeSource: "agent_search",
     closeObservedAt: null, closeUnavailableReason: null, closeOppSource: "agent_search", closeOverround: null,
     closeEnteredBy: by || null, closeEnteredTs: nowMs,
     // A query string can carry a session; the page itself is the evidence.
@@ -24828,24 +24828,24 @@ const MCP_TOOLS = [
   },
   {
     name: "dd_record_bozo_agent_close",
-    title: "Record a DraftKings close read before kickoff",
+    title: "Record sourced pregame closing evidence",
     catalog: "full",
     readOnlyHint: false,
     destructiveHint: false,
-    description: "Manager-only. Fills a Bozo leg's missing close with a DraftKings price a Claude routine read on a public page before kickoff. The league can calculate approximate CLV from the selected side alone; this does not verify the original entry, and it is stored as closeSource agent_search with the page, read time and minutes before kickoff for audit. It only fills a gap. Sent before kickoff (up to 3 hours out), the read is held and returns staged:true; at kickoff it becomes the close only if the Worker's own free capture got none. Sent after kickoff, it applies at once. A close already on the leg stands, and a later held read replaces an earlier one. The leg is matched by season, week, player, eventId and mkt; the line and side must be the leg's own, since a moved line is a different selection. Props require exact selectionKey, prop object, period, side and line from the ledger. Opposite-side price is optional. DraftKings only. Send the same requestId to retry safely.",
+    description: "Manager-only. Fills a Bozo leg's missing close with a sourced price an authorized routine read on a public page before kickoff. The league can calculate approximate CLV from the selected side alone; this does not verify the original entry, and it is stored as closeSource agent_search with the page, read time and minutes before kickoff for audit. It only fills a gap. Sent before kickoff (up to 3 hours out), the read is held and returns staged:true; at kickoff it becomes the close only if the Worker's own free capture got none. Sent after kickoff, it applies at once. A close already on the leg stands, and a later held read replaces an earlier one. The leg is matched by season, week, player, eventId and mkt; the line and side must be the leg's own, since a moved line is a different selection. Props require exact selectionKey, prop object, period, side and line from the ledger. Opposite-side price is optional. Prefer DraftKings; preserve the actual source book for a cross-book estimate. Other markets require exact selectionKey, label, period, side and line. Send the same requestId to retry safely.",
     inputSchema: { type: "object", properties: {
       league: { type: "string", description: "League id" },
       season: { type: "integer" }, week: { type: "integer" },
       player: { type: "string", description: "Member name as the board shows it" },
       game: { type: "string" }, eventId: { type: "string", description: "ESPN event id, as a string" }, label: { type: "string" },
-      mkt: { type: "string", enum: ["ml", "spread", "total", "prop"] },
+      mkt: { type: "string", enum: ["ml", "spread", "total", "prop", "other"] },
       selectionKey: {type:"string"}, prop: {type:"object"}, period: {type:"string"},
       side: { type: "string", description: "The side the leg took" },
       line: { type: "number", description: "The leg's line, in the board's own convention" },
       startsAt: { type: "string", description: "Kickoff, ISO" },
       close: { type: "integer", description: "American price of the leg's side" },
       closeOpp: { type: "integer", description: "American price of the other side of the same line" },
-      book: { type: "string", enum: ["draftkings"] },
+      book: { type: "string", pattern: "^[a-z0-9_-]{2,40}$" },
       source: { type: "string", description: "The https page the price was read on" },
       observedAt: { type: "string", description: "ISO time the price was read" },
       minutesBeforeKickoff: { type: "number" },

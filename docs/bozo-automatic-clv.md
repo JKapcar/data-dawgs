@@ -20,8 +20,10 @@ not zero. A reached Royale CLV lever requires evidence for every losing leg, pre
 elimination based on a selectively covered subset. Existing terminal-result checks and
 the pre-drawn lever order remain in force.
 
-The manager agent-close workflow accepts an optional opposite price and exact player
-props. Props require the ledger's selection key, prop identity, period, side and line.
+The manager agent-close workflow accepts an optional opposite price, exact player
+props and custom markets. Props require the ledger's selection key, prop identity,
+period, side and line; custom markets also require the exact ledger label. Free
+cross-book observations retain their actual bookmaker and resolve as estimates.
 The observed page, read time and kickoff remain evidence. Pregame reads are staged and
 promoted by the existing five-minute Worker job. An existing single-sided close is
 preserved. Agent observations are closing proxies, not a claim of final book close.
@@ -29,9 +31,10 @@ preserved. Agent observations are closing proxies, not a claim of final book clo
 Bozo's Odds API gate is closed even if a key or old paid-enable flag exists. The existing
 ESPN keyless source, staged agent observations, and configured SGO free-close route remain.
 No account, subscription, credential or runtime configuration changes are part of this
-release. The two existing owner capture automations were updated in place to use the
-supported capture-only write and readback, with free public search and no SGO calls from
-the automations. Unsupported source/book/market evidence remains missing, never invented.
+release. The existing owner pregame capture automation now runs hourly on every day,
+using the supported capture-only write and readback, with free public search and no SGO
+calls from the automation. The separate Thursday job is paused to avoid duplicate runs.
+Unsupported or unmatched market evidence remains missing, never invented.
 
 Free ESPN reads are deduplicated by exact selection per run, and successful pregame
 quotes get durable receipts before ledger updates. Failed/concurrent ledger writes can

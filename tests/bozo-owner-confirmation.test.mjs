@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {webcrypto} from 'node:crypto';
 import * as identity from '../bozo-owner-confirmation.mjs';
+import effectiveClv from '../bozo-effective-clv.js';
 const source=readFileSync('dawg-bot-worker.js','utf8');
 const core=source.slice(source.indexOf('async function bozoOwnerConfirmationCore('),source.indexOf('// Verify a manually entered ORIGINAL quote'));
 test('browser and Worker identity definitions remain identical',()=>{
@@ -51,7 +52,7 @@ test('CAS conflict creates no visible seal or successful readback',async()=>{
 });
 test('badge requires exact identity and leaves quote-unverified status visible',async()=>{
  const page=readFileSync('bozo.html','utf8'),r=rig(),p=await r.propose();await r.post({forUid:'pat',confirm:p.body.confirm_code});
- const ctx={window:{DDBozoOwner:identity},LID:'main',S:r.state(),kEnc:x=>x,legRow:()=>null};vm.createContext(ctx);
+ const ctx={window:{DDBozoOwner:identity,DDEffectiveClv:effectiveClv},clvDisplayEstimate:()=>null,LID:'main',S:r.state(),kEnc:x=>x,legRow:()=>null};vm.createContext(ctx);
  const start=page.indexOf('function ownerConfirmationFor('),end=page.indexOf('\n};',page.indexOf('const quoteSourceBadge =',start))+3;
  vm.runInContext(page.slice(start,end)+';this.badge=priceSourceBadge;',ctx);
  assert.match(ctx.badge({...r.state().picks.pat,key:'pat'}),/Owner approved.*Quote unverified/);

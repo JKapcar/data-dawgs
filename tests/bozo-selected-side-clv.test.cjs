@@ -14,6 +14,10 @@ test('server and browser use byte-identical resolver, no duplicate CLV formula',
  assert.match(cut('function royaleApplyLever(','function royaleDecideChop('),/DDEffectiveClv.resolve/);
  assert.match(fs.readFileSync('bozo.html','utf8'),/DDEffectiveClv.resolve\(row\)/);
 });
+test('cross-book selected-side proxy never becomes paired measured CLV',()=>{
+ const out=api.resolve({entryPrice:-200,entryPriceOpp:170,entryBook:'draftkings',closePrice:-150,closePriceOpp:130,closeBook:'fanduel'});
+ assert.equal(out.kind,'estimated');assert.match(out.reason,/Cross-book fanduel/);
+});
 test('Royale compares all losing legs and blocks a missing close instead of choosing from partial coverage',()=>{
  const c={DDEffectiveClv:api};vm.createContext(c);vm.runInContext(cut('function royaleApplyLever(','function royaleDecideChop('),c);
  const picks={a:{price:-200},b:{price:-150}},results={a:{close:-150},b:{close:-200}};
