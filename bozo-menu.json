@@ -1,12 +1,56 @@
 {
-  "title": "Bozo Menu · Nov 3 NFL/CFB research holds · 0 cleared · prices pending",
+  "title": "Bozo Menu · Nov 6 refresh · yellow research holds · 0 cleared · prices are dated snapshots",
   "week": "2026-11-02",
-  "revision": 1,
-  "published_at": "2026-11-03T17:32:33.202Z",
-  "retrieved_at": "2026-11-06T15:04:56.115Z",
+  "revision": 2,
+  "published_at": "2026-11-06T16:18:37.658Z",
+  "retrieved_at": "2026-11-06T20:54:54.352Z",
   "status": "published",
   "scope": "Public Data Dawgs research. Saved quotes, not guaranteed current offers. No contest picks submitted.",
   "candidates": [
+    {
+      "base": {
+        "book": "DraftKings, reported by AgentBets aggregator; opposing side +280",
+        "odds": -355,
+        "quoted_at": "2026-11-06T15:00:00Z"
+      },
+      "event": "Iowa State at Baylor",
+      "id": "cfb-20261107-isu-bay-ml",
+      "kickoff": "2026-11-07T17:00:00Z",
+      "market": "moneyline",
+      "probability": {
+        "basis": "Proportional de-vig of Pinnacle ML -372/+303 as reported by AgentBets at 15:00 UTC Nov 6. Market estimate, not a true or Data Dawgs probability.",
+        "value": 0.7605
+      },
+      "rank": 1,
+      "reason": "PFF and SP+ both favor Baylor with a comfortable projected margin, the cleanest model-agreement favorite in the Nov 6 screen. But the sharp no-vig estimate (76.05%) sits below the DraftKings break-even (78.02% at -355); BetMGM was reported at -350. Baylor's Nov 1 preview names DJ Lagway and interim coach Joe Klanderman, which is not a final availability report. Mild weather expected; wind unverified. Still needed: live price, final QBs/injuries, kickoff wind, league eligibility. Yellow research hold from the Nov 6 refresh; not cleared, no measured EV. Prices are dated aggregator snapshots, not executable offers.",
+      "screened_at": "2026-11-06T15:38:28Z",
+      "selection": "Baylor moneyline (yellow research hold)",
+      "sources": [
+        {
+          "as_of": "2026-11-06T15:00:00Z",
+          "name": "AgentBets odds page (DK -355/+280, BetMGM -350, Pinnacle -372/+303)",
+          "url": "https://agentbets.ai/odds/ncaaf/iowa-state-cyclones-vs-baylor-bears/"
+        },
+        {
+          "as_of": "2026-11-06T15:38:28Z",
+          "name": "PFF Best Game Bets (authenticated, no refresh time displayed)",
+          "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-06T15:01:00Z",
+          "name": "SP+ Week 10 via CLEATZ rendering",
+          "url": "https://cleatz.com/cfb-sp-plus-rankings/"
+        },
+        {
+          "as_of": "2026-11-06T15:38:28Z",
+          "name": "Baylor official Nov 1 preview",
+          "url": "https://baylorbears.com/news/2026/11/1/football-baylor-hosts-iowa-state-in-nations-longest-running-homecoming"
+        }
+      ],
+      "sport": "CFB",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
     {
       "event": "Ohio at Akron",
       "id": "cfb-20261103-ohio-akron-spread",
@@ -48,6 +92,45 @@
       "quote_state": "Started / archived"
     },
     {
+      "base": {
+        "book": "DraftKings, reported by AgentBets aggregator; opposing side +170",
+        "odds": -205,
+        "quoted_at": "2026-11-06T15:00:00Z"
+      },
+      "event": "UCLA at Minnesota",
+      "id": "cfb-20261107-ucla-minn-ml",
+      "kickoff": "2026-11-07T17:00:00Z",
+      "market": "moneyline",
+      "probability": {
+        "basis": "Proportional de-vig of Pinnacle ML -205/+178 as reported by AgentBets at 15:00 UTC Nov 6. Market estimate, not a true or Data Dawgs probability.",
+        "value": 0.6514
+      },
+      "rank": 2,
+      "reason": "PFF and SP+ both favor UCLA, but the sharp no-vig estimate (65.14%) is well below the DraftKings break-even (67.21% at -205); theScore/BetRivers reported -200. FanDuel's -194 is outside the -200 to -500 band, so not eligible. Still needed: live price, QB/injury status, Minneapolis weather and wind, league eligibility. Yellow research hold from the Nov 6 refresh; not cleared, no measured EV. Prices are dated aggregator snapshots, not executable offers.",
+      "screened_at": "2026-11-06T15:38:28Z",
+      "selection": "UCLA moneyline (yellow research hold)",
+      "sources": [
+        {
+          "as_of": "2026-11-06T15:00:00Z",
+          "name": "AgentBets odds page (DK -205/+170, theScore/BetRivers -200, Pinnacle -205/+178)",
+          "url": "https://agentbets.ai/odds/ncaaf/ucla-bruins-vs-minnesota-golden-gophers/"
+        },
+        {
+          "as_of": "2026-11-06T15:38:28Z",
+          "name": "PFF Best Game Bets (authenticated, no refresh time displayed)",
+          "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-06T15:01:00Z",
+          "name": "SP+ Week 10 via CLEATZ rendering",
+          "url": "https://cleatz.com/cfb-sp-plus-rankings/"
+        }
+      ],
+      "sport": "CFB",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
       "event": "Ohio at Akron",
       "id": "cfb-20261103-ohio-akron-ml",
       "kickoff": "2026-11-04T00:00:00Z",
@@ -76,6 +159,50 @@
       "sport": "CFB",
       "status": "hold",
       "quote_state": "Started / archived"
+    },
+    {
+      "base": {
+        "book": "DraftKings, reported by AgentBets aggregator; opposing side +270",
+        "odds": -340,
+        "quoted_at": "2026-11-06T15:00:00Z"
+      },
+      "event": "Charlotte at UAB",
+      "id": "cfb-20261107-clt-uab-ml",
+      "kickoff": "2026-11-07T20:30:00Z",
+      "market": "moneyline",
+      "probability": {
+        "basis": "Proportional de-vig of Pinnacle ML -329/+272 as reported by AgentBets at 15:00 UTC Nov 6. Market estimate, not a true or Data Dawgs probability.",
+        "value": 0.7405
+      },
+      "rank": 3,
+      "reason": "SP+ favors UAB clearly, but PFF leans Charlotte plus points, so this is a model conflict, not corroborated value. Sharp no-vig estimate 74.05% vs DraftKings break-even 77.27% at -340; theScore reported -320. UAB's Nov 5 preview discusses both quarterbacks but does not confirm full availability. Still needed: model reconciliation, final QBs/injuries, live quote, kickoff wind. Yellow research hold from the Nov 6 refresh; not cleared, no measured EV. Prices are dated aggregator snapshots, not executable offers.",
+      "screened_at": "2026-11-06T15:38:28Z",
+      "selection": "UAB moneyline: model-conflict hold (yellow)",
+      "sources": [
+        {
+          "as_of": "2026-11-06T15:00:00Z",
+          "name": "AgentBets odds page (DK -340/+270, theScore -320, Pinnacle -329/+272)",
+          "url": "https://agentbets.ai/odds/ncaaf/charlotte-49ers-vs-uab-blazers/"
+        },
+        {
+          "as_of": "2026-11-06T15:38:28Z",
+          "name": "PFF Best Game Bets (authenticated, no refresh time displayed)",
+          "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-06T15:01:00Z",
+          "name": "SP+ Week 10 via CLEATZ rendering",
+          "url": "https://cleatz.com/cfb-sp-plus-rankings/"
+        },
+        {
+          "as_of": "2026-11-06T15:38:28Z",
+          "name": "UAB official Nov 5 preview",
+          "url": "https://uabsports.com/news/2026/11/5/football-uab-hosts-charlotte-on-saturday-in-10th-annual-childrens-harbor-game"
+        }
+      ],
+      "sport": "CFB",
+      "status": "hold",
+      "quote_state": "On hold"
     },
     {
       "event": "Ohio at Akron",
@@ -118,6 +245,45 @@
       "quote_state": "Started / archived"
     },
     {
+      "base": {
+        "book": "DraftKings, reported by AgentBets aggregator; opposing side +300",
+        "odds": -380,
+        "quoted_at": "2026-11-06T15:00:00Z"
+      },
+      "event": "Northern Illinois at San Jose State",
+      "id": "cfb-20261107-niu-sjsu-ml",
+      "kickoff": "2026-11-07T21:00:00Z",
+      "market": "moneyline",
+      "probability": {
+        "basis": "Proportional de-vig of Pinnacle ML -392/+317 as reported by AgentBets at 15:00 UTC Nov 6. Market estimate, not a true or Data Dawgs probability.",
+        "value": 0.7686
+      },
+      "rank": 4,
+      "reason": "SP+ favors San Jose State clearly, but PFF leans Northern Illinois plus points; the gap is not independent corroboration. Sharp no-vig estimate 76.86% vs DraftKings break-even 79.17% at -380; BetMGM reported -375. Separate from the San Jose State spread row. Still needed: final QB/injury, weather, model reconciliation, direct book quote. Yellow research hold from the Nov 6 refresh; not cleared, no measured EV. Prices are dated aggregator snapshots, not executable offers.",
+      "screened_at": "2026-11-06T15:38:28Z",
+      "selection": "San Jose State moneyline: model-conflict hold (yellow)",
+      "sources": [
+        {
+          "as_of": "2026-11-06T15:00:00Z",
+          "name": "AgentBets odds page (DK -380/+300, BetMGM -375, Pinnacle -392/+317)",
+          "url": "https://agentbets.ai/odds/ncaaf/northern-illinois-huskies-vs-san-jose-state-spartans/"
+        },
+        {
+          "as_of": "2026-11-06T15:38:28Z",
+          "name": "PFF Best Game Bets (authenticated, no refresh time displayed)",
+          "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-06T15:01:00Z",
+          "name": "SP+ Week 10 via CLEATZ rendering",
+          "url": "https://cleatz.com/cfb-sp-plus-rankings/"
+        }
+      ],
+      "sport": "CFB",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
       "event": "Buffalo at Miami (OH)",
       "id": "cfb-20261103-buff-miami-ml",
       "kickoff": "2026-11-04T01:00:00Z",
@@ -151,6 +317,50 @@
       "sport": "CFB",
       "status": "hold",
       "quote_state": "Started / archived"
+    },
+    {
+      "base": {
+        "book": "DraftKings, reported by AgentBets aggregator; opposing side +310",
+        "odds": -395,
+        "quoted_at": "2026-11-06T15:00:00Z"
+      },
+      "event": "New Mexico at Nevada",
+      "id": "cfb-20261106-unm-nev-ml",
+      "kickoff": "2026-11-07T02:00:00Z",
+      "market": "moneyline",
+      "probability": {
+        "basis": "Proportional de-vig of Pinnacle ML -399/+332 as reported by AgentBets at 15:00 UTC Nov 6. Market estimate, not a true or Data Dawgs probability.",
+        "value": 0.7755
+      },
+      "rank": 5,
+      "reason": "PFF mildly supports New Mexico and SP+ favors them, but neither SP+ nor the sharp no-vig estimate (77.55%) clears the DraftKings break-even (79.8% at -395) by a meaningful margin; Caesars reported -390. A survival-oriented watch, not proven value. Kicks off Fri 9 PM ET. Still needed: final QBs/injuries, Reno weather and wind, live price. Yellow research hold from the Nov 6 refresh; not cleared, no measured EV. Prices are dated aggregator snapshots, not executable offers.",
+      "screened_at": "2026-11-06T15:38:28Z",
+      "selection": "New Mexico moneyline: price-sensitive hold (yellow)",
+      "sources": [
+        {
+          "as_of": "2026-11-06T15:00:00Z",
+          "name": "AgentBets odds page (DK -395/+310, Caesars -390, Pinnacle -399/+332)",
+          "url": "https://agentbets.ai/odds/ncaaf/new-mexico-lobos-vs-nevada-wolf-pack/"
+        },
+        {
+          "as_of": "2026-11-06T15:38:28Z",
+          "name": "PFF Best Game Bets (authenticated, no refresh time displayed)",
+          "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-06T15:01:00Z",
+          "name": "SP+ Week 10 via CLEATZ rendering",
+          "url": "https://cleatz.com/cfb-sp-plus-rankings/"
+        },
+        {
+          "as_of": "2026-11-03T17:26:00Z",
+          "name": "SP+ FBS Week 10 sheet; current model, reference market cells",
+          "url": "https://docs.google.com/spreadsheets/d/1vwoVl-Dxy0es87Z9I1RTvFzr72Lb1fAkREfbLxbK-eg/edit?gid=559933777#gid=559933777"
+        }
+      ],
+      "sport": "CFB",
+      "status": "hold",
+      "quote_state": "On hold"
     },
     {
       "event": "Buffalo at Miami (OH)",
@@ -193,6 +403,50 @@
       "quote_state": "Started / archived"
     },
     {
+      "event": "Detroit Lions at Miami Dolphins",
+      "id": "nfl-20261108-det-mia-ml",
+      "kickoff": "2026-11-08T18:00:00Z",
+      "market": "moneyline",
+      "probability": {
+        "basis": "Proportional de-vig of Pinnacle ML -305/+248 as reported by AgentBets at 15:00 UTC Nov 6. Market estimate, not a true or Data Dawgs probability.",
+        "value": 0.7238
+      },
+      "rank": 6,
+      "reason": "DraftKings was reported at -325 / +260 on The Odds Gap with only a relative update time, so no quote is saved. Break-even 76.47% vs a sharp no-vig estimate of 72.38%. PFF favors Detroit's spread, which is not a verified moneyline edge; nfelo's model matches the market. Miami's report shows Malik Willis full Wed/Thu; Detroit had Amon-Ra St. Brown limited and Jack Campbell, Cade Mays, D.J. Reed and DJ Wonnum out of practice Wed/Thu, with Friday statuses pending. Still needed: Friday report, Miami weather, exact live price. Yellow research hold from the Nov 6 refresh; not cleared, no measured EV. Prices are dated aggregator snapshots, not executable offers.",
+      "screened_at": "2026-11-06T15:38:28Z",
+      "selection": "Detroit moneyline (yellow research hold)",
+      "sources": [
+        {
+          "as_of": "2026-11-06T15:38:28Z",
+          "name": "The Odds Gap (DK -325/+260; relative update time only)",
+          "url": "https://theoddsgap.com/odds/nfl/detroit-lions-vs-miami-dolphins"
+        },
+        {
+          "as_of": "2026-11-06T15:00:00Z",
+          "name": "AgentBets Pinnacle NFL board (Pinnacle -305/+248)",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-06T15:38:28Z",
+          "name": "nfelo games board (no precise refresh time)",
+          "url": "https://www.nfeloapp.com/games/"
+        },
+        {
+          "as_of": "2026-11-06T15:38:28Z",
+          "name": "PFF Best Game Bets (authenticated, no refresh time displayed)",
+          "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-06T15:38:28Z",
+          "name": "Miami Dolphins official injury report",
+          "url": "https://www.miamidolphins.com/team/injury-report/"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
       "event": "Ball State at Massachusetts",
       "id": "cfb-20261104-ball-umass-side",
       "kickoff": "2026-11-05T00:00:00Z",
@@ -216,6 +470,41 @@
       "sport": "CFB",
       "status": "hold",
       "quote_state": "Started / archived"
+    },
+    {
+      "event": "New York Jets at Kansas City Chiefs",
+      "id": "nfl-20261108-nyj-kc-spread",
+      "kickoff": "2026-11-08T18:00:00Z",
+      "market": "alternate spread",
+      "rank": 7,
+      "reason": "PFF is favorable on Kansas City around its reference line; nfelo matches the market rather than showing value. Pinnacle's main moneyline (-547) is outside the -200 to -500 band. A real alternate rung must be priced directly; none has been verified and no line or probability is assumed. Still needed: exact eligible rung and price, final availability, Arrowhead wind, alternate-spread eligibility. Yellow research hold from the Nov 6 refresh; not cleared, no measured EV. Prices are dated aggregator snapshots, not executable offers.",
+      "screened_at": "2026-11-06T15:38:28Z",
+      "selection": "Kansas City alternate spread watch (yellow)",
+      "sources": [
+        {
+          "as_of": "2026-11-06T15:38:28Z",
+          "name": "PFF Best Game Bets (authenticated, no refresh time displayed)",
+          "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-06T15:38:28Z",
+          "name": "nfelo games board (no precise refresh time)",
+          "url": "https://www.nfeloapp.com/games/"
+        },
+        {
+          "as_of": "2026-11-06T15:00:00Z",
+          "name": "AgentBets Pinnacle NFL board",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-03T17:26:00Z",
+          "name": "Official NFL Week 9 schedule",
+          "url": "https://www.nfl.com/schedules/2026/by-week/week-9"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
     },
     {
       "event": "Ball State at Massachusetts",
@@ -243,6 +532,41 @@
       "quote_state": "Started / archived"
     },
     {
+      "event": "Denver Broncos at Carolina Panthers",
+      "id": "nfl-20261108-den-car-ml",
+      "kickoff": "2026-11-08T18:00:00Z",
+      "market": "alternate spread",
+      "rank": 8,
+      "reason": "PFF favors Denver's direction; nfelo matches the market. Pinnacle's moneyline (-142) is outside the -200 to -500 band, so the standard moneyline is not eligible. An alternate spread is a separate price decision and no exact alternate quote has been verified. Still needed: eligible exact quote, independent support, current availability, alternate-spread eligibility. Yellow research hold from the Nov 6 refresh; not cleared, no measured EV. Prices are dated aggregator snapshots, not executable offers.",
+      "screened_at": "2026-11-06T15:38:28Z",
+      "selection": "Denver alternate spread watch (yellow; ML outside band)",
+      "sources": [
+        {
+          "as_of": "2026-11-06T15:38:28Z",
+          "name": "PFF Best Game Bets (authenticated, no refresh time displayed)",
+          "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-06T15:38:28Z",
+          "name": "nfelo games board (no precise refresh time)",
+          "url": "https://www.nfeloapp.com/games/"
+        },
+        {
+          "as_of": "2026-11-06T15:00:00Z",
+          "name": "AgentBets Pinnacle NFL board",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-03T17:26:00Z",
+          "name": "Official NFL Week 9 schedule",
+          "url": "https://www.nfl.com/schedules/2026/by-week/week-9"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
       "event": "Toledo at Sacramento State",
       "id": "cfb-20261104-tol-sac-spread",
       "kickoff": "2026-11-05T00:00:00Z",
@@ -266,6 +590,31 @@
       "sport": "CFB",
       "status": "hold",
       "quote_state": "Started / archived"
+    },
+    {
+      "event": "Liberty at New Mexico State",
+      "id": "cfb-20261107-lib-nmsu-spread",
+      "kickoff": "2026-11-08T01:00:00Z",
+      "market": "alternate spread",
+      "rank": 9,
+      "reason": "SP+ projects Liberty as a very large favorite; that is a lead only. No exact alternate rung inside -200 to -500 has been priced, and a moneyline win probability must not be translated into a spread-cover probability. Still needed: exact rung and price, final eligibility, injuries, Las Cruces weather. Yellow research hold from the Nov 6 refresh; not cleared, no measured EV. Prices are dated aggregator snapshots, not executable offers.",
+      "screened_at": "2026-11-06T15:38:28Z",
+      "selection": "Liberty alternate spread watch (yellow)",
+      "sources": [
+        {
+          "as_of": "2026-11-06T15:01:00Z",
+          "name": "SP+ Week 10 via CLEATZ rendering",
+          "url": "https://cleatz.com/cfb-sp-plus-rankings/"
+        },
+        {
+          "as_of": "2026-11-03T17:26:00Z",
+          "name": "SP+ FBS Week 10 sheet; current model, reference market cells",
+          "url": "https://docs.google.com/spreadsheets/d/1vwoVl-Dxy0es87Z9I1RTvFzr72Lb1fAkREfbLxbK-eg/edit?gid=559933777#gid=559933777"
+        }
+      ],
+      "sport": "CFB",
+      "status": "hold",
+      "quote_state": "On hold"
     },
     {
       "event": "Toledo at Sacramento State",
@@ -418,31 +767,6 @@
       "quote_state": "On hold"
     },
     {
-      "event": "New Mexico at Nevada",
-      "id": "cfb-20261106-unm-nev-ml",
-      "kickoff": "2026-11-07T02:00:00Z",
-      "market": "moneyline",
-      "rank": 15,
-      "reason": "Both sources favor New Mexico, but the moneyline offers less margin for model error than the spread discussion suggests. A price inside the preferred band is not sufficient evidence of positive EV. Confirm the exact two-sided offer before comparing a calibrated probability. Research hold only. Fresh same-market sharp comparison, executable price, final availability and applicable alternate/SGP eligibility remain unverified. No cleared play or measured EV.",
-      "screened_at": "2026-11-03T17:26:00Z",
-      "selection": "New Mexico moneyline: price-sensitive hold",
-      "sources": [
-        {
-          "as_of": "2026-11-03T17:26:00Z",
-          "name": "PFF current model screen; original synthesis only, no executable quote",
-          "url": "https://www.pff.com/betting/best-game-bets"
-        },
-        {
-          "as_of": "2026-11-03T17:26:00Z",
-          "name": "SP+ FBS Week 10 sheet; current model, reference market cells",
-          "url": "https://docs.google.com/spreadsheets/d/1vwoVl-Dxy0es87Z9I1RTvFzr72Lb1fAkREfbLxbK-eg/edit?gid=559933777#gid=559933777"
-        }
-      ],
-      "sport": "CFB",
-      "status": "hold",
-      "quote_state": "On hold"
-    },
-    {
       "event": "Clemson at Syracuse",
       "id": "cfb-20261107-clem-syr-spread",
       "kickoff": "2026-11-07T17:00:00Z",
@@ -468,31 +792,6 @@
       "quote_state": "On hold"
     },
     {
-      "event": "Iowa State at Baylor",
-      "id": "cfb-20261107-isu-bay-ml",
-      "kickoff": "2026-11-07T17:00:00Z",
-      "market": "moneyline",
-      "rank": 17,
-      "reason": "Both models favor Baylor and SP+ projects a comfortable margin. That makes this a useful favorite to price-check, not an approved parlay leg. Quarterback availability and the exact moneyline or alternate spread must be reconciled with current two-sided prices. Research hold only. Fresh same-market sharp comparison, executable price, final availability and applicable alternate/SGP eligibility remain unverified. No cleared play or measured EV.",
-      "screened_at": "2026-11-03T17:26:00Z",
-      "selection": "Baylor moneyline / alternate spread watch",
-      "sources": [
-        {
-          "as_of": "2026-11-03T17:26:00Z",
-          "name": "PFF current model screen; original synthesis only, no executable quote",
-          "url": "https://www.pff.com/betting/best-game-bets"
-        },
-        {
-          "as_of": "2026-11-03T17:26:00Z",
-          "name": "SP+ FBS Week 10 sheet; current model, reference market cells",
-          "url": "https://docs.google.com/spreadsheets/d/1vwoVl-Dxy0es87Z9I1RTvFzr72Lb1fAkREfbLxbK-eg/edit?gid=559933777#gid=559933777"
-        }
-      ],
-      "sport": "CFB",
-      "status": "hold",
-      "quote_state": "On hold"
-    },
-    {
       "event": "Northern Illinois at San Jose State",
       "id": "cfb-20261107-niu-sjsu-spread",
       "kickoff": "2026-11-07T21:00:00Z",
@@ -501,26 +800,6 @@
       "reason": "SP+ projects a materially larger San Jose State margin than its reference spread. This is a model-led watch pending an independent current price comparison, personnel and weather. A large point gap alone does not establish expected value. Research hold only. Fresh same-market sharp comparison, executable price, final availability and applicable alternate/SGP eligibility remain unverified. No cleared play or measured EV.",
       "screened_at": "2026-11-03T17:26:00Z",
       "selection": "San Jose State spread: model lead pending checks",
-      "sources": [
-        {
-          "as_of": "2026-11-03T17:26:00Z",
-          "name": "SP+ FBS Week 10 sheet; current model, reference market cells",
-          "url": "https://docs.google.com/spreadsheets/d/1vwoVl-Dxy0es87Z9I1RTvFzr72Lb1fAkREfbLxbK-eg/edit?gid=559933777#gid=559933777"
-        }
-      ],
-      "sport": "CFB",
-      "status": "hold",
-      "quote_state": "On hold"
-    },
-    {
-      "event": "Liberty at New Mexico State",
-      "id": "cfb-20261107-lib-nmsu-spread",
-      "kickoff": "2026-11-08T01:00:00Z",
-      "market": "spread",
-      "rank": 19,
-      "reason": "SP+ projects a large favorite margin, but an alternate offer must be priced directly. Avoid translating its moneyline win probability into a spread-cover probability. Current injuries, kickoff and Las Cruces weather should be rechecked before promotion. Research hold only. Fresh same-market sharp comparison, executable price, final availability and applicable alternate/SGP eligibility remain unverified. No cleared play or measured EV.",
-      "screened_at": "2026-11-03T17:26:00Z",
-      "selection": "Liberty alternate spread watch",
       "sources": [
         {
           "as_of": "2026-11-03T17:26:00Z",
@@ -601,56 +880,6 @@
       "reason": "PFF gives Atlanta only a small favorable direction near a key spread. The neutral-site game in Madrid requires its own venue and weather check. A small signal should not survive worse pricing automatically, and no exact alternative in the preferred band is verified. Research hold only. Fresh same-market sharp comparison, executable price, final availability and applicable alternate/SGP eligibility remain unverified. No cleared play or measured EV. NFL total selections were unavailable in the current model screen; ETR subscriber analysis was inaccessible, so neither supplies corroboration here.",
       "screened_at": "2026-11-03T17:26:00Z",
       "selection": "Atlanta plus points: small-signal hold",
-      "sources": [
-        {
-          "as_of": "2026-11-03T17:26:00Z",
-          "name": "PFF current model screen; original synthesis only, no executable quote",
-          "url": "https://www.pff.com/betting/best-game-bets"
-        },
-        {
-          "as_of": "2026-11-03T17:26:00Z",
-          "name": "Official NFL Week 9 schedule",
-          "url": "https://www.nfl.com/schedules/2026/by-week/week-9"
-        }
-      ],
-      "sport": "NFL",
-      "status": "hold",
-      "quote_state": "On hold"
-    },
-    {
-      "event": "Denver Broncos at Carolina Panthers",
-      "id": "nfl-20261108-den-car-ml",
-      "kickoff": "2026-11-08T18:00:00Z",
-      "market": "moneyline",
-      "rank": 23,
-      "reason": "PFF mildly favors Denver, but its standard moneyline is shorter than this menu’s preferred -200 minimum. An alternate spread is a separate price decision, not a way to manufacture value. Current availability and a second current model or sharp comparison remain unverified. Research hold only. Fresh same-market sharp comparison, executable price, final availability and applicable alternate/SGP eligibility remain unverified. No cleared play or measured EV. NFL total selections were unavailable in the current model screen; ETR subscriber analysis was inaccessible, so neither supplies corroboration here.",
-      "screened_at": "2026-11-03T17:26:00Z",
-      "selection": "Denver moneyline / alternate spread watch",
-      "sources": [
-        {
-          "as_of": "2026-11-03T17:26:00Z",
-          "name": "PFF current model screen; original synthesis only, no executable quote",
-          "url": "https://www.pff.com/betting/best-game-bets"
-        },
-        {
-          "as_of": "2026-11-03T17:26:00Z",
-          "name": "Official NFL Week 9 schedule",
-          "url": "https://www.nfl.com/schedules/2026/by-week/week-9"
-        }
-      ],
-      "sport": "NFL",
-      "status": "hold",
-      "quote_state": "On hold"
-    },
-    {
-      "event": "New York Jets at Kansas City Chiefs",
-      "id": "nfl-20261108-nyj-kc-spread",
-      "kickoff": "2026-11-08T18:00:00Z",
-      "market": "spread",
-      "rank": 24,
-      "reason": "PFF’s favorable spread direction is around a large favorite line. No exact bought-points price is available, and the moneyline must not inherit the spread edge. Final offensive availability and Arrowhead wind remain open checks. Research hold only. Fresh same-market sharp comparison, executable price, final availability and applicable alternate/SGP eligibility remain unverified. No cleared play or measured EV. NFL total selections were unavailable in the current model screen; ETR subscriber analysis was inaccessible, so neither supplies corroboration here.",
-      "screened_at": "2026-11-03T17:26:00Z",
-      "selection": "Kansas City alternate spread watch",
       "sources": [
         {
           "as_of": "2026-11-03T17:26:00Z",
@@ -796,9 +1025,9 @@
   "published_weeks": [
     {
       "week": "2026-11-02",
-      "title": "Bozo Menu · Nov 3 NFL/CFB research holds · 0 cleared · prices pending",
-      "revision": 1,
-      "published_at": "2026-11-03T17:32:33.202Z"
+      "title": "Bozo Menu · Nov 6 refresh · yellow research holds · 0 cleared · prices are dated snapshots",
+      "revision": 2,
+      "published_at": "2026-11-06T16:18:37.658Z"
     },
     {
       "week": "2026-10-26",
@@ -826,8 +1055,8 @@
     }
   ],
   "snapshot": {
-    "checked_at": "2026-11-06T15:04:57.616Z",
+    "checked_at": "2026-11-06T20:54:55.298Z",
     "source": "https://toto.jkapcar4.workers.dev/bozo/menu.json?week=2026-11-02",
-    "notice": "Static copy checked 2026-11-06T15:04:57.616Z. Refresh is attempted hourly; delays or failures can leave this copy behind the publisher. Compare the week, revision and source publication time. These are saved research observations, not live odds or available bets. Holds and scratches are not active recommendations."
+    "notice": "Static copy checked 2026-11-06T20:54:55.298Z. Refresh is attempted hourly; delays or failures can leave this copy behind the publisher. Compare the week, revision and source publication time. These are saved research observations, not live odds or available bets. Holds and scratches are not active recommendations."
   }
 }
