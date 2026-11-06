@@ -1700,6 +1700,9 @@ export default {
   async scheduled(controller, env, ctx) {
     const cron = (controller && controller.cron) || "";
     if(cron === "*/5 * * * *" && env.DISCORD_GROK_WAKE_ENABLED === "true" && ctx?.waitUntil)ctx.waitUntil(dgDrain(env).catch(()=>{}));
+    // Approved backup-only retry: existing cron, private opt-in marker, fixed deadline.
+    if (cron === "*/5 * * * *" && ctx?.waitUntil)
+      ctx.waitUntil(backupIncidentRetry(env, ctx).catch(() => {}));
     // Time-bounded, approved incident repair rides an existing tick; never HTTP.
     if(cron === "*/5 * * * *" && ctx?.waitUntil){
       ctx.waitUntil(DD_OWNER_REPAIR({env,fbGet,fbPut,backup:now=>{const run=runBackup(env,now);opsTrack(ctx,env,"backup",now,run);return run;}}).catch(async()=>{
@@ -2783,6 +2786,50 @@ return repairOwnerEnvelope;
 // working backup right up until the day it was needed.
 const backupKV = (env) => env.RL || null;
 
+// Oversized general copies use a self-describing envelope; old JSON remains readable.
+// Prepare and size-check completely before replacing either existing general copy.
+const BACKUP_VALUE_LIMIT = 25 * 1024 * 1024;
+async function encodeGeneralBackup(body, taken) {
+  const bytes = new TextEncoder().encode(body);
+  if (bytes.byteLength <= BACKUP_VALUE_LIMIT) return body;
+  const sha256 = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)),
+    b => b.toString(16).padStart(2, "0")).join("");
+  const compressed = new Uint8Array(await new Response(
+    new Response(bytes).body.pipeThrough(new CompressionStream("gzip"))).arrayBuffer());
+  // Base64 chunks must end at a multiple of three input bytes.
+  const parts = [];
+  for (let i = 0; i < compressed.length; i += 24576)
+    parts.push(btoa(String.fromCharCode(...compressed.subarray(i, i + 24576))));
+  const value = JSON.stringify({ format: "dd-backup-gzip-v1", taken,
+    uncompressedBytes: bytes.byteLength, sha256, payload: parts.join("") });
+  if (new TextEncoder().encode(value).byteLength > BACKUP_VALUE_LIMIT)
+    throw new Error("General backup exceeds KV limit after compression; previous copies preserved");
+  return value;
+}
+
+// No automatic retries after a claimed attempt, including failures or an uncertain
+// outcome. Operators inspect the receipt before explicitly re-arming this private key.
+async function backupIncidentRetry(env, ctx, now = Date.now()) {
+  if (now < Date.parse("2026-11-06T00:00:00Z") || now >= Date.parse("2026-11-07T00:00:00Z") || !env.RL)
+    return;
+  const key = "backup-retry:2026-11-06", kv = env.RL;
+  const request = await kv.get(key, "json");
+  if (request?.status !== "pending" || request?.incident !== "kv-size-20261106") return;
+  const taken = new Date(now).toISOString(), opts = { expirationTtl: 2592000 };
+  await kv.put(key, JSON.stringify({ status: "started", taken }), opts);
+  try {
+    const run = runBackup(env, now);
+    opsTrack(ctx, env, "backup", now, run);
+    const result = await run;
+    await kv.put(key, JSON.stringify({ status: "complete", taken, ...result }), opts);
+  } catch (e) {
+    await kv.put(key, JSON.stringify({ status: "failed", taken }), opts);
+    await kv.put("backup:lasterror", JSON.stringify({ at: new Date().toISOString(),
+      error: "Approved backup retry failed; inspect private Worker diagnostics" }));
+    throw e;
+  }
+}
+
 async function runBackup(env, nowMs) {
   const kv = backupKV(env);
   if (!kv) throw new Error("no KV binding for backup");
@@ -2800,7 +2847,7 @@ async function runBackup(env, nowMs) {
     delete general.researchProjects;
     delete general.privateJobs;
   }
-  const body = JSON.stringify({ taken, db: general });
+  const body = await encodeGeneralBackup(JSON.stringify({ taken, db: general }), taken);
   await kv.put("backup:" + taken.slice(0, 10), body, { expirationTtl: 15552000 });
   await kv.put("backup:latest", body);
   // General disaster recovery completes even if a private copy fails. Fail the job
@@ -2867,7 +2914,7 @@ async function runBackup(env, nowMs) {
       }
     }
   }
-  return { day: taken.slice(0, 10), bytes: body.length };
+  return { day: taken.slice(0, 10), bytes: new TextEncoder().encode(body).byteLength };
 }
 
 /* ================================ Bozo auth =============================== */

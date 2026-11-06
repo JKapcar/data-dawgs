@@ -246,5 +246,27 @@ const T0 = Date.parse("2026-09-15T09:00:00Z");
   ok("a failed job copy reports a sanitized message and leaves the general backup intact",message==="Private job backup write failed"&&kv.store.has("backup:latest")&&!kv.store.get("backup:lasterror").includes("SYNTHETIC_JOB_CANARY"));
   delete WHOLE_DB.privateJobs;
 }
+// Production size regression: exact decoded JSON, private isolation, no old-copy loss.
+{
+  WHOLE_DB.syntheticLarge = "synthetic record é ".repeat(1800000);
+  WHOLE_DB.privateJobs = {v1:{u_one:{owner_uid:"u_one",payload:'{"private":"SYNTHETIC_ONLY"}'}}};
+  const kv = makeKV(); kv.store.set("backup:2026-09-14", "preserve older copy");
+  const originalPut = kv.put.bind(kv);
+  kv.put = async (k,v,o) => {
+    if (new TextEncoder().encode(v).length > 26214400) throw Error("KV 413");
+    return originalPut(k,v,o);
+  };
+  await worker.scheduled({scheduledTime:T0},{FB_SECRET:"s",RL:kv},{});
+  const value = kv.store.get("backup:latest"), envelope = JSON.parse(value);
+  const bytes = new Uint8Array(await new Response(new Response(Buffer.from(envelope.payload,"base64")).body.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer());
+  const decoded = JSON.parse(new TextDecoder().decode(bytes));
+  const hash = Buffer.from(await crypto.subtle.digest("SHA-256",bytes)).toString("hex");
+  ok("oversized UTF-8 backup uses versioned gzip with verified length and checksum",envelope.format==="dd-backup-gzip-v1"&&bytes.length===envelope.uncompressedBytes&&hash===envelope.sha256);
+  ok("large backup round trips without losing general sections",decoded.db.syntheticLarge===WHOLE_DB.syntheticLarge&&JSON.stringify(decoded.db.users)===JSON.stringify(WHOLE_DB.users));
+  ok("compressed general excludes private data; private copy still completes",!decoded.db.privateJobs&&kv.store.has("jobs-backup:v1:u_one:2026-09-15"));
+  ok("both general values identical and historic copy preserved",value===kv.store.get("backup:2026-09-15")&&kv.store.get("backup:2026-09-14")==="preserve older copy");
+  delete WHOLE_DB.syntheticLarge; delete WHOLE_DB.privateJobs;
+}
+await import("./test-backup-format.mjs");
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
