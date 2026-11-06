@@ -236,7 +236,7 @@ ok(!/data-clv=/.test(pageCode) && !/class="gclv/.test(pageCode),
    "no CLV input survives on the page — the number is derived, not entered");
 ok(effectiveClv.resolve({clvPts:0,entryPrice:-200,closePrice:-150}).point===0 && /DDEffectiveClv.resolve/.test(pageCode), "page uses shared resolver with zero override precedence");
 ok(/if\(a == null \|\| b == null/.test(pageCode), "missing opposite side remains unmeasured");
-ok(/no juice is assumed/.test(pageCode), "the panel explains missing evidence");
+ok(/missing closes are not zero/.test(pageCode), "the panel explains missing evidence");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
