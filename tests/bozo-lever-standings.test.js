@@ -11,6 +11,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
+const clvContext=(c={})=>vm.createContext(Object.assign(c,{DDEffectiveClv:require('../bozo-effective-clv.js'),window:{DDEffectiveClv:require('../bozo-effective-clv.js')}}));
 const bozo = fs.readFileSync(path.join(__dirname, '..', 'bozo.html'), 'utf8');
 
 function lift(name) {
@@ -24,12 +25,12 @@ function lift(name) {
 function standings(picks, results) {
   const sandbox = { S: { results }, kEnc: n => n, sdOf: () => 10, dirOf: () => 'over',
     beatDeficit: (m, d, line, margin) => (margin - line) / -10 };
-  const c = vm.createContext(sandbox);
+  const c = clvContext(sandbox);
   vm.runInContext(['imp', 'devigP', 'invNorm', 'worstBeatRuleFor', 'moneylineBeat', 'binaryBeatOf', 'legRow', 'beatOf', 'clvDeltaOf', 'rankRows', 'leverStandings'].map(lift).join('\n')
     + '\nthis.RESULT = leverStandings(PICKS);', Object.assign(c, { PICKS: picks }));
   return sandbox.RESULT;
 }
-const ctx = vm.createContext({});
+const ctx = clvContext({});
 vm.runInContext(['imp', 'devigP', 'ordinal', 'rankRows'].map(lift).join('\n')
   + '\nthis.imp=imp; this.devigP=devigP; this.ordinal=ordinal; this.rankRows=rankRows;', ctx);
 const { imp, devigP, ordinal, rankRows } = ctx;
@@ -175,19 +176,19 @@ test('Worst beat ignores an ungraded prop until it actually loses', () => {
   assert.match(bozo, /'awaiting result'/, 'the empty cell describes grading state, not kickoff state');
 });
 
-test('Worst CLV drops a leg it cannot de-vig rather than scoring it zero', () => {
+test('Worst CLV includes a one-sided estimate without fabricating an opposite', () => {
   const picks = [ML('A', -200, 170, 1), ML('B', -180, 150, 2), ML('C', -150, 130, 3)];
   const L = standings(picks, {
     A: { close: -150, closeOpp: 130 },   // drifted longer: the market moved against A
     B: { close: -260, closeOpp: 210 },   // shortened: the market moved toward B
     C: { close: -150 },                  // one side only: not de-viggable
   });
-  assert.equal(L.withClv, 2);
+  assert.equal(L.withClv, 3);
   assert.ok(L.d[0].clv < 0 && L.d[1].clv > 0);
   assert.equal(L.rank[3][0], 1, 'the most negative CLV is first');
   assert.ok(L.holds[3][0]);
-  assert.equal(L.rank[3][2], undefined, 'one side alone is unrankable, never zero');
-  assert.match(bozo, /clv: \(pC==null\|\|pE==null\) \? null : \(pC-pE\)/);
+  assert.equal(L.rank[3][2], 2, 'same selected price gives estimated zero movement');
+  assert.match(bozo, /DDEffectiveClv.resolve\(row\)/);
 });
 
 test('a lever out of the draw gets a column saying so, not a blank', () => {
@@ -215,7 +216,7 @@ test('the note calls the columns a standing, not a verdict', () => {
 function renderCell(LV, k, i, val, muted) {
   const src = bozo.match(/  const lvCell = \(k, i, lbl, val, muted\) => \{[\s\S]*?\n  \};/)[0]
             + '\n' + bozo.match(/  const outCell = lbl => [\s\S]*?;\n/)[0];
-  const c = vm.createContext({ LV, ordinal });
+  const c = clvContext({ LV, ordinal });
   vm.runInContext(src + '\nthis.OUT = ARG === null ? outCell(LBL) : lvCell(K, I, LBL, V, M);',
     Object.assign(c, { ARG: k, K: k, I: i, LBL: 'I · Shortest odds', V: val, M: muted }));
   return c.OUT;

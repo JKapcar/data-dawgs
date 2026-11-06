@@ -88,7 +88,7 @@ function cascadeRig({sgo,odds,mkt='spread',leagues={}}){
   bozoSame:(a,b)=>JSON.stringify(a)===JSON.stringify(b),
   bozoCloseMutation:(_t,q,reason)=>q?{'results/a/close':q.price,'results/a/closeOpp':q.opp,'results/a/closeSource':q.provider}:{'results/a/closeUnavailableReason':reason},
   bozoGuardedPatch:async(_e,_l,_s,p)=>{patches.push(p);return true;},cfbMarketKV:()=>null,bozoPromoteAgentCloses:async()=>0};
- vm.createContext(c);vm.runInContext(cut('const BOZO_MISSED_CLOSE_GRACE_MS','/* GET /bozo/clv'),c);
+ vm.createContext(c);vm.runInContext(cut('function bozoOddsApiAllowed(', 'const BOZO_ODDS_API_REASONS')+cut('const BOZO_MISSED_CLOSE_GRACE_MS','/* GET /bozo/clv'),c);
  c.bozoSgoCloseQuote=async()=>{calls.sgo++;return sgo;};
  c.bozoOddsApiCapture=async()=>{calls.odds++;return odds||{ok:false,reason:'Odds API refused the key'};};
  c.bozoFetchEvents=async()=>{throw Error('the free path must go through bozoSgoCloseQuote');};
@@ -104,14 +104,14 @@ test('order: SGO free first; a hit means the Odds API backup is never asked',asy
  assert.deepEqual(r.calls,{sgo:1,odds:0,once:1});assert.equal(out.captured,1);
  assert.equal(r.patches[0]['results/a/close'],-272);assert.equal(r.patches[0]['results/a/closeSource'],'sgo');
 });
-test('an SGO miss falls through to the Odds API backup, and the reason keeps both',async()=>{
+test('an SGO free miss never opens a paid backup',async()=>{
  const miss={ok:false,code:'quota_exceeded',reason:'allowance used up'};
  let r=cascadeRig({sgo:miss,odds:{ok:true,quote:{price:-270,opp:220,provider:'odds_api'}}});
  let out=await r.c.runBozoCloseCapture(env,kickoff-2*60000);
- assert.deepEqual(r.calls,{sgo:1,odds:1,once:1});assert.equal(out.captured,1);assert.equal(r.patches[0]['results/a/closeSource'],'odds_api');
+ assert.deepEqual(r.calls,{sgo:1,odds:0,once:1});assert.equal(out.captured,0);
  r=cascadeRig({sgo:miss});
  await r.c.runBozoCloseCapture(env,kickoff-2*60000);
- assert.match(r.patches[0]['results/a/closeUnavailableReason'],/SportsGameOdds free tier: allowance used up; Odds API backup failed: Odds API refused the key/);
+ assert.match(r.patches[0]['results/a/closeUnavailableReason'],/SportsGameOdds free tier: allowance used up/);
  r=cascadeRig({sgo:miss});
  await r.c.runBozoCloseCapture({SGO_KEY:'k',BOZO_SGO_CLOSE:'true'},kickoff-2*60000);
  assert.equal(r.calls.odds,0,'no key, no backup');assert.match(r.patches[0]['results/a/closeUnavailableReason'],/SportsGameOdds free tier: allowance used up$/);

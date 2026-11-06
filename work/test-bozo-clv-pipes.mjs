@@ -1,3 +1,4 @@
+import effectiveClv from '../bozo-effective-clv.js';
 /* A CLV the manager sets by hand reaches EVERY surface that reads a CLV.
  *
  * Run: node test-bozo-clv-pipes.mjs
@@ -49,7 +50,7 @@ const S = {
 
 const ctx = vm.createContext({
   console, Object, Array, Number, JSON, Math, String, Boolean,
-  window:{DDBozoOwner:ownerConfirmation},LID:'main',
+  window:{DDEffectiveClv:effectiveClv,DDBozoOwner:ownerConfirmation},LID:'main',
   S,
   esc: s => String(s == null ? "" : s),
   kDec: k => k,
@@ -100,7 +101,7 @@ ok(!/no CLV/.test(badge),
    "a leg with a hand-set CLV is no longer branded 'no CLV' on the ticket");
 ok(/set by hand/.test(badge),
    "it says the CLV was set by hand, so the weaker evidence is still visible");
-ok(/no CLV/.test(ctx.__badge({ p: "Nobody", label: "x", priceSource: "self" })),
+ok(/close pending/.test(ctx.__badge({ p: "Nobody", label: "x", priceSource: "self" })),
    "a self-priced leg with no CLV at all still says so");
 ok(/DK captured/.test(ctx.__badge(kap)), "a captured entry still reads DK captured");
 
@@ -130,11 +131,11 @@ ok(/r\.clvPts != null && Number\.isFinite\(\+r\.clvPts\)/.test(code.split("const
 // D10 2026-09-24: incomplete pairs remain unmeasured, including old assumed numeric prices.
 {
  const entry={price:-145,entryPriceOpp:null};
- ok(ctx.__delta(entry,{close:-200,closeOpp:null})===null,"two lone prices do not invent CLV");
- ok(ctx.__delta(entry,{close:-145,closeOpp:null})===null,"missing evidence is not zero");
+ ok(ctx.__delta(entry,{close:-200,closeOpp:null})>0,"selected sides yield approximate CLV");
+ ok(ctx.__delta(entry,{close:-145,closeOpp:null})===0,"identical selected prices yield approximate zero");
  entry.entryPriceOpp=125;
  ok(ctx.__delta(entry,{close:-200,closeOpp:170})>0,"observed pairs yield positive CLV");
- ok(ctx.__delta(entry,{close:-200,closeOpp:170,closeOppSource:'assumed'})===null,"historical assumed opposite is excluded");
+ ok(ctx.__delta(entry,{close:-200,closeOpp:170,closeOppSource:'assumed'})>0,"assumed opposite is ignored in selected-side approximation");
  ok(ctx.__delta(entry,{close:-145,closeOpp:125})===0,"identical observed pairs yield measured zero");
 }
 

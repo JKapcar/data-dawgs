@@ -1,3 +1,4 @@
+import effectiveClv from '../bozo-effective-clv.js';
 /* Automatic grading and the manager's override — the invariants that move money.
  *
  * Run: node test-bozo-autograde.mjs
@@ -210,9 +211,7 @@ ok(/clvOverridden: legs\.filter\(l => l\.clvPts != null\)\.length/.test(worker),
 
 /* ⚠️ A lever that decides who is ELIMINATED must use the best number available, not only
    the automatic one. The override exists precisely where the derived number cannot. */
-ok(/const manual = r\.clvPts != null && Number\.isFinite\(Number\(r\.clvPts\)\)/.test(worker)
-   && /if \(manual != null\) \{ v = -manual; break; \}/.test(worker),
-   "the Royale CLV lever honours a hand-set CLV");
+ok(effectiveClv.resolve({clvPts:-3,entryPrice:-200,closePrice:-150}).point===-3 && /DDEffectiveClv.resolve/.test(worker), "Royale uses shared resolver with override precedence");
 
 /* On the page: one rule for the live board, one for the chart, and they must agree. */
 ok(/function clvDeltaOf\(x, r\)/.test(pageCode) && /function clvPair\(l\)/.test(pageCode),
@@ -235,10 +234,9 @@ ok(/:\$\{r\.clvPts\?\?''\}/.test(pageCode),
    above. What is removed is the second place to enter one. */
 ok(!/data-clv=/.test(pageCode) && !/class="gclv/.test(pageCode),
    "no CLV input survives on the page — the number is derived, not entered");
-ok(/if\(r\.clvPts != null && Number\.isFinite\(\+r\.clvPts\)\) return \+r\.clvPts\/100;/.test(pageCode),
-   "a row that already carries a hand-set CLV still outranks the derived one");
+ok(effectiveClv.resolve({clvPts:0,entryPrice:-200,closePrice:-150}).point===0 && /DDEffectiveClv.resolve/.test(pageCode), "page uses shared resolver with zero override precedence");
 ok(/if\(a == null \|\| b == null/.test(pageCode), "missing opposite side remains unmeasured");
-ok(/no juice is assumed/.test(pageCode), "the panel explains missing evidence");
+ok(/missing closes are not zero/.test(pageCode), "the panel explains missing evidence");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

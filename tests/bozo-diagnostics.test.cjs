@@ -22,10 +22,13 @@ test('expected wins and delta use the identical valid matched sample',()=>{
   assert.equal(s.picks,6);assert.equal(s.graded.length,4);assert.equal(s.wins,3);assert.equal(s.losses,1);
   assert.equal(s.measurable.length,2);assert.equal(s.matchedWins,1);assert.equal(s.expected,1);assert.equal(s.delta,0);assert.ok(Math.abs(s.clv)<1e-12);
 });
-test('invalid probabilities, unverified and missing closes are never zero-valued measurements',()=>{
+test('invalid probabilities and missing closes stay missing; unverified pairs use labeled estimates',()=>{
   const {context}=fixture([]);
-  for(const extra of [{closePrice:null},{verificationStatus:'unverified'},{clvEligible:false},{closeOppSource:'assumed'},{clvPts:90},{clvPts:-90},{entryPrice:0}]){
+  for(const extra of [{closePrice:null},{clvPts:90},{clvPts:-90},{entryPrice:0}]){
     const s=context.dxSummary([row(extra)]);assert.equal(s.measurable.length,0,JSON.stringify(extra));assert.equal(s.clv,null);
+  }
+  for(const extra of [{verificationStatus:'unverified'},{clvEligible:false},{closeOppSource:'assumed'}]){
+    const s=context.dxSummary([row(extra)]);assert.equal(s.measurable.length,1);assert.equal(context.window.DDEffectiveClv.resolve(row(extra)).kind,'estimated');assert.ok(Math.abs(s.clv-.1)<1e-12);
   }
   const s=context.dxSummary([row({clvPts:5})]);assert.equal(s.overridden,1);assert.equal(s.matchedWins,1);assert.ok(Math.abs(s.expected-.55)<1e-12);assert.ok(Math.abs(s.delta-.45)<1e-12);
 });

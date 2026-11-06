@@ -17,6 +17,7 @@ function rig(fetcher=async()=>{throw Error('Unexpected fetch')}) {
  cut('function bozoMatchEvent(','/* The cron body.'),
  'this.api={bozoBuildTeamRegistry,bozoOddsApiQuote,bozoOddsApiEvent,bozoOddsApiCapture,bozoOddsApiRequest,bozoOddsApiRequestRaw,bozoCaptureEntry,bozoCloseMutation};',
  ].join('\n'),ctx);
+ ctx.bozoOddsApiAllowed=(env,caller)=>!!env.ODDS_API_KEY&&(caller==='close'||env.BOZO_PAID_ODDS==='true'); // transport fixture only
  return {ctx,logs,...ctx.api,bozoCaptureEntry:(env,p)=>ctx.api.bozoCaptureEntry(env,p,{committed:true}),reg:s=>ctx.api.bozoBuildTeamRegistry(s).aliases};
 }
 const bp={sport:'nfl',game:'LAC @ BUF',side:'BUF',mkt:'spread',line:2.5,startsAt:bills.data.commence_time,eventId:'espn-bills',label:'BUF -2.5'};

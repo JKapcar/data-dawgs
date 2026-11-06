@@ -22,6 +22,31 @@ const entry=(x={})=>({league:'main',season:2026,week:8,player:'Kap',game:'ARI @ 
  startsAt:iso(kickoff),close:-112,closeOpp:-108,book:'draftkings',source:'https://sportsbook.draftkings.com/event/ari-cardinals-%40-dal-cowboys/33333?category=odds',
  observedAt:iso(kickoff-4*60000),minutesBeforeKickoff:4,verification:'verified',note:'Read in the routine',requestId:'routine-2026w8-kap-0001',...x});
 
+test('one-sided pregame evidence stages and promotes without inventing an opposite',async()=>{
+ const r=promoteRig(),out=await r.run(entry({closeOpp:undefined}),kickoff-60000);
+ assert.equal(out.body.staged,true);const p=await r.promote(kickoff+60000);
+ assert.equal(p.ch['ledger/2026-w8-u_kap/close'],-112);
+ assert.equal(p.ch['ledger/2026-w8-u_kap/closeOpp'],null);
+ assert.equal(p.ch['results/u_kap/close'],-112);
+});
+test('cross-book proxy keeps its actual bookmaker and custom markets require exact identity',async()=>{
+ const r=agentRig();assert.equal((await r.run(entry({book:'fanduel',closeOpp:undefined}))).status,200);
+ assert.equal(r.writes[0]['ledger/2026-w8-u_kap/closeBook'],'fanduel');
+ const custom=()=>agentRig(l=>Object.assign(l.ledger['2026-w8-u_kap'],{mkt:'other',selectionKey:'exact-custom',period:'game'}));
+ const args=entry({mkt:'other',selectionKey:'exact-custom',period:'game',closeOpp:undefined});
+ assert.equal((await custom().run(args)).status,200);
+ for(const bad of [{selectionKey:'wrong'},{label:'different'},{period:'1h'},{side:'ARI'},{line:12.5}])assert.equal((await custom().run({...args,...bad})).status,409);
+});
+test('prop capture binds player/stat, selection, side, line and period',async()=>{
+ const prop={player:'Fixture Player',stat:'pass_attempts'},key='exact-prop-selection';
+ const rig=()=>agentRig(l=>Object.assign(l.ledger['2026-w8-u_kap'],{mkt:'prop',side:'under',line:33.5,prop,selectionKey:key,period:'game'}));
+ const args=entry({mkt:'prop',side:'under',line:33.5,prop,selectionKey:key,period:'game',closeOpp:undefined});
+ assert.equal((await rig().run(args)).status,200);
+ for(const bad of [{selectionKey:'other'},{prop:{...prop,player:'Another Player'}},{line:34.5},{side:'over'},{period:'1h'}]){
+  const r=rig();assert.equal((await r.run({...args,...bad})).status,409);assert.equal(r.writes.length,0);
+ }
+});
+
 test('an agent-read DraftKings close fills the gap as a verified, labelled close',async()=>{
  const r=agentRig(),out=await r.run(entry());
  assert.equal(out.status,200);assert.equal(out.body.minutesBeforeKickoff,4);
@@ -56,7 +81,7 @@ test('a replay with the same requestId is a no-op, not a second write',async()=>
 });
 test('only the leg itself, at its own line and side, from DraftKings, before kickoff',async()=>{
  const refuse=async(x,re,edit)=>{const r=agentRig(edit);const out=await r.run(entry(x));assert.notEqual(out.status,200,JSON.stringify(x));if(re)assert.match(out.body.error,re);assert.equal(r.writes.length,0);};
- await refuse({book:'fanduel'},/only a DraftKings close counts/);
+ await refuse({book:''},/source bookmaker required/);
  await refuse({line:11},/different selection/);
  await refuse({side:'ARI'},/another side/);
  await refuse({observedAt:iso(kickoff)},/at or after kickoff/);
@@ -64,8 +89,8 @@ test('only the leg itself, at its own line and side, from DraftKings, before kic
  await refuse({minutesBeforeKickoff:64},/time zone/);
  await refuse({startsAt:iso(kickoff+3600000)},/check the game/);
  await refuse({player:'Jeff'},/No leg matches/);
- await refuse({closeOpp:null},/Both whole American prices/);
- await refuse({mkt:'prop'},/two-sided close/);
+ assert.equal((await agentRig().run(entry({closeOpp:null}))).status,200);
+ await refuse({mkt:'prop'},/No leg matches/);
  await refuse({source:'http://example.com/x'},/https/);
  await refuse({extra:1},/Send only/);
  await refuse({},/Simulated league/,l=>{l.synthetic=true;});
@@ -73,7 +98,7 @@ test('only the leg itself, at its own line and side, from DraftKings, before kic
 });
 
 function missedRig(){const c={SEASON:2026,Date,ledgerKey,bozoEspnOddsSupports:p=>p.mkt!=='prop'};vm.createContext(c);
- vm.runInContext(cut('const BOZO_MISSED_CLOSE_GRACE_MS','// One cron interval'),c);return c;}
+ vm.runInContext(cut('function bozoOddsApiAllowed(', 'const BOZO_ODDS_API_REASONS')+cut('const BOZO_MISSED_CLOSE_GRACE_MS','// One cron interval'),c);return c;}
 test('a leg that kicked off with no close is reported until it gets one',()=>{
  const c=missedRig(),pick=(x={})=>({eventId:'1',mkt:'spread',label:'DAL -10.5',startsAt:iso(kickoff),...x});
  const lg=(picks,results={},ledger={},x={})=>({main:{season:2026,week:8,picks,results,ledger,...x}});
@@ -83,7 +108,7 @@ test('a leg that kicked off with no close is reported until it gets one',()=>{
  assert.equal(c.bozoMissedCloses(lg({a:pick()},{a:{close:-110,closeOpp:-110}}),at).length,0,'a close on the board clears it');
  assert.equal(c.bozoMissedCloses(lg({a:pick()},{},{'2026-w8-a':{close:-110,closeOpp:-110}}),at).length,0,'so does one on the ledger');
  assert.equal(c.bozoMissedCloses(lg({a:pick()},{a:{clvPts:0}}),at).length,0,'a manager-set CLV is an answer too');
- assert.equal(c.bozoMissedCloses(lg({a:pick()},{a:{close:-110}}),at).length,1,'one side is still a miss');
+ assert.equal(c.bozoMissedCloses(lg({a:pick()},{a:{close:-110}}),at).length,0,'selected side suffices');
  assert.equal(c.bozoMissedCloses(lg({a:pick()}),kickoff+5*60000).length,0,'grace for the last pregame tick');
  assert.equal(c.bozoMissedCloses(lg({a:pick()}),kickoff+37*3600000).length,0,'last weekend cannot keep health red');
  assert.equal(c.bozoMissedCloses(lg({a:pick()},{},{},{synthetic:true}),at).length,0,'simulated leagues are never reported');
@@ -102,7 +127,7 @@ function captureRig(espnReads,leagues={}){
   bozoSame:(a,b)=>JSON.stringify(a)===JSON.stringify(b),
   bozoCloseMutation:(_t,q,reason)=>q?{'results/a/close':q.price,'results/a/closeOpp':q.opp}:{'results/a/closeUnavailableReason':reason},
   bozoGuardedPatch:async(_e,_l,_s,p)=>{patches.push(p);return true;},cfbMarketKV:()=>null,bozoPromoteAgentCloses:async()=>0};
- vm.createContext(c);vm.runInContext(cut('const BOZO_MISSED_CLOSE_GRACE_MS','/* GET /bozo/clv'),c);
+ vm.createContext(c);vm.runInContext(cut('function bozoOddsApiAllowed(', 'const BOZO_ODDS_API_REASONS')+cut('const BOZO_MISSED_CLOSE_GRACE_MS','/* GET /bozo/clv'),c);
  return {c,calls,patches};
 }
 test('a free read that misses early is retried next tick; the paid fallback waits for the last tick',async()=>{
@@ -110,7 +135,7 @@ test('a free read that misses early is retried next tick; the paid fallback wait
  let out=await r.c.runBozoCloseCapture(paid,kickoff-7*60000);
  assert.equal(r.calls.once,0,'no paid call and no stored failure seven minutes out');assert.equal(r.patches.length,0);assert.equal(out.captured,0);
  out=await r.c.runBozoCloseCapture(paid,kickoff-2*60000);
- assert.equal(r.calls.espn,2);assert.equal(r.calls.once,1,'the last tick reaches the paid fallback once');
+ assert.equal(r.calls.espn,2);assert.equal(r.calls.once,0,'paid fallback stays disabled');
  assert.equal(JSON.stringify(out.missed),'[]');
 });
 test('a free read that lands on the last tick never touches the paid receipt',async()=>{
@@ -185,7 +210,7 @@ test('the Odds API key alone opens the close fallback, once per leg, on the last
  await r.c.runBozoCloseCapture(env,kickoff-7*60000);
  assert.equal(r.calls.once,0,'never before the last tick');
  await r.c.runBozoCloseCapture(env,kickoff-2*60000);
- assert.equal(r.calls.once,1,'one once-only receipt for the leg');
+ assert.equal(r.calls.once,0,'key alone never opens paid fallback');
 });
 test('a held agent read means the paid backup is never asked',async()=>{
  const cand={close:-112,closeOpp:-108,readAt:iso(kickoff-30*60000),requestId:'r'.repeat(16)};
@@ -195,7 +220,7 @@ test('a held agent read means the paid backup is never asked',async()=>{
  assert.match(r.patches[0]['results/a/closeUnavailableReason'],/agent's DraftKings read is held/);
  // A read already promoted, or one taken after kickoff, holds nothing.
  const late=captureRig([false],{main:{ledger:{'2026-w8-a':{agentCloseCandidate:{...cand,readAt:iso(kickoff+60000)}}}}});
- await late.c.runBozoCloseCapture({ODDS_API_KEY:'k'},kickoff-2*60000);assert.equal(late.calls.once,1);
+ await late.c.runBozoCloseCapture({ODDS_API_KEY:'k'},kickoff-2*60000);assert.equal(late.calls.once,0);
 });
 test('a leg the Odds API cannot price never opens a paid receipt on the key alone',async()=>{
  const r=captureRig([false]);r.c.bozoOddsApiMarkets=()=>null;
@@ -213,6 +238,7 @@ function oddsRig(responses){
   fetch:async()=>{const r=responses[Math.min(fetches,responses.length-1)];fetches++;return typeof r==='function'?r():r;}};
  vm.createContext(c);
  vm.runInContext(cut('const BOZO_ODDS_API_LEG_CAP','async function bozoOddsApiCapture(')+'this.cap=BOZO_ODDS_API_LEG_CAP;',c);
+ c.bozoOddsApiAllowed=(env,caller)=>!!env.ODDS_API_KEY&&(caller==='close'||env.BOZO_PAID_ODDS==='true'); // isolated legacy transport test
  return {c,env,puts,get fetches(){return fetches;}};
 }
 test('Odds API requests: entry capture stays off on the key alone, and each leg is capped',async()=>{

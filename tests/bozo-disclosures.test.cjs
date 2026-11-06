@@ -15,7 +15,7 @@ function fixture(measured = 1) {
   const live = [0,1].map(i => ({p:'Player '+i, label:'Example pick', price:-150, entryPriceOpp:130,
     mkt:'ml', eventId:'event-'+i, game:'Fixture game '+i, ts:i+1, clv:i<measured?.02:null}));
   const context = {
-    document:dom.window.document, ME:null, S:{order:[3,1,2,0]},
+    document:dom.window.document, window:{DDEffectiveClv:require('../bozo-effective-clv.js')}, ME:null, S:{order:[3,1,2,0]},
     LEVERS:['Shortest Odds','Worst Beat','Last In','Worst CLV'].map(name=>({name})),
     settings:()=>({levers:[0,1,2,3]}), simKey:'fixture', simKeyFor:()=> 'fixture',
     simOut:{sims:20000,n:2,cash:.36,win:[.6,.6],bozo:[.4,.4],solo:[.24,.24],by:[null,null]},
@@ -62,7 +62,7 @@ test('diagnostic values and important caveats stay outside the closed methodolog
   const flags=d.getElementById('dgFlags').cloneNode(true);
   flags.querySelectorAll('details').forEach(x=>x.remove());
   assert.match(flags.textContent,/CLV evidence .*available on 1 of 2 legs/);
-  assert.match(flags.textContent,/Missing sides stay unmeasured/);
+  assert.match(flags.textContent,/missing closes are not zero/);
   assert.doesNotMatch(flags.textContent,/A leg whose market can be captured draws/);
   assert.match(d.getElementById('dgClvHelp').textContent,/that player's own past legs/);
 });
@@ -122,3 +122,4 @@ test('when a focused disclosure disappears, focus moves to the stable Diagnostic
   assert.equal(d.getElementById('dgHelp'),null);
   assert.equal(d.activeElement,d.getElementById('dgTitle'));
 });
+
