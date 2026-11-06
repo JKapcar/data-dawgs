@@ -7737,8 +7737,8 @@ function paintDiag(live, players, status){
      <b>Review flags</b> compare the submitted price against where the market closed and mark anything too far
      apart to be ordinary line movement — that check only runs on a leg whose close has been captured, so an
      empty list on an open board means nothing has been checked yet, not that everything is clean.
-     <b>CLV</b> is the de-vigged close minus the de-vigged entry, in probability points, and it needs both sides
-     of both prices; a leg missing any of them reads “no close”, never zero.
+     <b>CLV</b> uses the shared evidence resolver, in probability points. Captured pairs are measured;
+     selected-side prices and sourced proxies are labeled estimated. Missing evidence reads "no close", never zero.
      <br><br>
      <b>The four lever columns are standings, not a forecast.</b> Only legs that <b>lost</b> are eligible, and on an
      open board nothing has lost yet — placing first on a lever means only this: if your leg loses and the draw
@@ -7748,8 +7748,8 @@ function paintDiag(live, players, status){
      never come apart. <b>Last in</b> is numbered in the order the legs were filed, so the highlight sits at the
      <em>bottom</em> of that column — it is the only lever you can move by acting, and editing a leg refiles it.
      <b>Worst beat</b> and <b>Worst CLV</b> keep their columns while they wait: beat needs a final score, CLV needs
-     a close with both sides at both ends. Both stay in the draw and pass while they cannot measure, which is
-     dormant, not absent.</div></details>`;
+     usable closing evidence. Both stay in the draw. Royale waits when a reached CLV lever lacks evidence
+     for any losing leg.</div></details>`;
   // Live updates must not knock a keyboard reader off the disclosure they are using.
   restoreHelpFocus();
 }
@@ -7905,7 +7905,7 @@ HOW TO TALK ABOUT THE NUMBERS:
 - The simulation draws every leg INDEPENDENTLY. Two legs on the same game are not independent. If the state flags correlated legs, mention it rather than quoting the cash probability as if it were clean.
 - Prop legs use a placeholder standard deviation (line x 0.55) that is openly a guess. Flag a prop before leaning on its Worst Beat exposure.
 - Period legs (1h, 2h, quarters) use the game SD scaled by the square root of the fraction played (beatBasis "scaled-sd"), a documented model pending calibration. They are hand-graded: no Worker-reachable score source carries per-period scores.
-- Worst CLV is measured only when both sides of the DraftKings entry and both sides of the kickoff close were captured. A missing side is unmeasured, never zero, and the lever passes it.
+- Worst CLV uses the canonical effectiveClv value from dd_bozo_clv, including labeled selected-side and sourced estimates. Opposite odds and entry verification stamps are not required for approximate CLV. Missing closing evidence is unknown, never zero; Royale waits if any losing leg lacks evidence when the drawn CLV lever is reached.
 - priceSource=captured means both entry prices came from DraftKings through an odds feed. When the checker fails, entered odds are accepted as Unverified (verificationStatus=unverified); manager review is pending. priceSource=manual and verificationStatus=verified means a manager confirmed the original two-sided entry prices without changing the submission time. Selected-side entry and closing prices suffice for labeled approximate CLV; paired verified quotes support measured CLV. Existing manual CLV overrides remain supported. Never describe unverified prices as verified.
 - The "As it stands / If every leg lost" panel is a read-only hypothetical over currently filed legs. It assumes every filed leg loses, does not know results, and never names a bozo. Before the card locks there is no running order at all. Never present the panel as a prediction, a probability, or a graded outcome.
 - You may NOT place, edit or remove anyone's leg, and you must never tell someone their bet is guaranteed. Prices and probabilities, never certainties.`;

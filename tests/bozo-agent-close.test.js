@@ -112,7 +112,7 @@ test('a leg that kicked off with no close is reported until it gets one',()=>{
  assert.equal(c.bozoMissedCloses(lg({a:pick()}),kickoff+5*60000).length,0,'grace for the last pregame tick');
  assert.equal(c.bozoMissedCloses(lg({a:pick()}),kickoff+37*3600000).length,0,'last weekend cannot keep health red');
  assert.equal(c.bozoMissedCloses(lg({a:pick()},{},{},{synthetic:true}),at).length,0,'simulated leagues are never reported');
- assert.equal(c.bozoMissedCloses(lg({a:pick({mkt:'other'})}),at).length,0);
+ assert.equal(c.bozoMissedCloses(lg({a:pick({mkt:'other'})}),at).length,1,'custom-market missing evidence remains visible');
 });
 
 function captureRig(espnReads,leagues={}){
@@ -271,15 +271,17 @@ test('an exhausted quota flag blocks for a day, then the restored subscription i
 
 // dd_bozo_clv's own eligibility rule, cut from the committed Worker: an agent close counts
 // once the leg is graded, with closeObservedAt left null so a manager can still correct it.
-test('an agent-read close is CLV-measurable once the leg is graded, with no feed stamp',()=>{
- const expr=cut('clvMeasurable: r.verificationStatus','\n        }));').replace(/^clvMeasurable:\s*/,'').trim().replace(/,$/,'');
- const measurable=new Function('r','return '+expr+';');
+test('agent-read measured evidence is separate from settlement and needs no feed stamp',()=>{
+ const api=require('../bozo-effective-clv.js');
+ const expr=src.match(/clvMeasurable:(r\.effectiveClv\.kind === "measured")/)[1];
+ const check=new Function('r','return '+expr+';');
+ const measurable=r=>check({effectiveClv:api.resolve(api.fromPick(r,r))});
  const tulane={verificationStatus:'verified',price:-345,priceOpp:275,close:-345,closeOpp:275,closeSource:'agent_search',
   closeObservedAt:null,closeEvidence:{readAt:'2026-10-30T22:35:00.000Z'},result:null};
- assert.equal(measurable(tulane),false,'ungraded: not yet');
+ assert.equal(measurable(tulane),true,'measured evidence exists before settlement; averages filter outcomes separately');
  assert.equal(measurable({...tulane,result:'won'}),true,'graded: measurable without closeObservedAt');
  assert.equal(measurable({...tulane,result:'lost'}),true);
- assert.equal(measurable({...tulane,result:'push'}),false,'a push carries no information');
+ assert.equal(measurable({...tulane,result:'push'}),true,'push has measured evidence but is excluded from win/loss averages');
  assert.equal(measurable({...tulane,result:'won',closeOpp:null}),false,'both sides still required');
  // And the dd_bozo_week caveat no longer tells readers the feed stamp is required.
  assert.doesNotMatch(src,/closeObservedAt (is )?required/i);
