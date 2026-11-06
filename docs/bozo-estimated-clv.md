@@ -1,5 +1,7 @@
 # Estimated CLV
 
+Policy update (2026-11-06): [Automatic CLV policy](bozo-automatic-clv.md) supersedes the original analytics-only restriction below. Usable labeled estimates now feed the pre-drawn CLV tiebreaker through the shared resolver; all losing legs must have evidence.
+
 Alongside two-sided measured CLV and `clvPts` manual overrides, the schema stores `ledger/<row>/clvEstimate`, exposed by `/bozo/clv`, and a separate
 estimated-evidence disclosure below the existing CLV chart. Saved non-stale estimates feed labeled analytics after manager overrides and valid measured CLV. They never change official contest rankings, tiebreakers or settlement.
 Existing zero overrides remain intact. No result field is changed.
