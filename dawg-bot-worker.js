@@ -24839,7 +24839,7 @@ const MCP_TOOLS = [
       player: { type: "string", description: "Member name as the board shows it" },
       game: { type: "string" }, eventId: { type: "string", description: "ESPN event id, as a string" }, label: { type: "string" },
       mkt: { type: "string", enum: ["ml", "spread", "total", "prop", "other"] },
-      selectionKey: {type:"string"}, prop: {type:"object"}, period: {type:"string"},
+      selectionKey: {type:"string"}, prop: {type:["string","object"]}, period: {type:"string"},
       side: { type: "string", description: "The side the leg took" },
       line: { type: "number", description: "The leg's line, in the board's own convention" },
       startsAt: { type: "string", description: "Kickoff, ISO" },
