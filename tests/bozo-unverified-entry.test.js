@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
+const clvContext=(c={})=>vm.createContext(Object.assign(c,{DDEffectiveClv:require('../bozo-effective-clv.js'),window:{DDEffectiveClv:require('../bozo-effective-clv.js')}}));
 const {buildPick,assertHistorical}=require('./fixtures/bozo-provenance-pipeline.cjs');
 const crypto = require('node:crypto').webcrypto;
 const worker = fs.readFileSync('dawg-bot-worker.js','utf8');
@@ -29,7 +30,7 @@ function rig(){
   bozoPeriodOf:p=>p.period||'game',bozoPeriodError:()=>null,bozoSpreadSignError:()=>null,
   bozoWeekGateError:()=>null,playerName:x=>x,
  };
- vm.createContext(ctx);
+ clvContext(ctx);
  vm.runInContext([
   cut(worker,'const bzAmerican =','/* Resolve one free-text prop'),
   cut(worker,'const bozoRawImplied =','function bozoCanonicalKey('),
@@ -92,14 +93,14 @@ test('explicit verification of a new fallback pick preserves provenance through 
  assert.equal(r.state().ledger['2026-w4-pat'].entryOppSource,'manual-verified');
  await assertHistorical(r.state().picks.pat,'manual-verified');
 });
-test('unverified entries do not gain automatic CLV; manual verification enables it with both closing sides; overrides survive',()=>{
+test('unverified entries gain labeled selected-side estimates without changing verification; overrides survive',()=>{
  const ctx={devigP:(a,b)=>a==null||b==null?null:(a<0?-a/(100-a):100/(100+a))/((a<0?-a/(100-a):100/(100+a))+(b<0?-b/(100-b):100/(100+b)))};
- vm.createContext(ctx);vm.runInContext(cut(page,'function clvDeltaOf(','const amer =')+'this.delta=clvDeltaOf;',ctx);
+ clvContext(ctx);vm.runInContext(cut(page,'function clvDeltaOf(','const amer =')+'this.delta=clvDeltaOf;',ctx);
  const p={price:-150,entryPriceOpp:130,priceSource:'self',verificationStatus:'unverified'};
- assert.equal(ctx.delta(p,{close:-170,closeOpp:145}),null);
+ assert.ok(ctx.delta(p,{close:-170,closeOpp:145})>0);
  assert.equal(ctx.delta(p,{clvPts:0}),0);
  p.priceSource='manual';p.verificationStatus='verified';assert.ok(ctx.delta(p,{close:-170,closeOpp:145})>0);
- assert.equal(ctx.delta(p,{close:-170}),null);
+ assert.ok(ctx.delta(p,{close:-170})>0);
 });
 
 test('durable receipt replays identically after KV expiry and week rollover; authorization is rechecked',async()=>{
@@ -123,7 +124,7 @@ test('MCP verification rejects shared callers and forwards personal identity to 
  const m=fs.readFileSync('work/mcp-block.js','utf8');let calls=0;
  const ctx={SITE:'https://example.test',toolErr:error=>({error}),toolText:body=>body,
  bozoVerifyEntryCore:async(env,auth,args,via)=>{calls++;assert.equal(auth.uid,'delegate');assert.equal(via,'mcp');return{status:200,body:{status:'confirm_required',echo:'original quote'}};}};
- vm.createContext(ctx);const start=m.indexOf('    name: "dd_verify_bozo_entry"'),end=m.indexOf('\n  },',start);
+ clvContext(ctx);const start=m.indexOf('    name: "dd_verify_bozo_entry"'),end=m.indexOf('\n  },',start);
  vm.runInContext('this.tool={'+m.slice(start,end)+'};',ctx);
  assert.ok((await ctx.tool.run({forUid:'pat'},{},{kind:'shared'})).error);assert.equal(calls,0);
  const p=await ctx.tool.run({forUid:'pat',price:-150,priceOpp:130},{},{kind:'user',name:'Delegate',uid:'delegate'});

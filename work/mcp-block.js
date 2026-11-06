@@ -2679,6 +2679,7 @@ const MCP_TOOLS = [
           closeUnavailableReason: r.closeUnavailableReason || null,
           // The one derived field, and it is a boolean rather than a number: whether
           // this leg is eligible to be in a CLV calculation at all.
+          clvUsable: globalThis.DDEffectiveClv.resolve(globalThis.DDEffectiveClv.fromPick(r,r)).point != null,
           clvMeasurable: r.verificationStatus !== "unverified" && r.close != null && r.closeOpp != null && r.price != null && r.priceOpp != null
             && (r.result === "won" || r.result === "lost"),
         }));
@@ -2689,7 +2690,7 @@ const MCP_TOOLS = [
         synthetic: lg.synthetic === true,
         devig: "proportional",
         formula: "imp(o) = o<0 ? -o/(-o+100) : 100/(o+100); p = imp(price)/(imp(price)+imp(oppPrice)); clv = p_close - p_entry, in probability points.",
-        counts: { legs: rows.length, clvMeasurable: measurable, notMeasurable: rows.length - measurable },
+        counts: { legs: rows.length, clvUsable: rows.filter(r=>r.clvUsable).length, clvMeasurable: measurable, notMeasurable: rows.length - measurable },
         legs: rows,
         caveats: [
           "This tool returns prices. It deliberately does not return a CLV number, a per-player average or a ranking — the de-vig method is declared so the caller derives those and stays reproducible if the method ever changes.",
@@ -3000,13 +3001,14 @@ const MCP_TOOLS = [
     catalog: "full",
     readOnlyHint: false,
     destructiveHint: false,
-    description: "Manager-only. Fills a Bozo leg's missing close with a DraftKings price a Claude routine read on a public page before kickoff. The league counts it as a verified close, so CLV includes it, and it is stored as closeSource agent_search with the page, read time and minutes before kickoff for audit. It only fills a gap. Sent before kickoff (up to 3 hours out), the read is held and returns staged:true; at kickoff it becomes the close only if the Worker's own free capture got none. Sent after kickoff, it applies at once. A close already on the leg stands, and a later held read replaces an earlier one. The leg is matched by season, week, player, eventId and mkt; the line and side must be the leg's own, since a moved line is a different selection. DraftKings only. Send the same requestId to retry safely.",
+    description: "Manager-only. Fills a Bozo leg's missing close with a DraftKings price a Claude routine read on a public page before kickoff. The league can calculate approximate CLV from the selected side alone; this does not verify the original entry, and it is stored as closeSource agent_search with the page, read time and minutes before kickoff for audit. It only fills a gap. Sent before kickoff (up to 3 hours out), the read is held and returns staged:true; at kickoff it becomes the close only if the Worker's own free capture got none. Sent after kickoff, it applies at once. A close already on the leg stands, and a later held read replaces an earlier one. The leg is matched by season, week, player, eventId and mkt; the line and side must be the leg's own, since a moved line is a different selection. Props require exact selectionKey, prop object, period, side and line from the ledger. Opposite-side price is optional. DraftKings only. Send the same requestId to retry safely.",
     inputSchema: { type: "object", properties: {
       league: { type: "string", description: "League id" },
       season: { type: "integer" }, week: { type: "integer" },
       player: { type: "string", description: "Member name as the board shows it" },
       game: { type: "string" }, eventId: { type: "string", description: "ESPN event id, as a string" }, label: { type: "string" },
-      mkt: { type: "string", enum: ["ml", "spread", "total"] },
+      mkt: { type: "string", enum: ["ml", "spread", "total", "prop"] },
+      selectionKey: {type:"string"}, prop: {type:"object"}, period: {type:"string"},
       side: { type: "string", description: "The side the leg took" },
       line: { type: "number", description: "The leg's line, in the board's own convention" },
       startsAt: { type: "string", description: "Kickoff, ISO" },
@@ -3019,7 +3021,7 @@ const MCP_TOOLS = [
       verification: { type: "string", description: "Accepted for the routine's file shape; not stored" },
       note: { type: "string", description: "Optional, up to 300 characters" },
       requestId: { type: "string", description: "16-120 letters, digits, hyphens, colons, dots or underscores, e.g. 2026-w8-401873024-2026-11-01T17:56:00.000Z" },
-    }, required: ["league", "season", "week", "player", "eventId", "mkt", "close", "closeOpp", "book", "source", "observedAt", "requestId"], additionalProperties: false },
+    }, required: ["league", "season", "week", "player", "eventId", "mkt", "close", "book", "source", "observedAt", "requestId"], additionalProperties: false },
     async run(args, env, caller) {
       if (!caller || caller.kind !== "user" || !caller.uid) return toolErr("A personal authenticated account is required.");
       const out = await bozoAgentCloseCore(env, caller, args);

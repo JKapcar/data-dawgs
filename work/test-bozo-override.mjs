@@ -1,3 +1,4 @@
+import effectiveClv from '../bozo-effective-clv.js';
 /* Manager Override settles a week: result, actual, closing price, and the CLV that falls
  * out of it — for EVERY leg, in ONE place.
  *
@@ -54,7 +55,7 @@ const S = {
 
 const ctx = vm.createContext({
   console, Object, Array, Number, JSON, Math, String, Boolean,
-  window:{DDBozoOwner:ownerConfirmation},LID:'main',isAdmin:()=>false,
+  window:{DDEffectiveClv:effectiveClv,DDBozoOwner:ownerConfirmation},LID:'main',isAdmin:()=>false,
   document: { getElementById: el, querySelectorAll: () => [] },
   S,
   esc: s => String(s == null ? "" : s),
@@ -95,8 +96,8 @@ ok(ctx.__devig(-145, 200) !== ctx.__devig(-145, null),
 ok(ctx.__devig(null, 200) === null, "a missing price itself is still refused");
 
 /* The payoff: one close, and the leg has a CLV. */
-ok(ctx.__delta({ price: -145, entryPriceOpp: null }, { close: -175, closeOpp: null }) === null,
-   "one closing price cannot invent CLV");
+ok(ctx.__delta({ price: -145, entryPriceOpp: null }, { close: -175, closeOpp: null }) > 0,
+   "one selected closing price supports approximate CLV");
 
 ctx.__paint();
 const html = nodes["godResults"].innerHTML;

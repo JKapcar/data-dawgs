@@ -4491,14 +4491,13 @@ const devigAssumed = (x, r) => !!x && ((x.price != null && x.entryPriceOpp == nu
    Mirrors clvPair() for the ledger-shaped chart rows — change the rule in one and it
    has to change in the other, or the board and the chart stop agreeing. */
 function clvDeltaOf(x, r){
-  r = r || {};
-  if(r.clvPts != null && Number.isFinite(+r.clvPts)) return +r.clvPts/100;
-  if(x.verificationStatus === "unverified" || x.clvEligible === false || r.closeOppSource === "assumed" || x.entryOppSource === "assumed") return null;
-  const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp ?? x.priceOpp);
-  return (pC==null || pE==null) ? null : (pC - pE);
+  const row=window.DDEffectiveClv.fromPick(x,r||{});
+  const estimate=typeof clvDisplayEstimate==='function'?clvDisplayEstimate(x):null;
+  if(estimate)row.clvEstimate={kind:'estimated',point:estimate.point,stale:false};
+  return window.DDEffectiveClv.resolve(row).clv;
 }
 function clvDisplayEstimate(x){
-  if(typeof CLV==='undefined'||!CLV.data||CLV.lid!==LID||!x.selectionKey||x.eventId==null)return null;
+  if(!x.selectionKey||x.eventId==null||typeof CLV==='undefined'||!CLV.data||CLV.lid!==LID)return null;
   const matches=CLV.data.legs.filter(l=>l.week===S.week&&l.selectionKey===x.selectionKey&&String(l.eventId)===String(x.eventId)&&(!(x.p||x.player)||l.player===(x.p||x.player)));
   if(matches.length!==1)return null;
   const e=window.DDEffectiveClv.resolve(matches[0]);return e.kind==='estimated'?e:null;
@@ -7661,13 +7660,15 @@ function paintDiag(live, players, status){
     const pC = devigP(r.close, r.closeOpp), pE = devigP(x.price, x.entryPriceOpp ?? x.priceOpp);
     if(delta != null){
       const v = delta * 100;
+      const resolved=window.DDEffectiveClv.resolve(window.DDEffectiveClv.fromPick(x,r));
+      if(resolved.kind==='estimated'||clvDisplayEstimate(x))return `<span title="${esc(resolved.reason)}">${v>0?'+':''}${v.toFixed(2)} pts estimated</span>`;
       // ⚠️ NOT .pos/.neg — .pos is already the reel position label ("1ST"), and the
       // carnival skin restyles it. A CLV number would silently inherit both.
       return `<span class="${v>=0?'clvup':'clvdn'}" title="de-vigged close ${(pC*100).toFixed(1)}% − de-vigged entry ${(pE*100).toFixed(1)}%">`
         + `${v>0?'+':''}${v.toFixed(2)} pts</span>`;
     }
     const estimated=clvDisplayEstimate(x);
-    if(estimated)return '<span class="clvup">'+(estimated.point>0?'+':'')+estimated.point.toFixed(2)+' estimated</span><br><small>Scenario only; '+esc(estimated.reason)+'</small>';
+    if(estimated)return '<span class="clvup">'+(estimated.point>0?'+':'')+estimated.point.toFixed(2)+' estimated</span><br><small>Estimated; '+esc(estimated.reason)+'</small>';
     if(x.verificationStatus === "unverified") return "entry awaiting review";
     if(r.close != null && r.closeOpp == null)
       return `<span title="Only one side of the close was captured, so it can't be de-vigged.">one side only</span>`;

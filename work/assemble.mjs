@@ -148,6 +148,11 @@ const yahoo = readFileSync("yahoo-parse.js", "utf8").replace(/\s+$/, "")
 /* ---- the whole pipeline, so the build and its idempotency proof cannot diverge ---- */
 function transform(input) {
   let t = input;
+    const cs='/* BEGIN SHARED BOZO CLV */',ce='/* END SHARED BOZO CLV */';
+    const ci=t.indexOf(cs),cj=t.indexOf(ce);
+    if(ci>=0&&cj>ci)t=t.slice(0,ci)+t.slice(cj+ce.length).replace(/^\r?\n/,'');
+    const clvAnchor=t.indexOf('import { BOZO_ESPN_TEAM_SEED }');
+    t=t.slice(0,clvAnchor)+cs+'\n'+readFileSync('../bozo-effective-clv.js','utf8').trimEnd()+'\n'+ce+'\n'+t.slice(clvAnchor);
   const repairStart='/* DD-OWNER-REPAIR START */',repairEnd='/* DD-OWNER-REPAIR END */';
   const ri=t.indexOf(repairStart),rj=t.indexOf(repairEnd);
   if(ri<0||rj<ri)fail('owner repair markers missing');

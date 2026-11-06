@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
+const clvContext=(c={})=>vm.createContext(Object.assign(c,{DDEffectiveClv:require('../bozo-effective-clv.js'),window:{DDEffectiveClv:require('../bozo-effective-clv.js')}}));
 const source = fs.readFileSync(require('node:path').join(__dirname, '../dawg-bot-worker.js'), 'utf8');
 const slice = (a,b) => source.slice(source.indexOf(a), source.indexOf(b,source.indexOf(a)));
 function setup(unsettled=false) {
@@ -12,7 +13,7 @@ function setup(unsettled=false) {
   }};
   const results={legend:{result:'lost',won:false},beamen:unsettled?{}:{result:'lost',won:false},winner:{result:'won',won:true}};
   let signed;
-  const c=vm.createContext({Response,Request,Date,console,
+  const c=clvContext({Response,Request,Date,console,
     rImp:a=>a<0?Math.abs(a)/(Math.abs(a)+100):100/(a+100),playerName:k=>k,
     ROYALE_LEVER_NAMES:['Shortest Odds','Worst Beat','Last In','Worst CLV'],
     readBody:r=>r.json(),leagueOf:()=> 'royale',requireManager:async()=>({league:state}),

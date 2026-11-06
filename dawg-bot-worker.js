@@ -12,6 +12,39 @@ function ownerConfirmationMatches(record,identity){
   typeof record.receiptId==='string'&&sameOwnerConfirmationIdentity(record.identity,identity);
 }
 
+/* BEGIN SHARED BOZO CLV */
+/* Canonical CLV resolver shared by the Worker and browser. Never writes raw evidence. */
+(function(root){
+ const valid=x=>typeof x==='number'&&Number.isFinite(x),odds=x=>valid(x)&&Math.abs(x)>=100;
+ const imp=x=>x<0?-x/(100-x):100/(100+x);
+ const pair=(a,b)=>odds(a)&&odds(b)?imp(a)/(imp(a)+imp(b)):null;
+ function resolve(l){
+  const receipt=l.entryCapture,stamp=Date.parse(receipt?.snapshotAt),submitted=Date.parse(l.entrySubmittedAt),start=Date.parse(l.startsAt);
+  const entryCaptured=receipt?.ok===true&&receipt.price===l.entryPrice&&odds(receipt.opp)&&Number.isFinite(stamp)&&stamp<start&&stamp<=submitted&&submitted-stamp<=5*60000;
+  const e=l.clvEstimate,base=pair(l.entryPrice,entryCaptured?receipt.opp:l.entryPriceOpp),override=l.clvPts!=null&&Number.isFinite(+l.clvPts);
+  if(override)return finish(+l.clvPts,'override',base,l,'Manager override');
+  if((entryCaptured||(l.verificationStatus!=='unverified'&&l.clvEligible!==false&&l.entryOppSource!=='assumed'))&&l.closeOppSource!=='assumed'){
+   const close=pair(l.closePrice,l.closePriceOpp);if(base!==null&&close!==null)return finish(100*(close-base),'measured',base,l,'Captured paired prices');
+  }
+  if(e?.kind==='convention'&&e.method==='owner_push_zero_v1'&&!e.stale&&e.point===0&&l.result==='push')return finish(0,'convention',null,l,'Owner push convention — not measured CLV');
+  if(e?.kind==='estimated'&&!e.stale&&valid(e.point)){
+   let pe=e.method==='historical_exchange_probability_v1'&&valid(e.entryProbability)?e.entryProbability:l.entryOppSource==='assumed'?null:base;
+   if(pe===null&&odds(e.entryPrice)){const h=e.scenarios?.[Math.floor(e.scenarios.length/2)];if(valid(h)&&h>=0&&h<=.3)pe=imp(e.entryPrice)/(1+h);}
+   return finish(e.point,'estimated',pe,l,(e.settlementWarning?e.settlementWarning+' ':'')+(e.provenance==='historical_exchange'?'Historical exchange estimate; fee/liquidity caveats. ':e.provenance==='modeled_proxy'?'Modeled proxy; selected quote not observed. ':e.provenance==='cross_book_proxy'?'Cross-book '+e.closeQuote.book+' proxy. ':'')+(e.closeQuote?.evidence==='untimed_quote_proxy'?'Untimed quote used as closing proxy':e.closeQuote?.evidence||'Estimated quote'),e.closeQuote?.sourceUrl);
+  }
+  // Owner-approved selected-side approximation. No opposite price or verification
+  // stamp is inferred. This measures the raw implied-probability move, including vig.
+  if(odds(l.entryPrice)&&odds(l.closePrice))return finish(100*(imp(l.closePrice)-imp(l.entryPrice)),'estimated',imp(l.entryPrice),l,'Selected-side implied probability change; includes bookmaker margin; entry verification unchanged',l.closeEvidence?.url||null);
+  return {point:null,kind:'unknown',pE:null,pC:null,clv:null,reason:e?.stale?'Stale estimate; review required':!l.result?'Pending outcome / missing usable CLV':'No usable CLV evidence',source:null};
+ }
+ function finish(point,kind,pE,l,reason,source=null){const pc=pE===null?null:pE+point/100;return {point,kind,pE,pC:valid(pc)&&pc>=0&&pc<=1?pc:null,clv:point/100,manual:kind==='override',estimated:kind==='estimated',reason,source};}
+ function outcome(l){return l.result==='won'?'win':l.result==='lost'?'loss':['win','loss','push','void'].includes(l.result)?l.result:null;}
+ function rows(legs){return legs.map((l,index)=>{const e=resolve(l),r=outcome(l),y=(r==='win'||r==='loss')&&e.pC!==null?100*((r==='win'?1:0)-e.pC):null;return {leg:l,index,...e,result:r,x:e.point,y,charted:e.point!==null&&y!==null};});}
+ function counts(items){return {convention:items.filter(x=>x.kind==='convention').length,total:items.length,charted:items.filter(x=>x.charted).length,measured:items.filter(x=>x.kind==='measured').length,estimated:items.filter(x=>x.kind==='estimated').length,override:items.filter(x=>x.kind==='override').length,unknown:items.filter(x=>x.point===null).length,pending:items.filter(x=>!x.result).length,push:items.filter(x=>x.result==='push').length,void:items.filter(x=>x.result==='void').length};}
+ function fromPick(p,r={}){return {...p,...r,entryPrice:p.price,entryPriceOpp:p.entryPriceOpp??p.priceOpp,closePrice:r.close,closePriceOpp:r.closeOpp,entrySubmittedAt:p.ts?new Date(p.ts).toISOString():null};}
+ root.DDEffectiveClv={resolve,rows,counts,fromPick};if(typeof module!=='undefined')module.exports=root.DDEffectiveClv;
+})(typeof window!=='undefined'?window:globalThis);
+/* END SHARED BOZO CLV */
 import { BOZO_ESPN_TEAM_SEED } from "./bozo-team-registry.mjs";
 
 /**
@@ -5547,6 +5580,7 @@ async function leagueImportFinalise(env, id, lg) {
         actual: r.actual ?? null,
         close: r.close ?? null, closeOpp: r.closeOpp ?? null,
         closeBook: r.closeBook || null, closeSource: r.closeSource || null,
+      closeEvidence: r.closeEvidence || null,
         closeOppSource: r.closeOppSource || null,
         closeObservedAt: r.closeObservedAt || null,
         closeUnavailableReason: r.closeUnavailableReason || null,
@@ -8987,7 +9021,7 @@ async function bozoCloseTargets(env, nowMs, preloaded = null) {
       if (!Number.isFinite(start)) continue;                       // no kickoff, no window
       if (start > nowMs + BOZO_CLOSE_LEAD_MS) continue;            // too early
       if (lg.status === "graded" && start > nowMs) continue;
-      if (start <= nowMs) continue; // No automatic historical purchases.
+      if (start <= nowMs && nowMs-start > BOZO_CLOSE_STALE_MS) continue; // Bounded replay of pregame receipts only; never fetch historical odds.
 
       const player = p.who || memberNameAt(lg, key) || playerName(key);
       const uid = UID_RE.test(key) ? key : (uidByName.get(player) || null);
@@ -9263,7 +9297,7 @@ function bozoOddsApiQuote(ev, p, registry) {
    stays off with them. Each leg is capped at an events list plus one odds read, ever. */
 const BOZO_ODDS_API_LEG_CAP = 2;
 function bozoOddsApiAllowed(env, caller) {
-  return !!env.ODDS_API_KEY && (caller === "close" || env.BOZO_PAID_ODDS === "true");
+  return false; // Owner instruction: Bozo odds must use free sources only.
 }
 const BOZO_ODDS_API_REASONS = {
   paid_feeds_off: "Odds API backup is off for this caller",
@@ -9731,7 +9765,7 @@ function bozoMissedCloses(leagues, nowMs) {
       const start = Date.parse(p.startsAt || "");
       if (!Number.isFinite(start) || nowMs - start < BOZO_MISSED_CLOSE_GRACE_MS || nowMs - start > BOZO_MISSED_CLOSE_WINDOW_MS) continue;
       const row = ledgerKey(season, week, key), r = (lg.results || {})[key] || {}, l = (lg.ledger || {})[row] || {};
-      if ((r.close != null && r.closeOpp != null) || (l.close != null && l.closeOpp != null)) continue;
+      if (r.close != null || l.close != null) continue;
       if (l.clvEstimate || l.clvPts != null || r.clvPts != null) continue;
       out.push({ league: lid, row, label: p.label || null, startsAt: new Date(start).toISOString(),
                  freeSource: bozoEspnOddsSupports(p), reason: r.closeUnavailableReason || l.closeUnavailableReason || null });
@@ -9783,7 +9817,7 @@ async function runBozoCloseCapture(env, nowMs) {
   // Staged agent reads become closes once kickoff passes and no feed close landed.
   if (leagues) { try { await bozoPromoteAgentCloses(env, leagues, nowMs); } catch (e) { console.log("bozo agent close promotion failed: " + e.message); } }
   const targets = await bozoCloseTargets(env, nowMs, leagues);
-  if (!targets.length) return { captured: 0, skipped: 0, checked: 0, missed };
+  if (!targets.length) { const run={captured:0,skipped:0,checked:0,missed}; await bozoCloseRunSummary(env,nowMs,run); return run; }
 
   // Group registry reads; durable request receipts deduplicate provider calls globally.
   const byBucket = new Map();
@@ -9796,6 +9830,8 @@ async function runBozoCloseCapture(env, nowMs) {
   const observedAt = new Date(nowMs).toISOString();
   let captured = 0, skipped = 0;
   const patches = new Map();                                  // lid -> deep-path patch
+  const freeReads = new Map(), targetsByLeague = new Map();
+  for(const t of targets){if(!targetsByLeague.has(t.lid))targetsByLeague.set(t.lid,[]);targetsByLeague.get(t.lid).push(t);}
   const add = (lid, path, val) => {
     if (!patches.has(lid)) patches.set(lid, {});
     patches.get(lid)[path] = val;
@@ -9809,10 +9845,22 @@ async function runBozoCloseCapture(env, nowMs) {
          paid provider being asked twice, and it stores a failure as the final answer. A
          keyless read costs nothing, so an ESPN timeout seven minutes out is retried on the
          next tick, and the paid fallback is only reached on the last tick before kickoff. */
+      const identity=JSON.stringify(bozoCaptureIdentity(t.pick,'close'));
       let free = null;
+      if(nowMs>=t.startMs){
+        try {const saved=(await fbGet(env,'/bozoFreeCloseReceipts/v1/'+await sha256hex(identity))).data;
+          if(saved?.ok && Date.parse(saved.quote?.snapshotAt)<t.startMs && t.startMs-Date.parse(saved.quote.snapshotAt)<=BOZO_CLOSE_STALE_MS)free=saved;
+        } catch {} // The missed-close monitor records unavailable recovery.
+      }
       if (nowMs < t.startMs && bozoEspnOddsSupports(t.pick)) {
-        const read = await bozoEspnOddsCapture(env,t.pick,registry,{nowMs,deadline:Date.now()+4000});
-        if (read.ok) free = {ok:true,quote:read.quote};
+        if(!freeReads.has(identity))freeReads.set(identity,(async()=>{
+          const read=await bozoEspnOddsCapture(env,t.pick,registry,{nowMs,deadline:Date.now()+4000});
+          if(!read.ok)return null;
+          const result={ok:true,quote:read.quote};
+          try {await fbPut(env,'/bozoFreeCloseReceipts/v1/'+await sha256hex(identity),result);} catch {}
+          return result;
+        })());
+        free=await freeReads.get(identity);
       }
       // Nothing paid before the last tick, whether or not ESPN carries the market.
       if (!free && t.startMs - nowMs > BOZO_CLOSE_LAST_TICK_MS) continue;
@@ -9822,10 +9870,10 @@ async function runBozoCloseCapture(env, nowMs) {
       /* Order: ESPN's free line, the agent's held DraftKings read, SportsGameOdds' free tier
          (BOZO_SGO_CLOSE), then the Odds API, Kap's paid backup. A held agent read means no
          provider call. With no source open the miss is recorded with no receipt. */
-      const oddsApiReady = !!env.ODDS_API_KEY && !!bozoOddsApiMarkets(t.pick);
+      const oddsApiReady = bozoOddsApiAllowed(env, "close") && !!bozoOddsApiMarkets(t.pick);
       const sgoFree = !!env.SGO_KEY && env.BOZO_SGO_CLOSE === "true" && t.pick.mkt !== "other";
       const receipt = free || (bozoAgentReadHeld(leagues, t) ? {ok:false,reason:BOZO_AGENT_HELD_REASON} :
-        !oddsApiReady && !sgoFree && env.BOZO_PAID_ODDS !== "true" ? {ok:false,reason:BOZO_FREE_MISS_REASON} :
+        !oddsApiReady && !sgoFree ? {ok:false,reason:BOZO_FREE_MISS_REASON} :
         await bozoCaptureOnce(env,bozoCaptureIdentity(t.pick,'close'),async()=>{
         if (nowMs >= t.startMs || t.pick.mkt==='other') return {ok:false,reason:'No supported pregame close'};
         // The free SGO tier is not a paid provider, so its miss still reaches the backup.
@@ -9845,7 +9893,7 @@ async function runBozoCloseCapture(env, nowMs) {
         const sgo=await bozoSgoCloseQuote(env,t,registry);
         return sgo.ok ? sgo : {ok:false,reason:'Exact pregame line unavailable; manual evidence required'};
       }));
-      const existing=(await fbGet(env,LG(t.lid)+'/results/'+t.key)).data||{};
+      const existing=leagues?.[t.lid]?.results?.[t.key]||{};
       const conflict=receipt.ok && ((existing.close!=null&&existing.close!==receipt.quote.price)||(existing.closeOpp!=null&&existing.closeOpp!==receipt.quote.opp));
       const quote=receipt.ok&&!conflict?receipt.quote:null, reason=conflict?'Saved partial price conflicts; manual review':receipt.reason||'Close pending';
       const mutation = bozoCloseMutation(t, quote, reason, observedAt);
@@ -9858,7 +9906,7 @@ async function runBozoCloseCapture(env, nowMs) {
   for (const [lid, patch] of patches.entries()) {
     if (!Object.keys(patch).length) continue;
     try {
-      const group = targets.filter(t => t.lid === lid);
+      const group = targetsByLeague.get(lid) || [];
       const live = (await fbGet(env, LG(lid))).data;
       if (!live || group.some(t => t.week !== (live.week || 1) || t.season !== (live.season || SEASON) || !bozoSame(live.picks?.[t.key], t.pick))) continue;
       // A manager or another capture may have supplied prices after target discovery.
@@ -9890,7 +9938,7 @@ async function bozoCloseRunSummary(env, nowMs, run) {
     await kv.put("bozo:close:last-run", JSON.stringify({
       at: new Date(nowMs).toISOString(), ...run,
       book: BOZO_CLOSE_BOOK,
-      via: ["agent","espn", ...(env.ODDS_API_KEY ? ["odds_api"] : []), ...(env.BOZO_PAID_ODDS === "true" ? ["sgo"] : [])].join("+"),
+      via: ["agent","espn", ...(bozoOddsApiAllowed(env, "close") ? ["odds_api"] : []), ...(env.BOZO_PAID_ODDS === "true" ? ["sgo"] : [])].join("+"),
     }));
   } catch { /* the capture already landed; the summary is a convenience */ }
 }
@@ -9974,6 +10022,8 @@ async function bozoClv(request, url, env, cors) {
       shortestOdds: r.shortestOdds === true,
     }));
 
+  for(const leg of legs){leg.effectiveClv=globalThis.DDEffectiveClv.resolve(leg);leg.clvUsable=leg.effectiveClv.point!=null;}
+
   const weeks = [...new Set(legs.map(l => l.week))].sort((a, b) => a - b)
     .map(w => ({ week: w, label: labels[w] || ("Week " + w), phase: (lg.weekPhases || {})[w] || "regular" }));
 
@@ -9994,7 +10044,8 @@ async function bozoClv(request, url, env, cors) {
     format: set.format, synthetic: lg.synthetic === true,
     devig: "proportional",
     book: BOZO_CLOSE_BOOK,
-    closeVia: "sportsgameodds",
+    closeVia: "free_sources_and_agent_evidence",
+    clvPolicy: "selected-side-fallback-v1",
     players: memberNames(lg), teams: lg.teams || null,
     week: lg.week || 1,
     weeks, coverage, legs,
@@ -10260,24 +10311,11 @@ function royaleApplyLever(leverIdx, losers, picks, results, rule = "legacy-v1") 
         break;                // furthest under = worst
       case 2: v = x.ts || null; break;                             // latest in = worst
       case 3: {                                                    // price moved most against = worst
-        /* ⚠️ Needs BOTH sides at BOTH ends, OR a manager's override. Kap's call: a leg
-           with no capturable close is unmeasurable and falls through to the next lever.
-           It is neither ranked worst (DraftKings pulling a market is not the player's
-           doing) nor ranked best (that would make an uncapturable market the optimal
-           thing to bet).
-
-           ⚠️ clvPts, when the manager has set it, IS the CLV — it is read off the placed
-           slip, which is the same evidence the capture would have snapped. It outranks
-           the derived number because it exists in exactly the cases where the derived
-           one cannot. A lever that decides who is eliminated must use the best number
-           available, not only the automatic one. */
-        const manual = r.clvPts != null && Number.isFinite(Number(r.clvPts))
-          ? Number(r.clvPts) / 100 : null;
-        if (manual != null) { v = -manual; break; }
-        if (x.verificationStatus === "unverified" || x.clvEligible === false ||
-            r.closeOppSource === "assumed" || x.entryOppSource === "assumed") break;
-        const pC = rDevig(r.close, r.closeOpp), pE = rDevig(x.price, x.entryPriceOpp);
-        v = (pC == null || pE == null) ? null : -(pC - pE);
+        const effective = globalThis.DDEffectiveClv.resolve(globalThis.DDEffectiveClv.fromPick(x,r));
+        // Every losing leg must have evidence; comparing only the covered subset
+        // can eliminate the wrong player. Keep the pre-drawn CLV lever pending.
+        if(effective.clv==null)return {blocked:true,missing:key,reason:"CLV closing evidence missing for a losing leg"};
+        v=-effective.clv;
         break;
       }
     }
@@ -10291,7 +10329,15 @@ function royaleApplyLever(leverIdx, losers, picks, results, rule = "legacy-v1") 
 
 /* The chop, exactly as handoff §8.2 specifies it. */
 function royaleDecideChop(state, order) {
-  const picks = state.picks || {}, results = state.results || {};
+  const picks = state.picks || {}, results = {...(state.results || {})};
+  for(const [key,pick] of Object.entries(picks)){
+    const row=state.ledger?.[String(state.season)+'-w'+String(state.week)+'-'+key];
+    if(!row||!pick.selectionKey||row.selectionKey!==pick.selectionKey||String(row.eventId)!==String(pick.eventId)||row.price!==pick.price||(row.ts!=null&&pick.ts!=null&&row.ts!==pick.ts))continue;
+    const r={...(results[key]||{})};
+    for(const field of ['close','closeOpp','closeSource','closeEvidence','closeOppSource','clvPts'])if(row[field]!=null)r[field]=row[field];
+    if(row.clvEstimate)r.clvEstimate={...row.clvEstimate,stale:!bozoEstimateBasisSame(row.clvEstimate.basis,bozoEstimateBasis(bozoEstimateSettledRow(row,String(state.season)+'-w'+String(state.week)+'-'+key,state)))};
+    results[key]=r;
+  }
   const keys = Object.keys(picks);
   const losers = keys.filter(k => {
     const r = results[k] || {};
@@ -10825,7 +10871,7 @@ async function bozoCloseFill(request, env, cors) {
    misread from the override panel; the read time lives in closeEvidence instead. */
 const BOZO_AGENT_CLOSE_WINDOW_MS = 3 * 3600 * 1000;
 const BOZO_AGENT_CLOSE_FIELDS = ["league", "season", "week", "player", "game", "eventId", "label", "mkt", "side", "line",
-  "startsAt", "close", "closeOpp", "book", "source", "observedAt", "minutesBeforeKickoff", "verification", "note", "requestId"];
+  "startsAt", "close", "closeOpp", "book", "source", "observedAt", "minutesBeforeKickoff", "verification", "note", "requestId", "selectionKey", "prop", "period"];
 async function bozoAgentCloseCore(env, auth, args, nowMs = Date.now()) {
   const fail = (error, status = 400) => ({ status, body: { error } });
   const odds = x => Number.isInteger(x) && Math.abs(x) >= 100 && Math.abs(x) <= 100000;
@@ -10838,8 +10884,8 @@ async function bozoAgentCloseCore(env, auth, args, nowMs = Date.now()) {
   if (!Number.isInteger(args.season) || !Number.isInteger(args.week) || args.week < 1) return fail("season and week must be whole numbers.");
   if (typeof args.player !== "string" || !args.player.trim()) return fail("player is the member's name as the board shows it.");
   if (args.eventId == null || String(args.eventId) === "") return fail("eventId is required.");
-  if (!["ml", "spread", "total"].includes(args.mkt)) return fail("Only moneyline, spread and total legs have a two-sided close to read.");
-  if (!odds(args.close) || !odds(args.closeOpp)) return fail("Both whole American prices are required; no juice is assumed.");
+  if (!["ml", "spread", "total", "prop"].includes(args.mkt)) return fail("Unsupported market.");
+  if (!odds(args.close) || (args.closeOpp != null && !odds(args.closeOpp))) return fail("Selected-side whole American price required; opposite may be omitted.");
   if (norm(args.book) !== "draftkings")
     return fail("Bozo legs are DraftKings slips, so only a DraftKings close counts. Another book is a reference, not this close.");
   let url;
@@ -10867,6 +10913,8 @@ async function bozoAgentCloseCore(env, auth, args, nowMs = Date.now()) {
     ? "More than one leg matches that player, event and market; record nothing and ask a manager."
     : "No leg matches that league, season, week, player, event and market.", 409);
   const [rowKey, row] = matches[0];
+  if(args.mkt==="prop" && (!args.selectionKey || args.selectionKey!==row.selectionKey || !args.prop || JSON.stringify(args.prop)!==JSON.stringify(row.prop) || args.period!==(row.period||"game")))return fail("Props require exact selectionKey, player/stat prop identity and period.",409);
+  if(args.mkt==="prop" && args.side==null)return fail("Prop side is required.");
   // The line is part of the selection. A moved line is a different bet, not this close.
   if (args.mkt !== "ml" && Number(args.line) !== Number(row.line))
     return fail(`The leg's line is ${row.line}; a price at ${args.line} is a different selection. Record nothing.`, 409);
@@ -10885,15 +10933,15 @@ async function bozoAgentCloseCore(env, auth, args, nowMs = Date.now()) {
   const currentKey = Object.keys(state.picks || {}).find(key =>
     ledgerKey(state.season || SEASON, state.week || 1, key) === rowKey);
   const result = currentKey ? (state.results || {})[currentKey] || {} : {};
-  if ((row.close != null && row.closeOpp != null) || (result.close != null && result.closeOpp != null)) {
+  if (row.close != null || result.close != null) {
     const same = row.closeSource === "agent_search" && row.closeEvidence?.requestId === args.requestId &&
-      row.close === args.close && row.closeOpp === args.closeOpp;
+      row.close === args.close && (row.closeOpp ?? null) === (args.closeOpp ?? null);
     if (same) return { status: 200, body: { ok: true, unchanged: true, row: rowKey } };
     return fail(`This leg already has a close (${row.closeSource || result.closeSource || "unknown source"}); it stands.`, 409);
   }
 
   const note = typeof args.note === "string" && args.note.trim() ? args.note.trim().slice(0, 300) : null;
-  const cand = { close: args.close, closeOpp: args.closeOpp, url: url.origin + url.pathname,
+  const cand = { close: args.close, closeOpp: args.closeOpp ?? null, url: url.origin + url.pathname,
     readAt: new Date(read).toISOString(), minutesBeforeKickoff: minutes, requestId: args.requestId, note,
     by: auth.name || null, at: new Date(nowMs).toISOString() };
 
@@ -10904,7 +10952,7 @@ async function bozoAgentCloseCore(env, auth, args, nowMs = Date.now()) {
      an earlier read never replaces a later one. */
   if (nowMs < start) {
     const held = row.agentCloseCandidate;
-    if (held && held.requestId === args.requestId && held.close === args.close && held.closeOpp === args.closeOpp)
+    if (held && held.requestId === args.requestId && held.close === args.close && (held.closeOpp ?? null) === (args.closeOpp ?? null))
       return { status: 200, body: { ok: true, unchanged: true, staged: true, row: rowKey } };
     if (held && Date.parse(held.readAt) > read)
       return fail(`A later read (${held.readAt}) is already held for this leg; it stands.`, 409);
@@ -10970,7 +11018,7 @@ async function bozoPromoteAgentCloses(env, leagues, nowMs) {
       if (!cand || cand.promotedAt) continue;
       const start = Date.parse(row.startsAt || (p && p.startsAt) || "");
       if (!Number.isFinite(start) || nowMs < start || !(Date.parse(cand.readAt) < start)) continue;
-      if ((row.close != null && row.closeOpp != null) || (r.close != null && r.closeOpp != null)) continue;
+      if (row.close != null || r.close != null) continue;
       const patch = bozoAgentClosePatch(cand, cand.by, nowMs);
       for (const [field, value] of Object.entries(patch)) {
         changes[`ledger/${rowKey}/${field}`] = value;
@@ -24462,6 +24510,7 @@ const MCP_TOOLS = [
           closeUnavailableReason: r.closeUnavailableReason || null,
           // The one derived field, and it is a boolean rather than a number: whether
           // this leg is eligible to be in a CLV calculation at all.
+          clvUsable: globalThis.DDEffectiveClv.resolve(globalThis.DDEffectiveClv.fromPick(r,r)).point != null,
           clvMeasurable: r.verificationStatus !== "unverified" && r.close != null && r.closeOpp != null && r.price != null && r.priceOpp != null
             && (r.result === "won" || r.result === "lost"),
         }));
@@ -24472,7 +24521,7 @@ const MCP_TOOLS = [
         synthetic: lg.synthetic === true,
         devig: "proportional",
         formula: "imp(o) = o<0 ? -o/(-o+100) : 100/(o+100); p = imp(price)/(imp(price)+imp(oppPrice)); clv = p_close - p_entry, in probability points.",
-        counts: { legs: rows.length, clvMeasurable: measurable, notMeasurable: rows.length - measurable },
+        counts: { legs: rows.length, clvUsable: rows.filter(r=>r.clvUsable).length, clvMeasurable: measurable, notMeasurable: rows.length - measurable },
         legs: rows,
         caveats: [
           "This tool returns prices. It deliberately does not return a CLV number, a per-player average or a ranking — the de-vig method is declared so the caller derives those and stays reproducible if the method ever changes.",
@@ -24783,13 +24832,14 @@ const MCP_TOOLS = [
     catalog: "full",
     readOnlyHint: false,
     destructiveHint: false,
-    description: "Manager-only. Fills a Bozo leg's missing close with a DraftKings price a Claude routine read on a public page before kickoff. The league counts it as a verified close, so CLV includes it, and it is stored as closeSource agent_search with the page, read time and minutes before kickoff for audit. It only fills a gap. Sent before kickoff (up to 3 hours out), the read is held and returns staged:true; at kickoff it becomes the close only if the Worker's own free capture got none. Sent after kickoff, it applies at once. A close already on the leg stands, and a later held read replaces an earlier one. The leg is matched by season, week, player, eventId and mkt; the line and side must be the leg's own, since a moved line is a different selection. DraftKings only. Send the same requestId to retry safely.",
+    description: "Manager-only. Fills a Bozo leg's missing close with a DraftKings price a Claude routine read on a public page before kickoff. The league can calculate approximate CLV from the selected side alone; this does not verify the original entry, and it is stored as closeSource agent_search with the page, read time and minutes before kickoff for audit. It only fills a gap. Sent before kickoff (up to 3 hours out), the read is held and returns staged:true; at kickoff it becomes the close only if the Worker's own free capture got none. Sent after kickoff, it applies at once. A close already on the leg stands, and a later held read replaces an earlier one. The leg is matched by season, week, player, eventId and mkt; the line and side must be the leg's own, since a moved line is a different selection. Props require exact selectionKey, prop object, period, side and line from the ledger. Opposite-side price is optional. DraftKings only. Send the same requestId to retry safely.",
     inputSchema: { type: "object", properties: {
       league: { type: "string", description: "League id" },
       season: { type: "integer" }, week: { type: "integer" },
       player: { type: "string", description: "Member name as the board shows it" },
       game: { type: "string" }, eventId: { type: "string", description: "ESPN event id, as a string" }, label: { type: "string" },
-      mkt: { type: "string", enum: ["ml", "spread", "total"] },
+      mkt: { type: "string", enum: ["ml", "spread", "total", "prop"] },
+      selectionKey: {type:"string"}, prop: {type:"object"}, period: {type:"string"},
       side: { type: "string", description: "The side the leg took" },
       line: { type: "number", description: "The leg's line, in the board's own convention" },
       startsAt: { type: "string", description: "Kickoff, ISO" },
@@ -24802,7 +24852,7 @@ const MCP_TOOLS = [
       verification: { type: "string", description: "Accepted for the routine's file shape; not stored" },
       note: { type: "string", description: "Optional, up to 300 characters" },
       requestId: { type: "string", description: "16-120 letters, digits, hyphens, colons, dots or underscores, e.g. 2026-w8-401873024-2026-11-01T17:56:00.000Z" },
-    }, required: ["league", "season", "week", "player", "eventId", "mkt", "close", "closeOpp", "book", "source", "observedAt", "requestId"], additionalProperties: false },
+    }, required: ["league", "season", "week", "player", "eventId", "mkt", "close", "book", "source", "observedAt", "requestId"], additionalProperties: false },
     async run(args, env, caller) {
       if (!caller || caller.kind !== "user" || !caller.uid) return toolErr("A personal authenticated account is required.");
       const out = await bozoAgentCloseCore(env, caller, args);

@@ -98,7 +98,7 @@ test('manager preview refuses an unmeasurable v2 verdict without issuing a confi
 
 test('UI refuses the same missing-data grade before confirmGrade',async()=>{
  const {ui}=build(page,worker);vm.runInContext(lift(page,'decide'),ui);
- let writes=0,error='';Object.assign(ui,{S:state(),document:{querySelectorAll:()=>[]},
+ ui.window={DDEffectiveClv:require('../bozo-effective-clv.js')};let writes=0,error='';Object.assign(ui,{S:state(),document:{querySelectorAll:()=>[]},
   LEVERS:[{k:'odds'},{k:'beat'},{k:'last'},{k:'clv'}],gradeErr:e=>{error=e;},
   confirmGrade:async()=>{writes++;},refresh:()=>{}});
  await ui.decide();assert.equal(writes,0);assert.match(error,/No grade was written/);

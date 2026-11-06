@@ -461,7 +461,7 @@ ctx.S = {results:{},picks:{},week:3};
 const manual = legs.map(x=>({...x, entryPriceOpp:null, verificationStatus:'unverified'}));
 const manualRun = simulate(manual,[0,1,2,3]);
 ok(manualRun.n===manual.length && manualRun.win.every(Number.isFinite), "all manually priced legs remain simulated and visible");
-ok(clvDeltaOf(manual[0],{close:-180,closeOpp:150})===null, "simulation fallback does not fabricate measured CLV");
+ok(Number.isFinite(clvDeltaOf(manual[0],{close:-180,closeOpp:150})), "selected-side fallback supplies approximate CLV");
 
 /* A settled unknown margin is not a zero and is never sampled as measured evidence. */
 {

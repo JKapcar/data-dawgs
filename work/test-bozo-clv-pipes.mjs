@@ -1,3 +1,4 @@
+import effectiveClv from '../bozo-effective-clv.js';
 /* A CLV the manager sets by hand reaches EVERY surface that reads a CLV.
  *
  * Run: node test-bozo-clv-pipes.mjs
@@ -49,7 +50,7 @@ const S = {
 
 const ctx = vm.createContext({
   console, Object, Array, Number, JSON, Math, String, Boolean,
-  window:{DDBozoOwner:ownerConfirmation},LID:'main',
+  window:{DDEffectiveClv:effectiveClv,DDBozoOwner:ownerConfirmation},LID:'main',
   S,
   esc: s => String(s == null ? "" : s),
   kDec: k => k,
@@ -130,11 +131,11 @@ ok(/r\.clvPts != null && Number\.isFinite\(\+r\.clvPts\)/.test(code.split("const
 // D10 2026-09-24: incomplete pairs remain unmeasured, including old assumed numeric prices.
 {
  const entry={price:-145,entryPriceOpp:null};
- ok(ctx.__delta(entry,{close:-200,closeOpp:null})===null,"two lone prices do not invent CLV");
- ok(ctx.__delta(entry,{close:-145,closeOpp:null})===null,"missing evidence is not zero");
+ ok(ctx.__delta(entry,{close:-200,closeOpp:null})>0,"selected sides yield approximate CLV");
+ ok(ctx.__delta(entry,{close:-145,closeOpp:null})===0,"identical selected prices yield approximate zero");
  entry.entryPriceOpp=125;
  ok(ctx.__delta(entry,{close:-200,closeOpp:170})>0,"observed pairs yield positive CLV");
- ok(ctx.__delta(entry,{close:-200,closeOpp:170,closeOppSource:'assumed'})===null,"historical assumed opposite is excluded");
+ ok(ctx.__delta(entry,{close:-200,closeOpp:170,closeOppSource:'assumed'})>0,"assumed opposite is ignored in selected-side approximation");
  ok(ctx.__delta(entry,{close:-145,closeOpp:125})===0,"identical observed pairs yield measured zero");
 }
 
