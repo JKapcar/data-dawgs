@@ -4503,11 +4503,9 @@ function clvDisplayEstimate(x){
   const e=window.DDEffectiveClv.resolve(matches[0]);return e.kind==='estimated'?e:null;
 }
 function clvMissingReason(x, r = {}){
-  if(x.verificationStatus === 'unverified' || x.clvEligible === false) return 'entry odds need verification';
-  if(devigP(x.price, x.entryPriceOpp ?? x.priceOpp) == null || x.entryOppSource === 'assumed') return 'opposite entry odds missing';
-  if(r.closeOppSource === 'assumed') return 'opposite closing odds need verification';
-  if(r.close != null && r.closeOpp == null) return 'opposite closing odds missing';
-  if(r.close == null || r.closeOpp == null) return 'closing odds missing';
+  r=r||{};
+  if(typeof x.price!=='number'||!Number.isFinite(x.price)||Math.abs(x.price)<100)return 'selected entry odds missing';
+  if(typeof r.close!=='number'||!Number.isFinite(r.close)||Math.abs(r.close)<100)return 'selected closing odds missing';
   return 'check entry and closing odds';
 }
 const amer = d => d>=2 ? '+'+Math.round((d-1)*100) : '-'+Math.round(100/(d-1));
