@@ -218,16 +218,16 @@
     "path": "/data/epa-players.json",
     "url": "https://datadawgs216.com/data/epa-players.json",
     "bytes": 194710,
-    "as_of": "2026-11-06",
-    "sha256": "1b84b0ff6e1424bc47f3a7dafa1eb7038cd2813cb01c0e51c81f8ea7c1149333",
+    "as_of": "2026-11-07",
+    "sha256": "c9d05a868107db8e48aa41956c73035ac5f6e20b84120797340c948be336243d",
     "note": "Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name per play, so the whole value of a completed pass is credited to the quarterback and a receiver appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, not projections: do not read 2025 as 2026. 2026 is Weeks 1-9 ONLY (122 games): incomplete-season coverage, with the season minimums prorated to 68 dropbacks / 34 rushes. The pooled table spans every season in the snapshot, including the partial one."
    },
    {
     "path": "/data/epa-teams.json",
     "url": "https://datadawgs216.com/data/epa-teams.json",
     "bytes": 111479,
-    "as_of": "2026-11-06",
-    "sha256": "697b958ede54826433ab494c592ef8bc18781a99561b295d309f4d52704d354d",
+    "as_of": "2026-11-07",
+    "sha256": "91ac6751fa3f6c2369fc00d0c948dbd7aa576e5002312ae6bd25436494d792d3",
     "note": "Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback minimum for QBs; the pooled table uses 500. 2026 covers Weeks 1-9 ONLY (122 games) — a small sample sensitive to opponent and game script; its QB minimum is the 200 bar prorated to 90 dropbacks. The pooled table spans every season in the snapshot, including the partial one. These are descriptive aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026, and do not interpret an incomplete season as a complete season. Dropback EPA counts every dropback including scrambles and penalty-nullified plays and uses play epa, not qb_epa; Rush EPA excludes scrambles and kneels. These will not match nflverse passing_epa / rushing_epa."
    },
    {
