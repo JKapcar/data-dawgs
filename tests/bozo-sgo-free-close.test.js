@@ -144,3 +144,18 @@ test('a day-old SGO exhausted flag is retried; a fresh one still stops the call'
  await c.bozoSgoRequest(e,new URL('https://example.test/events?leagueID=NCAAF'),{caller:'close'});assert.equal(calls,2);
  await assert.rejects(c.bozoSgoRequest(e,url,{caller:'submit'}),x=>x.code==='paid_feeds_off');
 });
+
+test('a provider refusal keeps its code and HTTP status through the spend receipt, so the close reason names the cause',async()=>{
+ // Week 9: BOIS -8.5 read only "request failed" because the receipt swallowed the SGO error.
+ const saved={};const c={URL,Number,Date,Object,Set,JSON,BOZO_CLOSE_API:'https://api.sportsgameodds.com/v2/events',BOZO_SGO_LEAGUE:{nfl:'NFL'},
+  bozoOddIds:(m,pd)=>[`points-home-${pd}-${m}-home`],bozoPeriodOf:()=>'game',sha256hex:async s=>String(s.length),
+  fbGet:async(_e,p)=>({data:saved[p]||null,etag:'e'}),fbPut:async(_e,p,v)=>{saved[p]=v;return true;},
+  bozoSgoRequest:async()=>{throw Object.assign(new Error('SGO 401'),{code:'provider_rejected',status:401});}};
+ vm.createContext(c);
+ vm.runInContext(cut('function bozoSgoAllowed(','// Shared 60-second KV cache')+cut('async function bozoFetchEvents(','// Join an ESPN')+cut('async function bozoCaptureOnce(','function bozoCaptureIdentity(')+cut('async function bozoSgoCloseQuote(','async function runBozoCloseCapture('),c);
+ const kickoff=Date.parse('2026-11-08T18:00:00Z');
+ const r=await c.bozoSgoCloseQuote({SGO_KEY:'fixture',BOZO_SGO_CLOSE:'true'},{startMs:kickoff,pick:{sport:'nfl',mkt:'spread',game:'DEN @ CAR'}},{});
+ assert.deepEqual([r.ok,r.code,r.reason],[false,'provider_rejected','key or plan rejected (HTTP 401)']);
+ const receipt=Object.values(saved).find(v=>v.state==='complete');
+ assert.deepEqual([receipt.result.code,receipt.result.status],['provider_rejected',401],'the stored receipt keeps the cause');
+});
