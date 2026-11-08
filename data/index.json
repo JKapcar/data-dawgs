@@ -201,10 +201,10 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 163373,
+    "bytes": 163263,
     "as_of": "2026-11-08",
-    "sha256": "3ff6d4b535682bc7aec3901e482ce9e6990d233ce312f93686095d016fd8f0db",
-    "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 124/272 regular-season games are settled and banked in wins_tracker; 148 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
+    "sha256": "7d169368e793fb2e1439e586523ebceed4d66c88d60349ce836a3f08b016bc1d",
+    "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 125/272 regular-season games are settled and banked in wins_tracker; 147 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    },
    {
     "path": "/data/dynasty-ranks.json",
@@ -352,9 +352,9 @@
    {
     "path": "/data/nfl-schedule.json",
     "url": "https://datadawgs216.com/data/nfl-schedule.json",
-    "bytes": 113160,
+    "bytes": 113661,
     "as_of": "2026-11-08",
-    "sha256": "7f484458979cb2083d29c85b44e452b2422cc490a9172be1e466cb4141dee341",
+    "sha256": "b78cf9c22191d5396518ee74d8c49ba3a43ecb241251851d577dacc616954a5e",
     "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts."
    },
    {
