@@ -1,6 +1,6 @@
 {
  "as_of": "2026-11-08",
- "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 06fe79ce56d11cce4b7bbb01c9ea129230f63541. Manual final-result amendment supplied and explicitly approved by Kap on 2026-11-08: 2026_09_LAR_WAS, LAR 20–WAS 13; this amendment is not attributed to the pinned upstream CSV. Manual final-result amendments supplied and explicitly approved by Kap on 2026-11-08: 2026_09_CLE_NO, 2026_09_DAL_IND, 2026_09_DEN_CAR, 2026_09_NYG_PHI, 2026_09_NYJ_KC; these amendments are not attributed to the pinned upstream CSV.",
+ "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 06fe79ce56d11cce4b7bbb01c9ea129230f63541. Manual final-result amendment supplied and explicitly approved by Kap on 2026-11-08: 2026_09_LAR_WAS, LAR 20–WAS 13; this amendment is not attributed to the pinned upstream CSV. Manual final-result amendments supplied and explicitly approved by Kap on 2026-11-08: 2026_09_CLE_NO, 2026_09_DAL_IND, 2026_09_DEN_CAR, 2026_09_NYG_PHI, 2026_09_NYJ_KC; these amendments are not attributed to the pinned upstream CSV. Manual final-result amendments supplied and explicitly approved by Kap on 2026-11-08: 2026_09_HOU_LAC, 2026_09_LV_SF, 2026_09_ARI_SEA, 2026_09_GB_NE; these amendments are not attributed to the pinned upstream CSV.",
  "tier": "labs",
  "graded": false,
  "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts.",
@@ -63,11 +63,43 @@
     "home_score": 35,
     "as_of": "2026-11-08",
     "source": "Kap-provided final result; explicitly requested banking on 2026-11-08 at approximately 6:25 PM EST"
+   },
+   {
+    "game_id": "2026_09_HOU_LAC",
+    "status": "final",
+    "away_score": 44,
+    "home_score": 22,
+    "as_of": "2026-11-08",
+    "source": "Kap-provided final result; explicitly requested banking on 2026-11-08 at approximately 8:47 PM EST"
+   },
+   {
+    "game_id": "2026_09_LV_SF",
+    "status": "final",
+    "away_score": 17,
+    "home_score": 38,
+    "as_of": "2026-11-08",
+    "source": "Kap-provided final result; explicitly requested banking on 2026-11-08 at approximately 8:47 PM EST"
+   },
+   {
+    "game_id": "2026_09_ARI_SEA",
+    "status": "final",
+    "away_score": 3,
+    "home_score": 17,
+    "as_of": "2026-11-08",
+    "source": "Kap-provided final result; explicitly requested banking on 2026-11-08 at approximately 8:47 PM EST"
+   },
+   {
+    "game_id": "2026_09_GB_NE",
+    "status": "final",
+    "away_score": 45,
+    "home_score": 27,
+    "as_of": "2026-11-08",
+    "source": "Kap-provided final result; explicitly requested banking on 2026-11-08 at approximately 8:47 PM EST"
    }
   ]
  },
  "integrity": {
-  "snapshot_id": "sha256:e66ff93d50f4e3eec9555b8373ddec65e20eb3b737d2d4f9746ab8cb0d74d6e7",
+  "snapshot_id": "sha256:16d20a36c941f884799eb7dc970235f8fa226ec9d28889bc48b0cd502e7db6e4",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -2298,9 +2330,9 @@
     "divisional": false,
     "away_rest_days": 14,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 44,
+    "home_score": 22
    },
    {
     "game_id": "2026_09_LV_SF",
@@ -2315,9 +2347,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 14,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 17,
+    "home_score": 38
    },
    {
     "game_id": "2026_09_ARI_SEA",
@@ -2332,9 +2364,9 @@
     "divisional": true,
     "away_rest_days": 7,
     "home_rest_days": 6,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 3,
+    "home_score": 17
    },
    {
     "game_id": "2026_09_GB_NE",
@@ -2349,9 +2381,9 @@
     "divisional": false,
     "away_rest_days": 10,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 45,
+    "home_score": 27
    },
    {
     "game_id": "2026_09_TB_CHI",
