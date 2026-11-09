@@ -201,9 +201,9 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 162264,
+    "bytes": 162279,
     "as_of": "2026-11-09",
-    "sha256": "bb745caa8e502b2c96741102cc7c888bcb13f44c2bb111550201e9a269c0729a",
+    "sha256": "1eb0cedd8bc28c2bb1fd01715e88b5e25cc1bd5b234fa393cd61fc30932ec7f9",
     "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 135/272 regular-season games are settled and banked in wins_tracker; 137 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    },
    {
@@ -337,16 +337,16 @@
     "path": "/data/models.json",
     "url": "https://datadawgs216.com/data/models.json",
     "bytes": 3267,
-    "as_of": "2026-11-08",
-    "sha256": "802254baa13c90d91daa172f5abdeac633a51abe7beb8a95064a84e63997726d",
+    "as_of": "2026-11-09",
+    "sha256": "756464e0bc81b0c386cf7aa8d46e45cb9040b8c46f52a73dc6a47ba615851fb1",
     "note": "Survivor uses nfelo published probabilities or nfelo-season-v1, not the legacy margin model below. The margin model is a linear Elo-to-points map with a normal residual — it is deliberately simple and its residual SD (13.18) is larger than most people intuit, which is the whole point."
    },
    {
     "path": "/data/nfelo.json",
     "url": "https://datadawgs216.com/data/nfelo.json",
-    "bytes": 168095,
-    "as_of": "2026-11-08",
-    "sha256": "0c16f2ae04f10034cc3335db85b598001c8a4037d3688fe3de161e9e4ef1f0ea",
+    "bytes": 168149,
+    "as_of": "2026-11-09",
+    "sha256": "120a63d28e51fa0bb6fa93a4f6cf4fc438ab1fed2e22681f7acce2cad882bccc",
     "note": "Backtest figures span 2009-2025 and OVERLAP the model's own optimisation window, so they are in-sample-ish and should not be read as out-of-sample skill. nfelo straight-up 0.6674 vs market 0.6677 over n=4053 is a difference well inside noise (SE 0.20 pp)."
    },
    {
@@ -440,9 +440,9 @@
    {
     "path": "/data/survivor.json",
     "url": "https://datadawgs216.com/data/survivor.json",
-    "bytes": 117693,
-    "as_of": "2026-11-08",
-    "sha256": "9e85f316b900884717dae999b8b267d759f92de3550beb7ec1904d0117eb4941",
+    "bytes": 117704,
+    "as_of": "2026-11-09",
+    "sha256": "a9da4bbe31aabf56707dc8ccae22ad8dc420e1807aeceec344ada94de4feed1e",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"nfelo\" = published nfelo forecast without an extra blend; \"nfelo-season\" = nfelo pre-market calculation with current team/QB strength and game-specific HFA. Ownership is modelled, not observed."
    },
    {
