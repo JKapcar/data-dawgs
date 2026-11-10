@@ -1,6 +1,6 @@
 {
- "as_of": "2026-11-08",
- "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 06fe79ce56d11cce4b7bbb01c9ea129230f63541. Manual final-result amendment supplied and explicitly approved by Kap on 2026-11-08: 2026_09_LAR_WAS, LAR 20–WAS 13; this amendment is not attributed to the pinned upstream CSV. Manual final-result amendments supplied and explicitly approved by Kap on 2026-11-08: 2026_09_CLE_NO, 2026_09_DAL_IND, 2026_09_DEN_CAR, 2026_09_NYG_PHI, 2026_09_NYJ_KC; these amendments are not attributed to the pinned upstream CSV. Manual final-result amendments supplied and explicitly approved by Kap on 2026-11-08: 2026_09_HOU_LAC, 2026_09_LV_SF, 2026_09_ARI_SEA, 2026_09_GB_NE; these amendments are not attributed to the pinned upstream CSV. Manual final-result amendment on 2026-11-08: 2026_09_TB_CHI from ESPN public scoreboard; not attributed to the pinned upstream CSV.",
+ "as_of": "2026-11-10",
+ "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 555f6ca5c4d36a355e881c298dfd7b05ffe50e18.",
  "tier": "labs",
  "graded": false,
  "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts.",
@@ -10,10 +10,10 @@
   "loader_license": "MIT",
   "source_repository": "nflverse/nfldata",
   "source_url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-  "source_commit": "06fe79ce56d11cce4b7bbb01c9ea129230f63541",
-  "source_committed_at": "2026-11-08T21:05:20Z",
+  "source_commit": "555f6ca5c4d36a355e881c298dfd7b05ffe50e18",
+  "source_committed_at": "2026-11-10T06:05:21Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-11-08T21:05:51.494760Z",
+  "captured_at": "2026-11-10T07:07:50.897754Z",
   "manual_result_amendments": [
    {
     "game_id": "2026_09_LAR_WAS",
@@ -107,7 +107,7 @@
   ]
  },
  "integrity": {
-  "snapshot_id": "sha256:4aa299c1114269645c8013a9d251f4e0be1f737a876c5090fa66b637ed45f7ab",
+  "snapshot_id": "sha256:31217550c57fa1829b6946744f71e66403022c69afbdd563998d3467c33d1672",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -2423,9 +2423,9 @@
     "divisional": false,
     "away_rest_days": 8,
     "home_rest_days": 8,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 23,
+    "home_score": 6
    },
    {
     "game_id": "2026_10_WAS_NYG",
@@ -4742,6 +4742,6 @@
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-11-08",
+ "built": "2026-11-10",
  "canonical_url": "https://datadawgs216.com/data/nfl-schedule.json"
 }
