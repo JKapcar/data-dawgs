@@ -2,7 +2,7 @@
   "tier": "labs",
   "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
   "graded": false,
-  "as_of": "2026-11-10",
+  "as_of": "2026-11-11",
   "source": "Sleeper league current starters and completed matchup points; Data Dawgs weekly player simulation",
   "note": "Prospective pregame forecasts. Roster IDs only; no ownership identities or player rosters. Multiclass Brier is the sum of squared chop-probability errors; lower is better. Repeated full ties await resolution.",
   "canonical_url": "https://datadawgs216.com/data/guillotine-receipts.json",
@@ -3619,7 +3619,7 @@
       "feed_sha256": "f831094b775d8a863b6611bf39e344139d441ec66d84384b3a9491152b96d544",
       "lineup_sha256": "75e7f0a019faf612bfb521449a2dbc6ee7e05cc6d3625242431c37201807ab38",
       "n": 10000,
-      "status": "pending",
+      "status": "graded",
       "chop_line": 89.8,
       "rows": [
         {
@@ -3722,7 +3722,52 @@
           "draft_position": 1,
           "prior_season_points": 888.06
         }
-      ]
+      ],
+      "graded_at": "2026-11-11T16:09:14.120Z",
+      "chopped_rid": 12,
+      "actual_scores": [
+        {
+          "rid": 5,
+          "points": 139.86
+        },
+        {
+          "rid": 7,
+          "points": 110.08
+        },
+        {
+          "rid": 2,
+          "points": 142.88
+        },
+        {
+          "rid": 15,
+          "points": 116.38
+        },
+        {
+          "rid": 3,
+          "points": 93.24
+        },
+        {
+          "rid": 4,
+          "points": 121.36
+        },
+        {
+          "rid": 1,
+          "points": 83.26
+        },
+        {
+          "rid": 12,
+          "points": 76.78
+        },
+        {
+          "rid": 18,
+          "points": 113.76
+        },
+        {
+          "rid": 8,
+          "points": 118.84
+        }
+      ],
+      "brier": 0.8302776399999999
     },
     {
       "receipt_id": "1389344040964599808:2026:9",
@@ -3736,7 +3781,7 @@
       "feed_sha256": "f831094b775d8a863b6611bf39e344139d441ec66d84384b3a9491152b96d544",
       "lineup_sha256": "72ec632839b2f6ca26ba8a7065e12fa51df35c767d3003be9247b5d65846e59e",
       "n": 10000,
-      "status": "pending",
+      "status": "graded",
       "chop_line": 76.16,
       "rows": [
         {
@@ -3839,7 +3884,52 @@
           "draft_position": 9,
           "prior_season_points": 709.14
         }
-      ]
+      ],
+      "graded_at": "2026-11-11T16:09:14.120Z",
+      "chopped_rid": 18,
+      "actual_scores": [
+        {
+          "rid": 7,
+          "points": 126.5
+        },
+        {
+          "rid": 10,
+          "points": 130.46
+        },
+        {
+          "rid": 13,
+          "points": 142.84
+        },
+        {
+          "rid": 11,
+          "points": 68.54
+        },
+        {
+          "rid": 14,
+          "points": 103.78
+        },
+        {
+          "rid": 18,
+          "points": 59.74
+        },
+        {
+          "rid": 3,
+          "points": 63.48
+        },
+        {
+          "rid": 16,
+          "points": 64.78
+        },
+        {
+          "rid": 1,
+          "points": 91.06
+        },
+        {
+          "rid": 17,
+          "points": 73.5
+        }
+      ],
+      "brier": 0.9155182400000001
     }
   ]
 }
