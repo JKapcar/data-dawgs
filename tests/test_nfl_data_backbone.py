@@ -195,5 +195,51 @@ class ContractTests(unittest.TestCase):
             backbone.assert_append_only([receipt], [])
 
 
+class SourcePinTests(unittest.TestCase):
+    """The loader reads a CDN copy of a branch that nflverse moves every few minutes."""
+
+    def setUp(self):
+        self.rows = []
+        for index in range(272):
+            row = source_row(index // 18)
+            row["week"] = index % 18 + 1
+            row["game_id"] = f"2026_{row['week']:02d}_{row['away_team']}_{row['home_team']}"
+            self.rows.append(row)
+        self.games = backbone.canonicalize_source_rows(self.rows, 2026)
+        newer = copy.deepcopy(self.rows)
+        newer[0]["away_score"], newer[0]["home_score"] = 17, 20
+        self.by_sha = {"a" * 40: newer, "b" * 40: self.rows, "c" * 40: self.rows}
+        self.commits = [{"sha": sha, "committed_at": "2026-11-10T04:32:23Z"} for sha in self.by_sha]
+        self.fetched = []
+
+    def fetch(self, sha):
+        self.fetched.append(sha)
+        return copy.deepcopy(self.by_sha[sha])
+
+    def test_head_match_cites_head(self):
+        commit, behind = backbone.match_source_commit(
+            backbone.canonicalize_source_rows(self.by_sha["a" * 40], 2026), self.commits, 2026, self.fetch)
+        self.assertEqual((commit["sha"], behind), ("a" * 40, 0))
+        self.assertEqual(self.fetched, ["a" * 40])
+
+    def test_cdn_lag_cites_the_commit_the_load_came_from(self):
+        commit, behind = backbone.match_source_commit(self.games, self.commits, 2026, self.fetch)
+        self.assertEqual((commit["sha"], behind), ("b" * 40, 1))
+        self.assertEqual(self.fetched, ["a" * 40, "b" * 40])
+
+    def test_load_matching_no_recent_commit_fails_closed(self):
+        other = copy.deepcopy(self.rows)
+        other[1]["away_score"], other[1]["home_score"] = 3, 0
+        with self.assertRaisesRegex(backbone.ContractError, "differs from the last 3"):
+            backbone.match_source_commit(
+                backbone.canonicalize_source_rows(other, 2026), self.commits, 2026, self.fetch)
+
+    def test_stale_and_future_source_commits_fail(self):
+        with self.assertRaisesRegex(backbone.ContractError, "stale"):
+            backbone.check_source_commit_age({"sha": "a" * 40, "committed_at": "2020-01-01T00:00:00Z"}, 30)
+        with self.assertRaisesRegex(backbone.ContractError, "future"):
+            backbone.check_source_commit_age({"sha": "a" * 40, "committed_at": "2099-01-01T00:00:00Z"}, 30)
+
+
 if __name__ == "__main__":
     unittest.main()
