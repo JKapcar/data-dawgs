@@ -23,7 +23,7 @@ import urllib.error
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 from zoneinfo import ZoneInfo
 
 
@@ -33,8 +33,13 @@ DEFAULT_RECEIPTS = ROOT / "data" / "model-receipts.json"
 NFELODCM_VERSION = "0.2.21"
 SOURCE_REPOSITORY = "nflverse/nfldata"
 SOURCE_URL = "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv"
+# nflverse commits data/games.csv every 5-10 minutes on game days, while the loader reads the
+# branch through raw.githubusercontent.com's CDN, which can serve bytes up to ~5 minutes old.
+# Look back over this many recent commits for the one the typed load actually matches.
+SOURCE_COMMIT_LOOKBACK = 10
 SOURCE_COMMIT_API = (
-    "https://api.github.com/repos/nflverse/nfldata/commits?path=data/games.csv&per_page=1"
+    "https://api.github.com/repos/nflverse/nfldata/commits?path=data/games.csv"
+    f"&per_page={SOURCE_COMMIT_LOOKBACK}"
 )
 TIER_MEANING = (
     "Pup — live and useful, not yet validated. It may compute real answers and still "
@@ -215,7 +220,18 @@ def parse_timestamp(value: Any, field: str) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
-def fetch_source_commit(max_age_days: int) -> dict[str, str]:
+def check_source_commit_age(commit: dict[str, str], max_age_days: int) -> None:
+    age = datetime.now(timezone.utc) - parse_timestamp(commit["committed_at"], "source committed_at")
+    if age.days > max_age_days:
+        raise ContractError(
+            f"upstream games source is stale: {age.days} days old (limit {max_age_days})"
+        )
+    if age.total_seconds() < -300:
+        raise ContractError("upstream games commit timestamp is in the future")
+
+
+def fetch_source_commits() -> list[dict[str, str]]:
+    """Return recent nflverse/nfldata commits touching data/games.csv, newest first."""
     headers = {"Accept": "application/vnd.github+json", "User-Agent": "data-dawgs-nfl-backbone/1"}
     token = os.environ.get("GITHUB_TOKEN")
     if token:
@@ -225,19 +241,47 @@ def fetch_source_commit(max_age_days: int) -> dict[str, str]:
         payload = json.load(response)
     if not isinstance(payload, list) or not payload:
         raise ContractError("GitHub returned no commit for nflverse/nfldata data/games.csv")
-    commit = payload[0]
-    sha = str(commit.get("sha", ""))
-    committed_at = commit.get("commit", {}).get("committer", {}).get("date")
-    if not SHA_RE.fullmatch(sha) or not committed_at:
-        raise ContractError("upstream commit response is missing sha or timestamp")
-    age = datetime.now(timezone.utc) - parse_timestamp(committed_at, "source committed_at")
-    if age.days > max_age_days:
-        raise ContractError(
-            f"upstream games source is stale: {age.days} days old (limit {max_age_days})"
-        )
-    if age.total_seconds() < -300:
-        raise ContractError("upstream games commit timestamp is in the future")
-    return {"sha": sha, "committed_at": committed_at}
+    commits = []
+    for commit in payload:
+        sha = str(commit.get("sha", ""))
+        committed_at = commit.get("commit", {}).get("committer", {}).get("date")
+        if not SHA_RE.fullmatch(sha) or not committed_at:
+            raise ContractError("upstream commit response is missing sha or timestamp")
+        commits.append({"sha": sha, "committed_at": committed_at})
+    return commits
+
+
+def fetch_source_commit(max_age_days: int) -> dict[str, str]:
+    commit = fetch_source_commits()[0]
+    check_source_commit_age(commit, max_age_days)
+    return commit
+
+
+def fetch_pinned_source_rows(sha: str) -> list[dict[str, str]]:
+    pinned_url = f"https://raw.githubusercontent.com/{SOURCE_REPOSITORY}/{sha}/data/games.csv"
+    with urllib.request.urlopen(pinned_url, timeout=60) as response:  # noqa: S310 - pinned HTTPS URL
+        return list(csv.DictReader(io.StringIO(response.read().decode("utf-8-sig"))))
+
+
+def match_source_commit(
+    games: list[dict[str, Any]],
+    commits: list[dict[str, str]],
+    season: int,
+    fetch_rows: Callable[[str], list[dict[str, str]]],
+) -> tuple[dict[str, str], int]:
+    """Bind the typed load to the newest recent commit whose exact bytes it equals.
+
+    Returns the commit and how many newer commits it trails. Equality is still required:
+    a load that matches none of the recent commits fails, so no SHA is ever cited for rows
+    it did not produce.
+    """
+    for index, commit in enumerate(commits):
+        pinned = canonicalize_source_rows(fetch_rows(commit["sha"]), season)
+        if same_source_games(pinned, games):
+            return commit, index
+    raise ContractError(
+        f"typed schedule differs from the last {len(commits)} pinned source commits; retry the refresh"
+    )
 
 
 def make_schedule_envelope(
@@ -470,14 +514,19 @@ def cmd_refresh(args: argparse.Namespace) -> None:
     frame = nfelodcm.load(["games"])["games"]
     rows = frame.to_dict(orient="records")
     games = canonicalize_source_rows(rows, args.season)
-    source_commit = fetch_source_commit(args.max_source_age_days)
-    # Bind the typed loader output to the exact cited commit. A moving branch
-    # between the load and provenance lookup must fail, never acquire a false SHA.
-    pinned_url = f"https://raw.githubusercontent.com/{SOURCE_REPOSITORY}/{source_commit['sha']}/data/games.csv"
-    with urllib.request.urlopen(pinned_url, timeout=60) as response:
-        pinned_rows = list(csv.DictReader(io.StringIO(response.read().decode("utf-8-sig"))))
-    if not same_source_games(canonicalize_source_rows(pinned_rows, args.season), games):
-        raise ContractError("typed schedule differs from pinned source commit; retry the refresh")
+    # Bind the typed loader output to the exact cited commit. The branch moves every few
+    # minutes on game days and the loader's CDN copy can trail it, so cite the newest
+    # recent commit whose bytes equal the load; never a SHA the rows did not come from.
+    source_commit, behind = match_source_commit(
+        games, fetch_source_commits(), args.season, fetch_pinned_source_rows
+    )
+    check_source_commit_age(source_commit, args.max_source_age_days)
+    if behind:
+        print(
+            f"note: typed load matches source {source_commit['sha'][:12]}, "
+            f"{behind} commit(s) behind upstream head; the next run picks those up",
+            file=sys.stderr,
+        )
     captured_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     envelope = make_schedule_envelope(games, args.season, source_commit, captured_at)
     validate_schedule_envelope(envelope)
