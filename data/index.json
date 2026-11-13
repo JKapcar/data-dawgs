@@ -201,9 +201,9 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 162079,
+    "bytes": 162081,
     "as_of": "2026-11-13",
-    "sha256": "8df0aa1d820b1c536504165b7e8cd39f8aacf204747f06b77df6e9664f870526",
+    "sha256": "b771bee58e5389a90b78f644150f8b8faa7ef488c05b0f1fcf963905c68d1753",
     "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 137/272 regular-season games are settled and banked in wins_tracker; 135 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    },
    {
@@ -440,9 +440,9 @@
    {
     "path": "/data/survivor.json",
     "url": "https://datadawgs216.com/data/survivor.json",
-    "bytes": 118918,
+    "bytes": 118919,
     "as_of": "2026-11-13",
-    "sha256": "a46d99cfa5ed31cc3fd1a59d08aaccd44d46625f324bc29e5c8518254e4f4213",
+    "sha256": "2c82aaa153603980f673a0d60996a21e94dbf4870a00c94674a76d2034391881",
     "note": "Full 2026 schedule with per-game win probabilities. `src` says where each probability came from: \"nfelo\" = published nfelo forecast without an extra blend; \"nfelo-season\" = nfelo pre-market calculation with current team/QB strength and game-specific HFA. Ownership is modelled, not observed."
    },
    {
