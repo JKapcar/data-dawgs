@@ -86,7 +86,7 @@ function csv(file) {
     return o;
   });
 }
-const num = v => (v === null || v === undefined || v === "" || Number.isNaN(Number(v))) ? null : Number(v);
+const num = v => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v))) ? null : Number(v);
 const r1 = v => v === null ? null : Math.round(v * 10) / 10;
 const r2 = v => v === null ? null : Math.round(v * 100) / 100;
 const r4 = v => v === null ? null : Math.round(v * 10000) / 10000;
@@ -123,7 +123,7 @@ const games = gamesRaw.map(g => {
   const mktClose = num(g.home_line_close), mktOpen = num(g.home_line_open);
   const hwp = num(g.nfelo_home_probability_close) ?? num(g.nfelo_home_probability_open);
   if (!KNOWN.has(h) || !KNOWN.has(a)) die("unknown team in game id " + g.game_id);
-  if (hwp === null) die("no nfelo probability for " + g.game_id);
+  if (hwp === null || hwp < 0 || hwp > 1) die("no nfelo probability for " + g.game_id);
   const spread = mktClose ?? mktOpen ?? nfeloClose;
   return {
     id: g.game_id, week: Number(week), h, a,
@@ -160,7 +160,7 @@ const prev = JSON.parse(m[1]);
 for (const k of ["headline", "calibration", "seasons", "ats"])
   if (!prev[k]) die("existing blob missing " + k);
 
-const seasonRun = spawnSync("python3", ["tools/nfelo-season-inputs.py", "--nfelo", up, "--season", String(SEASON)], {cwd: ROOT, encoding: "utf8", maxBuffer: 4 * 1024 * 1024});
+const seasonRun = spawnSync(process.platform === "win32" ? "python" : "python3", ["tools/nfelo-season-inputs.py", "--nfelo", up, "--season", String(SEASON)], {cwd: ROOT, encoding: "utf8", maxBuffer: 4 * 1024 * 1024});
 if (seasonRun.status !== 0) die("season inputs failed: " + seasonRun.stderr);
 const seasonInputs = JSON.parse(seasonRun.stdout);
 const NF = {
@@ -175,6 +175,7 @@ const NF = {
     captured: capturedAt.slice(0, 10), captured_at: capturedAt,
     upstream_committed_at: upstreamCommittedAt,
     model_version: modelVersion,
+    model_version_note: "Last public changelog version; current private model version is not verified.",
     ratings_as_of: { season: ratingsSeason, week: ratingsWeek },
     backtest_captured: prev.meta && prev.meta.backtest_captured || prev.meta && prev.meta.captured || null,
     refresh: "tools/nfelo-refresh.mjs, scheduled daily at 14:45 UTC by .github/workflows/nfelo-refresh.yml",

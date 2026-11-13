@@ -95,7 +95,7 @@ const meta = {
   ...OLD.meta,
   captured: (nfelo.data.meta && nfelo.data.meta.captured) || nfelo.as_of || OLD.meta.captured,
   probability_method: "nfelo-season-v1",
-  season_projection: { z: seasonInputs.z, qb_weight: seasonInputs.qb_weight, hfa_sha: seasonInputs.hfa_sha, hfa_committed_at: seasonInputs.hfa_committed_at, assumption: seasonInputs.assumption },
+  season_projection: { parameters: seasonInputs.parameters, compatibility: seasonInputs.compatibility, z: seasonInputs.z, qb_weight: seasonInputs.qb_weight, hfa_sha: seasonInputs.hfa_sha, hfa_committed_at: seasonInputs.hfa_committed_at, assumption: seasonInputs.assumption },
   probability_method_since: "2026-09-09",
   market_observed_at: (nfelo.data.meta && nfelo.data.meta.upstream_committed_at) || null,
   nfelo_sha: (nfelo.data.meta && nfelo.data.meta.sha) || OLD.meta.nfelo_sha,

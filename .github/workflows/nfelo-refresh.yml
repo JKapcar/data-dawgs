@@ -45,6 +45,9 @@ jobs:
       - name: Exercise concurrent publication recovery
         run: python3 work/test-survivor-publish.py
 
+      - name: Verify retained parameters and fail-closed input handling
+        run: python3 work/test-nfelo-season-inputs.py
+
       - name: Refresh from upstream
         run: node tools/nfelo-refresh.mjs
 
