@@ -88,7 +88,7 @@ function demo(){const positions=['QB','RB','RB','WR','WR','WR','TE','WR','DST','
   }catch(e){cloudNote('Portfolio response rejected; local audit retained. '+e.message);}
  });
  $('aCloudSave').onclick=()=>portfolioRequest('portfolio-save');$('aCloudLoad').onclick=()=>portfolioRequest('portfolio-load');$('aCloudList').onclick=()=>portfolioRequest('list');
- window.DDFSDesk={snapshot:()=>record?JSON.parse(JSON.stringify(record)):null,addBuild(a){
+ window.DDFSDesk={importEntries(a){if(record)throw Error('An audit is already open. Save or export it, then clear that audit before importing another portfolio. Nothing was overwritten.');const next=D.privatePortfolio(a);++importVersion;requested=false;load(next);$('aCloudId').value='dk-'+next.site.replace('dk_','')+'-'+Date.now();message(next.entries.length+' DK entries imported with original slot order and source CSV. Submission status remains unverified. Save portfolio below to retain this on your account across devices.');},snapshot:()=>record?JSON.parse(JSON.stringify(record)):null,addBuild(a){
   const next=D.parse(JSON.stringify(a));++importVersion;requested=false;
   if(!record){load(next);message('Manual build added as a proposal. Fees and entry status remain unconfirmed.');return;}
   if(record.site!==next.site||JSON.stringify(record.players)!==JSON.stringify(next.players)||JSON.stringify(record.source)!==JSON.stringify(next.source))throw Error('The audit holds a different snapshot. Export it, then clear the audit before adding a different pool.');

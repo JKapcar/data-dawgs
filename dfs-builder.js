@@ -46,6 +46,41 @@ function inspect(text){
  const slateColumn=headers.findIndex(h=>norm(h)==='slate'),slates=slateColumn<0?[]:[...new Set(rows.map(r=>r[slateColumn].trim()).filter(Boolean))];
  return {headers,rows,map,detected:foreignSite?null:detected,foreignSite,defaults:{site:foreignSite?'':detected||'',units:units||'',convention:convention||'',slate:slates.length===1?slates[0]:'',matchup:knownEtrSD&&teams.length===2&&teams.every(t=>/^[A-Z0-9]{2,4}$/.test(t))?teams.join(' @ '):'',source:knownEtrSD||dkHeaders?'ETR-compatible CSV':''}};
 }
+
+// DK entry exports are a different schema from player projections. Repeated slots
+// are meaningful and must never be deduplicated or mapped as player columns.
+function importEntries(text, filename='DK entries.csv'){
+ if(typeof text!=='string'||text.length>2000000)throw Error('Maximum CSV size is 2 MB.');
+ const rows=I.parseCSV(text),h=rows[0]?.map(v=>String(v).trim());
+ if(!h||!['entryid','contestname','contestid','entryfee'].every((v,i)=>norm(h[i])===v))return null;
+ const end=h.findIndex((v,i)=>i>=4&&!String(v).trim()),slots=h.slice(4,end<0?h.length:end).map(v=>v.toUpperCase());
+ const site=Object.keys(D.rules).find(k=>D.rules[k].slots.join('|')===slots.join('|'));
+ if(!site)throw Error('Unrecognized DK entry roster columns. Expected exact NFL Classic or Showdown slot order.');
+ const players=[],entries=[],byId=new Map(),entryIds=new Set(),at=new Date().toISOString();
+ for(let n=1;n<rows.length;n++){
+  const row=rows[n];if(!String(row[0]||'').trim())continue;
+  if(!/^\d+$/.test(row[0].trim()))throw Error('Entry row '+(n+1)+': invalid entry ID.');
+  if(entries.length>=600)throw Error('Maximum 600 entries per portfolio.');
+  if(entryIds.has(row[0].trim()))throw Error('Duplicate entry ID '+row[0]+'. Existing portfolio retained.');
+  entryIds.add(row[0].trim());
+  const ids=[],rawSlots=row.slice(4,4+slots.length),missingSlots=[];
+  for(let k=0;k<slots.length;k++){
+   const raw=String(rawSlots[k]||'').trim();
+   if(!raw){missingSlots.push(k);continue;}
+   const match=raw.match(/^(.*?)\s*\((\d+)\)$/)||raw.match(/^()(\d+)$/);
+   if(!match)throw Error('Entry row '+(n+1)+': player must contain a DraftKings ID.');
+   const id=match[2],name=match[1].trim()||('DK player '+id);
+   if(!byId.has(id)){if(players.length>=220)throw Error('Maximum 220 players per portfolio.');byId.set(id,players.length);players.push({name,dkId:id,pos:'',team:'',opp:'',sal:null,proj:null,own:null,cptSal:null,cptOwn:null,flexOwn:null});}
+   const index=byId.get(id);if(players[index].name!==name)throw Error('Conflicting names for DK player '+id+'.');ids.push(index);
+  }
+  const feeRaw=String(row[3]||'').trim(),fee=feeRaw?Number(feeRaw.replace(/[$,]/g,'')):null;
+  if(fee!==null&&(!Number.isFinite(fee)||fee<0))throw Error('Entry row '+(n+1)+': invalid fee.');
+  entries.push({ids,slots:slots.filter((_,i)=>!missingSlots.includes(i)),rawSlots,missingSlots,cpt:site==='dk_showdown'&&!missingSlots.includes(0)?ids[0]:null,slotEvidence:'supplied',fee,lifecycle:'proposed',entryEvidence:{entryId:row[0].trim(),contestId:String(row[2]||''),contestName:String(row[1]||''),source:filename,asOf:at,verification:'Imported user file; submission not independently verified'},history:[]});
+ }
+ if(!entries.length)throw Error('No DK entry rows found.');
+ return D.privatePortfolio({version:1,site,players,entries,capturedAt:at,source:{name:filename,asOf:null,version:'dk-entry-csv-v1'},originalCsv:text,notes:[{at,text:'Imported DK entry file. Original CSV and slot order retained. Submission status, player positions, salaries, projections and matchups are unverified; missing values are not zero.'}],recommendations:[]});
+}
+
 function numeric(v,label,{ownership=false,units='pp',salary=false}={}){
  const raw=String(v??'').trim();if(!raw||/^(?:na|n\/a|null|--|-)$/i.test(raw))return null;
  const percent=raw.endsWith('%');
@@ -131,6 +166,6 @@ function summary(pool,roster,now=new Date().toISOString()){
  return {salary,projection,ownership,remaining,open,used:used.length,perSlot:open&&remaining!=null?remaining/open:null,efficiency:salary>0&&projection!=null?projection/(salary/1000):null,knownOwnership:used.filter(x=>finite(value(x.p,x.slot,'own',pool.site))).length,checks,canAudit};
 }
 function auditRecord(pool,roster){const m=summary(pool,roster);if(!m.canAudit)throw Error('Resolve the full roster, salary and matchup checks first.');return {version:1,site:pool.site,synthetic:!!pool.synthetic,players:pool.players,source:pool.source,capturedAt:new Date().toISOString(),builder:{slate:pool.slate,matchupEvidence:pool.matchupEvidence||null,mapping:pool.mapping,units:pool.units,convention:pool.convention},entries:[{ids:roster.slice(),slots:D.rules[pool.site].slots.slice(),cpt:pool.site==='dk_showdown'?roster[0]:undefined,slotEvidence:'supplied',fee:null,lifecycle:'proposed'}]};}
-const api={fields,labels,inspect,importPool,empty,eligible,assign,value,summary,auditRecord};
+const api={importEntries,fields,labels,inspect,importPool,empty,eligible,assign,value,summary,auditRecord};
 if(typeof module!=='undefined')module.exports=api;root.DDFSBuilder=api;
 })(typeof self!=='undefined'?self:globalThis);
