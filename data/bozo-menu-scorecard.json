@@ -20,14 +20,14 @@
    "close": "clv_points and close MAE are measured against the DraftKings near-close"
   },
   "menu": {
-   "n_graded": 200,
-   "wins": 117,
-   "losses": 83,
-   "pushes": 3,
-   "hit_rate": 0.585,
+   "n_graded": 164,
+   "wins": 97,
+   "losses": 67,
+   "pushes": 2,
+   "hit_rate": 0.5915,
    "hit_wilson90": [
-    0.5269,
-    0.6408
+    0.5273,
+    0.6526
    ],
    "clv_points": {
     "n": 45,
@@ -40,14 +40,14 @@
    "verdict": "rankable"
   },
   "scratched_for_the_record": {
-   "n_graded": 92,
-   "wins": 42,
-   "losses": 50,
-   "pushes": 0,
-   "hit_rate": 0.4565,
+   "n_graded": 128,
+   "wins": 62,
+   "losses": 66,
+   "pushes": 1,
+   "hit_rate": 0.4844,
    "hit_wilson90": [
-    0.3736,
-    0.542
+    0.4128,
+    0.5566
    ],
    "clv_points": {
     "n": 1,
@@ -163,14 +163,14 @@
   ],
   "edge_buckets": {
    "none": {
-    "n_graded": 138,
-    "wins": 80,
-    "losses": 58,
-    "pushes": 2,
-    "hit_rate": 0.5797,
+    "n_graded": 102,
+    "wins": 60,
+    "losses": 42,
+    "pushes": 1,
+    "hit_rate": 0.5882,
     "hit_wilson90": [
-     0.5097,
-     0.6466
+     0.5068,
+     0.6651
     ],
     "clv_points": {
      "n": 0,
@@ -305,6 +305,6 @@
   }
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-11-15T13:58:39.791Z",
+ "built": "2026-11-15T19:22:52.013Z",
  "canonical_url": "https://datadawgs216.com/data/bozo-menu-scorecard.json"
 }
