@@ -11,7 +11,7 @@
     "url": "https://datadawgs216.com/data/538-classic.json",
     "bytes": 46364,
     "as_of": "2026-11-16",
-    "sha256": "6f37732a1bf6c83219ed5f20faff2897b494a6d4aa14f14e7dd43879945d03c5",
+    "sha256": "ac47551f17759748f84cf03527e3afb5730e24d4adf9c614b57ab2b23f4050c8",
     "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority."
    },
    {
@@ -201,10 +201,10 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 161153,
+    "bytes": 160979,
     "as_of": "2026-11-16",
-    "sha256": "9cc843684b4e6ca251e0236afd6b88db7536aef55b19a6991ca6472f5196e3fe",
-    "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 148/272 regular-season games are settled and banked in wins_tracker; 124 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
+    "sha256": "e6939aa46fa185c377ebf5580c7d6703c60b703dca4422f0cb31f693f29236a8",
+    "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 149/272 regular-season games are settled and banked in wins_tracker; 123 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    },
    {
     "path": "/data/dynasty-ranks.json",
@@ -352,9 +352,9 @@
    {
     "path": "/data/nfl-schedule.json",
     "url": "https://datadawgs216.com/data/nfl-schedule.json",
-    "bytes": 115814,
+    "bytes": 115806,
     "as_of": "2026-11-16",
-    "sha256": "16a9e46a714d91fb1ddba77acbf1e139c5b946636fb95823d26046dc03586f2f",
+    "sha256": "51ddfcb28f997a550cb9bbbf79e6968f3af7d776ab869f2864f459a1d876d366",
     "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts."
    },
    {
