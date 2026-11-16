@@ -1,6 +1,6 @@
 {
- "as_of": "2026-11-15",
- "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 448c99df2cfd045af793b1a48cefa810c2ea354e.",
+ "as_of": "2026-11-16",
+ "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 38e6bc142c498bdeb7fdce413c32e95c87b472a6.",
  "tier": "labs",
  "graded": false,
  "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts.",
@@ -10,10 +10,10 @@
   "loader_license": "MIT",
   "source_repository": "nflverse/nfldata",
   "source_url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-  "source_commit": "448c99df2cfd045af793b1a48cefa810c2ea354e",
-  "source_committed_at": "2026-11-15T21:35:18Z",
+  "source_commit": "38e6bc142c498bdeb7fdce413c32e95c87b472a6",
+  "source_committed_at": "2026-11-16T01:45:19Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-11-15T21:42:41.158895Z",
+  "captured_at": "2026-11-16T01:55:35.196884Z",
   "manual_result_amendments": [
    {
     "game_id": "2026_09_LAR_WAS",
@@ -107,7 +107,7 @@
   ]
  },
  "integrity": {
-  "snapshot_id": "sha256:c68433f417b4f6f259410612ab95d6d10150c00fae61cf7db2618d4f1b1c5a4c",
+  "snapshot_id": "sha256:c341ed64e164a7dab2b217189bc53a5f2e874450e8dce4443d05719f78d75997",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -2593,9 +2593,9 @@
     "divisional": true,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 34,
+    "home_score": 6
    },
    {
     "game_id": "2026_10_SEA_LV",
@@ -2610,9 +2610,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 21,
+    "home_score": 13
    },
    {
     "game_id": "2026_10_SF_DAL",
@@ -2627,9 +2627,9 @@
     "divisional": false,
     "away_rest_days": 7,
     "home_rest_days": 7,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 46,
+    "home_score": 40
    },
    {
     "game_id": "2026_10_PIT_CIN",
@@ -4742,6 +4742,6 @@
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-11-15",
+ "built": "2026-11-16",
  "canonical_url": "https://datadawgs216.com/data/nfl-schedule.json"
 }
