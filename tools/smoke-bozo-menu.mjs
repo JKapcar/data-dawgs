@@ -28,7 +28,11 @@ for (let i=0; i<12; i++) {
   try {
     const page = await read('https://datadawgs216.com/bozo-menu.html');
     assert.match(page.text, /The Bozo Menu/);
-    assert.match(page.text, /bozo\/menu\.md/);
+    // bozo-menu.html is the static snapshot from tools/bozo-menu-snapshots.mjs: it links the
+    // publisher feed and the plain-text copy, not the Worker's /bozo/menu.md.
+    assert.match(page.text, /id="snapshotNotice"/);
+    assert.match(page.text, /toto\.jkapcar4\.workers\.dev\/bozo\/menu\.json\?week=/);
+    assert.match(page.text, /href="\/bozo-menu\.txt"/);
     const module = await read('https://datadawgs216.com/bozo-menu.mjs');
     assert.match(module.text, /export function renderPublicMenu/);
     ready = true; break;
