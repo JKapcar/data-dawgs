@@ -7,6 +7,8 @@ on:
       - 'bozo-menu.html'
       - 'bozo-menu.mjs'
       - 'tools/smoke-bozo-menu.mjs'
+      - 'tools/bozo-menu-smoke-contract.mjs'
+      - 'tests/bozo-menu-smoke-contract.test.mjs'
       - '.github/workflows/bozo-menu-smoke.yml'
 permissions:
   contents: read
@@ -18,4 +20,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: {node-version: '22'}
+      - run: node --test tests/bozo-menu-smoke-contract.test.mjs
       - run: node tools/smoke-bozo-menu.mjs

@@ -164,10 +164,4 @@ jobs:
 
       # nfelo-refresh.yml owns the single daily forecast refresh.
 
-      - name: Check pipeline health after bot dispatch
-        if: ${{ always() && github.actor == 'github-actions[bot]' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-          WATCH_FAILURE: >-
-            ${{ job.status != 'success' && format('{0}: {1}. {2}/{3}/actions/runs/{4}', github.workflow, job.status, github.server_url, github.repository, github.run_id) || '' }}
-        run: gh workflow run survivor-pipeline-watch.yml --ref main --raw-field "failure=$WATCH_FAILURE"
+      # Site pipeline health scans all producer results twice daily.

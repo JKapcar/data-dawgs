@@ -53,8 +53,11 @@ const rows = new Set(WATCHED.map(r => r.file));
 assert.deepEqual([...required].sort(), [...rows].sort(), 'every unattended workflow has exactly one row');
 assert.equal(rows.size, WATCHED.length, 'no workflow is listed twice');
 for (const r of WATCHED) assert.equal(r.name, nameOf(r.file), `${r.file}: row name is the workflow's own name: field`);
-const triggered = [...text[WATCHER].matchAll(/^\s+- "([^"]+)"\s*$/gm)].map(m => m[1]);
-assert.deepEqual([...triggered].sort(), WATCHED.map(r => r.name).sort(), 'workflow_run names every row, exactly');
+assert.equal(nameOf(WATCHER), 'Site pipeline health');
+assert.deepEqual(cronsOf(WATCHER), ['35 12,23 * * *'], 'exactly two scheduled scans daily');
+assert.doesNotMatch(text[WATCHER], /^\s{2}workflow_run:/m, 'producer completions do not trigger scans');
+assert.match(text[WATCHER], /^\s{2}workflow_dispatch:/m, 'manual dispatch remains available');
+for (const f of files) assert.doesNotMatch(text[f], /gh workflow run survivor-pipeline-watch\.yml/, `${f}: no automatic dispatch bypasses twice-daily policy`);
 for (const f of production) assert.match(text[f], /^\s{2}push:/m, `${f} runs on push`);
 
 // Thresholds come from each workflow's own cron: the longest gap between fires (simulated over
@@ -251,6 +254,8 @@ try {
     assert.equal(h.calls.created.length, 0, 'no second issue');
     assert.equal(h.calls.updates[0].issue_number, 42); assert.equal(h.calls.updates[0].state, undefined, 'edited in place, still open');
     assert.equal(h.calls.comments.length, 0, 'the same problem with a new run link is not news');
+    assert.equal(h.calls.failed.length, 0, 'unchanged incident does not send another failed-run alert');
+    assert.ok(h.calls.lines.some(l => l.includes('DEGRADED')), 'unchanged health remains explicit');
     body = h.calls.updates[0].body;
 
     // Flap: nfelo recovers for one run, then fails again, all inside the hold-down. No comments.

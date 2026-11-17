@@ -6,9 +6,9 @@ const H = 36e5;
 /* ⚠️ THE TABLE IS THE COVERAGE. One row per workflow that runs unattended against main: every
    schedule:, every GH_PACER_DAILY entry in dawg-bot-worker.js, everything chained by
    workflow_run or `gh workflow run`, and the push-triggered production checks. `name` is the
-   workflow's own name: field, copied exactly — survivor-pipeline-watch.yml's workflow_run
-   trigger matches names, not filenames. work/test-survivor-pipeline.mjs derives the list from
-   the repo and fails on a missing row, a misspelt name, or a row the trigger does not name.
+   workflow's own name: field, copied exactly. The twice-daily full scan covers every row;
+   producer completions deliberately do not trigger scans. work/test-survivor-pipeline.mjs
+   derives coverage from the repo and checks the bounded schedule and dispatch policy.
 
    max_age_hours = the longest gap between the workflow's own cron fires + 9 hours, because
    GitHub lands these schedules 5-7 hours late (2026-10-05..09: nfelo 14:45 → 19:43-21:37,
@@ -40,8 +40,7 @@ const FAILED = new Set(['failure', 'timed_out', 'startup_failure']);
 // cancelled, skipped and neutral runs say nothing about whether the job works; look past them.
 const DECISIVE = new Set(['success', ...FAILED]);
 const FRESH_EVENTS = new Set(['schedule', 'workflow_dispatch', 'workflow_run', 'push']);
-/* ⚠️ HOLD-DOWN. A problem that clears stays listed this long. The watch now wakes on every
-   watched workflow — fourth-down alone can fire every 15 minutes on game days — so a check
+/* ⚠️ HOLD-DOWN. A problem that clears stays listed this long. Manual checks can run between the twice-daily scans, so a check
    that flaps (one failed run between two good ones, a live fetch that blips) would otherwise
    swing the problem set, and with it the notifying comment, back and forth. Problems still
    appear on the first sighting; only their exit waits. */
@@ -280,18 +279,24 @@ module.exports = async ({ github, context, core }) => {
     `and closes itself when every check passes. A problem that clears stays listed for ${HOLD_MS / 6e4} minutes, ` +
     `so a check that flaps does not swing the list back and forth.\n\n<!-- fingerprint: ${fingerprint} -->\n<!-- watch-state: ${writeState(state)} -->`;
   let number;
+  const priorFingerprint = (String(rolling?.body || '').match(/<!-- fingerprint: ([0-9a-f]+) -->/) || [])[1];
+  const changed = priorFingerprint !== fingerprint;
   if (rolling) {
     number = rolling.number;
-    const prior = (String(rolling.body || '').match(/<!-- fingerprint: ([0-9a-f]+) -->/) || [])[1];
     await github.rest.issues.update({ ...repo, issue_number: number, body });
-    if (prior !== fingerprint)
+    if (changed)
       await github.rest.issues.createComment({ ...repo, issue_number: number, body: `Problems changed at ${stamp}:\n\n${list}\n\nWatch run: ${runUrl}` });
   } else {
     number = (await github.rest.issues.create({ ...repo, title: TITLE, body })).data.number;
   }
   for (const old of legacy)
     await close(old, `Superseded by #${number}, which is kept current and closes itself when every check passes.`);
-  if (problems.length) core.setFailed(problems.map(p => p.text).join('\n'));
+  // Success means this scan completed, not that the site is healthy. Keep the issue and
+  // summary explicitly degraded; fail only on a new/changed incident to avoid repeat emails.
+  if (core.summary) await core.summary.addHeading(problems.length ? 'Site health: DEGRADED' : 'Site health: recovering')
+    .addRaw(`Open status: ${context.serverUrl}/${repo.owner}/${repo.repo}/issues/${number}\n\n${list}`).write();
+  if (problems.length && changed) core.setFailed(problems.map(p => p.text).join('\n'));
+  else if (problems.length) core.info(`Site health remains DEGRADED: ${problems.length} unchanged problem(s); status issue #${number} updated, repeat alert suppressed.`);
   else core.info(`Every check passed; ${keys.length} recently cleared problem(s) stay listed until they have been clear for ${HOLD_MS / 6e4} minutes.`);
 };
 module.exports.WATCHED = WATCHED;

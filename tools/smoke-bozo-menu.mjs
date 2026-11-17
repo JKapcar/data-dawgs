@@ -1,5 +1,6 @@
 // Anonymous, read-only production verification. No credentials or candidate writes.
 import assert from 'node:assert/strict';
+import { validateStaticMenu, validateMenuText } from './bozo-menu-smoke-contract.mjs';
 const host = 'https://toto.jkapcar4.workers.dev';
 async function read(url) {
   const r = await fetch(url, {signal: AbortSignal.timeout(20000), cache: 'no-store'});
@@ -15,7 +16,8 @@ assert.equal(r.headers.get('access-control-allow-origin'), '*');
 assert.match(r.headers.get('cache-control'), /no-store/);
 for (const path of ['/bozo/menu', '/bozo/menu.md']) {
   const response = await read(host + path);
-  assert.match(response.text, /Bozo Menu/);
+  if (path.endsWith('.md')) validateMenuText(response.text);
+  else assert.match(response.text, /Bozo Menu/);
   console.log(`PASS ${path}: anonymous 200`);
 }
 console.log(`PASS public JSON: ${menu.status}, ${menu.candidates.length} candidates, ${menu.published_weeks.length} weeks`);
@@ -27,10 +29,9 @@ let ready = false;
 for (let i=0; i<12; i++) {
   try {
     const page = await read('https://datadawgs216.com/bozo-menu.html');
-    assert.match(page.text, /The Bozo Menu/);
-    assert.match(page.text, /bozo\/menu\.md/);
-    const module = await read('https://datadawgs216.com/bozo-menu.mjs');
-    assert.match(module.text, /export function renderPublicMenu/);
+    const plain = await read('https://datadawgs216.com/bozo-menu.txt');
+    const copiedJson = await read('https://datadawgs216.com/bozo-menu.json');
+    validateStaticMenu(page.text, plain.text, JSON.parse(copiedJson.text));
     ready = true; break;
   } catch(e) {
     if (i===11) throw e;
@@ -38,4 +39,4 @@ for (let i=0; i<12; i++) {
   }
 }
 assert.ok(ready);
-console.log('PASS published page and renderer module');
+console.log('PASS published static HTML, text and JSON');
