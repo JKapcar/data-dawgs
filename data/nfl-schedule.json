@@ -1,6 +1,6 @@
 {
- "as_of": "2026-11-16",
- "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit 980dc89eb400e698f94e3a23ee40ba1fc5d0703d.",
+ "as_of": "2026-11-17",
+ "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit ff78d3d363848b0702b172828370605d710fe9a1.",
  "tier": "labs",
  "graded": false,
  "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts.",
@@ -10,10 +10,10 @@
   "loader_license": "MIT",
   "source_repository": "nflverse/nfldata",
   "source_url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-  "source_commit": "980dc89eb400e698f94e3a23ee40ba1fc5d0703d",
-  "source_committed_at": "2026-11-16T06:05:20Z",
+  "source_commit": "ff78d3d363848b0702b172828370605d710fe9a1",
+  "source_committed_at": "2026-11-17T05:00:25Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-11-16T06:15:09.523112Z",
+  "captured_at": "2026-11-17T05:03:35.561649Z",
   "manual_result_amendments": [
    {
     "game_id": "2026_09_LAR_WAS",
@@ -107,7 +107,7 @@
   ]
  },
  "integrity": {
-  "snapshot_id": "sha256:ce00d0ec90abb22a938abb450005015e7d41332100b0e7c1145f3579f4d8e149",
+  "snapshot_id": "sha256:9cf99a6306263814478c436b8522a95f6176720a1363ed6a84712f5e5d7ca8eb",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -2661,9 +2661,9 @@
     "divisional": false,
     "away_rest_days": 8,
     "home_rest_days": 11,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
+    "status": "final",
+    "away_score": 23,
+    "home_score": 20
    },
    {
     "game_id": "2026_11_IND_HOU",
@@ -4742,6 +4742,6 @@
   ]
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-11-16",
+ "built": "2026-11-17",
  "canonical_url": "https://datadawgs216.com/data/nfl-schedule.json"
 }
