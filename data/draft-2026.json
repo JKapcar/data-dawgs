@@ -7180,7 +7180,7 @@
     "par_delta": 0.98,
     "internal_games": 2,
     "sd_sim": 4.71,
-    "sd_model": 2.394,
+    "sd_model": 2.397,
     "picks_remaining": 0
    },
    "Rob": {
@@ -7198,7 +7198,7 @@
     "par_delta": 1.63,
     "internal_games": 3,
     "sd_sim": 4.55,
-    "sd_model": 2.446,
+    "sd_model": 2.343,
     "picks_remaining": 0
    },
    "Kevin": {
@@ -7216,7 +7216,7 @@
     "par_delta": -0.63,
     "internal_games": 4,
     "sd_sim": 4.62,
-    "sd_model": 2.185,
+    "sd_model": 2.186,
     "picks_remaining": 0
    },
    "Chris": {
@@ -7234,7 +7234,7 @@
     "par_delta": -1.86,
     "internal_games": 2,
     "sd_sim": 4.58,
-    "sd_model": 2.408,
+    "sd_model": 2.404,
     "picks_remaining": 0
    },
    "Tyler": {
@@ -7252,7 +7252,7 @@
     "par_delta": 1.59,
     "internal_games": 1,
     "sd_sim": 4.7,
-    "sd_model": 2.533,
+    "sd_model": 2.526,
     "picks_remaining": 0
    },
    "Kap": {
@@ -7270,7 +7270,7 @@
     "par_delta": 2.78,
     "internal_games": 3,
     "sd_sim": 4.76,
-    "sd_model": 2.287,
+    "sd_model": 2.281,
     "picks_remaining": 0
    },
    "Jared": {
@@ -7288,7 +7288,7 @@
     "par_delta": -0.33,
     "internal_games": 3,
     "sd_sim": 4.46,
-    "sd_model": 2.24,
+    "sd_model": 2.237,
     "picks_remaining": 0
    },
    "Alan": {
@@ -7306,7 +7306,7 @@
     "par_delta": -4.15,
     "internal_games": 2,
     "sd_sim": 5.08,
-    "sd_model": 2.278,
+    "sd_model": 2.28,
     "picks_remaining": 0
    }
   },
@@ -8569,7 +8569,7 @@
    }
   },
   "diagnostics": {
-   "checked_at_as_of": "2026-11-16",
+   "checked_at_as_of": "2026-11-17",
    "hard_failures": [],
    "checks": [
     {
@@ -8705,7 +8705,7 @@
      "label": "Two roster standard deviations, and they disagree",
      "ok": true,
      "detail": "The upstream simulation and the quadrature-plus-head-to-head calculation sit within 2.80 wins of each other (worst: Alan). They diverge most for rosters with internal games, and the simulation is the smaller of the two — it also draws correlated team strength, which quadrature cannot see. The page shows the simulated figure wherever it exists and says when it is falling back.",
-     "value": 2.802,
+     "value": 2.8,
      "severity": "info"
     }
    ]
