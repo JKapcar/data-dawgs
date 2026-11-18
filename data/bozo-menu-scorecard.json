@@ -1,5 +1,5 @@
 {
- "as_of": "2026-11-17",
+ "as_of": "2026-11-18",
  "source": "Data Dawgs public Bozo Menu (Worker /bozo/menu.json) graded against Worker /scores finals and DraftKings near-closes (SportsGameOdds).",
  "tier": "labs",
  "graded": true,
@@ -21,14 +21,14 @@
    "close": "clv_points and close MAE are measured against the DraftKings near-close"
   },
   "menu": {
-   "n_graded": 185,
-   "wins": 107,
-   "losses": 78,
+   "n_graded": 188,
+   "wins": 108,
+   "losses": 80,
    "pushes": 2,
-   "hit_rate": 0.5784,
+   "hit_rate": 0.5745,
    "hit_wilson90": [
-    0.518,
-    0.6365
+    0.5145,
+    0.6323
    ],
    "clv_points": {
     "n": 45,
@@ -164,14 +164,14 @@
   ],
   "edge_buckets": {
    "none": {
-    "n_graded": 123,
-    "wins": 70,
-    "losses": 53,
+    "n_graded": 126,
+    "wins": 71,
+    "losses": 55,
     "pushes": 1,
-    "hit_rate": 0.5691,
+    "hit_rate": 0.5635,
     "hit_wilson90": [
-     0.495,
-     0.6403
+     0.4902,
+     0.6341
     ],
     "clv_points": {
      "n": 0,
@@ -306,6 +306,6 @@
   }
  },
  "tier_meaning": "Pup — live and useful, not yet validated. It may compute real answers and still have open questions about calibration, assumptions, data quality or edge. Everything starts here.",
- "built": "2026-11-17T16:04:26.384Z",
+ "built": "2026-11-18T15:42:59.415Z",
  "canonical_url": "https://datadawgs216.com/data/bozo-menu-scorecard.json"
 }
