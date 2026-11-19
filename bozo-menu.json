@@ -1,9 +1,9 @@
 {
-  "title": "Nov 18 expanded research · 936 PFF rows reviewed · 64 SP+ comparisons private · 0 cleared",
+  "title": "Nov 19 research update · 222 PFF game rows screened · 62 SP+ gaps reviewed · 0 cleared",
   "week": "2026-11-16",
-  "revision": 3,
-  "published_at": "2026-11-18T16:05:45.699Z",
-  "retrieved_at": "2026-11-19T13:09:12.297Z",
+  "revision": 4,
+  "published_at": "2026-11-19T15:42:00.640Z",
+  "retrieved_at": "2026-11-19T21:36:10.230Z",
   "status": "published",
   "scope": "Public Data Dawgs research. Saved quotes, not guaranteed current offers. No contest picks submitted.",
   "candidates": [
@@ -50,8 +50,8 @@
       "id": "cfb-202611-umass-spread",
       "kickoff": "2026-11-18T19:00:00-05:00",
       "market": "spread",
-      "reason": "SP+ comparison favors UMass while the PFF direction favors Akron. Treat disagreement as a reason to investigate assumptions, not combine model edges. The current comparison spread differs from the older saved line. Exact executable price, starting QB, injuries and weather remain unverified. No probability or EV assigned.",
-      "screened_at": "2026-11-18T16:05:07.047Z",
+      "reason": "Retired Nov 19: event has started. Historical research only, not a negative-EV assessment. Prior note: SP+ comparison favors UMass while the PFF direction favors Akron. Treat disagreement as a reason to investigate assumptions, not combine model edges. The current comparison spread differs from the older saved line. Exact executable price, starting QB, injuries and weather remain unverified. No probability or EV assigned.",
+      "screened_at": "2026-11-19T15:40:59.762Z",
       "selection": "UMass spread: conflicting models, not a cleared pick",
       "sources": [
         {
@@ -66,8 +66,8 @@
         }
       ],
       "sport": "CFB",
-      "status": "hold",
-      "quote_state": "Started / archived"
+      "status": "scratch",
+      "quote_state": "Scratched"
     },
     {
       "event": "Eastern Michigan at Western Michigan",
@@ -228,9 +228,9 @@
       "id": "nfl-20261122-dal-ml",
       "kickoff": "2026-11-22T13:00:00-05:00",
       "market": "moneyline",
-      "reason": "Research hold. Favoritism and a high chance of winning are not proof of value. Current qualitative model comparison does not establish positive value at this reference. This is a Pinnacle comparison-feed snapshot, not an executable DraftKings quote. Final injury/QB, weather, league eligibility and available price remain unverified. No estimated edge or stake assigned.",
-      "screened_at": "2026-11-18T15:51:13.786Z",
-      "selection": "Cowboys ML (Pinnacle reference -382, Nov 18 14:00 UTC)",
+      "reason": "Research hold. DK Network public board observed Nov 19, quote-update time not supplied; not an executable sportsbook confirmation. Pinnacle comparison feed timestamp Nov 19 15:00 UTC. High win probability does not establish value. Final QB, injuries, weather, league eligibility and available price remain unverified. Prior reference preserved in source history; no EV or stake assigned.",
+      "screened_at": "2026-11-19T15:40:59.762Z",
+      "selection": "Cowboys ML (DK Network reference -380; Pinnacle reference -386)",
       "sources": [
         {
           "as_of": "2026-11-18T14:00:00Z",
@@ -241,6 +241,16 @@
           "as_of": "2026-11-18T15:51:13.786Z",
           "name": "PFF model screen reviewed Nov 18; original qualitative synthesis only",
           "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-19T15:40:59.762Z",
+          "name": "DraftKings Network public odds board; observed Nov 19, underlying update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
+        },
+        {
+          "as_of": "2026-11-19T15:00:00Z",
+          "name": "Pinnacle via AgentBets, reference snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
         }
       ],
       "sport": "NFL",
@@ -252,9 +262,9 @@
       "id": "nfl-20261122-det-ml",
       "kickoff": "2026-11-22T13:00:00-05:00",
       "market": "moneyline",
-      "reason": "Research hold. Favoritism and a high chance of winning are not proof of value. Current qualitative model comparison does not establish positive value at this reference. This is a Pinnacle comparison-feed snapshot, not an executable DraftKings quote. Final injury/QB, weather, league eligibility and available price remain unverified. No estimated edge or stake assigned.",
-      "screened_at": "2026-11-18T15:51:13.786Z",
-      "selection": "Lions ML (Pinnacle reference -313, Nov 18 14:00 UTC)",
+      "reason": "Research hold. DK Network public board observed Nov 19, quote-update time not supplied; not an executable sportsbook confirmation. Pinnacle comparison feed timestamp Nov 19 15:00 UTC. High win probability does not establish value. Final QB, injuries, weather, league eligibility and available price remain unverified. Prior reference preserved in source history; no EV or stake assigned.",
+      "screened_at": "2026-11-19T15:40:59.762Z",
+      "selection": "Lions ML (DK Network reference -340; Pinnacle reference -299)",
       "sources": [
         {
           "as_of": "2026-11-18T14:00:00Z",
@@ -265,6 +275,16 @@
           "as_of": "2026-11-18T15:51:13.786Z",
           "name": "PFF model screen reviewed Nov 18; original qualitative synthesis only",
           "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-19T15:40:59.762Z",
+          "name": "DraftKings Network public odds board; observed Nov 19, underlying update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
+        },
+        {
+          "as_of": "2026-11-19T15:00:00Z",
+          "name": "Pinnacle via AgentBets, reference snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
         }
       ],
       "sport": "NFL",
@@ -276,9 +296,9 @@
       "id": "nfl-20261122-jax-ml",
       "kickoff": "2026-11-22T16:25:00-05:00",
       "market": "moneyline",
-      "reason": "Research hold. Favoritism and a high chance of winning are not proof of value. Current qualitative model comparison does not establish positive value at this reference. This is a Pinnacle comparison-feed snapshot, not an executable DraftKings quote. Final injury/QB, weather, league eligibility and available price remain unverified. No estimated edge or stake assigned.",
-      "screened_at": "2026-11-18T15:51:13.786Z",
-      "selection": "Jaguars ML (Pinnacle reference -264, Nov 18 14:00 UTC)",
+      "reason": "Research hold. DK Network public board observed Nov 19, quote-update time not supplied; not an executable sportsbook confirmation. Pinnacle comparison feed timestamp Nov 19 15:00 UTC. High win probability does not establish value. Final QB, injuries, weather, league eligibility and available price remain unverified. Prior reference preserved in source history; no EV or stake assigned.",
+      "screened_at": "2026-11-19T15:40:59.762Z",
+      "selection": "Jaguars ML (DK Network reference -265; Pinnacle reference -269)",
       "sources": [
         {
           "as_of": "2026-11-18T14:00:00Z",
@@ -289,6 +309,16 @@
           "as_of": "2026-11-18T15:51:13.786Z",
           "name": "PFF model screen reviewed Nov 18; original qualitative synthesis only",
           "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-19T15:40:59.762Z",
+          "name": "DraftKings Network public odds board; observed Nov 19, underlying update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
+        },
+        {
+          "as_of": "2026-11-19T15:00:00Z",
+          "name": "Pinnacle via AgentBets, reference snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
         }
       ],
       "sport": "NFL",
@@ -300,8 +330,8 @@
       "id": "nfl-20261122-ten-dal-alt-under",
       "kickoff": "2026-11-22T13:00:00-05:00",
       "market": "total",
-      "reason": "Conditional safety/value research target, NOT a verified available offer or cleared bet. The main-total research signal favors under, but its edge cannot simply transfer to an alternate. Buying points raises hit probability while the extra price can erase value. A separately observed Caliente ladder listed under 63.5 at -295, but that indexed comparison is not current executable DK pricing or proof of availability. Check exact book price, final injuries/QB, weather and league eligibility. Correlated with other TEN-DAL positions. ETR premium corroboration and the supplied comparison sheet remain unavailable. No calibrated alternate probability, estimated edge or stake assigned. Coverage audit Nov18: reviewed 39 NFL and189 CFB game-market rows plus708 unique player-prop rows in PFF. Counts are source coverage, not recommendations. Other PFF tools/alternate ladders are not certified complete. SP+ scan:64 nonzero comparisons saved privately,2 missing quotes,1 zero gap,3 started. Primary spreadsheet cells and ETR premium remain unverified. Full PFF private import is still pending; paid tables are not reproduced here.",
-      "screened_at": "2026-11-18T15:51:13.786Z",
+      "reason": "Conditional research target, NOT a verified alternate offer. Nov 19 main totals disagree: DK Network under 54.5 +100 and Pinnacle reference under 55.5 -117; these are different lines, not direct price arbitrage. PFF still gives an under direction, but its main-line edge cannot transfer to an alternate. No verified current alternate ladder or calibrated tail probability: keep on hold. Titans official Wednesday report: Tate limited, Spears DNP; Dallas Ferguson and Booker DNP. Thursday/Friday status still pending, so offense and defense uncertainties cut both ways. ETR subscriber projections now accessible, timestamp Nov 18 7:59PM EST; DFS fantasy points do not alone imply prop or game-total probabilities. Coverage Nov 19: authenticated PFF full main game boards screened: 39 NFL and 183 NCAA rows. Player props and remaining PFF tools not yet fully refreshed; prior Nov 18 708-prop inventory is historical, not fresh. SP+ comparison audited 70 rows: 65 upcoming, 62 nonzero point gaps, 2 zero gaps, 1 missing quote, 5 started. Point gaps are not EV. Full private import remains incomplete. ETR main-slate subscriber table available; supplied comparison sheet could not be read by web tool. No current executable alternate ladder, complete injury/QB/weather clearance or robust positive-EV validation.",
+      "screened_at": "2026-11-19T15:40:59.762Z",
       "selection": "Under 63.5: investigate only at -300 or better",
       "sources": [
         {
@@ -313,6 +343,21 @@
           "as_of": "2026-11-18T15:51:13.786Z",
           "name": "Caliente alternate ladder, indexed prior-day comparison only",
           "url": "https://sports.caliente.mx/es_MX/NFL/2026-11-22/Tennessee-Titans-vs-Dallas-Cowboys?betbuilder_toggle=Y"
+        },
+        {
+          "as_of": "2026-11-19T15:40:59.762Z",
+          "name": "DraftKings Network public board observed Nov 19; underlying quote time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
+        },
+        {
+          "as_of": "2026-11-18T16:30:00Z",
+          "name": "Official Wednesday injury report, final statuses pending",
+          "url": "https://www.tennesseetitans.com/news/week-11-injury-report-titans-at-cowboys"
+        },
+        {
+          "as_of": "2026-11-19T00:59:00Z",
+          "name": "ETR subscriber projections access verified; no raw projections shared",
+          "url": "https://establishtherun.com/draftkings-projections/"
         }
       ],
       "sport": "NFL",
@@ -348,17 +393,70 @@
       "id": "cfb-202611-tt-msst-review",
       "kickoff": "2026-11-21T18:00:00Z",
       "market": "spread",
-      "reason": "A very large public model-market disagreement makes this a data-quality priority, not a high-confidence bet. Verify model team mapping, roster inputs and current line before considering any alternate. Reference price -110 is outside the -200 to -500 band. No calibrated win probability or EV; injuries/QB and weather unchecked.",
-      "screened_at": "2026-11-18T16:05:07.047Z",
-      "selection": "Tennessee Tech +37.5 reference: large-gap anomaly review",
+      "reason": "Nov 19 comparison now quotes +35.5 rather than +37.5. A very large model-versus-market disagreement is a data-quality check, not a guaranteed edge. Confirm team mapping, roster and model inputs. Secondary-feed line only, not executable DraftKings verification. Standard spread price remains outside Bozo favorite band; no alt price or EV claimed.",
+      "screened_at": "2026-11-19T15:40:59.762Z",
+      "selection": "Tennessee Tech +35.5 reference: large-gap anomaly review",
       "sources": [
         {
           "as_of": "2026-11-18T15:37:00Z",
           "name": "SP+ comparison via Cleatz",
           "url": "https://cleatz.com/cfb-sp-plus-rankings/"
+        },
+        {
+          "as_of": "2026-11-19T15:25:00Z",
+          "name": "Cleatz SP+ comparison reference, refreshed Nov 19",
+          "url": "https://cleatz.com/cfb-sp-plus-rankings/"
         }
       ],
       "sport": "CFB",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "Pittsburgh Steelers at Philadelphia Eagles",
+      "id": "nfl-20261122-pit-ml",
+      "kickoff": "2026-11-22T18:00:00Z",
+      "market": "moneyline",
+      "reason": "In-band price screen only, not a cleared positive-EV recommendation. DK Network reference is not demonstrably cheaper than the Pinnacle comparison; no independent robust edge established. Feed snapshots can differ in time. Verify exact executable price, starting QBs, injury reports, weather and league eligibility. No probability or stake assigned.",
+      "screened_at": "2026-11-19T15:40:59.762Z",
+      "selection": "Steelers ML (DK Network reference -218; Pinnacle -217)",
+      "sources": [
+        {
+          "as_of": "2026-11-19T15:40:59.762Z",
+          "name": "DraftKings Network public board observed Nov 19, underlying update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
+        },
+        {
+          "as_of": "2026-11-19T15:00:00Z",
+          "name": "Pinnacle via AgentBets, reference snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "Cincinnati Bengals at Washington Commanders",
+      "id": "nfl-20261123-cin-ml",
+      "kickoff": "2026-11-24T01:15:00Z",
+      "market": "moneyline",
+      "reason": "In-band price screen only, not a cleared positive-EV recommendation. DK Network reference is not demonstrably cheaper than the Pinnacle comparison; no independent robust edge established. Feed snapshots can differ in time. Verify exact executable price, starting QBs, injury reports, weather and league eligibility. No probability or stake assigned.",
+      "screened_at": "2026-11-19T15:40:59.762Z",
+      "selection": "Bengals ML (DK Network reference -310; Pinnacle -295)",
+      "sources": [
+        {
+          "as_of": "2026-11-19T15:40:59.762Z",
+          "name": "DraftKings Network public board observed Nov 19, underlying update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
+        },
+        {
+          "as_of": "2026-11-19T15:00:00Z",
+          "name": "Pinnacle via AgentBets, reference snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        }
+      ],
+      "sport": "NFL",
       "status": "hold",
       "quote_state": "On hold"
     }
@@ -366,9 +464,9 @@
   "published_weeks": [
     {
       "week": "2026-11-16",
-      "title": "Nov 18 expanded research · 936 PFF rows reviewed · 64 SP+ comparisons private · 0 cleared",
-      "revision": 3,
-      "published_at": "2026-11-18T16:05:45.699Z"
+      "title": "Nov 19 research update · 222 PFF game rows screened · 62 SP+ gaps reviewed · 0 cleared",
+      "revision": 4,
+      "published_at": "2026-11-19T15:42:00.640Z"
     },
     {
       "week": "2026-11-09",
@@ -408,8 +506,8 @@
     }
   ],
   "snapshot": {
-    "checked_at": "2026-11-19T13:09:14.195Z",
+    "checked_at": "2026-11-19T21:36:12.061Z",
     "source": "https://toto.jkapcar4.workers.dev/bozo/menu.json?week=2026-11-16",
-    "notice": "Static copy checked 2026-11-19T13:09:14.195Z. Refresh is attempted hourly; delays or failures can leave this copy behind the publisher. Compare the week, revision and source publication time. These are saved research observations, not live odds or available bets. Holds and scratches are not active recommendations."
+    "notice": "Static copy checked 2026-11-19T21:36:12.061Z. Refresh is attempted hourly; delays or failures can leave this copy behind the publisher. Compare the week, revision and source publication time. These are saved research observations, not live odds or available bets. Holds and scratches are not active recommendations."
   }
 }
