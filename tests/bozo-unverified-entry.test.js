@@ -58,9 +58,10 @@ test('429/network failures accept manual odds; blank price remains actionable an
  assert.match(v(out.p,'Pat',{someone:{...out.p,who:'Someone'}},band,'standard','pat'),/exact selection/);
  assert.match(v(out.p,'Pat',{someone:{...out.p,who:'Someone',side:'A'}},band,'standard','pat'),/other side/);
 });
-test('verification requires manager and both real prices; cannot change the submitted price',async()=>{
+test('two-sided verification rejects a bad opposite price; no path can change the submitted price',async()=>{
  const r=rig();const input={forUid:'pat',week:4,ts:base.ts,price:-150,priceOpp:130};
- for(const value of [null,'',0,'nope']){assert.equal((await r.post({...input,priceOpp:value})).status,400);}
+ // A supplied but unusable opposite price is an error, never a silent attestation.
+ for(const value of [0,'nope',99]){assert.equal((await r.post({...input,priceOpp:value})).status,400);}
  assert.equal((await r.post({...input,price:-160})).status,400);
  r.deny();assert.equal((await r.post(input)).status,403);assert.equal(r.writes(),0);
 });
@@ -120,6 +121,61 @@ test('verification refuses implausible hold and long evidence, while exact real 
  assert.ok(Math.abs(done.body.fairEntry-.6767788294585378)<1e-12);
 });
 
+test('commissioner attestation verifies on the selected-side price alone, two-phase, audited, clock preserved',async()=>{
+ for(const blank of [undefined,null,'','  ']){
+  const r=rig();const proposal=await r.post({forUid:'pat',week:4,ts:base.ts,price:-150,priceOpp:blank,evidence:'Kap checked DK'});
+  assert.equal(proposal.status,200);assert.equal(proposal.body.status,'confirm_required');assert.equal(r.writes(),0);
+  assert.match(proposal.body.echo,/Commissioner attestation/);assert.match(proposal.body.echo,/original entry -150\./);
+  assert.match(proposal.body.echo,/selected-side/);
+  const done=await r.post({forUid:'pat',confirm:proposal.body.confirm_code});
+  assert.equal(done.status,200);assert.equal(done.body.verificationStatus,'verified');assert.equal(done.body.verifiedVia,'commissioner-attest');
+  assert.equal(done.body.priceOpp,null);assert.equal(done.body.fairEntry,null);
+  const s=r.state(),pick=s.picks.pat,row=s.ledger['2026-w4-pat'];
+  assert.equal(pick.ts,base.ts);assert.equal(pick.price,-150);assert.equal(pick.priceSource,'manual');
+  assert.equal(pick.verificationStatus,'verified');assert.equal(pick.clvEligible,true);
+  assert.equal(pick.entryPriceOpp,null);assert.equal(pick.priceOpp,null);assert.equal(pick.fairEntry,null);assert.equal(pick.entryHold,null);
+  assert.equal(pick.entryOppSource,null);
+  assert.equal(pick.entryVerification.verifiedVia,'commissioner-attest');assert.equal(pick.entryVerification.channel,'site');
+  assert.equal(pick.entryVerification.byUid,'kap');assert.equal(pick.entryVerification.byName,'Kap');assert.equal(pick.entryVerification.priceOpp,null);
+  assert.equal(pick.entryVerification.originalSubmittedAt,new Date(base.ts).toISOString());assert.equal(pick.entryVerification.evidence,'Kap checked DK');
+  assert.equal(row.ts,base.ts);assert.equal(row.verificationStatus,'verified');assert.equal(row.clvEligible,true);
+  assert.equal(row.close,-170);assert.equal(row.closeOpp,145);
+  const audit=s.audit[proposal.body.confirm_code],action=s.admin.actions[proposal.body.confirm_code];
+  assert.equal(audit.type,'verify_entry');assert.equal(audit.to.entryVerification.verifiedVia,'commissioner-attest');
+  assert.equal(action.method,'commissioner-attest');assert.equal(action.via,'site');assert.equal(action.byName,'Kap');
+  assert.equal((await r.post({forUid:'pat',confirm:proposal.body.confirm_code})).body.verifiedVia,'commissioner-attest');assert.equal(r.writes(),1);
+ }
+});
+test('attestation defaults to the submitted price, refuses a different one, needs a manager, and never overwrites a two-sided verification',async()=>{
+ let r=rig();const p=await r.post({forUid:'pat'});assert.equal(p.status,200);assert.match(p.body.echo,/original entry -150\./);
+ assert.equal((await r.post({forUid:'pat',price:-160})).status,400);
+ r.deny();assert.equal((await r.post({forUid:'pat',price:-150})).status,403);assert.equal(r.writes(),0);
+ r=rig();const two=await r.post({forUid:'pat',price:-150,priceOpp:130});await r.post({forUid:'pat',confirm:two.body.confirm_code});
+ const again=await r.post({forUid:'pat',price:-150});assert.equal(again.status,409);assert.equal(r.state().picks.pat.entryPriceOpp,130);
+ // Changed pick between phases still refuses the attestation.
+ r=rig();const q=await r.post({forUid:'pat'});r.change(s=>s.picks.pat.ts++);
+ assert.equal((await r.post({forUid:'pat',confirm:q.body.confirm_code})).status,409);assert.equal(r.writes(),0);
+ // A graded week keeps its verdict.
+ r=rig();r.change(s=>{s.status='graded';s.results={pat:{result:'won'}};});const g=await r.post({forUid:'pat'});
+ const gd=await r.post({forUid:'pat',confirm:g.body.confirm_code});assert.match(gd.body.warning,/graded verdict is unchanged/);
+ assert.equal(r.state().results.pat.result,'won');assert.equal(r.state().status,'graded');
+});
+test('attested legs resolve to usable selected-side CLV with no opposite price, and stay unknown without a close',()=>{
+ const clv=require('../bozo-effective-clv.js');
+ const pick={price:-150,ts:base.ts,priceSource:'manual',verificationStatus:'verified',clvEligible:true,entryPriceOpp:null,priceOpp:null,
+  entryOppSource:null,fairEntry:null,entryHold:null,entryVerification:{verifiedVia:'commissioner-attest'}};
+ const imp=x=>x<0?-x/(100-x):100/(100+x);
+ const withClose=clv.resolve(clv.fromPick(pick,{close:-170,closeOpp:145,result:'won'}));
+ assert.equal(withClose.kind,'estimated');assert.ok(Number.isFinite(withClose.point));
+ assert.ok(Math.abs(withClose.point-100*(imp(-170)-imp(-150)))<1e-9);assert.ok(withClose.point>0);
+ const selectedOnly=clv.resolve(clv.fromPick(pick,{close:-170,result:'lost'}));assert.ok(Number.isFinite(selectedOnly.point));
+ for(const v of Object.values(selectedOnly))assert.ok(typeof v!=='number'||Number.isFinite(v));
+ const none=clv.resolve(clv.fromPick(pick,{}));assert.equal(none.point,null);assert.equal(none.kind,'unknown');
+});
+test('attested pick shows a commissioner badge and the site sends a blank opposite price as attestation',()=>{
+ assert.match(page,/verifiedVia === 'commissioner-attest'[\s\S]{0,200}Commissioner verified/);
+ assert.match(page,/Leave opposite odds blank to verify on your word/);
+});
 test('MCP verification rejects shared callers and forwards personal identity to the same core',async()=>{
  const m=fs.readFileSync('work/mcp-block.js','utf8');let calls=0;
  const ctx={SITE:'https://example.test',toolErr:error=>({error}),toolText:body=>body,
@@ -129,6 +185,9 @@ test('MCP verification rejects shared callers and forwards personal identity to 
  assert.ok((await ctx.tool.run({forUid:'pat'},{},{kind:'shared'})).error);assert.equal(calls,0);
  const p=await ctx.tool.run({forUid:'pat',price:-150,priceOpp:130},{},{kind:'user',name:'Delegate',uid:'delegate'});
  assert.equal(p.status,'confirm_required');assert.equal(calls,1);
+ const a=await ctx.tool.run({forUid:'pat',price:-150},{},{kind:'user',name:'Delegate',uid:'delegate'});
+ assert.equal(a.status,'confirm_required');assert.equal(calls,2);
+ assert.equal(ctx.tool.inputSchema.anyOf,undefined);assert.match(ctx.tool.description,/commissioner-attest/);
 });
 
 const liberty={espnEventId:'401870766',canonicalKey:'cfb|libertyflames~samhoustonbearkats|2026-10-08',startsAt:'2026-10-08T23:00:00Z'};

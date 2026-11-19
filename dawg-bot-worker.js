@@ -12478,6 +12478,11 @@ async function bozoOwnerConfirmationCore(env,auth,body,method='POST') {
 }
 
 // Verify a manually entered ORIGINAL quote, without changing the pick or its clock.
+// Two paths. Two-sided: the original price plus the opposite price, de-vigged and
+// hold-checked. Commissioner attestation: the manager's word on the selected-side price
+// alone (priceOpp omitted or blank). That leg is verified and CLV-eligible; with no
+// opposite price its CLV resolves selected-side (approximate, includes the margin), and
+// the receipt records verifiedVia "commissioner-attest" so the audit trail says which.
 // Confirmation binds the manager, week and exact pick. A conditional league write
 // makes the pick, existing ledger receipt and audit record one atomic change.
 async function bozoVerifyEntry(request, env, cors) {
@@ -12522,34 +12527,56 @@ async function bozoVerifyEntryCore(env, auth, body, via = "site") {
       if ((body.week !== undefined && Number(body.week) !== Number(state.week || 1)) ||
           (body.ts !== undefined && Number(body.ts) !== Number(pick.ts)))
         return fail("The pick or week changed. Refresh before verifying.", 409);
-      const price = bzAmerican(body.price), opposite = bzAmerican(body.priceOpp);
-      const facts = bozoDevigPair(price, opposite);
-      if (price === null || opposite === null || !facts || facts.hold < -1e-9 || facts.hold > .15 + 1e-9)
+      const blank = v => v === undefined || v === null || (typeof v === "string" && v.trim() === "");
+      // No opposite price at all means commissioner attestation. A supplied but invalid
+      // opposite price is still an error: a typo must never silently become an attestation.
+      const attest = blank(body.priceOpp);
+      const price = attest && blank(body.price) ? bzAmerican(pick.price) : bzAmerican(body.price);
+      const opposite = attest ? null : bzAmerican(body.priceOpp);
+      const facts = attest ? null : bozoDevigPair(price, opposite);
+      if (attest) {
+        if (price === null) return fail("Enter the original DraftKings entry price with its sign.", 400);
+        // Attesting over a two-sided verification would throw away its opposite price.
+        if (pick.verificationStatus === "verified") return fail("This entry is already verified.", 409);
+      } else if (price === null || opposite === null || !facts || facts.hold < -1e-9 || facts.hold > .15 + 1e-9)
         return fail("Enter both original DraftKings entry prices with signs; the two-sided hold must be between 0% and 15%.", 400);
       if (price !== Number(pick.price)) return fail("The entry price differs from the submitted pick. Correct the pick explicitly before verifying it.", 400);
       if (body.evidence !== undefined && (typeof body.evidence !== "string" || body.evidence.length > 200))
         return fail("Evidence must be text of at most 200 characters.", 400);
       const identityFields = await bozoMissingIdentityFields(env, pick, state.season || SEASON);
       const confirmation = crypto.randomUUID(), evidence = body.evidence || null;
-      const echo = `${pick.who || key}: ${pick.label} (${pick.game}), original entry ${price} / ${opposite}. Confirm these were the DraftKings prices for this exact line and period at submission, not today's prices. The submission time will stay unchanged.${identityFields.canonicalKey ? " Schedule identity: " + identityFields.canonicalKey + ", kickoff " + identityFields.startsAt + "." : ""}`;
-      await env.RL.put(kvKey, JSON.stringify({ code: confirmation, week: state.week || 1, before: pick, opposite, evidence, via, echo, identityFields }), { expirationTtl: 300 });
+      const idNote = identityFields.canonicalKey ? " Schedule identity: " + identityFields.canonicalKey + ", kickoff " + identityFields.startsAt + "." : "";
+      const echo = attest
+        ? `${pick.who || key}: ${pick.label} (${pick.game}), original entry ${price}. Commissioner attestation: ${auth.name} confirms this was the DraftKings price for this exact line and period at submission. No opposite price is recorded, so this leg's CLV is selected-side (approximate, includes the book's margin). The submission time will stay unchanged.${idNote}`
+        : `${pick.who || key}: ${pick.label} (${pick.game}), original entry ${price} / ${opposite}. Confirm these were the DraftKings prices for this exact line and period at submission, not today's prices. The submission time will stay unchanged.${idNote}`;
+      await env.RL.put(kvKey, JSON.stringify({ code: confirmation, week: state.week || 1, before: pick, opposite, attest, evidence, via, echo, identityFields }), { expirationTtl: 300 });
       return result({ status: "confirm_required", confirm_code: confirmation, echo, league: lid, forUid: key });
     }
     const pending = JSON.parse(await env.RL.get(kvKey) || "null");
     if (!pending || pending.code !== code) return fail("Verification expired or confirmation does not match.", 409);
     if (pending.week !== (state.week || 1) || JSON.stringify(pending.before) !== JSON.stringify(pick))
       return fail("The pick or week changed. Review it again.", 409);
-    const at = new Date().toISOString(), facts = bozoDevigPair(pick.price, pending.opposite);
+    const attest = pending.attest === true;
+    const at = new Date().toISOString(), facts = attest ? null : bozoDevigPair(pick.price, pending.opposite);
+    if (!attest && !facts) return fail("Verification expired or confirmation does not match.", 409);
     const verification = { byUid: auth.uid || null, byName: auth.name, at, confirmationId: code,
-      verifiedVia: pending.via, evidence: pending.evidence,
-      originalSubmittedAt: new Date(pick.ts).toISOString(), price: pick.price, priceOpp: pending.opposite };
-    const fields = { ...(pending.identityFields || {}), priceOpp: pending.opposite, entryPriceOpp: pending.opposite,
-      priceSource: "manual", verificationStatus: "verified", clvEligible: true, entryOppSource: "manual-verified",
-      entryProvider: "manual", entryVerification: verification, fairEntry: facts.fair, entryHold: facts.hold };
+      verifiedVia: attest ? "commissioner-attest" : pending.via, ...(attest ? { channel: pending.via } : {}),
+      evidence: pending.evidence,
+      originalSubmittedAt: new Date(pick.ts).toISOString(), price: pick.price, priceOpp: attest ? null : pending.opposite };
+    // Attested legs carry no opposite price and no de-vigged fair entry. Nothing downstream
+    // may divide by them: CLV falls to the selected-side resolver, Worst Beat reads them as
+    // entry-unpriced exactly as it did while the leg was unverified.
+    const fields = attest
+      ? { ...(pending.identityFields || {}), priceOpp: null, entryPriceOpp: null,
+          priceSource: "manual", verificationStatus: "verified", clvEligible: true, entryOppSource: null,
+          entryProvider: "manual", entryVerification: verification, fairEntry: null, entryHold: null }
+      : { ...(pending.identityFields || {}), priceOpp: pending.opposite, entryPriceOpp: pending.opposite,
+          priceSource: "manual", verificationStatus: "verified", clvEligible: true, entryOppSource: "manual-verified",
+          entryProvider: "manual", entryVerification: verification, fairEntry: facts.fair, entryHold: facts.hold };
     const next = { ...pick, ...fields };
-    const out = { ok: true, verificationStatus: "verified", league: lid, forUid: key, ts: next.ts,
-      price: next.price, priceOpp: next.entryPriceOpp, fairEntry: facts.fair,
-      warning: state.status === "graded" ? "Prices verified; an already graded verdict is unchanged." : null };
+    const out = { ok: true, verificationStatus: "verified", verifiedVia: verification.verifiedVia, league: lid, forUid: key, ts: next.ts,
+      price: next.price, priceOpp: next.entryPriceOpp, fairEntry: facts ? facts.fair : null,
+      warning: state.status === "graded" ? (attest ? "Entry verified; an already graded verdict is unchanged." : "Prices verified; an already graded verdict is unchanged.") : null };
     state.picks[key] = next;
     const rowKey = ledgerKey(state.season || SEASON, state.week || 1, key);
     if (state.ledger?.[rowKey]) Object.assign(state.ledger[rowKey], fields);
@@ -12559,7 +12586,8 @@ async function bozoVerifyEntryCore(env, auth, body, via = "site") {
     state.admin = state.admin || {}; state.admin.actions = state.admin.actions || {};
     state.admin.actions[code] = { ts: Date.parse(at), type: "verify_entry", byUid: auth.uid || null,
       byName: auth.name, forUid: key, forName: memberNameAt(state, key), leagueId: lid,
-      week: state.week || 1, via: pending.via, evidence: pending.evidence, before: pick, after: next };
+      week: state.week || 1, via: pending.via, method: attest ? "commissioner-attest" : "two-sided",
+      evidence: pending.evidence, before: pick, after: next };
     if (!etag) throw new Error("Database did not supply a concurrency token.");
     if (!await fbPut(env, LG(lid), state, etag)) {
       const fresh = (await fbGet(env, LG(lid))).data;
@@ -24586,7 +24614,7 @@ const MCP_TOOLS = [
           // The canonical CLV tool owns evidence projection and derived values.
           "Read dd_bozo_clv for canonical effectiveClv values and measured/estimated/override labels. Selected-side entry and close suffice for approximate CLV; do not recalculate from this board or require opposite odds or verification stamps.",
           "A capture failure reason is historical context, not an eligibility gate: later estimates or overrides may supply usable CLV. Check effectiveClv. Do not substitute the entry price for a missing close: that fabricates a zero and drags any average toward it.",
-          "priceSource=captured means both entry sides came from DraftKings through the odds feeds. Failed captures can be submitted with typed odds, marked verificationStatus=unverified. A manager can verify the original entry pair without changing the submission time; priceSource=manual then permits CLV with a real closing pair. Unverified prices remain labeled estimated when closing evidence exists; use effectiveClv, not the verification flag, for usability. Existing explicit manual CLV overrides remain supported.",
+          "priceSource=captured means both entry sides came from DraftKings through the odds feeds. Failed captures can be submitted with typed odds, marked verificationStatus=unverified. A manager can verify the original entry pair without changing the submission time; priceSource=manual then permits CLV with a real closing pair. A manager can also verify by commissioner attestation (entryVerification.verifiedVia=commissioner-attest): verified with no opposite price, so its CLV resolves selected-side and stays labeled estimated. Unverified prices remain labeled estimated when closing evidence exists; use effectiveClv, not the verification flag, for usability. Existing explicit manual CLV overrides remain supported.",
           "Every leg goes on a real DraftKings bet slip, so every market — props included — exists and closes. A missing close means the capture could not resolve the typed description onto the right market, and closeUnavailableReason says which of stat, player or number failed. \"Other\" legs are the exception: free text for an arbitrary market, with nothing to match on. Either way it is a matching gap, never evidence about a player.",
           "If two legs share an eventId the ticket is a same-game parlay and the displayed parlay price is INDICATIVE — DraftKings reprices correlated legs, so the product of the leg prices is an upper bound, not the payout.",
         ],
@@ -25161,15 +25189,15 @@ const MCP_TOOLS = [
     catalog: "core",
     readOnlyHint: false,
     destructiveHint: false,
-    description: "Missing canonical identity is also repaired from the schedule and included in the audited confirmation, preserving the submission timestamp. Manager, delegate or site admin: verify an unverified current pick using BOTH original DraftKings prices for its exact line and period at submission. Never substitute current odds. Phase one returns an echo and confirm_code; SHOW the human the echo and obtain their approval before phase two. Preserves the submission clock and any graded verdict. Records an atomic commissioner audit receipt. Requires a personal connector.",
+    description: "Missing canonical identity is also repaired from the schedule and included in the audited confirmation, preserving the submission timestamp. Manager, delegate or site admin: verify an unverified current pick. Two paths. (1) Two-sided: BOTH original DraftKings prices for its exact line and period at submission (price + priceOpp); de-vigged and hold-checked. (2) Commissioner attestation: omit priceOpp and the manager's word verifies the leg on the selected-side price alone (price optional; it defaults to the submitted price and must match it). The leg becomes verified and CLV-eligible, its CLV resolves selected-side (approximate, includes the margin), and the receipt records verifiedVia \"commissioner-attest\". Use attestation only when the manager says they checked the leg. Never substitute current odds. Phase one returns an echo and confirm_code; SHOW the human the echo and obtain their approval before phase two. Preserves the submission clock and any graded verdict. Records an atomic commissioner audit receipt. Requires a personal connector.",
     inputSchema: { type: "object", properties: {
       league: { type: "string", description: "League id, default main" },
       forUid: { type: "string", description: "Member key or unique display name" },
-      price: { type: "number", description: "Original submitted American price, signed" },
-      priceOpp: { type: "number", description: "Original opposite price for the same line and period, signed" },
+      price: { type: "number", description: "Original submitted American price, signed. Required for two-sided; optional for attestation (defaults to the submitted price)" },
+      priceOpp: { type: "number", description: "Original opposite price for the same line and period, signed. Omit for commissioner attestation" },
       evidence: { type: "string", maxLength: 200, description: "Optional source note for the original quote" },
       confirm: { type: "string", description: "Phase two: approved confirm_code; include league and forUid" }
-    }, required: ["forUid"], anyOf: [{required:["confirm"]},{required:["price","priceOpp"]}], additionalProperties: false },
+    }, required: ["forUid"], additionalProperties: false },
     async run(args, env, caller) {
       if (!caller || caller.kind !== "user") return toolErr("Verification needs a personal connector. Sign in at " + SITE + "/connect.html.");
       const out = await bozoVerifyEntryCore(env, caller, args, "mcp");
@@ -25200,7 +25228,7 @@ const MCP_TOOLS = [
         .map(({ ts, r }) => ({
           at: ts ? new Date(ts).toISOString() : null, type: r.type,
           by: r.byName || null, for: r.forName || null, week: r.week || 1,
-          via: r.via || "site", evidence: r.evidence || null, before: brief(r.before), after: brief(r.after),
+          via: r.via || "site", method: r.method || null, evidence: r.evidence || null, before: brief(r.before), after: brief(r.after),
         }));
       return toolText({ league: lid, week, actions,
         note: actions.length ? undefined : "No commissioner actions this week.",

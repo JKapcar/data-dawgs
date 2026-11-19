@@ -2755,7 +2755,7 @@ const MCP_TOOLS = [
           // The canonical CLV tool owns evidence projection and derived values.
           "Read dd_bozo_clv for canonical effectiveClv values and measured/estimated/override labels. Selected-side entry and close suffice for approximate CLV; do not recalculate from this board or require opposite odds or verification stamps.",
           "A capture failure reason is historical context, not an eligibility gate: later estimates or overrides may supply usable CLV. Check effectiveClv. Do not substitute the entry price for a missing close: that fabricates a zero and drags any average toward it.",
-          "priceSource=captured means both entry sides came from DraftKings through the odds feeds. Failed captures can be submitted with typed odds, marked verificationStatus=unverified. A manager can verify the original entry pair without changing the submission time; priceSource=manual then permits CLV with a real closing pair. Unverified prices remain labeled estimated when closing evidence exists; use effectiveClv, not the verification flag, for usability. Existing explicit manual CLV overrides remain supported.",
+          "priceSource=captured means both entry sides came from DraftKings through the odds feeds. Failed captures can be submitted with typed odds, marked verificationStatus=unverified. A manager can verify the original entry pair without changing the submission time; priceSource=manual then permits CLV with a real closing pair. A manager can also verify by commissioner attestation (entryVerification.verifiedVia=commissioner-attest): verified with no opposite price, so its CLV resolves selected-side and stays labeled estimated. Unverified prices remain labeled estimated when closing evidence exists; use effectiveClv, not the verification flag, for usability. Existing explicit manual CLV overrides remain supported.",
           "Every leg goes on a real DraftKings bet slip, so every market — props included — exists and closes. A missing close means the capture could not resolve the typed description onto the right market, and closeUnavailableReason says which of stat, player or number failed. \"Other\" legs are the exception: free text for an arbitrary market, with nothing to match on. Either way it is a matching gap, never evidence about a player.",
           "If two legs share an eventId the ticket is a same-game parlay and the displayed parlay price is INDICATIVE — DraftKings reprices correlated legs, so the product of the leg prices is an upper bound, not the payout.",
         ],
@@ -3330,15 +3330,15 @@ const MCP_TOOLS = [
     catalog: "core",
     readOnlyHint: false,
     destructiveHint: false,
-    description: "Missing canonical identity is also repaired from the schedule and included in the audited confirmation, preserving the submission timestamp. Manager, delegate or site admin: verify an unverified current pick using BOTH original DraftKings prices for its exact line and period at submission. Never substitute current odds. Phase one returns an echo and confirm_code; SHOW the human the echo and obtain their approval before phase two. Preserves the submission clock and any graded verdict. Records an atomic commissioner audit receipt. Requires a personal connector.",
+    description: "Missing canonical identity is also repaired from the schedule and included in the audited confirmation, preserving the submission timestamp. Manager, delegate or site admin: verify an unverified current pick. Two paths. (1) Two-sided: BOTH original DraftKings prices for its exact line and period at submission (price + priceOpp); de-vigged and hold-checked. (2) Commissioner attestation: omit priceOpp and the manager's word verifies the leg on the selected-side price alone (price optional; it defaults to the submitted price and must match it). The leg becomes verified and CLV-eligible, its CLV resolves selected-side (approximate, includes the margin), and the receipt records verifiedVia \"commissioner-attest\". Use attestation only when the manager says they checked the leg. Never substitute current odds. Phase one returns an echo and confirm_code; SHOW the human the echo and obtain their approval before phase two. Preserves the submission clock and any graded verdict. Records an atomic commissioner audit receipt. Requires a personal connector.",
     inputSchema: { type: "object", properties: {
       league: { type: "string", description: "League id, default main" },
       forUid: { type: "string", description: "Member key or unique display name" },
-      price: { type: "number", description: "Original submitted American price, signed" },
-      priceOpp: { type: "number", description: "Original opposite price for the same line and period, signed" },
+      price: { type: "number", description: "Original submitted American price, signed. Required for two-sided; optional for attestation (defaults to the submitted price)" },
+      priceOpp: { type: "number", description: "Original opposite price for the same line and period, signed. Omit for commissioner attestation" },
       evidence: { type: "string", maxLength: 200, description: "Optional source note for the original quote" },
       confirm: { type: "string", description: "Phase two: approved confirm_code; include league and forUid" }
-    }, required: ["forUid"], anyOf: [{required:["confirm"]},{required:["price","priceOpp"]}], additionalProperties: false },
+    }, required: ["forUid"], additionalProperties: false },
     async run(args, env, caller) {
       if (!caller || caller.kind !== "user") return toolErr("Verification needs a personal connector. Sign in at " + SITE + "/connect.html.");
       const out = await bozoVerifyEntryCore(env, caller, args, "mcp");
@@ -3369,7 +3369,7 @@ const MCP_TOOLS = [
         .map(({ ts, r }) => ({
           at: ts ? new Date(ts).toISOString() : null, type: r.type,
           by: r.byName || null, for: r.forName || null, week: r.week || 1,
-          via: r.via || "site", evidence: r.evidence || null, before: brief(r.before), after: brief(r.after),
+          via: r.via || "site", method: r.method || null, evidence: r.evidence || null, before: brief(r.before), after: brief(r.after),
         }));
       return toolText({ league: lid, week, actions,
         note: actions.length ? undefined : "No commissioner actions this week.",
