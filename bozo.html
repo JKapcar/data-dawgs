@@ -4676,7 +4676,9 @@ const quoteSourceBadge = x => {
   const estimate = clvDisplayEstimate(x) || window.DDEffectiveClv.resolve(window.DDEffectiveClv.fromPick(x,r));
   if(estimate?.kind==='estimated')return '<span class="cst warn" title="Approximate CLV from recorded evidence; original entry verification is unchanged">'+(x.verificationStatus==='unverified'?'Entry unverified · ':'')+'CLV estimated</span>';
   if(x && x.priceSource === 'manual' && x.verificationStatus === 'verified')
-    return '<span class="cst ok" title="Original entry odds confirmed by a league manager; verification is recorded">Manually verified</span>';
+    return x.entryVerification?.verifiedVia === 'commissioner-attest'
+      ? '<span class="cst ok" title="League manager attested the original entry price; no opposite price recorded, so CLV is selected-side">Commissioner verified</span>'
+      : '<span class="cst ok" title="Original entry odds confirmed by a league manager; verification is recorded">Manually verified</span>';
   if(x && x.verificationStatus === 'unverified')
     return '<span class="cst warn" title="Sportsbook quote remains unverified. Owner confirmation is separate and supplies no opposing price.">' + (ownerConfirmationFor(x)?'Quote unverified':'Unverified') + (r && r.clvPts != null ? ' · CLV set by hand' : ownerConfirmationFor(x)?'':' · awaiting review') + '</span>';
   if(r && r.clvPts != null && Number.isFinite(+r.clvPts))
@@ -8821,7 +8823,7 @@ function paintGodResults(){
         <label>Original entry odds <input class="gvep" aria-label="Original entry odds" value="${esc(x.price ?? '')}" readonly style="max-width:110px"></label>
         <label>Opposite entry odds <input class="gveo" aria-label="Opposite entry odds" inputmode="text" placeholder="e.g. +150" value="${esc(x.entryPriceOpp ?? x.priceOpp ?? '')}" style="max-width:120px"></label>
         <button class="btn ghost sm gverify">Verify entry odds</button>
-        <span class="tm">Confirm the original DraftKings quote for this exact line and period. Keeps the submission time.</span>
+        <span class="tm">Confirm the original DraftKings quote for this exact line and period. Leave opposite odds blank to verify on your word (CLV then uses this side only). Keeps the submission time.</span>
       </div>` : ''}
       <div class="row" style="gap:6px;flex-wrap:wrap">${['won','lost','push',''].map(v=>btn(k,v,cur)).join('')}</div>
       ${isManualLeg(x) ? `<div class="row" style="gap:6px;margin-top:8px;align-items:center">
@@ -8900,7 +8902,9 @@ function paintGodResults(){
         if(!window.confirm(proposal.echo)) return;
         const result=await wPost('/bozo/verify-entry', {forUid:key, confirm:proposal.confirm_code});
         await refresh(); paintGod();
-        godErr(result.warning || 'Entry odds verified. Submission time unchanged. CLV uses these prices once both closing prices are available.', true);
+        godErr(result.warning || (result.verifiedVia==='commissioner-attest'
+          ? 'Entry verified on your word. Submission time unchanged. CLV is selected-side once a closing price is available.'
+          : 'Entry odds verified. Submission time unchanged. CLV uses these prices once both closing prices are available.'), true);
       } catch(e) { godErr(e.message); }
       finally { b.disabled=false; }
     };
