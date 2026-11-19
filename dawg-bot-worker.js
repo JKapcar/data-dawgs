@@ -9188,7 +9188,7 @@ async function bozoFetchEvents(env, sport, startMs, needProps, periods = ["game"
     const events=await bozoSgoRequest(env,url,{sport,needProps,caller:options.caller||'submit'},options);
     return {ok:true,events,fetchedAt:events.fetchedAt||null};
   });
-  if(!receipt.ok)throw Object.assign(new Error(receipt.reason),{code:receipt.code});
+  if(!receipt.ok)throw Object.assign(new Error(receipt.reason),{code:receipt.code,status:receipt.status});
   Object.defineProperty(receipt.events,'fetchedAt',{value:receipt.fetchedAt,configurable:true});
   return receipt.events;
 }
@@ -9335,7 +9335,7 @@ async function bozoOddsApiRequest(env,path,params,options={}) {
   // receipt: a refused key or a timeout on one leg must not stick to every other leg that day.
   const receipt=options.caller==='close' ? await attempt()
     : await bozoCaptureOnce(env,['provider-request',options.caller||'entry',options.discoveryDate||null,path,params],attempt);
-  if(!receipt.ok)throw Object.assign(new Error(receipt.reason),{code:receipt.code});
+  if(!receipt.ok)throw Object.assign(new Error(receipt.reason),{code:receipt.code,status:receipt.status});
   return receipt.value;
 }
 async function bozoOddsApiRequestRaw(env, path, params, options = {}) {
@@ -9709,7 +9709,9 @@ async function bozoCaptureOnce(env, identity, work) {
   } catch { return {ok:false,code:'receipt_unavailable',reason:'No durable spend guard; manual fallback'}; }
   let result;
   try { result = await work(); }
-  catch { result = {ok:false,code:'provider_error',reason:'Capture failed; manual fallback'}; }
+  // Keep the provider's own code and HTTP status: a bare provider_error hid every SGO cause.
+  catch (e) { result = {ok:false,code:e?.code||'provider_error',reason:'Capture failed; manual fallback'};
+    if (Number.isFinite(e?.status)) result.status = e.status; }
   try { await fbPut(env,path,{state:'complete',result,at:new Date().toISOString()}); } catch {}
   return result;
 }
@@ -9794,9 +9796,9 @@ async function bozoSgoCloseQuote(env, t, registry) {
     events=await bozoFetchEvents(env,t.pick.sport,t.startMs,t.pick.mkt==='prop',[bozoPeriodOf(t.pick)],
       {caller:'close',eventId:t.pick.providerEventIds?.sgo || t.pick.entryCapture?.providerEventIds?.sgo});
   } catch (e) {
-    const why={paid_feeds_off:'switched off',capture_unconfigured:'no key',quota_exceeded:'allowance used up',
+    const why={paid_feeds_off:'switched off',capture_unconfigured:'no key',quota_exceeded:'allowance used up',provider_rejected:'key or plan rejected',provider_error:'provider error',invalid_response:'bad response',
       rate_limited:'rate limited',timeout:'timed out'}[e.code];
-    return {ok:false,code:e.code||'provider_error',reason:why||'request failed'};
+    return {ok:false,code:e.code||'provider_error',reason:(why||'request failed')+(Number.isFinite(e.status)?' (HTTP '+e.status+')':'')};
   }
   const ev=bozoMatchEvent(events,t.pick,registry);
   if(!ev)return {ok:false,code:'event_not_matched',reason:'game not found'};
