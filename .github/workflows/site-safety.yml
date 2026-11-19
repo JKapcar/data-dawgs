@@ -12,6 +12,9 @@ on:
       - "work/test-agent-feedback-ui.mjs"
       - "sw.js"
       - "dfs.html"
+      - "dfs-stage.html"
+      - "work/*showdown-stage*"
+      - "tools/showdown-stage/**"
       - "dfs-nhl*"
       - "tests/nhl*"
       - "work/test-nhl*"
@@ -98,6 +101,9 @@ on:
       - "work/test-agent-feedback-ui.mjs"
       - "sw.js"
       - "dfs.html"
+      - "dfs-stage.html"
+      - "work/*showdown-stage*"
+      - "tools/showdown-stage/**"
       - "dfs-nhl*"
       - "tests/nhl*"
       - "work/test-nhl*"
@@ -272,6 +278,8 @@ jobs:
       - run: node --test tests/nhl.test.cjs tests/nhl-snapshot.test.cjs tests/nhl-player-history.test.cjs tests/nhl-recipe.test.cjs tests/nhl-reviewed-slate.test.cjs tests/nhl-private.test.cjs tests/nhl-ownership.test.cjs tests/nhl-source-import.test.cjs
       - run: node work/test-nhl-workspace.mjs
       - run: node work/test-dfs-workspace.mjs
+      - run: node work/test-showdown-stage-bridge.mjs
+      - run: cd tools/showdown-stage && python3 -m unittest -q
       - run: node work/test-dfs-draft-workspace.mjs
       - run: node work/test-dfs-portfolio-workspace.mjs
       - run: PLAYWRIGHT_MODULE=/tmp/dd-diagnostics-pw/node_modules/playwright node tests/dfs-portfolio.browser.cjs

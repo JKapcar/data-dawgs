@@ -232,6 +232,7 @@ function dfsExport(w){
  return {filename:w.id+'-draftkings.csv',csv:rows.map(r=>r.join(',')).join('\r\n')+'\r\n',lineups:ls.length,revision:w.revision,note:'Export only. No contest entries were submitted.'};
 }
 async function handleDfsWorkspace(request,url,env,cors){
+ if(url.pathname.startsWith("/api/dfs/stage/"))return handleShowdownStage(request,url,env,cors);
  cors={...cors,"Cache-Control":"private, no-store"};
  const auth=await sessionAuth(request,env);if(auth.err)return json({error:auth.err},auth.code||401,cors);
  if(request.method!=='POST')return json({error:'POST only'},405,cors);
