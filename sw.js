@@ -4,7 +4,7 @@
 // this set so changes to the modular research UI also invalidate the cache key.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "110b8fb43c";
+const VERSION = "25076ae171";
 // A cache revision also invalidates old images when only precached artwork changes.
 const CACHE = "dd-" + VERSION + "-public-v3";
 
@@ -14,7 +14,7 @@ const CORE = [
   "/", "/index.html", "/draft-leagues.html", "/draft-league.js", "/draft-personal-sync.js", "/draft-providers.js", "/draft-live-sync.js", "/dashboard.html", "/board.html", "/auction.html",
   "/bigboard.html", "/dataviz.html", "/report.html", "/master.html", "/strategy.html",
   // Lab landing pages — small, static, and the nav now points at them
-  "/dfs.html", "/dfs-history-ui.js", "/dfs-ledger.js", "/dfs-ledger-ui.js", "/dfs-atlas.js", "/dfs-atlas.css", "/dfs-diagnostics.html", "/dfs-diagnostics.js", "/dfs-diagnostics-ui.js", "/dfs-diagnostics.css", "/dfs-builder.js", "/dfs-builder-ui.js", "/dfs-builder.css", "/dfs-draft.js", "/dfs-entry-bridge.js", "/dfs-builder-sim.js", "/dfs-builder-sim-ui.js", "/work/dfs-engine.js", "/work/dfs-field-sim.js", "/work/dfs-slate-ingest.js", "/signon.html", "/connect.html", "/guillotine.html", "/receipts.html", "/nfelo.html", "/survivor.html", "/survivor-season-chart.js", "/survivor-season-chart.css", "/survivor-settings.html", "/pound.html", "/dawghouse.html",
+  "/dfs.html", "/dfs-stage.html", "/dfs-history-ui.js", "/dfs-ledger.js", "/dfs-ledger-ui.js", "/dfs-atlas.js", "/dfs-atlas.css", "/dfs-diagnostics.html", "/dfs-diagnostics.js", "/dfs-diagnostics-ui.js", "/dfs-diagnostics.css", "/dfs-builder.js", "/dfs-builder-ui.js", "/dfs-builder.css", "/dfs-draft.js", "/dfs-entry-bridge.js", "/dfs-builder-sim.js", "/dfs-builder-sim-ui.js", "/work/dfs-engine.js", "/work/dfs-field-sim.js", "/work/dfs-slate-ingest.js", "/signon.html", "/connect.html", "/guillotine.html", "/receipts.html", "/nfelo.html", "/survivor.html", "/survivor-season-chart.js", "/survivor-season-chart.css", "/survivor-settings.html", "/pound.html", "/dawghouse.html",
   "/cfb.html", "/cfb-power.html", "/calculators.html", "/arena.html", "/fantasy-warroom.html", "/warroom-weekly.js", "/teamdraft.html", "/data.html", "/nfl.html",
   "/dawgs.html", "/swoledawg.html", "/datedawg.html",
   // The challenge board is worth having offline: the schedule and the model lines still

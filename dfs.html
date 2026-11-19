@@ -2070,7 +2070,7 @@ arena.html — the hub for games played against other people; links to all of th
 bozo.html — the weekly one-leg parlay game with four sheets: Overview (season Bozo Count, CLV chart, current-week diagnostics and weekly hierarchy grid), This Week (hierarchy machine, ticket and personal entry), Diagnostics (filterable league ledger), and League Settings (roster, rules, shared league password, member cap and public/private visibility).
 challenge.html — the NFL Forecasting Challenge: put a probability on a game before kickoff, get graded after.
 survivor.html — survivor pool: this week's board, pick popularity, an optimal path, a season simulation, model settings.
-guillotine.html — guillotine league companion. dfs.html — DFS Labs: Playbook and Copy AI starter at #dfsPlaybook; This week dashboard, slate, solver, simulator, exposure, bankroll, screener, standings (post-lock results ledger: joins DK contest-standings CSVs to the saved pre-lock workspace, audit CSV), method (keys 1–9). The projections there are the USER'S OWN. dfs-nhl.html - Hockey DFS: a separate DraftKings-only hockey app with CSV import, historical projections, status and lineup checks. Rules remain provisional; no contest-ready or simulation claims.
+guillotine.html — guillotine league companion. dfs.html — DFS Labs: The Showdown Stage at #showdown-stage opens an explicitly selected legal-lineup archive, with owner-only cloud save/open. It cannot place entries and does not certify unofficial player pools. Playbook and Copy AI starter at #dfsPlaybook; This week dashboard, slate, solver, simulator, exposure, bankroll, screener, standings (post-lock results ledger: joins DK contest-standings CSVs to the saved pre-lock workspace, audit CSV), method (keys 1–9). The projections there are the USER'S OWN. dfs-nhl.html - Hockey DFS: a separate DraftKings-only hockey app with CSV import, historical projections, status and lineup checks. Rules remain provisional; no contest-ready or simulation claims.
 dfs-showdown.html — DFS SHOWDOWN: grades a signed-in user's DraftKings Showdown entries (their DFS Labs workspace lineups or saved portfolio, or an imported DK entries CSV) against a field sampled from their own ownership, per contest type: single-entry, 5/20-max, max-entry, flagship. The types differ by a field-sharpness preset, which is a hypothesis. Shows a banded contest-fit chart, a grade with reasons, exposure by dollars, captains, game scripts, expected copies and finish odds. Simulation output, ungraded, no ROI. Read-only: never saves, solves or enters. Signed out it runs an invented demo slate. The projections are the USER'S OWN.
 teamdraft.html — the 32-team wins pool: spin wheel, board, eight rosters, Monte Carlo season sim.
 The draft rig: dashboard.html (a drafter's view), auction.html (the operator), board.html (read-only room view), bigboard.html (the projector), dataviz.html and report.html (afterwards), master.html (the player pool and scouting).
@@ -2752,6 +2752,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
   <p class="lab-sub">Your projections. Your lineup. One private workspace.</p>
 
 <section id="diagnosticsDesk" data-ddb-skip><iframe id="diagnosticsFrame" title="Private DFS decision desk" src="dfs-diagnostics.html#builder" sandbox="allow-scripts allow-downloads" referrerpolicy="no-referrer" loading="eager" style="width:100%;height:1100px;border:0;border-radius:4px"></iframe></section>
+<details id="showdown-stage" class="labs-drawer" data-ddb-skip>
+  <summary>The Showdown Stage · private lineup archive</summary>
+  <p class="note">Browse every platform-legal combination in a saved slate. Strategy filters and portfolios are kept separate.</p>
+  <iframe id="showdownStageFrame" title="The Showdown Stage" sandbox="allow-scripts" referrerpolicy="origin" loading="lazy" style="width:100%;height:640px;border:0;border-radius:8px"></iframe>
+</details>
 <details id="legacyTools" class="labs-drawer" data-ddb-skip><summary>Previous workspaces, solver &amp; reference tools</summary><p class="note">These tools retain your previous saved workspace and history. The session above stays private until you explicitly save it. Load that same workspace here to use the existing solver.</p><section id="labsWelcome" class="card labs-welcome" aria-labelledby="labsWelcomeTitle">
   <div class="atlas-intro">
     <div><div class="atlas-kicker"><span class="atlas-mark" aria-hidden="true"></span> DataDawgs / Field Notes 01</div>
@@ -9315,9 +9320,9 @@ async function doStandingsImport(text) {
 
 const SHEETS = ["week","slate","solver","sim","exposure","bankroll","screener","standings","method","history"];
 function show(name) {
-  const anchor = ["dfsPlaybook", "dfsGuide", "dfsCloudCard", "csvUploadCard"].includes(name) ? name : null;
+  const anchor = ["dfsPlaybook", "dfsGuide", "dfsCloudCard", "csvUploadCard", "showdown-stage"].includes(name) ? name : null;
   if (anchor) {
-    $("labsSetup").open = true;
+    if(anchor!=="showdown-stage")$("labsSetup").open = true;
     for (let p = $(anchor); p; p = p.parentElement) if (p.tagName === "DETAILS") p.open = true;
     name = "week";
   }
@@ -9344,6 +9349,7 @@ function show(name) {
 /* ---------------------------------------------------------------- wiring */
 
 function boot() {
+  bootShowdownStage();
   let builderRequested=false;
   $('labsBuilder').onclick=()=>{builderRequested=true;$('diagnosticsDesk').open=true;$('diagnosticsDesk').scrollIntoView({block:'start'});$('diagnosticsFrame').contentWindow.postMessage({type:'dfs-builder-open'},'*');};
   window.addEventListener('message',event=>{
@@ -10411,6 +10417,66 @@ ${S.demo ? "- ⚠️ THE LOADED SLATE IS THE DEMO SLATE. Every player name, sala
   };
 }
 
+/* THE SHOWDOWN STAGE: OPAQUE-FRAME TO OWNER-SESSION BRIDGE */
+function bootShowdownStage(){
+ const panel=document.getElementById('showdown-stage'),frame=document.getElementById('showdownStageFrame');
+ if(!panel||!frame)return;
+ const open=()=>{if(panel.open&&!frame.hasAttribute('src'))frame.src='dfs-stage.html';};
+ panel.addEventListener('toggle',open);
+ if(location.hash==='#showdown-stage'){panel.open=true;open();}
+ window.addEventListener('hashchange',()=>{if(location.hash==='#showdown-stage'){panel.open=true;open();}});
+ let active=0, sessionIdentity=window.DDAuth?.token();
+ window.addEventListener('dd-auth',()=>{
+  const next=window.DDAuth?.token();
+  if(next!==sessionIdentity){sessionIdentity=next;if(frame.hasAttribute('src'))frame.src='dfs-stage.html';}
+ });
+ window.addEventListener('message',async e=>{
+  if(e.source!==frame.contentWindow||e.origin!=='null')return;
+  const d=e.data;
+  if(d?.type==='dd-stage-height'&&Number.isFinite(d.height)){frame.style.height=Math.min(15000,Math.max(420,d.height+18))+'px';return;}
+  if(d?.type!=='dd-stage-call'||typeof d.id!=='string'||!/^\d{1,10}$/.test(d.id))return;
+  const send=(ok,data,error)=>{if(frame.contentWindow===e.source)e.source.postMessage({type:'dd-stage-response',id:d.id,ok,data,error},'*',data instanceof ArrayBuffer?[data]:[]);};
+  if(active>=2){send(false,null,'Too many archive requests. Try again.');return;}
+  active++;
+  try{
+   if(d.method==='HASH'){
+    if(!(d.body instanceof ArrayBuffer)||d.body.byteLength>2097152)throw Error('Invalid checksum input.');
+    const data=[...new Uint8Array(await crypto.subtle.digest('SHA-256',d.body))].map(v=>v.toString(16).padStart(2,'0')).join('');
+    send(true,data);return;
+   }
+   if(DEMO_MODE||S.demo)throw Error('Exit demo before opening or saving private archives.');
+   const token=window.DDAuth?.token();if(!token)throw Error('Sign in to open or save private archives.');
+   if(!['GET','PUT'].includes(d.method)||!['manifest','chunk','model'].includes(d.resource)||typeof d.archive!=='string'||!/^[0-9a-f]{64}$/.test(d.archive))throw Error('Invalid private archive request.');
+   const url=new URL(dfsCloudOrigin+'/api/dfs/stage/'+d.resource);
+   url.searchParams.set('archive',d.archive);
+   if(d.resource==='model'){
+    if(typeof d.index!=='string'||!/^[0-9a-f]{64}$/.test(d.index))throw Error('Invalid model ID.');
+    url.searchParams.set('model',d.index);
+   }
+   if(d.resource==='chunk'){
+    if(!Number.isInteger(d.index)||d.index<0||d.index>63)throw Error('Invalid Captain file.');
+    url.searchParams.set('index',String(d.index));
+   }
+   const headers={'X-Bozo-Session':token};let body;
+   if(d.method==='PUT'){
+    if(d.resource==='manifest'||d.resource==='model'){
+     if(typeof d.body!=='string'||new TextEncoder().encode(d.body).length>262144)throw Error('Invalid archive manifest size.');
+     headers['Content-Type']='application/json';body=d.body;
+    }else{
+     if(!(d.body instanceof ArrayBuffer)||d.body.byteLength>2097152)throw Error('Invalid Captain file size.');
+     headers['Content-Type']='application/octet-stream';body=d.body;
+    }
+   }
+   const r=await fetch(url,{method:d.method,headers,body,cache:'no-store',redirect:'error',credentials:'omit'});
+   if(window.DDAuth?.token()!==token)throw Error('Account changed. Open the archive again.');
+   if(!r.ok){const v=await r.json().catch(()=>null);throw Error(v?.error||'Private archive service unavailable.');}
+   const data=d.method==='GET'&&d.resource==='chunk'?await r.arrayBuffer():await r.json();
+   if(window.DDAuth?.token()!==token)throw Error('Account changed. Open the archive again.');
+   send(true,data);
+  }catch(err){send(false,null,err.message||'Private archive request failed.');}
+  finally{active--;}
+ });
+}
 /* DFS WORKSPACE UI START */
 /* Inlined inside dfs.html's state closure. Explicit private save/load, never background upload. */
 const dfsPreviewVersion=new URLSearchParams(location.search).get('dfs_preview');

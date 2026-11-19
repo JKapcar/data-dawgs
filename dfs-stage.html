@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark"><title>The Showdown Stage | Data Dawgs</title>
+<style>
+:root{--bg:#141211;--panel:#211c19;--edge:#493b32;--text:#fff7ee;--muted:#cab9ab;--orange:#ff824d;--dim:#321f16;--max:1060px}*{box-sizing:border-box}body{margin:0;color:var(--text);background:var(--bg);font:16px/1.5 system-ui,sans-serif}main{max-width:var(--max);margin:auto;padding:32px 20px 56px}.flag{font-weight:750;color:var(--orange);font-size:.79rem;letter-spacing:.15em;text-transform:uppercase}h1{font-size:clamp(2.1rem,7vw,4rem);line-height:1.05;letter-spacing:-.05em;margin:.35em 0 .23em}p{margin:.5rem 0;color:var(--muted)}.card{background:var(--panel);border:1px solid var(--edge);padding:1.2rem;border-radius:15px;margin-top:1.2rem}.card h2{margin:0;font-size:1.24rem}.warning{border-left:4px solid var(--orange);background:var(--dim);padding:.7rem .85rem;border-radius:5px;margin-top:.8rem;color:var(--text)}.picker{margin:.8rem 0 .1rem;width:100%;color:var(--muted)}.row{display:flex;gap:.8rem;align-items:end;flex-wrap:wrap}.row>*{flex:1 1 128px}.row label{display:grid;gap:.28rem;color:var(--muted);font-size:.86rem}.row label:first-child{flex-grow:1.5}input,select,button{font:inherit}input[type=number],input:not([type]),select{border:1px solid var(--edge);background:#141211;color:var(--text);border-radius:8px;padding:.56rem .64rem;min-width:0;width:100%}button,input::file-selector-button{background:var(--orange);color:#1c120e;border:0;font-weight:750;border-radius:8px;padding:.55rem .8rem;cursor:pointer}button:disabled{opacity:.45;cursor:default}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #fff;outline-offset:3px}.counts{font-variant-numeric:tabular-nums}.counts strong{color:var(--text)}.scroll{overflow:auto;margin-top:.6rem}.pager{display:flex;gap:.8rem;align-items:center;justify-content:space-between;margin-top:.8rem}table{border-collapse:collapse;width:100%;font-size:.9rem}th,td{border-bottom:1px solid var(--edge);padding:.52rem .52rem;text-align:left;vertical-align:top}th{color:var(--muted);font-size:.77rem;white-space:nowrap;text-transform:uppercase;letter-spacing:.05em}td:last-child{font-variant-numeric:tabular-nums;white-space:nowrap}td:nth-child(3){white-space:nowrap}footer{margin-top:1rem;font-size:.8rem;color:var(--muted)}[hidden]{display:none!important}
+</style>
+</head><body><main>
+<header><div class="flag">Data Dawgs · DFS Labs</div><h1>The Showdown Stage</h1><p>Every legal lineup in the saved slate. Explore by Captain, salary, and team split.</p></header>
+<section class="card" aria-labelledby="loadTitle"><h2 id="loadTitle">Open a saved slate</h2><p>Select the archive folder containing its manifest and Captain files. The files stay on this device.</p><input id="folder" class="picker" type="file" aria-label="Choose archive folder" webkitdirectory multiple><div id="hosted" hidden><div class="row"><label>Saved archive ID<input id="archiveKey" autocomplete="off" maxlength="64" spellcheck="false" placeholder="64-character archive ID"></label><label>Optional model ID<input id="modelKey" autocomplete="off" maxlength="64" spellcheck="false" placeholder="64-character model ID"></label><button type="button" id="restore">Open private archive</button><button type="button" id="persist" disabled>Save privately</button></div><p id="hostStatus" role="status">Only the signed-in owner can open or save archives. Nothing is uploaded automatically.</p></div><p id="status" role="status">No archive open.</p></section>
+<section class="card" id="controls" hidden aria-labelledby="slateTitle"><h2 id="slateTitle"></h2><p id="archiveInfo" class="counts"></p><p id="provenance" class="warning"></p><form id="filters" class="row">
+<label>Captain<select id="captain"></select></label><label>Min. salary<input id="min" type="number" min="0" max="50000" step="1" value="0"></label><label>Max. salary<input id="max" type="number" min="0" max="50000" step="1" value="50000"></label><label>Team split<select id="split"><option value="">Any split</option></select></label><label>Include in FLEX<select id="include"><option value="">Any player</option></select></label><label>Min. summed ceiling<input id="ceilingMin" type="number" min="0" step="0.1" placeholder="Any"></label><label>Max. summed ownership (%)<input id="ownershipMax" type="number" min="0" max="600" step="0.1" placeholder="Any"></label><label>Sort<select id="sort"><option value="salaryDesc">Salary: high first</option><option value="salaryAsc">Salary: low first</option><option value="ceilingDesc">Summed ceiling: high first</option><option value="ownershipAsc">Summed ownership: low first</option><option value="ownershipDesc">Summed ownership: high first</option></select></label><button style="flex:0 0 auto" type="submit">Show lineups</button>
+</form><p id="metricsInfo" class="warning"></p><p id="matchInfo" class="counts" role="status"></p><div class="scroll"><table><thead><tr><th scope="col">Captain</th><th scope="col">Five FLEX players</th><th scope="col">Split</th><th scope="col">Salary</th><th scope="col">Summed ceiling<br>(not simulated)</th><th scope="col">Summed ownership</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="pager"><button id="prev" type="button">Previous</button><span id="page" class="counts"></span><button id="next" type="button">Next</button></div></section>
+<footer>Lineup legality is separate from projections, contest entries, and Data Dawgs strategy filters.</footer>
+</main>
+<script>
+'use strict';
+const el=id=>document.getElementById(id), num=new Intl.NumberFormat('en-US'), dollars=n=>'$'+num.format(n);
+const state={files:new Map,players:[],parts:[],teams:[],cache:null,metrics:null,metricSums:new Map,match:[],page:0,job:0}; const PAGE=30;
+const opt=(label,value)=>new Option(label,value);
+function safeFile(name){return typeof name==='string'&&!name.includes('..')&&!name.startsWith('/')&&/^[\w./-]+$/.test(name);}
+function setStatus(msg){el('status').textContent=msg;}
+function clearResults(){state.match=[];state.page=0;el('rows').replaceChildren();el('page').textContent='';el('prev').disabled=true;el('next').disabled=true;}
+async function verifyBytes(buffer,expected){
+ if(!expected)return;
+ if(!/^[a-f0-9]{64}$/i.test(expected))throw Error('Invalid checksum in manifest.');
+ const hash=await sha(buffer);
+ if(hash!==expected.toLowerCase())throw Error('File checksum does not match the saved archive.');
+}
+async function sha(buffer){
+ if(globalThis.crypto?.subtle)return [...new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))].map(v=>v.toString(16).padStart(2,'0')).join('');
+ if(window.stageCall)return stageCall('HASH','','',undefined,buffer.slice(0));
+ throw Error('Open this preview in a browser that supports archive checksums.');
+}
+function readMetrics(m,manifestHash,players){
+ if(m.format!=='showdown-stage-metrics/1'||m.manifest_sha256!==manifestHash)throw Error('Metrics do not match this archive.');
+ if(m.units?.ceiling!=='DK fantasy points'||m.units?.ownership!=='fraction'||!Array.isArray(m.players)||m.players.length!==players.length)throw Error('Invalid metrics schema or units.');
+ const result=Array(players.length), seen=new Set;
+ for(const item of m.players){
+  const i=item.index,a=players[i];
+  if(!Number.isInteger(i)||!a||seen.has(i)||item.identity!==a.identity)throw Error('Unknown or duplicate metrics identity.');
+  seen.add(i);const entry={};
+  for(const role of ['CPT','FLEX']){
+   const v=item[role];if(!v||v.role_id!==a.roles?.[role]?.id)throw Error('Unknown metrics role ID.');
+   const ceiling=typeof v.ceiling==='number'&&Number.isFinite(v.ceiling)&&v.ceiling>=0&&v.ceiling<=(role==='CPT'?1500:1000)?v.ceiling:null;
+   const ownership=typeof v.ownership==='number'&&Number.isFinite(v.ownership)&&v.ownership>=0&&v.ownership<=1?v.ownership:null;
+   entry[role]={ceiling,ownership};
+  }
+  if(entry.FLEX.ceiling===null||entry.CPT.ceiling===null||Math.abs(entry.CPT.ceiling-entry.FLEX.ceiling*1.5)>1e-8)entry.CPT.ceiling=null;
+  if(entry.CPT.ownership!==null&&entry.FLEX.ownership!==null&&entry.CPT.ownership+entry.FLEX.ownership>1+1e-8){entry.CPT.ownership=null;entry.FLEX.ownership=null;}
+  result[i]=entry;
+ }
+ return result;
+}
+function sumMetrics(c,indices,metrics=state.metrics){
+ if(!metrics)return {ceiling:null,ownership:null};
+ const roles=[metrics[c]?.CPT,...indices.map(i=>metrics[i]?.FLEX)],out={};
+ for(const key of ['ceiling','ownership'])out[key]=roles.every(r=>r&&typeof r[key]==='number'&&Number.isFinite(r[key]))?roles.reduce((n,r)=>n+r[key],0):null;
+ return out;
+}
+function makePreviewRow(c, flex, t, salary,metrics){
+ const tr=document.createElement('tr');
+ for(const item of [c.name,flex.map(p=>p.name).join(' · '),state.teams[0]+' '+t+' / '+state.teams[1]+' '+(6-t),dollars(salary),metrics.ceiling===null?'Unavailable':metrics.ceiling.toFixed(1),metrics.ownership===null?'Unavailable':(metrics.ownership*100).toFixed(1)+'%']){const td=document.createElement('td');td.textContent=item;tr.append(td);}
+ return tr;
+}
+function render(){
+ const list=state.match, data=state.cache, body=el('rows'), pages=Math.ceil(list.length/PAGE);
+ body.replaceChildren();el('prev').disabled=!pages||state.page===0;el('next').disabled=!pages||state.page+1>=pages;
+ el('page').textContent=pages?'Page '+num.format(state.page+1)+' of '+num.format(pages):'';
+ if(!data||!pages)return;
+ const fragment=document.createDocumentFragment(),{p,buffer}=data,b=new Uint8Array(buffer),v=new DataView(buffer);
+ for(const i of list.slice(PAGE*state.page,PAGE*(state.page+1))){
+  const flex=Array.from(b.subarray(i,i+5),idx=>state.players[idx]);
+  const t=Number(p.captain.team===state.teams[0])+flex.filter(q=>q.team===state.teams[0]).length;
+  fragment.append(makePreviewRow(p.captain,flex,t,v.getUint16(i+5,true),state.metricSums.get(i)||{ceiling:null,ownership:null}));
+ }
+ body.append(fragment);
+}
+async function findRows(event){
+ event?.preventDefault();const job=++state.job;clearResults();
+ const p=state.parts[Number(el('captain').value)], low=el('min').value===''?0:Number(el('min').value), high=el('max').value===''?50000:Number(el('max').value);
+ if(!p||!Number.isInteger(low)||!Number.isInteger(high)||low<0||high>50000||low>high){el('matchInfo').textContent='Enter a valid salary range from $0 to $50,000.';return;}
+ const ceilingMin=el('ceilingMin').value===''?null:Number(el('ceilingMin').value),ownershipMax=el('ownershipMax').value===''?null:Number(el('ownershipMax').value)/100;
+ if((ceilingMin!==null&&(!Number.isFinite(ceilingMin)||ceilingMin<0))||(ownershipMax!==null&&(!Number.isFinite(ownershipMax)||ownershipMax<0||ownershipMax>6))){el('matchInfo').textContent='Enter valid metric thresholds.';return;}
+ const sp=el('split').value, inc=el('include').value===''?-1:Number(el('include').value);
+ el('matchInfo').textContent='Reading '+p.captain.name+'’s lineup file…';
+ try{
+  if(state.cache?.p!==p){
+   const f=state.files.get(p.file)||(state.remote&&{arrayBuffer:()=>stageCall('GET','chunk',state.remote,p.captain_index)});
+   if(!f)throw Error('Missing Captain file: '+p.file+'. Select the entire archive folder.');
+   const bytes=await f.arrayBuffer();await verifyBytes(bytes,p.sha256);
+   const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+   const buffer=await new Response(stream).arrayBuffer();
+   if(buffer.byteLength!==p.count*7)throw Error('Saved record count does not match the manifest.');
+   if(job!==state.job)return;
+   state.cache={p,buffer};
+  }
+  const buffer=state.cache.buffer,b=new Uint8Array(buffer),v=new DataView(buffer),matches=[];
+  state.metricSums=new Map;
+  const cIsA=Number(p.captain.team===state.teams[0]);
+  for(let i=0;i<b.length;i+=7){
+   const s=v.getUint16(i+5,true);if(s<low||s>high)continue;
+   let t=cIsA, has=inc<0, last=-1;
+   for(let j=0;j<5;j++){const x=b[i+j], player=state.players[x];if(!player||x<=last||x===p.flex_index)throw Error('Invalid FLEX indices in saved archive.');last=x;if(player.team===state.teams[0])t++;if(x===inc)has=true;}
+   if(has&&(!sp||String(t)===sp)){const metrics=sumMetrics(p.flex_index,Array.from(b.subarray(i,i+5)));if(ceilingMin!==null&&(metrics.ceiling===null||metrics.ceiling<ceilingMin))continue;if(ownershipMax!==null&&(metrics.ownership===null||metrics.ownership>ownershipMax))continue;state.metricSums.set(i,metrics);matches.push(i);}
+  }
+  if(job!==state.job)return;
+  const sort=el('sort').value||'salaryDesc';
+  matches.sort((a,b)=>{let x,y,sign=sort.endsWith('Desc')?-1:1;if(sort.startsWith('salary')){x=v.getUint16(a+5,true);y=v.getUint16(b+5,true);}else{const key=sort.startsWith('ceiling')?'ceiling':'ownership';x=state.metricSums.get(a)[key];y=state.metricSums.get(b)[key];}if(x===null&&y===null)return a-b;if(x===null)return 1;if(y===null)return -1;return sign*(x-y)||a-b;});
+  state.match=matches;el('matchInfo').textContent=num.format(matches.length)+' matching lineups · '+num.format(p.count)+' saved for this Captain';render();
+ }catch(e){if(job===state.job){state.cache=null;el('matchInfo').textContent=e.message;}}
+}
+function readManifest(m){
+ if(m.format!=='showdown-stage/1'||m.record?.bytes!==7||m.record?.compression!=='gzip')throw Error('This is not a supported Showdown Stage manifest.');
+ const players=m.flex, teams=m.game?.teams, parts=m.partitions;
+ if(!Array.isArray(players)||players.length<6||players.length>256||
+    !Array.isArray(teams)||teams.length!==2||teams[0]===teams[1]||
+    !Array.isArray(parts)||parts.length!==players.length||
+    players.some(p=>typeof p.name!=='string'||!teams.includes(p.team)))throw Error('Incomplete or incorrect slate data.');
+ const seen=new Set;
+ for(const p of parts){
+  if(!Number.isInteger(p.captain_index)||!players[p.captain_index]||seen.has(p.captain_index)||
+     !safeFile(p.file)||!Number.isSafeInteger(p.count)||p.count<0||!/^([0-9a-f]{64})$/i.test(p.sha256))throw Error('Invalid Captain file list.');
+  seen.add(p.captain_index);
+ }
+ if(parts.reduce((n,p)=>n+p.count,0)!==m.total_lineups)throw Error('Archive lineup totals do not agree.');
+ return {players,teams,parts:parts.map(p=>({...p,flex_index:p.captain_index,captain:players[p.captain_index]}))};
+}
+function modelLabel(m){
+ return (m.source.sample_only?'Private sample':'Private model layer')+' · '+m.source.provider+' · '+(m.source.observed_at||'Snapshot time unavailable')+'. Summed ceiling is not simulated or a lineup percentile. Summed ownership uses Captain and FLEX-only ownership, not duplication probability.';
+}
+async function showArchive(m,view,files,remote,metricDoc,id){
+ const nextModel=metricDoc?readMetrics(metricDoc,id,view.players):null;
+ Object.assign(state,view,{files,remote,cache:null,metrics:nextModel,metricSums:new Map});
+ el('metricsInfo').textContent=metricDoc?modelLabel(metricDoc):'Metrics unavailable. Legality and salary remain available.';
+  el('ceilingMin').value='';el('ownershipMax').value='';el('sort').value='salaryDesc';
+  const {players,teams,parts}=view;
+  el('slateTitle').textContent=teams.join(' vs. ');
+  el('archiveInfo').textContent=num.format(m.total_lineups)+' saved lineups · '+num.format(players.length)+' players · '+num.format(parts.length)+' Captains';
+  el('provenance').textContent=m.source?.official===true?'Source: official DraftKings salary export.':'Research preview: this saved slate uses an unofficial player-pool snapshot. It is not a complete official DraftKings slate.';
+  el('captain').replaceChildren(...parts.map((p,i)=>opt(p.captain.name+' ('+p.captain.team+')',String(i))));
+  el('include').replaceChildren(opt('Any player',''),...players.map((p,i)=>opt(p.name+' ('+p.team+')',String(i))));
+  el('split').replaceChildren(opt('Any split',''),...[5,4,3,2,1].map(i=>opt(teams[0]+' '+i+' / '+teams[1]+' '+(6-i),String(i))));
+  el('min').value=0;el('max').value=50000;el('controls').hidden=false;
+ await findRows();
+}
+el('folder').addEventListener('change',async event=>{
+ const job=++state.job;state.cache=null;state.remote=null;state.metrics=null;state.metricsRaw=null;state.manifestRaw=null;el('persist').disabled=true;clearResults();el('controls').hidden=true;
+ const files=[...event.target.files], manifestFiles=files.filter(f=>f.name==='manifest.json');
+ if(manifestFiles.length!==1){setStatus('Select one archive folder with exactly one manifest.json.');return;}
+ setStatus('Checking the archive manifest…');
+ try{
+  const mf=manifestFiles[0], raw=await mf.text(), id=await sha(await mf.arrayBuffer()), m=JSON.parse(raw), view=readManifest(m);
+  if(job!==state.job)return;
+  const prefix=mf.webkitRelativePath.slice(0,-mf.name.length), inputFiles=new Map;
+  for(const f of files)if(f.webkitRelativePath.startsWith(prefix))inputFiles.set(f.webkitRelativePath.slice(prefix.length),f);
+  for(const p of view.parts)if(!inputFiles.has(p.file))throw Error('Archive is missing '+p.file+'.');
+  let metricDoc=null, metricsRaw=null, issue=null;
+  if(inputFiles.has('metrics.json')){
+   try{metricsRaw=await inputFiles.get('metrics.json').text();const proposed=JSON.parse(metricsRaw);readMetrics(proposed,id,view.players);metricDoc=proposed;}
+   catch(e){metricsRaw=null;issue=e.message;}
+  }
+  if(job!==state.job)return;
+  if(id!==await sha(new TextEncoder().encode(raw).buffer))throw Error('Manifest encoding does not round-trip as UTF-8.');
+  if(job!==state.job)return;
+  state.manifestRaw=raw;state.archiveId=id;state.metricsRaw=metricsRaw;el('persist').disabled=false;
+  await showArchive(m,view,inputFiles,null,metricDoc,id);
+  if(state.manifestRaw===raw){setStatus('Archive opened. Nothing was uploaded.');if(issue)el('metricsInfo').textContent='Metrics unavailable: '+issue;}
+ }catch(e){if(job===state.job)setStatus(e.message);}
+});
+if(window.parent!==window){
+ el('hosted').hidden=false;
+ const pending=new Map;let serial=0;
+ window.addEventListener('message',e=>{
+  if(e.source!==window.parent||e.origin!==new URL(document.referrer||'https://datadawgs216.com').origin||e.data?.type!=='dd-stage-response')return;
+  const p=pending.get(e.data.id);if(!p)return;
+  clearTimeout(p.timer);pending.delete(e.data.id);
+  if(e.data.ok)p.resolve(e.data.data);else p.reject(Error(e.data.error||'Private archive request failed.'));
+ });
+ window.stageCall=(method,resource,archive,index,body)=>new Promise((resolve,reject)=>{
+  const id=String(++serial);
+  const timer=setTimeout(()=>{pending.delete(id);reject(Error('Private archive request timed out.'));},60000);
+  pending.set(id,{resolve,reject,timer});
+  window.parent.postMessage({type:'dd-stage-call',id,method,resource,archive,index,body},'*',body instanceof ArrayBuffer?[body]:[]);
+ });
+ new ResizeObserver(()=>window.parent.postMessage({type:'dd-stage-height',height:document.documentElement.scrollHeight},'*')).observe(document.querySelector('main'));
+}
+function hostInfo(x){el('hostStatus').textContent=x;}
+el('restore').addEventListener('click',async()=>{
+ const k=el('archiveKey').value.trim(), v=el('modelKey').value.trim();
+ if(!/^[0-9a-f]{64}$/.test(k)||v&&!/^[0-9a-f]{64}$/.test(v)){hostInfo('Enter a valid archive ID and, optionally, model ID.');return;}
+ const job=++state.job;
+ el('restore').disabled=true;hostInfo('Opening the private archive…');
+ try{
+  const args=[stageCall('GET','manifest',k)];
+  if(v)args.push(stageCall('GET','model',k,v));
+  const [out,layer]=await Promise.all(args);
+  if(!out.complete||out.archive!==k)throw Error('This archive is not yet complete. Finish saving its original folder.');
+  if(v&&(layer.archive!==k||layer.model!==v))throw Error('The model does not match this archive.');
+  const m=out.manifest,view=readManifest(m);
+  if(job!==state.job)return;
+  state.manifestRaw=null;state.metricsRaw=null;el('persist').disabled=true;
+  await showArchive(m,view,new Map,k,layer?.metrics||null,k);
+  if(state.remote===k){hostInfo('Complete private archive opened'+(v?' with the selected metrics.':'.'));setStatus('Saved archive '+k);}
+ }catch(e){if(job===state.job)hostInfo(e.message);}
+ finally{el('restore').disabled=false;}
+});
+el('persist').addEventListener('click',async()=>{
+ const raw=state.manifestRaw,k=state.archiveId,metricsRaw=state.metricsRaw,parts=[...state.parts],files=new Map(state.files);
+ if(!raw)return;
+ el('persist').disabled=true;el('folder').disabled=true;el('restore').disabled=true;
+ try{
+  hostInfo('Saving archive manifest privately…');
+  const root=await stageCall('PUT','manifest',k,undefined,raw);
+  if(!root.verified_readback)throw Error('Manifest save not verified.');
+  let done=0;for(const p of parts){
+   hostInfo('Saving Captain file '+(done+1)+' of '+parts.length+'…');
+   if(!files.get(p.file))throw Error('Missing '+p.file);
+   const ack=await stageCall('PUT','chunk',k,p.captain_index,await files.get(p.file).arrayBuffer());
+   if(!ack.verified_readback||ack.sha256!==p.sha256)throw Error('Captain file save not verified.');
+   done++;
+  }
+  const check=await stageCall('GET','manifest',k);
+  if(!check.complete||check.archive!==k)throw Error('Save did not pass complete archive readback.');
+  el('archiveKey').value=k;
+  if(metricsRaw){
+   const v=await sha(new TextEncoder().encode(metricsRaw).buffer);
+   const saved=await stageCall('PUT','model',k,v,metricsRaw);
+   if(!saved.verified_readback||saved.model!==v)throw Error('Lineups saved but metrics save not verified.');
+   const read=await stageCall('GET','model',k,v);
+   readMetrics(read.metrics,k,state.players);
+   el('modelKey').value=v;
+  }else el('modelKey').value='';
+  hostInfo('Saved and verified. Copy the archive ID'+(metricsRaw?' and model ID':'')+' to reopen on another device.');
+ }catch(e){hostInfo(e.message);}
+ finally{el('persist').disabled=!state.manifestRaw;el('folder').disabled=false;el('restore').disabled=false;}
+});
+el('filters').addEventListener('submit',findRows);
+el('prev').addEventListener('click',()=>{if(state.page>0){state.page--;render();}});
+el('next').addEventListener('click',()=>{if((state.page+1)*PAGE<state.match.length){state.page++;render();}});
+</script>
+</body></html>
