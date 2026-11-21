@@ -4,7 +4,7 @@
 // this set so changes to the modular research UI also invalidate the cache key.
 // HTML is network-first (so deploys land immediately) with a cache fallback,
 // so a dead venue wifi can't take the draft down mid-auction.
-const VERSION = "981213f887";
+const VERSION = "e153e515f2";
 // A cache revision also invalidates old images when only precached artwork changes.
 const CACHE = "dd-" + VERSION + "-public-v3";
 
