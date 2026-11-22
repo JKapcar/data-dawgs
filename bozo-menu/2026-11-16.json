@@ -1,12 +1,770 @@
 {
-  "title": "Nov 21 Bozo Menu · partial market and SP+ refresh · 0 cleared",
+  "title": "Nov 22 Bozo Menu · Sunday NFL refresh · 0 cleared",
   "week": "2026-11-16",
-  "revision": 6,
-  "published_at": "2026-11-21T15:44:23.414Z",
-  "retrieved_at": "2026-11-22T11:39:33.754Z",
+  "revision": 7,
+  "published_at": "2026-11-22T15:45:06.904Z",
+  "retrieved_at": "2026-11-22T19:41:44.775Z",
   "status": "published",
   "scope": "Public Data Dawgs research. Saved quotes, not guaranteed current offers. No contest picks submitted.",
   "candidates": [
+    {
+      "event": "Tennessee Titans at Dallas Cowboys",
+      "id": "nfl-20261122-ten-dal-alt-under",
+      "kickoff": "2026-11-22T13:00:00-05:00",
+      "market": "total",
+      "reason": "Exact DraftKings public alternate: Under 60.5 −223, 61.5 −262, 62.5 −295, 63.5 −339, 64.5 −387. At 63.5 the other side was +236; under break-even is 77.2% versus 72.2% after removing this book’s margin. The main total was 54.5; independent model point estimates are lower, but are not probabilities for this alternate. Spears is now on IR, and several Dallas starters are out. Roof and final actives unverified. Same-game alternatives are correlated. No independent probability to clear any rung; live acceptance and league eligibility unverified. PFF’s full NFL/CFB and player prop boards are gated; ETR DFS access was verified, not an alternate market forecast. All 12 upcoming NFL games were screened against public models and Pinnacle; no Week 12 SP+ FBS games remain unstarted in this slate.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "TEN–DAL Under 63.5 (DraftKings −339 observed; research only)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Sportsbook exact public alternate ladder, observed",
+          "url": "https://sportsbook.draftkings.com/event/ten-titans-%40-dal-cowboys/34118142"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-22"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Titans officially moved Spears to injured reserve",
+          "url": "https://www.tennesseetitans.com/news/titans-place-rb-tyjae-spears-on-injured-reserve"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "PFF Game Bets: paid inventory gated",
+          "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "PFF Player Props: six preview entries, full inventory gated",
+          "url": "https://www.pff.com/betting/player-props"
+        },
+        {
+          "as_of": "2026-11-22T15:25:00Z",
+          "name": "ETR subscriber DFS update; not a betting probability",
+          "url": "https://establishtherun.com/draftkings-fanduel-yahoo-projections/"
+        },
+        {
+          "as_of": "2026-11-21T15:41:59.422Z",
+          "name": "Bill Connelly Week 12 SP+ historical reference",
+          "url": "https://docs.google.com/spreadsheets/d/1vwoVl-Dxy0es87Z9I1RTvFzr72Lb1fAkREfbLxbK-eg/edit#gid=456602388"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "Started / archived"
+    },
+    {
+      "event": "Jacksonville Jaguars at New York Giants",
+      "id": "nfl-20261122-jax-ml",
+      "kickoff": "2026-11-22T16:25:00-05:00",
+      "market": "moneyline",
+      "reason": "DraftKings Network reference requires 72.7%; its break-even is 1.5 percentage points above paired Pinnacle no-vig. That is a market comparison, not true EV. After The Timeout is stronger than the asking price, while Axle is below it. Jacksonville center Robert Hainsey is out. MetLife weather and final actives need recheck; official flex is 4:25 p.m. ET. Current acceptance and league eligibility were not established.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Jaguars ML (DK Network −266; Pinnacle −273)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-22"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "NFL official kickoff flex",
+          "url": "https://media.nfl.com/content/dam/communications/documents/2026/Week%2011%20Schedule%20Change.pdf"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "PFF Game Bets: paid inventory gated",
+          "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-22T15:25:00Z",
+          "name": "ETR subscriber DFS update; not a betting probability",
+          "url": "https://establishtherun.com/draftkings-fanduel-yahoo-projections/"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "Tampa Bay Buccaneers at Detroit Lions",
+      "id": "nfl-20261122-det-ml",
+      "kickoff": "2026-11-22T13:00:00-05:00",
+      "market": "moneyline",
+      "reason": "DraftKings Network reference requires 68.8%; its break-even is 2.9 percentage points above paired Pinnacle no-vig. That is a market comparison, not true EV. Axle leans stronger than the asking price, After The Timeout is materially weaker; no agreement. NFL Network reported Baker Mayfield will start; Detroit center Cade Mays is out. Ford Field is indoors. Current acceptance and league eligibility were not established.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Lions ML (DK Network −220; Pinnacle −209)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-22"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "NFL Network reports Baker Mayfield will start",
+          "url": "https://fantasy-www.nfl.com/news/buccaneers-baker-mayfield-will-play-vs-lions"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "PFF Game Bets: paid inventory gated",
+          "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-22T15:25:00Z",
+          "name": "ETR subscriber DFS update; not a betting probability",
+          "url": "https://establishtherun.com/draftkings-fanduel-yahoo-projections/"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "Started / archived"
+    },
+    {
+      "event": "Pittsburgh Steelers at Philadelphia Eagles",
+      "id": "nfl-20261122-pit-ml",
+      "kickoff": "2026-11-22T18:00:00Z",
+      "market": "moneyline",
+      "reason": "DraftKings Network reference requires 66.7%; its break-even is 2.1 percentage points above paired Pinnacle no-vig. That is a market comparison, not true EV. DraftKings Network reference touches the band floor; Pinnacle does not. Two model estimates sit below the asking price. Joe Milton III starts for Philadelphia; monitor rain and final actives. Official flex is 1 p.m. ET. Current acceptance and league eligibility were not established.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Steelers ML (DK Network −200; Pinnacle −197)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-22"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "NFL official kickoff flex",
+          "url": "https://media.nfl.com/content/dam/communications/documents/2026/Week%2011%20Schedule%20Change.pdf"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "PFF Game Bets: paid inventory gated",
+          "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-22T15:25:00Z",
+          "name": "ETR subscriber DFS update; not a betting probability",
+          "url": "https://establishtherun.com/draftkings-fanduel-yahoo-projections/"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "Started / archived"
+    },
+    {
+      "event": "Cincinnati Bengals at Washington Commanders",
+      "id": "nfl-20261123-cin-ml",
+      "kickoff": "2026-11-24T01:15:00Z",
+      "market": "moneyline",
+      "reason": "DraftKings Network reference requires 74.7%; its break-even is 3.2 percentage points above paired Pinnacle no-vig. That is a market comparison, not true EV. Both public model win estimates (65% and 68%) sit below the asking price. Burrow and Daniels are not on the NFL final injury designation lists; Monday inactives and weather still need recheck. Current acceptance and league eligibility were not established.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Bengals ML (DK Network −296; Pinnacle −285)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-23"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "PFF Game Bets: paid inventory gated",
+          "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-22T15:25:00Z",
+          "name": "ETR subscriber DFS update; not a betting probability",
+          "url": "https://establishtherun.com/draftkings-fanduel-yahoo-projections/"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "Tennessee Titans at Dallas Cowboys",
+      "id": "nfl-20261122-dal-ml",
+      "kickoff": "2026-11-22T13:00:00-05:00",
+      "market": "moneyline",
+      "reason": "DraftKings Network reference requires 79.6%; its break-even is 2.7 percentage points above paired Pinnacle no-vig. That is a market comparison, not true EV. Two public model win estimates (68% and 75%) are below this price. Tennessee put Tyjae Spears on IR; Dallas lists Ferguson, Booker and Bland out. Roof status and final actives not verified. Current acceptance and league eligibility were not established.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Cowboys ML (DK Network −390; Pinnacle −382)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-22"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Titans officially moved Spears to injured reserve",
+          "url": "https://www.tennesseetitans.com/news/titans-place-rb-tyjae-spears-on-injured-reserve"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "PFF Game Bets: paid inventory gated",
+          "url": "https://www.pff.com/betting/best-game-bets"
+        },
+        {
+          "as_of": "2026-11-22T15:25:00Z",
+          "name": "ETR subscriber DFS update; not a betting probability",
+          "url": "https://establishtherun.com/draftkings-fanduel-yahoo-projections/"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "Started / archived"
+    },
+    {
+      "event": "Minnesota Vikings vs San Francisco 49ers",
+      "id": "nfl-20261122-sf-min-under",
+      "kickoff": "2026-11-23T01:20:00Z",
+      "market": "total",
+      "reason": "Both published models put the main total below 46.5; Pinnacle listed a different 45. No line-specific probability or eligible alternate quote. Minnesota QB Kyler Murray and WR Jordan Addison out; neutral site Mexico City. Final inactives and weather unverified. Research hold only; standard price is outside the Bozo favorite band. Points are not probability or EV.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Under 46.5 (DK Network −114; alternate unverified)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-22"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "Jacksonville Jaguars at New York Giants",
+      "id": "nfl-20261122-jax-nyg-under",
+      "kickoff": "2026-11-22T21:25:00Z",
+      "market": "total",
+      "reason": "Both model point estimates are lower; one edge is only half a point. Pinnacle listed 45, not the same quote. Center Robert Hainsey out and outdoor rain remains possible. This and Jacksonville spread or ML are same-game alternatives, not independent. No eligible alternate quote. Research hold only; standard price is outside the Bozo favorite band. Points are not probability or EV.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Under 45.5 (DK Network −112; alternate unverified)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-22"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "Cincinnati Bengals at Washington Commanders",
+      "id": "nfl-20261122-cin-was-under",
+      "kickoff": "2026-11-24T01:15:00Z",
+      "market": "total",
+      "reason": "Both model means are lower than 54.5, but by different amounts. Pinnacle 55 is a different threshold. Burrow and Daniels did not carry final injury designations; Monday final inactives and weather pending. No eligible alternate quote. Research hold only; standard price is outside the Bozo favorite band. Points are not probability or EV.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Under 54.5 (DK Network −103; alternate unverified)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-23"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "Las Vegas Raiders at Denver Broncos",
+      "id": "nfl-20261122-lv-den-over",
+      "kickoff": "2026-11-22T21:25:00Z",
+      "market": "total",
+      "reason": "Both models point higher than 40.5, but the margin differs markedly. Pinnacle was 41, not the same line. Bowers questionable, Denver outdoor weather and final actives unverified. No eligible alternate quote. Research hold only; standard price is outside the Bozo favorite band. Points are not probability or EV.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Over 40.5 (DK Network −115; alternate unverified)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-22"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "Baltimore Ravens at Carolina Panthers",
+      "id": "nfl-20261122-bal-car-over",
+      "kickoff": "2026-11-22T18:00:00Z",
+      "market": "total",
+      "reason": "Models lean higher, but one projects just 45. Pinnacle 44 is a different threshold. Baltimore lists Madubuike and Humphrey out; Charlotte outdoor weather and final actives need recheck. No eligible alternate quote. Research hold only; standard price is outside the Bozo favorite band. Points are not probability or EV.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Over 44.5 (DK Network −106; alternate unverified)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-22"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "Started / archived"
+    },
+    {
+      "event": "Arizona Cardinals at Kansas City Chiefs",
+      "id": "nfl-20261122-ari-kc-over",
+      "kickoff": "2026-11-22T18:00:00Z",
+      "market": "total",
+      "reason": "Both model point estimates are above 40.5. Arizona QB Carson Beck is out, and public model starter assumptions are not consistent; don’t treat the direction as settled. Arrowhead weather and final actives unverified. No eligible alternate quote. Research hold only; standard price is outside the Bozo favorite band. Points are not probability or EV.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Over 40.5 (DK Network −107; alternate unverified)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-22"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "Started / archived"
+    },
+    {
+      "event": "Arizona Cardinals at Kansas City Chiefs",
+      "id": "nfl-20261122-ari-spread",
+      "kickoff": "2026-11-22T18:00:00Z",
+      "market": "spread",
+      "reason": "Both models make the Chiefs’ margin lower than 15.5; the QB assumption for Arizona is unsettled across models. Pinnacle used a different 14.5 threshold. No eligible alternate quote; outcome correlated with other markets in this game. Research hold only; standard price is outside the Bozo favorite band. Points are not probability or EV.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Cardinals +15.5 (DK Network −110; alternate unverified)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-22"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "Started / archived"
+    },
+    {
+      "event": "Baltimore Ravens at Carolina Panthers",
+      "id": "nfl-20261122-bal-spread",
+      "kickoff": "2026-11-22T18:00:00Z",
+      "market": "spread",
+      "reason": "Both model numbers are shorter than Carolina by three, but models disagree on the outright favorite. Baltimore front/secondary absences and Carolina availability matter. No eligible alternate quote. Research hold only; standard price is outside the Bozo favorite band. Points are not probability or EV.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Ravens +3 (DK Network −120; alternate unverified)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-22"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "Started / archived"
+    },
+    {
+      "event": "Pittsburgh Steelers at Philadelphia Eagles",
+      "id": "nfl-20261122-pit-spread",
+      "kickoff": "2026-11-22T18:00:00Z",
+      "market": "spread",
+      "reason": "Both public model spreads are longer than −3.5, but one by only half a point and neither proves a paid alternate. Philadelphia names Joe Milton III; weather and final actives unverified. Correlated with PIT ML. Research hold only; standard price is outside the Bozo favorite band. Points are not probability or EV.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Steelers −3.5 (DK Network −114; alternate unverified)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-22"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "Started / archived"
+    },
+    {
+      "event": "Jacksonville Jaguars at New York Giants",
+      "id": "nfl-20261122-jax-spread",
+      "kickoff": "2026-11-22T21:25:00Z",
+      "market": "spread",
+      "reason": "One public model has substantially more Jacksonville margin while another has slightly less. Matchup and late-window weather risks prevent clearing. Correlated with JAX ML. No eligible alternate quote. Research hold only; standard price is outside the Bozo favorite band. Points are not probability or EV.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Jaguars −6 (DK Network −109; alternate unverified)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-22"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "New Orleans Saints at Chicago Bears",
+      "id": "nfl-20261122-no-spread",
+      "kickoff": "2026-11-22T18:00:00Z",
+      "market": "spread",
+      "reason": "One model shows a meaningful cushion while the other is at the market line. New Orleans lists multiple offensive linemen out; verify wind, rain and final actives. No eligible alternate quote. Research hold only; standard price is outside the Bozo favorite band. Points are not probability or EV.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
+      "selection": "Saints +11.5 (DK Network −107; alternate unverified)",
+      "sources": [
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "DraftKings Network main-market reference; market update time unavailable",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/?itm_content=pills"
+        },
+        {
+          "as_of": "2026-11-22T15:00:00Z",
+          "name": "Pinnacle via AgentBets, timestamped benchmark",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-22T14:01:00Z",
+          "name": "After The Timeout game model, not an executable price",
+          "url": "https://afterthetimeout.com/nfl/lines/"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Axle public model, excludes injuries and weather",
+          "url": "https://bandwagon.fyi/odds/nfl?date=2026-11-22"
+        },
+        {
+          "as_of": "2026-11-22T15:42:59.309Z",
+          "name": "Official NFL Week 11 injury report",
+          "url": "https://amp.nfl.com/news/nfl-week-11-injury-report-2026-season"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "Started / archived"
+    },
     {
       "event": "Miami (OH) at Kent State",
       "id": "cfb-202611-miamioh-spread",
@@ -224,263 +982,12 @@
       "quote_state": "Scratched"
     },
     {
-      "event": "Tennessee Titans at Dallas Cowboys",
-      "id": "nfl-20261122-dal-ml",
-      "kickoff": "2026-11-22T13:00:00-05:00",
-      "market": "moneyline",
-      "reason": "DK Network break-even is about 2.5 percentage points above paired no-vig Pinnacle; this is market comparison, not independent win probability or EV. The independent model did not establish a robust advantage. DAL Ferguson, Booker and Bland out; TEN Spears and Tate questionable. Roof decision unverified. PFF full boards not reverified; ETR DFS projections are not bet probabilities. No direct executable offer or final Bozo eligibility established.",
-      "screened_at": "2026-11-21T15:41:59.422Z",
-      "selection": "Cowboys ML (DK Network reference -378; Pinnacle reference -385)",
-      "sources": [
-        {
-          "as_of": "2026-11-20T15:36:02Z",
-          "name": "DraftKings Network public reference, observed Nov 20; quote update time unavailable",
-          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
-        },
-        {
-          "as_of": "2026-11-20T15:00:00Z",
-          "name": "Pinnacle via AgentBets, timestamped comparison only",
-          "url": "https://agentbets.ai/odds/pinnacle/nfl"
-        },
-        {
-          "as_of": "2026-11-20T15:24:00Z",
-          "name": "ETR DFS subscriber projection timestamp, not a betting price or probability",
-          "url": "https://establishtherun.com/draftkings-projections/"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "DraftKings Network observed Nov 21; quote update time unavailable",
-          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
-        },
-        {
-          "as_of": "2026-11-21T15:00:00Z",
-          "name": "Pinnacle via AgentBets, 15:00 UTC comparison",
-          "url": "https://agentbets.ai/odds/pinnacle/nfl"
-        },
-        {
-          "as_of": "2026-11-21T15:00:00Z",
-          "name": "AgentBets DraftKings-labeled snapshot",
-          "url": "https://agentbets.ai/odds/draftkings/nfl"
-        },
-        {
-          "as_of": "2026-11-21T12:07:00Z",
-          "name": "The Almanac public model, Nov 21 pregame snapshot",
-          "url": "https://www.thealmanac.co/football/scores/2026-11-22"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "Official team injury or QB update, pregame",
-          "url": "https://www.tennesseetitans.com/news/week-11-injury-report-titans-at-cowboys"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "PFF Best Game Bets preview only; paid board gated",
-          "url": "https://www.pff.com/betting/best-game-bets"
-        },
-        {
-          "as_of": "2026-11-21T15:02:00Z",
-          "name": "ETR subscriber DFS update; not bet probabilities",
-          "url": "https://establishtherun.com/draftkings-projections/"
-        }
-      ],
-      "sport": "NFL",
-      "status": "hold",
-      "quote_state": "On hold"
-    },
-    {
-      "event": "Tampa Bay Buccaneers at Detroit Lions",
-      "id": "nfl-20261122-det-ml",
-      "kickoff": "2026-11-22T13:00:00-05:00",
-      "market": "moneyline",
-      "reason": "DK Network break-even is about 2.1 percentage points above paired no-vig Pinnacle; this is market comparison, not independent win probability or EV. The independent model did not establish a robust advantage. Baker Mayfield questionable; Jalon Daniels is next if Baker sits. Detroit center Cade Mays out; Ford Field indoors. PFF full boards not reverified; ETR DFS projections are not bet probabilities. No direct executable offer or final Bozo eligibility established.",
-      "screened_at": "2026-11-21T15:41:59.422Z",
-      "selection": "Lions ML (DK Network reference -236; Pinnacle reference -239)",
-      "sources": [
-        {
-          "as_of": "2026-11-20T15:36:02Z",
-          "name": "DraftKings Network public reference, observed Nov 20; quote update time unavailable",
-          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
-        },
-        {
-          "as_of": "2026-11-20T15:00:00Z",
-          "name": "Pinnacle via AgentBets, timestamped comparison only",
-          "url": "https://agentbets.ai/odds/pinnacle/nfl"
-        },
-        {
-          "as_of": "2026-11-20T15:24:00Z",
-          "name": "ETR DFS subscriber projection timestamp, not a betting price or probability",
-          "url": "https://establishtherun.com/draftkings-projections/"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "DraftKings Network observed Nov 21; quote update time unavailable",
-          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
-        },
-        {
-          "as_of": "2026-11-21T15:00:00Z",
-          "name": "Pinnacle via AgentBets, 15:00 UTC comparison",
-          "url": "https://agentbets.ai/odds/pinnacle/nfl"
-        },
-        {
-          "as_of": "2026-11-21T15:00:00Z",
-          "name": "AgentBets DraftKings-labeled snapshot",
-          "url": "https://agentbets.ai/odds/draftkings/nfl"
-        },
-        {
-          "as_of": "2026-11-21T12:07:00Z",
-          "name": "The Almanac public model, Nov 21 pregame snapshot",
-          "url": "https://www.thealmanac.co/football/scores/2026-11-22"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "Official team injury or QB update, pregame",
-          "url": "https://www.buccaneers.com/news/buccaneers-lions-injury-report-nov-20-week-11-2026"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "PFF Best Game Bets preview only; paid board gated",
-          "url": "https://www.pff.com/betting/best-game-bets"
-        },
-        {
-          "as_of": "2026-11-21T15:02:00Z",
-          "name": "ETR subscriber DFS update; not bet probabilities",
-          "url": "https://establishtherun.com/draftkings-projections/"
-        }
-      ],
-      "sport": "NFL",
-      "status": "hold",
-      "quote_state": "On hold"
-    },
-    {
-      "event": "Jacksonville Jaguars at New York Giants",
-      "id": "nfl-20261122-jax-ml",
-      "kickoff": "2026-11-22T16:25:00-05:00",
-      "market": "moneyline",
-      "reason": "DK Network break-even is about 1.9 percentage points above paired no-vig Pinnacle; this is market comparison, not independent win probability or EV. The independent model did not establish a robust advantage. JAX center Robert Hainsey out. Rain risk; final inactives unverified. PFF full boards not reverified; ETR DFS projections are not bet probabilities. No direct executable offer or final Bozo eligibility established.",
-      "screened_at": "2026-11-21T15:41:59.422Z",
-      "selection": "Jaguars ML (DK Network reference -253; Pinnacle reference -259)",
-      "sources": [
-        {
-          "as_of": "2026-11-20T15:36:02Z",
-          "name": "DraftKings Network public reference, observed Nov 20; quote update time unavailable",
-          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
-        },
-        {
-          "as_of": "2026-11-20T15:00:00Z",
-          "name": "Pinnacle via AgentBets, timestamped comparison only",
-          "url": "https://agentbets.ai/odds/pinnacle/nfl"
-        },
-        {
-          "as_of": "2026-11-20T15:24:00Z",
-          "name": "ETR DFS subscriber projection timestamp, not a betting price or probability",
-          "url": "https://establishtherun.com/draftkings-projections/"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "DraftKings Network observed Nov 21; quote update time unavailable",
-          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
-        },
-        {
-          "as_of": "2026-11-21T15:00:00Z",
-          "name": "Pinnacle via AgentBets, 15:00 UTC comparison",
-          "url": "https://agentbets.ai/odds/pinnacle/nfl"
-        },
-        {
-          "as_of": "2026-11-21T15:00:00Z",
-          "name": "AgentBets DraftKings-labeled snapshot",
-          "url": "https://agentbets.ai/odds/draftkings/nfl"
-        },
-        {
-          "as_of": "2026-11-21T12:07:00Z",
-          "name": "The Almanac public model, Nov 21 pregame snapshot",
-          "url": "https://www.thealmanac.co/football/scores/2026-11-22"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "Official team injury or QB update, pregame",
-          "url": "https://www.giants.com/news/injury-report-statuses-for-giants-vs-jaguars-week-11"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "PFF Best Game Bets preview only; paid board gated",
-          "url": "https://www.pff.com/betting/best-game-bets"
-        },
-        {
-          "as_of": "2026-11-21T15:02:00Z",
-          "name": "ETR subscriber DFS update; not bet probabilities",
-          "url": "https://establishtherun.com/draftkings-projections/"
-        }
-      ],
-      "sport": "NFL",
-      "status": "hold",
-      "quote_state": "On hold"
-    },
-    {
-      "event": "Tennessee Titans at Dallas Cowboys",
-      "id": "nfl-20261122-ten-dal-alt-under",
-      "kickoff": "2026-11-22T13:00:00-05:00",
-      "market": "total",
-      "reason": "DK Network main under 54.5 (-104) and Pinnacle main under 55.5 (-119) are different lines, not alternate prices. Almanac estimates a main total of 51, not the chance of clearing 63.5. Dallas Ferguson, Booker and Bland out; Tennessee Spears and Tate questionable. Final actives and roof status not verified. PFF full boards not reverified; ETR DFS projections are not bet probabilities. No direct executable offer or final Bozo eligibility established.",
-      "screened_at": "2026-11-21T15:41:59.422Z",
-      "selection": "TEN–DAL Under 63.5 alternate: price unverified",
-      "sources": [
-        {
-          "as_of": "2026-11-20T15:36:02Z",
-          "name": "DraftKings Network public reference, observed Nov 20; quote update time unavailable",
-          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
-        },
-        {
-          "as_of": "2026-11-20T15:00:00Z",
-          "name": "Pinnacle via AgentBets, timestamped comparison only",
-          "url": "https://agentbets.ai/odds/pinnacle/nfl"
-        },
-        {
-          "as_of": "2026-11-20T15:24:00Z",
-          "name": "ETR DFS subscriber projection timestamp, not a betting price or probability",
-          "url": "https://establishtherun.com/draftkings-projections/"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "DraftKings Network observed Nov 21; quote update time unavailable",
-          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
-        },
-        {
-          "as_of": "2026-11-21T15:00:00Z",
-          "name": "Pinnacle via AgentBets, 15:00 UTC comparison",
-          "url": "https://agentbets.ai/odds/pinnacle/nfl"
-        },
-        {
-          "as_of": "2026-11-21T12:07:00Z",
-          "name": "The Almanac public model, Nov 21 pregame snapshot",
-          "url": "https://www.thealmanac.co/football/scores/2026-11-22"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "Official team injury or QB update, pregame",
-          "url": "https://www.tennesseetitans.com/news/week-11-injury-report-titans-at-cowboys"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "PFF Best Game Bets preview only; paid board gated",
-          "url": "https://www.pff.com/betting/best-game-bets"
-        },
-        {
-          "as_of": "2026-11-21T15:02:00Z",
-          "name": "ETR subscriber DFS update; not bet probabilities",
-          "url": "https://establishtherun.com/draftkings-projections/"
-        }
-      ],
-      "sport": "NFL",
-      "status": "hold",
-      "quote_state": "On hold"
-    },
-    {
       "event": "Hawaii at Nevada",
       "id": "cfb-202611-nevada-conflict",
       "kickoff": "2026-11-22T03:30:00Z",
       "market": "spread",
-      "reason": "Cleatz's cache gives Nevada -6, a 2.9-point SP+ lean, versus the author's earlier -4 reference. Prior PFF screen leaned Hawaii; full live PFF recheck gated. Standard price outside the Bozo band, exact alternate not verified. Week 12: 58 still upcoming at the morning screen; 54 nonzero historical spread gaps, 53 nonzero historical total gaps plus one flat, and four lacking each reference. Cleatz cache: 57 matched spreads, 56 gaps and one flat. Point gaps are not EV.",
-      "screened_at": "2026-11-21T15:41:59.422Z",
+      "reason": "Retired Nov 22: event started. Historical research only, not a negative-EV assessment. Cleatz's cache gives Nevada -6, a 2.9-point SP+ lean, versus the author's earlier -4 reference. Prior PFF screen leaned Hawaii; full live PFF recheck gated. Standard price outside the Bozo band, exact alternate not verified. Week 12: 58 still upcoming at the morning screen; 54 nonzero historical spread gaps, 53 nonzero historical total gaps plus one flat, and four lacking each reference. Cleatz cache: 57 matched spreads, 56 gaps and one flat. Point gaps are not EV.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
       "selection": "Nevada -6 (-112 cache): spread research only",
       "sources": [
         {
@@ -520,16 +1027,16 @@
         }
       ],
       "sport": "CFB",
-      "status": "hold",
-      "quote_state": "Started / archived"
+      "status": "scratch",
+      "quote_state": "Scratched"
     },
     {
       "event": "Tennessee Tech at Mississippi State",
       "id": "cfb-202611-tt-msst-review",
       "kickoff": "2026-11-21T18:00:00Z",
       "market": "spread",
-      "reason": "Cleatz's cache gives Tennessee Tech +30.5 versus prior +35.5; SP+ projects Mississippi State by 16.5 for a 14-point gap. The original SP+ sheet lacks a same-game reference here. Treat large gaps as alignment and roster checks. Standard price outside band; no exact alternate. Week 12: 58 still upcoming at the morning screen; 54 nonzero historical spread gaps, 53 nonzero historical total gaps plus one flat, and four lacking each reference. Cleatz cache: 57 matched spreads, 56 gaps and one flat. Point gaps are not EV.",
-      "screened_at": "2026-11-21T15:41:59.422Z",
+      "reason": "Retired Nov 22: event started. Historical research only, not a negative-EV assessment. Cleatz's cache gives Tennessee Tech +30.5 versus prior +35.5; SP+ projects Mississippi State by 16.5 for a 14-point gap. The original SP+ sheet lacks a same-game reference here. Treat large gaps as alignment and roster checks. Standard price outside band; no exact alternate. Week 12: 58 still upcoming at the morning screen; 54 nonzero historical spread gaps, 53 nonzero historical total gaps plus one flat, and four lacking each reference. Cleatz cache: 57 matched spreads, 56 gaps and one flat. Point gaps are not EV.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
       "selection": "Tennessee Tech +30.5 (-105 cache): anomaly review",
       "sources": [
         {
@@ -564,144 +1071,16 @@
         }
       ],
       "sport": "CFB",
-      "status": "hold",
-      "quote_state": "Started / archived"
-    },
-    {
-      "event": "Pittsburgh Steelers at Philadelphia Eagles",
-      "id": "nfl-20261122-pit-ml",
-      "kickoff": "2026-11-22T18:00:00Z",
-      "market": "moneyline",
-      "reason": "DK Network break-even is about 2.0 percentage points above paired no-vig Pinnacle; this is market comparison, not independent win probability or EV. The independent model did not establish a robust advantage. Both reference prices are outside the -200 to -500 band; monitor only, not a negative-EV label. Philadelphia confirmed Joe Milton III starts; rain risk. NFL flexed kickoff to 1 p.m. ET. PFF full boards not reverified; ETR DFS projections are not bet probabilities. No direct executable offer or final Bozo eligibility established.",
-      "screened_at": "2026-11-21T15:41:59.422Z",
-      "selection": "Steelers ML (DK Network reference -197; Pinnacle reference -198)",
-      "sources": [
-        {
-          "as_of": "2026-11-20T15:36:02Z",
-          "name": "DraftKings Network public splits board reference, observed Nov 20; quote update time unavailable",
-          "url": "https://dknetwork.draftkings.com/draftkings-sportsbook-betting-splits/"
-        },
-        {
-          "as_of": "2026-11-20T15:00:00Z",
-          "name": "Pinnacle via AgentBets, timestamped comparison only",
-          "url": "https://agentbets.ai/odds/pinnacle/nfl"
-        },
-        {
-          "as_of": "2026-11-20T15:24:00Z",
-          "name": "ETR DFS subscriber projection timestamp, not a betting price or probability",
-          "url": "https://establishtherun.com/draftkings-projections/"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "DraftKings Network splits board observed Nov 21; quote time unavailable",
-          "url": "https://dknetwork.draftkings.com/draftkings-sportsbook-betting-splits/?itm_content=NFL&tb_edate=tomorrow&tb_eg=88808&tb_page=1"
-        },
-        {
-          "as_of": "2026-11-21T15:00:00Z",
-          "name": "Pinnacle via AgentBets, 15:00 UTC comparison",
-          "url": "https://agentbets.ai/odds/pinnacle/nfl"
-        },
-        {
-          "as_of": "2026-11-21T15:00:00Z",
-          "name": "AgentBets DraftKings-labeled snapshot",
-          "url": "https://agentbets.ai/odds/draftkings/nfl"
-        },
-        {
-          "as_of": "2026-11-21T12:07:00Z",
-          "name": "The Almanac public model, Nov 21 pregame snapshot",
-          "url": "https://www.thealmanac.co/football/scores/2026-11-22"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "Official team injury or QB update, pregame",
-          "url": "https://www.philadelphiaeagles.com/news/nick-sirianni-confirms-joe-milton-will-start-at-quarterback"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "PFF Best Game Bets preview only; paid board gated",
-          "url": "https://www.pff.com/betting/best-game-bets"
-        },
-        {
-          "as_of": "2026-11-21T15:02:00Z",
-          "name": "ETR subscriber DFS update; not bet probabilities",
-          "url": "https://establishtherun.com/draftkings-projections/"
-        }
-      ],
-      "sport": "NFL",
-      "status": "hold",
-      "quote_state": "On hold"
-    },
-    {
-      "event": "Cincinnati Bengals at Washington Commanders",
-      "id": "nfl-20261123-cin-ml",
-      "kickoff": "2026-11-24T01:15:00Z",
-      "market": "moneyline",
-      "reason": "DK Network break-even is about 3.3 percentage points above paired no-vig Pinnacle; this is market comparison, not independent win probability or EV. The independent model did not establish a robust advantage. Burrow and Jayden Daniels practiced fully Thursday and Friday; final Monday status not verified. PFF full boards not reverified; ETR DFS projections are not bet probabilities. No direct executable offer or final Bozo eligibility established.",
-      "screened_at": "2026-11-21T15:41:59.422Z",
-      "selection": "Bengals ML (DK Network reference -298; Pinnacle reference -285)",
-      "sources": [
-        {
-          "as_of": "2026-11-20T15:36:02Z",
-          "name": "DraftKings Network public reference, observed Nov 20; quote update time unavailable",
-          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
-        },
-        {
-          "as_of": "2026-11-20T15:00:00Z",
-          "name": "Pinnacle via AgentBets, timestamped comparison only",
-          "url": "https://agentbets.ai/odds/pinnacle/nfl"
-        },
-        {
-          "as_of": "2026-11-20T15:24:00Z",
-          "name": "ETR DFS subscriber projection timestamp, not a betting price or probability",
-          "url": "https://establishtherun.com/draftkings-projections/"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "DraftKings Network observed Nov 21; quote update time unavailable",
-          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
-        },
-        {
-          "as_of": "2026-11-21T15:00:00Z",
-          "name": "Pinnacle via AgentBets, 15:00 UTC comparison",
-          "url": "https://agentbets.ai/odds/pinnacle/nfl"
-        },
-        {
-          "as_of": "2026-11-21T15:00:00Z",
-          "name": "AgentBets DraftKings-labeled snapshot",
-          "url": "https://agentbets.ai/odds/draftkings/nfl"
-        },
-        {
-          "as_of": "2026-11-21T12:07:00Z",
-          "name": "The Almanac public model, Nov 21 pregame snapshot",
-          "url": "https://www.thealmanac.co/football/scores/2026-11-22"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "Official team injury or QB update, pregame",
-          "url": "https://www.bengals.com/news/bengals-commanders-week-11-2026-injury-report-monday-night-football"
-        },
-        {
-          "as_of": "2026-11-21T15:41:59.422Z",
-          "name": "PFF Best Game Bets preview only; paid board gated",
-          "url": "https://www.pff.com/betting/best-game-bets"
-        },
-        {
-          "as_of": "2026-11-21T15:02:00Z",
-          "name": "ETR subscriber DFS update; not bet probabilities",
-          "url": "https://establishtherun.com/draftkings-projections/"
-        }
-      ],
-      "sport": "NFL",
-      "status": "hold",
-      "quote_state": "On hold"
+      "status": "scratch",
+      "quote_state": "Scratched"
     },
     {
       "event": "Memphis at Navy",
       "id": "cfb-20261121-memphis-navy-sp",
       "kickoff": "2026-11-21T17:00:00Z",
       "market": "spread",
-      "reason": "SP+ comparison favors this side by 7.8 points relative to the displayed cache. These are model-versus-market points, not a calibrated probability or EV. The cached standard price is outside the Bozo band; any alternate needs its own exact current price and analysis. No final QB, availability, weather or rule clearance.",
-      "screened_at": "2026-11-21T15:41:59.422Z",
+      "reason": "Retired Nov 22: event started. Historical research only, not a negative-EV assessment. SP+ comparison favors this side by 7.8 points relative to the displayed cache. These are model-versus-market points, not a calibrated probability or EV. The cached standard price is outside the Bozo band; any alternate needs its own exact current price and analysis. No final QB, availability, weather or rule clearance.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
       "selection": "Memphis -2.5 (-115) (cached, research only)",
       "sources": [
         {
@@ -721,16 +1100,16 @@
         }
       ],
       "sport": "CFB",
-      "status": "hold",
-      "quote_state": "Started / archived"
+      "status": "scratch",
+      "quote_state": "Scratched"
     },
     {
       "event": "Northwestern at Minnesota",
       "id": "cfb-20261121-nw-minn-sp",
       "kickoff": "2026-11-21T17:00:00Z",
       "market": "spread",
-      "reason": "SP+ comparison favors this side by 6.7 points relative to the displayed cache. These are model-versus-market points, not a calibrated probability or EV. The cached standard price is outside the Bozo band; any alternate needs its own exact current price and analysis. No final QB, availability, weather or rule clearance.",
-      "screened_at": "2026-11-21T15:41:59.422Z",
+      "reason": "Retired Nov 22: event started. Historical research only, not a negative-EV assessment. SP+ comparison favors this side by 6.7 points relative to the displayed cache. These are model-versus-market points, not a calibrated probability or EV. The cached standard price is outside the Bozo band; any alternate needs its own exact current price and analysis. No final QB, availability, weather or rule clearance.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
       "selection": "Northwestern -3 (-102) (cached, research only)",
       "sources": [
         {
@@ -750,16 +1129,16 @@
         }
       ],
       "sport": "CFB",
-      "status": "hold",
-      "quote_state": "Started / archived"
+      "status": "scratch",
+      "quote_state": "Scratched"
     },
     {
       "event": "Western Kentucky at Liberty",
       "id": "cfb-20261121-wku-liberty-sp",
       "kickoff": "2026-11-21T18:00:00Z",
       "market": "spread",
-      "reason": "SP+ comparison favors this side by 12.1 points relative to the displayed cache. These are model-versus-market points, not a calibrated probability or EV. The cached standard price is outside the Bozo band; any alternate needs its own exact current price and analysis. No final QB, availability, weather or rule clearance.",
-      "screened_at": "2026-11-21T15:41:59.422Z",
+      "reason": "Retired Nov 22: event started. Historical research only, not a negative-EV assessment. SP+ comparison favors this side by 12.1 points relative to the displayed cache. These are model-versus-market points, not a calibrated probability or EV. The cached standard price is outside the Bozo band; any alternate needs its own exact current price and analysis. No final QB, availability, weather or rule clearance.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
       "selection": "Liberty -17.5 (-112) (cached, research only)",
       "sources": [
         {
@@ -779,16 +1158,16 @@
         }
       ],
       "sport": "CFB",
-      "status": "hold",
-      "quote_state": "Started / archived"
+      "status": "scratch",
+      "quote_state": "Scratched"
     },
     {
       "event": "Northern Illinois at North Dakota State",
       "id": "cfb-20261121-niu-ndsu-sp",
       "kickoff": "2026-11-21T21:10:00Z",
       "market": "spread",
-      "reason": "SP+ comparison favors this side by 16 points relative to the displayed cache. These are model-versus-market points, not a calibrated probability or EV. The cached standard price is outside the Bozo band; any alternate needs its own exact current price and analysis. No final QB, availability, weather or rule clearance.",
-      "screened_at": "2026-11-21T15:41:59.422Z",
+      "reason": "Retired Nov 22: event started. Historical research only, not a negative-EV assessment. SP+ comparison favors this side by 16 points relative to the displayed cache. These are model-versus-market points, not a calibrated probability or EV. The cached standard price is outside the Bozo band; any alternate needs its own exact current price and analysis. No final QB, availability, weather or rule clearance.",
+      "screened_at": "2026-11-22T15:42:59.309Z",
       "selection": "North Dakota State -25.5 (-115) (cached, research only)",
       "sources": [
         {
@@ -808,16 +1187,16 @@
         }
       ],
       "sport": "CFB",
-      "status": "hold",
-      "quote_state": "Started / archived"
+      "status": "scratch",
+      "quote_state": "Scratched"
     }
   ],
   "published_weeks": [
     {
       "week": "2026-11-16",
-      "title": "Nov 21 Bozo Menu · partial market and SP+ refresh · 0 cleared",
-      "revision": 6,
-      "published_at": "2026-11-21T15:44:23.414Z"
+      "title": "Nov 22 Bozo Menu · Sunday NFL refresh · 0 cleared",
+      "revision": 7,
+      "published_at": "2026-11-22T15:45:06.904Z"
     },
     {
       "week": "2026-11-09",
@@ -857,8 +1236,8 @@
     }
   ],
   "snapshot": {
-    "checked_at": "2026-11-22T11:39:34.694Z",
+    "checked_at": "2026-11-22T19:41:46.705Z",
     "source": "https://toto.jkapcar4.workers.dev/bozo/menu.json?week=2026-11-16",
-    "notice": "Static copy checked 2026-11-22T11:39:34.694Z. Refresh is attempted hourly; delays or failures can leave this copy behind the publisher. Compare the week, revision and source publication time. These are saved research observations, not live odds or available bets. Holds and scratches are not active recommendations."
+    "notice": "Static copy checked 2026-11-22T19:41:46.705Z. Refresh is attempted hourly; delays or failures can leave this copy behind the publisher. Compare the week, revision and source publication time. These are saved research observations, not live odds or available bets. Holds and scratches are not active recommendations."
   }
 }
