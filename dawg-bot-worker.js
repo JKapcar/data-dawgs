@@ -10437,7 +10437,8 @@ const royaleRoster = state => Object.entries(royaleStatus(state))
    is so that a season later you can tell a coin-flip from a data hole. */
 async function royaleResolveWeek(env, lid, state) {
   const week = state.week || 1;
-  if (((state.royale || {}).chops || {})[week]) return null;      // already resolved
+  const chops = (state.royale || {}).chops || {};
+  if (chops[`w${week}`] || chops[week]) return null;             // also accept legacy numeric keys
 
   const status = royaleStatus(state);
   const before = royaleRoster(state);
@@ -10467,16 +10468,15 @@ async function royaleResolveWeek(env, lid, state) {
        the whole reason the timed window is gone: there is no decision left to defer to a
        more convenient week.
 
-       ⚠️ NOT at the final two. A re-deploy there would mean the chop cannot resolve the
-       league, and the season would never end. Your last life is spent by being the last
-       one chopped, which is the correct place for it to run out. */
-    const stillAlive = before.filter(k => k !== key).length;
-    const canRedeploy = (st.redeploysLeft || 0) > 0 && stillAlive > 1;
+       The final two follow the same rule. An unused re-deploy is consumed here, so
+       the next chop of that player is final. A legacy re-deploy receipt is proof the
+       allowance was already used even if its counter was never stored. */
+    const canRedeploy = st.redeploysLeft > 0 && st.redeployed.length === 0;
 
     if (canRedeploy) {
       patch[`royale/status/${key}/alive`] = true;
-      patch[`royale/status/${key}/redeploysLeft`] = (st.redeploysLeft || 0) - 1;
-      patch[`royale/status/${key}/buybacksLeft`] = (st.redeploysLeft || 0) - 1;  // legacy mirror
+      patch[`royale/status/${key}/redeploysLeft`] = 0;
+      patch[`royale/status/${key}/buybacksLeft`] = 0;  // legacy mirror
       patch[`royale/status/${key}/redeployed`] = [...(st.redeployed || []), week];
       patch[`royale/status/${key}/boughtBack`] = [...(st.redeployed || []), week]; // legacy mirror
       patch[`royale/status/${key}/eliminatedWeek`] = null;
