@@ -1,17 +1,17 @@
 {
- "as_of": "2026-11-22",
+ "as_of": "2026-11-23",
  "source": "Generated manifest of every machine-readable surface on datadawgs216.com.",
  "note": "Start here. Each entry carries its own as_of — check it before quoting anything. The sha256 is of the file as served; recompute it if you care.",
  "site": "https://datadawgs216.com",
- "built": "2026-11-22",
+ "built": "2026-11-23",
  "data": {
   "files": [
    {
     "path": "/data/538-classic.json",
     "url": "https://datadawgs216.com/data/538-classic.json",
-    "bytes": 42546,
-    "as_of": "2026-11-22",
-    "sha256": "7526aedab5e51e256b6cdd595ddf1d1ca57948ec42f5f7238afeed391800b11c",
+    "bytes": 42233,
+    "as_of": "2026-11-23",
+    "sha256": "aca352b5d863211f1b7c45a2d7b5c2a24369cef45fc23606e06f9ae9f412a448",
     "note": "Prospective 2026 probabilities from the original 538 Classic Elo mathematics. They are ungraded, contain no QB, injury, weather or market adjustment, and are a permanent simple benchmark rather than a claim of current superiority."
    },
    {
@@ -201,10 +201,10 @@
    {
     "path": "/data/draft-2026.json",
     "url": "https://datadawgs216.com/data/draft-2026.json",
-    "bytes": 160225,
-    "as_of": "2026-11-22",
-    "sha256": "58af97c22d869c33ec00f7ae7c4a27447d748ae9ccc63ad21c9be5afc0bcebb3",
-    "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 157/272 regular-season games are settled and banked in wins_tracker; 115 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
+    "bytes": 160076,
+    "as_of": "2026-11-23",
+    "sha256": "a21cff1c13d546387fd27b5c42ffe9e63ec94312f9fc2312585ab828de0a0192",
+    "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 159/272 regular-season games are settled and banked in wins_tracker; 113 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run."
    },
    {
     "path": "/data/dynasty-ranks.json",
@@ -352,9 +352,9 @@
    {
     "path": "/data/nfl-schedule.json",
     "url": "https://datadawgs216.com/data/nfl-schedule.json",
-    "bytes": 115739,
-    "as_of": "2026-11-22",
-    "sha256": "3af66edf998463922c811865b534f8b62637d9a3c7a9b2af356fbb1a41990904",
+    "bytes": 115723,
+    "as_of": "2026-11-23",
+    "sha256": "2c7e7d2f053a4288486e417c820f5fe5dbc0c08ad4ee95f1d8306dea0cf35c95",
     "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts."
    },
    {
@@ -401,8 +401,8 @@
     "path": "/data/receipts-inventory.json",
     "url": "https://datadawgs216.com/data/receipts-inventory.json",
     "bytes": 3415,
-    "as_of": "2026-11-22",
-    "sha256": "2f208b6536e1b1c30f5e01079ffd0efcf51f869142ad1f3ec22be8701d486191",
+    "as_of": "2026-11-23",
+    "sha256": "bb85cd01b319e18f67e7bed06280f73cd04a86abd6c7b7e04461f76083fa902d",
     "note": "An INVENTORY, not a scoreboard. There is no honest Brier across domains, so this file counts what has been registered and settled and never scores it. The ledgers OVERLAP: receipts.json and the nfelo half of model-receipts.json are the same forecasts, as are 538-classic.json and its half. aggregate is therefore computed from aggregate.counted_from alone; aggregate.naive_sum is what summing the registered column would wrongly give, published so it can be named and corrected rather than quietly reproduced."
    },
    {
