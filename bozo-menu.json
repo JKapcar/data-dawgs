@@ -1,9 +1,9 @@
 {
-  "title": "Nov 23 Bozo Menu · partial SP+ and NFL refresh · PFF gated · 0 cleared",
+  "title": "Nov 24 Bozo Menu · partial SP+ and NFL refresh · PFF gated · 0 cleared",
   "week": "2026-11-23",
-  "revision": 1,
-  "published_at": "2026-11-23T15:51:37.793Z",
-  "retrieved_at": "2026-11-24T06:04:26.515Z",
+  "revision": 2,
+  "published_at": "2026-11-24T15:43:01.864Z",
+  "retrieved_at": "2026-11-24T17:46:20.737Z",
   "status": "published",
   "scope": "Public Data Dawgs research. Saved quotes, not guaranteed current offers. No contest picks submitted.",
   "candidates": [
@@ -60,19 +60,24 @@
       "id": "nfl-2026w12-gb-lar-ml",
       "kickoff": "2026-11-25T20:00:00-05:00",
       "market": "moneyline",
-      "reason": "The displayed moneyline is outside the Bozo target band. No exact qualifying alternate or independent cover probability verified. Lineups and conditions can change before kickoff. Not cleared.",
-      "screened_at": "2026-11-23T15:43:33.643734+00:00",
-      "selection": "Los Angeles Rams ML (DK Network −145, observed)",
+      "reason": "DK Network displayed -134/+113; no underlying quote time shown. Pinnacle via AgentBets -130/+115 implies roughly 54.9% no-vig versus DK break-even 57.3%. The ML is outside the Bozo price band. DK total 43.5 differs from Pinnacle 44.5; not the same quote. No verified exact-market model edge, qualifying alternate, or final availability. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Los Angeles Rams ML (DK Network -134, observed)",
       "sources": [
         {
-          "as_of": "2026-11-23T15:40:00Z",
-          "name": "DraftKings Network first-party main-market display, observed around 15:40 UTC",
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
           "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
         },
         {
-          "as_of": "2026-11-23T15:43:33.643734+00:00",
-          "name": "Official NFL Week 12 schedule",
-          "url": "https://www.nfl.com/schedules/2026/by-week/week-12"
+          "as_of": "2026-11-24T15:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "Official NFL Week 12 flex schedule",
+          "url": "https://media.nfl.com/content/dam/communications/documents/2026/Week%2012%20Schedule%20Change.pdf"
         }
       ],
       "sport": "NFL",
@@ -84,19 +89,24 @@
       "id": "nfl-2026w12-chi-det-ml",
       "kickoff": "2026-11-26T13:00:00-05:00",
       "market": "moneyline",
-      "reason": "The displayed moneyline is outside the Bozo target band. No exact qualifying alternate or independent cover probability verified. Lineups and conditions can change before kickoff. Not cleared.",
-      "screened_at": "2026-11-23T15:43:33.643734+00:00",
-      "selection": "Chicago Bears ML (DK Network −147, observed)",
+      "reason": "DK Network displayed -142/+120; no underlying quote time shown. Pinnacle via AgentBets -134/+119 implies roughly 55.6% no-vig versus DK break-even 58.7%. The ML is outside the Bozo price band. No verified exact-market model edge, qualifying alternate, or final availability. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Chicago Bears ML (DK Network -142, observed)",
       "sources": [
         {
-          "as_of": "2026-11-23T15:40:00Z",
-          "name": "DraftKings Network first-party main-market display, observed around 15:40 UTC",
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
           "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
         },
         {
-          "as_of": "2026-11-23T15:43:33.643734+00:00",
-          "name": "Official NFL Week 12 schedule",
-          "url": "https://www.nfl.com/schedules/2026/by-week/week-12"
+          "as_of": "2026-11-24T15:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "Official NFL Week 12 flex schedule",
+          "url": "https://media.nfl.com/content/dam/communications/documents/2026/Week%2012%20Schedule%20Change.pdf"
         }
       ],
       "sport": "NFL",
@@ -108,19 +118,24 @@
       "id": "nfl-2026w12-phi-dal-ml",
       "kickoff": "2026-11-26T16:30:00-05:00",
       "market": "moneyline",
-      "reason": "Break-even 81.8% versus roughly 77.9% after removing the margin from an indirectly sourced 15:00 UTC Pinnacle pair. No independent evidence supports that threshold; final injury and roof status unverified. Not cleared.",
-      "screened_at": "2026-11-23T15:43:33.643734+00:00",
-      "selection": "Dallas Cowboys ML (DK Network −450, observed)",
+      "reason": "DK Network displayed -469/+363; no underlying quote time shown. Pinnacle via AgentBets -422/+337 implies roughly 77.9% no-vig versus DK break-even 82.4%. In-band price is not sufficient: market proxy is below break-even; roof not verified. No verified exact-market model edge, qualifying alternate, or final availability. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Dallas Cowboys ML (DK Network -469, observed)",
       "sources": [
         {
-          "as_of": "2026-11-23T15:40:00Z",
-          "name": "DraftKings Network first-party main-market display, observed around 15:40 UTC",
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
           "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
         },
         {
-          "as_of": "2026-11-23T15:43:33.643734+00:00",
-          "name": "Official NFL Week 12 schedule",
-          "url": "https://www.nfl.com/schedules/2026/by-week/week-12"
+          "as_of": "2026-11-24T15:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "Official NFL Week 12 flex schedule",
+          "url": "https://media.nfl.com/content/dam/communications/documents/2026/Week%2012%20Schedule%20Change.pdf"
         }
       ],
       "sport": "NFL",
@@ -132,19 +147,24 @@
       "id": "nfl-2026w12-kc-buf-ml",
       "kickoff": "2026-11-26T20:20:00-05:00",
       "market": "moneyline",
-      "reason": "The displayed moneyline is outside the Bozo target band. No exact qualifying alternate or independent cover probability verified. Lineups and conditions can change before kickoff. Not cleared.",
-      "screened_at": "2026-11-23T15:43:33.643734+00:00",
-      "selection": "Buffalo Bills ML (DK Network −150, observed)",
+      "reason": "DK Network displayed -149/+126; no underlying quote time shown. Pinnacle via AgentBets -147/+130 implies roughly 57.8% no-vig versus DK break-even 59.8%. The ML is outside the Bozo price band. No verified exact-market model edge, qualifying alternate, or final availability. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Buffalo Bills ML (DK Network -149, observed)",
       "sources": [
         {
-          "as_of": "2026-11-23T15:40:00Z",
-          "name": "DraftKings Network first-party main-market display, observed around 15:40 UTC",
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
           "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
         },
         {
-          "as_of": "2026-11-23T15:43:33.643734+00:00",
-          "name": "Official NFL Week 12 schedule",
-          "url": "https://www.nfl.com/schedules/2026/by-week/week-12"
+          "as_of": "2026-11-24T15:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "Official NFL Week 12 flex schedule",
+          "url": "https://media.nfl.com/content/dam/communications/documents/2026/Week%2012%20Schedule%20Change.pdf"
         }
       ],
       "sport": "NFL",
@@ -156,19 +176,24 @@
       "id": "nfl-2026w12-den-pit-ml",
       "kickoff": "2026-11-27T15:00:00-05:00",
       "market": "moneyline",
-      "reason": "The displayed moneyline is outside the Bozo target band. No exact qualifying alternate or independent cover probability verified. Lineups and conditions can change before kickoff. Not cleared.",
-      "screened_at": "2026-11-23T15:43:33.643734+00:00",
-      "selection": "Denver Broncos ML (DK Network −156, observed)",
+      "reason": "DK Network displayed -156/+131; no underlying quote time shown. Pinnacle via AgentBets -152/+134 implies roughly 58.5% no-vig versus DK break-even 60.9%. The ML is outside the Bozo price band. No verified exact-market model edge, qualifying alternate, or final availability. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Denver Broncos ML (DK Network -156, observed)",
       "sources": [
         {
-          "as_of": "2026-11-23T15:40:00Z",
-          "name": "DraftKings Network first-party main-market display, observed around 15:40 UTC",
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
           "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
         },
         {
-          "as_of": "2026-11-23T15:43:33.643734+00:00",
-          "name": "Official NFL Week 12 schedule",
-          "url": "https://www.nfl.com/schedules/2026/by-week/week-12"
+          "as_of": "2026-11-24T15:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "Official NFL Week 12 flex schedule",
+          "url": "https://media.nfl.com/content/dam/communications/documents/2026/Week%2012%20Schedule%20Change.pdf"
         }
       ],
       "sport": "NFL",
@@ -180,14 +205,34 @@
       "id": "cfb-2026w13-1-spread",
       "kickoff": "2026-11-24T19:00:00-05:00",
       "market": "spread",
-      "reason": "SP+ projection differs from the earlier reference (Eastern Michigan -6) by 1.8 points in this direction. A points gap is not win probability or expected value. Current executable price, qualifying alternate, final team news and eligibility not verified. Not cleared.",
-      "screened_at": "2026-11-23T15:43:33.643734+00:00",
-      "selection": "Eastern Michigan against the reference spread",
+      "reason": "SP+ Eastern Michigan −7.8 versus DK Network −5.5 (Kent State +5.5 −108), a 2.3-point directional gap. Pinnacle via AgentBets was also −5.5 (−109) at 13:00 UTC. Main spread outside the Bozo price band; no exact qualifying alternate or calibrated cover probability verified. Cold, low-wind forecast; final availability unverified. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Eastern Michigan −5.5 (DK Network −112, observed)",
       "sources": [
         {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
+          "url": "https://dknetwork.draftkings.com/draftkings-sportsbook-betting-splits/?itm_content=NCAA+Football&tb_edate=n30days&tb_eg=87637"
+        },
+        {
+          "as_of": "2026-11-24T13:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/ncaaf"
+        },
+        {
           "as_of": "2026-11-23T15:42:11Z",
-          "name": "Bill Connelly SP+ Week 13 forecast and earlier market references; observed",
+          "name": "Bill Connelly, SP+ FBS Week 13 model",
           "url": "https://docs.google.com/spreadsheets/d/1vwoVl-Dxy0es87Z9I1RTvFzr72Lb1fAkREfbLxbK-eg/edit#gid=1144027514"
+        },
+        {
+          "as_of": "2026-11-24T14:51:00Z",
+          "name": "Cleatz comparison, 9:51 a.m. ET price retrieval",
+          "url": "https://cleatz.com/cfb-sp-plus-rankings/"
+        },
+        {
+          "as_of": "2026-11-24T06:00:00Z",
+          "name": "Weather Football NBM 06Z forecast, not field observation",
+          "url": "https://weather.football/college?team=Michigan"
         }
       ],
       "sport": "CFB",
@@ -199,14 +244,34 @@
       "id": "cfb-2026w13-1-total",
       "kickoff": "2026-11-24T19:00:00-05:00",
       "market": "total",
-      "reason": "SP+ projection differs from the earlier reference (45.5) by 1.3 points in this direction. A points gap is not win probability or expected value. Current executable price, qualifying alternate, final team news and eligibility not verified. Not cleared.",
-      "screened_at": "2026-11-23T15:43:33.643734+00:00",
-      "selection": "Over 45.5",
+      "reason": "SP+ 46.8 versus the displayed 46.5: the earlier 1.3-point over gap at 45.5 is now just 0.3 points. Pinnacle 46.5 paired O−104/U−114 at 13:00 UTC. Main total outside the Bozo band; no exact qualifying alternate, cover probability or final availability verified. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Over 46.5 (DK Network −112, observed)",
       "sources": [
         {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
+          "url": "https://dknetwork.draftkings.com/draftkings-sportsbook-betting-splits/?itm_content=NCAA+Football&tb_edate=n30days&tb_eg=87637"
+        },
+        {
+          "as_of": "2026-11-24T13:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/ncaaf"
+        },
+        {
           "as_of": "2026-11-23T15:42:11Z",
-          "name": "Bill Connelly SP+ Week 13 forecast and earlier market references; observed",
+          "name": "Bill Connelly, SP+ FBS Week 13 model",
           "url": "https://docs.google.com/spreadsheets/d/1vwoVl-Dxy0es87Z9I1RTvFzr72Lb1fAkREfbLxbK-eg/edit#gid=1144027514"
+        },
+        {
+          "as_of": "2026-11-24T14:51:00Z",
+          "name": "Cleatz comparison, 9:51 a.m. ET price retrieval",
+          "url": "https://cleatz.com/cfb-sp-plus-rankings/"
+        },
+        {
+          "as_of": "2026-11-24T06:00:00Z",
+          "name": "Weather Football NBM 06Z forecast, not field observation",
+          "url": "https://weather.football/college?team=Michigan"
         }
       ],
       "sport": "CFB",
@@ -218,14 +283,34 @@
       "id": "cfb-2026w13-2-spread",
       "kickoff": "2026-11-24T19:00:00-05:00",
       "market": "spread",
-      "reason": "SP+ projection differs from the earlier reference (Western Michigan -7) by 0.8 points in this direction. A points gap is not win probability or expected value. Current executable price, qualifying alternate, final team news and eligibility not verified. Not cleared.",
-      "screened_at": "2026-11-23T15:43:33.643734+00:00",
-      "selection": "Miami-OH against the reference spread",
+      "reason": "SP+ Western Michigan −6.2 versus the displayed Western Michigan −6.5: Miami +6.5 is a 0.3-point directional gap. Pinnacle −6.5 (−105) on Western at 13:00 UTC. Main spread outside Bozo band; no exact qualifying alternate or calibrated cover probability verified. Cold, low-wind forecast; final availability unverified. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Miami (OH) +6.5 (DK Network −110, observed)",
       "sources": [
         {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
+          "url": "https://dknetwork.draftkings.com/draftkings-sportsbook-betting-splits/?itm_content=NCAA+Football&tb_edate=n30days&tb_eg=87637"
+        },
+        {
+          "as_of": "2026-11-24T13:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/ncaaf"
+        },
+        {
           "as_of": "2026-11-23T15:42:11Z",
-          "name": "Bill Connelly SP+ Week 13 forecast and earlier market references; observed",
+          "name": "Bill Connelly, SP+ FBS Week 13 model",
           "url": "https://docs.google.com/spreadsheets/d/1vwoVl-Dxy0es87Z9I1RTvFzr72Lb1fAkREfbLxbK-eg/edit#gid=1144027514"
+        },
+        {
+          "as_of": "2026-11-24T14:51:00Z",
+          "name": "Cleatz comparison, 9:51 a.m. ET price retrieval",
+          "url": "https://cleatz.com/cfb-sp-plus-rankings/"
+        },
+        {
+          "as_of": "2026-11-24T06:00:00Z",
+          "name": "Weather Football NBM 06Z forecast, not field observation",
+          "url": "https://weather.football/college?team=Michigan"
         }
       ],
       "sport": "CFB",
@@ -237,14 +322,34 @@
       "id": "cfb-2026w13-2-total",
       "kickoff": "2026-11-24T19:00:00-05:00",
       "market": "total",
-      "reason": "SP+ projection differs from the earlier reference (46.5) by 2.6 points in this direction. A points gap is not win probability or expected value. Current executable price, qualifying alternate, final team news and eligibility not verified. Not cleared.",
-      "screened_at": "2026-11-23T15:43:33.643734+00:00",
-      "selection": "Over 46.5",
+      "reason": "SP+ 49.1 versus the displayed 45.5: 3.6-point over lean, up from 2.6 at 46.5. Pinnacle 45.5 paired O−106/U−112 at 13:00 UTC; DK Network U−108. Main total outside Bozo band; model gap is not a cover probability, and no qualifying alternate or final availability verified. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Over 45.5 (DK Network −112, observed)",
       "sources": [
         {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
+          "url": "https://dknetwork.draftkings.com/draftkings-sportsbook-betting-splits/?itm_content=NCAA+Football&tb_edate=n30days&tb_eg=87637"
+        },
+        {
+          "as_of": "2026-11-24T13:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/ncaaf"
+        },
+        {
           "as_of": "2026-11-23T15:42:11Z",
-          "name": "Bill Connelly SP+ Week 13 forecast and earlier market references; observed",
+          "name": "Bill Connelly, SP+ FBS Week 13 model",
           "url": "https://docs.google.com/spreadsheets/d/1vwoVl-Dxy0es87Z9I1RTvFzr72Lb1fAkREfbLxbK-eg/edit#gid=1144027514"
+        },
+        {
+          "as_of": "2026-11-24T14:51:00Z",
+          "name": "Cleatz comparison, 9:51 a.m. ET price retrieval",
+          "url": "https://cleatz.com/cfb-sp-plus-rankings/"
+        },
+        {
+          "as_of": "2026-11-24T06:00:00Z",
+          "name": "Weather Football NBM 06Z forecast, not field observation",
+          "url": "https://weather.football/college?team=Michigan"
         }
       ],
       "sport": "CFB",
@@ -256,13 +361,23 @@
       "id": "cfb-2026w13-3-spread",
       "kickoff": "2026-11-26T20:00:00-05:00",
       "market": "spread",
-      "reason": "SP+ projection differs from the earlier reference (Texas Tech -12.5) by 4.5 points in this direction. A points gap is not win probability or expected value. Current executable price, qualifying alternate, final team news and eligibility not verified. Not cleared.",
-      "screened_at": "2026-11-23T15:43:33.643734+00:00",
-      "selection": "Texas Tech against the reference spread",
+      "reason": "SP+ Texas Tech −17 against the Cleatz 9:51 a.m. ET DraftKings reference −14: 3 points, down from 4.5 at −12.5. Pinnacle −14.5 (−110) at 13:00 UTC. Neither main spread is in the Bozo band, and the first-party executable alternate and final availability were not verified. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Texas Tech −14 (secondary DK −112 reference)",
       "sources": [
         {
+          "as_of": "2026-11-24T14:51:00Z",
+          "name": "Cleatz comparison, 9:51 a.m. ET price retrieval",
+          "url": "https://cleatz.com/cfb-sp-plus-rankings/"
+        },
+        {
+          "as_of": "2026-11-24T13:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/ncaaf"
+        },
+        {
           "as_of": "2026-11-23T15:42:11Z",
-          "name": "Bill Connelly SP+ Week 13 forecast and earlier market references; observed",
+          "name": "Bill Connelly, SP+ FBS Week 13 model",
           "url": "https://docs.google.com/spreadsheets/d/1vwoVl-Dxy0es87Z9I1RTvFzr72Lb1fAkREfbLxbK-eg/edit#gid=1144027514"
         }
       ],
@@ -2777,14 +2892,261 @@
       "sport": "CFB",
       "status": "hold",
       "quote_state": "On hold"
+    },
+    {
+      "event": "Kent State at Eastern Michigan",
+      "id": "cfb-2026w13-1-ml",
+      "kickoff": "2026-11-24T19:00:00-05:00",
+      "market": "moneyline",
+      "reason": "DK Network displayed -225/+185; no underlying quote time shown. Pinnacle via AgentBets -216/+183 implies roughly 65.9% no-vig versus DK break-even 69.2%. SP+ via Cleatz rounds Eastern Michigan to 69% straight-up, essentially the 69.2% break-even, not a robust edge. No verified exact-market model edge, qualifying alternate, or final availability. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Eastern Michigan ML (DK Network -225, observed)",
+      "sources": [
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
+          "url": "https://dknetwork.draftkings.com/draftkings-sportsbook-betting-splits/?itm_content=NCAA+Football&tb_edate=n30days&tb_eg=87637"
+        },
+        {
+          "as_of": "2026-11-24T13:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/ncaaf"
+        },
+        {
+          "as_of": "2026-11-23T15:42:11Z",
+          "name": "Bill Connelly, SP+ FBS Week 13 model",
+          "url": "https://docs.google.com/spreadsheets/d/1vwoVl-Dxy0es87Z9I1RTvFzr72Lb1fAkREfbLxbK-eg/edit#gid=1144027514"
+        },
+        {
+          "as_of": "2026-11-24T14:51:00Z",
+          "name": "Cleatz comparison, 9:51 a.m. ET price retrieval",
+          "url": "https://cleatz.com/cfb-sp-plus-rankings/"
+        },
+        {
+          "as_of": "2026-11-24T06:00:00Z",
+          "name": "Weather Football NBM 06Z forecast, not field observation",
+          "url": "https://weather.football/college?team=Michigan"
+        }
+      ],
+      "sport": "CFB",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "Miami-OH at Western Michigan",
+      "id": "cfb-2026w13-2-ml",
+      "kickoff": "2026-11-24T19:00:00-05:00",
+      "market": "moneyline",
+      "reason": "DK Network displayed -270/+220; no underlying quote time shown. Pinnacle via AgentBets -251/+209 implies roughly 68.8% no-vig versus DK break-even 73.0%. SP+ via Cleatz rounds Western Michigan to 65% straight-up, below the 73.0% threshold; this remains a research hold given incomplete availability. No verified exact-market model edge, qualifying alternate, or final availability. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Western Michigan ML (DK Network -270, observed)",
+      "sources": [
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
+          "url": "https://dknetwork.draftkings.com/draftkings-sportsbook-betting-splits/?itm_content=NCAA+Football&tb_edate=n30days&tb_eg=87637"
+        },
+        {
+          "as_of": "2026-11-24T13:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/ncaaf"
+        },
+        {
+          "as_of": "2026-11-23T15:42:11Z",
+          "name": "Bill Connelly, SP+ FBS Week 13 model",
+          "url": "https://docs.google.com/spreadsheets/d/1vwoVl-Dxy0es87Z9I1RTvFzr72Lb1fAkREfbLxbK-eg/edit#gid=1144027514"
+        },
+        {
+          "as_of": "2026-11-24T14:51:00Z",
+          "name": "Cleatz comparison, 9:51 a.m. ET price retrieval",
+          "url": "https://cleatz.com/cfb-sp-plus-rankings/"
+        },
+        {
+          "as_of": "2026-11-24T06:00:00Z",
+          "name": "Weather Football NBM 06Z forecast, not field observation",
+          "url": "https://weather.football/college?team=Michigan"
+        }
+      ],
+      "sport": "CFB",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "Baltimore Ravens at Houston Texans",
+      "id": "nfl-2026w12-bal-hou-ml",
+      "kickoff": "2026-11-29T13:00:00-05:00",
+      "market": "moneyline",
+      "reason": "DK Network displayed -304/+247; no underlying quote time shown. Pinnacle via AgentBets -309/+258 implies roughly 73.0% no-vig versus DK break-even 75.2%. The displayed ML is in-band, not a verified betting edge. No verified exact-market model edge, qualifying alternate, or final availability. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Houston Texans ML (DK Network -304, observed)",
+      "sources": [
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
+        },
+        {
+          "as_of": "2026-11-24T15:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "Official NFL Week 12 flex schedule",
+          "url": "https://media.nfl.com/content/dam/communications/documents/2026/Week%2012%20Schedule%20Change.pdf"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "Atlanta Falcons at Minnesota Vikings",
+      "id": "nfl-2026w12-atl-min-ml",
+      "kickoff": "2026-11-29T13:00:00-05:00",
+      "market": "moneyline",
+      "reason": "DK Network displayed -350/+280; no underlying quote time shown. Pinnacle via AgentBets -317/+264 implies roughly 73.5% no-vig versus DK break-even 77.8%. The displayed ML is in-band, not a verified betting edge. No verified exact-market model edge, qualifying alternate, or final availability. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Minnesota Vikings ML (DK Network -350, observed)",
+      "sources": [
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
+        },
+        {
+          "as_of": "2026-11-24T15:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "Official NFL Week 12 flex schedule",
+          "url": "https://media.nfl.com/content/dam/communications/documents/2026/Week%2012%20Schedule%20Change.pdf"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "New York Jets at Miami Dolphins",
+      "id": "nfl-2026w12-nyj-mia-ml",
+      "kickoff": "2026-11-29T13:00:00-05:00",
+      "market": "moneyline",
+      "reason": "DK Network displayed -213/+178; no underlying quote time shown. Pinnacle via AgentBets -194/+169 implies roughly 64.0% no-vig versus DK break-even 68.1%. The displayed ML is in-band, not a verified betting edge. No verified exact-market model edge, qualifying alternate, or final availability. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "New York Jets ML (DK Network -213, observed)",
+      "sources": [
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
+        },
+        {
+          "as_of": "2026-11-24T15:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "Official NFL Week 12 flex schedule",
+          "url": "https://media.nfl.com/content/dam/communications/documents/2026/Week%2012%20Schedule%20Change.pdf"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "New York Giants at Indianapolis Colts",
+      "id": "nfl-2026w12-nyg-ind-ml",
+      "kickoff": "2026-11-29T13:00:00-05:00",
+      "market": "moneyline",
+      "reason": "DK Network displayed -322/+260; no underlying quote time shown. Pinnacle via AgentBets -300/+251 implies roughly 72.5% no-vig versus DK break-even 76.3%. The displayed ML is in-band, not a verified betting edge. No verified exact-market model edge, qualifying alternate, or final availability. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "New York Giants ML (DK Network -322, observed)",
+      "sources": [
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
+        },
+        {
+          "as_of": "2026-11-24T15:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "Official NFL Week 12 flex schedule",
+          "url": "https://media.nfl.com/content/dam/communications/documents/2026/Week%2012%20Schedule%20Change.pdf"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "Washington Commanders at Arizona Cardinals",
+      "id": "nfl-2026w12-was-ari-ml",
+      "kickoff": "2026-11-29T16:25:00-05:00",
+      "market": "moneyline",
+      "reason": "DK Network displayed -412/+324; no underlying quote time shown. DK break-even 80.5%; paired sharp comparison unverified. The displayed ML is in-band, not a verified betting edge. No verified exact-market model edge, qualifying alternate, or final availability. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Washington Commanders ML (DK Network -412, observed)",
+      "sources": [
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
+        },
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "Official NFL Week 12 flex schedule",
+          "url": "https://media.nfl.com/content/dam/communications/documents/2026/Week%2012%20Schedule%20Change.pdf"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
+    },
+    {
+      "event": "Las Vegas Raiders at Cleveland Browns",
+      "id": "nfl-2026w12-lv-cle-ml",
+      "kickoff": "2026-11-29T20:20:00-05:00",
+      "market": "moneyline",
+      "reason": "DK Network displayed -220/+183; no underlying quote time shown. Pinnacle via AgentBets -227/+195 implies roughly 67.2% no-vig versus DK break-even 68.8%. The displayed ML is in-band, not a verified betting edge. No verified exact-market model edge, qualifying alternate, or final availability. Not cleared.",
+      "screened_at": "2026-11-24T15:41:49.574Z",
+      "selection": "Cleveland Browns ML (DK Network -220, observed)",
+      "sources": [
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "DraftKings Network public board; displayed price, no book quote timestamp",
+          "url": "https://dknetwork.draftkings.com/moneyline-total-spread/"
+        },
+        {
+          "as_of": "2026-11-24T15:00:00Z",
+          "name": "Pinnacle via AgentBets snapshot",
+          "url": "https://agentbets.ai/odds/pinnacle/nfl"
+        },
+        {
+          "as_of": "2026-11-24T15:41:49.574Z",
+          "name": "Official NFL Week 12 flex schedule",
+          "url": "https://media.nfl.com/content/dam/communications/documents/2026/Week%2012%20Schedule%20Change.pdf"
+        }
+      ],
+      "sport": "NFL",
+      "status": "hold",
+      "quote_state": "On hold"
     }
   ],
   "published_weeks": [
     {
       "week": "2026-11-23",
-      "title": "Nov 23 Bozo Menu · partial SP+ and NFL refresh · PFF gated · 0 cleared",
-      "revision": 1,
-      "published_at": "2026-11-23T15:51:37.793Z"
+      "title": "Nov 24 Bozo Menu · partial SP+ and NFL refresh · PFF gated · 0 cleared",
+      "revision": 2,
+      "published_at": "2026-11-24T15:43:01.864Z"
     },
     {
       "week": "2026-11-16",
@@ -2830,8 +3192,8 @@
     }
   ],
   "snapshot": {
-    "checked_at": "2026-11-24T06:04:28.413Z",
+    "checked_at": "2026-11-24T17:46:28.572Z",
     "source": "https://toto.jkapcar4.workers.dev/bozo/menu.json?week=2026-11-23",
-    "notice": "Static copy checked 2026-11-24T06:04:28.413Z. Refresh is attempted hourly; delays or failures can leave this copy behind the publisher. Compare the week, revision and source publication time. These are saved research observations, not live odds or available bets. Holds and scratches are not active recommendations."
+    "notice": "Static copy checked 2026-11-24T17:46:28.572Z. Refresh is attempted hourly; delays or failures can leave this copy behind the publisher. Compare the week, revision and source publication time. These are saved research observations, not live odds or available bets. Holds and scratches are not active recommendations."
   }
 }
