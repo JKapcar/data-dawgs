@@ -2,7 +2,7 @@
  "source_page": "/teamdraft.html",
  "tier": "labs",
  "graded": false,
- "as_of": "2026-11-24",
+ "as_of": "2026-11-23",
  "source": "VegasInsider 4-book devigged win totals (2026-08-09) normalized to 272; per-game probabilities refit to those totals over the nflverse 2026 schedule",
  "note": "A private eight-person pool: four NFL teams each, all 32 owned, total regular-season wins the only criterion. Expected wins are devigged from four books and normalized to 272; they are NOT the posted lines, and `line` carries those separately. 160/272 regular-season games are settled and banked in wins_tracker; 112 remain open (including any in-progress or not-yet-kicked slate). Nothing here is graded — banked cells are observed wins only. `drafters`, `undrafted`, `board` and `diagnostics` are derived from `picks` by scripts/team_draft_pool.py and are rewritten on every run.",
  "field_notes": {
@@ -1231,16 +1231,16 @@
     "division": "AFC North",
     "line": 10.5,
     "ew": 10.11,
-    "sd": 1.205,
+    "sd": 1.203,
     "dist": {
      "8": 0.00026,
-     "9": 0.00378,
-     "10": 0.02177,
-     "11": 0.08765,
-     "12": 0.21496,
-     "13": 0.32034,
-     "14": 0.26035,
-     "15": 0.09089
+     "9": 0.00367,
+     "10": 0.0214,
+     "11": 0.08677,
+     "12": 0.21348,
+     "13": 0.32059,
+     "14": 0.2618,
+     "15": 0.09203
     },
     "p10": 11.0,
     "p50": 13.0,
@@ -1344,7 +1344,7 @@
       "wpf": 0.52237,
       "tier": "model",
       "settled": false,
-      "live": 0.6784
+      "live": 0.6872
      },
      {
       "week": 12,
@@ -1418,8 +1418,8 @@
      }
     ],
     "banked": 7.0,
-    "remaining": 5.972,
-    "projected": 12.972
+    "remaining": 5.981,
+    "projected": 12.981
    },
    "CLE": {
     "name": "Browns",
@@ -6106,17 +6106,17 @@
     "division": "NFC East",
     "line": 7.5,
     "ew": 7.62,
-    "sd": 1.333,
+    "sd": 1.332,
     "dist": {
-     "3.5": 0.00484,
-     "4.5": 0.04036,
-     "5.5": 0.13934,
-     "6.5": 0.26022,
-     "7.5": 0.28322,
-     "8.5": 0.18692,
-     "9.5": 0.06967,
-     "10.5": 0.01425,
-     "11.5": 0.00118
+     "3.5": 0.00488,
+     "4.5": 0.04086,
+     "5.5": 0.14032,
+     "6.5": 0.2611,
+     "7.5": 0.28328,
+     "8.5": 0.18564,
+     "9.5": 0.06882,
+     "10.5": 0.01397,
+     "11.5": 0.00113
     },
     "p10": 5.5,
     "p50": 7.5,
@@ -6220,7 +6220,7 @@
       "wpf": 0.47763,
       "tier": "model",
       "settled": false,
-      "live": 0.3216
+      "live": 0.3128
      },
      {
       "week": 12,
@@ -6294,8 +6294,8 @@
      }
     ],
     "banked": 3.5,
-    "remaining": 3.687,
-    "projected": 7.187
+    "remaining": 3.678,
+    "projected": 7.178
    }
   },
   "overlap": {
@@ -8079,20 +8079,20 @@
      }
     },
     "CIN": {
-     "mean": 12.97,
-     "sd": 1.205,
+     "mean": 12.979,
+     "sd": 1.203,
      "p10": 11.0,
      "p50": 13.0,
      "p90": 14.0,
      "dist": {
       "8": 0.00026,
-      "9": 0.00378,
-      "10": 0.02177,
-      "11": 0.08765,
-      "12": 0.21496,
-      "13": 0.32034,
-      "14": 0.26035,
-      "15": 0.09089
+      "9": 0.00367,
+      "10": 0.0214,
+      "11": 0.08677,
+      "12": 0.21348,
+      "13": 0.32059,
+      "14": 0.2618,
+      "15": 0.09203
      }
     },
     "CLE": {
@@ -8504,27 +8504,27 @@
      }
     },
     "WAS": {
-     "mean": 7.194,
-     "sd": 1.333,
+     "mean": 7.186,
+     "sd": 1.332,
      "p10": 5.5,
      "p50": 7.5,
      "p90": 8.5,
      "dist": {
-      "3.5": 0.00484,
-      "4.5": 0.04036,
-      "5.5": 0.13934,
-      "6.5": 0.26022,
-      "7.5": 0.28322,
-      "8.5": 0.18692,
-      "9.5": 0.06967,
-      "10.5": 0.01425,
-      "11.5": 0.00118
+      "3.5": 0.00488,
+      "4.5": 0.04086,
+      "5.5": 0.14032,
+      "6.5": 0.2611,
+      "7.5": 0.28328,
+      "8.5": 0.18564,
+      "9.5": 0.06882,
+      "10.5": 0.01397,
+      "11.5": 0.00113
      }
     }
    }
   },
   "diagnostics": {
-   "checked_at_as_of": "2026-11-23",
+   "checked_at_as_of": "2026-11-24",
    "hard_failures": [],
    "checks": [
     {
@@ -8572,7 +8572,7 @@
      "label": "Live win distributions land on each team's projected total",
      "ok": true,
      "detail": "The mean of the live 0-17 distribution sits within 0.01 wins of projected (WAS). Same Monte Carlo as the roster sim — banked floor plus unplayed games at live prices — so the curve's mean is the projected total, not the frozen draft-day `ew`.",
-     "value": 0.007,
+     "value": 0.008,
      "severity": "hard"
     },
     {
