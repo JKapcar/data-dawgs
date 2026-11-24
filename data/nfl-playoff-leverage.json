@@ -1,6 +1,6 @@
 {
  "as_of": "2026-11-24",
- "source": "Data Dawgs season simulation (playoff-leverage-engine v1, work/playoff-leverage-engine.js) over /data/nfl-schedule.json results (snapshot sha256:359690f644e7…, captured 2026-11-23T07:24:42.078411Z) and /data/survivor.json game probabilities (nfelo fec9a3aa, captured 2026-11-24).",
+ "source": "Data Dawgs season simulation (playoff-leverage-engine v1, work/playoff-leverage-engine.js) over /data/nfl-schedule.json results (snapshot sha256:77c54e261128…, captured 2026-11-24T06:55:49.190317Z) and /data/survivor.json game probabilities (nfelo e740e2dc, captured 2026-11-24).",
  "tier": "labs",
  "graded": false,
  "note": "SIMULATION OUTPUT, ungraded — not a forecast receipt and not a betting signal. Each of 100,000 simulated seasons keeps every finished game's real result and plays every unplayed 2026 regular-season game once at its /data/survivor.json home-win probability (the published nfelo forecast for the current week, the nfelo season projection after it). Leverage is paired: every season is also played with one game's result flipped while every other game keeps its simulated result. Team strength is held fixed and games are independent, so probabilities near 0% and 100% are overconfident. Seeding follows the NFL tie-breaking procedures through strength of schedule; a tie that survives SOS goes to a coin toss because points are not simulated. Daily snapshot: rebuilt after the nfelo refresh, deterministic for identical inputs.",
@@ -25,19 +25,19 @@
  "inputs": {
   "schedule": {
    "url": "/data/nfl-schedule.json",
-   "as_of": "2026-11-23",
-   "snapshot_id": "sha256:359690f644e71c15482b807465bca5ffb9d3d4d0557ea3c89650cc71c003f0ba",
-   "source_commit": "e7a6c4afaeb37417e99c2b1dd26dd028e8e749d7",
-   "captured_at": "2026-11-23T07:24:42.078411Z",
-   "finals": 160,
-   "unplayed": 112
+   "as_of": "2026-11-24",
+   "snapshot_id": "sha256:77c54e26112851307c31cd3ae4bac5b300096aafd011d8e548a0cca0a351a675",
+   "source_commit": "914a9c9731200580027bc2396c0795e01534a63d",
+   "captured_at": "2026-11-24T06:55:49.190317Z",
+   "finals": 161,
+   "unplayed": 111
   },
   "probabilities": {
    "url": "/data/survivor.json",
    "as_of": "2026-11-24",
-   "nfelo_sha": "fec9a3aa",
+   "nfelo_sha": "e740e2dc",
    "captured": "2026-11-24",
-   "nfelo_observed_at": "2026-11-23T23:42:56.000Z",
+   "nfelo_observed_at": "2026-11-24T20:42:58.000Z",
    "method": "nfelo-season-v1",
    "current_week": "src \"nfelo\": published nfelo forecast",
    "later_weeks": "src \"nfelo-season\": Data Dawgs-owned extrapolation with frozen retained z=401.62 and qb_weight=1 (2026-11-11), not current upstream configuration or an official nfelo forecast. Current base team strength and QB adjustments held fixed for future games; game-specific HFA from nfelohfa. No extra market regression."
@@ -47,15 +47,15 @@
   "season": 2026,
   "week": 11,
   "sims": 100000,
-  "seed": "f5fac072fbb994d56ca07268feb22a2a",
+  "seed": "9ab1fc827e3af5024a0a78df9b72057a",
   "precision": {
    "swing_se_max": 0.0014,
    "shift_se_max": 0.0014
   },
   "week_games": {
    "total": 13,
-   "final": 10,
-   "remaining": 3
+   "final": 11,
+   "remaining": 2
   },
   "byes": [
    "NE",
@@ -66,12 +66,12 @@
    "SEA"
   ],
   "last_final": {
-   "game_id": "2026_11_MIN_SF",
-   "kickoff_at": "2026-11-23T01:20:00Z",
-   "away": "MIN",
-   "home": "SF",
-   "away_score": 10,
-   "home_score": 35
+   "game_id": "2026_11_CIN_WAS",
+   "kickoff_at": "2026-11-24T01:15:00Z",
+   "away": "CIN",
+   "home": "WAS",
+   "away_score": 20,
+   "home_score": 22
   },
   "team_order": [
    "BUF",
@@ -116,10 +116,10 @@
     "w": 9,
     "l": 1,
     "t": 0,
-    "playoffs": 0.9997,
-    "division_title": 0.989,
-    "bye": 0.4448,
-    "wins_mean": 13.66
+    "playoffs": 0.9999,
+    "division_title": 0.9982,
+    "bye": 0.4974,
+    "wins_mean": 13.8
    },
    {
     "team": "MIA",
@@ -142,10 +142,10 @@
     "w": 5,
     "l": 5,
     "t": 0,
-    "playoffs": 0.6023,
-    "division_title": 0.011,
-    "bye": 0.0001,
-    "wins_mean": 8.95
+    "playoffs": 0.2728,
+    "division_title": 0.0018,
+    "bye": 0,
+    "wins_mean": 7.89
    },
    {
     "team": "NYJ",
@@ -155,10 +155,10 @@
     "w": 3,
     "l": 8,
     "t": 0,
-    "playoffs": 0.0011,
+    "playoffs": 0.0031,
     "division_title": 0,
     "bye": 0,
-    "wins_mean": 4.91
+    "wins_mean": 5.39
    },
    {
     "team": "BAL",
@@ -168,10 +168,10 @@
     "w": 4,
     "l": 7,
     "t": 0,
-    "playoffs": 0.0314,
-    "division_title": 0.0003,
+    "playoffs": 0.0365,
+    "division_title": 0.0009,
     "bye": 0,
-    "wins_mean": 6.6
+    "wins_mean": 6.52
    },
    {
     "team": "CIN",
@@ -179,12 +179,12 @@
     "conf": "AFC",
     "division": "AFC North",
     "w": 7,
-    "l": 2,
+    "l": 3,
     "t": 0,
-    "playoffs": 0.996,
-    "division_title": 0.927,
-    "bye": 0.1464,
-    "wins_mean": 12.98
+    "playoffs": 0.9892,
+    "division_title": 0.85,
+    "bye": 0.0448,
+    "wins_mean": 12.06
    },
    {
     "team": "CLE",
@@ -194,10 +194,10 @@
     "w": 6,
     "l": 4,
     "t": 0,
-    "playoffs": 0.4038,
-    "division_title": 0.0229,
-    "bye": 0.0001,
-    "wins_mean": 8.9
+    "playoffs": 0.5761,
+    "division_title": 0.0614,
+    "bye": 0,
+    "wins_mean": 9.16
    },
    {
     "team": "PIT",
@@ -207,10 +207,10 @@
     "w": 6,
     "l": 3,
     "t": 0,
-    "playoffs": 0.7356,
-    "division_title": 0.0498,
-    "bye": 0.0019,
-    "wins_mean": 10.09
+    "playoffs": 0.7388,
+    "division_title": 0.0878,
+    "bye": 0.0016,
+    "wins_mean": 9.98
    },
    {
     "team": "HOU",
@@ -220,10 +220,10 @@
     "w": 4,
     "l": 6,
     "t": 0,
-    "playoffs": 0.2352,
-    "division_title": 0.0161,
+    "playoffs": 0.3757,
+    "division_title": 0.0395,
     "bye": 0,
-    "wins_mean": 8.26
+    "wins_mean": 8.64
    },
    {
     "team": "IND",
@@ -233,10 +233,10 @@
     "w": 3,
     "l": 8,
     "t": 0,
-    "playoffs": 0.0008,
+    "playoffs": 0.0017,
     "division_title": 0,
     "bye": 0,
-    "wins_mean": 5.33
+    "wins_mean": 5.34
    },
    {
     "team": "JAX",
@@ -246,10 +246,10 @@
     "w": 7,
     "l": 2,
     "t": 0,
-    "playoffs": 0.9968,
-    "division_title": 0.9839,
-    "bye": 0.1353,
-    "wins_mean": 12.77
+    "playoffs": 0.9945,
+    "division_title": 0.9605,
+    "bye": 0.0734,
+    "wins_mean": 12.4
    },
    {
     "team": "TEN",
@@ -262,7 +262,7 @@
     "playoffs": 0,
     "division_title": 0,
     "bye": 0,
-    "wins_mean": 3.19
+    "wins_mean": 3.06
    },
    {
     "team": "DEN",
@@ -272,10 +272,10 @@
     "w": 8,
     "l": 2,
     "t": 0,
-    "playoffs": 0.9926,
-    "division_title": 0.5928,
-    "bye": 0.1808,
-    "wins_mean": 12.62
+    "playoffs": 0.9966,
+    "division_title": 0.5776,
+    "bye": 0.2431,
+    "wins_mean": 12.92
    },
    {
     "team": "KC",
@@ -285,10 +285,10 @@
     "w": 8,
     "l": 2,
     "t": 0,
-    "playoffs": 0.9909,
-    "division_title": 0.4072,
-    "bye": 0.0907,
-    "wins_mean": 12.03
+    "playoffs": 0.9973,
+    "division_title": 0.4224,
+    "bye": 0.1398,
+    "wins_mean": 12.42
    },
    {
     "team": "LAC",
@@ -298,10 +298,10 @@
     "w": 1,
     "l": 9,
     "t": 0,
-    "playoffs": 0.0001,
+    "playoffs": 0,
     "division_title": 0,
     "bye": 0,
-    "wins_mean": 3.69
+    "wins_mean": 3.37
    },
    {
     "team": "LV",
@@ -311,10 +311,10 @@
     "w": 4,
     "l": 7,
     "t": 0,
-    "playoffs": 0.0138,
+    "playoffs": 0.0179,
     "division_title": 0,
     "bye": 0,
-    "wins_mean": 6.24
+    "wins_mean": 6.23
    },
    {
     "team": "DAL",
@@ -324,10 +324,10 @@
     "w": 5,
     "l": 6,
     "t": 0,
-    "playoffs": 0.3217,
-    "division_title": 0.3198,
+    "playoffs": 0.2862,
+    "division_title": 0.2817,
     "bye": 0,
-    "wins_mean": 7.89
+    "wins_mean": 8.07
    },
    {
     "team": "NYG",
@@ -337,10 +337,10 @@
     "w": 5,
     "l": 3,
     "t": 1,
-    "playoffs": 0.4833,
-    "division_title": 0.4806,
+    "playoffs": 0.4192,
+    "division_title": 0.4106,
     "bye": 0.0005,
-    "wins_mean": 8.49
+    "wins_mean": 8.69
    },
    {
     "team": "PHI",
@@ -350,23 +350,23 @@
     "w": 2,
     "l": 7,
     "t": 0,
-    "playoffs": 0.0029,
-    "division_title": 0.0029,
+    "playoffs": 0.0012,
+    "division_title": 0.0012,
     "bye": 0,
-    "wins_mean": 4.56
+    "wins_mean": 4.46
    },
    {
     "team": "WAS",
     "name": "Commanders",
     "conf": "NFC",
     "division": "NFC East",
-    "w": 3,
+    "w": 4,
     "l": 5,
     "t": 1,
-    "playoffs": 0.1974,
-    "division_title": 0.1966,
+    "playoffs": 0.3102,
+    "division_title": 0.3066,
     "bye": 0,
-    "wins_mean": 7.18
+    "wins_mean": 8.01
    },
    {
     "team": "CHI",
@@ -376,10 +376,10 @@
     "w": 8,
     "l": 2,
     "t": 0,
-    "playoffs": 0.8406,
-    "division_title": 0.2261,
-    "bye": 0.0921,
-    "wins_mean": 11.65
+    "playoffs": 0.8881,
+    "division_title": 0.262,
+    "bye": 0.0898,
+    "wins_mean": 11.82
    },
    {
     "team": "DET",
@@ -389,10 +389,10 @@
     "w": 8,
     "l": 2,
     "t": 0,
-    "playoffs": 0.9241,
-    "division_title": 0.4795,
-    "bye": 0.2073,
-    "wins_mean": 12.28
+    "playoffs": 0.9446,
+    "division_title": 0.5128,
+    "bye": 0.1977,
+    "wins_mean": 12.4
    },
    {
     "team": "GB",
@@ -402,10 +402,10 @@
     "w": 6,
     "l": 4,
     "t": 0,
-    "playoffs": 0.3145,
-    "division_title": 0.0156,
-    "bye": 0.0012,
-    "wins_mean": 9.7
+    "playoffs": 0.2788,
+    "division_title": 0.0102,
+    "bye": 0.0006,
+    "wins_mean": 9.46
    },
    {
     "team": "MIN",
@@ -415,10 +415,10 @@
     "w": 7,
     "l": 3,
     "t": 0,
-    "playoffs": 0.8936,
-    "division_title": 0.2789,
-    "bye": 0.0513,
-    "wins_mean": 11.51
+    "playoffs": 0.877,
+    "division_title": 0.2151,
+    "bye": 0.0264,
+    "wins_mean": 11.33
    },
    {
     "team": "ATL",
@@ -428,10 +428,10 @@
     "w": 3,
     "l": 7,
     "t": 0,
-    "playoffs": 0.0834,
-    "division_title": 0.0833,
+    "playoffs": 0.0542,
+    "division_title": 0.054,
     "bye": 0,
-    "wins_mean": 5.9
+    "wins_mean": 5.66
    },
    {
     "team": "CAR",
@@ -441,10 +441,10 @@
     "w": 5,
     "l": 5,
     "t": 0,
-    "playoffs": 0.6421,
-    "division_title": 0.6416,
-    "bye": 0.0001,
-    "wins_mean": 8.04
+    "playoffs": 0.6019,
+    "division_title": 0.6008,
+    "bye": 0,
+    "wins_mean": 8.09
    },
    {
     "team": "NO",
@@ -454,10 +454,10 @@
     "w": 3,
     "l": 7,
     "t": 0,
-    "playoffs": 0.0768,
-    "division_title": 0.0767,
+    "playoffs": 0.0611,
+    "division_title": 0.061,
     "bye": 0,
-    "wins_mean": 6.09
+    "wins_mean": 5.98
    },
    {
     "team": "TB",
@@ -467,10 +467,10 @@
     "w": 3,
     "l": 7,
     "t": 0,
-    "playoffs": 0.1986,
-    "division_title": 0.1984,
+    "playoffs": 0.2847,
+    "division_title": 0.2842,
     "bye": 0,
-    "wins_mean": 6.32
+    "wins_mean": 6.82
    },
    {
     "team": "ARI",
@@ -483,7 +483,7 @@
     "playoffs": 0,
     "division_title": 0,
     "bye": 0,
-    "wins_mean": 5.27
+    "wins_mean": 5.09
    },
    {
     "team": "LAR",
@@ -493,10 +493,10 @@
     "w": 6,
     "l": 4,
     "t": 0,
-    "playoffs": 0.458,
-    "division_title": 0.0339,
-    "bye": 0.0125,
-    "wins_mean": 10.15
+    "playoffs": 0.4746,
+    "division_title": 0.0228,
+    "bye": 0.0084,
+    "wins_mean": 10.09
    },
    {
     "team": "SEA",
@@ -506,10 +506,10 @@
     "w": 6,
     "l": 4,
     "t": 0,
-    "playoffs": 0.568,
-    "division_title": 0.0632,
-    "bye": 0.014,
-    "wins_mean": 10.58
+    "playoffs": 0.5201,
+    "division_title": 0.0342,
+    "bye": 0.0077,
+    "wins_mean": 10.35
    },
    {
     "team": "SF",
@@ -519,10 +519,10 @@
     "w": 9,
     "l": 1,
     "t": 0,
-    "playoffs": 0.9952,
-    "division_title": 0.9029,
-    "bye": 0.6211,
-    "wins_mean": 13.53
+    "playoffs": 0.9983,
+    "division_title": 0.943,
+    "bye": 0.6689,
+    "wins_mean": 13.85
    }
   ],
   "games": [
@@ -532,198 +532,98 @@
     "neutral_site": false,
     "away": "JAX",
     "home": "NYG",
-    "p_home": 0.2425,
+    "p_home": 0.2329,
     "p_source": "nfelo",
-    "leverage": 0.2484,
+    "leverage": 0.266,
     "teams": [
      {
       "team": "NYG",
       "side": "home",
-      "p_win": 0.2425,
-      "now": 0.4833,
-      "if_win": 0.6665,
-      "if_loss": 0.4252,
-      "swing": 0.2413,
+      "p_win": 0.2329,
+      "now": 0.4192,
+      "if_win": 0.6135,
+      "if_loss": 0.3595,
+      "swing": 0.254,
       "swing_se": 0.0014
      },
      {
       "team": "JAX",
       "side": "away",
-      "p_win": 0.7575,
-      "now": 0.9968,
-      "if_win": 0.9987,
-      "if_loss": 0.9916,
-      "swing": 0.0071,
+      "p_win": 0.7671,
+      "now": 0.9945,
+      "if_win": 0.9974,
+      "if_loss": 0.9854,
+      "swing": 0.012,
       "swing_se": 0.0003
      }
     ],
     "if_home_win": [
-     0.9997,
+     0.9999,
      0,
-     0.6014,
-     0.0011,
-     0.0314,
-     0.996,
-     0.4031,
-     0.7364,
-     0.2412,
-     0.0008,
-     0.9916,
+     0.2721,
+     0.0031,
+     0.0364,
+     0.9889,
+     0.5745,
+     0.7402,
+     0.3858,
+     0.0017,
+     0.9854,
      0,
-     0.9927,
-     0.9909,
-     0.0001,
-     0.0138,
-     0.2082,
-     0.6665,
-     0.0015,
-     0.1334,
-     0.84,
-     0.9239,
-     0.3133,
-     0.8925,
-     0.0834,
-     0.642,
-     0.0769,
-     0.1987,
+     0.9967,
+     0.9973,
      0,
-     0.4575,
-     0.5671,
-     0.9952
-    ],
-    "if_away_win": [
-     0.9997,
-     0,
-     0.6025,
-     0.0011,
-     0.0314,
-     0.996,
-     0.4041,
-     0.7353,
-     0.2333,
-     0.0008,
-     0.9987,
-     0,
-     0.9926,
-     0.9909,
-     0.0001,
-     0.0138,
-     0.3574,
-     0.4252,
-     0.0034,
-     0.2176,
-     0.8409,
-     0.9242,
-     0.3147,
-     0.8938,
-     0.0834,
-     0.6421,
-     0.0768,
-     0.1986,
-     0,
-     0.4582,
-     0.5684,
-     0.9952
-    ]
-   },
-   {
-    "game_id": "2026_11_CIN_WAS",
-    "kickoff_at": "2026-11-24T01:15:00Z",
-    "neutral_site": false,
-    "away": "CIN",
-    "home": "WAS",
-    "p_home": 0.3128,
-    "p_source": "nfelo",
-    "leverage": 0.1868,
-    "teams": [
-     {
-      "team": "WAS",
-      "side": "home",
-      "p_win": 0.3128,
-      "now": 0.1974,
-      "if_win": 0.3205,
-      "if_loss": 0.1407,
-      "swing": 0.1798,
-      "swing_se": 0.0012
-     },
-     {
-      "team": "CIN",
-      "side": "away",
-      "p_win": 0.6872,
-      "now": 0.996,
-      "if_win": 0.9982,
-      "if_loss": 0.9911,
-      "swing": 0.007,
-      "swing_se": 0.0003
-     }
-    ],
-    "if_home_win": [
-     0.9998,
-     0,
-     0.6037,
-     0.0011,
-     0.0316,
-     0.9911,
-     0.4053,
-     0.7367,
-     0.2357,
-     0.0008,
-     0.9969,
-     0,
-     0.9926,
-     0.9909,
-     0.0001,
-     0.0138,
-     0.2805,
-     0.4052,
-     0.002,
-     0.3205,
-     0.8401,
-     0.9239,
-     0.3139,
-     0.8926,
-     0.0834,
-     0.642,
-     0.0768,
-     0.1986,
-     0,
-     0.4579,
-     0.5675,
-     0.9952
-    ],
-    "if_away_win": [
-     0.9997,
-     0,
+     0.018,
+     0.1902,
+     0.6135,
+     0.0006,
+     0.2238,
+     0.8873,
+     0.9442,
+     0.2764,
+     0.8741,
+     0.0542,
      0.6017,
-     0.0011,
-     0.0312,
-     0.9982,
-     0.4031,
-     0.7351,
-     0.2351,
-     0.0008,
-     0.9968,
+     0.0612,
+     0.2846,
      0,
-     0.9926,
-     0.9909,
-     0.0001,
-     0.0137,
-     0.3413,
-     0.5187,
-     0.0033,
-     0.1407,
-     0.8408,
-     0.9241,
-     0.3147,
-     0.8939,
-     0.0834,
-     0.6421,
-     0.0768,
-     0.1986,
+     0.4721,
+     0.5177,
+     0.9983
+    ],
+    "if_away_win": [
+     0.9999,
      0,
-     0.4581,
-     0.5683,
-     0.9952
+     0.273,
+     0.0031,
+     0.0365,
+     0.9893,
+     0.5766,
+     0.7384,
+     0.3725,
+     0.0016,
+     0.9974,
+     0,
+     0.9965,
+     0.9973,
+     0,
+     0.0179,
+     0.3149,
+     0.3595,
+     0.0014,
+     0.3374,
+     0.8885,
+     0.9447,
+     0.2795,
+     0.8781,
+     0.0542,
+     0.602,
+     0.0611,
+     0.2847,
+     0,
+     0.4753,
+     0.5206,
+     0.9983
     ]
    },
    {
@@ -734,96 +634,96 @@
     "home": "PHI",
     "p_home": 0.3689,
     "p_source": "nfelo",
-    "leverage": 0.1862,
+    "leverage": 0.1793,
     "teams": [
      {
       "team": "PIT",
       "side": "away",
       "p_win": 0.6311,
-      "now": 0.7356,
-      "if_win": 0.8017,
-      "if_loss": 0.6208,
-      "swing": 0.1809,
+      "now": 0.7388,
+      "if_win": 0.8052,
+      "if_loss": 0.6281,
+      "swing": 0.1771,
       "swing_se": 0.0012
      },
      {
       "team": "PHI",
       "side": "home",
       "p_win": 0.3689,
-      "now": 0.0029,
-      "if_win": 0.0063,
-      "if_loss": 0.0011,
-      "swing": 0.0053,
-      "swing_se": 0.0002
+      "now": 0.0012,
+      "if_win": 0.0026,
+      "if_loss": 0.0004,
+      "swing": 0.0022,
+      "swing_se": 0.0001
      }
     ],
     "if_home_win": [
-     0.9998,
+     1,
      0,
-     0.6396,
-     0.0012,
-     0.0368,
-     0.9965,
-     0.4293,
-     0.6208,
-     0.2735,
-     0.0009,
-     0.9971,
+     0.3075,
+     0.0038,
+     0.0417,
+     0.9899,
+     0.5897,
+     0.6281,
+     0.4254,
+     0.0018,
+     0.9952,
      0,
-     0.9937,
-     0.9927,
-     0.0001,
-     0.0181,
-     0.3211,
-     0.482,
-     0.0063,
-     0.1958,
-     0.8406,
-     0.924,
-     0.3144,
-     0.8933,
-     0.0834,
-     0.6421,
-     0.0768,
-     0.1986,
+     0.997,
+     0.998,
      0,
-     0.4583,
-     0.5682,
-     0.9952
+     0.0219,
+     0.2862,
+     0.4187,
+     0.0026,
+     0.3094,
+     0.8881,
+     0.9445,
+     0.2787,
+     0.8766,
+     0.0542,
+     0.6019,
+     0.0611,
+     0.2847,
+     0,
+     0.4748,
+     0.5202,
+     0.9983
     ],
     "if_away_win": [
-     0.9997,
+     0.9999,
      0,
-     0.5805,
-     0.0008,
-     0.0286,
-     0.9955,
-     0.3893,
-     0.8017,
-     0.213,
-     0.0007,
-     0.9967,
+     0.253,
+     0.0026,
+     0.0332,
+     0.9888,
+     0.5676,
+     0.8052,
+     0.3453,
+     0.0015,
+     0.9941,
      0,
-     0.992,
-     0.9899,
-     0.0001,
-     0.0115,
-     0.322,
-     0.484,
-     0.0011,
-     0.1982,
-     0.8406,
-     0.9241,
-     0.3145,
-     0.8937,
-     0.0834,
-     0.642,
-     0.0768,
-     0.1986,
+     0.9962,
+     0.9971,
      0,
-     0.4578,
-     0.5679,
-     0.9953
+     0.0156,
+     0.2864,
+     0.4194,
+     0.0004,
+     0.3106,
+     0.8881,
+     0.9446,
+     0.2789,
+     0.8772,
+     0.0542,
+     0.6019,
+     0.0611,
+     0.2847,
+     0,
+     0.4744,
+     0.5199,
+     0.9983
     ]
    }
   ]
