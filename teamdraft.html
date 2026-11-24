@@ -1061,8 +1061,8 @@ h2.secn{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var
 .td-qi b{color:var(--ink-1)}
 .td-strip{border:1px solid var(--border);border-radius:12px;background:var(--surface-1);
   padding:12px 14px;overflow:auto}
-.td-srow{display:grid;grid-template-columns:60px repeat(17,minmax(30px,1fr));gap:3px;align-items:center;
-  min-width:640px;margin-bottom:6px}
+.td-srow{display:grid;grid-template-columns:60px repeat(18,minmax(30px,1fr));gap:3px;align-items:center;
+  min-width:660px;margin-bottom:6px}
 .td-srow.head{margin-bottom:3px}
 .td-slab{font:800 11.5px/1 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--ink-1);
   display:flex;align-items:center;gap:5px}
@@ -3013,11 +3013,11 @@ TIERS: Pup = live and useful but not yet validated. Working Dawg = it survived a
     <div class="td-hero" id="tdHero"></div>
 
     <section class="p-section" id="strip" style="padding-top:0">
-      <header><div><h2>Week by week</h2><p class="dek">Seventeen weeks of per-game win probability.
+      <header><div><h2 id="tdStripHeading">Week by week</h2><p class="dek">All 18 regular-season weeks: 17 games and one bye per team. Scroll to see later weeks on smaller screens.
         Games where the same drafter owns <b>both</b> sides are outlined — those are the ones that
         wash. With four strips stacked, a collision lines up vertically.</p></div>
         <div class="p-meta" id="schedMeta" aria-live="polite"></div></header>
-      <div class="td-strip" id="tdStrip"></div>
+      <div class="td-strip" id="tdStrip" role="region" tabindex="0" aria-labelledby="tdStripHeading"></div>
     </section>
 
     <section class="p-section" id="curve">
@@ -3998,12 +3998,12 @@ window.DDSheets = function(cfg){
     const list = selTeams(), own = selOwner();
     const mate = new Set(own ? teamsOf(own) : []);
     const head = `<div class="td-srow head"><span></span>`
-      + weeks.slice(0,17).map(w=>`<span class="td-wk">${w}</span>`).join("") + `</div>`;
+      + weeks.map(w=>`<span class="td-wk">${w}</span>`).join("") + `</div>`;
     let clashes = 0;
     const rows = list.map(t=>{
       const byWeek = {};
       D.teams[t].schedule.forEach(g=>{ byWeek[g.week] = g; });
-      const cells = weeks.filter(w=>w<=17 || byWeek[w]).slice(0,17).map(w=>{
+      const cells = weeks.map(w=>{
         const g = byWeek[w];
         if(!g) return `<span class="td-g bye"><span class="op">BYE</span><span class="p">—</span></span>`;
         const clash = mate.has(g.opp) && g.opp!==t;

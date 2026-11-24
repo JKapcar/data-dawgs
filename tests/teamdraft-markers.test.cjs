@@ -75,3 +75,32 @@ assert.equal(positions(out,'td-rfinish').length,0);
 assert.ok(out.includes('Current target unavailable'));
 console.log('PASS: inline JS syntax, frozen preseason provenance, shared live leader, tied leaders, expanded scale, missing-value handling');
 console.log(`Payload ${env.as_of}: target ${leader.toFixed(2)} wins`);
+
+// The real strip renderer must show 18 calendar weeks, not just 17 games.
+const stripStart = html.indexOf('  function strip(){');
+const strip = html.slice(stripStart, html.indexOf('  function curves(){', stripStart));
+const stripNodes = {};
+const teamCodes = Object.keys(env.data.teams);
+vm.runInNewContext(strip + '\nstrip();', {
+  D:env.data, selTeams:()=>teamCodes, selOwner:()=>null, teamsOf:()=>[], ownerOf:()=>null,
+  $:id=>stripNodes[id] ||= {}, esc:String, oc:()=>'', pct:p=>String(p)
+});
+const stripMarkup = stripNodes.tdStrip.innerHTML;
+const headings = [...stripMarkup.matchAll(/class="td-wk">(\d+)<\/span>/g)].map(m=>+m[1]);
+assert.deepEqual(headings, Array.from({length:18}, (_,i)=>i+1));
+const teamRows = stripMarkup.split('<span class="td-slab">').slice(1);
+assert.equal(teamRows.length,32);
+for (const [i,t] of teamCodes.entries()) {
+  const schedule = env.data.teams[t].schedule;
+  const cells = [...teamRows[i].matchAll(/<span class="td-g ([^"]*)"(?:\s+data-tip="([^"]*)")?>/g)];
+  assert.equal(cells.length,18,t);
+  assert.equal(cells.filter(m=>m[1]==='bye').length,1,t);
+  for (const [i,cell] of cells.entries()) {
+    const w = i+1;
+    const game = schedule.find(g=>g.week===w);
+    if (game) assert.ok(cell[2].includes(`Week ${w}</b><br>${t} ${game.home?"vs":"at"} ${game.opp}`),`${t} Week ${w} opponent and alignment`);
+    else assert.equal(cell[1],'bye',`${t} missing game is the bye`);
+  }
+}
+assert.match(html,/\.td-srow\{[^}]*repeat\(18,minmax\(30px,1fr\)\)/);
+console.log('PASS: 18 aligned week headers and cells for every team; Week 18 shows actual matchup and each bye stays in its calendar slot');
