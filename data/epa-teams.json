@@ -2,7 +2,7 @@
  "source_page": "/stats.html",
  "tier": "dawg",
  "graded": false,
- "as_of": "2026-11-24",
+ "as_of": "2026-11-25",
  "source": "nflverse play-by-play; current-season completed games refreshed daily, with corrections; historical seasons retain their dated snapshots. See data.coverage for exact games, source hash and timestamps.",
  "note": "Regular season only, plays with a down (excludes kickoffs/XPs/etc). Per-season tables use a 200-dropback minimum for QBs; the pooled table uses 500. 2026 covers Weeks 1-11 ONLY (163 games) — a small sample sensitive to opponent and game script; its QB minimum is the 200 bar prorated to 120 dropbacks. The pooled table spans every season in the snapshot, including the partial one. These are descriptive aggregates, not projections — team EPA is famously unstable year to year, so do not read 2025 as 2026, and do not interpret an incomplete season as a complete season. Dropback EPA counts every dropback including scrambles and penalty-nullified plays and uses play epa, not qb_epa; Rush EPA excludes scrambles and kneels. These will not match nflverse passing_epa / rushing_epa.",
  "field_notes": {
@@ -3048,7 +3048,7 @@
       "epa_per_dropback": 0.3245,
       "epa_per_play": 0.31,
       "dropback_success": 0.5858,
-      "cpoe": 6.4491,
+      "cpoe": 6.3883,
       "total_epa": 109.44
      },
      {
@@ -3356,7 +3356,7 @@
       "epa_per_dropback": -0.0315,
       "epa_per_play": -0.0303,
       "dropback_success": 0.4157,
-      "cpoe": -1.7063,
+      "cpoe": -1.6009,
       "total_epa": -12.84
      },
      {
@@ -3856,7 +3856,7 @@
      "epa_per_dropback": 0.2625,
      "epa_per_play": 0.2685,
      "dropback_success": 0.5453,
-     "cpoe": 4.9182,
+     "cpoe": 4.9062,
      "total_epa": 479.6
     },
     {
@@ -4131,7 +4131,7 @@
      "epa_per_dropback": 0.0209,
      "epa_per_play": 0.0214,
      "dropback_success": 0.4335,
-     "cpoe": -1.4701,
+     "cpoe": -1.4444,
      "total_epa": 35.71
     },
     {
@@ -4611,12 +4611,12 @@
      "WAS": 10
     },
     "through": "2026-11-23",
-    "captured": "2026-11-24",
-    "refreshed_at": "2026-11-24T21:30:32.259201Z",
+    "captured": "2026-11-25",
+    "refreshed_at": "2026-11-25T20:39:14.502119Z",
     "source_url": "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2026.csv.gz",
-    "source_updated": "Tue, 24 Nov 2026 20:08:26 GMT",
-    "source_sha256": "87f102f70de3e7656e7c93aceca6b37e573a6abf4ec5cc0980a7abeef41db986",
-    "schedule_sha256": "1a18a1850c8ec4ff3742900c858ff7e201dd42abe622768ecaf75b828182fa10",
+    "source_updated": "Wed, 25 Nov 2026 19:09:19 GMT",
+    "source_sha256": "f92d2a1c1ee506d9c6172ba3ffcfaeb9088d03aa999e797f6afc764b2a86851c",
+    "schedule_sha256": "4213469a74042b0832ee6b992385f171d053bc85bf64b612dc4f463af043e8b6",
     "pending_games": [],
     "refresh_frequency": "daily at 11:43 UTC",
     "note": "Completed games only, including incomplete weeks. Daily published nflverse EPA; not live. Historical seasons retained; current-season corrections incorporated."
@@ -4631,6 +4631,6 @@
   }
  },
  "tier_meaning": "Working Dawg — earned its collar. Evidence survived validation: receipts against a benchmark chosen in advance for forecasters, named sources and reproducible maths for measurement tools.",
- "built": "2026-11-24",
+ "built": "2026-11-25",
  "canonical_url": "https://datadawgs216.com/data/epa-teams.json"
 }
