@@ -1,0 +1,41 @@
+.DS_Store
+.Rhistory
+.RData
+.Rproj.user/
+stan/*.rds
+# Compiled CmdStan build outputs (the .stan source is tracked)
+stan/bt_logit
+stan/bayes_elo_dynamic
+stan/*.hpp
+.Renviron
+
+# Secrets — never in git
+.env
+.env.*
+!.env.example
+
+# Raw API sample payloads
+data/samples/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# SQLite database files (data, not source)
+*.db
+*.db-wal
+*.db-shm
+
+# Write lock and status lines
+data/write.lock
+data/.lockdir
+data/status/
+
+# Optional local database snapshots (scripts/backup_db.py)
+backups/

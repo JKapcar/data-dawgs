@@ -1,0 +1,55 @@
+# Example crontab for keeping a local database current.
+# Times are UTC, paired so the pass lands on the same America/Chicago hour
+# in both CDT and CST. Replace REPO with the checkout path.
+# Install with: crontab -e
+#
+# The run_*.sh wrappers use flock. On macOS, install it with
+# `brew install flock`, or run the python modules directly.
+# Each line creates data/status before the redirect opens the log.
+#
+# REPO=/path/to/bayesratings-models
+#
+# Daily fit, 04:30 America/Chicago
+30 9,10 * * * mkdir -p REPO/data/status && REPO/scripts/run_daily.sh >> REPO/data/status/daily-cron.log 2>&1
+# Hourly schedule refresh (skips the 04:xx Chicago hour)
+20 * * * * mkdir -p REPO/data/status && REPO/scripts/run_refresh.sh >> REPO/data/status/refresh-cron.log 2>&1
+# In-progress games: mark finished games final, and freeze forecasts about to start
+5-55/10 * * * * mkdir -p REPO/data/status && REPO/scripts/run_refresh.sh --live >> REPO/data/status/refresh-cron.log 2>&1
+# Morning rosters, depth charts, transactions at 06:40 Chicago
+40 11,12 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh morning 06 >> REPO/data/status/prelog-cron.log 2>&1
+# NBA and NHL rosters, 15:40 Chicago
+40 20,21 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh rosters 15 --leagues nba,nhl >> REPO/data/status/prelog-cron.log 2>&1
+# NFL rosters Wed-Fri 16:40 Chicago, and Sunday 10:40 Chicago
+40 21,22 * * 3-5 mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh rosters 16 --leagues nfl >> REPO/data/status/prelog-cron.log 2>&1
+40 15,16 * * 0 mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh rosters 10 --leagues nfl >> REPO/data/status/prelog-cron.log 2>&1
+# Lineups and injuries 60-80 minutes before a start
+*/10 * * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh pregame >> REPO/data/status/prelog-cron.log 2>&1
+# MLB rosters and transactions, nflverse, 07:10 Chicago
+10 12,13 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh sources 07 >> REPO/data/status/prelog-cron.log 2>&1
+# Starting goalies on NHL game days
+15 9,10 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh goalies 04 >> REPO/data/status/prelog-cron.log 2>&1
+10 14,15 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh goalies 09 >> REPO/data/status/prelog-cron.log 2>&1
+10 17,18 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh goalies 12 >> REPO/data/status/prelog-cron.log 2>&1
+10 20,21 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh goalies 15 >> REPO/data/status/prelog-cron.log 2>&1
+40 22,23 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh goalies 17 >> REPO/data/status/prelog-cron.log 2>&1
+# Line combinations, 16:10 Chicago
+10 21,22 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh nhl-lines 16 >> REPO/data/status/prelog-cron.log 2>&1
+# Lines and starting goalies for the NHL player model
+50 8,9 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh nhl-slate 03 >> REPO/data/status/prelog-cron.log 2>&1
+15,45 * * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh nhl-slate 08-22 >> REPO/data/status/prelog-cron.log 2>&1
+# MLB probable starters, every 30 minutes 08:00-22:59 Chicago
+15,45 * * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh mlb-probables 08-22 >> REPO/data/status/prelog-cron.log 2>&1
+# NBA injury report, every 15 minutes 08:00-22:59 Chicago
+5,20,35,50 * * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh nbainj 08-22 >> REPO/data/status/prelog-cron.log 2>&1
+# Second nflverse pull, 19:10 Chicago
+10 0,1 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh nflverse 19 >> REPO/data/status/prelog-cron.log 2>&1
+# Play-by-play, 04:00 Chicago
+0 9,10 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh nfl-pbp 04 >> REPO/data/status/prelog-cron.log 2>&1
+# MLB boxes and batted balls, 07:05 Chicago
+5 12,13 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh mlb-extra 07 >> REPO/data/status/prelog-cron.log 2>&1
+# NHL shots, 07:20 Chicago
+20 12,13 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh nhl-pbp 07 >> REPO/data/status/prelog-cron.log 2>&1
+# Injury-report history, 07:25 Chicago
+25 12,13 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh inj-hist 07 >> REPO/data/status/prelog-cron.log 2>&1
+# Morning health check, 07:30 Chicago
+30 12,13 * * * mkdir -p REPO/data/status && REPO/scripts/run_prelog.sh check 07 >> REPO/data/status/prelog-cron.log 2>&1

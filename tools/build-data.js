@@ -779,6 +779,11 @@ const UPSTREAM_MODELS = [
     captured_at: '2026-07-28', license: null, license_status: 'proprietary-subscription-content',
     integration_mode: 'reference-only', data_status: 'not republished; /data/strategy.md is a dated synthesis, not their content',
     notes: 'A subscription product. Their rankings, projections and articles are not mirrored, proxied or cached here, and no Data Dawgs page requests anything from their servers. The captured date is when the synthesis was written; they update daily, so treat player-level calls as stale and the structural arguments as ageing better.' },
+  { id: 'bayesratings-models', creator: 'WalrusQuant', repository: 'WalrusQuant/bayesratings-models',
+    upstream_commit: 'd65026a5e8ef069e8a463156869f7418d274b559', version: '0.1.0',
+    captured_at: '2026-11-26', license: 'AGPL-3.0-only', license_status: 'verified-license-file',
+    integration_mode: 'vendored-unmodified', data_status: 'vendored in /models/bayesratings; NFL run by a manual workflow, export at /data/bayesratings-nfl.json once a run is reviewed',
+    notes: 'Bayesian Bradley-Terry, dynamic Elo and player models for MLB, NBA, NFL and NHL. Copyleft: notices stay, local changes must be logged in /models/README.md, and a modified version served to users over a network must offer its source. Inputs (ESPN, nflverse and others) keep their own terms. Predictive skill not yet checked by Data Dawgs.' },
 ];
 
 const MODEL_CONTRACTS = {

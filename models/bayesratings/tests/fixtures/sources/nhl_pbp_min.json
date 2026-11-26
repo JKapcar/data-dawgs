@@ -1,0 +1,47 @@
+{
+  "pbp": {
+    "id": 2025020001,
+    "season": 20252026,
+    "gameType": 2,
+    "gameDate": "2026-11-21",
+    "startTimeUTC": "2026-11-22T00:00:00Z",
+    "gameState": "OFF",
+    "homeTeam": {"id": 6, "abbrev": "BOS", "score": 1},
+    "awayTeam": {"id": 8, "abbrev": "MTL", "score": 2},
+    "rosterSpots": [
+      {"teamId": 6, "playerId": 101, "firstName": {"default": "Brad"}, "lastName": {"default": "Marchand"}, "positionCode": "L"},
+      {"teamId": 6, "playerId": 201, "firstName": {"default": "Jeremy"}, "lastName": {"default": "Swayman"}, "positionCode": "G"}
+    ],
+    "plays": [
+      {"eventId": 1, "sortOrder": 1, "periodDescriptor": {"number": 1, "periodType": "REG"}, "timeInPeriod": "00:00", "typeDescKey": "period-start"},
+      {"eventId": 2, "sortOrder": 2, "periodDescriptor": {"number": 1, "periodType": "REG"}, "timeInPeriod": "00:00", "homeTeamDefendingSide": "left", "typeDescKey": "faceoff", "details": {"eventOwnerTeamId": 6}},
+      {"eventId": 3, "sortOrder": 3, "periodDescriptor": {"number": 1, "periodType": "REG"}, "timeInPeriod": "00:10", "homeTeamDefendingSide": "left", "typeDescKey": "takeaway", "details": {"eventOwnerTeamId": 6}},
+      {"eventId": 10, "sortOrder": 4, "periodDescriptor": {"number": 1, "periodType": "REG"}, "timeInPeriod": "00:13", "situationCode": "1551", "homeTeamDefendingSide": "left", "typeDescKey": "shot-on-goal", "details": {"xCoord": 55, "yCoord": 11, "zoneCode": "O", "shotType": "snap", "shootingPlayerId": 101, "goalieInNetId": 201, "eventOwnerTeamId": 6}},
+      {"eventId": 11, "sortOrder": 5, "periodDescriptor": {"number": 1, "periodType": "REG"}, "timeInPeriod": "00:15", "situationCode": "1551", "homeTeamDefendingSide": "left", "typeDescKey": "shot-on-goal", "details": {"xCoord": 80, "yCoord": 0, "zoneCode": "O", "shotType": "wrist", "shootingPlayerId": 102, "goalieInNetId": 201, "eventOwnerTeamId": 6}},
+      {"eventId": 12, "sortOrder": 6, "periodDescriptor": {"number": 1, "periodType": "REG"}, "timeInPeriod": "01:00", "situationCode": "1551", "homeTeamDefendingSide": "left", "typeDescKey": "missed-shot", "details": {"xCoord": 83, "yCoord": 11, "zoneCode": "O", "shotType": "wrist", "shootingPlayerId": 101, "goalieInNetId": 201, "eventOwnerTeamId": 6}},
+      {"eventId": 13, "sortOrder": 7, "periodDescriptor": {"number": 1, "periodType": "REG"}, "timeInPeriod": "01:10", "situationCode": "1551", "homeTeamDefendingSide": "left", "typeDescKey": "blocked-shot", "details": {"xCoord": 78, "yCoord": 0, "zoneCode": "D", "shotType": null, "shootingPlayerId": 103, "blockingPlayerId": 301, "goalieInNetId": 201, "eventOwnerTeamId": 6}},
+      {"eventId": 20, "sortOrder": 8, "periodDescriptor": {"number": 1, "periodType": "REG"}, "timeInPeriod": "08:26", "situationCode": "1541", "homeTeamDefendingSide": "left", "typeDescKey": "goal", "details": {"xCoord": -81, "yCoord": 0, "zoneCode": "O", "shotType": "tip-in", "scoringPlayerId": 401, "goalieInNetId": 501, "eventOwnerTeamId": 8}},
+      {"eventId": 21, "sortOrder": 9, "periodDescriptor": {"number": 1, "periodType": "REG"}, "timeInPeriod": "18:00", "situationCode": "1450", "homeTeamDefendingSide": "left", "typeDescKey": "goal", "details": {"xCoord": -70, "yCoord": 5, "zoneCode": "O", "shotType": "wrist", "scoringPlayerId": 402, "goalieInNetId": 501, "eventOwnerTeamId": 8}},
+      {"eventId": 22, "sortOrder": 10, "periodDescriptor": {"number": 1, "periodType": "REG"}, "timeInPeriod": "18:30", "situationCode": "1551", "homeTeamDefendingSide": "left", "typeDescKey": "shot-on-goal", "details": {"zoneCode": "O", "shotType": "wrist", "shootingPlayerId": 101, "goalieInNetId": 201, "eventOwnerTeamId": 6}},
+      {"eventId": 90, "sortOrder": 11, "periodDescriptor": {"number": 5, "periodType": "SO"}, "timeInPeriod": "00:00", "situationCode": "1551", "homeTeamDefendingSide": "left", "typeDescKey": "goal", "details": {"xCoord": 80, "yCoord": 0, "zoneCode": "O", "shotType": "wrist", "scoringPlayerId": 101, "goalieInNetId": 201, "eventOwnerTeamId": 6}}
+    ]
+  },
+  "box": {
+    "id": 2025020001,
+    "playerByGameStats": {
+      "homeTeam": {
+        "forwards": [{"playerId": 101, "name": {"default": "B. Marchand"}, "position": "L", "toi": "10:00"}],
+        "defense": [],
+        "goalies": [{"playerId": 201, "name": {"default": "J. Swayman"}, "position": "G", "toi": "60:00"}]
+      },
+      "awayTeam": {
+        "forwards": [
+          {"playerId": 401, "name": {"default": "B. Gallagher"}, "position": "R", "toi": "15:00"},
+          {"playerId": 402, "name": {"default": "C. Caufield"}, "position": "R", "toi": "12:00"}
+        ],
+        "defense": [],
+        "goalies": [{"playerId": 501, "name": {"default": "C. Primeau"}, "position": "G", "toi": "58:00"}]
+      }
+    }
+  }
+}

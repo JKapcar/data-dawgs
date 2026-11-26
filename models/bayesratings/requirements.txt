@@ -1,0 +1,14 @@
+# Direct dependencies for bayesratings-models (Python 3.12).
+# cmdstanpy, numpy and pandas fit the team model.
+# scikit-learn fits the player models. pdfplumber reads NBA injury-report PDFs.
+cmdstanpy==1.3.0
+numpy==2.5.4
+pandas==3.0.6
+scikit-learn==1.9.1
+scipy==1.18.1
+joblib==1.6.0
+threadpoolctl==3.8.0
+pdfplumber==0.11.10
+
+# nflverse play-by-play files are Parquet
+pyarrow==26.0.0
