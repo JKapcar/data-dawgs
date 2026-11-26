@@ -1,0 +1,113 @@
+name: bayesratings models
+
+# WalrusQuant/bayesratings-models (AGPL-3.0-only) is vendored unmodified in models/bayesratings.
+# PRs: stdlib checks only (vendored tree matches its lock, adapter tests).
+# Manual run: install the pinned upstream requirements and CmdStan on the runner, fit NFL,
+# run the upstream test suite, and upload data/bayesratings-nfl.json as an artifact.
+# Nothing here commits to main or appends to /data/model-receipts.json.
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/bayesratings.yml"
+      - "models/**"
+      - "scripts/bayesratings_export.py"
+      - "tests/test_bayesratings_export.py"
+      - "data/bayesratings-nfl.json"
+  workflow_dispatch:
+    inputs:
+      seasons:
+        description: "ESPN seasons to backfill before the current one"
+        required: false
+        default: "3"
+      qb_ridge:
+        description: "Also load nflverse play-by-play since 2006 and fit the quarterback ridge (slow)"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bayesratings-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'run' }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Vendored tree and adapter
+        run: |
+          python scripts/bayesratings_export.py verify-vendor
+          python -m unittest tests.test_bayesratings_export
+          if [ -f data/bayesratings-nfl.json ]; then python scripts/bayesratings_export.py validate; fi
+
+  nfl:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      BAYESRATINGS_USER_AGENT: data-dawgs bayesratings-models
+      BAYESRATINGS_DB: ${{ github.workspace }}/.bayesratings/bayesratings.db
+      BAYESRATINGS_STATUS_DIR: ${{ github.workspace }}/.bayesratings/status
+      BAYESRATINGS_LOCK_DIR: ${{ github.workspace }}/.bayesratings
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Vendored tree is unmodified
+        run: python scripts/bayesratings_export.py verify-vendor
+      - name: Compiler
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+      - name: Install pinned upstream requirements
+        working-directory: models/bayesratings
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install -e .
+          python -m pip install pytest
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cmdstan
+          key: cmdstan-2.40.0-${{ runner.os }}
+      - name: CmdStan
+        run: python -c "import cmdstanpy; cmdstanpy.install_cmdstan(version='2.40.0')"
+      - uses: actions/cache@v4
+        with:
+          path: .bayesratings
+          key: bayesratings-db-${{ github.run_id }}
+          restore-keys: bayesratings-db-
+      - name: Upstream test suite
+        working-directory: models/bayesratings
+        run: python -m pytest -q
+      - name: Backfill ESPN scoreboards
+        run: |
+          mkdir -p .bayesratings/status
+          bayesratings init
+          bayesratings backfill --leagues nfl --seasons "${{ inputs.seasons }}"
+          bayesratings extract --leagues nfl
+      - name: nflverse play-by-play and walk-forward team history
+        if: inputs.qb_ridge == 'true'
+        working-directory: models/bayesratings
+        run: |
+          python -m bayesratings.sources.nfl_pbp --db "$BAYESRATINGS_DB" --from-season 2006
+          python -m bayesratings.nfl_team_hist --db "$BAYESRATINGS_DB"
+      - name: Fit and forecast
+        run: |
+          bayesratings daily --leagues nfl
+          bayesratings show --leagues nfl
+      - name: Export the Data Dawgs envelope
+        run: |
+          python scripts/bayesratings_export.py export --db "$BAYESRATINGS_DB" --dd-commit "$GITHUB_SHA"
+          python scripts/bayesratings_export.py validate
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bayesratings-nfl
+          path: data/bayesratings-nfl.json

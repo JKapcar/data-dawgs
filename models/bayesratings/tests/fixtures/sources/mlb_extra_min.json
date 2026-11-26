@@ -1,0 +1,217 @@
+{
+ "box": {
+  "teams": {
+   "home": {
+    "team": {
+     "id": 116,
+     "name": "Detroit Tigers",
+     "abbreviation": "DET"
+    },
+    "batters": [
+     201,
+     202
+    ],
+    "pitchers": [
+     201,
+     301
+    ],
+    "players": {
+     "ID201": {
+      "person": {
+       "id": 201,
+       "fullName": "Tarik Skubal"
+      },
+      "position": {
+       "abbreviation": "P"
+      },
+      "battingOrder": "900",
+      "stats": {
+       "batting": {
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 0,
+        "hitByPitch": 0,
+        "sacFlies": 0,
+        "sacBunts": 0,
+        "plateAppearances": 2,
+        "totalBases": 1,
+        "stolenBases": 0,
+        "caughtStealing": 0,
+        "intentionalWalks": 0,
+        "groundIntoDoublePlay": 0
+       },
+       "pitching": {
+        "doubles": 1,
+        "triples": 0,
+        "hitBatsmen": 1,
+        "sacFlies": 0,
+        "sacBunts": 0,
+        "intentionalWalks": 0,
+        "wildPitches": 1,
+        "balks": 0,
+        "battersFaced": 22,
+        "groundOuts": 8,
+        "airOuts": 7,
+        "stolenBases": 0,
+        "caughtStealing": 0,
+        "inheritedRunners": 0,
+        "inheritedRunnersScored": 0,
+        "wins": 1,
+        "losses": 0,
+        "saves": 0,
+        "holds": 0,
+        "blownSaves": 0,
+        "gamesStarted": 1
+       }
+      }
+     },
+     "ID202": {
+      "person": {
+       "id": 202,
+       "fullName": "Riley Greene"
+      },
+      "position": {
+       "abbreviation": "LF"
+      },
+      "battingOrder": "200",
+      "stats": {
+       "batting": {
+        "doubles": 0,
+        "triples": 0,
+        "homeRuns": 1,
+        "hitByPitch": 0,
+        "sacFlies": 0,
+        "sacBunts": 1,
+        "plateAppearances": 4,
+        "totalBases": 4,
+        "stolenBases": 0,
+        "caughtStealing": 1,
+        "intentionalWalks": 0,
+        "groundIntoDoublePlay": 0
+       }
+      }
+     },
+     "ID301": {
+      "person": {
+       "id": 301,
+       "fullName": "Tyler Holton"
+      },
+      "position": {
+       "abbreviation": "P"
+      },
+      "stats": {
+       "pitching": {
+        "hitByPitch": 2,
+        "wildPitches": 0,
+        "balks": 1,
+        "battersFaced": 3,
+        "gamesStarted": 0,
+        "holds": 1
+       }
+      }
+     },
+     "ID999": {
+      "person": {
+       "id": 999,
+       "fullName": "Bench Player"
+      },
+      "position": {
+       "abbreviation": "PH"
+      }
+     }
+    }
+   },
+   "away": {
+    "team": {
+     "id": 145,
+     "name": "Chicago White Sox",
+     "abbreviation": "CWS"
+    },
+    "batters": [
+     101
+    ],
+    "pitchers": [],
+    "players": {
+     "ID101": {
+      "person": {
+       "id": 101,
+       "fullName": "Justyn-Henry Malloy"
+      },
+      "position": {
+       "abbreviation": "RF"
+      },
+      "battingOrder": "100",
+      "stats": {
+       "batting": {
+        "doubles": 1,
+        "triples": 1,
+        "homeRuns": 0,
+        "hitByPitch": 1,
+        "sacFlies": 1,
+        "sacBunts": 0,
+        "plateAppearances": 4,
+        "totalBases": 3,
+        "stolenBases": 1,
+        "caughtStealing": 0,
+        "intentionalWalks": 1,
+        "groundIntoDoublePlay": 0
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "teams": {
+  "teams": [
+   {
+    "id": 116,
+    "abbreviation": "DET",
+    "name": "Detroit Tigers"
+   },
+   {
+    "id": 145,
+    "abbreviation": "CWS",
+    "name": "Chicago White Sox"
+   }
+  ]
+ },
+ "schedule": {
+  "dates": [
+   {
+    "date": "2026-11-21",
+    "games": [
+     {
+      "gamePk": 778445,
+      "gameType": "R",
+      "season": "2026",
+      "gameDate": "2026-11-21T23:10:00Z",
+      "officialDate": "2026-11-21",
+      "gameNumber": 1,
+      "status": {
+       "abstractGameState": "Final",
+       "detailedState": "Final"
+      },
+      "teams": {
+       "home": {
+        "score": 4,
+        "team": {
+         "id": 116,
+         "name": "Detroit Tigers"
+        }
+       },
+       "away": {
+        "score": 2,
+        "team": {
+         "id": 145,
+         "name": "Chicago White Sox"
+        }
+       }
+      }
+     }
+    ]
+   }
+  ]
+ },
+ "csv": "pitch_type,game_date,game_year,game_type,game_pk,home_team,away_team,batter,pitcher,player_name,events,type,bb_type,launch_speed,launch_angle,hit_distance_sc,estimated_ba_using_speedangle,estimated_woba_using_speedangle,woba_value,launch_speed_angle,at_bat_number,pitch_number,inning_topbot,post_home_score,post_away_score\nFF,2026-11-21,2026,R,778445,DET,CWS,101,201,\"Malloy, Justyn-Henry\",,B,,,,,,,1,1,Top,0,0\nFF,2026-11-21,2026,R,778445,DET,CWS,101,201,\"Malloy, Justyn-Henry\",field_out,X,fly_ball,99.6,43,341,0.05,0.123,0.0,3,1,2,Top,0,0\nFF,2026-11-21,2026,R,778445,DET,CWS,102,201,\"Slugger, Bob\",home_run,X,fly_ball,106.8,25,410,0.9,1.9,2.0,6,2,1,Top,0,1\nFF,2026-11-21,2026,R,778445,DET,CWS,201,301,\"Skubal, Tarik\",single,X,ground_ball,70,10,12,0.4,0.2,0.9,,3,1,Bot,1,1\nFF,2026-11-21,2026,R,778445,DET,CWS,101,201,\"Malloy, Justyn-Henry\",foul,S,fly_ball,100,20,180,0.1,0.4,0,6,1,3,Top,0,0\nFF,2026-11-21,2026,S,1,DET,CWS,999,1,\"Spring, Guy\",single,X,line_drive,110,20,200,0.8,1.5,1.2,6,1,1,Top,1,0\n"
+}

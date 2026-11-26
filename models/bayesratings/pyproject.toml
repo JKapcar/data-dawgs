@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bayesratings-models"
+version = "0.1.0"
+description = "Bayesian team and player models for MLB, NBA, NFL, and NHL"
+readme = "README.md"
+license = "AGPL-3.0-only"
+requires-python = ">=3.12"
+dependencies = [
+    "cmdstanpy==1.3.0",
+    "numpy==2.5.4",
+    "pandas==3.0.6",
+    "scikit-learn==1.9.1",
+    "scipy==1.18.1",
+    "joblib==1.6.0",
+    "threadpoolctl==3.8.0",
+    "pdfplumber==0.11.10",
+    "pyarrow==26.0.0",
+]
+
+[project.scripts]
+bayesratings = "bayesratings.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["bayesratings*"]
+
+[tool.setuptools.package-data]
+bayesratings = ["schema.sql", "data/*.csv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
