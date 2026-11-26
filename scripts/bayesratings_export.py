@@ -36,7 +36,8 @@ OUT = ROOT / "data" / "bayesratings-nfl.json"
 
 UPSTREAM_REPO = "WalrusQuant/bayesratings-models"
 MODEL_ID = "bayesratings-nfl"
-MODEL_NAME = "bayesRatings NFL (Bayesian Bradley-Terry + Elo, QB ridge)"
+MODEL_NAME = "bayesRatings NFL (Bayesian Bradley-Terry + Elo)"
+DEFAULT_INPUTS = "ESPN scoreboards"
 METHODOLOGY_URL = "https://datadawgs216.com/models/bayesratings/docs/model.md"
 LICENSE_STATUS = "verified-license-file"
 CANONICAL_URL = "https://datadawgs216.com/data/bayesratings-nfl.json"
@@ -232,7 +233,8 @@ def match_game(sched_games, home, away, start_utc):
 
 
 def build(db_path: Path, schedule_path: Path, captured_at: dt.datetime,
-          upstream_commit: str, dd_commit: str | None = None) -> dict:
+          upstream_commit: str, dd_commit: str | None = None,
+          inputs: str = DEFAULT_INPUTS) -> dict:
     raw = read_db(db_path)
     sched = load_schedule(schedule_path)
     input_snapshot_id = "sha256:" + sha256_bytes(_canon_json(
@@ -291,11 +293,12 @@ def build(db_path: Path, schedule_path: Path, captured_at: dt.datetime,
                 "forecast_status": "prospective",
                 "methodology_url": METHODOLOGY_URL, "license_status": LICENSE_STATUS,
             })
+    if any(r["win_path"] == "ridge_qb" for r in forecasts):
+        inputs += " plus nflverse play-by-play (quarterback ridge)"
     return {
         "as_of": raw["snapshot_date"] or captured_at.date().isoformat(),
         "source": (f"{UPSTREAM_REPO} at {upstream_commit} (AGPL-3.0-only), vendored unmodified "
-                   "in /models/bayesratings and run by .github/workflows/bayesratings.yml on ESPN "
-                   "scoreboards plus nflverse play-by-play."),
+                   f"in /models/bayesratings, run on {inputs}."),
         "tier": "labs",
         "graded": False,
         "note": ("Model output, not a market. Ratings are zero-centered Bradley-Terry logits; "
@@ -353,7 +356,7 @@ def cmd_export(args) -> int:
     captured = _parse_ts(args.captured_at) if args.captured_at else dt.datetime.now(dt.timezone.utc)
     lock = json.loads(LOCK.read_text())
     doc = build(Path(args.db), Path(args.schedule), captured, lock["upstream_commit"],
-                args.dd_commit)
+                args.dd_commit, args.inputs)
     errs = validate(doc)
     if errs:
         print("\n".join(errs), file=sys.stderr)
@@ -385,6 +388,8 @@ def main(argv=None) -> int:
     s.add_argument("--out", default=str(OUT))
     s.add_argument("--captured-at", default=None)
     s.add_argument("--dd-commit", default=None)
+    s.add_argument("--inputs", default=DEFAULT_INPUTS,
+                   help="what the pipeline was fed, for the envelope's source line")
     s.set_defaults(fn=cmd_export)
     s = sub.add_parser("validate"); s.add_argument("file", nargs="?", default=str(OUT))
     s.set_defaults(fn=cmd_validate)

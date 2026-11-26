@@ -117,6 +117,11 @@ class ExportTests(unittest.TestCase):
         self.assertEqual(r["source_commit"], "d" * 40)
         self.assertEqual(r["schedule_snapshot_id"], "sha256:fixture")
 
+    def test_source_names_inputs(self):
+        self.assertIn("run on ESPN scoreboards plus nflverse play-by-play", self.doc["source"])
+        other = bx.build(self.db, self.sched, CAPTURED, "d" * 40, "e" * 40, "nflverse games.csv")
+        self.assertIn("run on nflverse games.csv plus", other["source"])
+
     def test_input_snapshot_is_deterministic(self):
         again = bx.build(self.db, self.sched, CAPTURED, "d" * 40, "e" * 40)
         self.assertEqual(again["provenance"]["input_snapshot_id"],

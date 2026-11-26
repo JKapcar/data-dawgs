@@ -76,9 +76,9 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cmdstan
-          key: cmdstan-${{ runner.os }}-${{ hashFiles('models/bayesratings/requirements.txt') }}
+          key: cmdstan-2.40.0-${{ runner.os }}
       - name: CmdStan
-        run: python -c "import cmdstanpy; cmdstanpy.install_cmdstan()"
+        run: python -c "import cmdstanpy; cmdstanpy.install_cmdstan(version='2.40.0')"
       - uses: actions/cache@v4
         with:
           path: .bayesratings

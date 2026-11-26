@@ -32,6 +32,25 @@ All credit for the models belongs to the upstream author. Data Dawgs did not wri
    `/data/model-contracts.json` shape (`model_id` `bayesratings-nfl`).
 3. Receipt candidates are not appended to `/data/model-receipts.json` automatically. That
    ledger is append-only and needs a reviewed step.
+4. The manual run can only be started once the workflow is on `main` (GitHub runs
+   `workflow_dispatch` only for workflows on the default branch). Without the quarterback
+   ridge input (`qb_ridge: true`, nflverse play-by-play since 2006), NFL win chances come
+   from the team path.
+
+### Other leagues
+
+The same five commands work with `--leagues nba`, `nhl` or `mlb`. None is wired into the
+site yet. Each needs, beyond ESPN scoreboards:
+
+- **NBA:** the official injury-report PDFs and probable lineups for the player ridge;
+  the team path runs without them.
+- **NHL:** Daily Faceoff lines and starting goalies (`scripts/cron.example`) and, for the
+  shot model, `scripts/backfill_nhl_shots.py`; the team path runs without them.
+- **MLB:** MLB Stats API rosters, lineups and boxes plus Baseball Savant batted balls,
+  loaded with `scripts/backfill_mlb_extra.py`, `scripts/load_mlb_extra.py` and
+  `bayesratings.mlb_team_hist` before the first daily run.
+
+Each would need its own export (canonical game ids for that sport) and a `model_id`.
 
 ### AGPL-3.0 obligations (not legal advice)
 
