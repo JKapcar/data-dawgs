@@ -7156,7 +7156,7 @@
     "par_delta": 0.98,
     "internal_games": 2,
     "sd_sim": 4.71,
-    "sd_model": 2.311,
+    "sd_model": 2.264,
     "picks_remaining": 0
    },
    "Rob": {
@@ -7174,7 +7174,7 @@
     "par_delta": 1.63,
     "internal_games": 3,
     "sd_sim": 4.55,
-    "sd_model": 2.139,
+    "sd_model": 2.135,
     "picks_remaining": 0
    },
    "Kevin": {
@@ -7192,7 +7192,7 @@
     "par_delta": -0.63,
     "internal_games": 4,
     "sd_sim": 4.62,
-    "sd_model": 2.102,
+    "sd_model": 2.047,
     "picks_remaining": 0
    },
    "Chris": {
@@ -7210,7 +7210,7 @@
     "par_delta": -1.86,
     "internal_games": 2,
     "sd_sim": 4.58,
-    "sd_model": 2.319,
+    "sd_model": 2.31,
     "picks_remaining": 0
    },
    "Tyler": {
@@ -7228,7 +7228,7 @@
     "par_delta": 1.59,
     "internal_games": 1,
     "sd_sim": 4.7,
-    "sd_model": 2.303,
+    "sd_model": 2.306,
     "picks_remaining": 0
    },
    "Kap": {
@@ -7264,7 +7264,7 @@
     "par_delta": -0.33,
     "internal_games": 3,
     "sd_sim": 4.46,
-    "sd_model": 2.134,
+    "sd_model": 2.127,
     "picks_remaining": 0
    },
    "Alan": {
@@ -7282,7 +7282,7 @@
     "par_delta": -4.15,
     "internal_games": 2,
     "sd_sim": 5.08,
-    "sd_model": 2.126,
+    "sd_model": 2.13,
     "picks_remaining": 0
    }
   },
@@ -8512,7 +8512,7 @@
    }
   },
   "diagnostics": {
-   "checked_at_as_of": "2026-11-25",
+   "checked_at_as_of": "2026-11-26",
    "hard_failures": [],
    "checks": [
     {
@@ -8648,7 +8648,7 @@
      "label": "Two roster standard deviations, and they disagree",
      "ok": true,
      "detail": "The upstream simulation and the quadrature-plus-head-to-head calculation sit within 2.95 wins of each other (worst: Alan). They diverge most for rosters with internal games, and the simulation is the smaller of the two — it also draws correlated team strength, which quadrature cannot see. The page shows the simulated figure wherever it exists and says when it is falling back.",
-     "value": 2.954,
+     "value": 2.95,
      "severity": "info"
     }
    ]
