@@ -1,6 +1,6 @@
 {
  "as_of": "2026-11-27",
- "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit f185e4b7e8c413393610724f7aebd842feb26b77.",
+ "source": "nfelodcm 0.2.21 typed load of nflverse/nfldata data/games.csv at commit b89caeed875db2fcc5d6c3f3d1d1dc0d0a55231e.",
  "tier": "labs",
  "graded": false,
  "note": "Canonical schedule facts only. Market prices are deliberately excluded because the upstream table does not identify their book and observation timestamp. Git history retains every changed snapshot; models must record integrity.snapshot_id in receipts.",
@@ -10,104 +10,13 @@
   "loader_license": "MIT",
   "source_repository": "nflverse/nfldata",
   "source_url": "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv",
-  "source_commit": "f185e4b7e8c413393610724f7aebd842feb26b77",
-  "source_committed_at": "2026-11-27T04:45:20Z",
+  "source_commit": "b89caeed875db2fcc5d6c3f3d1d1dc0d0a55231e",
+  "source_committed_at": "2026-11-27T19:15:20Z",
   "source_data_license": "not-verified-for-nfldata-repository",
-  "captured_at": "2026-11-27T04:58:04.792915Z",
-  "manual_result_amendments": [
-   {
-    "game_id": "2026_09_LAR_WAS",
-    "status": "final",
-    "away_score": 20,
-    "home_score": 13,
-    "as_of": "2026-11-08",
-    "source": "Kap-provided final result; explicitly requested schedule correction",
-    "base_schedule_blob": "833ef2abdf32da1a6e625955055797abc15b5ce0"
-   },
-   {
-    "game_id": "2026_09_CLE_NO",
-    "status": "final",
-    "away_score": 22,
-    "home_score": 23,
-    "as_of": "2026-11-08",
-    "source": "Kap-provided final result; explicitly requested banking on 2026-11-08 at approximately 6:25 PM EST"
-   },
-   {
-    "game_id": "2026_09_DAL_IND",
-    "status": "final",
-    "away_score": 27,
-    "home_score": 23,
-    "as_of": "2026-11-08",
-    "source": "Kap-provided final result; explicitly requested banking on 2026-11-08 at approximately 6:25 PM EST"
-   },
-   {
-    "game_id": "2026_09_DEN_CAR",
-    "status": "final",
-    "away_score": 26,
-    "home_score": 21,
-    "as_of": "2026-11-08",
-    "source": "Kap-provided final result; explicitly requested banking on 2026-11-08 at approximately 6:25 PM EST"
-   },
-   {
-    "game_id": "2026_09_NYG_PHI",
-    "status": "final",
-    "away_score": 19,
-    "home_score": 11,
-    "as_of": "2026-11-08",
-    "source": "Kap-provided final result; explicitly requested banking on 2026-11-08 at approximately 6:25 PM EST"
-   },
-   {
-    "game_id": "2026_09_NYJ_KC",
-    "status": "final",
-    "away_score": 12,
-    "home_score": 35,
-    "as_of": "2026-11-08",
-    "source": "Kap-provided final result; explicitly requested banking on 2026-11-08 at approximately 6:25 PM EST"
-   },
-   {
-    "game_id": "2026_09_HOU_LAC",
-    "status": "final",
-    "away_score": 44,
-    "home_score": 22,
-    "as_of": "2026-11-08",
-    "source": "Kap-provided final result; explicitly requested banking on 2026-11-08 at approximately 8:47 PM EST"
-   },
-   {
-    "game_id": "2026_09_LV_SF",
-    "status": "final",
-    "away_score": 17,
-    "home_score": 38,
-    "as_of": "2026-11-08",
-    "source": "Kap-provided final result; explicitly requested banking on 2026-11-08 at approximately 8:47 PM EST"
-   },
-   {
-    "game_id": "2026_09_ARI_SEA",
-    "status": "final",
-    "away_score": 3,
-    "home_score": 17,
-    "as_of": "2026-11-08",
-    "source": "Kap-provided final result; explicitly requested banking on 2026-11-08 at approximately 8:47 PM EST"
-   },
-   {
-    "game_id": "2026_09_GB_NE",
-    "status": "final",
-    "away_score": 45,
-    "home_score": 27,
-    "as_of": "2026-11-08",
-    "source": "Kap-provided final result; explicitly requested banking on 2026-11-08 at approximately 8:47 PM EST"
-   },
-   {
-    "game_id": "2026_09_TB_CHI",
-    "status": "final",
-    "away_score": 24,
-    "home_score": 27,
-    "as_of": "2026-11-08",
-    "source": "ESPN public scoreboard STATUS_FINAL, checked 2026-11-08 ~11:46 PM EST at Kap's request"
-   }
-  ]
+  "captured_at": "2026-11-27T19:28:18.298024Z"
  },
  "integrity": {
-  "snapshot_id": "sha256:247b0633abc5c12ed165f87e692e2018ab311d82e2f1eb2a0bde5531be56f219",
+  "snapshot_id": "sha256:1261f749fdbc4786cacee2a1cbbd4ec07c7fe85245e6ea31d2b873f5a92fc221",
   "algorithm": "SHA-256 of canonical UTF-8 JSON for data.games (sorted object keys, no insignificant whitespace).",
   "rows": 272,
   "regular_season_rows": 272
@@ -2343,23 +2252,6 @@
     "home_score": 22
    },
    {
-    "game_id": "2026_09_LV_SF",
-    "upstream_game_id": "2026_09_OAK_SF",
-    "season": 2026,
-    "week": 9,
-    "season_type": "REG",
-    "kickoff_at": "2026-11-08T21:05:00Z",
-    "away_team": "LV",
-    "home_team": "SF",
-    "neutral_site": false,
-    "divisional": false,
-    "away_rest_days": 7,
-    "home_rest_days": 14,
-    "status": "final",
-    "away_score": 17,
-    "home_score": 38
-   },
-   {
     "game_id": "2026_09_ARI_SEA",
     "upstream_game_id": "2026_09_ARI_SEA",
     "season": 2026,
@@ -2392,6 +2284,23 @@
     "status": "final",
     "away_score": 45,
     "home_score": 27
+   },
+   {
+    "game_id": "2026_09_LV_SF",
+    "upstream_game_id": "2026_09_OAK_SF",
+    "season": 2026,
+    "week": 9,
+    "season_type": "REG",
+    "kickoff_at": "2026-11-08T21:25:00Z",
+    "away_team": "LV",
+    "home_team": "SF",
+    "neutral_site": false,
+    "divisional": false,
+    "away_rest_days": 7,
+    "home_rest_days": 14,
+    "status": "final",
+    "away_score": 17,
+    "home_score": 38
    },
    {
     "game_id": "2026_09_TB_CHI",
@@ -2717,23 +2626,6 @@
     "home_score": 35
    },
    {
-    "game_id": "2026_11_JAX_NYG",
-    "upstream_game_id": "2026_11_JAX_NYG",
-    "season": 2026,
-    "week": 11,
-    "season_type": "REG",
-    "kickoff_at": "2026-11-22T18:00:00Z",
-    "away_team": "JAX",
-    "home_team": "NYG",
-    "neutral_site": false,
-    "divisional": false,
-    "away_rest_days": 7,
-    "home_rest_days": 10,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
-   },
-   {
     "game_id": "2026_11_MIA_BUF",
     "upstream_game_id": "2026_11_MIA_BUF",
     "season": 2026,
@@ -2766,6 +2658,23 @@
     "status": "final",
     "away_score": 13,
     "home_score": 21
+   },
+   {
+    "game_id": "2026_11_PIT_PHI",
+    "upstream_game_id": "2026_11_PIT_PHI",
+    "season": 2026,
+    "week": 11,
+    "season_type": "REG",
+    "kickoff_at": "2026-11-22T18:00:00Z",
+    "away_team": "PIT",
+    "home_team": "PHI",
+    "neutral_site": false,
+    "divisional": false,
+    "away_rest_days": 7,
+    "home_rest_days": 14,
+    "status": "final",
+    "away_score": 16,
+    "home_score": 19
    },
    {
     "game_id": "2026_11_TB_DET",
@@ -2819,6 +2728,23 @@
     "home_score": 24
    },
    {
+    "game_id": "2026_11_JAX_NYG",
+    "upstream_game_id": "2026_11_JAX_NYG",
+    "season": 2026,
+    "week": 11,
+    "season_type": "REG",
+    "kickoff_at": "2026-11-22T21:25:00Z",
+    "away_team": "JAX",
+    "home_team": "NYG",
+    "neutral_site": false,
+    "divisional": false,
+    "away_rest_days": 7,
+    "home_rest_days": 10,
+    "status": "final",
+    "away_score": 18,
+    "home_score": 23
+   },
+   {
     "game_id": "2026_11_LV_DEN",
     "upstream_game_id": "2026_11_OAK_DEN",
     "season": 2026,
@@ -2834,23 +2760,6 @@
     "status": "final",
     "away_score": 24,
     "home_score": 38
-   },
-   {
-    "game_id": "2026_11_PIT_PHI",
-    "upstream_game_id": "2026_11_PIT_PHI",
-    "season": 2026,
-    "week": 11,
-    "season_type": "REG",
-    "kickoff_at": "2026-11-22T21:25:00Z",
-    "away_team": "PIT",
-    "home_team": "PHI",
-    "neutral_site": false,
-    "divisional": false,
-    "away_rest_days": 7,
-    "home_rest_days": 14,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
    },
    {
     "game_id": "2026_11_MIN_SF",
@@ -3006,23 +2915,6 @@
     "home_score": null
    },
    {
-    "game_id": "2026_12_LV_CLE",
-    "upstream_game_id": "2026_12_OAK_CLE",
-    "season": 2026,
-    "week": 12,
-    "season_type": "REG",
-    "kickoff_at": "2026-11-29T18:00:00Z",
-    "away_team": "LV",
-    "home_team": "CLE",
-    "neutral_site": false,
-    "divisional": false,
-    "away_rest_days": 7,
-    "home_rest_days": 14,
-    "status": "scheduled",
-    "away_score": null,
-    "home_score": null
-   },
-   {
     "game_id": "2026_12_NO_CIN",
     "upstream_game_id": "2026_12_NO_CIN",
     "season": 2026,
@@ -3079,12 +2971,29 @@
     "season": 2026,
     "week": 12,
     "season_type": "REG",
-    "kickoff_at": "2026-11-29T21:05:00Z",
+    "kickoff_at": "2026-11-29T18:00:00Z",
     "away_team": "TEN",
     "home_team": "JAX",
     "neutral_site": false,
     "divisional": true,
     "away_rest_days": 7,
+    "home_rest_days": 7,
+    "status": "scheduled",
+    "away_score": null,
+    "home_score": null
+   },
+   {
+    "game_id": "2026_12_NE_LAC",
+    "upstream_game_id": "2026_12_NE_LAC",
+    "season": 2026,
+    "week": 12,
+    "season_type": "REG",
+    "kickoff_at": "2026-11-29T21:05:00Z",
+    "away_team": "NE",
+    "home_team": "LAC",
+    "neutral_site": false,
+    "divisional": false,
+    "away_rest_days": 14,
     "home_rest_days": 7,
     "status": "scheduled",
     "away_score": null,
@@ -3125,18 +3034,18 @@
     "home_score": null
    },
    {
-    "game_id": "2026_12_NE_LAC",
-    "upstream_game_id": "2026_12_NE_LAC",
+    "game_id": "2026_12_LV_CLE",
+    "upstream_game_id": "2026_12_OAK_CLE",
     "season": 2026,
     "week": 12,
     "season_type": "REG",
     "kickoff_at": "2026-11-30T01:20:00Z",
-    "away_team": "NE",
-    "home_team": "LAC",
+    "away_team": "LV",
+    "home_team": "CLE",
     "neutral_site": false,
     "divisional": false,
-    "away_rest_days": 14,
-    "home_rest_days": 7,
+    "away_rest_days": 7,
+    "home_rest_days": 14,
     "status": "scheduled",
     "away_score": null,
     "home_score": null
