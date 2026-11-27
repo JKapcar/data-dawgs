@@ -2,9 +2,9 @@
  "source_page": "/stats.html",
  "tier": "dawg",
  "graded": false,
- "as_of": "2026-11-26",
+ "as_of": "2026-11-27",
  "source": "nflverse play-by-play; current-season completed games refreshed daily, with corrections; historical seasons retain their dated snapshots. See data.coverage for exact games, source hash and timestamps.",
- "note": "Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name per play, so the whole value of a completed pass is credited to the quarterback and a receiver appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, not projections: do not read 2025 as 2026. 2026 is Weeks 1-12 ONLY (164 games): incomplete-season coverage, with the season minimums prorated to 91 dropbacks / 46 rushes. The pooled table spans every season in the snapshot, including the partial one.",
+ "note": "Aggregated by the PRIMARY BALL HANDLER: the passer on a dropback, the ball carrier on a rush. There is no receiving EPA here and there cannot be — the play-by-play snapshot carries one name per play, so the whole value of a completed pass is credited to the quarterback and a receiver appears only for his own carries. Regular season only, plays with a down. Descriptive aggregates, not projections: do not read 2025 as 2026. 2026 is Weeks 1-12 ONLY (167 games): incomplete-season coverage, with the season minimums prorated to 93 dropbacks / 47 rushes. The pooled table spans every season in the snapshot, including the partial one.",
  "field_notes": {
   "epa_per_play": "EPA per play over everything he handled the ball on",
   "epa_per_dropback": "EPA per dropback as the passer; null if he never dropped back",
@@ -32,8 +32,8 @@
    },
    "partial_season": {
     "2026": {
-     "dropbacks": 91,
-     "rushes": 46,
+     "dropbacks": 93,
+     "rushes": 47,
      "weeks": [
       1,
       2,
@@ -84,8 +84,8 @@
     "captured": "2026-07-29"
    },
    "2026": {
-    "plays": 21133,
-    "reg_plays_with_down": 21055,
+    "plays": 21537,
+    "reg_plays_with_down": 21455,
     "season_types": [
      "REG"
     ],
@@ -104,8 +104,8 @@
      12
     ],
     "postseason_weeks": [],
-    "games": 164,
-    "regular_games": 164,
+    "games": 167,
+    "regular_games": 167,
     "games_per_week": {
      "1": 16,
      "2": 16,
@@ -118,7 +118,7 @@
      "9": 15,
      "10": 14,
      "11": 13,
-     "12": 1
+     "12": 4
     },
     "game_ids": [
      "2026_01_ARI_LAC",
@@ -284,25 +284,28 @@
      "2026_11_PIT_PHI",
      "2026_11_TB_DET",
      "2026_11_TEN_DAL",
-     "2026_12_GB_LA"
+     "2026_12_CHI_DET",
+     "2026_12_GB_LA",
+     "2026_12_KC_BUF",
+     "2026_12_PHI_DAL"
     ],
     "games_by_team": {
      "ARI": 11,
      "ATL": 10,
      "BAL": 11,
-     "BUF": 10,
+     "BUF": 11,
      "CAR": 10,
-     "CHI": 10,
+     "CHI": 11,
      "CIN": 10,
      "CLE": 10,
-     "DAL": 11,
+     "DAL": 12,
      "DEN": 10,
-     "DET": 10,
+     "DET": 11,
      "GB": 11,
      "HOU": 10,
      "IND": 11,
      "JAX": 10,
-     "KC": 10,
+     "KC": 11,
      "LA": 11,
      "LAC": 10,
      "LV": 11,
@@ -312,7 +315,7 @@
      "NO": 10,
      "NYG": 10,
      "NYJ": 11,
-     "PHI": 10,
+     "PHI": 11,
      "PIT": 10,
      "SEA": 10,
      "SF": 10,
@@ -320,13 +323,13 @@
      "TEN": 10,
      "WAS": 10
     },
-    "through": "2026-11-25",
-    "captured": "2026-11-26",
-    "refreshed_at": "2026-11-26T20:32:05.385355Z",
+    "through": "2026-11-26",
+    "captured": "2026-11-27",
+    "refreshed_at": "2026-11-27T20:18:40.897730Z",
     "source_url": "https://github.com/nflverse/nflverse-data/releases/download/pbp/play_by_play_2026.csv.gz",
-    "source_updated": "Thu, 26 Nov 2026 18:58:15 GMT",
-    "source_sha256": "adf5a3a727ce7f114678dfdd6d49a98f5a67c2f55bf6b5b001002d224959ec89",
-    "schedule_sha256": "3c21da3ec41be7397ae782352196b8af291cea7cdef4ae00e2cfdfed23b6eef6",
+    "source_updated": "Fri, 27 Nov 2026 19:03:45 GMT",
+    "source_sha256": "d83fa7f95c0069983b20b7419d5ba0c3b00cfa3389c1e1466778ff23abb6c1a5",
+    "schedule_sha256": "83cf7a34feffd6fda01e93bb5f23dcc072a3d202973bb142796ac87efb3aeaf8",
     "pending_games": [],
     "refresh_frequency": "daily at 11:43 UTC",
     "note": "Completed games only, including incomplete weeks. Daily published nflverse EPA; not live. Historical seasons retained; current-season corrections incorporated."
@@ -5086,6 +5089,21 @@
    ],
    "2026": [
     {
+     "player": "D.Prescott",
+     "team": "DAL",
+     "plays": 538,
+     "dropbacks": 533,
+     "rushes": 5,
+     "epa_per_play": 0.2191,
+     "success": 0.5204,
+     "epa_per_dropback": 0.2152,
+     "dropback_success": 0.5178,
+     "cpoe": 1.5639,
+     "epa_per_rush": 0.636,
+     "rush_success": 0.8,
+     "total_epa": 117.89
+    },
+    {
      "player": "B.Purdy",
      "team": "SF",
      "plays": 353,
@@ -5116,64 +5134,19 @@
      "total_epa": 108.65
     },
     {
-     "player": "D.Prescott",
-     "team": "DAL",
-     "plays": 496,
-     "dropbacks": 491,
-     "rushes": 5,
-     "epa_per_play": 0.2126,
-     "success": 0.5242,
-     "epa_per_dropback": 0.2083,
-     "dropback_success": 0.5214,
-     "cpoe": 1.1554,
-     "epa_per_rush": 0.636,
-     "rush_success": 0.8,
-     "total_epa": 105.44
-    },
-    {
-     "player": "J.Allen",
-     "team": "BUF",
-     "plays": 409,
-     "dropbacks": 372,
-     "rushes": 37,
-     "epa_per_play": 0.1877,
-     "success": 0.5037,
-     "epa_per_dropback": 0.1782,
-     "dropback_success": 0.4839,
-     "cpoe": 1.6724,
-     "epa_per_rush": 0.283,
-     "rush_success": 0.7027,
-     "total_epa": 76.76
-    },
-    {
      "player": "J.Goff",
      "team": "DET",
-     "plays": 383,
-     "dropbacks": 373,
-     "rushes": 10,
-     "epa_per_play": 0.1997,
-     "success": 0.5274,
-     "epa_per_dropback": 0.2124,
-     "dropback_success": 0.5255,
-     "cpoe": 0.785,
-     "epa_per_rush": -0.273,
-     "rush_success": 0.6,
-     "total_epa": 76.5
-    },
-    {
-     "player": "P.Mahomes",
-     "team": "KC",
-     "plays": 384,
-     "dropbacks": 382,
-     "rushes": 2,
-     "epa_per_play": 0.1875,
-     "success": 0.5182,
-     "epa_per_dropback": 0.1865,
-     "dropback_success": 0.5183,
-     "cpoe": 2.5949,
-     "epa_per_rush": 0.39,
-     "rush_success": 0.5,
-     "total_epa": 72.01
+     "plays": 426,
+     "dropbacks": 415,
+     "rushes": 11,
+     "epa_per_play": 0.187,
+     "success": 0.5235,
+     "epa_per_dropback": 0.1961,
+     "dropback_success": 0.5205,
+     "cpoe": 0.8873,
+     "epa_per_rush": -0.1573,
+     "rush_success": 0.6364,
+     "total_epa": 79.65
     },
     {
      "player": "T.Lawrence",
@@ -5191,6 +5164,21 @@
      "total_epa": 71.95
     },
     {
+     "player": "P.Mahomes",
+     "team": "KC",
+     "plays": 419,
+     "dropbacks": 415,
+     "rushes": 4,
+     "epa_per_play": 0.1676,
+     "success": 0.5012,
+     "epa_per_dropback": 0.1693,
+     "dropback_success": 0.5036,
+     "cpoe": 1.7201,
+     "epa_per_rush": -0.0025,
+     "rush_success": 0.25,
+     "total_epa": 70.24
+    },
+    {
      "player": "C.Stroud",
      "team": "HOU",
      "plays": 418,
@@ -5204,6 +5192,21 @@
      "epa_per_rush": -0.105,
      "rush_success": 0.6,
      "total_epa": 66.91
+    },
+    {
+     "player": "J.Allen",
+     "team": "BUF",
+     "plays": 441,
+     "dropbacks": 399,
+     "rushes": 42,
+     "epa_per_play": 0.1471,
+     "success": 0.4989,
+     "epa_per_dropback": 0.1399,
+     "dropback_success": 0.4812,
+     "cpoe": 0.2853,
+     "epa_per_rush": 0.2148,
+     "rush_success": 0.6667,
+     "total_epa": 64.86
     },
     {
      "player": "K.Cousins",
@@ -5276,6 +5279,21 @@
      "total_epa": 39.07
     },
     {
+     "player": "C.Williams",
+     "team": "CHI",
+     "plays": 328,
+     "dropbacks": 319,
+     "rushes": 9,
+     "epa_per_play": 0.1172,
+     "success": 0.5061,
+     "epa_per_dropback": 0.1319,
+     "dropback_success": 0.511,
+     "cpoe": 4.8325,
+     "epa_per_rush": -0.4067,
+     "rush_success": 0.3333,
+     "total_epa": 38.43
+    },
+    {
      "player": "J.Love",
      "team": "GB",
      "teams": [
@@ -5314,21 +5332,6 @@
      "epa_per_rush": -0.095,
      "rush_success": 0.5,
      "total_epa": 34.05
-    },
-    {
-     "player": "C.Williams",
-     "team": "CHI",
-     "plays": 275,
-     "dropbacks": 267,
-     "rushes": 8,
-     "epa_per_play": 0.1147,
-     "success": 0.5018,
-     "epa_per_dropback": 0.137,
-     "dropback_success": 0.5094,
-     "cpoe": 6.2252,
-     "epa_per_rush": -0.63,
-     "rush_success": 0.25,
-     "total_epa": 31.53
     },
     {
      "player": "B.Nix",
@@ -5376,6 +5379,36 @@
      "total_epa": 21.8
     },
     {
+     "player": "J.Gibbs",
+     "team": "DET",
+     "plays": 252,
+     "dropbacks": 0,
+     "rushes": 252,
+     "epa_per_play": 0.083,
+     "success": 0.504,
+     "epa_per_dropback": null,
+     "dropback_success": null,
+     "cpoe": null,
+     "epa_per_rush": 0.083,
+     "rush_success": 0.504,
+     "total_epa": 20.92
+    },
+    {
+     "player": "J.Cook",
+     "team": "BUF",
+     "plays": 247,
+     "dropbacks": 0,
+     "rushes": 247,
+     "epa_per_play": 0.0755,
+     "success": 0.4818,
+     "epa_per_dropback": null,
+     "dropback_success": null,
+     "cpoe": null,
+     "epa_per_rush": 0.0755,
+     "rush_success": 0.4818,
+     "total_epa": 18.65
+    },
+    {
      "player": "B.Corum",
      "team": "LA",
      "plays": 140,
@@ -5391,21 +5424,6 @@
      "total_epa": 14.98
     },
     {
-     "player": "J.Cook",
-     "team": "BUF",
-     "plays": 214,
-     "dropbacks": 0,
-     "rushes": 214,
-     "epa_per_play": 0.0687,
-     "success": 0.4673,
-     "epa_per_dropback": null,
-     "dropback_success": null,
-     "cpoe": null,
-     "epa_per_rush": 0.0687,
-     "rush_success": 0.4673,
-     "total_epa": 14.71
-    },
-    {
      "player": "K.Walker",
      "team": "KC",
      "plays": 161,
@@ -5419,21 +5437,6 @@
      "epa_per_rush": 0.0773,
      "rush_success": 0.4845,
      "total_epa": 12.44
-    },
-    {
-     "player": "J.Gibbs",
-     "team": "DET",
-     "plays": 231,
-     "dropbacks": 0,
-     "rushes": 231,
-     "epa_per_play": 0.0528,
-     "success": 0.4935,
-     "epa_per_dropback": null,
-     "dropback_success": null,
-     "cpoe": null,
-     "epa_per_rush": 0.0528,
-     "rush_success": 0.4935,
-     "total_epa": 12.19
     },
     {
      "player": "J.McCarthy",
@@ -5566,6 +5569,21 @@
      "total_epa": 4.44
     },
     {
+     "player": "K.Monangai",
+     "team": "CHI",
+     "plays": 77,
+     "dropbacks": 0,
+     "rushes": 77,
+     "epa_per_play": 0.0553,
+     "success": 0.4416,
+     "epa_per_dropback": null,
+     "dropback_success": null,
+     "cpoe": null,
+     "epa_per_rush": 0.0553,
+     "rush_success": 0.4416,
+     "total_epa": 4.26
+    },
+    {
      "player": "J.Brissett",
      "team": "ARI",
      "teams": [
@@ -5619,36 +5637,6 @@
      "epa_per_rush": 0.0574,
      "rush_success": 0.4151,
      "total_epa": 3.04
-    },
-    {
-     "player": "K.Monangai",
-     "team": "CHI",
-     "plays": 69,
-     "dropbacks": 0,
-     "rushes": 69,
-     "epa_per_play": 0.04,
-     "success": 0.4348,
-     "epa_per_dropback": null,
-     "dropback_success": null,
-     "cpoe": null,
-     "epa_per_rush": 0.04,
-     "rush_success": 0.4348,
-     "total_epa": 2.76
-    },
-    {
-     "player": "E.Johnson",
-     "team": "KC",
-     "plays": 72,
-     "dropbacks": 0,
-     "rushes": 72,
-     "epa_per_play": 0.0361,
-     "success": 0.4306,
-     "epa_per_dropback": null,
-     "dropback_success": null,
-     "cpoe": null,
-     "epa_per_rush": 0.0361,
-     "rush_success": 0.4306,
-     "total_epa": 2.6
     },
     {
      "player": "S.McGowan",
@@ -5724,6 +5712,21 @@
      "epa_per_rush": -0.1312,
      "rush_success": 0.5769,
      "total_epa": 1.24
+    },
+    {
+     "player": "E.Johnson",
+     "team": "KC",
+     "plays": 90,
+     "dropbacks": 0,
+     "rushes": 90,
+     "epa_per_play": 0.0077,
+     "success": 0.4778,
+     "epa_per_dropback": null,
+     "dropback_success": null,
+     "cpoe": null,
+     "epa_per_rush": 0.0077,
+     "rush_success": 0.4778,
+     "total_epa": 0.69
     },
     {
      "player": "B.Irving",
@@ -5816,6 +5819,21 @@
      "total_epa": -2.32
     },
     {
+     "player": "J.Milton",
+     "team": "PHI",
+     "plays": 122,
+     "dropbacks": 115,
+     "rushes": 7,
+     "epa_per_play": -0.023,
+     "success": 0.377,
+     "epa_per_dropback": -0.0057,
+     "dropback_success": 0.3826,
+     "cpoe": -3.7071,
+     "epa_per_rush": -0.3071,
+     "rush_success": 0.2857,
+     "total_epa": -2.8
+    },
+    {
      "player": "O.Gordon",
      "team": "MIA",
      "plays": 144,
@@ -5829,35 +5847,6 @@
      "epa_per_rush": -0.0197,
      "rush_success": 0.3681,
      "total_epa": -2.84
-    },
-    {
-     "player": "J.Williams",
-     "team": "DAL",
-     "teams": [
-      {
-       "team": "DAL",
-       "plays": 195
-      },
-      {
-       "team": "DET",
-       "plays": 1
-      },
-      {
-       "team": "GB",
-       "plays": 1
-      }
-     ],
-     "plays": 197,
-     "dropbacks": 0,
-     "rushes": 197,
-     "epa_per_play": -0.0145,
-     "success": 0.4569,
-     "epa_per_dropback": null,
-     "dropback_success": null,
-     "cpoe": null,
-     "epa_per_rush": -0.0145,
-     "rush_success": 0.4569,
-     "total_epa": -2.85
     },
     {
      "player": "T.Huntley",
@@ -5935,6 +5924,35 @@
      "total_epa": -3.85
     },
     {
+     "player": "J.Williams",
+     "team": "DAL",
+     "teams": [
+      {
+       "team": "DAL",
+       "plays": 224
+      },
+      {
+       "team": "DET",
+       "plays": 2
+      },
+      {
+       "team": "GB",
+       "plays": 1
+      }
+     ],
+     "plays": 227,
+     "dropbacks": 0,
+     "rushes": 227,
+     "epa_per_play": -0.0172,
+     "success": 0.4449,
+     "epa_per_dropback": null,
+     "dropback_success": null,
+     "cpoe": null,
+     "epa_per_rush": -0.0172,
+     "rush_success": 0.4449,
+     "total_epa": -3.9
+    },
+    {
      "player": "K.Williams",
      "team": "LA",
      "plays": 156,
@@ -5978,21 +5996,6 @@
      "epa_per_rush": 0.24,
      "rush_success": 0.5,
      "total_epa": -5.58
-    },
-    {
-     "player": "S.Barkley",
-     "team": "PHI",
-     "plays": 91,
-     "dropbacks": 0,
-     "rushes": 91,
-     "epa_per_play": -0.0714,
-     "success": 0.3407,
-     "epa_per_dropback": null,
-     "dropback_success": null,
-     "cpoe": null,
-     "epa_per_rush": -0.0714,
-     "rush_success": 0.3407,
-     "total_epa": -6.5
     },
     {
      "player": "M.Willis",
@@ -6078,6 +6081,21 @@
      "epa_per_rush": -0.0689,
      "rush_success": 0.3982,
      "total_epa": -7.79
+    },
+    {
+     "player": "D.Swift",
+     "team": "CHI",
+     "plays": 182,
+     "dropbacks": 0,
+     "rushes": 182,
+     "epa_per_play": -0.0462,
+     "success": 0.3956,
+     "epa_per_dropback": null,
+     "dropback_success": null,
+     "cpoe": null,
+     "epa_per_rush": -0.0462,
+     "rush_success": 0.3956,
+     "total_epa": -8.41
     },
     {
      "player": "K.Murray",
@@ -6255,6 +6273,21 @@
      "total_epa": -11.07
     },
     {
+     "player": "S.Barkley",
+     "team": "PHI",
+     "plays": 96,
+     "dropbacks": 0,
+     "rushes": 96,
+     "epa_per_play": -0.1153,
+     "success": 0.3229,
+     "epa_per_dropback": null,
+     "dropback_success": null,
+     "cpoe": null,
+     "epa_per_rush": -0.1153,
+     "rush_success": 0.3229,
+     "total_epa": -11.07
+    },
+    {
      "player": "B.Tuten",
      "team": "JAX",
      "plays": 164,
@@ -6283,21 +6316,6 @@
      "epa_per_rush": -0.0987,
      "rush_success": 0.375,
      "total_epa": -11.84
-    },
-    {
-     "player": "D.Swift",
-     "team": "CHI",
-     "plays": 173,
-     "dropbacks": 0,
-     "rushes": 173,
-     "epa_per_play": -0.0685,
-     "success": 0.3757,
-     "epa_per_dropback": null,
-     "dropback_success": null,
-     "cpoe": null,
-     "epa_per_rush": -0.0685,
-     "rush_success": 0.3757,
-     "total_epa": -11.85
     },
     {
      "player": "C.Ward",
@@ -6560,17 +6578,17 @@
    {
     "player": "J.Allen",
     "team": "BUF",
-    "plays": 2411,
-    "dropbacks": 2218,
-    "rushes": 193,
-    "epa_per_play": 0.2244,
-    "success": 0.5139,
-    "epa_per_dropback": 0.2113,
-    "dropback_success": 0.4995,
-    "cpoe": 2.9788,
-    "epa_per_rush": 0.3753,
-    "rush_success": 0.6788,
-    "total_epa": 541.12
+    "plays": 2443,
+    "dropbacks": 2245,
+    "rushes": 198,
+    "epa_per_play": 0.2166,
+    "success": 0.5129,
+    "epa_per_dropback": 0.2041,
+    "dropback_success": 0.4989,
+    "cpoe": 2.7221,
+    "epa_per_rush": 0.3585,
+    "rush_success": 0.6717,
+    "total_epa": 529.22
    },
    {
     "player": "B.Purdy",
@@ -6590,32 +6608,32 @@
    {
     "player": "J.Goff",
     "team": "DET",
-    "plays": 2304,
-    "dropbacks": 2276,
-    "rushes": 28,
-    "epa_per_play": 0.1808,
-    "success": 0.5091,
-    "epa_per_dropback": 0.1862,
-    "dropback_success": 0.5083,
-    "cpoe": 2.4884,
-    "epa_per_rush": -0.2582,
-    "rush_success": 0.5714,
-    "total_epa": 416.54
+    "plays": 2347,
+    "dropbacks": 2318,
+    "rushes": 29,
+    "epa_per_play": 0.1788,
+    "success": 0.5087,
+    "epa_per_dropback": 0.1837,
+    "dropback_success": 0.5078,
+    "cpoe": 2.4763,
+    "epa_per_rush": -0.2148,
+    "rush_success": 0.5862,
+    "total_epa": 419.69
    },
    {
     "player": "D.Prescott",
     "team": "DAL",
-    "plays": 2271,
-    "dropbacks": 2233,
+    "plays": 2313,
+    "dropbacks": 2275,
     "rushes": 38,
-    "epa_per_play": 0.1737,
-    "success": 0.5002,
-    "epa_per_dropback": 0.1788,
-    "dropback_success": 0.4989,
-    "cpoe": 2.0456,
+    "epa_per_play": 0.1759,
+    "success": 0.4998,
+    "epa_per_dropback": 0.1809,
+    "dropback_success": 0.4985,
+    "cpoe": 2.1275,
     "epa_per_rush": -0.1261,
     "rush_success": 0.5789,
-    "total_epa": 394.41
+    "total_epa": 406.86
    },
    {
     "player": "J.Love",
@@ -6649,17 +6667,17 @@
    {
     "player": "P.Mahomes",
     "team": "KC",
-    "plays": 2424,
-    "dropbacks": 2415,
-    "rushes": 9,
-    "epa_per_play": 0.151,
-    "success": 0.5004,
-    "epa_per_dropback": 0.1509,
-    "dropback_success": 0.5006,
-    "cpoe": 2.0695,
-    "epa_per_rush": 0.17,
-    "rush_success": 0.4444,
-    "total_epa": 365.92
+    "plays": 2459,
+    "dropbacks": 2448,
+    "rushes": 11,
+    "epa_per_play": 0.1481,
+    "success": 0.4978,
+    "epa_per_dropback": 0.1485,
+    "dropback_success": 0.4984,
+    "cpoe": 1.9217,
+    "epa_per_rush": 0.0673,
+    "rush_success": 0.3636,
+    "total_epa": 364.15
    },
    {
     "player": "L.Jackson",
@@ -6980,24 +6998,24 @@
     "teams": [
      {
       "team": "CHI",
-      "plays": 1718
+      "plays": 1771
      },
      {
       "team": "SEA",
       "plays": 2
      }
     ],
-    "plays": 1720,
-    "dropbacks": 1662,
-    "rushes": 58,
-    "epa_per_play": 0.0348,
-    "success": 0.4424,
-    "epa_per_dropback": 0.0561,
-    "dropback_success": 0.444,
-    "cpoe": -0.5117,
-    "epa_per_rush": -0.5759,
-    "rush_success": 0.3966,
-    "total_epa": 59.81
+    "plays": 1773,
+    "dropbacks": 1714,
+    "rushes": 59,
+    "epa_per_play": 0.0376,
+    "success": 0.445,
+    "epa_per_dropback": 0.0576,
+    "dropback_success": 0.4463,
+    "cpoe": -0.5474,
+    "epa_per_rush": -0.5427,
+    "rush_success": 0.4068,
+    "total_epa": 66.71
    },
    {
     "player": "M.Mariota",
@@ -7108,6 +7126,21 @@
     "total_epa": 35.71
    },
    {
+    "player": "J.Gibbs",
+    "team": "DET",
+    "plays": 944,
+    "dropbacks": 0,
+    "rushes": 944,
+    "epa_per_play": 0.0352,
+    "success": 0.4301,
+    "epa_per_dropback": null,
+    "dropback_success": null,
+    "cpoe": null,
+    "epa_per_rush": 0.0352,
+    "rush_success": 0.4301,
+    "total_epa": 33.19
+   },
+   {
     "player": "M.Penix",
     "team": "ATL",
     "plays": 735,
@@ -7148,21 +7181,6 @@
     "total_epa": 26.53
    },
    {
-    "player": "J.Gibbs",
-    "team": "DET",
-    "plays": 923,
-    "dropbacks": 0,
-    "rushes": 923,
-    "epa_per_play": 0.0265,
-    "success": 0.4258,
-    "epa_per_dropback": null,
-    "dropback_success": null,
-    "cpoe": null,
-    "epa_per_rush": 0.0265,
-    "rush_success": 0.4258,
-    "total_epa": 24.46
-   },
-   {
     "player": "M.Rudolph",
     "team": "TEN",
     "teams": [
@@ -7186,6 +7204,21 @@
     "epa_per_rush": -0.1779,
     "rush_success": 0.5263,
     "total_epa": 22.98
+   },
+   {
+    "player": "J.Cook",
+    "team": "BUF",
+    "plays": 1014,
+    "dropbacks": 0,
+    "rushes": 1014,
+    "epa_per_play": 0.0201,
+    "success": 0.4458,
+    "epa_per_dropback": null,
+    "dropback_success": null,
+    "cpoe": null,
+    "epa_per_rush": 0.0201,
+    "rush_success": 0.4458,
+    "total_epa": 20.35
    },
    {
     "player": "D.Achane",
@@ -7216,21 +7249,6 @@
     "epa_per_rush": 0.0579,
     "rush_success": 0.4928,
     "total_epa": 20.1
-   },
-   {
-    "player": "J.Cook",
-    "team": "BUF",
-    "plays": 981,
-    "dropbacks": 0,
-    "rushes": 981,
-    "epa_per_play": 0.0167,
-    "success": 0.4414,
-    "epa_per_dropback": null,
-    "dropback_success": null,
-    "cpoe": null,
-    "epa_per_rush": 0.0167,
-    "rush_success": 0.4414,
-    "total_epa": 16.41
    },
    {
     "player": "J.Winston",
@@ -7312,6 +7330,21 @@
     "total_epa": 9.34
    },
    {
+    "player": "K.Monangai",
+    "team": "CHI",
+    "plays": 248,
+    "dropbacks": 0,
+    "rushes": 248,
+    "epa_per_play": 0.0298,
+    "success": 0.4476,
+    "epa_per_dropback": null,
+    "dropback_success": null,
+    "cpoe": null,
+    "epa_per_rush": 0.0298,
+    "rush_success": 0.4476,
+    "total_epa": 7.4
+   },
+   {
     "player": "J.Browning",
     "team": "CIN",
     "plays": 460,
@@ -7373,21 +7406,6 @@
     "epa_per_rush": -0.1889,
     "rush_success": 0.4167,
     "total_epa": 6.17
-   },
-   {
-    "player": "K.Monangai",
-    "team": "CHI",
-    "plays": 240,
-    "dropbacks": 0,
-    "rushes": 240,
-    "epa_per_play": 0.0246,
-    "success": 0.4458,
-    "epa_per_dropback": null,
-    "dropback_success": null,
-    "cpoe": null,
-    "epa_per_rush": 0.0246,
-    "rush_success": 0.4458,
-    "total_epa": 5.9
    },
    {
     "player": "R.Wilson",
@@ -7764,6 +7782,21 @@
     "epa_per_rush": -1.064,
     "rush_success": 0,
     "total_epa": -15.59
+   },
+   {
+    "player": "R.Davis",
+    "team": "BUF",
+    "plays": 200,
+    "dropbacks": 0,
+    "rushes": 200,
+    "epa_per_play": -0.0833,
+    "success": 0.37,
+    "epa_per_dropback": null,
+    "dropback_success": null,
+    "cpoe": null,
+    "epa_per_rush": -0.0833,
+    "rush_success": 0.37,
+    "total_epa": -16.66
    },
    {
     "player": "J.Dobbins",
@@ -8629,6 +8662,31 @@
     "total_epa": -43.66
    },
    {
+    "player": "D.Swift",
+    "team": "CHI",
+    "teams": [
+     {
+      "team": "CHI",
+      "plays": 670
+     },
+     {
+      "team": "PHI",
+      "plays": 231
+     }
+    ],
+    "plays": 901,
+    "dropbacks": 0,
+    "rushes": 901,
+    "epa_per_play": -0.0491,
+    "success": 0.4062,
+    "epa_per_dropback": null,
+    "dropback_success": null,
+    "cpoe": null,
+    "epa_per_rush": -0.0491,
+    "rush_success": 0.4062,
+    "total_epa": -44.23
+   },
+   {
     "player": "T.Allgeier",
     "team": "ATL",
     "teams": [
@@ -8744,31 +8802,6 @@
     "total_epa": -47.63
    },
    {
-    "player": "D.Swift",
-    "team": "CHI",
-    "teams": [
-     {
-      "team": "CHI",
-      "plays": 661
-     },
-     {
-      "team": "PHI",
-      "plays": 231
-     }
-    ],
-    "plays": 892,
-    "dropbacks": 0,
-    "rushes": 892,
-    "epa_per_play": -0.0534,
-    "success": 0.4025,
-    "epa_per_dropback": null,
-    "dropback_success": null,
-    "cpoe": null,
-    "epa_per_rush": -0.0534,
-    "rush_success": 0.4025,
-    "total_epa": -47.67
-   },
-   {
     "player": "D.Singletary",
     "team": "NYG",
     "teams": [
@@ -8817,31 +8850,6 @@
     "epa_per_rush": -0.5764,
     "rush_success": 0.3571,
     "total_epa": -56
-   },
-   {
-    "player": "S.Barkley",
-    "team": "PHI",
-    "teams": [
-     {
-      "team": "PHI",
-      "plays": 727
-     },
-     {
-      "team": "NYG",
-      "plays": 252
-     }
-    ],
-    "plays": 979,
-    "dropbacks": 1,
-    "rushes": 978,
-    "epa_per_play": -0.0595,
-    "success": 0.3882,
-    "epa_per_dropback": -1.66,
-    "dropback_success": 0,
-    "cpoe": null,
-    "epa_per_rush": -0.0578,
-    "rush_success": 0.3885,
-    "total_epa": -58.23
    },
    {
     "player": "B.Hall",
@@ -8912,6 +8920,31 @@
     "epa_per_rush": -0.0961,
     "rush_success": 0.3869,
     "total_epa": -60.34
+   },
+   {
+    "player": "S.Barkley",
+    "team": "PHI",
+    "teams": [
+     {
+      "team": "PHI",
+      "plays": 732
+     },
+     {
+      "team": "NYG",
+      "plays": 252
+     }
+    ],
+    "plays": 984,
+    "dropbacks": 1,
+    "rushes": 983,
+    "epa_per_play": -0.0638,
+    "success": 0.3862,
+    "epa_per_dropback": -1.66,
+    "dropback_success": 0,
+    "cpoe": null,
+    "epa_per_rush": -0.0622,
+    "rush_success": 0.3866,
+    "total_epa": -62.8
    },
    {
     "player": "N.Harris",
@@ -9076,7 +9109,7 @@
     "teams": [
      {
       "team": "DAL",
-      "plays": 451
+      "plays": 480
      },
      {
       "team": "DEN",
@@ -9088,7 +9121,7 @@
      },
      {
       "team": "DET",
-      "plays": 21
+      "plays": 22
      },
      {
       "team": "TB",
@@ -9103,17 +9136,17 @@
       "plays": 1
      }
     ],
-    "plays": 952,
+    "plays": 982,
     "dropbacks": 0,
-    "rushes": 952,
-    "epa_per_play": -0.0898,
-    "success": 0.3918,
+    "rushes": 982,
+    "epa_per_play": -0.0881,
+    "success": 0.391,
     "epa_per_dropback": null,
     "dropback_success": null,
     "cpoe": null,
-    "epa_per_rush": -0.0898,
-    "rush_success": 0.3918,
-    "total_epa": -85.51
+    "epa_per_rush": -0.0881,
+    "rush_success": 0.391,
+    "total_epa": -86.56
    },
    {
     "player": "S.Rattler",
@@ -9336,6 +9369,6 @@
   ]
  },
  "tier_meaning": "Working Dawg — earned its collar. Evidence survived validation: receipts against a benchmark chosen in advance for forecasters, named sources and reproducible maths for measurement tools.",
- "built": "2026-11-26",
+ "built": "2026-11-27",
  "canonical_url": "https://datadawgs216.com/data/epa-players.json"
 }
